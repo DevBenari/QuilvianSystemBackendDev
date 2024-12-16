@@ -1,0 +1,2577 @@
+[
+  {
+    "ContainingType": "QuilvianSystem.Controllers.AuthController",
+    "Method": "Login",
+    "RelativePath": "api/Auth/login",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "model",
+        "Type": "QuilvianSystem.Controllers.LoginModel",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.AccountingAndFinancial.Controllers.BankController",
+    "Method": "GetAllBankCabangs",
+    "RelativePath": "api/Bank/bankcabang",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.AccountingAndFinancial.Controllers.BankController",
+    "Method": "CreateBankCabang",
+    "RelativePath": "api/Bank/bankcabang",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "bankCabang",
+        "Type": "QuilvianSystem.Areas.AccountingAndFinancial.Models.BankCabang",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.AccountingAndFinancial.Controllers.BankController",
+    "Method": "GetBankCabangById",
+    "RelativePath": "api/Bank/bankcabang/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.AccountingAndFinancial.Controllers.BankController",
+    "Method": "UpdateBankCabang",
+    "RelativePath": "api/Bank/bankcabang/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "updatedBankCabang",
+        "Type": "QuilvianSystem.Areas.AccountingAndFinancial.Models.BankCabang",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.AccountingAndFinancial.Controllers.BankController",
+    "Method": "DeleteBankCabang",
+    "RelativePath": "api/Bank/bankcabang/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.AccountingAndFinancial.Controllers.BankController",
+    "Method": "GetAllBanks",
+    "RelativePath": "api/Bank/banks",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.AccountingAndFinancial.Controllers.BankController",
+    "Method": "CreateBank",
+    "RelativePath": "api/Bank/banks",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "bank",
+        "Type": "QuilvianSystem.Areas.AccountingAndFinancial.Models.Bank",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.AccountingAndFinancial.Controllers.BankController",
+    "Method": "GetBankById",
+    "RelativePath": "api/Bank/banks/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.AccountingAndFinancial.Controllers.BankController",
+    "Method": "UpdateBank",
+    "RelativePath": "api/Bank/banks/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "updatedBank",
+        "Type": "QuilvianSystem.Areas.AccountingAndFinancial.Models.Bank",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.AccountingAndFinancial.Controllers.BankController",
+    "Method": "DeleteBank",
+    "RelativePath": "api/Bank/banks/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.BloodTypeController",
+    "Method": "CreateBloodType",
+    "RelativePath": "api/BloodType/bloodtype",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "bloodType",
+        "Type": "QuilvianSystem.Areas.HealthManagement.Models.BloodType",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.BloodTypeController",
+    "Method": "GetAllBloodTypes",
+    "RelativePath": "api/BloodType/bloodtype",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.BloodTypeController",
+    "Method": "GetBloodType",
+    "RelativePath": "api/BloodType/bloodtype/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.BloodTypeController",
+    "Method": "UpdateBloodType",
+    "RelativePath": "api/BloodType/bloodtype/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "updatedBloodType",
+        "Type": "QuilvianSystem.Areas.HealthManagement.Models.BloodType",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.BloodTypeController",
+    "Method": "DeleteBloodType",
+    "RelativePath": "api/BloodType/bloodtype/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.CityController",
+    "Method": "GetCity",
+    "RelativePath": "api/City",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.CityController",
+    "Method": "AddCity",
+    "RelativePath": "api/City",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "model",
+        "Type": "QuilvianSystem.Areas.Administration.Models.City",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.CityController",
+    "Method": "GetCityById",
+    "RelativePath": "api/City/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.CityController",
+    "Method": "UpdateCity",
+    "RelativePath": "api/City/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "updatedCity",
+        "Type": "QuilvianSystem.Areas.Administration.Models.City",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.CityController",
+    "Method": "DeleteCity",
+    "RelativePath": "api/City/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.CityController",
+    "Method": "GetCitiesByProvince",
+    "RelativePath": "api/City/by-province/{provinceId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "provinceId",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.CountryController",
+    "Method": "GetCountry",
+    "RelativePath": "api/Country",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.CountryController",
+    "Method": "CreateCountry",
+    "RelativePath": "api/Country",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "country",
+        "Type": "QuilvianSystem.Areas.Administration.Models.Country",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.CountryController",
+    "Method": "GetCountryById",
+    "RelativePath": "api/Country/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.CountryController",
+    "Method": "UpdateCountry",
+    "RelativePath": "api/Country/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "updatedCountry",
+        "Type": "QuilvianSystem.Areas.Administration.Models.Country",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.CountryController",
+    "Method": "DeleteCountry",
+    "RelativePath": "api/Country/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.DayController",
+    "Method": "CreateDay",
+    "RelativePath": "api/Day/day",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "day",
+        "Type": "QuilvianSystem.Areas.HealthManagement.Models.Day",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.DayController",
+    "Method": "GetAllDays",
+    "RelativePath": "api/Day/day",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.DayController",
+    "Method": "GetDay",
+    "RelativePath": "api/Day/day/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.DayController",
+    "Method": "UpdateDay",
+    "RelativePath": "api/Day/day/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "updatedDay",
+        "Type": "QuilvianSystem.Areas.HealthManagement.Models.Day",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.DayController",
+    "Method": "DeleteDay",
+    "RelativePath": "api/Day/day/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.DepartmentLocationController",
+    "Method": "CreateDepartmentLocation",
+    "RelativePath": "api/DepartmentLocation/department-location",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "departmentLocation",
+        "Type": "QuilvianSystem.Areas.HealthManagement.Models.DoctorDepartmentLocation",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.DepartmentLocationController",
+    "Method": "GetAllDepartmentLocations",
+    "RelativePath": "api/DepartmentLocation/department-location",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.DepartmentLocationController",
+    "Method": "GetDepartmentLocation",
+    "RelativePath": "api/DepartmentLocation/department-location/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.DepartmentLocationController",
+    "Method": "UpdateDepartmentLocation",
+    "RelativePath": "api/DepartmentLocation/department-location/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "updatedLocation",
+        "Type": "QuilvianSystem.Areas.HealthManagement.Models.DoctorDepartmentLocation",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.DepartmentLocationController",
+    "Method": "DeleteDepartmentLocation",
+    "RelativePath": "api/DepartmentLocation/department-location/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.DistrictController",
+    "Method": "GetDistrict",
+    "RelativePath": "api/District",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.DistrictController",
+    "Method": "CreateDistrict",
+    "RelativePath": "api/District",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "district",
+        "Type": "QuilvianSystem.Areas.Administration.Models.District",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.DistrictController",
+    "Method": "GetDistrictById",
+    "RelativePath": "api/District/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.DistrictController",
+    "Method": "UpdateDistrict",
+    "RelativePath": "api/District/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "updatedDistrict",
+        "Type": "QuilvianSystem.Areas.Administration.Models.District",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.DistrictController",
+    "Method": "DeleteDistrict",
+    "RelativePath": "api/District/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.DoctorController",
+    "Method": "CreateDoctor",
+    "RelativePath": "api/Doctor/doctor",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "doctor",
+        "Type": "QuilvianSystem.Areas.HealthManagement.Models.Doctor",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.DoctorController",
+    "Method": "GetAllDoctors",
+    "RelativePath": "api/Doctor/doctor",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.DoctorController",
+    "Method": "GetDoctor",
+    "RelativePath": "api/Doctor/doctor/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.DoctorController",
+    "Method": "UpdateDoctor",
+    "RelativePath": "api/Doctor/doctor/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "updatedDoctor",
+        "Type": "QuilvianSystem.Areas.HealthManagement.Models.Doctor",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.DoctorController",
+    "Method": "DeleteDoctor",
+    "RelativePath": "api/Doctor/doctor/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.DoctorDepartmentController",
+    "Method": "GetAllDoctorDepartments",
+    "RelativePath": "api/DoctorDepartment/doctor-department",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.DoctorDepartmentController",
+    "Method": "CreateDoctorDepartment",
+    "RelativePath": "api/DoctorDepartment/doctor-department",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "department",
+        "Type": "QuilvianSystem.Areas.HealthManagement.Models.DoctorDepartment",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.DoctorDepartmentController",
+    "Method": "GetDoctorDepartment",
+    "RelativePath": "api/DoctorDepartment/doctor-department/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.DoctorDepartmentController",
+    "Method": "UpdateDoctorDepartment",
+    "RelativePath": "api/DoctorDepartment/doctor-department/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "updatedDepartment",
+        "Type": "QuilvianSystem.Areas.HealthManagement.Models.DoctorDepartment",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.DoctorDepartmentController",
+    "Method": "DeleteDoctorDepartment",
+    "RelativePath": "api/DoctorDepartment/doctor-department/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.DoctorQueueTypeController",
+    "Method": "CreateDoctorQueueType",
+    "RelativePath": "api/DoctorQueueType/doctor-queue-type",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "doctorQueueType",
+        "Type": "QuilvianSystem.Areas.HealthManagement.Models.DoctorQueueType",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.DoctorQueueTypeController",
+    "Method": "GetAllDoctorQueueTypes",
+    "RelativePath": "api/DoctorQueueType/doctor-queue-type",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.DoctorQueueTypeController",
+    "Method": "GetDoctorQueueType",
+    "RelativePath": "api/DoctorQueueType/doctor-queue-type/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.DoctorQueueTypeController",
+    "Method": "UpdateDoctorQueueType",
+    "RelativePath": "api/DoctorQueueType/doctor-queue-type/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "updatedQueueType",
+        "Type": "QuilvianSystem.Areas.HealthManagement.Models.DoctorQueueType",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.DoctorQueueTypeController",
+    "Method": "DeleteDoctorQueueType",
+    "RelativePath": "api/DoctorQueueType/doctor-queue-type/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.DoctorTitleController",
+    "Method": "CreateDoctorTitle",
+    "RelativePath": "api/DoctorTitle/doctor-title",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "doctorTitle",
+        "Type": "QuilvianSystem.Areas.HealthManagement.Models.DoctorTitle",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.DoctorTitleController",
+    "Method": "GetAllDoctorTitles",
+    "RelativePath": "api/DoctorTitle/doctor-title",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.DoctorTitleController",
+    "Method": "GetDoctorTitle",
+    "RelativePath": "api/DoctorTitle/doctor-title/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.DoctorTitleController",
+    "Method": "UpdateDoctorTitle",
+    "RelativePath": "api/DoctorTitle/doctor-title/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "updatedDoctorTitle",
+        "Type": "QuilvianSystem.Areas.HealthManagement.Models.DoctorTitle",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.DoctorTitleController",
+    "Method": "DeleteDoctorTitle",
+    "RelativePath": "api/DoctorTitle/doctor-title/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.DoctorTypeController",
+    "Method": "CreateDoctorType",
+    "RelativePath": "api/DoctorType/doctor-type",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "doctorType",
+        "Type": "QuilvianSystem.Areas.HealthManagement.Models.DoctorType",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.DoctorTypeController",
+    "Method": "GetAllDoctorTypes",
+    "RelativePath": "api/DoctorType/doctor-type",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.DoctorTypeController",
+    "Method": "GetDoctorType",
+    "RelativePath": "api/DoctorType/doctor-type/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.DoctorTypeController",
+    "Method": "UpdateDoctorType",
+    "RelativePath": "api/DoctorType/doctor-type/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "updatedDoctorType",
+        "Type": "QuilvianSystem.Areas.HealthManagement.Models.DoctorType",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.DoctorTypeController",
+    "Method": "DeleteDoctorType",
+    "RelativePath": "api/DoctorType/doctor-type/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ExternalPatientController",
+    "Method": "GetAllExternalPatientAmbulances",
+    "RelativePath": "api/ExternalPatient/ambulance",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ExternalPatientController",
+    "Method": "CreateExternalPatientAmbulance",
+    "RelativePath": "api/ExternalPatient/ambulance",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "externalPatientAmbulance",
+        "Type": "QuilvianSystem.Areas.PatientRegistration.Models.ExternalPatientAmbulance",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ExternalPatientController",
+    "Method": "GetExternalPatientAmbulance",
+    "RelativePath": "api/ExternalPatient/ambulance/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ExternalPatientController",
+    "Method": "UpdateExternalPatientAmbulance",
+    "RelativePath": "api/ExternalPatient/ambulance/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "updatedExternalPatientAmbulance",
+        "Type": "QuilvianSystem.Areas.PatientRegistration.Models.ExternalPatientAmbulance",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ExternalPatientController",
+    "Method": "DeleteExternalPatientAmbulance",
+    "RelativePath": "api/ExternalPatient/ambulance/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ExternalPatientController",
+    "Method": "GetAllExternalPatientFasilitas",
+    "RelativePath": "api/ExternalPatient/fasilitas",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ExternalPatientController",
+    "Method": "CreateExternalPatientFasilitas",
+    "RelativePath": "api/ExternalPatient/fasilitas",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "externalPatientFasilitas",
+        "Type": "QuilvianSystem.Areas.PatientRegistration.Models.ExternalPatientFasilitas",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ExternalPatientController",
+    "Method": "GetExternalPatientFasilitas",
+    "RelativePath": "api/ExternalPatient/fasilitas/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ExternalPatientController",
+    "Method": "UpdateExternalPatientFasilitas",
+    "RelativePath": "api/ExternalPatient/fasilitas/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "updatedExternalPatientFasilitas",
+        "Type": "QuilvianSystem.Areas.PatientRegistration.Models.ExternalPatientFasilitas",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ExternalPatientController",
+    "Method": "DeleteExternalPatientFasilitas",
+    "RelativePath": "api/ExternalPatient/fasilitas/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ExternalPatientController",
+    "Method": "GetAllExternalPatientLaboratorium",
+    "RelativePath": "api/ExternalPatient/laboratorium",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ExternalPatientController",
+    "Method": "CreateExternalPatientLaboratorium",
+    "RelativePath": "api/ExternalPatient/laboratorium",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "externalPatientLaboratorium",
+        "Type": "QuilvianSystem.Areas.PatientRegistration.Models.ExternalPatientLaboratorium",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ExternalPatientController",
+    "Method": "GetExternalPatientLaboratorium",
+    "RelativePath": "api/ExternalPatient/laboratorium/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ExternalPatientController",
+    "Method": "UpdateExternalPatientLaboratorium",
+    "RelativePath": "api/ExternalPatient/laboratorium/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "updatedExternalPatientLaboratorium",
+        "Type": "QuilvianSystem.Areas.PatientRegistration.Models.ExternalPatientLaboratorium",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ExternalPatientController",
+    "Method": "DeleteExternalPatientLaboratorium",
+    "RelativePath": "api/ExternalPatient/laboratorium/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ExternalPatientController",
+    "Method": "GetAllExternalPatientMedicalCheckUp",
+    "RelativePath": "api/ExternalPatient/medical-checkup",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ExternalPatientController",
+    "Method": "CreateExternalPatientMedicalCheckUp",
+    "RelativePath": "api/ExternalPatient/medical-checkup",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "externalPatientMedicalCheckUp",
+        "Type": "QuilvianSystem.Areas.PatientRegistration.Models.ExternalPatientMedicalCheckUp",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ExternalPatientController",
+    "Method": "GetExternalPatientMedicalCheckUp",
+    "RelativePath": "api/ExternalPatient/medical-checkup/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ExternalPatientController",
+    "Method": "UpdateExternalPatientMedicalCheckUp",
+    "RelativePath": "api/ExternalPatient/medical-checkup/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "updatedExternalPatientMedicalCheckUp",
+        "Type": "QuilvianSystem.Areas.PatientRegistration.Models.ExternalPatientMedicalCheckUp",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ExternalPatientController",
+    "Method": "DeleteExternalPatientMedicalCheckUp",
+    "RelativePath": "api/ExternalPatient/medical-checkup/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ExternalPatientController",
+    "Method": "GetAllExternalPatientOptik",
+    "RelativePath": "api/ExternalPatient/optik",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ExternalPatientController",
+    "Method": "CreateExternalPatientOptik",
+    "RelativePath": "api/ExternalPatient/optik",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "externalPatientOptik",
+        "Type": "QuilvianSystem.Areas.PatientRegistration.Models.ExternalPatientOptik",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ExternalPatientController",
+    "Method": "GetExternalPatientOptik",
+    "RelativePath": "api/ExternalPatient/optik/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ExternalPatientController",
+    "Method": "UpdateExternalPatientOptik",
+    "RelativePath": "api/ExternalPatient/optik/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "updatedExternalPatientOptik",
+        "Type": "QuilvianSystem.Areas.PatientRegistration.Models.ExternalPatientOptik",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ExternalPatientController",
+    "Method": "DeleteExternalPatientOptik",
+    "RelativePath": "api/ExternalPatient/optik/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ExternalPatientController",
+    "Method": "GetAllExternalPatientRadiologi",
+    "RelativePath": "api/ExternalPatient/radiologi",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ExternalPatientController",
+    "Method": "CreateExternalPatientRadiologi",
+    "RelativePath": "api/ExternalPatient/radiologi",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "externalPatientRadiologi",
+        "Type": "QuilvianSystem.Areas.PatientRegistration.Models.ExternalPatientRadiologi",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ExternalPatientController",
+    "Method": "GetExternalPatientRadiologi",
+    "RelativePath": "api/ExternalPatient/radiologi/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ExternalPatientController",
+    "Method": "UpdateExternalPatientRadiologi",
+    "RelativePath": "api/ExternalPatient/radiologi/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "updatedExternalPatientRadiologi",
+        "Type": "QuilvianSystem.Areas.PatientRegistration.Models.ExternalPatientRadiologi",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ExternalPatientController",
+    "Method": "DeleteExternalPatientRadiologi",
+    "RelativePath": "api/ExternalPatient/radiologi/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ExternalPatientController",
+    "Method": "GetAllExternalPatientRehabilitasiMedik",
+    "RelativePath": "api/ExternalPatient/rehabilitasi",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ExternalPatientController",
+    "Method": "CreateExternalPatientRehabilitasiMedik",
+    "RelativePath": "api/ExternalPatient/rehabilitasi",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "externalPatientRehabilitasiMedik",
+        "Type": "QuilvianSystem.Areas.PatientRegistration.Models.ExternalPatientRehabilitasiMedik",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ExternalPatientController",
+    "Method": "GetExternalPatientRehabilitasiMedik",
+    "RelativePath": "api/ExternalPatient/rehabilitasi/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ExternalPatientController",
+    "Method": "UpdateExternalPatientRehabilitasiMedik",
+    "RelativePath": "api/ExternalPatient/rehabilitasi/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "updatedExternalPatientRehabilitasiMedik",
+        "Type": "QuilvianSystem.Areas.PatientRegistration.Models.ExternalPatientRehabilitasiMedik",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ExternalPatientController",
+    "Method": "DeleteExternalPatientRehabilitasiMedik",
+    "RelativePath": "api/ExternalPatient/rehabilitasi/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.InsuranceController",
+    "Method": "CreateInsurance",
+    "RelativePath": "api/Insurance/insurance",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "insurance",
+        "Type": "QuilvianSystem.Areas.Administration.Models.Insurance",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.InsuranceController",
+    "Method": "GetAllInsurances",
+    "RelativePath": "api/Insurance/insurance",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.InsuranceController",
+    "Method": "GetInsurance",
+    "RelativePath": "api/Insurance/insurance/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.InsuranceController",
+    "Method": "UpdateInsurance",
+    "RelativePath": "api/Insurance/insurance/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "updatedInsurance",
+        "Type": "QuilvianSystem.Areas.Administration.Models.Insurance",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.InsuranceController",
+    "Method": "DeleteInsurance",
+    "RelativePath": "api/Insurance/insurance/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.LastEducationController",
+    "Method": "CreateLastEducation",
+    "RelativePath": "api/LastEducation/last-education",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "lastEducation",
+        "Type": "QuilvianSystem.Areas.Administration.Models.LastEducation",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.LastEducationController",
+    "Method": "GetAllLastEducations",
+    "RelativePath": "api/LastEducation/last-education",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.LastEducationController",
+    "Method": "GetLastEducation",
+    "RelativePath": "api/LastEducation/last-education/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.LastEducationController",
+    "Method": "UpdateLastEducation",
+    "RelativePath": "api/LastEducation/last-education/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "updatedLastEducation",
+        "Type": "QuilvianSystem.Areas.Administration.Models.LastEducation",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.LastEducationController",
+    "Method": "DeleteLastEducation",
+    "RelativePath": "api/LastEducation/last-education/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.NewPatientController",
+    "Method": "GetNewPatient",
+    "RelativePath": "api/NewPatient",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.NewPatientController",
+    "Method": "AddNewPatient",
+    "RelativePath": "api/NewPatient",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "newPatient",
+        "Type": "QuilvianSystem.Areas.PatientRegistration.ViewModels.CreateNewPatientViewModel",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.NewPatientController",
+    "Method": "UpdateNewPatient",
+    "RelativePath": "api/NewPatient/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "updateNewPatient",
+        "Type": "QuilvianSystem.Areas.PatientRegistration.Models.NewPatient",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.NewPatientController",
+    "Method": "DeleteNewPatient",
+    "RelativePath": "api/NewPatient/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.PromoController",
+    "Method": "CreatePromo",
+    "RelativePath": "api/Promo/promo",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "promo",
+        "Type": "QuilvianSystem.Areas.Administration.Models.Promo",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.PromoController",
+    "Method": "GetAllPromos",
+    "RelativePath": "api/Promo/promo",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.PromoController",
+    "Method": "GetPromo",
+    "RelativePath": "api/Promo/promo/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.PromoController",
+    "Method": "UpdatePromo",
+    "RelativePath": "api/Promo/promo/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "updatedPromo",
+        "Type": "QuilvianSystem.Areas.Administration.Models.Promo",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.PromoController",
+    "Method": "DeletePromo",
+    "RelativePath": "api/Promo/promo/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.ProvinceController",
+    "Method": "GetProvince",
+    "RelativePath": "api/Province",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.ProvinceController",
+    "Method": "CreateProvince",
+    "RelativePath": "api/Province",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "province",
+        "Type": "QuilvianSystem.Areas.Administration.Models.Province",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.ProvinceController",
+    "Method": "GetProvinceById",
+    "RelativePath": "api/Province/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.ProvinceController",
+    "Method": "UpdateProvince",
+    "RelativePath": "api/Province/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "updatedProvince",
+        "Type": "QuilvianSystem.Areas.Administration.Models.Province",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.ProvinceController",
+    "Method": "DeleteProvince",
+    "RelativePath": "api/Province/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.ProvinceController",
+    "Method": "GetProvincesByCountry",
+    "RelativePath": "api/Province/by-country/{countryId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "countryId",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ReferenceController",
+    "Method": "GetReference",
+    "RelativePath": "api/Reference",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ReferenceController",
+    "Method": "CreateReference",
+    "RelativePath": "api/Reference",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "reference",
+        "Type": "QuilvianSystem.Areas.PatientRegistration.Models.Reference",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ReferenceController",
+    "Method": "UpdateReference",
+    "RelativePath": "api/Reference/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "updatedReference",
+        "Type": "QuilvianSystem.Areas.PatientRegistration.Models.Reference",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ReferenceController",
+    "Method": "DeleteReference",
+    "RelativePath": "api/Reference/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ReferenceDetailController",
+    "Method": "GetReferenceDetail",
+    "RelativePath": "api/ReferenceDetail",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ReferenceDetailController",
+    "Method": "CreateReferenceDetail",
+    "RelativePath": "api/ReferenceDetail",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "referenceDetail",
+        "Type": "QuilvianSystem.Areas.PatientRegistration.Models.ReferenceDetail",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ReferenceDetailController",
+    "Method": "UpdateReferenceDetail",
+    "RelativePath": "api/ReferenceDetail/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "updatedReferenceDetail",
+        "Type": "QuilvianSystem.Areas.PatientRegistration.Models.ReferenceDetail",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ReferenceDetailController",
+    "Method": "DeleteReferenceDetail",
+    "RelativePath": "api/ReferenceDetail/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ReferenceTypeController",
+    "Method": "GetReferenceType",
+    "RelativePath": "api/ReferenceType",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ReferenceTypeController",
+    "Method": "CreateReferenceType",
+    "RelativePath": "api/ReferenceType",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "referenceType",
+        "Type": "QuilvianSystem.Areas.PatientRegistration.Models.ReferenceType",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ReferenceTypeController",
+    "Method": "UpdateReferenceType",
+    "RelativePath": "api/ReferenceType/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "updatedReferenceType",
+        "Type": "QuilvianSystem.Areas.PatientRegistration.Models.ReferenceType",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.PatientRegistration.Controllers.ReferenceTypeController",
+    "Method": "DeleteReferenceType",
+    "RelativePath": "api/ReferenceType/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.ReligionController",
+    "Method": "CreateReligion",
+    "RelativePath": "api/Religion/religion",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "religion",
+        "Type": "QuilvianSystem.Areas.Administration.Models.Religion",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.ReligionController",
+    "Method": "GetAllReligions",
+    "RelativePath": "api/Religion/religion",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.ReligionController",
+    "Method": "GetReligion",
+    "RelativePath": "api/Religion/religion/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.ReligionController",
+    "Method": "UpdateReligion",
+    "RelativePath": "api/Religion/religion/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "updatedReligion",
+        "Type": "QuilvianSystem.Areas.Administration.Models.Religion",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.ReligionController",
+    "Method": "DeleteReligion",
+    "RelativePath": "api/Religion/religion/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.ScheduleTodayController",
+    "Method": "CreateSchedule",
+    "RelativePath": "api/ScheduleToday/schedule-today",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "scheduleToday",
+        "Type": "QuilvianSystem.Areas.HealthManagement.Models.ScheduleToday",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.ScheduleTodayController",
+    "Method": "GetAllSchedules",
+    "RelativePath": "api/ScheduleToday/schedule-today",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.ScheduleTodayController",
+    "Method": "GetSchedule",
+    "RelativePath": "api/ScheduleToday/schedule-today/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.ScheduleTodayController",
+    "Method": "UpdateSchedule",
+    "RelativePath": "api/ScheduleToday/schedule-today/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "updatedSchedule",
+        "Type": "QuilvianSystem.Areas.HealthManagement.Models.ScheduleToday",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.HealthManagement.Controllers.ScheduleTodayController",
+    "Method": "DeleteSchedule",
+    "RelativePath": "api/ScheduleToday/schedule-today/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.SubDistrictController",
+    "Method": "GetSubDistrict",
+    "RelativePath": "api/SubDistrict",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.SubDistrictController",
+    "Method": "CreateSubDistrict",
+    "RelativePath": "api/SubDistrict",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "subDistrict",
+        "Type": "QuilvianSystem.Areas.Administration.Models.SubDistrict",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.SubDistrictController",
+    "Method": "GetSubDistrictById",
+    "RelativePath": "api/SubDistrict/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.SubDistrictController",
+    "Method": "UpdateSubDistrict",
+    "RelativePath": "api/SubDistrict/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "updatedSubDistrict",
+        "Type": "QuilvianSystem.Areas.Administration.Models.SubDistrict",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.SubDistrictController",
+    "Method": "DeleteSubDistrict",
+    "RelativePath": "api/SubDistrict/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.MasterData.Controllers.UserActiveController",
+    "Method": "GetUserActives",
+    "RelativePath": "api/UserActive",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.MasterData.Controllers.UserActiveController",
+    "Method": "AddUserActive",
+    "RelativePath": "api/UserActive",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "useractive",
+        "Type": "QuilvianSystem.Areas.MasterData.ViewModels.UserActiveViewModel",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.MasterData.Controllers.UserActiveController",
+    "Method": "UpdateUserActive",
+    "RelativePath": "api/UserActive/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "updateUserActive",
+        "Type": "QuilvianSystem.Areas.MasterData.Models.UserActive",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "QuilvianSystem.Areas.MasterData.Controllers.UserActiveController",
+    "Method": "DeleteUserActive",
+    "RelativePath": "api/UserActive/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.WorkingController",
+    "Method": "CreateWorking",
+    "RelativePath": "api/Working/working",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "working",
+        "Type": "QuilvianSystem.Areas.Administration.Models.Working",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.WorkingController",
+    "Method": "GetAllWorkings",
+    "RelativePath": "api/Working/working",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.WorkingController",
+    "Method": "GetWorking",
+    "RelativePath": "api/Working/working/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.WorkingController",
+    "Method": "UpdateWorking",
+    "RelativePath": "api/Working/working/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "updatedWorking",
+        "Type": "QuilvianSystem.Areas.Administration.Models.Working",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BenariMikronWebApp.Areas.Administration.Controllers.WorkingController",
+    "Method": "DeleteWorking",
+    "RelativePath": "api/Working/working/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  }
+]

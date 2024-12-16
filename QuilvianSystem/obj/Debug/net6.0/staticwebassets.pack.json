@@ -1,0 +1,33 @@
+{
+  "Files": [
+    {
+      "Id": "C:\\Users\\ecustomer\\source\\repos\\QuilvianSystemBackendDev\\QuilvianSystem\\wwwroot\\NewQRCodePasien\\661e29ca-d0c9-4709-80d0-965e482dfab3_24-04-10-03_Timmy Time.png",
+      "PackagePath": "staticwebassets\\NewQRCodePasien\\661e29ca-d0c9-4709-80d0-965e482dfab3_24-04-10-03_Timmy Time.png"
+    },
+    {
+      "Id": "C:\\Users\\ecustomer\\source\\repos\\QuilvianSystemBackendDev\\QuilvianSystem\\wwwroot\\NewQRCodePasien\\a263b35b-89e4-4279-ace6-6ae70c21ccac_24-04-10-03_Timmy Time.png",
+      "PackagePath": "staticwebassets\\NewQRCodePasien\\a263b35b-89e4-4279-ace6-6ae70c21ccac_24-04-10-03_Timmy Time.png"
+    },
+    {
+      "Id": "C:\\Users\\ecustomer\\source\\repos\\QuilvianSystemBackendDev\\QuilvianSystem\\wwwroot\\NewQRCodePasien\\c692909f-0669-4446-8707-bfd7213a6bf2_24-04-10-03_Timmy Time.png",
+      "PackagePath": "staticwebassets\\NewQRCodePasien\\c692909f-0669-4446-8707-bfd7213a6bf2_24-04-10-03_Timmy Time.png"
+    },
+    {
+      "Id": "obj\\Debug\\net6.0\\staticwebassets\\msbuild.QuilvianSystem.Microsoft.AspNetCore.StaticWebAssets.props",
+      "PackagePath": "build\\Microsoft.AspNetCore.StaticWebAssets.props"
+    },
+    {
+      "Id": "obj\\Debug\\net6.0\\staticwebassets\\msbuild.build.QuilvianSystem.props",
+      "PackagePath": "build\\QuilvianSystem.props"
+    },
+    {
+      "Id": "obj\\Debug\\net6.0\\staticwebassets\\msbuild.buildMultiTargeting.QuilvianSystem.props",
+      "PackagePath": "buildMultiTargeting\\QuilvianSystem.props"
+    },
+    {
+      "Id": "obj\\Debug\\net6.0\\staticwebassets\\msbuild.buildTransitive.QuilvianSystem.props",
+      "PackagePath": "buildTransitive\\QuilvianSystem.props"
+    }
+  ],
+  "ElementsToRemove": []
+}
