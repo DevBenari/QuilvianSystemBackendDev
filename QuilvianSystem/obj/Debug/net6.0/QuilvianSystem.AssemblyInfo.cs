@@ -15,7 +15,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("QuilvianSystem")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d926442992480cf91fd90868db8b2ae29dacd0d3")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+83cf451825e7043d612c81164bb0bf7a509b1536")]
 [assembly: System.Reflection.AssemblyProductAttribute("QuilvianSystem")]
 [assembly: System.Reflection.AssemblyTitleAttribute("QuilvianSystem")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
