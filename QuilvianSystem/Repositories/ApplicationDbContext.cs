@@ -14,7 +14,7 @@ namespace QuilvianSystem.Repositories
         public DbSet<UserActive> UserActives { get; set; }
 
         #region Areas Pendaftaran
-        public DbSet<PendaftaranPasien> PendaftaranPasiens { get; set; }
+        public DbSet<PendaftaranPasienBaru> PendaftaranPasienBarus { get; set; }
         #endregion
 
     }

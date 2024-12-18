@@ -1,11 +1,11 @@
 ﻿<Project>
   <ItemGroup>
-    <StaticWebAsset Include="$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\NewQRCodePasien\661e29ca-d0c9-4709-80d0-965e482dfab3_24-04-10-03_Timmy Time.png))">
+    <StaticWebAsset Include="$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\images\log.png))">
       <SourceType>Package</SourceType>
       <SourceId>QuilvianSystem</SourceId>
       <ContentRoot>$(MSBuildThisFileDirectory)..\staticwebassets\</ContentRoot>
       <BasePath>_content/QuilvianSystem</BasePath>
-      <RelativePath>NewQRCodePasien/661e29ca-d0c9-4709-80d0-965e482dfab3_24-04-10-03_Timmy Time.png</RelativePath>
+      <RelativePath>images/log.png</RelativePath>
       <AssetKind>All</AssetKind>
       <AssetMode>All</AssetMode>
       <AssetRole>Primary</AssetRole>
@@ -14,39 +14,7 @@
       <AssetTraitValue></AssetTraitValue>
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-      <OriginalItemSpec>$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\NewQRCodePasien\661e29ca-d0c9-4709-80d0-965e482dfab3_24-04-10-03_Timmy Time.png))</OriginalItemSpec>
-    </StaticWebAsset>
-    <StaticWebAsset Include="$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\NewQRCodePasien\a263b35b-89e4-4279-ace6-6ae70c21ccac_24-04-10-03_Timmy Time.png))">
-      <SourceType>Package</SourceType>
-      <SourceId>QuilvianSystem</SourceId>
-      <ContentRoot>$(MSBuildThisFileDirectory)..\staticwebassets\</ContentRoot>
-      <BasePath>_content/QuilvianSystem</BasePath>
-      <RelativePath>NewQRCodePasien/a263b35b-89e4-4279-ace6-6ae70c21ccac_24-04-10-03_Timmy Time.png</RelativePath>
-      <AssetKind>All</AssetKind>
-      <AssetMode>All</AssetMode>
-      <AssetRole>Primary</AssetRole>
-      <RelatedAsset></RelatedAsset>
-      <AssetTraitName></AssetTraitName>
-      <AssetTraitValue></AssetTraitValue>
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-      <OriginalItemSpec>$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\NewQRCodePasien\a263b35b-89e4-4279-ace6-6ae70c21ccac_24-04-10-03_Timmy Time.png))</OriginalItemSpec>
-    </StaticWebAsset>
-    <StaticWebAsset Include="$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\NewQRCodePasien\c692909f-0669-4446-8707-bfd7213a6bf2_24-04-10-03_Timmy Time.png))">
-      <SourceType>Package</SourceType>
-      <SourceId>QuilvianSystem</SourceId>
-      <ContentRoot>$(MSBuildThisFileDirectory)..\staticwebassets\</ContentRoot>
-      <BasePath>_content/QuilvianSystem</BasePath>
-      <RelativePath>NewQRCodePasien/c692909f-0669-4446-8707-bfd7213a6bf2_24-04-10-03_Timmy Time.png</RelativePath>
-      <AssetKind>All</AssetKind>
-      <AssetMode>All</AssetMode>
-      <AssetRole>Primary</AssetRole>
-      <RelatedAsset></RelatedAsset>
-      <AssetTraitName></AssetTraitName>
-      <AssetTraitValue></AssetTraitValue>
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-      <OriginalItemSpec>$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\NewQRCodePasien\c692909f-0669-4446-8707-bfd7213a6bf2_24-04-10-03_Timmy Time.png))</OriginalItemSpec>
+      <OriginalItemSpec>$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\images\log.png))</OriginalItemSpec>
     </StaticWebAsset>
   </ItemGroup>
 </Project>

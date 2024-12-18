@@ -7,6 +7,17 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Areas\PatientRegistration\**" />
+    <Compile Remove="Areas\UserManagement\**" />
+    <Content Remove="Areas\PatientRegistration\**" />
+    <Content Remove="Areas\UserManagement\**" />
+    <EmbeddedResource Remove="Areas\PatientRegistration\**" />
+    <EmbeddedResource Remove="Areas\UserManagement\**" />
+    <None Remove="Areas\PatientRegistration\**" />
+    <None Remove="Areas\UserManagement\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.29" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="6.0.29" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="6.0.29" />
@@ -16,14 +27,9 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="6.0.18" />
+    <PackageReference Include="QRCoder" Version="1.2.4" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
     <PackageReference Include="ZXing.Net.Bindings.Windows.Compatibility" Version="0.16.12" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Areas\PatientRegistration\Controllers\" />
-    <Folder Include="Areas\UserManagement\Controllers\" />
-    <Folder Include="wwwroot\NewQRCodePasien\" />
   </ItemGroup>
 
 </Project>

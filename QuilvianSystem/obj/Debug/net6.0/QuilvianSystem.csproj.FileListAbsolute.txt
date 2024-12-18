@@ -778,3 +778,5 @@ C:\Users\BenariDev02\Source\Repos\QuilvianSystemBackendDev\QuilvianSystem\obj\De
 C:\Users\BenariDev02\Source\Repos\QuilvianSystemBackendDev\QuilvianSystem\obj\Debug\net6.0\QuilvianSystem.pdb
 C:\Users\BenariDev02\Source\Repos\QuilvianSystemBackendDev\QuilvianSystem\obj\Debug\net6.0\QuilvianSystem.genruntimeconfig.cache
 C:\Users\BenariDev02\Source\Repos\QuilvianSystemBackendDev\QuilvianSystem\obj\Debug\net6.0\ref\QuilvianSystem.dll
+C:\Users\BenariDev02\Source\Repos\QuilvianSystemBackendDev\QuilvianSystem\bin\Debug\net6.0\QRCoder.dll
+C:\Users\BenariDev02\Source\Repos\QuilvianSystemBackendDev\QuilvianSystem\bin\Debug\net6.0\UnityEngine.dll

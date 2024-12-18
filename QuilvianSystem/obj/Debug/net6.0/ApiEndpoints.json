@@ -25,7 +25,7 @@
     "Parameters": [],
     "ReturnTypes": [
       {
-        "Type": "System.Collections.Generic.IEnumerable\u00601[[QuilvianSystem.Areas.AccountingAndFinancial.Models.PendaftaranPasien, QuilvianSystem, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[QuilvianSystem.Areas.AccountingAndFinancial.Models.PendaftaranPasienBaru, QuilvianSystem, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
         "MediaTypes": [
           "text/plain",
           "application/json",
@@ -45,13 +45,13 @@
     "Parameters": [
       {
         "Name": "pendaftaranPasien",
-        "Type": "QuilvianSystem.Areas.AccountingAndFinancial.Models.PendaftaranPasien",
+        "Type": "QuilvianSystem.Areas.AccountingAndFinancial.Models.PendaftaranPasienBaru",
         "IsRequired": true
       }
     ],
     "ReturnTypes": [
       {
-        "Type": "QuilvianSystem.Areas.AccountingAndFinancial.Models.PendaftaranPasien",
+        "Type": "QuilvianSystem.Areas.AccountingAndFinancial.Models.PendaftaranPasienBaru",
         "MediaTypes": [
           "text/plain",
           "application/json",
@@ -77,7 +77,7 @@
     ],
     "ReturnTypes": [
       {
-        "Type": "QuilvianSystem.Areas.AccountingAndFinancial.Models.PendaftaranPasien",
+        "Type": "QuilvianSystem.Areas.AccountingAndFinancial.Models.PendaftaranPasienBaru",
         "MediaTypes": [
           "text/plain",
           "application/json",
@@ -102,7 +102,7 @@
       },
       {
         "Name": "pendaftaranPasien",
-        "Type": "QuilvianSystem.Areas.AccountingAndFinancial.Models.PendaftaranPasien",
+        "Type": "QuilvianSystem.Areas.AccountingAndFinancial.Models.PendaftaranPasienBaru",
         "IsRequired": true
       }
     ],

@@ -6,10 +6,10 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace QuilvianSystem.Areas.AccountingAndFinancial.Models
 {
     [Table("PdfPasienBaru", Schema = "dbo")]
-    public class PendaftaranPasien : UserActivity
+    public class PendaftaranPasienBaru : UserActivity
     {
         [Key]
-        public Guid PendaftaranPasienId { get; set; }
+        public Guid PendaftaranPasienBaruId { get; set; }
         public string Penjamin { get; set; }
         public string Title { get; set; }
         public string NoRekamMedis { get; set; }
@@ -46,6 +46,7 @@ namespace QuilvianSystem.Areas.AccountingAndFinancial.Models
         public string NamaSutri { get; set; }
         public string NomorKtpSutri { get; set; }
         public string Foto { get; set; }
+        public string QrCode { get; set; }
 
     }
 

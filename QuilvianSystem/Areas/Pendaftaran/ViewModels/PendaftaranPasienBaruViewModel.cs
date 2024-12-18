@@ -1,6 +1,6 @@
 ﻿namespace QuilvianSystem.Areas.AccountingAndFinancial.ViewModels
 {
-    public class PendaftaranPasienViewModel
+    public class PendaftaranPasienBaruViewModel
     {
         public Guid BankId { get; set; }
         public string KodeBank { get; set; }

@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "Hash": "oJQNuLM/YSekYIqLwkbadWzS5ZDaEP9lS5k5oDcpTXo=",
+  "Hash": "Y2N4QnlHYBOv7yoluPXyg0PHpKRuzNjf9A3iBo1spK0=",
   "Source": "QuilvianSystem",
   "BasePath": "_content/QuilvianSystem",
   "Mode": "Default",
@@ -1157,12 +1157,12 @@
       "OriginalItemSpec": "C:\\Users\\BenariDev02\\.nuget\\packages\\microsoft.aspnetcore.identity.ui\\6.0.29\\staticwebassets\\V5\\lib\\jquery-validation-unobtrusive\\LICENSE.txt"
     },
     {
-      "Identity": "C:\\Users\\BenariDev02\\Source\\Repos\\QuilvianSystemBackendDev\\QuilvianSystem\\wwwroot\\NewQRCodePasien\\661e29ca-d0c9-4709-80d0-965e482dfab3_24-04-10-03_Timmy Time.png",
+      "Identity": "C:\\Users\\BenariDev02\\Source\\Repos\\QuilvianSystemBackendDev\\QuilvianSystem\\wwwroot\\images\\log.png",
       "SourceId": "QuilvianSystem",
       "SourceType": "Discovered",
       "ContentRoot": "C:\\Users\\BenariDev02\\Source\\Repos\\QuilvianSystemBackendDev\\QuilvianSystem\\wwwroot\\",
       "BasePath": "_content/QuilvianSystem",
-      "RelativePath": "NewQRCodePasien/661e29ca-d0c9-4709-80d0-965e482dfab3_24-04-10-03_Timmy Time.png",
+      "RelativePath": "images/log.png",
       "AssetKind": "All",
       "AssetMode": "All",
       "AssetRole": "Primary",
@@ -1173,45 +1173,7 @@
       "AssetTraitValue": "",
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
-      "OriginalItemSpec": "wwwroot\\NewQRCodePasien\\661e29ca-d0c9-4709-80d0-965e482dfab3_24-04-10-03_Timmy Time.png"
-    },
-    {
-      "Identity": "C:\\Users\\BenariDev02\\Source\\Repos\\QuilvianSystemBackendDev\\QuilvianSystem\\wwwroot\\NewQRCodePasien\\a263b35b-89e4-4279-ace6-6ae70c21ccac_24-04-10-03_Timmy Time.png",
-      "SourceId": "QuilvianSystem",
-      "SourceType": "Discovered",
-      "ContentRoot": "C:\\Users\\BenariDev02\\Source\\Repos\\QuilvianSystemBackendDev\\QuilvianSystem\\wwwroot\\",
-      "BasePath": "_content/QuilvianSystem",
-      "RelativePath": "NewQRCodePasien/a263b35b-89e4-4279-ace6-6ae70c21ccac_24-04-10-03_Timmy Time.png",
-      "AssetKind": "All",
-      "AssetMode": "All",
-      "AssetRole": "Primary",
-      "AssetMergeBehavior": "PreferTarget",
-      "AssetMergeSource": "",
-      "RelatedAsset": "",
-      "AssetTraitName": "",
-      "AssetTraitValue": "",
-      "CopyToOutputDirectory": "Never",
-      "CopyToPublishDirectory": "PreserveNewest",
-      "OriginalItemSpec": "wwwroot\\NewQRCodePasien\\a263b35b-89e4-4279-ace6-6ae70c21ccac_24-04-10-03_Timmy Time.png"
-    },
-    {
-      "Identity": "C:\\Users\\BenariDev02\\Source\\Repos\\QuilvianSystemBackendDev\\QuilvianSystem\\wwwroot\\NewQRCodePasien\\c692909f-0669-4446-8707-bfd7213a6bf2_24-04-10-03_Timmy Time.png",
-      "SourceId": "QuilvianSystem",
-      "SourceType": "Discovered",
-      "ContentRoot": "C:\\Users\\BenariDev02\\Source\\Repos\\QuilvianSystemBackendDev\\QuilvianSystem\\wwwroot\\",
-      "BasePath": "_content/QuilvianSystem",
-      "RelativePath": "NewQRCodePasien/c692909f-0669-4446-8707-bfd7213a6bf2_24-04-10-03_Timmy Time.png",
-      "AssetKind": "All",
-      "AssetMode": "All",
-      "AssetRole": "Primary",
-      "AssetMergeBehavior": "PreferTarget",
-      "AssetMergeSource": "",
-      "RelatedAsset": "",
-      "AssetTraitName": "",
-      "AssetTraitValue": "",
-      "CopyToOutputDirectory": "Never",
-      "CopyToPublishDirectory": "PreserveNewest",
-      "OriginalItemSpec": "wwwroot\\NewQRCodePasien\\c692909f-0669-4446-8707-bfd7213a6bf2_24-04-10-03_Timmy Time.png"
+      "OriginalItemSpec": "wwwroot\\images\\log.png"
     }
   ]
 }

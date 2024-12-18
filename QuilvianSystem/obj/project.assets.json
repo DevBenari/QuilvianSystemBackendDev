@@ -2185,6 +2185,17 @@
           "lib/netstandard2.0/NuGet.Versioning.dll": {}
         }
       },
+      "QRCoder/1.2.4": {
+        "type": "package",
+        "compile": {
+          "lib/net40/QRCoder.dll": {},
+          "lib/net40/UnityEngine.dll": {}
+        },
+        "runtime": {
+          "lib/net40/QRCoder.dll": {},
+          "lib/net40/UnityEngine.dll": {}
+        }
+      },
       "runtime.debian.8-x64.runtime.native.System.Security.Cryptography.OpenSsl/4.3.0": {
         "type": "package",
         "runtimeTargets": {
@@ -7191,6 +7202,25 @@
         "nuget.versioning.nuspec"
       ]
     },
+    "QRCoder/1.2.4": {
+      "sha512": "7udbgqSs6QsnBPoGlWDCpB1qGOD7MCfqTomB9ejxPTWZQs1qgkbfrzIQd+2aQPipBIwMLE8Fp+1Jg4gBsUYC3w==",
+      "type": "package",
+      "path": "qrcoder/1.2.4",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "lib/monoandroid/QRCoder.dll",
+        "lib/monotouch/QRCoder.dll",
+        "lib/net35/QRCoder.dll",
+        "lib/net35/UnityEngine.dll",
+        "lib/net40/QRCoder.dll",
+        "lib/net40/UnityEngine.dll",
+        "lib/portable-net45+netcore45+wpa81+wp81+wp8+uap/QRCoder.dll",
+        "lib/xamarinios/QRCoder.dll",
+        "qrcoder.1.2.4.nupkg.sha512",
+        "qrcoder.nuspec"
+      ]
+    },
     "runtime.debian.8-x64.runtime.native.System.Security.Cryptography.OpenSsl/4.3.0": {
       "sha512": "HdSSp5MnJSsg08KMfZThpuLPJpPwE5hBXvHwoKWosyHHfe8Mh5WKT0ylEOf6yNzX6Ngjxe4Whkafh5q7Ymac4Q==",
       "type": "package",
@@ -11338,6 +11368,7 @@
       "Microsoft.EntityFrameworkCore.SqlServer >= 6.0.29",
       "Microsoft.EntityFrameworkCore.Tools >= 6.0.29",
       "Microsoft.VisualStudio.Web.CodeGeneration.Design >= 6.0.18",
+      "QRCoder >= 1.2.4",
       "Swashbuckle.AspNetCore >= 6.5.0",
       "ZXing.Net.Bindings.Windows.Compatibility >= 0.16.12"
     ]
@@ -11413,6 +11444,10 @@
             "target": "Package",
             "version": "[6.0.18, )"
           },
+          "QRCoder": {
+            "target": "Package",
+            "version": "[1.2.4, )"
+          },
           "Swashbuckle.AspNetCore": {
             "target": "Package",
             "version": "[6.5.0, )"
@@ -11444,5 +11479,17 @@
         "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.400\\RuntimeIdentifierGraph.json"
       }
     }
-  }
+  },
+  "logs": [
+    {
+      "code": "NU1701",
+      "level": "Warning",
+      "warningLevel": 1,
+      "message": "Package 'QRCoder 1.2.4' was restored using '.NETFramework,Version=v4.6.1, .NETFramework,Version=v4.6.2, .NETFramework,Version=v4.7, .NETFramework,Version=v4.7.1, .NETFramework,Version=v4.7.2, .NETFramework,Version=v4.8, .NETFramework,Version=v4.8.1' instead of the project target framework 'net6.0'. This package may not be fully compatible with your project.",
+      "libraryId": "QRCoder",
+      "targetGraphs": [
+        "net6.0"
+      ]
+    }
+  ]
 }
