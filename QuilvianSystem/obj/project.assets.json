@@ -11379,9 +11379,9 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\BenariDev02\\Source\\Repos\\QuilvianSystemBackendDev\\QuilvianSystem\\QuilvianSystem.csproj",
+      "projectUniqueName": "C:\\Users\\BenariDev02\\source\\repos\\QuilvianSystemBackendDev\\QuilvianSystem\\QuilvianSystem.csproj",
       "projectName": "QuilvianSystem",
-      "projectPath": "C:\\Users\\BenariDev02\\Source\\Repos\\QuilvianSystemBackendDev\\QuilvianSystem\\QuilvianSystem.csproj",
+      "projectPath": "C:\\Users\\BenariDev02\\source\\repos\\QuilvianSystemBackendDev\\QuilvianSystem\\QuilvianSystem.csproj",
       "packagesPath": "C:\\Users\\BenariDev02\\.nuget\\packages\\",
       "outputPath": "C:\\Users\\BenariDev02\\Source\\Repos\\QuilvianSystemBackendDev\\QuilvianSystem\\obj\\",
       "projectStyle": "PackageReference",

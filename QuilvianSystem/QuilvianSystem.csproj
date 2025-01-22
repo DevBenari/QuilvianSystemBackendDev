@@ -32,4 +32,10 @@
     <PackageReference Include="ZXing.Net.Bindings.Windows.Compatibility" Version="0.16.12" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Areas\ManajemenKesehatan\Perjanjian\Models\" />
+    <Folder Include="Areas\ManajemenKesehatan\Perjanjian\ViewModels\" />
+    <Folder Include="Areas\ManajemenKesehatan\Tindakan\ViewModels\" />
+  </ItemGroup>
+
 </Project>

@@ -155,7 +155,564 @@ namespace QuilvianSystem.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("QuilvianSystem.Areas.AccountingAndFinancial.Models.PendaftaranPasienBaru", b =>
+            modelBuilder.Entity("QuilvianSystem.Areas.ManajemenKesehatan.MasterData.Models.Asuransi", b =>
+                {
+                    b.Property<Guid>("AsuransiId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CreateBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreateDateTime")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("DeleteBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("DeleteDateTime")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("KodeAsuransi")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NamaAsuransi")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TipePerusahaan")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("UpdateBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("UpdateDateTime")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("AsuransiId");
+
+                    b.ToTable("MstAsuransi", "dbo");
+                });
+
+            modelBuilder.Entity("QuilvianSystem.Areas.ManajemenKesehatan.MasterData.Models.Dokter", b =>
+                {
+                    b.Property<Guid>("DokterId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CreateBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreateDateTime")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("DeleteBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("DeleteDateTime")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("KdDokter")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Nik")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NmDokter")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PanggilDokter")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Sip")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Str")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("TglSip")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("TglStr")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UpdateBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("UpdateDateTime")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("DokterId");
+
+                    b.ToTable("MstDokter", "dbo");
+                });
+
+            modelBuilder.Entity("QuilvianSystem.Areas.ManajemenKesehatan.MasterData.Models.DokterPraktek", b =>
+                {
+                    b.Property<Guid>("DokterPraktekId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CreateBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreateDateTime")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("DeleteBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("DeleteDateTime")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Dokter")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("DokterId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Hari")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("JamKeluar")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("JamMasuk")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("JamPraktek")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Layanan")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("UpdateBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("UpdateDateTime")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("DokterPraktekId");
+
+                    b.HasIndex("DokterId");
+
+                    b.ToTable("MstDokterPraktek", "dbo");
+                });
+
+            modelBuilder.Entity("QuilvianSystem.Areas.ManajemenKesehatan.MasterData.Models.Kabupaten", b =>
+                {
+                    b.Property<Guid>("KabupatenId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("KabupatenCode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("KabupatenName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("ProvinsiId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("KabupatenId");
+
+                    b.HasIndex("ProvinsiId");
+
+                    b.ToTable("MstKabupaten", "dbo");
+                });
+
+            modelBuilder.Entity("QuilvianSystem.Areas.ManajemenKesehatan.MasterData.Models.Keangotaan", b =>
+                {
+                    b.Property<Guid>("KeangotaanId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CreateBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreateDateTime")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("DeleteBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("DeleteDateTime")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("JenisKeangotaan")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("JenisPromo")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("KeangotaanKode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("UpdateBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("UpdateDateTime")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("KeangotaanId");
+
+                    b.ToTable("MstKeangotaan", "dbo");
+                });
+
+            modelBuilder.Entity("QuilvianSystem.Areas.ManajemenKesehatan.MasterData.Models.Kecamatan", b =>
+                {
+                    b.Property<Guid>("KecamatanId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("KabupatenId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("KecamatanCode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("KecamatanName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("KecamatanId");
+
+                    b.HasIndex("KabupatenId");
+
+                    b.ToTable("MstKecamatan", "dbo");
+                });
+
+            modelBuilder.Entity("QuilvianSystem.Areas.ManajemenKesehatan.MasterData.Models.Kelurahan", b =>
+                {
+                    b.Property<Guid>("KelurahanId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("KecamatanId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("KelurahanCode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("KelurahanName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("KelurahanId");
+
+                    b.HasIndex("KecamatanId");
+
+                    b.ToTable("MstKelurahan", "dbo");
+                });
+
+            modelBuilder.Entity("QuilvianSystem.Areas.ManajemenKesehatan.MasterData.Models.Pegawai", b =>
+                {
+                    b.Property<Guid>("UserActiveId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Agama")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("AlamatDomisili")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("AlamatKantor")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("AlamatKeluarga")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("CreateBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreateDateTime")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DataKaryawanInput")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("DeleteBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("DeleteDateTime")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Departemen")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Foto")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("HubunganKeluarga")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("InformasiAlamat")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("JenisIdentitas")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("JenisKelamin")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("KabupatenKeluarga")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Kecamatan")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Kelurahan")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("KelurahanKeluarga")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Kewarganegaraan")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NIK")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NamaAyah")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NamaIbu")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NamaKantor")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NamaKeluarga")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NamaLengkap")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NamaSutri")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NoIdentitas")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NoPenjamin")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NoRekamMedis")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NomorHP")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NomorKeluargaTerdekat")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NomorKtpKeluarga")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NomorTeleponKantor")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NomorTeleponKeluarga")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Pekerjaan")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PendidikanTerakhir")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Suku")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("TanggalLahir")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TempatLahir")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("UpdateBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("UpdateDateTime")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("UserActiveCode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("UserActiveId");
+
+                    b.ToTable("MasterPegawai", "dbo");
+                });
+
+            modelBuilder.Entity("QuilvianSystem.Areas.ManajemenKesehatan.MasterData.Models.Provinsi", b =>
+                {
+                    b.Property<Guid>("ProvinsiId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ProvinsiCode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ProvinsiName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("ProvinsiId");
+
+                    b.ToTable("MstProvinsi", "dbo");
+                });
+
+            modelBuilder.Entity("QuilvianSystem.Areas.ManajemenKesehatan.Pendaftaran.Models.PendaftaranPasien", b =>
+                {
+                    b.Property<Guid>("PendaftaranPasienId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CreateBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreateDateTime")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("DeleteBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("DeleteDateTime")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DokterPemeriksa")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Layanan")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NamaLengkap")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NoIdentitas")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NoRekamMedis")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Penjamin")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("TanggalLahir")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TempatLahir")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("UpdateBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("UpdateDateTime")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("PendaftaranPasienId");
+
+                    b.ToTable("PdfPasien", "dbo");
+                });
+
+            modelBuilder.Entity("QuilvianSystem.Areas.ManajemenKesehatan.Pendaftaran.Models.PendaftaranPasienBaru", b =>
                 {
                     b.Property<Guid>("PendaftaranPasienBaruId")
                         .ValueGeneratedOnAdd()
@@ -268,11 +825,15 @@ namespace QuilvianSystem.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("NoPenjamin")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("NoRekamMedis")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("NoTeleponRumah")
+                    b.Property<string>("NomorHP")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -297,10 +858,6 @@ namespace QuilvianSystem.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PendidikanTerakhir")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Penjamin")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -332,79 +889,6 @@ namespace QuilvianSystem.Migrations
                     b.HasKey("PendaftaranPasienBaruId");
 
                     b.ToTable("PdfPasienBaru", "dbo");
-                });
-
-            modelBuilder.Entity("QuilvianSystem.Areas.MasterData.Models.UserActive", b =>
-                {
-                    b.Property<Guid>("UserActiveId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Address")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("CreateBy")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTimeOffset>("CreateDateTime")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<DateTimeOffset>("DateOfBirth")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<Guid>("DeleteBy")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTimeOffset>("DeleteDateTime")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Foto")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("FullName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Gender")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Handphone")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("IdentityNumber")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsDelete")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("PlaceOfBirth")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("UpdateBy")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTimeOffset>("UpdateDateTime")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("UserActiveCode")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("UserActiveId");
-
-                    b.ToTable("MasterUserActive", "dbo");
                 });
 
             modelBuilder.Entity("QuilvianSystem.Models.ApplicationUser", b =>
@@ -529,6 +1013,65 @@ namespace QuilvianSystem.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("QuilvianSystem.Areas.ManajemenKesehatan.MasterData.Models.DokterPraktek", b =>
+                {
+                    b.HasOne("QuilvianSystem.Areas.ManajemenKesehatan.MasterData.Models.Dokter", "Dokters")
+                        .WithMany()
+                        .HasForeignKey("DokterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Dokters");
+                });
+
+            modelBuilder.Entity("QuilvianSystem.Areas.ManajemenKesehatan.MasterData.Models.Kabupaten", b =>
+                {
+                    b.HasOne("QuilvianSystem.Areas.ManajemenKesehatan.MasterData.Models.Provinsi", "Provinsi")
+                        .WithMany("Kabupaten")
+                        .HasForeignKey("ProvinsiId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Provinsi");
+                });
+
+            modelBuilder.Entity("QuilvianSystem.Areas.ManajemenKesehatan.MasterData.Models.Kecamatan", b =>
+                {
+                    b.HasOne("QuilvianSystem.Areas.ManajemenKesehatan.MasterData.Models.Kabupaten", "Kabupaten")
+                        .WithMany("Kecamatans")
+                        .HasForeignKey("KabupatenId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Kabupaten");
+                });
+
+            modelBuilder.Entity("QuilvianSystem.Areas.ManajemenKesehatan.MasterData.Models.Kelurahan", b =>
+                {
+                    b.HasOne("QuilvianSystem.Areas.ManajemenKesehatan.MasterData.Models.Kecamatan", "Kecamatan")
+                        .WithMany("Kelurahans")
+                        .HasForeignKey("KecamatanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Kecamatan");
+                });
+
+            modelBuilder.Entity("QuilvianSystem.Areas.ManajemenKesehatan.MasterData.Models.Kabupaten", b =>
+                {
+                    b.Navigation("Kecamatans");
+                });
+
+            modelBuilder.Entity("QuilvianSystem.Areas.ManajemenKesehatan.MasterData.Models.Kecamatan", b =>
+                {
+                    b.Navigation("Kelurahans");
+                });
+
+            modelBuilder.Entity("QuilvianSystem.Areas.ManajemenKesehatan.MasterData.Models.Provinsi", b =>
+                {
+                    b.Navigation("Kabupaten");
                 });
 #pragma warning restore 612, 618
         }
