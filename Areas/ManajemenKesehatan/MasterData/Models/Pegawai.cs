@@ -59,9 +59,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string NomorTeleponKeluarga { get; set; }
         public string NamaKeluarga { get; set; }
         public string NomorKtpKeluarga { get; set; }
-        public string NamaAyah { get; set; }
-        public string NamaIbu { get; set; }
-        public string NamaSutri { get; set; }
+        public string? NamaAyah { get; set; }
+        public string? NamaIbu { get; set; }
+        public string? NamaSutri { get; set; }
 
         // Informasi Lain
         public string DataKaryawanInput { get; set; } // Data karyawan rumah sakit yang input

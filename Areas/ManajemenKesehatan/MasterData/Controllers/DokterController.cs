@@ -8,7 +8,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 {
     [ApiController]
     [Route("api/[controller]")]
-    //[Authorize] 
+    [Authorize]
     public class DokterController : Controller
     {
         private readonly ApplicationDbContext _context;

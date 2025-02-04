@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Repositories;
@@ -7,7 +8,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 {
     [ApiController]
     [Route("api/[controller]")]
-    //[Authorize] 
+    [Authorize]
     public class TitleController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -60,10 +61,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] Title model)
         {
-            if (model == null || id != model.TitleId)
-            {
-                return BadRequest(new { message = "Data tidak valid." });
-            }
             var existingRecord = await _context.Titles.FindAsync(id);
             if (existingRecord == null)
             {

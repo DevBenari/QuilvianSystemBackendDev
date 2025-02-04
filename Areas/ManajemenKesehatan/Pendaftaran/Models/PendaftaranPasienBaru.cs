@@ -61,18 +61,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
         public string RiwayatOperasi { get; set; }
         public string RiwayatPenyakitKeluarga { get; set; }
 
-        // Informasi Keluarga
-        public string NomorKeluargaTerdekat { get; set; }
-        public string HubunganKeluarga { get; set; }
-        public string AlamatKeluarga { get; set; }
-        public string KelurahanKeluarga { get; set; }
-        public string KabupatenKeluarga { get; set; }
-        public string NomorTeleponKeluarga { get; set; }
-        public string NamaAyah { get; set; }
-        public string NamaIbu { get; set; }
-        public string NamaSutri { get; set; }
-        public string NomorKtpSutri { get; set; }
-
         // Informasi Darurat
         public string NamaKontakDarurat { get; set; } // Data karyawan rumah sakit yang input
         public string Hubkel { get; set; }
@@ -80,14 +68,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
         public string AlamatDarurat { get; set; }
         public string NoDarurat { get; set; }
 
-        // Informasi Darurat
+        // Informasi Pasien
         public string NamaOrtu { get; set; } // Data karyawan rumah sakit yang input
         public string IdentitasOrtu { get; set; }
         public string PekerjaanOrtu { get; set; }
         public string HubkelAnak { get; set; }
         public string InformasiSekolah { get; set; }
 
-        // Informasi Darurat
+        // Informasi Tambahan
         public string Foto { get; set; }
         public string QrCode { get; set; }
 

@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Any;
+using Microsoft.OpenApi.Models;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using System.Text;
@@ -41,7 +43,7 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new() { Title = "My API", Version = "v1" });
-
+    c.MapType<string>(() => new OpenApiSchema { Type = "string", Example = new OpenApiString("Abc12345!") });
     // Konfigurasi JWT Authentication
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
@@ -87,7 +89,6 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-//builder.WebHost.UseUrls("https://0.0.0.0:7079"); // Menambahkan konfigurasi URL untuk akses lokal
 
 var app = builder.Build();
 
@@ -98,6 +99,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseSwagger();
+app.UseSwaggerUI();
+//app.Urls.Add("http://0.0.0.0:5000"); // Ini akan membuka port 5000 di semua IP
 app.UseCors("AllowSpecific"); // Panggil sebelum middleware lainnya
 app.UseHttpsRedirection();
 app.UseAuthentication(); // Tambahkan middleware autentikasi
