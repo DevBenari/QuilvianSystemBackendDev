@@ -143,7 +143,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
 
             // Buat QR Code berdasarkan NamaLengkap dan NoRekamMedis
             string qrContent = $"Nama: {pendaftaranPasienBaru.NamaLengkap}\nNo RM: {pendaftaranPasienBaru.NoRekamMedis}";
-            pendaftaranPasienBaru.QrCode = GenerateQrCodeWithDefaultText(qrContent); // Simpan QR Code Base64 ke properti QrCode
+            //pendaftaranPasienBaru.QrCode = GenerateQrCodeWithDefaultText(qrContent); // Simpan QR Code Base64 ke properti QrCode
 
             // Simpan data ke database
             _applicationDbContext.PendaftaranPasienBarus.Add(pendaftaranPasienBaru);
@@ -154,30 +154,30 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
 
         // Fungsi
 
-        private string GenerateQrCodeWithDefaultText(string content)
-        {
-            string centerText = "MMC"; // Teks default
+        //private string GenerateQrCodeWithDefaultText(string content)
+        //{
+        //    string centerText = "MMC"; // Teks default
 
-            using var qrGenerator = new QRCodeGenerator();
+        //    using var qrGenerator = new QRCodeGenerator();
 
-            // Menggunakan level koreksi kesalahan lebih tinggi (Q)
-            using var qrCodeData = qrGenerator.CreateQrCode(content, QRCodeGenerator.ECCLevel.Q);
-            using var qrCode = new QRCode(qrCodeData);
-            using var qrBitmap = qrCode.GetGraphic(10);  // Ukuran elemen lebih kecil
+        //    // Menggunakan level koreksi kesalahan lebih tinggi (Q)
+        //    using var qrCodeData = qrGenerator.CreateQrCode(content, QRCodeGenerator.ECCLevel.Q);
+        //    using var qrCode = new QRCode(qrCodeData);
+        //    using var qrBitmap = qrCode.GetGraphic(10);  // Ukuran elemen lebih kecil
 
-            // Tambahkan teks di tengah dengan ukuran font yang lebih kecil
-            using var graphics = Graphics.FromImage(qrBitmap);
-            var font = new Font(FontFamily.GenericSansSerif, 15, FontStyle.Bold);  // Ukuran font lebih kecil
-            var textSize = graphics.MeasureString(centerText, font);
-            var textX = (qrBitmap.Width - textSize.Width) / 2;
-            var textY = (qrBitmap.Height - textSize.Height) / 2;
-            graphics.DrawString(centerText, font, Brushes.Black, new PointF(textX, textY));
+        //    // Tambahkan teks di tengah dengan ukuran font yang lebih kecil
+        //    using var graphics = Graphics.FromImage(qrBitmap);
+        //    var font = new Font(FontFamily.GenericSansSerif, 15, FontStyle.Bold);  // Ukuran font lebih kecil
+        //    var textSize = graphics.MeasureString(centerText, font);
+        //    var textX = (qrBitmap.Width - textSize.Width) / 2;
+        //    var textY = (qrBitmap.Height - textSize.Height) / 2;
+        //    graphics.DrawString(centerText, font, Brushes.Black, new PointF(textX, textY));
 
-            // Konversi QR Code ke Base64
-            using var ms = new MemoryStream();
-            qrBitmap.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
-            return Convert.ToBase64String(ms.ToArray());
-        }
+        //    // Konversi QR Code ke Base64
+        //    using var ms = new MemoryStream();
+        //    qrBitmap.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+        //    return Convert.ToBase64String(ms.ToArray());
+        //}
 
         // End Fungsi
     }

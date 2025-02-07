@@ -1,26 +1,13 @@
-﻿using QuilvianSystemBackendDev.Models;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
+﻿namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.DTOs
 {
-    [Table("PdfPasienBaru", Schema = "dbo")]
-    public class PendaftaranPasienBaru : UserActivity
+    public class PendaftaranPasienBaruDto
     {
-        [Key]
-        public Guid PendaftaranPasienBaruId { get; set; }
-
-        // Informasi Utama
-        public string? KodePasien { get; set; }
-        public string? NoRekamMedis { get; set; }
-
-        // Informasi Pasien
         public Guid? TitleId { get; set; }
         public string? NamaLengkap { get; set; }
         public Guid? IdentitasId { get; set; }
         public string? NoIdentitas { get; set; } // KTP atau Passport
         public string? TempatLahir { get; set; }
-        public DateTime? TanggalLahir { get; set; }
+        public DateTime TanggalLahir { get; set; }
         public string? JenisKelamin { get; set; }
         public string? Status { get; set; }
         public Guid? AgamaId { get; set; }
@@ -71,10 +58,5 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
         public string? PekerjaanOrangTua { get; set; }
         public string? HubunganAnak { get; set; }
         public string? InformasiSekolah { get; set; }
-
-        // Informasi Tambahan
-        public string? Foto { get; set; }
-        public string? QrCode { get; set; }
     }
-
 }
