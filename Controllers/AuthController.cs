@@ -48,7 +48,7 @@ namespace QuilvianSystemBackendDev.Controllers
                         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]));
                         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-                        var claims = new[]
+                        var claims = new List<Claim>
                         {
                             new Claim(JwtRegisteredClaimNames.Sub, model.Email),
                             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())

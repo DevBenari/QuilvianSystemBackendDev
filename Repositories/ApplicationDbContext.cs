@@ -1,7 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
 using QuilvianSystemBackendDev.Models;
@@ -11,7 +9,7 @@ namespace QuilvianSystemBackendDev.Repositories
     public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
-        public DbSet<Pegawai> UserActives { get; set; }
+        public DbSet<UserActive> UserActives { get; set; }
 
         #region Areas Master
         public DbSet<Agama> Agamas { get; set; }
@@ -34,6 +32,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<PendaftaranPasienBaru> PendaftaranPasienBarus { get; set; }
         public DbSet<PendaftaranPasien> PendaftaranPasiens { get; set; }
         #endregion
+
         #region Areas Tindakan
         //public DbSet<TindakanPasienAmbulan> TindakanPasienAmbulans { get; set; }
         //public DbSet<TindakanPasienFasilitas> TindakanPasienFasilitass { get; set; }
