@@ -21,7 +21,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var records = await _context.DokterPrakteks.ToListAsync();
+            var records = await _context.DokterPrakteks
+                .Include(dp => dp.Dokters)  // Include relasi dengan tabel Dokters
+                .ToListAsync();
             if (records == null || !records.Any())
             {
                 return NotFound(new { message = "Tidak ada data ditemukan." });
@@ -33,18 +35,46 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var record = await _context.DokterPrakteks.FindAsync(id);
-            if (record == null)
+            var result = await _context.DokterPrakteks
+                .Include(dp => dp.Dokters)
+                .FirstOrDefaultAsync(dp => dp.DokterPraktekId == id);
+
+            if (result == null)
             {
-                return NotFound(new { message = $"Data dengan ID {id} tidak ditemukan." });
+                return NotFound(new { message = "Data tidak ditemukan. || 404 Not Found" });
             }
-            return Ok(new { message = "Data ditemukan.", data = record });
+
+            return Ok(result);
         }
 
         // POST: api/DokterPraktek
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] DokterPraktek model)
         {
+            //validate modelstate
+            if (ModelState.IsValid)
+            {
+                var dokterPraktek = new DokterPraktek
+                {
+                    DokterPraktekId = Guid.NewGuid(),
+                    Dokter = model.Dokter,
+                    Layanan = model.Layanan,
+                    JamPraktek = model.JamPraktek,
+                    Hari = model.Hari,
+                    JamMasuk = model.JamMasuk,
+                    JamKeluar = model.JamKeluar,
+                    DokterId = model.DokterId,
+                    CreateDateTime = DateTimeOffset.Now,
+                    CreateBy = Guid.NewGuid(),
+                    UpdateDateTime = DateTimeOffset.Now,
+                    UpdateBy = Guid.NewGuid(),
+                    DeleteDateTime = DateTimeOffset.Now,
+                    DeleteBy = Guid.NewGuid(),
+                    IsDelete = false
+                };
+            
+            }
+
             if (model == null)
             {
                 return BadRequest(new { message = "Data tidak valid." });
