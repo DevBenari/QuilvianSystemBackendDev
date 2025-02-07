@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -8,15 +8,37 @@ using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using System.Text;
 
+
 var builder = WebApplication.CreateBuilder(args);
 
-// untuk reigtrasi Dbcontex
+// Add services to the container.
+// Konfigurasi koneksi database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-//End
-builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
-    .AddEntityFrameworkStores<ApplicationDbContext>()
-    .AddDefaultTokenProviders();
+{
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+});
+
+// Tambahkan layanan CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowSpecific", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+{
+    options.Password.RequireNonAlphanumeric = false;
+
+    options.Lockout.MaxFailedAccessAttempts = 3;
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
+}).AddDefaultTokenProviders().AddEntityFrameworkStores<ApplicationDbContext>();
+
+builder.Services.AddHttpClient();
+
 // Konfigurasi JWT
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]);
@@ -42,8 +64,15 @@ builder.Services.AddAuthentication(options =>
 //Untuk menjalankan token yang di dapat pada swagger
 builder.Services.AddSwaggerGen(c =>
 {
+    c.EnableAnnotations();
+    var xmlFilename = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFilename);
+if (File.Exists(xmlPath))
+{
+    c.IncludeXmlComments(xmlPath);
+}
     c.SwaggerDoc("v1", new() { Title = "My API", Version = "v1" });
-    c.MapType<string>(() => new OpenApiSchema { Type = "string", Example = new OpenApiString("Abc12345!") });
+
     // Konfigurasi JWT Authentication
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
@@ -71,24 +100,9 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowSpecific", policy =>
-    {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
-    });
-});
-
-// Add services to the container.
-
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
 
 var app = builder.Build();
 
@@ -101,12 +115,11 @@ if (app.Environment.IsDevelopment())
 
 app.UseSwagger();
 app.UseSwaggerUI();
-//app.Urls.Add("http://0.0.0.0:5000"); // Ini akan membuka port 5000 di semua IP
-app.UseCors("AllowSpecific"); // Panggil sebelum middleware lainnya
 app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseCors("AllowSpecific"); // Panggil sebelum middleware lainnya
 app.UseAuthentication(); // Tambahkan middleware autentikasi
 app.UseAuthorization();
-
 app.MapControllers();
 
 app.Run();
