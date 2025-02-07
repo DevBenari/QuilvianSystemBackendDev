@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using QuilvianSystemBackendDev.Repositories;
 
@@ -11,9 +12,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250207081520_tambahKolomTipePasienRekamMedisLama")]
+    partial class tambahKolomTipePasienRekamMedisLama
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -883,7 +885,7 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("HubunganPasien")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<Guid>("IdentitasId")
+                    b.Property<Guid?>("IdentitasId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("IdentitasOrangTua")
@@ -920,7 +922,6 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("NamaLengkap")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("NamaOrangTua")
@@ -933,7 +934,6 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("NoIdentitas")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("NoIdentitasDarurat")
@@ -943,6 +943,7 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("NoRekamMedisLama")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("NoTelepon1")
@@ -960,8 +961,8 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<int?>("NoTeleponPerusahaan")
                         .HasColumnType("int");
 
-                    b.Property<Guid?>("PekerjaanId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("Pekerjaan")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PekerjaanOrangTua")
                         .HasColumnType("nvarchar(max)");
@@ -993,8 +994,8 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("Suku")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTimeOffset?>("TanggalLahir")
-                        .HasColumnType("datetimeoffset");
+                    b.Property<DateTime?>("TanggalLahir")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("TempatLahir")
                         .HasColumnType("nvarchar(max)");
