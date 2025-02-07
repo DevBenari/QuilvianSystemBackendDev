@@ -1,21 +1,32 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
+using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
+using System.Security.Claims;
+using static QRCoder.PayloadGenerator;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
+    
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    //[Authorize]
     public class TitleController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public TitleController(ApplicationDbContext context)
+        public TitleController(
+            ApplicationDbContext context,
+            UserManager<ApplicationUser> userManager
+        )
         {
             _context = context;
+            _userManager = userManager;
         }
 
         // GET: api/Title
@@ -59,28 +70,68 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
         // PUT: api/Title/{id}
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] Title model)
+        //public async Task<IActionResult> Update(Guid id, [FromBody] TitleViewModel model)
+        //{
+        //    var existingRecord = await _context.Titles.FindAsync(id);
+        //    if (existingRecord == null)
+        //    {
+        //        return NotFound(new { message = "Data tidak ditemukan." });
+        //    }
+        //    // Update properties
+        //    foreach (var prop in model.GetType().GetProperties())
+        //    {
+        //        var value = prop.GetValue(model);
+        //        if (value != null)
+        //        {
+        //            prop.SetValue(existingRecord, value);
+        //        }
+        //    }
+
+        //    _context.Titles.Update(existingRecord);
+        //    await _context.SaveChangesAsync();
+
+        //    return Ok(new { message = "Data berhasil diperbarui." });
+        //}
+        public async Task<IActionResult> Update(Guid id, [FromBody] TitleViewModel update)
         {
-            var existingRecord = await _context.Titles.FindAsync(id);
-            if (existingRecord == null)
+            // Mendapatkan email dari claim yang terautentikasi
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            var user = await _userManager.FindByEmailAsync(email);
+
+            if (update == null)
             {
-                return NotFound(new { message = "Data tidak ditemukan." });
-            }
-            // Update properties
-            foreach (var prop in model.GetType().GetProperties())
-            {
-                var value = prop.GetValue(model);
-                if (value != null)
-                {
-                    prop.SetValue(existingRecord, value);
-                }
+                return BadRequest("Data user tidak boleh kosong. || 400 Bad Request");
             }
 
-            _context.Titles.Update(existingRecord);
-            await _context.SaveChangesAsync();
+            // Cari data berdasarkan ID
+            var vm = await _context.Titles.FindAsync(id);
+            if (vm == null)
+            {
+                return NotFound($"User dengan ID {id} tidak ditemukan. || 404 Not Found");
+            }
 
-            return Ok(new { message = "Data berhasil diperbarui." });
+            try
+            {
+                // Perbarui data user
+                vm.UpdateDateTime = DateTime.Now;
+                vm.UpdateBy = Guid.Parse(user.Id); // Menyimpan userId sebagai GUID
+                vm.NamaTitle = update.NamaTitle;
+
+                // Tandai data sebagai telah diubah
+                _context.Titles.Update(vm);
+
+                // Simpan perubahan ke database
+                await _context.SaveChangesAsync(); // Pastikan menggunakan SaveChangesAsync untuk operasi asinkron
+
+                return Ok(new { message = "Berhasil Update || 200 OK" });
+            }
+            catch (Exception ex)
+            {
+                // Tangani error jika terjadi masalah
+                return StatusCode(500, $"Terjadi kesalahan saat memperbarui data: {ex.Message}");
+            }
         }
+
 
         // DELETE: api/Title/{id}
         [HttpDelete("{id}")]
