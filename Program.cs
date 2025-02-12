@@ -113,6 +113,20 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowSpecific", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
+
+
+// Add services to the container.
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();

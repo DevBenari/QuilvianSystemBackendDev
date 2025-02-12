@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Runtime.ConstrainedExecution;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
@@ -10,20 +11,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    public class PendidikanController : Controller
+    public class KeanggotaanController : Controller
     {
         private readonly ApplicationDbContext _context;
 
-        public PendidikanController(ApplicationDbContext context)
+        public KeanggotaanController(ApplicationDbContext context)
         {
             _context = context;
         }
 
-        // GET: api/Pendidikan
+        // GET: api/Keangotaan
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var records = await _context.Pendidikans.ToListAsync();
+            var records = await _context.Keangotaans.ToListAsync();
             if (records == null || !records.Any())
             {
                 return NotFound(new { message = "Tidak ada data ditemukan." });
@@ -31,11 +32,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             return Ok(new { message = "Data ditemukan.", data = records });
         }
 
-        // GET: api/Pendidikan/{id}
+        // GET: api/Keangotaan/{id}
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var record = await _context.Pendidikans.FindAsync(id);
+            var record = await _context.Keangotaans.FindAsync(id);
             if (record == null)
             {
                 return NotFound(new { message = $"Data dengan ID {id} tidak ditemukan." });
@@ -43,9 +44,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             return Ok(new { message = "Data ditemukan.", data = record });
         }
 
-        // POST: api/Pendidikan
+        // POST: api/Keangotaan
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] PendidikanViewModel model)
+        public async Task<IActionResult> Create([FromBody] KeanggotaanViewModel model)
         {
             var dateNow = DateTimeOffset.Now;
             var day = dateNow.Day;
@@ -55,38 +56,39 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             var setDateNow = DateTimeOffset.Now.ToString("yyMMdd");
 
             // Generate UserActiveCode
-            var lastCode = _context.Pendidikans
+            var lastCode = _context.Keangotaans
                 .Where(d => d.CreateDateTime.Day == day && d.CreateDateTime.Month == month && d.CreateDateTime.Year == year)
-                .OrderByDescending(k => k.KodePendidikan)
+                .OrderByDescending(k => k.KeangotaanKode)
                 .FirstOrDefault();
 
             if (lastCode == null)
             {
-                model.KodePendidikan = "PDD" + setDateNow + "0001";
+                model.KeangotaanKode = "AGT" + setDateNow + "0001";
             }
             else
             {
-                var lastCodeTrim = lastCode.KodePendidikan.Substring(3, 6);
+                var lastCodeTrim = lastCode.KeangotaanKode.Substring(3, 6);
 
                 if (lastCodeTrim != setDateNow)
                 {
-                    model.KodePendidikan = "PDD" + setDateNow + "0001";
+                    model.KeangotaanKode = "AGT" + setDateNow + "0001";
                 }
                 else
                 {
-                    model.KodePendidikan = "PDD" + setDateNow +
-                        (Convert.ToInt32(lastCode.KodePendidikan.Substring(9)) + 1).ToString("D4");
+                    model.KeangotaanKode = "AGT" + setDateNow +
+                        (Convert.ToInt32(lastCode.KeangotaanKode.Substring(9)) + 1).ToString("D4");
                 }
             }
 
             //Validate ModelState
             if (ModelState.IsValid)
             {
-                var pendidikan = new Pendidikan
+                var keanggotaan = new Keangotaan
                 {
-                    PendidikanId = Guid.NewGuid(),
-                    KodePendidikan = model.KodePendidikan,
-                    NamaPendidikan = model.NamaPendidikan,
+                    KeangotaanId = Guid.NewGuid(),
+                    KeangotaanKode = model.KeangotaanKode,
+                    JenisKeangotaan = model.JenisKeangotaan,
+                    JenisPromo = model.JenisPromo,
                     CreateDateTime = DateTimeOffset.Now,
                     CreateBy = Guid.NewGuid(),
                     UpdateDateTime = DateTimeOffset.Now,
@@ -97,14 +99,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 };
 
 
-                var checkDuplicate = _context.Pendidikans.Where(c => c.KodePendidikan == model.KodePendidikan && c.NamaPendidikan == model.NamaPendidikan).ToList();
+                var checkDuplicate = _context.Keangotaans.Where(c => c.KeangotaanKode == model.KeangotaanKode && c.JenisKeangotaan == model.JenisKeangotaan
+                                     && c.JenisPromo == model.JenisPromo).ToList();
 
                 if (checkDuplicate.Count == 0)
                 {
-                    var result = _context.Pendidikans.Where(c => c.KodePendidikan == model.KodePendidikan && c.NamaPendidikan == model.NamaPendidikan).FirstOrDefault();
+                    var result = _context.Keangotaans.Where(c => c.KeangotaanKode == model.KeangotaanKode && c.JenisKeangotaan == model.JenisKeangotaan
+                                     && c.JenisPromo == model.JenisPromo).FirstOrDefault();
                     if (result == null)
                     {
-                        _context.Pendidikans.Add(pendidikan);
+                        _context.Keangotaans.Add(keanggotaan);
                         _context.SaveChanges();
                         return CreatedAtAction(nameof(GetAll), new { message = "Tambah Data Berhasil || 201 Created" }, model);
                     }
@@ -124,39 +128,40 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-        // PUT: api/Pendidikan/{id}
+        // PUT: api/Keangotaan/{id}
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] PendidikanViewModel model)
+        public async Task<IActionResult> Update(Guid id, [FromBody] KeanggotaanViewModel model)
         {
-            //cek apakah data ada di database
-            var existingNegara = await _context.Pendidikans.FindAsync(id);
-            if (existingNegara == null)
+            // cek apakah data ada di database
+            var existingKeanggotaan = await _context.Keangotaans.FindAsync(id);
+            if (existingKeanggotaan == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan. || 404 Not Found " });
             }
 
             //cek duplikat data
-            var checkDuplicate = _context.Pendidikans.Where
-                (c => c.KodePendidikan == model.KodePendidikan && c.NamaPendidikan == model.NamaPendidikan
-                && c.PendidikanId != id).FirstOrDefault();
+            var checkDuplicate = _context.Keangotaans.Where
+                (c => c.KeangotaanKode == model.KeangotaanKode && c.JenisKeangotaan == model.JenisKeangotaan
+                                     && c.JenisPromo == model.JenisPromo).FirstOrDefault();
             if (checkDuplicate != null)
             {
                 return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
             }
 
             // Update properti dari data yang ada dengan nilai dari model
-            existingNegara.NamaPendidikan = model.NamaPendidikan;
+            existingKeanggotaan.JenisKeangotaan = model.JenisKeangotaan;
+            existingKeanggotaan.JenisPromo = model.JenisPromo;
 
-            // kode negara tidak diupdate hanya diganti nama pendidikan saja
-            //existingNegara.KodePendidikan = model.KodePendidikan;
 
-            existingNegara.UpdateDateTime = DateTimeOffset.Now;
-            existingNegara.UpdateBy = Guid.NewGuid();  // Sesuaikan dengan ID pengguna yang mengupdate
+            //existingKeanggotaan.KeangotaanKode = model.KeangotaanKode;
+
+            existingKeanggotaan.UpdateDateTime = DateTimeOffset.Now;
+            existingKeanggotaan.UpdateBy = Guid.NewGuid();  // Sesuaikan dengan ID pengguna yang mengupdate
 
             // Simpan perubahan ke database
             try
             {
-                _context.Pendidikans.Update(existingNegara);
+                _context.Keangotaans.Update(existingKeanggotaan);
                 await _context.SaveChangesAsync();
 
                 return CreatedAtAction(nameof(GetAll), new { message = "Tambah Data Berhasil || 201 Created" }, model);
@@ -168,44 +173,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-        // DELETE: api/Pendidikan/{id}
+        // DELETE: api/Keangotaan/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
-            var record = await _context.Pendidikans.FindAsync(id);
+            var record = await _context.Keangotaans.FindAsync(id);
             if (record == null)
             {
                 return NotFound(new { message = $"Data dengan ID {id} tidak ditemukan." });
             }
-            _context.Pendidikans.Remove(record);
+            _context.Keangotaans.Remove(record);
             await _context.SaveChangesAsync();
             return Ok(new { message = "Data berhasil dihapus." });
-        }
-
-
-        //search
-        [HttpGet("search")]
-        public async Task<IActionResult> Search([FromQuery] string keyword)
-        {
-            // Validasi input keyword
-            if (string.IsNullOrWhiteSpace(keyword))
-            {
-                return BadRequest(new { message = "Keyword tidak boleh kosong. || 400 Bad Request" });
-            }
-
-            // Lakukan pencarian di database (case-insensitive)
-            var searchResults = await _context.Pendidikans
-                .Where(n => EF.Functions.Like(n.NamaPendidikan, $"%{keyword}%"))
-                .ToListAsync();
-
-            // Jika tidak ada data ditemukan
-            if (!searchResults.Any())
-            {
-                return NotFound(new { message = "Data tidak ditemukan. || 404 Not Found" });
-            }
-
-            // Mengembalikan hasil pencarian
-            return Ok(new { message = "Data ditemukan.", data = searchResults });
         }
     }
 }

@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
@@ -9,21 +8,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
-    public class PendidikanController : Controller
+    public class IdentitasController : Controller
     {
         private readonly ApplicationDbContext _context;
 
-        public PendidikanController(ApplicationDbContext context)
+        public IdentitasController(ApplicationDbContext context)
         {
             _context = context;
         }
 
-        // GET: api/Pendidikan
+        //get : api/identitas
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var records = await _context.Pendidikans.ToListAsync();
+            var records = await _context.Identitass.ToListAsync();
             if (records == null || !records.Any())
             {
                 return NotFound(new { message = "Tidak ada data ditemukan." });
@@ -31,11 +29,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             return Ok(new { message = "Data ditemukan.", data = records });
         }
 
-        // GET: api/Pendidikan/{id}
+        //get : api/identitas/{id}
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var record = await _context.Pendidikans.FindAsync(id);
+            var record = await _context.Identitass.FindAsync(id);
             if (record == null)
             {
                 return NotFound(new { message = $"Data dengan ID {id} tidak ditemukan." });
@@ -43,50 +41,49 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             return Ok(new { message = "Data ditemukan.", data = record });
         }
 
-        // POST: api/Pendidikan
+        //post : api/identitas
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] PendidikanViewModel model)
+        public async Task<IActionResult> Create([FromBody] IdentitasViewModel model)
         {
             var dateNow = DateTimeOffset.Now;
             var day = dateNow.Day;
             var month = dateNow.Month;
             var year = dateNow.Year;
-
             var setDateNow = DateTimeOffset.Now.ToString("yyMMdd");
 
             // Generate UserActiveCode
-            var lastCode = _context.Pendidikans
+            var lastCode = _context.Identitass
                 .Where(d => d.CreateDateTime.Day == day && d.CreateDateTime.Month == month && d.CreateDateTime.Year == year)
-                .OrderByDescending(k => k.KodePendidikan)
+                .OrderByDescending(d => d.CreateDateTime)
                 .FirstOrDefault();
 
             if (lastCode == null)
-            {
-                model.KodePendidikan = "PDD" + setDateNow + "0001";
+            { 
+                model.KdIdentitas = "IDT" + setDateNow + "0001";
             }
             else
             {
-                var lastCodeTrim = lastCode.KodePendidikan.Substring(3, 6);
+                var lastCodeTrim = lastCode.KdIdentitas.Substring(3, 6);
 
                 if (lastCodeTrim != setDateNow)
                 {
-                    model.KodePendidikan = "PDD" + setDateNow + "0001";
+                    model.KdIdentitas = "IDT" + setDateNow + "0001";
                 }
                 else
                 {
-                    model.KodePendidikan = "PDD" + setDateNow +
-                        (Convert.ToInt32(lastCode.KodePendidikan.Substring(9)) + 1).ToString("D4");
+                    model.KdIdentitas = "IDT" + setDateNow +
+                        (Convert.ToInt32(lastCode.KdIdentitas.Substring(9)) + 1).ToString("D4");
                 }
             }
 
-            //Validate ModelState
+            //validate model
             if (ModelState.IsValid)
             {
-                var pendidikan = new Pendidikan
+                var identitas = new Identitas
                 {
-                    PendidikanId = Guid.NewGuid(),
-                    KodePendidikan = model.KodePendidikan,
-                    NamaPendidikan = model.NamaPendidikan,
+                    IdentitasId = Guid.NewGuid(),
+                    KdIdentitas = model.KdIdentitas,
+                    JenisIdentitas = model.JenisIdentitas,
                     CreateDateTime = DateTimeOffset.Now,
                     CreateBy = Guid.NewGuid(),
                     UpdateDateTime = DateTimeOffset.Now,
@@ -96,15 +93,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     IsDelete = false
                 };
 
-
-                var checkDuplicate = _context.Pendidikans.Where(c => c.KodePendidikan == model.KodePendidikan && c.NamaPendidikan == model.NamaPendidikan).ToList();
+                var checkDuplicate = _context.Identitass.Where(c => c.KdIdentitas == model.KdIdentitas && c.JenisIdentitas == model.JenisIdentitas).ToList();
 
                 if (checkDuplicate.Count == 0)
                 {
-                    var result = _context.Pendidikans.Where(c => c.KodePendidikan == model.KodePendidikan && c.NamaPendidikan == model.NamaPendidikan).FirstOrDefault();
+                    var result = _context.Identitass.Where(c => c.KdIdentitas == model.KdIdentitas && c.JenisIdentitas == model.JenisIdentitas).FirstOrDefault();
                     if (result == null)
                     {
-                        _context.Pendidikans.Add(pendidikan);
+                        _context.Identitass.Add(identitas);
                         _context.SaveChanges();
                         return CreatedAtAction(nameof(GetAll), new { message = "Tambah Data Berhasil || 201 Created" }, model);
                     }
@@ -122,41 +118,40 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             {
                 return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
             }
+
         }
 
-        // PUT: api/Pendidikan/{id}
+        //put : api/identitas/{id}
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] PendidikanViewModel model)
+        public async Task<IActionResult> Update(Guid id, [FromBody] IdentitasViewModel model)
         {
             //cek apakah data ada di database
-            var existingNegara = await _context.Pendidikans.FindAsync(id);
-            if (existingNegara == null)
+            var existingIdentitas = await _context.Identitass.FindAsync(id);
+            if (existingIdentitas == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan. || 404 Not Found " });
             }
 
             //cek duplikat data
-            var checkDuplicate = _context.Pendidikans.Where
-                (c => c.KodePendidikan == model.KodePendidikan && c.NamaPendidikan == model.NamaPendidikan
-                && c.PendidikanId != id).FirstOrDefault();
+            var checkDuplicate = _context.Identitass.Where
+                (c => c.KdIdentitas == model.KdIdentitas && c.JenisIdentitas == model.JenisIdentitas
+                && c.IdentitasId != id).FirstOrDefault();
             if (checkDuplicate != null)
             {
                 return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
             }
 
-            // Update properti dari data yang ada dengan nilai dari model
-            existingNegara.NamaPendidikan = model.NamaPendidikan;
+            existingIdentitas.JenisIdentitas = model.JenisIdentitas;
 
-            // kode negara tidak diupdate hanya diganti nama pendidikan saja
-            //existingNegara.KodePendidikan = model.KodePendidikan;
 
-            existingNegara.UpdateDateTime = DateTimeOffset.Now;
-            existingNegara.UpdateBy = Guid.NewGuid();  // Sesuaikan dengan ID pengguna yang mengupdate
+
+            existingIdentitas.UpdateDateTime = DateTimeOffset.Now;
+            existingIdentitas.UpdateBy = Guid.NewGuid();  // Sesuaikan dengan ID pengguna yang mengupdate
 
             // Simpan perubahan ke database
             try
             {
-                _context.Pendidikans.Update(existingNegara);
+                _context.Identitass.Update(existingIdentitas);
                 await _context.SaveChangesAsync();
 
                 return CreatedAtAction(nameof(GetAll), new { message = "Tambah Data Berhasil || 201 Created" }, model);
@@ -168,23 +163,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-        // DELETE: api/Pendidikan/{id}
+        //delete : api/identitas/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
-            var record = await _context.Pendidikans.FindAsync(id);
+            var record = await _context.Identitass.FindAsync(id);
             if (record == null)
             {
                 return NotFound(new { message = $"Data dengan ID {id} tidak ditemukan." });
             }
-            _context.Pendidikans.Remove(record);
+            _context.Identitass.Remove(record);
             await _context.SaveChangesAsync();
             return Ok(new { message = "Data berhasil dihapus." });
         }
 
-
-        //search
-        [HttpGet("search")]
+        //fungsi search
+        [HttpGet("Search")]
         public async Task<IActionResult> Search([FromQuery] string keyword)
         {
             // Validasi input keyword
@@ -194,8 +188,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
 
             // Lakukan pencarian di database (case-insensitive)
-            var searchResults = await _context.Pendidikans
-                .Where(n => EF.Functions.Like(n.NamaPendidikan, $"%{keyword}%"))
+            var searchResults = await _context.Identitass
+                .Where(n => EF.Functions.Like(n.JenisIdentitas, $"%{keyword}%"))
                 .ToListAsync();
 
             // Jika tidak ada data ditemukan
