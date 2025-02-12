@@ -12,7 +12,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
         public DateTime? JamMasuk { get; set; }
         public DateTime? JamKeluar { get; set; }
 
-        [ForeignKey("DokterId")]
-        public Dokter Dokters { get; set; }
+        public Guid DokterId { get; set; }
     }
 }

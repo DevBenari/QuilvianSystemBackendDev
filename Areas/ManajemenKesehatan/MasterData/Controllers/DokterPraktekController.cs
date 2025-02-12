@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Repositories;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
@@ -49,7 +50,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
         // POST: api/DokterPraktek
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] DokterPraktek model)
+        public async Task<IActionResult> Create([FromBody] DokterPraktekViewModel model)
         {
             //validate modelstate
             if (ModelState.IsValid)
@@ -72,47 +73,101 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     DeleteBy = Guid.NewGuid(),
                     IsDelete = false
                 };
-            
-            }
+                var checkDuplicate = _context.DokterPrakteks.Where(c => c.DokterId == model.DokterId && c.Dokter == model.Dokter).ToList();
 
-            if (model == null)
+                if (checkDuplicate.Count == 0)
+                {
+                    var result = _context.DokterPrakteks.Where(c => c.DokterId == model.DokterId && c.Dokter == model.Dokter).FirstOrDefault();
+                    if (result == null)
+                    {
+                        _context.DokterPrakteks.Add(dokterPraktek);
+                        _context.SaveChanges();
+                        return CreatedAtAction(nameof(GetAll), new { message = "Tambah Data Berhasil || 201 Created" }, model);
+                    }
+                    else
+                    {
+                        return BadRequest(new { message = "Data tidak dapat di input !!! || 400 Bad Request" });
+                    }
+                }
+                else
+                {
+                    return Conflict(new { message = "Terdapat duplikasi data !!! || 409 Conflict Data" });
+                }
+            }
+            else
             {
-                return BadRequest(new { message = "Data tidak valid." });
-            }
-            model.DokterPraktekId = Guid.NewGuid();
-            _context.DokterPrakteks.Add(model);
-            await _context.SaveChangesAsync();
+                return BadRequest(new { message = "Data tidak valid !!!! || 400 Bad Request" });
 
-            return CreatedAtAction(nameof(GetById), new { id = model.DokterPraktekId }, model);
+            }
         }
 
         // PUT: api/DokterPraktek/{id}
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] DokterPraktek model)
+        public async Task<IActionResult> Update(Guid id, [FromBody] DokterPraktekViewModel model)
         {
-            if (model == null || id != model.DokterPraktekId)
+
+            //cek apakah data ada di database
+            var existingDokterPraktek = await _context.DokterPrakteks.FindAsync(id);
+            if (existingDokterPraktek == null)
             {
-                return BadRequest(new { message = "Data tidak valid." });
-            }
-            var existingRecord = await _context.DokterPrakteks.FindAsync(id);
-            if (existingRecord == null)
-            {
-                return NotFound(new { message = "Data tidak ditemukan." });
-            }
-            // Update properties
-            foreach (var prop in model.GetType().GetProperties())
-            {
-                var value = prop.GetValue(model);
-                if (value != null)
-                {
-                    prop.SetValue(existingRecord, value);
-                }
+                return NotFound(new { message = "Data tidak ditemukan. || 404 Not Found " });
             }
 
-            _context.DokterPrakteks.Update(existingRecord);
-            await _context.SaveChangesAsync();
+            //cek duplikat data
+            var checkDuplicate = _context.DokterPrakteks.Where
+                (c => c.DokterId == model.DokterId && c.Dokter == model.Dokter
+                && c.DokterPraktekId != id).FirstOrDefault();
+            if (checkDuplicate != null)
+            {
+                return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
+            }
 
-            return Ok(new { message = "Data berhasil diperbarui." });
+            // Update properti dari data yang ada dengan nilai dari model
+            existingDokterPraktek.Dokter = model.Dokter;
+            existingDokterPraktek.Layanan = model.Layanan;
+            existingDokterPraktek.JamPraktek = model.JamPraktek;
+            existingDokterPraktek.Hari = model.Hari;
+            existingDokterPraktek.JamMasuk = model.JamMasuk;
+            existingDokterPraktek.JamKeluar = model.JamKeluar;
+            existingDokterPraktek.UpdateDateTime = DateTimeOffset.Now;
+            existingDokterPraktek.UpdateBy = Guid.NewGuid();  // Sesuaikan dengan ID pengguna yang mengupdate
+
+            // Simpan perubahan ke database
+            try
+            {
+                _context.DokterPrakteks.Update(existingDokterPraktek);
+                await _context.SaveChangesAsync();
+
+                return CreatedAtAction(nameof(GetAll), new { message = "Tambah Data Berhasil || 201 Created" }, model);
+            }
+            catch (Exception ex)
+            {
+                // Tangani kesalahan jika ada
+                return StatusCode(500, new { message = "Terjadi kesalahan di server.", error = ex.Message });
+            }
+            //if (model == null || id != model.DokterPraktekId)
+            //{
+            //    return BadRequest(new { message = "Data tidak valid." });
+            //}
+            //var existingRecord = await _context.DokterPrakteks.FindAsync(id);
+            //if (existingRecord == null)
+            //{
+            //    return NotFound(new { message = "Data tidak ditemukan." });
+            //}
+            //// Update properties
+            //foreach (var prop in model.GetType().GetProperties())
+            //{
+            //    var value = prop.GetValue(model);
+            //    if (value != null)
+            //    {
+            //        prop.SetValue(existingRecord, value);
+            //    }
+            //}
+
+            //_context.DokterPrakteks.Update(existingRecord);
+            //await _context.SaveChangesAsync();
+
+            //return Ok(new { message = "Data berhasil diperbarui." });
         }
 
         // DELETE: api/DokterPraktek/{id}
