@@ -4,8 +4,10 @@ namespace QuilvianSystemBackendDev.Models
 {
     public class ApplicationUser : IdentityUser
     {
-        public string NamaDepan { get; set; }
-        public string NamaBelakang { get; set; }
+        public string KodeUser { get; set; }
+        public string NamaUser { get; set; }
+        public bool IsActive { get; set; }
+        public bool IsOnline { get; set; }
     }
 
 }

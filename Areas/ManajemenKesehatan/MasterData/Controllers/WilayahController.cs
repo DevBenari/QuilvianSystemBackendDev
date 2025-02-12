@@ -1,5 +1,6 @@
 ﻿using System.Dynamic;
 using System.Text.Json;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
@@ -10,6 +11,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class WilayahController : Controller
     {
         private readonly ApplicationDbContext _context;

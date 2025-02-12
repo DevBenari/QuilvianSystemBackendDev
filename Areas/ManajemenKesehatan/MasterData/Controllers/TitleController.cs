@@ -11,7 +11,6 @@ using static QRCoder.PayloadGenerator;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
-
     [ApiController]
     [Route("api/[controller]")]
     //[Authorize]
@@ -119,7 +118,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Tandai data sebagai telah diubah
                 _context.Titles.Update(vm);
-
                 // Simpan perubahan ke database
                 await _context.SaveChangesAsync(); // Pastikan menggunakan SaveChangesAsync untuk operasi asinkron
 

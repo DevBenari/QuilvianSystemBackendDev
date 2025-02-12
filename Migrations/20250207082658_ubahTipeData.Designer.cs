@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using QuilvianSystemBackendDev.Repositories;
 
@@ -11,9 +12,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250207082658_ubahTipeData")]
+    partial class ubahTipeData
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -404,108 +406,28 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.ToTable("MstGolonganDarah", "dbo");
                 });
 
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Identitas", b =>
+            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Kabupaten", b =>
                 {
-                    b.Property<Guid>("IdentitasId")
+                    b.Property<Guid>("KabupatenId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("CreateBy")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTimeOffset>("CreateDateTime")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<Guid>("DeleteBy")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTimeOffset>("DeleteDateTime")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<bool>("IsDelete")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("JenisIdentitas")
+                    b.Property<string>("KabupatenCode")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("KdIdentitas")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("UpdateBy")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTimeOffset>("UpdateDateTime")
-                        .HasColumnType("datetimeoffset");
-
-                    b.HasKey("IdentitasId");
-
-                    b.ToTable("MstIdentitas", "dbo");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Jabatan", b =>
-                {
-                    b.Property<Guid>("JabatanId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("CreateBy")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTimeOffset>("CreateDateTime")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<Guid>("DeleteBy")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTimeOffset>("DeleteDateTime")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<bool>("IsDelete")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("JabatanKode")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("JenisJabatan")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("UpdateBy")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTimeOffset>("UpdateDateTime")
-                        .HasColumnType("datetimeoffset");
-
-                    b.HasKey("JabatanId");
-
-                    b.ToTable("MstJabatan", "dbo");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.KabupatenKota", b =>
-                {
-                    b.Property<Guid>("KabupatenKotaId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("KabupatenKotaCode")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("KabupatenKotaName")
+                    b.Property<string>("KabupatenName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("ProvinsiId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.HasKey("KabupatenKotaId");
+                    b.HasKey("KabupatenId");
 
                     b.HasIndex("ProvinsiId");
 
-                    b.ToTable("MstKabupatenKota", "dbo");
+                    b.ToTable("MstKabupaten", "dbo");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Keangotaan", b =>
@@ -558,7 +480,7 @@ namespace QuilvianSystemBackendDev.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("KabupatenKotaId")
+                    b.Property<Guid>("KabupatenId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("KecamatanCode")
@@ -571,7 +493,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("KecamatanId");
 
-                    b.HasIndex("KabupatenKotaId");
+                    b.HasIndex("KabupatenId");
 
                     b.ToTable("MstKecamatan", "dbo");
                 });
@@ -726,9 +648,6 @@ namespace QuilvianSystemBackendDev.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("NegaraId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<string>("ProvinsiCode")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -738,8 +657,6 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("ProvinsiId");
-
-                    b.HasIndex("NegaraId");
 
                     b.ToTable("MstProvinsi", "dbo");
                 });
@@ -1243,7 +1160,7 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Navigation("Dokters");
                 });
 
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.KabupatenKota", b =>
+            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Kabupaten", b =>
                 {
                     b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Provinsi", "Provinsi")
                         .WithMany("Kabupaten")
@@ -1256,13 +1173,13 @@ namespace QuilvianSystemBackendDev.Migrations
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Kecamatan", b =>
                 {
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.KabupatenKota", "Kabupatenkota")
+                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Kabupaten", "Kabupaten")
                         .WithMany("Kecamatans")
-                        .HasForeignKey("KabupatenKotaId")
+                        .HasForeignKey("KabupatenId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Kabupatenkota");
+                    b.Navigation("Kabupaten");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Kelurahan", b =>
@@ -1276,18 +1193,7 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Navigation("Kecamatan");
                 });
 
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Provinsi", b =>
-                {
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Negara", "Negara")
-                        .WithMany()
-                        .HasForeignKey("NegaraId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Negara");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.KabupatenKota", b =>
+            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Kabupaten", b =>
                 {
                     b.Navigation("Kecamatans");
                 });

@@ -11,86 +11,72 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
         public Guid PendaftaranPasienBaruId { get; set; }
 
         // Informasi Utama
-        public string KodePasien { get; set; }
-        public string NoRekamMedis { get; set; }
-        public DateTime TanggalDibuat { get; set; }
-        public string DibuatOleh { get; set; }
+        public string? KodePasien { get; set; }        
+        public string? NoRekamMedis { get; set; }
+        public string TipePasien { get; set; }
+        public string? NoRekamMedisLama { get; set; }
 
         // Informasi Pasien
-        public string Title { get; set; }
+        public Guid? TitleId { get; set; }
         public string NamaLengkap { get; set; }
-        public string Identitas { get; set; }
+        public Guid IdentitasId { get; set; }
         public string NoIdentitas { get; set; } // KTP atau Passport
-        public string TempatLahir { get; set; }
-        public DateTime TanggalLahir { get; set; }
-        public string JenisKelamin { get; set; }
-        public string Status { get; set; }
-        public string Agama { get; set; }
-        public string PendidikanTerakhir { get; set; }
+        public string? TempatLahir { get; set; }
+        public DateTimeOffset? TanggalLahir { get; set; }
+        public string? JenisKelamin { get; set; }
+        public string? Status { get; set; }
+        public Guid? AgamaId { get; set; }
+        public Guid? PendidikanTerakhirId { get; set; }
 
         // Informasi Alamat
-        public string AlamatIdentitas { get; set; }
-        public string AlamatDomisili { get; set; }
-        public string Negara { get; set; }
-        public string Provinsi { get; set; }
-        public string Kota { get; set; }
-        public string Kabupaten { get; set; }
-        public string Kelurahan { get; set; }
-        public string Kecamatan { get; set; }
-        public string KodePos { get; set; }
-        public string Email { get; set; }
-        public string Notelpon1 { get; set; }
-        public string Notelpon2 { get; set; }
-        public string Notelpon3 { get; set; }
+        public string? AlamatIdentitas { get; set; }
+        public string? AlamatDomisili { get; set; }
+        public Guid? NegaraId { get; set; }
+        public Guid? ProvinsiId { get; set; }
+        public Guid? KotaId { get; set; }
+        public Guid? KecKabId { get; set; }
+        public Guid? KelurahanId { get; set; }
+        public string? KodePos { get; set; }
+        public string? Email { get; set; }
+        public int? NoTelepon1 { get; set; }
+        public int? NoTelepon2 { get; set; }
+        public int? NoTelepon3 { get; set; }
 
         // Informasi Grafis
-        public string? Kewarganegaraan { get; set; }
+        public Guid? KewarganegaraanId { get; set; }
         public string? Suku { get; set; }
         public string? StatusKewarganegaraan { get; set; }
 
         // Informasi Pekerjaan
-        public string Pekerjaan { get; set; } // Nomor telepon pasien
-        public string NamaPerusahaan { get; set; }
-        public string AlamatPerusahaan { get; set; }
-        public string NoPerusahaan { get; set; }
+        public Guid? PekerjaanId { get; set; }
+        public string? NamaPerusahaan { get; set; }
+        public string? AlamatPerusahaan { get; set; }
+        public int? NoTeleponPerusahaan { get; set; }
 
         // Informasi Kesehatan
-        public string GolonganDarah { get; set; }
-        public string Alergi { get; set; }
-        public string RiwayatPenyakit { get; set; }
-        public string RiwayatOperasi { get; set; }
-        public string RiwayatPenyakitKeluarga { get; set; }
-
-        // Informasi Keluarga
-        public string NomorKeluargaTerdekat { get; set; }
-        public string HubunganKeluarga { get; set; }
-        public string AlamatKeluarga { get; set; }
-        public string KelurahanKeluarga { get; set; }
-        public string KabupatenKeluarga { get; set; }
-        public string NomorTeleponKeluarga { get; set; }
-        public string NamaAyah { get; set; }
-        public string NamaIbu { get; set; }
-        public string NamaSutri { get; set; }
-        public string NomorKtpSutri { get; set; }
+        public Guid? GolonganDarahId { get; set; }
+        public string? Alergi { get; set; }
+        public string? RiwayatPenyakit { get; set; }
+        public string? RiwayatOperasi { get; set; }
+        public string? RiwayatPenyakitKeluarga { get; set; }
 
         // Informasi Darurat
-        public string NamaKontakDarurat { get; set; } // Data karyawan rumah sakit yang input
-        public string Hubkel { get; set; }
-        public string IdentitasDarurat { get; set; }
-        public string AlamatDarurat { get; set; }
-        public string NoDarurat { get; set; }
+        public string? NamaKontakDarurat { get; set; } // Data karyawan rumah sakit yang input
+        public string? HubunganPasien { get; set; }
+        public string? NoIdentitasDarurat { get; set; }
+        public string? AlamatDarurat { get; set; }
+        public string? NoTeleponDarurat { get; set; }
 
-        // Informasi Darurat
-        public string NamaOrtu { get; set; } // Data karyawan rumah sakit yang input
-        public string IdentitasOrtu { get; set; }
-        public string PekerjaanOrtu { get; set; }
-        public string HubkelAnak { get; set; }
-        public string InformasiSekolah { get; set; }
+        // Informasi Pasien Anak
+        public string? NamaOrangTua { get; set; } // Data karyawan rumah sakit yang input
+        public string? IdentitasOrangTua { get; set; }
+        public string? PekerjaanOrangTua { get; set; }
+        public string? HubunganAnak { get; set; }
+        public string? InformasiSekolah { get; set; }
 
-        // Informasi Darurat
-        public string Foto { get; set; }
-        public string QrCode { get; set; }
-
+        // Informasi Tambahan
+        public string? Foto { get; set; }
+        public string? QrCode { get; set; }
     }
 
 }

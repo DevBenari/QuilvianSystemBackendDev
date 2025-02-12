@@ -1,7 +1,14 @@
-﻿namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels
+﻿using QuilvianSystemBackendDev.Models;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
 {
-    public class UserActiveViewModel
+    [Table("MstUserActive", Schema = "dbo")]
+    public class UserActive : UserActivity
     {
+        [Key]
+        public Guid UserActiveId { get; set; }
         public string UserActiveCode { get; set; }
         public string FullName { get; set; }
         public string IdentityNumber { get; set; }
@@ -12,5 +19,6 @@
         public string Handphone { get; set; }
         public string Email { get; set; }
         public bool IsActive { get; set; }
+
     }
 }
