@@ -30,7 +30,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet("Kabupaten")]
         public async Task<IActionResult> GetAllKabupaten()
         {
-            var records = await _context.Kabupatens.Include(k => k.Provinsi).ToListAsync();
+            var records = await _context.Kabupatens.ToListAsync();
             return records.Any() ? Ok(new { message = "Data ditemukan.", data = records }) : NotFound(new { message = "Tidak ada data ditemukan." });
         }
 
@@ -38,7 +38,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet("Kecamatan")]
         public async Task<IActionResult> GetAllKecamatan()
         {
-            var records = await _context.Kecamatans.Include(k => k.Kabupaten).ToListAsync();
+            var records = await _context.Kecamatans.ToListAsync();
             return records.Any() ? Ok(new { message = "Data ditemukan.", data = records }) : NotFound(new { message = "Tidak ada data ditemukan." });
         }
 
@@ -46,7 +46,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet("Kelurahan")]
         public async Task<IActionResult> GetAllKelurahan()
         {
-            var records = await _context.Kelurahans.Include(k => k.Kecamatan).ToListAsync();
+            var records = await _context.Kelurahans.ToListAsync();
             return records.Any() ? Ok(new { message = "Data ditemukan.", data = records }) : NotFound(new { message = "Tidak ada data ditemukan." });
         }
 
@@ -61,17 +61,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
             else if (model == "Kabupaten")
             {
-                var record = await _context.Kabupatens.Include(k => k.Provinsi).FirstOrDefaultAsync(k => k.KabupatenId == id);
+                var record = await _context.Kabupatens.FirstOrDefaultAsync(k => k.KabupatenId == id);
                 return record != null ? Ok(new { message = "Data ditemukan.", data = record }) : NotFound(new { message = $"Kabupaten dengan ID {id} tidak ditemukan." });
             }
             else if (model == "Kecamatan")
             {
-                var record = await _context.Kecamatans.Include(k => k.Kabupaten).FirstOrDefaultAsync(k => k.KecamatanId == id);
+                var record = await _context.Kecamatans.FirstOrDefaultAsync(k => k.KecamatanId == id);
                 return record != null ? Ok(new { message = "Data ditemukan.", data = record }) : NotFound(new { message = $"Kecamatan dengan ID {id} tidak ditemukan." });
             }
             else if (model == "Kelurahan")
             {
-                var record = await _context.Kelurahans.Include(k => k.Kecamatan).FirstOrDefaultAsync(k => k.KelurahanId == id);
+                var record = await _context.Kelurahans.FirstOrDefaultAsync(k => k.KelurahanId == id);
                 return record != null ? Ok(new { message = "Data ditemukan.", data = record }) : NotFound(new { message = $"Kelurahan dengan ID {id} tidak ditemukan." });
             }
 

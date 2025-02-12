@@ -26,6 +26,8 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<Asuransi> Asuransis { get; set; }
         public DbSet<Keangotaan> Keangotaans { get; set; }
         public DbSet<Negara> Negaras { get; set; }
+        public DbSet<RolePosition> RolePositions { get; set; }
+        public DbSet<RoleUser> RoleUsers { get; set; }
         #endregion
 
         #region Areas Pendaftaran
