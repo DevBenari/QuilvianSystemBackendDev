@@ -11,11 +11,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
     [ApiController]
     [Route("api/[controller]")]
     //[Authorize] 
-    public class KeanggotaanController : Controller
+    public class KeangotanController : Controller
     {
         private readonly ApplicationDbContext _context;
 
-        public KeanggotaanController(ApplicationDbContext context)
+        public KeangotanController(ApplicationDbContext context)
         {
             _context = context;
         }
