@@ -44,12 +44,12 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
         }
-        // GET: api/PendaftaranPasien
+
         [HttpGet]
         public IActionResult GetAllPendaftaranPasienBaru()
         {
-            var daftar = _applicationDbContext.PendaftaranPasienBarus.ToList();
-            if (daftar == null || !daftar.Any())
+            var listdata = _applicationDbContext.PendaftaranPasienBarus.ToList();
+            if (listdata == null || !listdata.Any())
             {
                 return NotFound(new { message = "Belum ada data. || 404 Not Found" });
             }
@@ -57,16 +57,15 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
             return Ok(new
             {
                 message = "Berhasil || 200 OK",
-                data = daftar
+                data = listdata
             });
         }
 
-        // GET: api/PendaftaranPasien
         [HttpGet("{id}")]
         public IActionResult GetPendaftraanPasienBaruById(Guid id)
         {
-            var daftar = _applicationDbContext.PendaftaranPasienBarus.Find(id);
-            if (daftar == null)
+            var listdata = _applicationDbContext.PendaftaranPasienBarus.Find(id);
+            if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
             }
@@ -74,7 +73,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
             return Ok(new
             {
                 message = "Ditemukan || 200 OK",
-                data = daftar
+                data = listdata
             });
         }
         
@@ -216,16 +215,12 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     fotoPath = "/FotoPasienBaru/user.jpg";
                 }
 
-                // Simpan Data Pendaftaran
+                // Simpan Data
                 var daftar = new PendaftaranPasienBaru
                 {
                     PendaftaranPasienBaruId = Guid.NewGuid(),
                     CreateDateTime = DateTimeOffset.Now,
-                    CreateBy = UserActiveId,
-                    UpdateDateTime = DateTimeOffset.MinValue,
-                    UpdateBy = Guid.Empty,
-                    DeleteDateTime = DateTimeOffset.MinValue,
-                    DeleteBy = Guid.Empty,
+                    CreateBy = UserActiveId,                    
                     KodePasien = kodePasien,
                     NoRekamMedis = noRekamMedis,
                     TipePasien = vm.TipePasien,
@@ -294,7 +289,6 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
             }
         }
 
-        // PUT: api/PendaftaranPasien/5
         [HttpPut("{id}")]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> UpdatePendaftaranPasien(Guid id, [FromForm] PendaftaranPasienBaruViewModel vm)
@@ -320,7 +314,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 var pasien = _applicationDbContext.PendaftaranPasienBarus.Find(id);
                 if (pasien == null)
                 {
-                    return NotFound(new { message = "Pasien tidak ditemukan." });
+                    return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
                 // **Update Data Pasien**
@@ -424,8 +418,6 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
             }
         }
 
-
-        // DELETE: api/PendaftaranPasien/5
         [HttpDelete("{id}")]        
         public async Task<IActionResult> DeletePendaftaranPasien(Guid id)
         {
@@ -445,7 +437,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 var pasien = _applicationDbContext.PendaftaranPasienBarus.Find(id);
                 if (pasien == null)
                 {
-                    return NotFound(new { message = "Pasien tidak ditemukan." });
+                    return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
                 // **Soft Delete (Tandai Data sebagai Terhapus)**
@@ -456,7 +448,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 _applicationDbContext.PendaftaranPasienBarus.Update(pasien);
                 _applicationDbContext.SaveChanges();
 
-                return Ok(new { message = "Data pasien berhasil dihapus..." });
+                return Ok(new { message = "Data berhasil dihapus..." });
             }
             catch (Exception ex)
             {
