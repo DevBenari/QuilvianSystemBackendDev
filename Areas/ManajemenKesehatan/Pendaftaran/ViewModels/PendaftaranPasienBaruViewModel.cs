@@ -4,17 +4,14 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewModels
 {
     public class PendaftaranPasienBaruViewModel
-    {
-        //public Guid PendaftaranPasienBaruId { get; set; }
-
-        //// Informasi Utama
-        //public string KodePasien { get; set; }
-        //public string? NoRekamMedis { get; set; }
+    {        
         // Informasi Pasien
+        public string TipePasien { get; set; }
+        public string? NoRekamMedisLama { get; set; }
         public Guid? TitleId { get; set; }
-        public string? NamaLengkap { get; set; }
-        public Guid? IdentitasId { get; set; }
-        public string? NoIdentitas { get; set; } // KTP atau Passport
+        public string NamaLengkap { get; set; }
+        public Guid IdentitasId { get; set; }
+        public string NoIdentitas { get; set; } // KTP atau Passport
         public string? TempatLahir { get; set; }
         public DateTime? TanggalLahir { get; set; }
         public string? JenisKelamin { get; set; }
@@ -42,7 +39,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewMode
         public string? StatusKewarganegaraan { get; set; }
 
         // Informasi Pekerjaan
-        public string? Pekerjaan { get; set; } // Nomor telepon pasien
+        public Guid? PekerjaanId { get; set; }
         public string? NamaPerusahaan { get; set; }
         public string? AlamatPerusahaan { get; set; }
         public int? NoTeleponPerusahaan { get; set; }

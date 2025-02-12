@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using System.Text;
@@ -65,12 +66,24 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddSwaggerGen(c =>
 {
     c.EnableAnnotations();
-    var xmlFilename = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
-var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFilename);
-if (File.Exists(xmlPath))
-{
-    c.IncludeXmlComments(xmlPath);
-}
+
+    // Konversi Enum ke String di Swagger
+    c.MapType<PeriodeFilter>(() => new OpenApiSchema
+    {
+        Type = "string",
+        Enum = Enum.GetValues(typeof(PeriodeFilter))
+            .Cast<PeriodeFilter>()
+            .Select(e => new OpenApiString(e.ToString()))
+            .ToList<IOpenApiAny>()
+    });
+
+    // Menampilkan Date Picker untuk startDate dan endDate
+    c.MapType<DateTime>(() => new OpenApiSchema
+    {
+        Type = "string",
+        Format = "date-time"
+    });
+
     c.SwaggerDoc("v1", new() { Title = "My API", Version = "v1" });
 
     // Konfigurasi JWT Authentication
