@@ -3,20 +3,21 @@ using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using QRCoder;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
-using System.Drawing;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewModels;
-using Microsoft.AspNetCore.Hosting;
 using System.Security.Claims;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    //[Authorize] 
+    [Authorize] 
     [EnableCors("AllowSpecific")]
     public class PendaftaranPasienBaruController : Controller
     {
@@ -43,12 +44,12 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
         }
-        // GET: api/PendaftaranPasien
+
         [HttpGet]
         public IActionResult GetAllPendaftaranPasienBaru()
         {
-            var daftar = _applicationDbContext.PendaftaranPasienBarus.ToList();
-            if (daftar == null || !daftar.Any())
+            var listdata = _applicationDbContext.PendaftaranPasienBarus.ToList();
+            if (listdata == null || !listdata.Any())
             {
                 return NotFound(new { message = "Belum ada data. || 404 Not Found" });
             }
@@ -56,16 +57,15 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
             return Ok(new
             {
                 message = "Berhasil || 200 OK",
-                data = daftar
+                data = listdata
             });
         }
 
-        // GET: api/PendaftaranPasien
         [HttpGet("{id}")]
         public IActionResult GetPendaftraanPasienBaruById(Guid id)
         {
-            var daftar = _applicationDbContext.PendaftaranPasienBarus.Find(id);
-            if (daftar == null)
+            var listdata = _applicationDbContext.PendaftaranPasienBarus.Find(id);
+            if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
             }
@@ -73,7 +73,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
             return Ok(new
             {
                 message = "Ditemukan || 200 OK",
-                data = daftar
+                data = listdata
             });
         }
         
@@ -215,18 +215,16 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     fotoPath = "/FotoPasienBaru/user.jpg";
                 }
 
-                // Simpan Data Pendaftaran
+                // Simpan Data
                 var daftar = new PendaftaranPasienBaru
                 {
                     PendaftaranPasienBaruId = Guid.NewGuid(),
                     CreateDateTime = DateTimeOffset.Now,
-                    CreateBy = UserActiveId,
-                    UpdateDateTime = DateTimeOffset.MinValue,
-                    UpdateBy = Guid.Empty,
-                    DeleteDateTime = DateTimeOffset.MinValue,
-                    DeleteBy = Guid.Empty,
+                    CreateBy = UserActiveId,                    
                     KodePasien = kodePasien,
                     NoRekamMedis = noRekamMedis,
+                    TipePasien = vm.TipePasien,
+                    NoRekamMedisLama = vm.NoRekamMedisLama,
                     TitleId = vm.TitleId,
                     NamaLengkap = vm.NamaLengkap,
                     IdentitasId = vm.IdentitasId,
@@ -252,7 +250,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     KewarganegaraanId = vm.KewarganegaraanId,
                     Suku = vm.Suku,
                     StatusKewarganegaraan = vm.StatusKewarganegaraan,
-                    Pekerjaan = vm.Pekerjaan,
+                    PekerjaanId = vm.PekerjaanId,
                     NamaPerusahaan = vm.NamaPerusahaan,
                     AlamatPerusahaan = vm.AlamatPerusahaan,
                     NoTeleponPerusahaan = vm.NoTeleponPerusahaan,
@@ -291,9 +289,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
             }
         }
 
-        // PUT: api/PendaftaranPasien/5
         [HttpPut("{id}")]
-        [Authorize]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> UpdatePendaftaranPasien(Guid id, [FromForm] PendaftaranPasienBaruViewModel vm)
         {
@@ -318,14 +314,16 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 var pasien = _applicationDbContext.PendaftaranPasienBarus.Find(id);
                 if (pasien == null)
                 {
-                    return NotFound(new { message = "Pasien tidak ditemukan." });
+                    return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
                 // **Update Data Pasien**
+                pasien.TipePasien = vm.TipePasien;
+                pasien.NoRekamMedisLama = vm.NoRekamMedisLama ?? pasien.NoRekamMedisLama;
                 pasien.TitleId = vm.TitleId ?? pasien.TitleId;
-                pasien.NamaLengkap = vm.NamaLengkap ?? pasien.NamaLengkap;
-                pasien.IdentitasId = vm.IdentitasId ?? pasien.IdentitasId;
-                pasien.NoIdentitas = vm.NoIdentitas ?? pasien.NoIdentitas;
+                pasien.NamaLengkap = vm.NamaLengkap;
+                pasien.IdentitasId = vm.IdentitasId;
+                pasien.NoIdentitas = vm.NoIdentitas;
                 pasien.TempatLahir = vm.TempatLahir ?? pasien.TempatLahir;
                 pasien.TanggalLahir = vm.TanggalLahir != default ? vm.TanggalLahir : pasien.TanggalLahir;
                 pasien.JenisKelamin = vm.JenisKelamin ?? pasien.JenisKelamin;
@@ -347,7 +345,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 pasien.KewarganegaraanId = vm.KewarganegaraanId ?? pasien.KewarganegaraanId;
                 pasien.Suku = vm.Suku ?? pasien.Suku;
                 pasien.StatusKewarganegaraan = vm.StatusKewarganegaraan ?? pasien.StatusKewarganegaraan;
-                pasien.Pekerjaan = vm.Pekerjaan ?? pasien.Pekerjaan;
+                pasien.PekerjaanId = vm.PekerjaanId ?? pasien.PekerjaanId;
                 pasien.NamaPerusahaan = vm.NamaPerusahaan ?? pasien.NamaPerusahaan;
                 pasien.AlamatPerusahaan = vm.AlamatPerusahaan ?? pasien.AlamatPerusahaan;
                 pasien.NoTeleponPerusahaan = vm.NoTeleponPerusahaan ?? pasien.NoTeleponPerusahaan;
@@ -399,26 +397,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     }
 
                     pasien.Foto = $"/FotoPasienBaru/{fotoFileName}";
-                }
-
-                // **Update QR Code jika No Rekam Medis berubah**
-                //if (vm.NoRekamMedis != null && vm.NoRekamMedis != pasien.NoRekamMedis)
-                //{
-                //    var logoPath = Path.Combine(_webHostEnvironment.WebRootPath, "images", "logo.png");
-                //    var qrCodeImage = QrCodeHelper.GenerateQRCodeWithLogo(vm.NoRekamMedis, logoPath);
-
-                //    var qrCodeFolder = Path.Combine(_webHostEnvironment.WebRootPath, "QRCodePasienBaru");
-                //    if (!Directory.Exists(qrCodeFolder))
-                //    {
-                //        Directory.CreateDirectory(qrCodeFolder);
-                //    }
-
-                //    var qrCodeFileName = $"{vm.NoRekamMedis}.png";
-                //    var qrCodeFilePath = Path.Combine(qrCodeFolder, qrCodeFileName);
-                //    qrCodeImage.Save(qrCodeFilePath, System.Drawing.Imaging.ImageFormat.Png);
-
-                //    pasien.QrCode = $"/qrcodes/{qrCodeFileName}";
-                //}
+                }                
 
                 pasien.UpdateBy = UserActiveId;
                 pasien.UpdateDateTime = DateTimeOffset.Now;
@@ -439,10 +418,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
             }
         }
 
-
-        // DELETE: api/PendaftaranPasien/5
-        [HttpDelete("{id}")]
-        [Authorize]
+        [HttpDelete("{id}")]        
         public async Task<IActionResult> DeletePendaftaranPasien(Guid id)
         {
             try
@@ -461,7 +437,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 var pasien = _applicationDbContext.PendaftaranPasienBarus.Find(id);
                 if (pasien == null)
                 {
-                    return NotFound(new { message = "Pasien tidak ditemukan." });
+                    return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
                 // **Soft Delete (Tandai Data sebagai Terhapus)**
@@ -472,7 +448,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 _applicationDbContext.PendaftaranPasienBarus.Update(pasien);
                 _applicationDbContext.SaveChanges();
 
-                return Ok(new { message = "Data pasien berhasil dihapus..." });
+                return Ok(new { message = "Data berhasil dihapus..." });
             }
             catch (Exception ex)
             {
@@ -480,5 +456,119 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
             }
         }
 
+        [HttpGet("paged")]
+        public IActionResult PegedPendaftaranPasienBaru(
+        int page = 1,
+        int perPage = 10,
+        string? search = null,
+        string? orderBy = "CreateDateTime",
+        string? sortDirection = "asc",
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ")]
+        DateTime? startDate = null,
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ")]
+        DateTime? endDate = null,
+        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        {
+            if (startDate.HasValue && endDate.HasValue && startDate > endDate)
+            {
+                return BadRequest(new { message = "StartDate tidak boleh lebih besar dari EndDate." });
+            }
+
+            // Jika tidak menggunakan daterange, gunakan periode filter
+            if (!startDate.HasValue && !endDate.HasValue && periode == null)
+            {
+                return BadRequest(new { message = "Harap pilih periode atau masukkan rentang tanggal yang valid." });
+            }
+
+            var query = _applicationDbContext.PendaftaranPasienBarus.AsQueryable();
+
+            // 🔍 Filter berdasarkan search
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(u => u.KodePasien.Contains(search) ||
+                                         u.NoRekamMedis.Contains(search) ||
+                                         u.NamaLengkap.Contains(search));
+            }
+
+            // 📅 Filter berdasarkan daterange
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                query = query.Where(u => u.CreateDateTime.Date >= startDate.Value.Date &&
+                                         u.CreateDateTime.Date <= endDate.Value.Date);
+            }
+
+            // 📆 Filter berdasarkan periode (Hari Ini, Minggu Ini, dll)
+            if (periode.HasValue)
+            {
+                DateTime today = DateTime.UtcNow.Date;
+
+                switch (periode)
+                {
+                    case PeriodeFilter.Today:
+                        query = query.Where(u => u.CreateDateTime.Date == today);
+                        break;
+                    case PeriodeFilter.ThisWeek:
+                        query = query.Where(u => u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
+                                                 u.CreateDateTime.Date <= today);
+                        break;
+                    case PeriodeFilter.LastWeek:
+                        query = query.Where(u => u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
+                                                 u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek)));
+                        break;
+                    case PeriodeFilter.ThisMonth:
+                        query = query.Where(u => u.CreateDateTime.Month == today.Month &&
+                                                 u.CreateDateTime.Year == today.Year);
+                        break;
+                    case PeriodeFilter.LastMonth:
+                        query = query.Where(u => u.CreateDateTime.Month == today.Month - 1 &&
+                                                 u.CreateDateTime.Year == today.Year);
+                        break;
+                    case PeriodeFilter.ThisYear:
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
+                        break;
+                    case PeriodeFilter.LastYear:
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
+                        break;
+                    case PeriodeFilter.Last3Months:
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
+                        break;
+                    case PeriodeFilter.Last6Months:
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
+                        break;
+                }
+            }
+
+            // Sorting Data
+            if (!string.IsNullOrEmpty(orderBy))
+            {
+                query = sortDirection?.ToLower() == "desc"
+                    ? query.OrderByDescending(e => EF.Property<object>(e, orderBy))
+                    : query.OrderBy(e => EF.Property<object>(e, orderBy));
+            }
+
+            // Pagination
+            var totalRows = query.Count();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
+
+            if (rows.Count == 0 && page > totalPages)
+            {
+                return NotFound(new { message = "Page not found." });
+            }
+
+            return Ok(new
+            {
+                status = "success",
+                message = "Data retrieved successfully",
+                data = new
+                {
+                    Rows = rows,
+                    TotalRows = totalRows,
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalPages = totalPages
+                }
+            });
+        }
     }
 }

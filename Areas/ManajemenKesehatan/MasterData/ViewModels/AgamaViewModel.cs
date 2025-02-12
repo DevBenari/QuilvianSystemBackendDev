@@ -1,7 +1,7 @@
 ﻿namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels
 {
-    public class TitleViewModel
+    public class AgamaViewModel
     {
-        public string NamaTitle { get; set; }
+        public string NamaAgama { get; set; }
     }
 }

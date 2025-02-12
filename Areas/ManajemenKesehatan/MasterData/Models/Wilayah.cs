@@ -11,16 +11,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public Guid ProvinsiId { get; set; }
         public string ProvinsiCode { get; set; }
         public string ProvinsiName { get; set; }
+        //foreign key to NegaraId
+        public Guid NegaraId { get; set; }
+        [ForeignKey("NegaraId")]
+        public Negara Negara { get; set; }
+
+        // Relationship with Kabupaten
+        public ICollection<KabupatenKota> Kabupaten { get; set; }
 
     }
 
-    [Table("MstKabupaten", Schema = "dbo")]
-    public class Kabupaten
+    [Table("MstKabupatenKota", Schema = "dbo")]
+    public class KabupatenKota
     {
         [Key]
-        public Guid KabupatenId { get; set; }
-        public string KabupatenCode { get; set; }
-        public string KabupatenName { get; set; }
+        public Guid KabupatenKotaId { get; set; }
+        public string KabupatenKotaCode { get; set; }
+        public string KabupatenKotaName { get; set; }
 
         // Foreign key to ProvinsiId (Guid)
         public Guid ProvinsiId { get; set; }  
@@ -35,7 +42,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string KecamatanName { get; set; }
 
         // Foreign key to KabupatenId (Guid)
-        public Guid KabupatenId { get; set; }  
+
+        public Guid KabupatenKotaId { get; set; }  // Changed to match KabupatenId type (Guid)
+        [ForeignKey("KabupatenKotaId")]
+        public KabupatenKota Kabupatenkota { get; set; }  // Relationship with Kabupaten
+
+        // Relationship with Kelurahan
+        public ICollection<Kelurahan> Kelurahans { get; set; }
+
     }
 
     [Table("MstKelurahan", Schema = "dbo")]
