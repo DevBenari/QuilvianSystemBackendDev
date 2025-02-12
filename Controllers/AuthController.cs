@@ -31,7 +31,7 @@ namespace QuilvianSystemBackendDev.Controllers
 
         [HttpPost("login")]
         [AllowAnonymous]
-        public async Task<IActionResult> Login([FromBody] LoginModel model)
+        public async Task<IActionResult> Login([FromForm] LoginModel model)
         {
             if (ModelState.IsValid)
             {
