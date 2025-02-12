@@ -2,7 +2,12 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
+using QuilvianSystemBackendDev.Migrations;
 using QuilvianSystemBackendDev.Repositories;
+using Newtonsoft.Json.Converters;
+using Newtonsoft.Json;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
@@ -44,46 +49,129 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
         // POST: api/Dokter
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] Dokter model)
+        public async Task<IActionResult> Create([FromBody] DokterViewModel model)
         {
-            if (model == null)
-            {
-                return BadRequest(new { message = "Data tidak valid." });
-            }
-            model.DokterId = Guid.NewGuid();
-            _context.Dokters.Add(model);
-            await _context.SaveChangesAsync();
+            var dateNow = DateTimeOffset.Now;
+            var day = dateNow.Day;
+            var month = dateNow.Month;
+            var year = dateNow.Year;
 
-            return CreatedAtAction(nameof(GetById), new { id = model.DokterId }, model);
+            var setDateNow = DateTimeOffset.Now.ToString("yyMMdd");
+
+            // Generate UserActiveCode
+            var lastCode = _context.Dokters
+                .Where(d => d.CreateDateTime.Day == day && d.CreateDateTime.Month == month && d.CreateDateTime.Year == year)
+                .OrderByDescending(k => k.KdDokter)
+                .FirstOrDefault();
+
+            if (lastCode == null)
+            {
+                model.KdDokter = "DR" + setDateNow + "0001";
+            }
+            else
+            { 
+                var lastCodeTrim = lastCode.KdDokter.Substring(3,6);
+                if (lastCodeTrim != setDateNow)
+                {
+                    model.KdDokter = "DR" + setDateNow + "0001";
+                }
+                else
+                {
+                    model.KdDokter = "DR" + setDateNow + (Convert.ToInt32(lastCode.KdDokter.Substring(9)) + 1).ToString("D4");
+                }
+            }
+
+            // validate model state
+            if (ModelState.IsValid)
+            {
+                var dokter = new Dokter
+                {
+                    DokterId = Guid.NewGuid(),
+                    KdDokter = model.KdDokter,
+                    NmDokter = model.NmDokter,
+                    Sip = model.Sip,
+                    Str = model.Str,
+                    TglSip = model.TglSip,
+                    TglStr = model.TglStr,
+                    PanggilDokter = model.PanggilDokter,
+                    Nik = model.Nik,
+                    CreateDateTime = DateTimeOffset.Now,
+                    CreateBy = Guid.NewGuid(),
+                    UpdateDateTime = DateTimeOffset.Now,
+                    UpdateBy = Guid.NewGuid(),
+                    DeleteDateTime = DateTimeOffset.Now,
+                    DeleteBy = Guid.NewGuid(),
+                    IsDelete = false
+                };
+
+                var checkDuplicate = _context.Dokters.Where(c => c.KdDokter == model.KdDokter && c.NmDokter == model.NmDokter).ToList();
+
+                if (checkDuplicate.Count == 0)
+                {
+                    var result = _context.Dokters.Where(c => c.KdDokter == model.KdDokter && c.NmDokter == model.NmDokter).FirstOrDefault();
+                    if (result == null)
+                    {
+                        _context.Dokters.Add(dokter);
+                        _context.SaveChanges();
+                        return CreatedAtAction(nameof(GetAll), new { message = "Tambah Data Berhasil || 201 Created" }, model);
+                    }
+                    else
+                    {
+                        return BadRequest(new { message = "Data tidak dapat di input !!! || 400 Bad Request" });
+                    }
+                }
+                else
+                {
+                    return Conflict(new { message = "Terdapat duplikasi data !!! || 409 Conflict Data" });
+                }
+            }
+            else
+            {
+                return BadRequest(new { message = "Data tidak valid !!!! || 400 Bad Request" });
+            }
         }
 
         // PUT: api/Dokter/{id}
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] Dokter model)
+        public async Task<IActionResult> Update(Guid id, [FromBody] DokterViewModel model)
         {
-            if (model == null || id != model.DokterId)
+            //cek apakah data ada ditabase
+            var existingDokter = await _context.Dokters.FindAsync(id);
+            if (existingDokter == null)
             {
-                return BadRequest(new { message = "Data tidak valid." });
-            }
-            var existingRecord = await _context.Dokters.FindAsync(id);
-            if (existingRecord == null)
-            {
-                return NotFound(new { message = "Data tidak ditemukan." });
-            }
-            // Update properties
-            foreach (var prop in model.GetType().GetProperties())
-            {
-                var value = prop.GetValue(model);
-                if (value != null)
-                {
-                    prop.SetValue(existingRecord, value);
-                }
+                return NotFound(new { message = "Data tidak ditemukan. || 404 Not Found " });
             }
 
-            _context.Dokters.Update(existingRecord);
-            await _context.SaveChangesAsync();
+            //cek duplikat data
+            var checkDuplicate = _context.Dokters.Where
+                (c => c.KdDokter == model.KdDokter && c.NmDokter == model.NmDokter
+                && c.DokterId != id).FirstOrDefault();
+            if (checkDuplicate == null)
+            {
+                return Conflict(new { message = "Terdapat duplikasi data !!! || 409 Conflict Data" });
+            }
 
-            return Ok(new { message = "Data berhasil diperbarui." });
+            //existingDokter.KdDokter = model.KdDokter;
+            existingDokter.NmDokter = model.NmDokter;
+            existingDokter.Sip = model.Sip;
+            existingDokter.Str = model.Str;
+            existingDokter.TglSip = model.TglSip;
+            existingDokter.TglStr = model.TglStr;
+            existingDokter.PanggilDokter = model.PanggilDokter;
+            existingDokter.Nik = model.Nik;
+            existingDokter.UpdateDateTime = DateTimeOffset.Now;
+            existingDokter.UpdateBy = Guid.NewGuid();
+
+            try
+            {
+                _context.Dokters.Update(existingDokter);
+                await _context.SaveChangesAsync();
+                return CreatedAtAction(nameof(GetAll), new { message = "Tambah Data Berhasil || 201 Created" }, model);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Terjadi kesalahan di server.", error = ex.Message });
+            }
         }
 
         // DELETE: api/Dokter/{id}
@@ -99,5 +187,101 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             await _context.SaveChangesAsync();
             return Ok(new { message = "Data berhasil dihapus." });
         }
+
+        //fungsi search
+        [HttpGet("search")]
+        public async Task<IActionResult> Search([FromQuery] string keyword)
+        {
+            // Validasi input keyword
+            if (string.IsNullOrWhiteSpace(keyword))
+            {
+                return BadRequest(new { message = "Keyword tidak boleh kosong. || 400 Bad Request" });
+            }
+
+            // Lakukan pencarian di database (case-insensitive)
+            var searchResults = await _context.Dokters
+                .Where(n => EF.Functions.Like(n.NmDokter, $"%{keyword}%"))
+                .ToListAsync();
+
+            // Jika tidak ada data ditemukan
+            if (!searchResults.Any())
+            {
+                return NotFound(new { message = "Data tidak ditemukan. || 404 Not Found" });
+            }
+
+            // Mengembalikan hasil pencarian
+            return Ok(new { message = "Data ditemukan.", data = searchResults });
+        }
+
+        // Pagination
+        [HttpGet("paged")]
+        public IActionResult PagedDokter(
+        int page = 1,
+        int perPage = 10,
+        string? search = null,
+        string? orderBy = "CreateDateTime",
+        string? sortDirection = "asc",
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ")]
+        DateTime? startDate = null,
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ")]
+        DateTime? endDate = null)
+        {
+            if (startDate.HasValue && endDate.HasValue && startDate > endDate)
+            {
+                return BadRequest(new { message = "StartDate tidak boleh lebih besar dari EndDate." });
+            }
+
+            var query = _context.Dokters.AsQueryable();
+
+            // 🔍 Filter berdasarkan search
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(u => u.KdDokter.Contains(search) ||
+                                         u.NmDokter.Contains(search) ||
+                                         u.Str.Contains(search));
+            }
+
+            // 📅 Filter berdasarkan daterange
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                query = query.Where(u => u.CreateDateTime.Date >= startDate.Value.Date &&
+                                         u.CreateDateTime.Date <= endDate.Value.Date);
+            }
+
+            
+
+            // Sorting Data
+            if (!string.IsNullOrEmpty(orderBy))
+            {
+                query = sortDirection?.ToLower() == "desc"
+                    ? query.OrderByDescending(e => EF.Property<object>(e, orderBy))
+                    : query.OrderBy(e => EF.Property<object>(e, orderBy));
+            }
+
+            // Pagination
+            var totalRows = query.Count();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
+
+            if (rows.Count == 0 && page > totalPages)
+            {
+                return NotFound(new { message = "Page not found." });
+            }
+
+            return Ok(new
+            {
+                status = "success",
+                message = "Data retrieved successfully",
+                data = new
+                {
+                    Rows = rows,
+                    TotalRows = totalRows,
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalPages = totalPages
+                }
+            });
+        }
+        
     }
 }

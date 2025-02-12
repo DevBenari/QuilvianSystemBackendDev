@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Runtime.ConstrainedExecution;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Repositories;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
@@ -13,7 +15,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
     {
         private readonly ApplicationDbContext _context;
 
-        public KeangotaanController(ApplicationDbContext context)
+        public KeangotanController(ApplicationDbContext context)
         {
             _context = context;
         }
@@ -44,46 +46,131 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
         // POST: api/Keangotaan
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] Keangotaan model)
+        public async Task<IActionResult> Create([FromBody] KeanggotaanViewModel model)
         {
-            if (model == null)
-            {
-                return BadRequest(new { message = "Data tidak valid." });
-            }
-            model.KeangotaanId = Guid.NewGuid();
-            _context.Keangotaans.Add(model);
-            await _context.SaveChangesAsync();
+            var dateNow = DateTimeOffset.Now;
+            var day = dateNow.Day;
+            var month = dateNow.Month;
+            var year = dateNow.Year;
 
-            return CreatedAtAction(nameof(GetById), new { id = model.KeangotaanId }, model);
+            var setDateNow = DateTimeOffset.Now.ToString("yyMMdd");
+
+            // Generate UserActiveCode
+            var lastCode = _context.Keangotaans
+                .Where(d => d.CreateDateTime.Day == day && d.CreateDateTime.Month == month && d.CreateDateTime.Year == year)
+                .OrderByDescending(k => k.KeangotaanKode)
+                .FirstOrDefault();
+
+            if (lastCode == null)
+            {
+                model.KeangotaanKode = "AGT" + setDateNow + "0001";
+            }
+            else
+            {
+                var lastCodeTrim = lastCode.KeangotaanKode.Substring(3, 6);
+
+                if (lastCodeTrim != setDateNow)
+                {
+                    model.KeangotaanKode = "AGT" + setDateNow + "0001";
+                }
+                else
+                {
+                    model.KeangotaanKode = "AGT" + setDateNow +
+                        (Convert.ToInt32(lastCode.KeangotaanKode.Substring(9)) + 1).ToString("D4");
+                }
+            }
+
+            //Validate ModelState
+            if (ModelState.IsValid)
+            {
+                var keanggotaan = new Keangotaan
+                {
+                    KeangotaanId = Guid.NewGuid(),
+                    KeangotaanKode = model.KeangotaanKode,
+                    JenisKeangotaan = model.JenisKeangotaan,
+                    JenisPromo = model.JenisPromo,
+                    CreateDateTime = DateTimeOffset.Now,
+                    CreateBy = Guid.NewGuid(),
+                    UpdateDateTime = DateTimeOffset.Now,
+                    UpdateBy = Guid.NewGuid(),
+                    DeleteDateTime = DateTimeOffset.Now,
+                    DeleteBy = Guid.NewGuid(),
+                    IsDelete = false
+                };
+
+
+                var checkDuplicate = _context.Keangotaans.Where(c => c.KeangotaanKode == model.KeangotaanKode && c.JenisKeangotaan == model.JenisKeangotaan
+                                     && c.JenisPromo == model.JenisPromo).ToList();
+
+                if (checkDuplicate.Count == 0)
+                {
+                    var result = _context.Keangotaans.Where(c => c.KeangotaanKode == model.KeangotaanKode && c.JenisKeangotaan == model.JenisKeangotaan
+                                     && c.JenisPromo == model.JenisPromo).FirstOrDefault();
+                    if (result == null)
+                    {
+                        _context.Keangotaans.Add(keanggotaan);
+                        _context.SaveChanges();
+                        return CreatedAtAction(nameof(GetAll), new { message = "Tambah Data Berhasil || 201 Created" }, model);
+                    }
+                    else
+                    {
+                        return BadRequest(new { message = "Data tidak dapat di input !!! || 400 Bad Request" });
+                    }
+                }
+                else
+                {
+                    return Conflict(new { message = "Terdapat duplikasi data !!! || 409 Conflict Data" });
+                }
+            }
+            else
+            {
+                return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
+            }
         }
 
         // PUT: api/Keangotaan/{id}
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] Keangotaan model)
+        public async Task<IActionResult> Update(Guid id, [FromBody] KeanggotaanViewModel model)
         {
-            if (model == null || id != model.KeangotaanId)
+            // cek apakah data ada di database
+            var existingKeanggotaan = await _context.Keangotaans.FindAsync(id);
+            if (existingKeanggotaan == null)
             {
-                return BadRequest(new { message = "Data tidak valid." });
-            }
-            var existingRecord = await _context.Keangotaans.FindAsync(id);
-            if (existingRecord == null)
-            {
-                return NotFound(new { message = "Data tidak ditemukan." });
-            }
-            // Update properties
-            foreach (var prop in model.GetType().GetProperties())
-            {
-                var value = prop.GetValue(model);
-                if (value != null)
-                {
-                    prop.SetValue(existingRecord, value);
-                }
+                return NotFound(new { message = "Data tidak ditemukan. || 404 Not Found " });
             }
 
-            _context.Keangotaans.Update(existingRecord);
-            await _context.SaveChangesAsync();
+            //cek duplikat data
+            var checkDuplicate = _context.Keangotaans.Where
+                (c => c.KeangotaanKode == model.KeangotaanKode && c.JenisKeangotaan == model.JenisKeangotaan
+                                     && c.JenisPromo == model.JenisPromo).FirstOrDefault();
+            if (checkDuplicate != null)
+            {
+                return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
+            }
 
-            return Ok(new { message = "Data berhasil diperbarui." });
+            // Update properti dari data yang ada dengan nilai dari model
+            existingKeanggotaan.JenisKeangotaan = model.JenisKeangotaan;
+            existingKeanggotaan.JenisPromo = model.JenisPromo;
+
+
+            //existingKeanggotaan.KeangotaanKode = model.KeangotaanKode;
+
+            existingKeanggotaan.UpdateDateTime = DateTimeOffset.Now;
+            existingKeanggotaan.UpdateBy = Guid.NewGuid();  // Sesuaikan dengan ID pengguna yang mengupdate
+
+            // Simpan perubahan ke database
+            try
+            {
+                _context.Keangotaans.Update(existingKeanggotaan);
+                await _context.SaveChangesAsync();
+
+                return CreatedAtAction(nameof(GetAll), new { message = "Tambah Data Berhasil || 201 Created" }, model);
+            }
+            catch (Exception ex)
+            {
+                // Tangani kesalahan jika ada
+                return StatusCode(500, new { message = "Terjadi kesalahan di server.", error = ex.Message });
+            }
         }
 
         // DELETE: api/Keangotaan/{id}
