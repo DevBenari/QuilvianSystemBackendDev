@@ -49,7 +49,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet]
         public async Task<IActionResult> GetAllJabatan()
         {
-            var listdata = _applicationDbContext.Jabatans.Where(a => a.IsDelete == true).ToList();
+            var listdata = _applicationDbContext.Jabatans.Where(a => a.IsDelete == false).ToList();
             if (listdata == null || !listdata.Any())
             {
                 return NotFound(new { message = "Belum ada data. || 404 Not Found" });
