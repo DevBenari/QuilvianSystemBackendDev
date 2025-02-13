@@ -9,7 +9,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
     {
         [Key]
         public Guid JabatanId { get; set; }
-        public string JabatanKode { get; set; }
-        public string JenisJabatan { get; set; }
+        public string KodeJabatan { get; set; }
+        public string NamaJabatan { get; set; }
     }
 }

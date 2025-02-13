@@ -78,8 +78,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
         }
         
         [HttpPost]
-        [Consumes("multipart/form-data")]
-        public async Task<IActionResult> CreatePendaftaranPasienBaru([FromForm] PendaftaranPasienBaruViewModel vm)
+        public async Task<IActionResult> CreatePendaftaranPasienBaru([FromBody] PendaftaranPasienBaruViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -290,8 +289,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
         }
 
         [HttpPut("{id}")]
-        [Consumes("multipart/form-data")]
-        public async Task<IActionResult> UpdatePendaftaranPasien(Guid id, [FromForm] PendaftaranPasienBaruViewModel vm)
+        public async Task<IActionResult> UpdatePendaftaranPasien(Guid id, [FromBody] PendaftaranPasienBaruViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {

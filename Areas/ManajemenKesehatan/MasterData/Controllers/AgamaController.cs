@@ -26,7 +26,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<PendaftaranPasienBaruController> _logger;
+        private readonly ILogger<AgamaController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
         public AgamaController
@@ -35,7 +35,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
 
-            ILogger<PendaftaranPasienBaruController> logger,
+            ILogger<AgamaController> logger,
             IWebHostEnvironment webHostEnvironment
         )
         {
@@ -79,7 +79,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateAgama([FromForm] AgamaViewModel vm)
+        public async Task<IActionResult> CreateAgama([FromBody] AgamaViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -135,23 +135,31 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
                 }
 
-                // Simpan Data
-                var data = new Agama
+                // Validate ModelState
+                if (ModelState.IsValid)
                 {
-                    AgamaId = Guid.NewGuid(),
-                    CreateDateTime = DateTimeOffset.Now,
-                    CreateBy = UserActiveId,                    
-                    KodeAgama = kode,
-                    NamaAgama = vm.NamaAgama                    
-                };
+                    // Simpan Data
+                    var data = new Agama
+                    {
+                        AgamaId = Guid.NewGuid(),
+                        CreateDateTime = DateTimeOffset.Now,
+                        CreateBy = UserActiveId,
+                        KodeAgama = kode,
+                        NamaAgama = vm.NamaAgama
+                    };
 
-                _applicationDbContext.Agamas.Add(data);
-                _applicationDbContext.SaveChanges();
+                    _applicationDbContext.Agamas.Add(data);
+                    _applicationDbContext.SaveChanges();
 
-                return Created("", new
+                    return Created("", new
+                    {
+                        message = "Tambah Data Berhasil || 201 Created",
+                    });
+                }
+                else
                 {
-                    message = "Tambah Data Berhasil || 201 Created",                    
-                });
+                    return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
+                }
             }
             catch (Exception ex)
             {
@@ -160,8 +168,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPut("{id}")]
-        [Consumes("multipart/form-data")]
-        public async Task<IActionResult> UpdateAgama(Guid id, [FromForm] AgamaViewModel vm)
+        public async Task<IActionResult> UpdateAgama(Guid id, [FromBody] AgamaViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
