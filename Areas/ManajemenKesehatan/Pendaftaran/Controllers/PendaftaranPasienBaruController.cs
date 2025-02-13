@@ -48,7 +48,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
         [HttpGet]
         public IActionResult GetAllPendaftaranPasienBaru()
         {
-            var listdata = _applicationDbContext.PendaftaranPasienBarus.ToList();
+            var listdata = _applicationDbContext.PendaftaranPasienBarus.Where(a => a.IsDelete == true).ToList();
             if (listdata == null || !listdata.Any())
             {
                 return NotFound(new { message = "Belum ada data. || 404 Not Found" });
@@ -219,7 +219,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 {
                     PendaftaranPasienBaruId = Guid.NewGuid(),
                     CreateDateTime = DateTimeOffset.Now,
-                    CreateBy = UserActiveId,                    
+                    CreateBy = UserActiveId,
                     KodePasien = kodePasien,
                     NoRekamMedis = noRekamMedis,
                     TipePasien = vm.TipePasien,

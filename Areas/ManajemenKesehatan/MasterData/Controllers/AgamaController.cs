@@ -7,7 +7,6 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using Microsoft.AspNetCore.Cors;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
-using QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using Swashbuckle.AspNetCore.Annotations;
@@ -49,7 +48,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet]
         public async Task<IActionResult> GetAllAgama()
         {
-            var listdata = _applicationDbContext.Agamas.ToList();
+            var listdata = _applicationDbContext.Agamas.Where(a => a.IsDelete == true).ToList();
             if (listdata == null || !listdata.Any())
             {
                 return NotFound(new { message = "Belum ada data. || 404 Not Found" });
