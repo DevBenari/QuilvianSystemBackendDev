@@ -50,7 +50,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet]
         public async Task<IActionResult> GetAllTitle()
         {
-            var listdata = _applicationDbContext.Titles.ToList();
+            var listdata = _applicationDbContext.Titles.Where(a => a.IsDelete == true).ToList();
             if (listdata == null || !listdata.Any())
             {
                 return NotFound(new { message = "Belum ada data. || 404 Not Found" });
