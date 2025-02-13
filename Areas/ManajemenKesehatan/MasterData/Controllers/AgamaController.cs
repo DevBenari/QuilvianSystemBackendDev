@@ -48,7 +48,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet]
         public async Task<IActionResult> GetAllAgama()
         {
-            var listdata = _applicationDbContext.Agamas.Where(a => a.IsDelete == true).ToList();
+            var listdata = _applicationDbContext.Agamas.Where(a => a.IsDelete == false).ToList();
             if (listdata == null || !listdata.Any())
             {
                 return NotFound(new { message = "Belum ada data. || 404 Not Found" });
