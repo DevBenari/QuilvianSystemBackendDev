@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using QuilvianSystemBackendDev.Repositories;
 
@@ -11,9 +12,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250212080736_changeModelAgama")]
+    partial class changeModelAgama
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -197,35 +199,14 @@ namespace QuilvianSystemBackendDev.Migrations
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Asuransi", b =>
                 {
-                    b.Property<Guid?>("AsuransiId")
+                    b.Property<Guid>("AsuransiId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("AlamatCabang")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("AlamatPusat")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("BatasMaxKlaimPerKunjungan")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("BatasMaxKlaimPerTahun")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("BatasWaktuPembayaran")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("BiayaTidakDitanggung")
-                        .HasColumnType("int");
 
                     b.Property<Guid>("CreateBy")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTimeOffset>("CreateDateTime")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<DateTimeOffset?>("Createdate")
                         .HasColumnType("datetimeoffset");
 
                     b.Property<Guid>("DeleteBy")
@@ -234,103 +215,29 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<DateTimeOffset>("DeleteDateTime")
                         .HasColumnType("datetimeoffset");
 
-                    b.Property<string>("DokumenKlaim")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("EmailPerwakilan")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("EmailPusat")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<bool>("IsDelete")
                         .HasColumnType("bit");
 
-                    b.Property<string>("JabatanPerwakilan")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("JenisAsuransi")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("KategoriAsuransi")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("KodeAsuransi")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Layanan")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("MasaTunggu")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("MaxUsiaPasien")
-                        .HasColumnType("int");
-
-                    b.Property<string>("MetodeKlaim")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("NamaAsuransi")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("NamaBank")
+                    b.Property<string>("Status")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("NamaBankCabang")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("NamaPerusahaanAsuransi")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("NamaPerwakilan")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("NoHotlineDarurat")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("NoRekRumahSakit")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("NoTelepon")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("NoTeleponPerwakilan")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ObatDitanggung")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("PenaltiTerlambatBayar")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("PersentasiBiayaPertanggungan")
-                        .HasColumnType("int");
-
-                    b.Property<string>("RSRekanan")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("StatusAsuransi")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("TambahanTanggungan")
-                        .HasColumnType("int");
-
-                    b.Property<DateTimeOffset?>("TanggalAkhirKerjasama")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<DateTimeOffset?>("TanggalMulaiKerjasama")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("TermOfPayment")
+                    b.Property<string>("TipePerusahaan")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("UpdateBy")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTimeOffset>("UpdateDateTime")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<DateTimeOffset?>("WaktuKlaim")
                         .HasColumnType("datetimeoffset");
 
                     b.HasKey("AsuransiId");
@@ -524,7 +431,7 @@ namespace QuilvianSystemBackendDev.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("KodeIdentitas")
+                    b.Property<string>("KdIdentitas")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -560,11 +467,11 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<bool>("IsDelete")
                         .HasColumnType("bit");
 
-                    b.Property<string>("KodeJabatan")
+                    b.Property<string>("JabatanKode")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("NamaJabatan")
+                    b.Property<string>("JenisJabatan")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 

@@ -4,208 +4,366 @@ using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Repositories;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
-using QuilvianSystemBackendDev.Migrations;
+using Microsoft.AspNetCore.Cors;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Identity;
+using QuilvianSystemBackendDev.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using Swashbuckle.AspNetCore.Annotations;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
+    [EnableCors("AllowSpecific")]
     public class AgamaController : Controller
     {
-        private readonly ApplicationDbContext _context;
+        private readonly ApplicationDbContext _applicationDbContext;
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly SignInManager<ApplicationUser> _signInManager;
 
-        public AgamaController(ApplicationDbContext context)
+        private readonly ILogger<AgamaController> _logger;
+        private readonly IWebHostEnvironment _webHostEnvironment;
+
+        public AgamaController
+        (
+            ApplicationDbContext context,
+            UserManager<ApplicationUser> userManager,
+            SignInManager<ApplicationUser> signInManager,
+
+            ILogger<AgamaController> logger,
+            IWebHostEnvironment webHostEnvironment
+        )
         {
-            _context = context;
+            _applicationDbContext = context;
+            _userManager = userManager;
+            _signInManager = signInManager;
+            _logger = logger;
+            _webHostEnvironment = webHostEnvironment;
         }
 
-        // GET: api/Agama
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAllAgama()
         {
-            var records = await _context.Agamas.ToListAsync();
-            if (records == null || !records.Any())
+            var listdata = _applicationDbContext.Agamas.Where(a => a.IsDelete == false).ToList();
+            if (listdata == null || !listdata.Any())
             {
-                return NotFound(new { message = "Tidak ada data ditemukan." });
+                return NotFound(new { message = "Belum ada data. || 404 Not Found" });
             }
-            return Ok(new { message = "Data ditemukan.", data = records });
+
+            return Ok(new
+            {
+                message = "Berhasil || 200 OK",
+                data = listdata
+            });
         }
 
-        // GET: api/Agama/{id}
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(Guid id)
+        public async Task<IActionResult> GetAgamaById(Guid id)
         {
-            var record = await _context.Agamas.FindAsync(id);
-            if (record == null)
+            var listdata = _applicationDbContext.Agamas.Find(id);
+            if (listdata == null)
             {
-                return NotFound(new { message = $"Data dengan ID {id} tidak ditemukan." });
+                return NotFound(new { message = "Data tidak ditemukan." });
             }
-            return Ok(new { message = "Data ditemukan.", data = record });
+
+            return Ok(new
+            {
+                message = "Ditemukan || 200 OK",
+                data = listdata
+            });
         }
 
-        // POST: api/Agama
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] AgamaViewModel model)
+        public async Task<IActionResult> CreateAgama([FromBody] AgamaViewModel vm)
         {
-            var dateNow = DateTimeOffset.Now;
-            var day = dateNow.Day;
-            var month = dateNow.Month;
-            var year = dateNow.Year;
-
-            var setDateNow = DateTimeOffset.Now.ToString("yyMMdd");
-
-            // Generate UserActiveCode
-            var lastCode = _context.Agamas
-                .Where(d => d.CreateDateTime.Day == day && d.CreateDateTime.Month == month && d.CreateDateTime.Year == year)
-                .OrderByDescending(k => k.AgamaKode)
-                .FirstOrDefault();
-
-            if (lastCode == null)
-            {
-                model.AgamaKode = "AGM" + setDateNow + "0001";
-            }
-            else
-            {
-                var lastCodeTrim = lastCode.AgamaKode.Substring(3, 6);
-
-                if (lastCodeTrim != setDateNow)
-                {
-                    model.AgamaKode = "AGM" + setDateNow + "0001";
-                }
-                else
-                {
-                    model.AgamaKode = "AGM" + setDateNow +
-                        (Convert.ToInt32(lastCode.AgamaKode.Substring(9)) + 1).ToString("D4");
-                }
-            }
-
-            //validate modelstate
-            if (ModelState.IsValid)
-            {
-                var agama = new Agama()
-                {
-                    AgamaId = Guid.NewGuid(),
-                    AgamaKode = model.AgamaKode,
-                    JenisAgama = model.JenisAgama,
-                    CreateDateTime = DateTimeOffset.Now,
-                    CreateBy = Guid.NewGuid(),
-                    UpdateDateTime = DateTimeOffset.Now,
-                    UpdateBy = Guid.NewGuid(),
-                    DeleteDateTime = DateTimeOffset.Now,
-                    DeleteBy = Guid.NewGuid(),
-                    IsDelete = false
-                };
-                var checkDuplicate = _context.Agamas.Where(c => c.AgamaKode == model.AgamaKode && c.JenisAgama == model.JenisAgama).ToList();
-
-                if (checkDuplicate.Count == 0)
-                {
-                    var result = _context.Agamas.Where(c => c.AgamaKode == model.AgamaKode && c.JenisAgama == model.JenisAgama).FirstOrDefault();
-                    if (result == null)
-                    {
-                        _context.Agamas.Add(agama);
-                        _context.SaveChanges();
-                        return CreatedAtAction(nameof(GetAll), new { message = "Tambah Data Berhasil || 201 Created" }, model);
-                    }
-                    else
-                    {
-                        return BadRequest(new { message = "Data tidak dapat di input !!! || 400 Bad Request" });
-                    }
-                }
-                else
-                {
-                    return Conflict(new { message = "Terdapat duplikasi data !!! || 409 Conflict Data" });
-                }
-            }
-            else
+            if (vm == null || !ModelState.IsValid)
             {
                 return BadRequest(new { message = "Data tidak valid." });
             }
-        }
 
-            // PUT: api/Agama/{id}
-            [HttpPut("{id}")]
-            public async Task<IActionResult> Update(Guid id, [FromBody] AgamaViewModel model)
+            try
             {
-                //cek apakah data ada di database
-                var existingAgama = await _context.Agamas.FindAsync(id);
-                if (existingAgama == null)
+                // **Ambil User ID dari JWT Claims**
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
+
+                if (string.IsNullOrEmpty(EmailLogin))
                 {
-                    return NotFound(new { message = "Data tidak ditemukan. || 404 Not Found " });
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                //cek duplikat data
-                var checkDuplicate = _context.Agamas.Where
-                    (c => c.AgamaKode == model.AgamaKode && c.JenisAgama == model.JenisAgama
-                    && c.AgamaId != id).FirstOrDefault();
-                if (checkDuplicate != null)
+                var dateNow = DateTimeOffset.Now;
+                var setDateNow = dateNow.ToString("yyMMdd");
+
+                // Ambil data terakhir untuk hari ini (tanpa ToString di query)
+                var lastCode = _applicationDbContext.Agamas
+                    .Where(d => d.CreateDateTime.Date == dateNow.Date)
+                    .OrderByDescending(k => k.KodeAgama)
+                    .FirstOrDefault();
+
+                string kode;
+                if (lastCode == null)
+                {
+                    kode = $"AGM{setDateNow}0001";
+                }
+                else
+                {
+                    var lastCodeTrim = lastCode.KodeAgama.Substring(3, 6);
+
+                    if (lastCodeTrim != setDateNow)
+                    {
+                        kode = $"AGM{setDateNow}0001";
+                    }
+                    else
+                    {
+                        kode = $"AGM{setDateNow}" + (Convert.ToInt32(lastCode.KodeAgama.Substring(9)) + 1).ToString("D4");
+                    }
+                }
+
+                // Cek Duplikasi
+                var isDuplicate = _applicationDbContext.Agamas
+                    .Any(c => c.KodeAgama == kode && c.NamaAgama == vm.NamaAgama);
+
+                if (isDuplicate)
                 {
                     return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
                 }
 
-                // Update properti dari data yang ada dengan nilai dari model
-                existingAgama.JenisAgama = model.JenisAgama;
-                //tidak update kode agama
-                //existingAgama.AgamaKode = model.AgamaKode;
-                existingAgama.UpdateDateTime = DateTimeOffset.Now;
-                existingAgama.UpdateBy = Guid.NewGuid();  // Sesuaikan dengan ID pengguna yang mengupdate
-
-                // Simpan perubahan ke database
-                try
+                // Validate ModelState
+                if (ModelState.IsValid)
                 {
-                    _context.Agamas.Update(existingAgama);
-                    await _context.SaveChangesAsync();
+                    // Simpan Data
+                    var data = new Agama
+                    {
+                        AgamaId = Guid.NewGuid(),
+                        CreateDateTime = DateTimeOffset.Now,
+                        CreateBy = UserActiveId,
+                        KodeAgama = kode,
+                        NamaAgama = vm.NamaAgama
+                    };
 
-                    return CreatedAtAction(nameof(GetAll), new { message = "Tambah Data Berhasil || 201 Created" }, model);
+                    _applicationDbContext.Agamas.Add(data);
+                    _applicationDbContext.SaveChanges();
+
+                    return Created("", new
+                    {
+                        message = "Tambah Data Berhasil || 201 Created",
+                    });
                 }
-                catch (Exception ex)
+                else
                 {
-                    // Tangani kesalahan jika ada
-                    return StatusCode(500, new { message = "Terjadi kesalahan di server.", error = ex.Message });
+                    return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }            
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateAgama(Guid id, [FromBody] AgamaViewModel vm)
+        {
+            if (vm == null || !ModelState.IsValid)
+            {
+                return BadRequest(new { message = "Data tidak valid." });
+            }
+
+            try
+            {
+                //Ambil User ID dari JWT Claims
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
+
+                if (string.IsNullOrEmpty(EmailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                // **Cari Data Pasien**
+                var data = _applicationDbContext.Agamas.Find(id);
+                if (data == null)
+                {
+                    return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                // **Update Data Pasien**
+                data.NamaAgama = vm.NamaAgama;
+
+                data.UpdateBy = UserActiveId;
+                data.UpdateDateTime = DateTimeOffset.Now;
+
+                _applicationDbContext.Agamas.Update(data);
+                _applicationDbContext.SaveChanges();
+
+                return Ok(new
+                {
+                    message = "Update Data Berhasil || 200 OK",                    
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteAgama(Guid id)
+        {
+            try
+            {
+                //Ambil User ID dari JWT Claims
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
+
+                if (string.IsNullOrEmpty(EmailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                // **Cari Data Pasien**
+                var data = _applicationDbContext.Agamas.Find(id);
+                if (data == null)
+                {
+                    return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                // **Soft Delete (Tandai Data sebagai Terhapus)**
+                data.DeleteBy = UserActiveId;
+                data.DeleteDateTime = DateTimeOffset.Now;
+                data.IsDelete = true;
+
+                _applicationDbContext.Agamas.Update(data);
+                _applicationDbContext.SaveChanges();
+
+                return Ok(new { message = "Data berhasil dihapus..." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
+        [HttpGet("paged")]
+        public IActionResult PegedAgama(
+        int page = 1,
+        int perPage = 10,
+        string? search = null,
+        string? orderBy = "CreateDateTime",
+        string? sortDirection = "asc",
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ")]
+        DateTime? startDate = null,
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ")]
+        DateTime? endDate = null,
+        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        {
+            if (startDate.HasValue && endDate.HasValue && startDate > endDate)
+            {
+                return BadRequest(new { message = "StartDate tidak boleh lebih besar dari EndDate." });
+            }
+
+            // Jika tidak menggunakan daterange, gunakan periode filter
+            if (!startDate.HasValue && !endDate.HasValue && periode == null)
+            {
+                return BadRequest(new { message = "Harap pilih periode atau masukkan rentang tanggal yang valid." });
+            }
+
+            var query = _applicationDbContext.Agamas.AsQueryable();
+
+            // 🔍 Filter berdasarkan search
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(u => u.KodeAgama.Contains(search) ||
+                                         u.NamaAgama.Contains(search));
+            }
+
+            // 📅 Filter berdasarkan daterange
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                query = query.Where(u => u.CreateDateTime.Date >= startDate.Value.Date &&
+                                         u.CreateDateTime.Date <= endDate.Value.Date);
+            }
+
+            // 📆 Filter berdasarkan periode (Hari Ini, Minggu Ini, dll)
+            if (periode.HasValue)
+            {
+                DateTime today = DateTime.UtcNow.Date;
+
+                switch (periode)
+                {
+                    case PeriodeFilter.Today:
+                        query = query.Where(u => u.CreateDateTime.Date == today);
+                        break;
+                    case PeriodeFilter.ThisWeek:
+                        query = query.Where(u => u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
+                                                 u.CreateDateTime.Date <= today);
+                        break;
+                    case PeriodeFilter.LastWeek:
+                        query = query.Where(u => u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
+                                                 u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek)));
+                        break;
+                    case PeriodeFilter.ThisMonth:
+                        query = query.Where(u => u.CreateDateTime.Month == today.Month &&
+                                                 u.CreateDateTime.Year == today.Year);
+                        break;
+                    case PeriodeFilter.LastMonth:
+                        query = query.Where(u => u.CreateDateTime.Month == today.Month - 1 &&
+                                                 u.CreateDateTime.Year == today.Year);
+                        break;
+                    case PeriodeFilter.ThisYear:
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
+                        break;
+                    case PeriodeFilter.LastYear:
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
+                        break;
+                    case PeriodeFilter.Last3Months:
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
+                        break;
+                    case PeriodeFilter.Last6Months:
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
+                        break;
                 }
             }
 
-
-            // DELETE: api/Agama/{id}
-            [HttpDelete("{id}")]
-            public async Task<IActionResult> Delete(Guid id)
+            // Sorting Data
+            if (!string.IsNullOrEmpty(orderBy))
             {
-                var record = await _context.Agamas.FindAsync(id);
-                if (record == null)
-                {
-                    return NotFound(new { message = $"Data dengan ID {id} tidak ditemukan." });
-                }
-                _context.Agamas.Remove(record);
-                await _context.SaveChangesAsync();
-                return Ok(new { message = "Data berhasil dihapus." });
-             }
-
-            //fungsi search
-            // GET: api/Agama/Search?keyword={keyword}
-            [HttpGet("Search")]
-            public async Task<IActionResult> Search([FromQuery] string keyword)
-            {
-                // Validasi input keyword
-                if (string.IsNullOrWhiteSpace(keyword))
-                {
-                    return BadRequest(new { message = "Keyword tidak boleh kosong. || 400 Bad Request" });
-                }
-
-                // Lakukan pencarian di database (case-insensitive)
-                var searchResults = await _context.Agamas
-                    .Where(n => EF.Functions.Like(n.JenisAgama, $"%{keyword}%")).ToListAsync();
-
-                // Jika tidak ada data ditemukan
-                if (!searchResults.Any())
-                {
-                    return NotFound(new { message = "Data tidak ditemukan. || 404 Not Found" });
-                }
-
-                // Mengembalikan hasil pencarian
-                return Ok(new { message = "Data ditemukan.", data = searchResults });
+                query = sortDirection?.ToLower() == "desc"
+                    ? query.OrderByDescending(e => EF.Property<object>(e, orderBy))
+                    : query.OrderBy(e => EF.Property<object>(e, orderBy));
             }
 
+            // Pagination
+            var totalRows = query.Count();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
 
+            if (rows.Count == 0 && page > totalPages)
+            {
+                return NotFound(new { message = "Page not found." });
+            }
+
+            return Ok(new
+            {
+                status = "success",
+                message = "Data retrieved successfully",
+                data = new
+                {
+                    Rows = rows,
+                    TotalRows = totalRows,
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalPages = totalPages
+                }
+            });
         }
     }
+}
 

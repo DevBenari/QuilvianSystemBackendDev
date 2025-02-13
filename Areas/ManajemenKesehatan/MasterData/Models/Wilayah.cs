@@ -11,7 +11,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public Guid ProvinsiId { get; set; }
         public string ProvinsiCode { get; set; }
         public string ProvinsiName { get; set; }
-
         //foreign key to NegaraId
         public Guid NegaraId { get; set; }
         [ForeignKey("NegaraId")]
@@ -19,6 +18,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
 
         // Relationship with Kabupaten
         public ICollection<KabupatenKota> Kabupaten { get; set; }
+
     }
 
     [Table("MstKabupatenKota", Schema = "dbo")]
@@ -30,12 +30,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string KabupatenKotaName { get; set; }
 
         // Foreign key to ProvinsiId (Guid)
-        public Guid ProvinsiId { get; set; }  // Changed to match ProvinsiId type (Guid)
-        [ForeignKey("ProvinsiId")]
-        public Provinsi Provinsi { get; set; } // Relationship with Provinsi
-
-        // Relationship with Kecamatan
-        public ICollection<Kecamatan> Kecamatans { get; set; }
+        public Guid ProvinsiId { get; set; }  
     }
 
     [Table("MstKecamatan", Schema = "dbo")]
@@ -47,12 +42,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string KecamatanName { get; set; }
 
         // Foreign key to KabupatenId (Guid)
+
         public Guid KabupatenKotaId { get; set; }  // Changed to match KabupatenId type (Guid)
         [ForeignKey("KabupatenKotaId")]
         public KabupatenKota Kabupatenkota { get; set; }  // Relationship with Kabupaten
 
         // Relationship with Kelurahan
         public ICollection<Kelurahan> Kelurahans { get; set; }
+
     }
 
     [Table("MstKelurahan", Schema = "dbo")]
@@ -64,8 +61,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string KelurahanName { get; set; }
 
         // Foreign key to KecamatanId (Guid)
-        public Guid KecamatanId { get; set; }  // Changed to match KecamatanId type (Guid)
-        [ForeignKey("KecamatanId")]
-        public Kecamatan Kecamatan { get; set; }  // Relationship with Kecamatan
+        public Guid KecamatanId { get; set; }  
     }
 }

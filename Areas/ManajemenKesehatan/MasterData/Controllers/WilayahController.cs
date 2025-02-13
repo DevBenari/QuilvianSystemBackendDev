@@ -56,6 +56,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             return records.Any()
            ? Ok(new { message = "Data ditemukan.", data = records })
            : NotFound(new { message = "Tidak ada data ditemukan." });
+
         }
 
 
@@ -78,7 +79,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             return records.Any()
             ? Ok(new { message = "Data ditemukan.", data = records })
             : NotFound(new { message = "Tidak ada data ditemukan." });
-
 
         }
 
@@ -114,17 +114,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
             else if (model == "Kabupaten")
             {
-                var record = await _context.KabupatenKotas.Include(k => k.Provinsi).FirstOrDefaultAsync(k => k.KabupatenKotaId == id);
+                var record = await _context.KabupatenKotas.Include(k => k.ProvinsiId).FirstOrDefaultAsync(k => k.KabupatenKotaId == id);
+
                 return record != null ? Ok(new { message = "Data ditemukan.", data = record }) : NotFound(new { message = $"Kabupaten dengan ID {id} tidak ditemukan." });
             }
             else if (model == "Kecamatan")
             {
                 var record = await _context.Kecamatans.Include(k => k.Kabupatenkota).FirstOrDefaultAsync(k => k.KecamatanId == id);
+
                 return record != null ? Ok(new { message = "Data ditemukan.", data = record }) : NotFound(new { message = $"Kecamatan dengan ID {id} tidak ditemukan." });
             }
             else if (model == "Kelurahan")
             {
-                var record = await _context.Kelurahans.Include(k => k.Kecamatan).FirstOrDefaultAsync(k => k.KelurahanId == id);
+                var record = await _context.Kelurahans.FirstOrDefaultAsync(k => k.KelurahanId == id);
                 return record != null ? Ok(new { message = "Data ditemukan.", data = record }) : NotFound(new { message = $"Kelurahan dengan ID {id} tidak ditemukan." });
             }
 

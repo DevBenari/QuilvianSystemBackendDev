@@ -2,7 +2,6 @@
 {
     public class JabatanViewModel
     {
-        public string JabatanKode { get; set; }
-        public string JenisJabatan { get; set; }
+        public string NamaJabatan { get; set; }
     }
 }

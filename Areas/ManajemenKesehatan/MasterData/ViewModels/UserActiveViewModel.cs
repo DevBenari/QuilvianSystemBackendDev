@@ -2,7 +2,6 @@
 {
     public class UserActiveViewModel
     {
-        public string UserActiveCode { get; set; }
         public string FullName { get; set; }
         public string IdentityNumber { get; set; }
         public string PlaceOfBirth { get; set; }
