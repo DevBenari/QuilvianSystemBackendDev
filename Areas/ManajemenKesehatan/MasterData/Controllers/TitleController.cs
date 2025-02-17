@@ -259,38 +259,38 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         int perPage = 10,
         string? search = null,
         string? orderBy = "CreateDateTime",
-        string? sortDirection = "asc",
+        string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ")]
         DateTime? startDate = null,
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ")]
         DateTime? endDate = null,
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
-            if (startDate.HasValue && endDate.HasValue && startDate > endDate)
-            {
-                return BadRequest(new { message = "StartDate tidak boleh lebih besar dari EndDate." });
-            }
+            //if (startDate.HasValue && endDate.HasValue && startDate > endDate)
+            //{
+            //    return BadRequest(new { message = "StartDate tidak boleh lebih besar dari EndDate." });
+            //}
 
-            // Jika tidak menggunakan daterange, gunakan periode filter
-            if (!startDate.HasValue && !endDate.HasValue && periode == null)
-            {
-                return BadRequest(new { message = "Harap pilih periode atau masukkan rentang tanggal yang valid." });
-            }
+            //// Jika tidak menggunakan daterange, gunakan periode filter
+            //if (!startDate.HasValue && !endDate.HasValue && periode == null)
+            //{
+            //    return BadRequest(new { message = "Harap pilih periode atau masukkan rentang tanggal yang valid." });
+            //}
 
-            var query = _applicationDbContext.Titles.AsQueryable();
+            var query = _applicationDbContext.Titles.Where(a => a.IsDelete == false).AsQueryable();
 
             // 🔍 Filter berdasarkan search
             if (!string.IsNullOrWhiteSpace(search))
             {
-                query = query.Where(u => u.KodeTitle.Contains(search) ||
-                                         u.NamaTitle.Contains(search));
+                query = query.Where(u => u.KodeTitle.Contains(search) && u.IsDelete == false ||
+                                         u.NamaTitle.Contains(search) && u.IsDelete == false);
             }
 
             // 📅 Filter berdasarkan daterange
             if (startDate.HasValue && endDate.HasValue)
             {
                 query = query.Where(u => u.CreateDateTime.Date >= startDate.Value.Date &&
-                                         u.CreateDateTime.Date <= endDate.Value.Date);
+                                         u.CreateDateTime.Date <= endDate.Value.Date && u.IsDelete == false);
             }
 
             // 📆 Filter berdasarkan periode (Hari Ini, Minggu Ini, dll)
@@ -301,35 +301,35 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 switch (periode)
                 {
                     case PeriodeFilter.Today:
-                        query = query.Where(u => u.CreateDateTime.Date == today);
+                        query = query.Where(u => u.CreateDateTime.Date == today && u.IsDelete == false);
                         break;
                     case PeriodeFilter.ThisWeek:
                         query = query.Where(u => u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
-                                                 u.CreateDateTime.Date <= today);
+                                                 u.CreateDateTime.Date <= today && u.IsDelete == false);
                         break;
                     case PeriodeFilter.LastWeek:
                         query = query.Where(u => u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                                                 u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek)));
+                                                 u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek)) && u.IsDelete == false);
                         break;
                     case PeriodeFilter.ThisMonth:
                         query = query.Where(u => u.CreateDateTime.Month == today.Month &&
-                                                 u.CreateDateTime.Year == today.Year);
+                                                 u.CreateDateTime.Year == today.Year && u.IsDelete == false);
                         break;
                     case PeriodeFilter.LastMonth:
                         query = query.Where(u => u.CreateDateTime.Month == today.Month - 1 &&
-                                                 u.CreateDateTime.Year == today.Year);
+                                                 u.CreateDateTime.Year == today.Year && u.IsDelete == false);
                         break;
                     case PeriodeFilter.ThisYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year && u.IsDelete == false);
                         break;
                     case PeriodeFilter.LastYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1 && u.IsDelete == false);
                         break;
                     case PeriodeFilter.Last3Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3) && u.IsDelete == false);
                         break;
                     case PeriodeFilter.Last6Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6) && u.IsDelete == false);
                         break;
                 }
             }
