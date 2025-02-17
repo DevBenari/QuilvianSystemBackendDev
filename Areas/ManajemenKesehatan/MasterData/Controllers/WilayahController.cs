@@ -1,105 +1,227 @@
 ﻿using System.Dynamic;
+using System.Security.Claims;
 using System.Text.Json;
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Components.Routing;
+using Microsoft.AspNetCore.Cors;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
+using QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers;
+using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    //[Authorize]
+    [Authorize]
+    [EnableCors("AllowSpecific")]
     public class WilayahController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly SignInManager<ApplicationUser> _signInManager;
 
-        public WilayahController(ApplicationDbContext context)
+        private readonly ILogger<PendaftaranPasienBaruController> _logger;
+        private readonly IWebHostEnvironment _webHostEnvironment;
+
+        public WilayahController
+            (ApplicationDbContext context,
+            UserManager<ApplicationUser> userManager,
+            SignInManager<ApplicationUser> signInManager,
+            ILogger<PendaftaranPasienBaruController> logger,
+            IWebHostEnvironment webHostEnvironment
+            )
         {
             _context = context;
+            _userManager = userManager;
+            _signInManager = signInManager;
+            _logger = logger;
+            _webHostEnvironment = webHostEnvironment;
         }
 
         // GET: api/GeoData/Provinsi
         [HttpGet("Provinsi")]
-        public async Task<IActionResult> GetAllProvinsi()
+        public async Task<IActionResult> GetAllProvinsi(int page = 1, int perPage = 10)
         {
-            var records = await _context.Provinsis
-                .Select(p => new
-                {
-                    ProvinsiId = p.ProvinsiId,
-                    NamaProvinsi = p.ProvinsiName,
-                    NegaraId = p.NegaraId
-                })
-                .ToListAsync();
+            // Validasi agar page dan perPage minimal bernilai 1
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
 
-            return records.Any()
-                ? Ok(new { message = "Data ditemukan.", data = records })
-                : NotFound(new { message = "Tidak ada data ditemukan." });
+            var query = from p in _context.Provinsis
+                          select new
+                          {
+                            ProvinsiId = p.ProvinsiId,
+                            NamaProvinsi = p.ProvinsiName,
+                            NegaraId = p.NegaraId
+                          };
+
+            // Hitung total data sebelum paginasi
+            var totalRows = query.Count();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            // Ambil data sesuai paging
+            var listdata = query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToList();
+
+            if (!listdata.Any())
+            {
+                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
+            }
+
+            // Return hasil dengan paging info
+            return Ok(new
+            {
+                message = "Berhasil || 200 OK",
+                data = listdata,
+                pagination = new
+                {
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalRows = totalRows,
+                    TotalPages = totalPages
+                }
+            });
         }
 
         // GET: api/GeoData/Kabupaten
         [HttpGet("Kabupaten")]
-        public async Task<IActionResult> GetAllKabupaten()
+        public async Task<IActionResult> GetAllKabupaten(int page = 1, int perPage = 10)
         {
 
-            var records = await _context.KabupatenKotas
-                .Select(k => new
+            var query = from k in _context.KabupatenKotas
+                        select new
+                        {
+                            KabupatenKotaId = k.KabupatenKotaId,
+                            KabupatenKotaName = k.KabupatenKotaName,
+                            KabupatenKotaCode = k.KabupatenKotaCode,
+                            ProvinsiId = k.ProvinsiId
+                        };
+            // Hitung total data sebelum paginasi
+            var totalRows = query.Count();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            // Ambil data sesuai paging
+            var listdata = query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToList();
+
+            if (!listdata.Any())
+            {
+                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
+            }
+
+            // Return hasil dengan paging info
+            return Ok(new
+            {
+                message = "Berhasil || 200 OK",
+                data = listdata,
+                pagination = new
                 {
-                    KabupatenKotaId = k.KabupatenKotaId,
-                    KabupatenKotaName = k.KabupatenKotaName,
-                    KabupatenKotaCode = k.KabupatenKotaCode,
-                    ProvinsiId = k.ProvinsiId
-                })
-                .ToListAsync();
-            return records.Any()
-           ? Ok(new { message = "Data ditemukan.", data = records })
-           : NotFound(new { message = "Tidak ada data ditemukan." });
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalRows = totalRows,
+                    TotalPages = totalPages
+                }
+            });
 
         }
 
 
         // GET: api/GeoData/Kecamatan
         [HttpGet("Kecamatan")]
-        public async Task<IActionResult> GetAllKecamatan()
+        public async Task<IActionResult> GetAllKecamatan(int page = 1, int perPage = 10)
         {
-            //var records = await _context.Kecamatans.Include(k => k.Kabupaten).ToListAsync();
-            //return records.Any() ? Ok(new { message = "Data ditemukan.", data = records }) : NotFound(new { message = "Tidak ada data ditemukan." });
-            var records = await _context.Kecamatans
-                .Select(k => new
+            var query = from k in _context.Kecamatans
+                select new
                 {
                     KecamatanId = k.KecamatanId,
                     KecamatanCode = k.KecamatanCode,
                     KecamatanName = k.KecamatanName,
                     KabupatenKotaId = k.KabupatenKotaId
-                })
-                .ToListAsync();
+                };
 
-            return records.Any()
-            ? Ok(new { message = "Data ditemukan.", data = records })
-            : NotFound(new { message = "Tidak ada data ditemukan." });
+            // Hitung total data sebelum paginasi
+            var totalRows = query.Count();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            // Ambil data sesuai paging
+            var listdata = query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToList();
+
+            if (!listdata.Any())
+            {
+                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
+            }
+
+            // Return hasil dengan paging info
+            return Ok(new
+            {
+                message = "Berhasil || 200 OK",
+                data = listdata,
+                pagination = new
+                {
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalRows = totalRows,
+                    TotalPages = totalPages
+                }
+            });
 
         }
 
         // GET: api/GeoData/Kelurahan
         [HttpGet("Kelurahan")]
-        public async Task<IActionResult> GetAllKelurahan()
+        public async Task<IActionResult> GetAllKelurahan(int page = 1, int perPage = 10)
         {
             //var records = await _context.Kelurahans.Include(k => k.Kecamatan).ToListAsync();
             //return records.Any() ? Ok(new { message = "Data ditemukan.", data = records }) : NotFound(new { message = "Tidak ada data ditemukan." });
-            var records = await _context.Kelurahans
-                .Select(k => new
+            var query = from k in _context.Kelurahans
+                        select new
+                        {
+                            KelurahanId = k.KelurahanId,
+                            KelurahanCode = k.KelurahanCode,
+                            KelurahanName = k.KelurahanName,
+                            KecamatanId = k.KecamatanId
+                        };
+            // Hitung total data sebelum paginasi
+            var totalRows = query.Count();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            // Ambil data sesuai paging
+            var listdata = query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToList();
+
+            if (!listdata.Any())
+            {
+                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
+            }
+
+            // Return hasil dengan paging info
+            return Ok(new
+            {
+                message = "Berhasil || 200 OK",
+                data = listdata,
+                pagination = new
                 {
-                    KelurahanId = k.KelurahanId,
-                    KelurahanCode = k.KelurahanCode,
-                    KelurahanName = k.KelurahanName,
-                    KecamatanId = k.KecamatanId
-                })
-                .ToListAsync();
-            return records.Any()
-            ? Ok(new { message = "Data ditemukan.", data = records })
-            : NotFound(new { message = "Tidak ada data ditemukan." });
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalRows = totalRows,
+                    TotalPages = totalPages
+                }
+            });
 
         }
 
@@ -137,312 +259,335 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpPost("Provinsi")]
         public async Task<IActionResult> CreateProvinsi([FromBody] ProvinsiViewModel model)
         {
-            var dateNow = DateTimeOffset.Now;
-            var day = dateNow.Day;
-            var month = dateNow.Month;
-            var year = dateNow.Year;
-
-            var setDateNow = DateTimeOffset.Now.ToString("yyMMdd");
-
-            // Generate UserActiveCode
-            var lastCode = _context.Provinsis
-                .OrderByDescending(k => k.ProvinsiCode)
-                .FirstOrDefault();
-
-            if (lastCode == null)
+            if (model == null || !ModelState.IsValid)
             {
-                model.ProvinsiCode = "PRV" + setDateNow + "0001";
+                return BadRequest(new { message = "Data tidak valid." });
             }
-            else
+
+            try
             {
-                var lastCodeTrim = lastCode.ProvinsiCode.Substring(3, 6);
-                if (lastCodeTrim != setDateNow)
+                // **Ambil User ID dari JWT Claims**
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _context.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
+
+                if (string.IsNullOrEmpty(EmailLogin))
                 {
-                    model.ProvinsiCode = "PRV" + setDateNow + "0001";
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+                var dateNow = DateTimeOffset.Now;
+
+
+                var setDateNow = DateTimeOffset.Now.ToString("yyMMdd");
+
+                // Generate UserActiveCode
+                var lastCode = _context.Provinsis
+                    .OrderByDescending(k => k.ProvinsiCode)
+                    .FirstOrDefault();
+
+                string kode;
+                if (lastCode == null)
+                {
+                    kode = $"PRV{setDateNow}0001";
+
                 }
                 else
                 {
-                    model.ProvinsiCode = "PRV" + setDateNow + (Convert.ToInt32(lastCode.ProvinsiCode.Substring(9)) + 1).ToString("D4");
-                }
-            }
-
-            if (ModelState.IsValid)
-            {
-                var prov = new Provinsi
-                {
-                  ProvinsiId = Guid.NewGuid(),
-                  ProvinsiCode = model.ProvinsiCode,
-                  ProvinsiName = model.ProvinsiName,
-                  NegaraId = model.NegaraId
-
-                };
-
-                var checkDuplicate = _context.Provinsis.Where(c => c.ProvinsiCode == model.ProvinsiCode && c.ProvinsiName == model.ProvinsiName).ToList();
-
-                if (checkDuplicate.Count == 0)
-                {
-                    var result = _context.Provinsis.Where(c => c.ProvinsiCode == model.ProvinsiCode && c.ProvinsiName == model.ProvinsiName).FirstOrDefault();
-                    if (result == null)
+                    var lastCodeTrim = lastCode.ProvinsiCode.Substring(3, 6);
+                    if (lastCodeTrim != setDateNow)
                     {
-                        _context.Provinsis.Add(prov);
-                        _context.SaveChanges();
-                        return CreatedAtAction(nameof(GetById), new { model = "Provinsi", id = prov.ProvinsiId }, model);
+                        kode = $"PRV{setDateNow}0001";
                     }
                     else
                     {
-                        return BadRequest(new { message = "Data tidak dapat di input !!! || 400 Bad Request" });
+                        kode = $"PRV{setDateNow}" + (Convert.ToInt32(lastCode.ProvinsiCode.Substring(9)) + 1).ToString("D4");
                     }
+                }
+
+                var isDuplicate = _context.Provinsis
+                    .Any(c => c.ProvinsiCode == kode && c.ProvinsiName == model.ProvinsiName);
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
+                }
+
+                if (ModelState.IsValid)
+                {
+                    var prov = new Provinsi
+                    {
+                        ProvinsiId = Guid.NewGuid(),
+                        ProvinsiCode = kode,
+                        ProvinsiName = model.ProvinsiName,
+                        NegaraId = model.NegaraId
+
+                    };
+                    _context.Provinsis.Add(prov);
+                    _context.SaveChanges();
+
+                    return Created("", new
+                    {
+                        message = "Tambah Data Berhasil || 201 Created",
+                    });
                 }
                 else
                 {
-                    return Conflict(new { message = "Terdapat duplikasi data !!! || 409 Conflict Data" });
+                    return BadRequest(new { message = "Data tidak valid !!!! || 400 Bad Request" });
                 }
             }
-            else
+            catch (Exception ex)
             {
-                return BadRequest(new { message = "Data tidak valid !!!! || 400 Bad Request" });
+                return StatusCode(500, new { message = "Terjadi kesalahan pada server.", detail = ex.Message });
             }
-            //if (model == null) return BadRequest(new { message = "Data tidak valid." });
-
-            //model.ProvinsiId = Guid.NewGuid();
-            //_context.Provinsis.Add(model);
-            //await _context.SaveChangesAsync();
-
-            //return CreatedAtAction(nameof(GetById), new { model = "Provinsi", id = model.ProvinsiId }, model);
         }
 
         //POST: api/GeoData/Kabupaten
        [HttpPost("Kabupaten")]
         public async Task<IActionResult> CreateKabupaten([FromBody] KabupatenViewModel model)
         {
-            var dateNow = DateTimeOffset.Now;
-            var day = dateNow.Day;
-            var month = dateNow.Month;
-            var year = dateNow.Year;
-
-            var setDateNow = DateTimeOffset.Now.ToString("yyMMdd");
-
-            // Generate UserActiveCode
-            var lastCode = _context.KabupatenKotas
-                .OrderByDescending(k => k.KabupatenKotaCode)
-                .FirstOrDefault();
-
-            if (lastCode == null)
+            if (model == null || !ModelState.IsValid)
             {
-                model.KabupatenKotaCode = "KBT" + setDateNow + "0001";
+                return BadRequest(new { message = "Data tidak valid." });
             }
-            else
+
+            try
             {
-                var lastCodeTrim = lastCode.KabupatenKotaCode.Substring(3, 6);
-                if (lastCodeTrim != setDateNow)
+                // **Ambil User ID dari JWT Claims**
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _context.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
+
+                var dateNow = DateTimeOffset.Now;
+                var setDateNow = DateTimeOffset.Now.ToString("yyMMdd");
+
+                // Generate UserActiveCode
+                var lastCode = _context.KabupatenKotas
+                    .OrderByDescending(k => k.KabupatenKotaCode)
+                    .FirstOrDefault();
+
+                string kode;
+                if (lastCode == null)
                 {
-                    model.KabupatenKotaCode = "KBT" + setDateNow + "0001";
+                    kode = $"KTA{setDateNow}0001";
+
                 }
                 else
                 {
-                    model.KabupatenKotaCode = "KBT" + setDateNow + (Convert.ToInt32(lastCode.KabupatenKotaCode.Substring(9)) + 1).ToString("D4");
-                }
-            }
-
-            if (ModelState.IsValid)
-            {
-                var kab = new KabupatenKota
-                {
-                    KabupatenKotaId = Guid.NewGuid(),
-                    KabupatenKotaCode = model.KabupatenKotaCode,
-                    KabupatenKotaName = model.KabupatenKotaName,
-                    ProvinsiId = model.ProvinsiId
-                };
-
-                var checkDuplicate = _context.KabupatenKotas.Where(c => c.KabupatenKotaCode == model.KabupatenKotaCode && c.KabupatenKotaName == model.KabupatenKotaName).ToList();
-
-                if (checkDuplicate.Count == 0)
-                {
-                    var result = _context.KabupatenKotas.Where(c => c.KabupatenKotaCode == model.KabupatenKotaCode && c.KabupatenKotaName == model.KabupatenKotaName).FirstOrDefault();
-                    if (result == null)
+                    var lastCodeTrim = lastCode.KabupatenKotaCode.Substring(3, 6);
+                    if (lastCodeTrim != setDateNow)
                     {
-                        _context.KabupatenKotas.Add(kab);
-                        _context.SaveChanges();
-                        return CreatedAtAction(nameof(GetById), new { model = "Kabupaten", id = kab.KabupatenKotaId }, model);
+                        kode = $"KTA{setDateNow}0001";
                     }
                     else
                     {
-                        return BadRequest(new { message = "Data tidak dapat di input !!! || 400 Bad Request" });
+                        kode = $"KTA{setDateNow}" + (Convert.ToInt32(lastCode.KabupatenKotaCode.Substring(9)) + 1).ToString("D4");
                     }
+                }
+
+                var isDuplicate = _context.KabupatenKotas
+                    .Any(c => c.KabupatenKotaCode == kode && c.KabupatenKotaName == model.KabupatenKotaName);
+                
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
+                }
+
+                if (ModelState.IsValid)
+                {
+                    var kab = new KabupatenKota
+                    {
+                        KabupatenKotaId = Guid.NewGuid(),
+                        KabupatenKotaCode = kode,
+                        KabupatenKotaName = model.KabupatenKotaName,
+                        ProvinsiId = model.ProvinsiId
+                    };
+                    _context.KabupatenKotas.Add(kab);
+                    _context.SaveChanges();
+                    return Created("", new
+                    {
+                        message = "Tambah Data Berhasil || 201 Created",
+                    });
                 }
                 else
                 {
-                    return Conflict(new { message = "Terdapat duplikasi data !!! || 409 Conflict Data" });
+                    return BadRequest(new { message = "Data tidak valid !!!! || 400 Bad Request" });
                 }
+
             }
-            else
+            catch (Exception ex)
             {
-                return BadRequest(new { message = "Data tidak valid !!!! || 400 Bad Request" });
+                return StatusCode(500, new { message = "Terjadi kesalahan pada server.", detail = ex.Message });
             }
-            //if (model == null) return BadRequest(new { message = "Data tidak valid." });
-
-            //model.KabupatenId = Guid.NewGuid();
-            //_context.Kabupatens.Add(model);
-            //await _context.SaveChangesAsync();
-
-            //return CreatedAtAction(nameof(GetById), new { model = "Kabupaten", id = model.KabupatenId }, model);
         }
 
         // POST: api/GeoData/Kecamatan
         [HttpPost("Kecamatan")]
         public async Task<IActionResult> CreateKecamatan([FromBody] KecamatanViewModel model)
         {
-            var dateNow = DateTimeOffset.Now;
-            var day = dateNow.Day;
-            var month = dateNow.Month;
-            var year = dateNow.Year;
-
-            var setDateNow = DateTimeOffset.Now.ToString("yyMMdd");
-
-            // Generate UserActiveCode
-            var lastCode = _context.Kecamatans
-                .OrderByDescending(k => k.KecamatanCode)
-                .FirstOrDefault();
-
-            if (lastCode == null)
+            if (model == null || !ModelState.IsValid)
             {
-                model.KecamatanCode = "CMT" + setDateNow + "0001";
+                return BadRequest(new { message = "Data tidak valid." });
             }
-            else
+
+            try
             {
-                var lastCodeTrim = lastCode.KecamatanCode.Substring(3, 6);
-                if (lastCodeTrim != setDateNow)
+                // **Ambil User ID dari JWT Claims**
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _context.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
+
+                if (string.IsNullOrEmpty(EmailLogin))
                 {
-                    model.KecamatanCode = "CMT" + setDateNow + "0001";
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                var dateNow = DateTimeOffset.Now;
+                var setDateNow = DateTimeOffset.Now.ToString("yyMMdd");
+
+                // Generate UserActiveCode
+                var lastCode = _context.Kecamatans
+                    .OrderByDescending(k => k.KecamatanCode)
+                    .FirstOrDefault();
+
+                string kode;
+                if (lastCode == null)
+                {
+                    kode = $"KCM{setDateNow}0001";
+
                 }
                 else
                 {
-                    model.KecamatanCode = "CMT" + setDateNow + (Convert.ToInt32(lastCode.KecamatanCode.Substring(9)) + 1).ToString("D4");
-                }
-            }
-
-            if (ModelState.IsValid)
-            {
-                var kec = new Kecamatan
-                {
-                    KecamatanId = Guid.NewGuid(),
-                    KecamatanCode = model.KecamatanCode,
-                    KecamatanName = model.KecamatanName,
-                    KabupatenKotaId = model.KabupatenId,
-                };
-
-                var checkDuplicate = _context.Kecamatans.Where(c => c.KecamatanCode == model.KecamatanCode && c.KecamatanName == model.KecamatanName).ToList();
-
-                if (checkDuplicate.Count == 0)
-                {
-                    var result = _context.Kecamatans.Where(c => c.KecamatanCode == model.KecamatanCode && c.KecamatanName == model.KecamatanName).FirstOrDefault();
-                    if (result == null)
+                    var lastCodeTrim = lastCode.KecamatanCode.Substring(3, 6);
+                    if (lastCodeTrim != setDateNow)
                     {
-                        _context.Kecamatans.Add(kec);
-                        _context.SaveChanges();
-                        return CreatedAtAction(nameof(GetAllKecamatan), new { message = "Tambah Data Berhasil || 201 Created" }, model);
+                        kode = $"KCM{setDateNow}0001";
                     }
                     else
                     {
-                        return BadRequest(new { message = "Data tidak dapat di input !!! || 400 Bad Request" });
+                        kode = $"KCM{setDateNow}" + (Convert.ToInt32(lastCode.KecamatanCode.Substring(9)) + 1).ToString("D4");
                     }
+                }
+
+                //cek duplicate data
+                var isDuplicate = _context.Kecamatans
+                    .Any(c => c.KecamatanCode == kode && c.KecamatanName == model.KecamatanName);
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
+
+                }
+
+                if (ModelState.IsValid)
+                {
+                    var kec = new Kecamatan
+                    {
+                        KecamatanId = Guid.NewGuid(),
+                        KecamatanCode = kode,
+                        KecamatanName = model.KecamatanName,
+                        KabupatenKotaId = model.KabupatenId,
+                    };
+                    _context.Kecamatans.Add(kec);
+                    _context.SaveChanges();
+                    return Created("", new
+                    {
+                        message = "Tambah Data Berhasil || 201 Created",
+                    });
                 }
                 else
                 {
-                    return Conflict(new { message = "Terdapat duplikasi data !!! || 409 Conflict Data" });
+                    return BadRequest(new { message = "Data tidak valid !!!! || 400 Bad Request" });
                 }
             }
-            else
+            catch (Exception ex)
             {
-                return BadRequest(new { message = "Data tidak valid !!!! || 400 Bad Request" });
+                return StatusCode(500, new { message = "Terjadi kesalahan pada server.", detail = ex.Message });
             }
-            //if (model == null) return BadRequest(new { message = "Data tidak valid." });
-
-            //model.KecamatanId = Guid.NewGuid();
-            //_context.Kecamatans.Add(model);
-            //await _context.SaveChangesAsync();
-
-            //return CreatedAtAction(nameof(GetById), new { model = "Kecamatan", id = model.KecamatanId }, model);
         }
 
         // POST: api/GeoData/Kelurahan
         [HttpPost("Kelurahan")]
         public async Task<IActionResult> CreateKelurahan([FromBody] KelurahanViewModel model)
         {
-            var dateNow = DateTimeOffset.Now;
-            var day = dateNow.Day;
-            var month = dateNow.Month;
-            var year = dateNow.Year;
-
-            var setDateNow = DateTimeOffset.Now.ToString("yyMMdd");
-
-            // Generate UserActiveCode
-            var lastCode = _context.Kelurahans
-                .OrderByDescending(k => k.KelurahanCode)
-                .FirstOrDefault();
-
-            if (lastCode == null)
+            if (model == null || !ModelState.IsValid)
             {
-                model.KelurahanCode = "KLR" + setDateNow + "0001";
+                return BadRequest(new { message = "Data tidak valid." });
             }
-            else
+
+            try
             {
-                var lastCodeTrim = lastCode.KelurahanCode.Substring(3, 6);
-                if (lastCodeTrim != setDateNow)
+                // **Ambil User ID dari JWT Claims**
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _context.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
+
+                if (string.IsNullOrEmpty(EmailLogin))
                 {
-                    model.KelurahanCode = "KLR" + setDateNow + "0001";
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                var dateNow = DateTimeOffset.Now;
+                var setDateNow = DateTimeOffset.Now.ToString("yyMMdd");
+
+                // Generate UserActiveCode
+                var lastCode = _context.Kelurahans
+                    .OrderByDescending(k => k.KelurahanCode)
+                    .FirstOrDefault();
+
+                string kode;
+                if (lastCode == null)
+                {
+                    kode = $"KLR{setDateNow}0001";
+
                 }
                 else
                 {
-                    model.KelurahanCode = "KLR" + setDateNow + (Convert.ToInt32(lastCode.KelurahanCode.Substring(9)) + 1).ToString("D4");
-                }
-            }
-
-            if (ModelState.IsValid)
-            {
-                var kel = new Kelurahan
-                {
-                    KelurahanId = Guid.NewGuid(),
-                    KelurahanCode = model.KelurahanCode,
-                    KelurahanName = model.KelurahanName,
-                    KecamatanId = model.KecamatanId
-                };
-
-                var checkDuplicate = _context.Kelurahans.Where(c => c.KelurahanCode == model.KelurahanCode && c.KelurahanName == model.KelurahanName).ToList();
-
-                if (checkDuplicate.Count == 0)
-                {
-                    var result = _context.Kelurahans.Where(c => c.KelurahanCode == model.KelurahanCode && c.KelurahanName == model.KelurahanName).FirstOrDefault();
-                    if (result == null)
+                    var lastCodeTrim = lastCode.KelurahanCode.Substring(3, 6);
+                    if (lastCodeTrim != setDateNow)
                     {
-                        _context.Kelurahans.Add(kel);
-                        _context.SaveChanges();
-                        return CreatedAtAction(nameof(GetAllKelurahan), new { message = "Tambah Data Berhasil || 201 Created" }, model);
+                        kode = $"KLR{setDateNow}0001";
                     }
                     else
                     {
-                        return BadRequest(new { message = "Data tidak dapat di input !!! || 400 Bad Request" });
+                        kode = $"KLR{setDateNow}" + (Convert.ToInt32(lastCode.KelurahanCode.Substring(9)) + 1).ToString("D4");
                     }
+                }
+
+                //cek duplicate data
+                var isDuplicate = _context.Kelurahans
+                    .Any(c => c.KelurahanCode == kode && c.KelurahanName == model.KelurahanName);
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
+
+                }
+
+                if (ModelState.IsValid)
+                {
+                    var kel = new Kelurahan
+                    {
+                        KelurahanId = Guid.NewGuid(),
+                        KelurahanCode = kode,
+                        KelurahanName = model.KelurahanName,
+                        KecamatanId = model.KecamatanId
+                    };
+                    _context.Kelurahans.Add(kel);
+                    _context.SaveChanges();
+                    return Created("", new
+                    {
+                        message = "Tambah Data Berhasil || 201 Created",
+                    });
                 }
                 else
                 {
-                    return Conflict(new { message = "Terdapat duplikasi data !!! || 409 Conflict Data" });
+                    return BadRequest(new { message = "Data tidak valid !!!! || 400 Bad Request" });
                 }
             }
-            else
+            catch (Exception ex)
             {
-                return BadRequest(new { message = "Data tidak valid !!!! || 400 Bad Request" });
+                return StatusCode(500, new { message = "Terjadi kesalahan pada server.", detail = ex.Message });
             }
-            //if (model == null) return BadRequest(new { message = "Data tidak valid." });
-
-            //model.KelurahanId = Guid.NewGuid();
-            //_context.Kelurahans.Add(model);
-            //await _context.SaveChangesAsync();
-
-            //return CreatedAtAction(nameof(GetById), new { model = "Kelurahan", id = model.KelurahanId }, model);
         }
 
-        // PUT: api/GeoData/{model}/{id}
+        //: api/GeoData/{model}/{id}
         [HttpPut("{model}/{id}")]
         public async Task<IActionResult> Update(string model, Guid id, [FromBody] JsonElement requestBody)
         {

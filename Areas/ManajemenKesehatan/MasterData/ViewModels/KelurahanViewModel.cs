@@ -5,7 +5,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
 {
     public class KelurahanViewModel
     {
-        public string KelurahanCode { get; set; }
+
         public string KelurahanName { get; set; }
 
         // Foreign key to KecamatanId (Guid)
