@@ -5,7 +5,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
 {
     public class KabupatenViewModel
     {
-        public string KabupatenKotaCode { get; set; }
+
         public string KabupatenKotaName { get; set; }
 
         // Foreign key to ProvinsiId (Guid)

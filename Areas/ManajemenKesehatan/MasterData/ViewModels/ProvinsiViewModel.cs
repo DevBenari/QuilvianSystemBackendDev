@@ -3,7 +3,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
 {
     public class ProvinsiViewModel
     {
-        public string ProvinsiCode { get; set; }
+
         public string ProvinsiName { get; set; }
 
         public Guid NegaraId { get; set; }
