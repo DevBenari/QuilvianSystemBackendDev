@@ -11,7 +11,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    //[Authorize]
     public class WilayahController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -29,7 +29,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 .Select(p => new
                 {
                     ProvinsiId = p.ProvinsiId,
-                    NamaProvinsi = p.ProvinsiName
+                    NamaProvinsi = p.ProvinsiName,
+                    NegaraId = p.NegaraId
                 })
                 .ToListAsync();
 
@@ -48,7 +49,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     KabupatenKotaId = k.KabupatenKotaId,
                     KabupatenKotaName = k.KabupatenKotaName,
-                    KabupatenKotaCode = k.KabupatenKotaCode
+                    KabupatenKotaCode = k.KabupatenKotaCode,
+                    ProvinsiId = k.ProvinsiId
                 })
                 .ToListAsync();
             return records.Any()
@@ -70,6 +72,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     KecamatanId = k.KecamatanId,
                     KecamatanCode = k.KecamatanCode,
                     KecamatanName = k.KecamatanName,
+                    KabupatenKotaId = k.KabupatenKotaId
                 })
                 .ToListAsync();
 
@@ -91,6 +94,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     KelurahanId = k.KelurahanId,
                     KelurahanCode = k.KelurahanCode,
                     KelurahanName = k.KelurahanName,
+                    KecamatanId = k.KecamatanId
                 })
                 .ToListAsync();
             return records.Any()

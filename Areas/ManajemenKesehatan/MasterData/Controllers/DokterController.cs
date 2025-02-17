@@ -66,18 +66,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
             if (lastCode == null)
             {
-                model.KdDokter = "DR" + setDateNow + "0001";
+                model.KdDokter = "DKR" + setDateNow + "0001";
             }
             else
             { 
                 var lastCodeTrim = lastCode.KdDokter.Substring(3,6);
                 if (lastCodeTrim != setDateNow)
                 {
-                    model.KdDokter = "DR" + setDateNow + "0001";
+                    model.KdDokter = "DKR" + setDateNow + "0001";
                 }
                 else
                 {
-                    model.KdDokter = "DR" + setDateNow + (Convert.ToInt32(lastCode.KdDokter.Substring(9)) + 1).ToString("D4");
+                    model.KdDokter = "DKR" + setDateNow + (Convert.ToInt32(lastCode.KdDokter.Substring(9)) + 1).ToString("D4");
                 }
             }
 

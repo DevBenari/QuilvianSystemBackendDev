@@ -10,7 +10,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    //[Authorize]
     public class AsuransiController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -88,8 +88,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     AsuransiId = Guid.NewGuid(),
                     KodeAsuransi = newAsuransi.KodeAsuransi,
                     NamaAsuransi = newAsuransi.NamaAsuransi,
-                    TipePerusahaan = newAsuransi.TipePerusahaan,
-                    Status = newAsuransi.Status,
+                    //TipePerusahaan = newAsuransi.TipePerusahaan,
+                    //Status = newAsuransi.Status,
                     CreateDateTime = DateTimeOffset.Now,
                     CreateBy = Guid.NewGuid(),
                     UpdateDateTime = DateTimeOffset.Now,
@@ -151,8 +151,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
 
             existingNegara.NamaAsuransi = updatedAsuransi.NamaAsuransi;
-            existingNegara.TipePerusahaan = updatedAsuransi.TipePerusahaan;
-            existingNegara.Status = updatedAsuransi.Status;
+            existingNegara.NamaBank = updatedAsuransi.NamaBank;
+            
             
 
            
