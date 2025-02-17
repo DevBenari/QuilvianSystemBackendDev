@@ -3,9 +3,9 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels
 {
-    public class KelurahanViewModel
+    public class KabupatenKotaViewModel
     {
-        public string NamaKelurahan { get; set; }
-        public Guid KecamatanId { get; set; }
+        public string NamaKabupatenKota { get; set; }
+        public Guid ProvinsiId { get; set; }
     }
 }

@@ -151,7 +151,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
 
             existingNegara.NamaAsuransi = updatedAsuransi.NamaAsuransi;
-            existingNegara.NamaBank = updatedAsuransi.NamaBank;
+            //existingNegara.NamaBank = updatedAsuransi.NamaBank;
             
             
 

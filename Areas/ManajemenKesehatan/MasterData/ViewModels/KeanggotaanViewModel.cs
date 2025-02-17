@@ -2,8 +2,7 @@
 {
     public class KeanggotaanViewModel
     {
-        public string KeangotaanKode { get; set; }
-        public string JenisKeangotaan { get; set; }
+        public string JenisKeanggotaan { get; set; }
         public string JenisPromo { get; set; }
     }
 }

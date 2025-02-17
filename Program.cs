@@ -113,7 +113,6 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowSpecific", policy =>
@@ -123,8 +122,6 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader();
     });
 });
-
-
 
 // Add services to the container.
 builder.Services.AddControllers();

@@ -46,18 +46,54 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAllPekerjaan()
+        public async Task<IActionResult> GetAllPekerjaan(int page = 1, int perPage = 10)
         {
-            var listdata = _applicationDbContext.Pekerjaans.Where(a => a.IsDelete == false).ToList();
-            if (listdata == null || !listdata.Any())
+            // Validasi agar page dan perPage minimal bernilai 1
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
+
+            // Query data
+            var query = from a in _applicationDbContext.Pekerjaans
+                        join u in _applicationDbContext.UserActives
+                        on a.CreateBy equals u.UserActiveId
+                        where a.IsDelete == false
+                        select new
+                        {
+                            CreatedDate = a.CreateDateTime,
+                            CreateBy = a.CreateBy,
+                            CreateByName = u.FullName,
+                            PekerjaanId = a.PekerjaanId,
+                            KodePekerjaan = a.KodePekerjaan,
+                            NamaPekerjaan = a.NamaPekerjaan,
+                        };
+
+            // Hitung total data sebelum paginasi
+            var totalRows = query.Count();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            // Ambil data sesuai paging
+            var listdata = query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToList();
+
+            if (!listdata.Any())
             {
-                return NotFound(new { message = "Belum ada data. || 404 Not Found" });
+                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
             }
 
+            // Return hasil dengan paging info
             return Ok(new
             {
                 message = "Berhasil || 200 OK",
-                data = listdata
+                data = listdata,
+                pagination = new
+                {
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalRows = totalRows,
+                    TotalPages = totalPages
+                }
             });
         }
 
@@ -109,7 +145,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 string kode;
                 if (lastCode == null)
                 {
-                    kode = $"TTL{setDateNow}0001";
+                    kode = $"PKJ{setDateNow}0001";
                 }
                 else
                 {
@@ -117,11 +153,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                     if (lastCodeTrim != setDateNow)
                     {
-                        kode = $"TTL{setDateNow}0001";
+                        kode = $"PKJ{setDateNow}0001";
                     }
                     else
                     {
-                        kode = $"TTL{setDateNow}" + (Convert.ToInt32(lastCode.KodePekerjaan.Substring(9)) + 1).ToString("D4");
+                        kode = $"PKJ{setDateNow}" + (Convert.ToInt32(lastCode.KodePekerjaan.Substring(9)) + 1).ToString("D4");
                     }
                 }
 
@@ -252,7 +288,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet("paged")]
-        public IActionResult PegedPekerjaan(
+        public IActionResult PagedPekerjaan(
         int page = 1,
         int perPage = 10,
         string? search = null,
@@ -264,34 +300,34 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         DateTime? endDate = null,
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
-            //if (startDate.HasValue && endDate.HasValue && startDate > endDate)
-            //{
-            //    return BadRequest(new { message = "StartDate tidak boleh lebih besar dari EndDate." });
-            //}
-
-            //// Jika tidak menggunakan daterange, gunakan periode filter
-            //if (!startDate.HasValue && !endDate.HasValue && periode == null)
-            //{
-            //    return BadRequest(new { message = "Harap pilih periode atau masukkan rentang tanggal yang valid." });
-            //}
-
             var query = _applicationDbContext.Pekerjaans.Where(a => a.IsDelete == false).AsQueryable();
 
-            // 🔍 Filter berdasarkan search
+            //Set default periode ke Today jika tidak ada periode, startDate, atau endDate
+            if (!periode.HasValue && !startDate.HasValue && !endDate.HasValue)
+            {
+                periode = PeriodeFilter.Today;
+            }
+
+            //Filter berdasarkan search
             if (!string.IsNullOrWhiteSpace(search))
             {
-                query = query.Where(u => u.KodePekerjaan.Contains(search) && u.IsDelete == false ||
-                                         u.NamaPekerjaan.Contains(search) && u.IsDelete == false);
+                query = query.Where(u =>
+                    (u.KodePekerjaan.Contains(search) || u.NamaPekerjaan.Contains(search)) &&
+                    u.IsDelete == false
+                );
             }
 
-            // 📅 Filter berdasarkan daterange
+            //Filter berdasarkan daterange
             if (startDate.HasValue && endDate.HasValue)
             {
-                query = query.Where(u => u.CreateDateTime.Date >= startDate.Value.Date &&
-                                         u.CreateDateTime.Date <= endDate.Value.Date && u.IsDelete == false);
+                query = query.Where(u =>
+                    u.CreateDateTime.Date >= startDate.Value.Date &&
+                    u.CreateDateTime.Date <= endDate.Value.Date &&
+                    u.IsDelete == false
+                );
             }
 
-            // 📆 Filter berdasarkan periode (Hari Ini, Minggu Ini, dll)
+            //Filter berdasarkan periode (Hari Ini, Minggu Ini, dll)
             if (periode.HasValue)
             {
                 DateTime today = DateTime.UtcNow.Date;
@@ -302,20 +338,32 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         query = query.Where(u => u.CreateDateTime.Date == today && u.IsDelete == false);
                         break;
                     case PeriodeFilter.ThisWeek:
-                        query = query.Where(u => u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
-                                                 u.CreateDateTime.Date <= today && u.IsDelete == false);
+                        query = query.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
+                            u.CreateDateTime.Date <= today &&
+                            u.IsDelete == false
+                        );
                         break;
                     case PeriodeFilter.LastWeek:
-                        query = query.Where(u => u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                                                 u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek)) && u.IsDelete == false);
+                        query = query.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
+                            u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek)) &&
+                            u.IsDelete == false
+                        );
                         break;
                     case PeriodeFilter.ThisMonth:
-                        query = query.Where(u => u.CreateDateTime.Month == today.Month &&
-                                                 u.CreateDateTime.Year == today.Year && u.IsDelete == false);
+                        query = query.Where(u =>
+                            u.CreateDateTime.Month == today.Month &&
+                            u.CreateDateTime.Year == today.Year &&
+                            u.IsDelete == false
+                        );
                         break;
                     case PeriodeFilter.LastMonth:
-                        query = query.Where(u => u.CreateDateTime.Month == today.Month - 1 &&
-                                                 u.CreateDateTime.Year == today.Year && u.IsDelete == false);
+                        query = query.Where(u =>
+                            u.CreateDateTime.Month == today.Month - 1 &&
+                            u.CreateDateTime.Year == today.Year &&
+                            u.IsDelete == false
+                        );
                         break;
                     case PeriodeFilter.ThisYear:
                         query = query.Where(u => u.CreateDateTime.Year == today.Year && u.IsDelete == false);
@@ -332,7 +380,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
             }
 
-            // Sorting Data
+            //Sorting Data
             if (!string.IsNullOrEmpty(orderBy))
             {
                 query = sortDirection?.ToLower() == "desc"
@@ -340,7 +388,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     : query.OrderBy(e => EF.Property<object>(e, orderBy));
             }
 
-            // Pagination
+            //Pagination
             var totalRows = query.Count();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
             var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
