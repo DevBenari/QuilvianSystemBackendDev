@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers;
 using QuilvianSystemBackendDev.Models;
+using System.Security.Claims;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
@@ -47,16 +48,58 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
         // GET: api/DokterPraktek
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAllDokterPraktek(int page = 1, int perPage = 10)
         {
-            var records = await _context.DokterPrakteks
-                .Include(dp => dp.Dokters)  // Include relasi dengan tabel Dokters
-                .ToListAsync();
-            if (records == null || !records.Any())
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
+
+            var query = from a in _context.DokterPrakteks
+                        join u in _context.UserActives
+                        on a.CreateBy equals u.UserActiveId
+                        where a.IsDelete == false
+                        select new
+                        {
+                            CreatedDate = a.CreateDateTime,
+                            CreateBy = a.CreateBy,
+                            CreateByName = u.FullName,
+                            DokterPraktekId =a.DokterId,
+                            Dokter = a.Dokter,
+                            Layanan = a.Layanan,
+                            JamPraktek = a.JamPraktek,
+                            Hari = a.Hari,
+                            JamMasuk = a.JamMasuk,
+                            JamKeluar = a.JamKeluar,
+                            DokterId = a.DokterId,
+                        };
+
+            // Hitung total data sebelum paginasi
+            var totalRows = query.Count();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            // Ambil data sesuai paging
+            var listdata = query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToList();
+
+            if (!listdata.Any())
             {
-                return NotFound(new { message = "Tidak ada data ditemukan." });
+                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
             }
-            return Ok(new { message = "Data ditemukan.", data = records });
+
+            // Return hasil dengan paging info
+            return Ok(new
+            {
+                message = "Berhasil || 200 OK",
+                data = listdata,
+                pagination = new
+                {
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalRows = totalRows,
+                    TotalPages = totalPages
+                }
+            });
         }
 
         // GET: api/DokterPraktek/{id}
@@ -79,52 +122,75 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] DokterPraktekViewModel model)
         {
-            //validate modelstate
-            if (ModelState.IsValid)
+            if (model == null || !ModelState.IsValid)
             {
-                var dokterPraktek = new DokterPraktek
-                {
-                    DokterPraktekId = Guid.NewGuid(),
-                    Dokter = model.Dokter,
-                    Layanan = model.Layanan,
-                    JamPraktek = model.JamPraktek,
-                    Hari = model.Hari,
-                    JamMasuk = model.JamMasuk,
-                    JamKeluar = model.JamKeluar,
-                    DokterId = model.DokterId,
-                    CreateDateTime = DateTimeOffset.Now,
-                    CreateBy = Guid.NewGuid(),
-                    UpdateDateTime = DateTimeOffset.Now,
-                    UpdateBy = Guid.NewGuid(),
-                    DeleteDateTime = DateTimeOffset.Now,
-                    DeleteBy = Guid.NewGuid(),
-                    IsDelete = false
-                };
-                var checkDuplicate = _context.DokterPrakteks.Where(c => c.DokterId == model.DokterId && c.Dokter == model.Dokter).ToList();
+                return BadRequest(new { message = "Data tidak valid." });
+            }
 
-                if (checkDuplicate.Count == 0)
+            try
+            {
+                // **Ambil User ID dari JWT Claims**
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _context.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
+
+                if (string.IsNullOrEmpty(EmailLogin))
                 {
-                    var result = _context.DokterPrakteks.Where(c => c.DokterId == model.DokterId && c.Dokter == model.Dokter).FirstOrDefault();
-                    if (result == null)
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                var dateNow = DateTimeOffset.Now;
+                var setDateNow = DateTimeOffset.Now.ToString("yyMMdd");
+
+                
+
+                // Cek Duplikasi
+                var isDuplicate = _context.DokterPrakteks
+                    .Any(c => c.DokterId == model.DokterId && c.Dokter == model.Dokter);
+
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
+                }
+
+                if (ModelState.IsValid)
+                {
+                    var dokterPraktek = new DokterPraktek
                     {
-                        _context.DokterPrakteks.Add(dokterPraktek);
-                        _context.SaveChanges();
-                        return CreatedAtAction(nameof(GetAll), new { message = "Tambah Data Berhasil || 201 Created" }, model);
-                    }
-                    else
+                        DokterPraktekId = Guid.NewGuid(),
+                        Dokter = model.Dokter,
+                        Layanan = model.Layanan,
+                        JamPraktek = model.JamPraktek,
+                        Hari = model.Hari,
+                        JamMasuk = model.JamMasuk,
+                        JamKeluar = model.JamKeluar,
+                        DokterId = model.DokterId,
+                        CreateDateTime = DateTimeOffset.Now,
+                        CreateBy = Guid.NewGuid(),
+                        UpdateDateTime = DateTimeOffset.Now,
+                        UpdateBy = Guid.NewGuid(),
+                        DeleteDateTime = DateTimeOffset.Now,
+                        DeleteBy = Guid.NewGuid(),
+                        IsDelete = false
+                    };
+                    _context.DokterPrakteks.Add(dokterPraktek);
+                    _context.SaveChanges();
+
+                    return Created("", new
                     {
-                        return BadRequest(new { message = "Data tidak dapat di input !!! || 400 Bad Request" });
-                    }
+                        message = "Tambah Data Berhasil || 201 Created",
+                    });
+
                 }
                 else
                 {
-                    return Conflict(new { message = "Terdapat duplikasi data !!! || 409 Conflict Data" });
+                    return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
                 }
             }
-            else
-            {
-                return BadRequest(new { message = "Data tidak valid !!!! || 400 Bad Request" });
 
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
 
@@ -132,83 +198,88 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] DokterPraktekViewModel model)
         {
-
-            //cek apakah data ada di database
-            var existingDokterPraktek = await _context.DokterPrakteks.FindAsync(id);
-            if (existingDokterPraktek == null)
+            if (model == null || !ModelState.IsValid)
             {
-                return NotFound(new { message = "Data tidak ditemukan. || 404 Not Found " });
+                return BadRequest(new { message = "Data tidak valid." });
             }
 
-            //cek duplikat data
-            var checkDuplicate = _context.DokterPrakteks.Where
-                (c => c.DokterId == model.DokterId && c.Dokter == model.Dokter
-                && c.DokterPraktekId != id).FirstOrDefault();
-            if (checkDuplicate != null)
-            {
-                return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
-            }
-
-            // Update properti dari data yang ada dengan nilai dari model
-            existingDokterPraktek.Dokter = model.Dokter;
-            existingDokterPraktek.Layanan = model.Layanan;
-            existingDokterPraktek.JamPraktek = model.JamPraktek;
-            existingDokterPraktek.Hari = model.Hari;
-            existingDokterPraktek.JamMasuk = model.JamMasuk;
-            existingDokterPraktek.JamKeluar = model.JamKeluar;
-            existingDokterPraktek.UpdateDateTime = DateTimeOffset.Now;
-            existingDokterPraktek.UpdateBy = Guid.NewGuid();  // Sesuaikan dengan ID pengguna yang mengupdate
-
-            // Simpan perubahan ke database
             try
             {
-                _context.DokterPrakteks.Update(existingDokterPraktek);
-                await _context.SaveChangesAsync();
+                // **Ambil User ID dari JWT Claims**
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _context.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
 
-                return CreatedAtAction(nameof(GetAll), new { message = "Tambah Data Berhasil || 201 Created" }, model);
+                if (string.IsNullOrEmpty(EmailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                // cari data
+                var data = _context.DokterPrakteks.Find(id);
+                if (data == null)
+                {
+                    return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                //update data
+                data.Dokter = model.Dokter ?? data.Dokter;
+                data.Layanan = model.Layanan ?? data.Layanan;
+                data.JamPraktek = model.JamPraktek ?? data.JamPraktek;
+                data.Hari = model.Hari ?? data.Hari;
+                data.JamMasuk = model.JamMasuk ?? data.JamMasuk;
+                data.JamKeluar = model.JamKeluar ?? data.JamKeluar;
+                
+
+                _context.DokterPrakteks.Update(data);
+                _context.SaveChanges();
+
+                return Ok(new { message = "Data berhasil diupdate..." });
             }
+
             catch (Exception ex)
             {
-                // Tangani kesalahan jika ada
-                return StatusCode(500, new { message = "Terjadi kesalahan di server.", error = ex.Message });
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
-            //if (model == null || id != model.DokterPraktekId)
-            //{
-            //    return BadRequest(new { message = "Data tidak valid." });
-            //}
-            //var existingRecord = await _context.DokterPrakteks.FindAsync(id);
-            //if (existingRecord == null)
-            //{
-            //    return NotFound(new { message = "Data tidak ditemukan." });
-            //}
-            //// Update properties
-            //foreach (var prop in model.GetType().GetProperties())
-            //{
-            //    var value = prop.GetValue(model);
-            //    if (value != null)
-            //    {
-            //        prop.SetValue(existingRecord, value);
-            //    }
-            //}
-
-            //_context.DokterPrakteks.Update(existingRecord);
-            //await _context.SaveChangesAsync();
-
-            //return Ok(new { message = "Data berhasil diperbarui." });
         }
 
         // DELETE: api/DokterPraktek/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
-            var record = await _context.DokterPrakteks.FindAsync(id);
-            if (record == null)
+            try
             {
-                return NotFound(new { message = $"Data dengan ID {id} tidak ditemukan." });
+                //Ambil User ID dari JWT Claims
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _context.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
+
+                if (string.IsNullOrEmpty(EmailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                // **Cari Data Dokter**
+                var data = _context.DokterPrakteks.Find(id);
+                if (data == null)
+                {
+                    return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                // **Soft Delete (Tandai Data sebagai Terhapus)**
+                data.DeleteBy = UserActiveId;
+                data.DeleteDateTime = DateTimeOffset.Now;
+                data.IsDelete = true;
+
+                _context.DokterPrakteks.Update(data);
+                _context.SaveChanges();
+
+                return Ok(new { message = "Data berhasil dihapus..." });
             }
-            _context.DokterPrakteks.Remove(record);
-            await _context.SaveChangesAsync();
-            return Ok(new { message = "Data berhasil dihapus." });
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
         }
 
         [HttpGet("paged")]

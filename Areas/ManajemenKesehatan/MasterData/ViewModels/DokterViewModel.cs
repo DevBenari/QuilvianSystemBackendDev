@@ -2,7 +2,6 @@
 {
     public class DokterViewModel
     {
-        public string KdDokter { get; set; }
         public string NmDokter { get; set; }
         public string Sip { get; set; }
         public string Str { get; set; }
