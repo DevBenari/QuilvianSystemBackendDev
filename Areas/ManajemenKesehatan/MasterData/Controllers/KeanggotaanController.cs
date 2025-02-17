@@ -4,12 +4,16 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient.Server;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
-using QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
@@ -19,27 +23,30 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
     [EnableCors("AllowSpecific")]
     public class KeanggotaanController : Controller
     {
-        private readonly ApplicationDbContext _context;
+        private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-        private readonly ILogger<PendaftaranPasienBaruController> _logger;
+
+        private readonly ILogger<KeanggotaanController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
+
         public KeanggotaanController
-            (ApplicationDbContext context,
+        (
+            ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<PendaftaranPasienBaruController> logger,
+
+            ILogger<KeanggotaanController> logger,
             IWebHostEnvironment webHostEnvironment
-            )
+        )
         {
-            _context = context;
+            _applicationDbContext = context;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
         }
 
-        // GET: api/Keangotaan
         [HttpGet]
         public async Task<IActionResult> GetAllKeanggotaan(int page = 1, int perPage = 10)
         {
@@ -48,8 +55,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = from a in _context.Keangotaans
-                        join u in _context.UserActives
+            var query = from a in _applicationDbContext.Keanggotaans
+                        join u in _applicationDbContext.UserActives
                         on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
                         select new
@@ -57,9 +64,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreatedDate = a.CreateDateTime,
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
-                            KeanggotaanId = a.KeangotaanId,
-                            KeanggotaanKode = a.KeangotaanKode,
-                            JenisKeangotaan = a.JenisKeangotaan,
+                            KeanggotaanId = a.KeanggotaanId,
+                            KodeKeanggotaan = a.KodeKeanggotaan,
+                            JenisKeangotaan = a.JenisKeanggotaan,
+                            JenisPromo = a.JenisPromo
                         };
 
             // Hitung total data sebelum paginasi
@@ -92,23 +100,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             });
         }
 
-        // GET: api/Keangotaan/{id}
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(Guid id)
+        public async Task<IActionResult> GetKeanggotaanById(Guid id)
         {
-            var record = await _context.Keangotaans.FindAsync(id);
-            if (record == null)
+            var listdata = _applicationDbContext.Keanggotaans.Find(id);
+            if (listdata == null)
             {
-                return NotFound(new { message = $"Data dengan ID {id} tidak ditemukan." });
+                return NotFound(new { message = "Data tidak ditemukan." });
             }
-            return Ok(new { message = "Data ditemukan.", data = record });
+
+            return Ok(new
+            {
+                message = "Ditemukan || 200 OK",
+                data = listdata
+            });
         }
 
-        // POST: api/Keangotaan
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] KeanggotaanViewModel model)
+        public async Task<IActionResult> CreateKeanggotaan([FromBody] KeanggotaanViewModel vm)
         {
-            if (model == null || !ModelState.IsValid)
+            if (vm == null || !ModelState.IsValid)
             {
                 return BadRequest(new { message = "Data tidak valid." });
             }
@@ -117,7 +128,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             {
                 // **Ambil User ID dari JWT Claims**
                 var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var GetUserActive = _context.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
                 var UserActiveId = GetUserActive.UserActiveId;
 
                 if (string.IsNullOrEmpty(EmailLogin))
@@ -126,132 +137,88 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 var dateNow = DateTimeOffset.Now;
-                var setDateNow = DateTimeOffset.Now.ToString("yyMMdd");
+                var setDateNow = dateNow.ToString("yyMMdd");
 
-                // Generate UserActiveCode
-                var lastCode = _context.Keangotaans
+                // Ambil data terakhir untuk hari ini (tanpa ToString di query)
+                var lastCode = _applicationDbContext.Keanggotaans
                     .Where(d => d.CreateDateTime.Date == dateNow.Date)
-                    .OrderByDescending(k => k.KeangotaanKode)
+                    .OrderByDescending(k => k.KodeKeanggotaan)
                     .FirstOrDefault();
 
                 string kode;
                 if (lastCode == null)
                 {
-                    kode = $"AGT{setDateNow}0001";
-
+                    kode = $"AGG{setDateNow}0001";
                 }
                 else
                 {
-                    var lastCodeTrim = lastCode.KeangotaanKode.Substring(3, 6);
+                    var lastCodeTrim = lastCode.KodeKeanggotaan.Substring(3, 6);
+
                     if (lastCodeTrim != setDateNow)
                     {
-                        kode = $"AGT{setDateNow}0001";
+                        kode = $"AGG{setDateNow}0001";
                     }
                     else
                     {
-                        kode = $"AGT{setDateNow}" + (Convert.ToInt32(lastCode.KeangotaanKode.Substring(9)) + 1).ToString("D4");
+                        kode = $"AGG{setDateNow}" + (Convert.ToInt32(lastCode.KodeKeanggotaan.Substring(9)) + 1).ToString("D4");
                     }
                 }
 
                 // Cek Duplikasi
-                var isDuplicate = _context.Keangotaans
-                    .Any(c => c.KeangotaanKode == kode && c.JenisKeangotaan == model.JenisKeangotaan);
+                var isDuplicate = _applicationDbContext.Keanggotaans
+                    .Any(c => c.KodeKeanggotaan == kode && c.JenisKeanggotaan == vm.JenisKeanggotaan);
 
                 if (isDuplicate)
                 {
                     return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
                 }
 
+                // Validate ModelState
                 if (ModelState.IsValid)
                 {
-                    var data = new Keangotaan
+                    // Simpan Data
+                    var data = new Keanggotaan
                     {
-                        KeangotaanId = Guid.NewGuid(),
-                        KeangotaanKode = kode,
-                        JenisKeangotaan = model.JenisKeangotaan,
-                        JenisPromo = model.JenisPromo,
+                        KeanggotaanId = Guid.NewGuid(),
                         CreateDateTime = DateTimeOffset.Now,
                         CreateBy = UserActiveId,
-                        IsDelete = false
+                        KodeKeanggotaan = kode,
+                        JenisKeanggotaan = vm.JenisKeanggotaan,
+                        JenisPromo = vm.JenisPromo
                     };
 
-                    _context.Keangotaans.Add(data);
-                    _context.SaveChanges();
+                    _applicationDbContext.Keanggotaans.Add(data);
+                    _applicationDbContext.SaveChanges();
 
                     return Created("", new
                     {
                         message = "Tambah Data Berhasil || 201 Created",
                     });
-
                 }
                 else
                 {
                     return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
                 }
-
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Terjadi kesalahan di server.", error = ex.Message });
-            }
-        }
-
-        // PUT: api/Keangotaan/{id}
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] KeanggotaanViewModel model)
-        {
-            if (model == null || !ModelState.IsValid)
-            {
-                return BadRequest(new { message = "Data tidak valid." });
-            }
-
-            try
-            {
-                // **Ambil User ID dari JWT Claims**
-                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var GetUserActive = _context.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
-                var UserActiveId = GetUserActive.UserActiveId;
-
-                if (string.IsNullOrEmpty(EmailLogin))
-                {
-                    return Unauthorized(new { message = "User tidak terautentikasi!" });
-                }
-
-                // cari data
-                var data = _context.Keangotaans.Find(id);
-                if (data == null)
-                {
-                    return NotFound(new { message = "Data tidak ditemukan." });
-                }
-
-                //update data
-                data.JenisKeangotaan = model.JenisKeangotaan ?? data.JenisKeangotaan;
-                data.JenisPromo = model.JenisPromo ?? data.JenisPromo;
-
-                data.UpdateDateTime = DateTimeOffset.Now;
-                data.UpdateBy = UserActiveId;
-
-                _context.Keangotaans.Update(data);
-                _context.SaveChanges();
-
-                return Ok(new { message = "Data berhasil diupdate..." });
-            }
-
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
 
-        // DELETE: api/Keangotaan/{id}
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(Guid id)
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateKeanggotaan(Guid id, [FromBody] KeanggotaanViewModel vm)
         {
+            if (vm == null || !ModelState.IsValid)
+            {
+                return BadRequest(new { message = "Data tidak valid." });
+            }
+
             try
             {
                 //Ambil User ID dari JWT Claims
                 var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var GetUserActive = _context.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
                 var UserActiveId = GetUserActive.UserActiveId;
 
                 if (string.IsNullOrEmpty(EmailLogin))
@@ -259,8 +226,50 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                // **Cari Data Dokter**
-                var data = _context.Keangotaans.Find(id);
+                // **Cari Data Pasien**
+                var data = _applicationDbContext.Keanggotaans.Find(id);
+                if (data == null)
+                {
+                    return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                // **Update Data Pasien**
+                data.JenisKeanggotaan = vm.JenisKeanggotaan;
+
+                data.UpdateBy = UserActiveId;
+                data.UpdateDateTime = DateTimeOffset.Now;
+
+                _applicationDbContext.Keanggotaans.Update(data);
+                _applicationDbContext.SaveChanges();
+
+                return Ok(new
+                {
+                    message = "Update Data Berhasil || 200 OK",
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteKeanggotaan(Guid id)
+        {
+            try
+            {
+                //Ambil User ID dari JWT Claims
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
+
+                if (string.IsNullOrEmpty(EmailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                // **Cari Data Pasien**
+                var data = _applicationDbContext.Keanggotaans.Find(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -271,8 +280,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.DeleteDateTime = DateTimeOffset.Now;
                 data.IsDelete = true;
 
-                _context.Keangotaans.Update(data);
-                _context.SaveChanges();
+                _applicationDbContext.Keanggotaans.Update(data);
+                _applicationDbContext.SaveChanges();
 
                 return Ok(new { message = "Data berhasil dihapus..." });
             }
@@ -280,6 +289,132 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             {
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
+        }
+
+        [HttpGet("paged")]
+        public IActionResult PagedKeanggotaan(
+        int page = 1,
+        int perPage = 10,
+        string? search = null,
+        string? orderBy = "CreateDateTime",
+        string? sortDirection = "desc",
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ")]
+        DateTime? startDate = null,
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ")]
+        DateTime? endDate = null,
+        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        {
+            var query = _applicationDbContext.Keanggotaans.Where(a => a.IsDelete == false).AsQueryable();
+
+            //Set default periode ke Today jika tidak ada periode, startDate, atau endDate
+            if (!periode.HasValue && !startDate.HasValue && !endDate.HasValue)
+            {
+                periode = PeriodeFilter.Today;
+            }
+
+            //Filter berdasarkan search
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(u =>
+                    (u.KodeKeanggotaan.Contains(search) || u.JenisKeanggotaan.Contains(search)) &&
+                    u.IsDelete == false
+                );
+            }
+
+            //Filter berdasarkan daterange
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                query = query.Where(u =>
+                    u.CreateDateTime.Date >= startDate.Value.Date &&
+                    u.CreateDateTime.Date <= endDate.Value.Date &&
+                    u.IsDelete == false
+                );
+            }
+
+            //Filter berdasarkan periode (Hari Ini, Minggu Ini, dll)
+            if (periode.HasValue)
+            {
+                DateTime today = DateTime.UtcNow.Date;
+
+                switch (periode)
+                {
+                    case PeriodeFilter.Today:
+                        query = query.Where(u => u.CreateDateTime.Date == today && u.IsDelete == false);
+                        break;
+                    case PeriodeFilter.ThisWeek:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
+                            u.CreateDateTime.Date <= today &&
+                            u.IsDelete == false
+                        );
+                        break;
+                    case PeriodeFilter.LastWeek:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
+                            u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek)) &&
+                            u.IsDelete == false
+                        );
+                        break;
+                    case PeriodeFilter.ThisMonth:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Month == today.Month &&
+                            u.CreateDateTime.Year == today.Year &&
+                            u.IsDelete == false
+                        );
+                        break;
+                    case PeriodeFilter.LastMonth:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Month == today.Month - 1 &&
+                            u.CreateDateTime.Year == today.Year &&
+                            u.IsDelete == false
+                        );
+                        break;
+                    case PeriodeFilter.ThisYear:
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year && u.IsDelete == false);
+                        break;
+                    case PeriodeFilter.LastYear:
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1 && u.IsDelete == false);
+                        break;
+                    case PeriodeFilter.Last3Months:
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3) && u.IsDelete == false);
+                        break;
+                    case PeriodeFilter.Last6Months:
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6) && u.IsDelete == false);
+                        break;
+                }
+            }
+
+            //Sorting Data
+            if (!string.IsNullOrEmpty(orderBy))
+            {
+                query = sortDirection?.ToLower() == "desc"
+                    ? query.OrderByDescending(e => EF.Property<object>(e, orderBy))
+                    : query.OrderBy(e => EF.Property<object>(e, orderBy));
+            }
+
+            //Pagination
+            var totalRows = query.Count();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
+
+            if (rows.Count == 0 && page > totalPages)
+            {
+                return NotFound(new { message = "Page not found." });
+            }
+
+            return Ok(new
+            {
+                status = "success",
+                message = "Data retrieved successfully",
+                data = new
+                {
+                    Rows = rows,
+                    TotalRows = totalRows,
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalPages = totalPages
+                }
+            });
         }
     }
 }

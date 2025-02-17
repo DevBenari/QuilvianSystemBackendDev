@@ -97,7 +97,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             });
         }
 
-
         [HttpGet("{id}")]
         public async Task<IActionResult> GetAgamaById(Guid id)
         {
@@ -289,27 +288,27 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet("paged")]
-        public IActionResult PegedAgama(
-    int page = 1,
-    int perPage = 10,
-    string? search = null,
-    string? orderBy = "CreateDateTime",
-    string? sortDirection = "desc",
-    [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ")]
-    DateTime? startDate = null,
-    [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ")]
-    DateTime? endDate = null,
-    [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        public IActionResult PagedAgama(
+        int page = 1,
+        int perPage = 10,
+        string? search = null,
+        string? orderBy = "CreateDateTime",
+        string? sortDirection = "desc",
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ")]
+        DateTime? startDate = null,
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ")]
+        DateTime? endDate = null,
+        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
             var query = _applicationDbContext.Agamas.Where(a => a.IsDelete == false).AsQueryable();
 
-            // 🔹 Set default periode ke Today jika tidak ada periode, startDate, atau endDate
+            //Set default periode ke Today jika tidak ada periode, startDate, atau endDate
             if (!periode.HasValue && !startDate.HasValue && !endDate.HasValue)
             {
                 periode = PeriodeFilter.Today;
             }
 
-            // 🔍 Filter berdasarkan search
+            //Filter berdasarkan search
             if (!string.IsNullOrWhiteSpace(search))
             {
                 query = query.Where(u =>
@@ -318,7 +317,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 );
             }
 
-            // 📅 Filter berdasarkan daterange
+            //Filter berdasarkan daterange
             if (startDate.HasValue && endDate.HasValue)
             {
                 query = query.Where(u =>
@@ -328,7 +327,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 );
             }
 
-            // 📆 Filter berdasarkan periode (Hari Ini, Minggu Ini, dll)
+            //Filter berdasarkan periode (Hari Ini, Minggu Ini, dll)
             if (periode.HasValue)
             {
                 DateTime today = DateTime.UtcNow.Date;
@@ -381,7 +380,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
             }
 
-            // 🔽 Sorting Data
+            //Sorting Data
             if (!string.IsNullOrEmpty(orderBy))
             {
                 query = sortDirection?.ToLower() == "desc"
@@ -389,7 +388,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     : query.OrderBy(e => EF.Property<object>(e, orderBy));
             }
 
-            // 📌 Pagination
+            //Pagination
             var totalRows = query.Count();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
             var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();

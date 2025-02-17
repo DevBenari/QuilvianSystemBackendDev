@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using QuilvianSystemBackendDev.Repositories;
 
@@ -11,9 +12,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250217084613_inisiasiWilayah")]
+    partial class inisiasiWilayah
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1403,7 +1405,7 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 
@@ -1412,7 +1414,7 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.HasOne("QuilvianSystemBackendDev.Models.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 
@@ -1421,7 +1423,7 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.HasOne("QuilvianSystemBackendDev.Models.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 
@@ -1430,13 +1432,13 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("QuilvianSystemBackendDev.Models.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 
@@ -1445,7 +1447,7 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.HasOne("QuilvianSystemBackendDev.Models.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 
@@ -1454,7 +1456,7 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Dokter", "Dokters")
                         .WithMany()
                         .HasForeignKey("DokterId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Dokters");
@@ -1464,7 +1466,8 @@ namespace QuilvianSystemBackendDev.Migrations
                 {
                     b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Provinsi", "Provinsi")
                         .WithMany("KabupatenKotas")
-                        .HasForeignKey("ProvinsiId");
+                        .HasForeignKey("ProvinsiId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Provinsi");
                 });
@@ -1473,7 +1476,8 @@ namespace QuilvianSystemBackendDev.Migrations
                 {
                     b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.KabupatenKota", "KabupatenKota")
                         .WithMany("Kecamatan")
-                        .HasForeignKey("KabupatenKotaId");
+                        .HasForeignKey("KabupatenKotaId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("KabupatenKota");
                 });
@@ -1482,7 +1486,8 @@ namespace QuilvianSystemBackendDev.Migrations
                 {
                     b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Kecamatan", "Kecamatan")
                         .WithMany("Kelurahan")
-                        .HasForeignKey("KecamatanId");
+                        .HasForeignKey("KecamatanId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Kecamatan");
                 });
@@ -1491,7 +1496,8 @@ namespace QuilvianSystemBackendDev.Migrations
                 {
                     b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Negara", "Negara")
                         .WithMany("Provinsi")
-                        .HasForeignKey("NegaraId");
+                        .HasForeignKey("NegaraId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Negara");
                 });
