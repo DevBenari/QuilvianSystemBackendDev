@@ -46,20 +46,57 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAllAgama()
+        public async Task<IActionResult> GetAllAgama(int page = 1, int perPage = 10)
         {
-            var listdata = _applicationDbContext.Agamas.Where(a => a.IsDelete == false).ToList();
-            if (listdata == null || !listdata.Any())
+            // Validasi agar page dan perPage minimal bernilai 1
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
+
+            // Query data
+            var query = from a in _applicationDbContext.Agamas
+                        join u in _applicationDbContext.UserActives
+                        on a.CreateBy equals u.UserActiveId
+                        where a.IsDelete == false
+                        select new
+                        {
+                            CreatedDate = a.CreateDateTime,
+                            CreateBy = a.CreateBy,
+                            CreateByName = u.FullName,
+                            AgamaId = a.AgamaId,
+                            KodeAgama = a.KodeAgama,
+                            NamaAgama = a.NamaAgama,
+                        };
+
+            // Hitung total data sebelum paginasi
+            var totalRows = query.Count();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            // Ambil data sesuai paging
+            var listdata = query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToList();
+
+            if (!listdata.Any())
             {
-                return NotFound(new { message = "Belum ada data. || 404 Not Found" });
+                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
             }
 
+            // Return hasil dengan paging info
             return Ok(new
             {
                 message = "Berhasil || 200 OK",
-                data = listdata
+                data = listdata,
+                pagination = new
+                {
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalRows = totalRows,
+                    TotalPages = totalPages
+                }
             });
         }
+
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetAgamaById(Guid id)
@@ -253,42 +290,42 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
         [HttpGet("paged")]
         public IActionResult PegedAgama(
-        int page = 1,
-        int perPage = 10,
-        string? search = null,
-        string? orderBy = "CreateDateTime",
-        string? sortDirection = "asc",
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ")]
-        DateTime? startDate = null,
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ")]
-        DateTime? endDate = null,
-        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+    int page = 1,
+    int perPage = 10,
+    string? search = null,
+    string? orderBy = "CreateDateTime",
+    string? sortDirection = "desc",
+    [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ")]
+    DateTime? startDate = null,
+    [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ")]
+    DateTime? endDate = null,
+    [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
-            if (startDate.HasValue && endDate.HasValue && startDate > endDate)
-            {
-                return BadRequest(new { message = "StartDate tidak boleh lebih besar dari EndDate." });
-            }
+            var query = _applicationDbContext.Agamas.Where(a => a.IsDelete == false).AsQueryable();
 
-            // Jika tidak menggunakan daterange, gunakan periode filter
-            if (!startDate.HasValue && !endDate.HasValue && periode == null)
+            // 🔹 Set default periode ke Today jika tidak ada periode, startDate, atau endDate
+            if (!periode.HasValue && !startDate.HasValue && !endDate.HasValue)
             {
-                return BadRequest(new { message = "Harap pilih periode atau masukkan rentang tanggal yang valid." });
+                periode = PeriodeFilter.Today;
             }
-
-            var query = _applicationDbContext.Agamas.AsQueryable();
 
             // 🔍 Filter berdasarkan search
             if (!string.IsNullOrWhiteSpace(search))
             {
-                query = query.Where(u => u.KodeAgama.Contains(search) ||
-                                         u.NamaAgama.Contains(search));
+                query = query.Where(u =>
+                    (u.KodeAgama.Contains(search) || u.NamaAgama.Contains(search)) &&
+                    u.IsDelete == false
+                );
             }
 
             // 📅 Filter berdasarkan daterange
             if (startDate.HasValue && endDate.HasValue)
             {
-                query = query.Where(u => u.CreateDateTime.Date >= startDate.Value.Date &&
-                                         u.CreateDateTime.Date <= endDate.Value.Date);
+                query = query.Where(u =>
+                    u.CreateDateTime.Date >= startDate.Value.Date &&
+                    u.CreateDateTime.Date <= endDate.Value.Date &&
+                    u.IsDelete == false
+                );
             }
 
             // 📆 Filter berdasarkan periode (Hari Ini, Minggu Ini, dll)
@@ -299,40 +336,52 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 switch (periode)
                 {
                     case PeriodeFilter.Today:
-                        query = query.Where(u => u.CreateDateTime.Date == today);
+                        query = query.Where(u => u.CreateDateTime.Date == today && u.IsDelete == false);
                         break;
                     case PeriodeFilter.ThisWeek:
-                        query = query.Where(u => u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
-                                                 u.CreateDateTime.Date <= today);
+                        query = query.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
+                            u.CreateDateTime.Date <= today &&
+                            u.IsDelete == false
+                        );
                         break;
                     case PeriodeFilter.LastWeek:
-                        query = query.Where(u => u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                                                 u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek)));
+                        query = query.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
+                            u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek)) &&
+                            u.IsDelete == false
+                        );
                         break;
                     case PeriodeFilter.ThisMonth:
-                        query = query.Where(u => u.CreateDateTime.Month == today.Month &&
-                                                 u.CreateDateTime.Year == today.Year);
+                        query = query.Where(u =>
+                            u.CreateDateTime.Month == today.Month &&
+                            u.CreateDateTime.Year == today.Year &&
+                            u.IsDelete == false
+                        );
                         break;
                     case PeriodeFilter.LastMonth:
-                        query = query.Where(u => u.CreateDateTime.Month == today.Month - 1 &&
-                                                 u.CreateDateTime.Year == today.Year);
+                        query = query.Where(u =>
+                            u.CreateDateTime.Month == today.Month - 1 &&
+                            u.CreateDateTime.Year == today.Year &&
+                            u.IsDelete == false
+                        );
                         break;
                     case PeriodeFilter.ThisYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year && u.IsDelete == false);
                         break;
                     case PeriodeFilter.LastYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1 && u.IsDelete == false);
                         break;
                     case PeriodeFilter.Last3Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3) && u.IsDelete == false);
                         break;
                     case PeriodeFilter.Last6Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6) && u.IsDelete == false);
                         break;
                 }
             }
 
-            // Sorting Data
+            // 🔽 Sorting Data
             if (!string.IsNullOrEmpty(orderBy))
             {
                 query = sortDirection?.ToLower() == "desc"
@@ -340,7 +389,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     : query.OrderBy(e => EF.Property<object>(e, orderBy));
             }
 
-            // Pagination
+            // 📌 Pagination
             var totalRows = query.Count();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
             var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
