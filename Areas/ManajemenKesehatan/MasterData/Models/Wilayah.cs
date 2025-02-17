@@ -5,62 +5,61 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
 {
     [Table("MstProvinsi", Schema = "dbo")]
-    public class Provinsi
+    public class Provinsi : UserActivity
     {
         [Key]
         public Guid ProvinsiId { get; set; }
-        public string ProvinsiCode { get; set; }
-        public string ProvinsiName { get; set; }
-        //foreign key to NegaraId
-        public Guid NegaraId { get; set; }
+        public string KodeProvinsi { get; set; }
+        public string NamaProvinsi { get; set; }
+        public Guid? NegaraId { get; set; }
+        public ICollection<KabupatenKota> KabupatenKotas { get; set; }
+
+        //Relation        
         [ForeignKey("NegaraId")]
-        public Negara Negara { get; set; }
-
-        // Relationship with Kabupaten
-        public ICollection<KabupatenKota> Kabupaten { get; set; }
-
+        public Negara? Negara { get; set; }        
     }
 
     [Table("MstKabupatenKota", Schema = "dbo")]
-    public class KabupatenKota
+    public class KabupatenKota : UserActivity
     {
         [Key]
         public Guid KabupatenKotaId { get; set; }
-        public string KabupatenKotaCode { get; set; }
-        public string KabupatenKotaName { get; set; }
+        public string KodeKabupatenKota { get; set; }
+        public string NamaKabupatenKota { get; set; }
+        public Guid? ProvinsiId { get; set; }
+        public ICollection<Kecamatan> Kecamatan { get; set; }
 
-        // Foreign key to ProvinsiId (Guid)
-        public Guid ProvinsiId { get; set; }  
+        //Relation
+        [ForeignKey("ProvinsiId")]
+        public Provinsi? Provinsi { get; set; }           
     }
 
     [Table("MstKecamatan", Schema = "dbo")]
-    public class Kecamatan
+    public class Kecamatan : UserActivity
     {
         [Key]
         public Guid KecamatanId { get; set; }
-        public string KecamatanCode { get; set; }
-        public string KecamatanName { get; set; }
+        public string KodeKecamatan { get; set; }
+        public string NamaKecamatan { get; set; }
+        public Guid? KabupatenKotaId { get; set; }
+        public ICollection<Kelurahan> Kelurahan { get; set; }
 
-        // Foreign key to KabupatenId (Guid)
-
-        public Guid KabupatenKotaId { get; set; }  // Changed to match KabupatenId type (Guid)
+        //Relation
         [ForeignKey("KabupatenKotaId")]
-        public KabupatenKota Kabupatenkota { get; set; }  // Relationship with Kabupaten
-
-        // Relationship with Kelurahan
-        public ICollection<Kelurahan> Kelurahans { get; set; }
-
+        public KabupatenKota? KabupatenKota { get; set; }        
     }
 
     [Table("MstKelurahan", Schema = "dbo")]
-    public class Kelurahan
+    public class Kelurahan : UserActivity
     {
         [Key]
         public Guid KelurahanId { get; set; }
-        public string KelurahanCode { get; set; }
-        public string KelurahanName { get; set; }
+        public string KodeKelurahan { get; set; }
+        public string NamaKelurahan { get; set; }
+        public Guid? KecamatanId { get; set; }
 
-        // Foreign key to KecamatanId (Guid)
-        public Guid KecamatanId { get; set; }  
+        //Relation
+        [ForeignKey("KecamatanId")]
+        public Kecamatan? Kecamatan { get; set; }
     }
 }

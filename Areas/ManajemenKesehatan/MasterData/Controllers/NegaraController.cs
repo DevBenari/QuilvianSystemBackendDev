@@ -3,45 +3,47 @@ using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Repositories;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
-using QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers;
 using QuilvianSystemBackendDev.Models;
-using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Logging;
 using System.Security.Claims;
+using Microsoft.Data.SqlClient.Server;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using Swashbuckle.AspNetCore.Annotations;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
-    [EnableCors("AllowSpecific")]
+    //[Authorize]
     public class NegaraController : Controller
     {
-        private readonly ApplicationDbContext _context;
+        private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<PendaftaranPasienBaruController> _logger;
+        private readonly ILogger<NegaraController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
         public NegaraController
-            (ApplicationDbContext context,
+        (
+            ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<PendaftaranPasienBaruController> logger,
+
+            ILogger<NegaraController> logger,
             IWebHostEnvironment webHostEnvironment
-            )
+        )
         {
-            _context = context;
+            _applicationDbContext = context;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
         }
 
-        // Get : api/Negara
         [HttpGet]
         public async Task<IActionResult> GetAllNegara(int page = 1, int perPage = 10)
         {
@@ -50,8 +52,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = from a in _context.Negaras
-                        join u in _context.UserActives
+            var query = from a in _applicationDbContext.Negaras
+                        join u in _applicationDbContext.UserActives
                         on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
                         select new
@@ -61,8 +63,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateByName = u.FullName,
                             NegaraId = a.NegaraId,
                             KodeNegara = a.KodeNegara,
-                            NamaNegara = a.NamaNegara
-
+                            NamaNegara = a.NamaNegara,
                         };
 
             // Hitung total data sebelum paginasi
@@ -95,23 +96,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             });
         }
 
-        // Get : api/Negara/{id}
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(Guid id)
+        public async Task<IActionResult> GetNegaraById(Guid id)
         {
-            var record = await _context.Negaras.FindAsync(id);
-            if (record == null)
+            var listdata = _applicationDbContext.Negaras.Find(id);
+            if (listdata == null)
             {
-                return NotFound(new { message = $"Data dengan ID {id} tidak ditemukan." });
+                return NotFound(new { message = "Data tidak ditemukan." });
             }
-            return Ok(new { message = "Data ditemukan.", data = record });
+
+            return Ok(new
+            {
+                message = "Ditemukan || 200 OK",
+                data = listdata
+            });
         }
 
-        // Post : api/Negara
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] NegaraViewModel model)
+        public async Task<IActionResult> CreateNegara([FromBody] NegaraViewModel vm)
         {
-            if (model == null || !ModelState.IsValid)
+            if (vm == null || !ModelState.IsValid)
             {
                 return BadRequest(new { message = "Data tidak valid." });
             }
@@ -120,7 +124,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             {
                 // **Ambil User ID dari JWT Claims**
                 var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var GetUserActive = _context.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
                 var UserActiveId = GetUserActive.UserActiveId;
 
                 if (string.IsNullOrEmpty(EmailLogin))
@@ -129,10 +133,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 var dateNow = DateTimeOffset.Now;
-                var setDateNow = DateTimeOffset.Now.ToString("yyMMdd");
+                var setDateNow = dateNow.ToString("yyMMdd");
 
-                // Generate UserActiveCode
-                var lastCode = _context.Negaras
+                // Ambil data terakhir untuk hari ini (tanpa ToString di query)
+                var lastCode = _applicationDbContext.Negaras
                     .Where(d => d.CreateDateTime.Date == dateNow.Date)
                     .OrderByDescending(k => k.KodeNegara)
                     .FirstOrDefault();
@@ -141,11 +145,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 if (lastCode == null)
                 {
                     kode = $"NGR{setDateNow}0001";
-
                 }
                 else
                 {
                     var lastCodeTrim = lastCode.KodeNegara.Substring(3, 6);
+
                     if (lastCodeTrim != setDateNow)
                     {
                         kode = $"NGR{setDateNow}0001";
@@ -157,64 +161,59 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // Cek Duplikasi
-                var isDuplicate = _context.Negaras
-                    .Any(c => c.KodeNegara == kode && c.NamaNegara == model.NamaNegara);
+                var isDuplicate = _applicationDbContext.Negaras
+                    .Any(c => c.KodeNegara == kode && c.NamaNegara == vm.NamaNegara);
 
                 if (isDuplicate)
                 {
                     return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
                 }
 
+                // Validate ModelState
                 if (ModelState.IsValid)
                 {
-                    var negara = new Negara
+                    // Simpan Data
+                    var data = new Negara
                     {
                         NegaraId = Guid.NewGuid(),
-                        KodeNegara = kode,
-                        NamaNegara = model.NamaNegara,
                         CreateDateTime = DateTimeOffset.Now,
                         CreateBy = UserActiveId,
-                        UpdateDateTime = DateTimeOffset.Now,
-                        IsDelete = false
+                        KodeNegara = kode,
+                        NamaNegara = vm.NamaNegara
                     };
-                    _context.Negaras.Add(negara);
-                    _context.SaveChanges();
+
+                    _applicationDbContext.Negaras.Add(data);
+                    _applicationDbContext.SaveChanges();
 
                     return Created("", new
                     {
                         message = "Tambah Data Berhasil || 201 Created",
                     });
-
                 }
                 else
                 {
                     return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
                 }
             }
-
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
-
-          
         }
 
-        // update negara
-        // Put : api/Negara/{id}
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] NegaraViewModel model)
+        public async Task<IActionResult> UpdateNegara(Guid id, [FromBody] NegaraViewModel vm)
         {
-            if (model == null || !ModelState.IsValid)
+            if (vm == null || !ModelState.IsValid)
             {
                 return BadRequest(new { message = "Data tidak valid." });
             }
 
             try
             {
-                // **Ambil User ID dari JWT Claims**
+                //Ambil User ID dari JWT Claims
                 var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var GetUserActive = _context.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
                 var UserActiveId = GetUserActive.UserActiveId;
 
                 if (string.IsNullOrEmpty(EmailLogin))
@@ -222,43 +221,41 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                // cari data
-                var data = _context.Negaras.Find(id);
+                // **Cari Data Pasien**
+                var data = _applicationDbContext.Negaras.Find(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
-                //update data
-                data.NamaNegara = model.NamaNegara ?? data.NamaNegara;
+                // **Update Data Pasien**
+                data.NamaNegara = vm.NamaNegara;
 
-
-                data.UpdateDateTime = DateTimeOffset.Now;
                 data.UpdateBy = UserActiveId;
+                data.UpdateDateTime = DateTimeOffset.Now;
 
-                _context.Negaras.Update(data);
-                _context.SaveChanges();
+                _applicationDbContext.Negaras.Update(data);
+                _applicationDbContext.SaveChanges();
 
-                return Ok(new { message = "Data berhasil diupdate..." });
+                return Ok(new
+                {
+                    message = "Update Data Berhasil || 200 OK",
+                });
             }
-
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
-          
-
         }
 
-        // Delete : api/Negara/{id}
         [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(Guid id)
+        public async Task<IActionResult> DeleteNegara(Guid id)
         {
             try
             {
                 //Ambil User ID dari JWT Claims
                 var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var GetUserActive = _context.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
                 var UserActiveId = GetUserActive.UserActiveId;
 
                 if (string.IsNullOrEmpty(EmailLogin))
@@ -266,8 +263,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                // **Cari Data **
-                var data = _context.Negaras.Find(id);
+                // **Cari Data Pasien**
+                var data = _applicationDbContext.Negaras.Find(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -278,8 +275,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.DeleteDateTime = DateTimeOffset.Now;
                 data.IsDelete = true;
 
-                _context.Negaras.Update(data);
-                _context.SaveChanges();
+                _applicationDbContext.Negaras.Update(data);
+                _applicationDbContext.SaveChanges();
 
                 return Ok(new { message = "Data berhasil dihapus..." });
             }
@@ -287,6 +284,133 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             {
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
+        }
+
+
+        [HttpGet("paged")]
+        public IActionResult PagedNegara(
+        int page = 1,
+        int perPage = 10,
+        string? search = null,
+        string? orderBy = "CreateDateTime",
+        string? sortDirection = "desc",
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ")]
+        DateTime? startDate = null,
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ")]
+        DateTime? endDate = null,
+        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        {
+            var query = _applicationDbContext.Negaras.Where(a => a.IsDelete == false).AsQueryable();
+
+            //Set default periode ke Today jika tidak ada periode, startDate, atau endDate
+            if (!periode.HasValue && !startDate.HasValue && !endDate.HasValue)
+            {
+                periode = PeriodeFilter.Today;
+            }
+
+            //Filter berdasarkan search
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(u =>
+                    (u.KodeNegara.Contains(search) || u.NamaNegara.Contains(search)) &&
+                    u.IsDelete == false
+                );
+            }
+
+            //Filter berdasarkan daterange
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                query = query.Where(u =>
+                    u.CreateDateTime.Date >= startDate.Value.Date &&
+                    u.CreateDateTime.Date <= endDate.Value.Date &&
+                    u.IsDelete == false
+                );
+            }
+
+            //Filter berdasarkan periode (Hari Ini, Minggu Ini, dll)
+            if (periode.HasValue)
+            {
+                DateTime today = DateTime.UtcNow.Date;
+
+                switch (periode)
+                {
+                    case PeriodeFilter.Today:
+                        query = query.Where(u => u.CreateDateTime.Date == today && u.IsDelete == false);
+                        break;
+                    case PeriodeFilter.ThisWeek:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
+                            u.CreateDateTime.Date <= today &&
+                            u.IsDelete == false
+                        );
+                        break;
+                    case PeriodeFilter.LastWeek:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
+                            u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek)) &&
+                            u.IsDelete == false
+                        );
+                        break;
+                    case PeriodeFilter.ThisMonth:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Month == today.Month &&
+                            u.CreateDateTime.Year == today.Year &&
+                            u.IsDelete == false
+                        );
+                        break;
+                    case PeriodeFilter.LastMonth:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Month == today.Month - 1 &&
+                            u.CreateDateTime.Year == today.Year &&
+                            u.IsDelete == false
+                        );
+                        break;
+                    case PeriodeFilter.ThisYear:
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year && u.IsDelete == false);
+                        break;
+                    case PeriodeFilter.LastYear:
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1 && u.IsDelete == false);
+                        break;
+                    case PeriodeFilter.Last3Months:
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3) && u.IsDelete == false);
+                        break;
+                    case PeriodeFilter.Last6Months:
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6) && u.IsDelete == false);
+                        break;
+                }
+            }
+
+            //Sorting Data
+            if (!string.IsNullOrEmpty(orderBy))
+            {
+                query = sortDirection?.ToLower() == "desc"
+                    ? query.OrderByDescending(e => EF.Property<object>(e, orderBy))
+                    : query.OrderBy(e => EF.Property<object>(e, orderBy));
+            }
+
+            //Pagination
+            var totalRows = query.Count();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
+
+            if (rows.Count == 0 && page > totalPages)
+            {
+                return NotFound(new { message = "Page not found." });
+            }
+
+            return Ok(new
+            {
+                status = "success",
+                message = "Data retrieved successfully",
+                data = new
+                {
+                    Rows = rows,
+                    TotalRows = totalRows,
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalPages = totalPages
+                }
+            });
         }
     }
 }

@@ -4,13 +4,13 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
 {
-    [Table("MstKeangotaan", Schema = "dbo")]
-    public class Keangotaan : UserActivity
+    [Table("MstKeanggotaan", Schema = "dbo")]
+    public class Keanggotaan : UserActivity
     {
         [Key]
-        public Guid KeangotaanId { get; set; }
-        public string KeangotaanKode { get; set; }
-        public string JenisKeangotaan { get; set; }
+        public Guid KeanggotaanId { get; set; }
+        public string KodeKeanggotaan { get; set; }
+        public string JenisKeanggotaan { get; set; }
         public string JenisPromo { get; set; }
     }
 }
