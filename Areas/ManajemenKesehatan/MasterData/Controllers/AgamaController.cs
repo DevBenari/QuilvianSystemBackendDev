@@ -7,7 +7,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using Microsoft.AspNetCore.Cors;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
-using QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controllers;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using Swashbuckle.AspNetCore.Annotations;

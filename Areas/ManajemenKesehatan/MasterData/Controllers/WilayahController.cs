@@ -110,7 +110,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
             else if (model == "Kabupaten")
             {
-                var record = await _context.KabupatenKotas.Include(k => k.Provinsi).FirstOrDefaultAsync(k => k.KabupatenKotaId == id);
+                var record = await _context.KabupatenKotas.Include(k => k.KabupatenKotaName).FirstOrDefaultAsync(k => k.KabupatenKotaId == id);
 
                 return record != null ? Ok(new { message = "Data ditemukan.", data = record }) : NotFound(new { message = $"Kabupaten dengan ID {id} tidak ditemukan." });
             }

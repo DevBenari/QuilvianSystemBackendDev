@@ -7,6 +7,7 @@ using Microsoft.OpenApi.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
+using QuilvianSystemBackendDev.Services;
 using System.Text;
 
 
@@ -131,7 +132,18 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 
+builder.Services.AddSingleton<NFCReaderService>();
+
 var app = builder.Build();
+
+// Jalankan layanan NFC saat aplikasi dimulai
+var nfcService = app.Services.GetRequiredService<NFCReaderService>();
+Task.Run(async () =>
+{
+    await Task.Delay(5000);
+    Console.WriteLine("✅ NFC Service dimulai setelah 5 detik...");
+    nfcService.Start();
+});
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
