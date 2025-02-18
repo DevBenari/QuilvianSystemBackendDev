@@ -71,10 +71,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             NmDokter = a.NmDokter,
                             Sip = a.Sip,
                             Str = a.Str,
-                            TglSip = a.TglSip,
-                            TglStr = a.TglStr,
-                            PanggilDokter = a.PanggilDokter,
-                            Nik = a.Nik,
                         };
 
             // Hitung total data sebelum paginasi

@@ -220,7 +220,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             // Query data
             var query = from a in _applicationDbContext.Kelurahans
                         join u in _applicationDbContext.UserActives
-                        on a.CreateBy equals u.UserActiveId
+                            on a.CreateBy equals u.UserActiveId
+                        join kec in _applicationDbContext.Kecamatans
+                            on a.KecamatanId equals kec.KecamatanId
+                        join kab in _applicationDbContext.KabupatenKotas
+                            on kec.KabupatenKotaId equals kab.KabupatenKotaId
+                        join prov in _applicationDbContext.Provinsis
+                            on kab.ProvinsiId equals prov.ProvinsiId   // Menghubungkan KabupatenKota ke Provinsi
+                        join neg in _applicationDbContext.Negaras
+                            on prov.NegaraId equals neg.NegaraId  // Menghubungkan Provinsi ke Negara
                         where a.IsDelete == false
                         select new
                         {
@@ -230,7 +238,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             KodeKelurahan = a.KodeKelurahan,
                             NamaKelurahan = a.NamaKelurahan,
                             KecamatanId = a.KecamatanId,
-                            NamaKecamatan = a.Kecamatan.NamaKecamatan
+                            NamaKecamatan = kec.NamaKecamatan,
+                            KabupatenKotaId = kab.KabupatenKotaId,
+                            NamaKabupatenKota = kab.NamaKabupatenKota,
+                            ProvinsiId = prov.ProvinsiId,
+                            NamaProvinsi = prov.NamaProvinsi,
+                            NegaraId = neg.NegaraId,
+                            NamaNegara = neg.NamaNegara
                         };
 
             // Hitung total data sebelum paginasi
