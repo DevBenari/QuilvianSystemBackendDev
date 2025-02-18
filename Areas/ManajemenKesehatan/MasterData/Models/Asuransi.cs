@@ -59,6 +59,5 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? NoTeleponPerwakilan { get; set; }
         public string? EmailPerwakilan { get; set; }
         public string? JabatanPerwakilan { get; set; }
-
     }
 }

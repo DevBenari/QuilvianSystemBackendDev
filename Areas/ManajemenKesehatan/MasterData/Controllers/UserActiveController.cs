@@ -55,12 +55,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         where a.IsDelete == false
                         select new
                         {
-                            CreatedDate = a.CreateDateTime,
+                            CreateDateTime = a.CreateDateTime,
                             CreateBy = a.CreateBy,
                             CreateByName = a.FullName,
                             UserActiveId = a.UserActiveId,
-                            KodeUserActive = a.UserActiveCode,
-                            NamaUserActive = a.FullName,
+                            UserActiveCode = a.UserActiveCode,
+                            FullName = a.FullName,
                         };
 
             // Hitung total data sebelum paginasi
@@ -329,40 +329,42 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         string? search = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ")]
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
         DateTime? startDate = null,
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ")]
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
         DateTime? endDate = null,
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
-            var query = _applicationDbContext.UserActives.Where(a => a.IsDelete == false).AsQueryable();
+            var query = from a in _applicationDbContext.UserActives
+                        where a.IsDelete == false
+                        select new
+                        {
+                            CreateDateTime = a.CreateDateTime,
+                            CreateBy = a.CreateBy,
+                            CreateByName = a.FullName,
+                            UserActiveId = a.UserActiveId,
+                            UserActiveCode = a.UserActiveCode,
+                            FullName = a.FullName,
+                        };
 
-            //Set default periode ke Today jika tidak ada periode, startDate, atau endDate
-            if (!periode.HasValue && !startDate.HasValue && !endDate.HasValue)
-            {
-                periode = PeriodeFilter.Today;
-            }
-
-            //Filter berdasarkan search
+            // Filter berdasarkan search
             if (!string.IsNullOrWhiteSpace(search))
             {
                 query = query.Where(u =>
-                    (u.UserActiveCode.Contains(search) || u.FullName.Contains(search)) &&
-                    u.IsDelete == false
+                    (u.UserActiveCode.Contains(search) || u.FullName.Contains(search))                    
                 );
             }
 
-            //Filter berdasarkan daterange
+            // Filter berdasarkan daterange jika keduanya memiliki nilai
             if (startDate.HasValue && endDate.HasValue)
             {
                 query = query.Where(u =>
                     u.CreateDateTime.Date >= startDate.Value.Date &&
-                    u.CreateDateTime.Date <= endDate.Value.Date &&
-                    u.IsDelete == false
+                    u.CreateDateTime.Date <= endDate.Value.Date
                 );
             }
 
-            //Filter berdasarkan periode (Hari Ini, Minggu Ini, dll)
+            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
             if (periode.HasValue)
             {
                 DateTime today = DateTime.UtcNow.Date;
@@ -370,60 +372,67 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 switch (periode)
                 {
                     case PeriodeFilter.Today:
-                        query = query.Where(u => u.CreateDateTime.Date == today && u.IsDelete == false);
+                        query = query.Where(u => u.CreateDateTime.Date == today);
                         break;
                     case PeriodeFilter.ThisWeek:
                         query = query.Where(u =>
                             u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
-                            u.CreateDateTime.Date <= today &&
-                            u.IsDelete == false
+                            u.CreateDateTime.Date <= today
                         );
                         break;
                     case PeriodeFilter.LastWeek:
                         query = query.Where(u =>
                             u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek)) &&
-                            u.IsDelete == false
+                            u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek))
                         );
                         break;
                     case PeriodeFilter.ThisMonth:
                         query = query.Where(u =>
                             u.CreateDateTime.Month == today.Month &&
-                            u.CreateDateTime.Year == today.Year &&
-                            u.IsDelete == false
+                            u.CreateDateTime.Year == today.Year
                         );
                         break;
                     case PeriodeFilter.LastMonth:
                         query = query.Where(u =>
                             u.CreateDateTime.Month == today.Month - 1 &&
-                            u.CreateDateTime.Year == today.Year &&
-                            u.IsDelete == false
+                            u.CreateDateTime.Year == today.Year
                         );
                         break;
                     case PeriodeFilter.ThisYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year && u.IsDelete == false);
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
                         break;
                     case PeriodeFilter.LastYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1 && u.IsDelete == false);
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
                         break;
                     case PeriodeFilter.Last3Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3) && u.IsDelete == false);
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
                         break;
                     case PeriodeFilter.Last6Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6) && u.IsDelete == false);
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
                         break;
                 }
             }
 
-            //Sorting Data
-            if (!string.IsNullOrEmpty(orderBy))
-            {
-                query = sortDirection?.ToLower() == "desc"
-                    ? query.OrderByDescending(e => EF.Property<object>(e, orderBy))
-                    : query.OrderBy(e => EF.Property<object>(e, orderBy));
-            }
+            // Sorting Data dengan cara yang lebih aman
+            query = sortDirection?.ToLower() == "desc"
+                ? orderBy switch
+                {
+                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
+                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
+                    "UserActiveCode" => query.OrderByDescending(u => u.UserActiveCode),
+                    "FullName" => query.OrderByDescending(u => u.FullName),
+                    _ => query.OrderByDescending(u => u.CreateDateTime)
+                }
+                : orderBy switch
+                {
+                    "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
+                    "CreateByName" => query.OrderBy(u => u.CreateByName),
+                    "UserActiveCode" => query.OrderBy(u => u.UserActiveCode),
+                    "FullName" => query.OrderBy(u => u.FullName),
+                    _ => query.OrderBy(u => u.CreateDateTime)
+                };
 
-            //Pagination
+            // Pagination
             var totalRows = query.Count();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
             var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
