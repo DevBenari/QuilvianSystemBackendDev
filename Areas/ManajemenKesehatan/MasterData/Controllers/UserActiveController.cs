@@ -329,21 +329,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         string? search = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ")]
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
         DateTime? startDate = null,
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ")]
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
         DateTime? endDate = null,
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
             var query = _applicationDbContext.UserActives.Where(a => a.IsDelete == false).AsQueryable();
 
-            //Set default periode ke Today jika tidak ada periode, startDate, atau endDate
-            if (!periode.HasValue && !startDate.HasValue && !endDate.HasValue)
-            {
-                periode = PeriodeFilter.Today;
-            }
-
-            //Filter berdasarkan search
+            // Filter berdasarkan search
             if (!string.IsNullOrWhiteSpace(search))
             {
                 query = query.Where(u =>
@@ -352,7 +346,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 );
             }
 
-            //Filter berdasarkan daterange
+            // Filter berdasarkan daterange jika keduanya memiliki nilai
             if (startDate.HasValue && endDate.HasValue)
             {
                 query = query.Where(u =>
@@ -362,7 +356,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 );
             }
 
-            //Filter berdasarkan periode (Hari Ini, Minggu Ini, dll)
+            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
             if (periode.HasValue)
             {
                 DateTime today = DateTime.UtcNow.Date;
@@ -415,7 +409,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
             }
 
-            //Sorting Data
+            // Sorting Data
             if (!string.IsNullOrEmpty(orderBy))
             {
                 query = sortDirection?.ToLower() == "desc"
@@ -423,7 +417,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     : query.OrderBy(e => EF.Property<object>(e, orderBy));
             }
 
-            //Pagination
+            // Pagination
             var totalRows = query.Count();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
             var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
