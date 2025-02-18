@@ -61,7 +61,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         where a.IsDelete == false
                         select new
                         {
-                            CreatedDate = a.CreateDateTime,
+                            CreateDateTime = a.CreateDateTime,
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
                             KeanggotaanId = a.KeanggotaanId,
