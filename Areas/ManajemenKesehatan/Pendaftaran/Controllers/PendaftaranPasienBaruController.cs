@@ -500,19 +500,13 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
         string? search = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ")]
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
         DateTime? startDate = null,
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ")]
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
         DateTime? endDate = null,
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
-            var query = _applicationDbContext.PendaftaranPasienBarus.Where(a => a.IsDelete == false).AsQueryable();
-
-            //Set default periode ke Today jika tidak ada periode, startDate, atau endDate
-            if (!periode.HasValue && !startDate.HasValue && !endDate.HasValue)
-            {
-                periode = PeriodeFilter.Today;
-            }
+            var query = _applicationDbContext.PendaftaranPasienBarus.Where(a => a.IsDelete == false).AsQueryable();            
 
             //Filter berdasarkan search
             if (!string.IsNullOrWhiteSpace(search))
@@ -533,7 +527,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 );
             }
 
-            //Filter berdasarkan periode (Hari Ini, Minggu Ini, dll)
+            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
             if (periode.HasValue)
             {
                 DateTime today = DateTime.UtcNow.Date;

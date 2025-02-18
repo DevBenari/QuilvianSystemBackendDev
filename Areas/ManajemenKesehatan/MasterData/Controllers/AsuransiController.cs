@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.Scaffolding.Shared.Messaging;
@@ -22,80 +23,131 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 {
     [ApiController]
     [Route("api/[controller]")]
-    //[Authorize]
+    [Authorize]
+    [EnableCors("AllowSpecific")]
     public class AsuransiController : Controller
     {
-        private readonly ApplicationDbContext _context;
+        private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<PendaftaranPasienBaruController> _logger;
+        private readonly ILogger<AsuransiController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
         public AsuransiController
-            (ApplicationDbContext context,
+        (
+            ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            //ILogger<PendaftaranPasienBaruController> logger,
+
+            ILogger<AsuransiController> logger,
             IWebHostEnvironment webHostEnvironment
-            )
+        )
         {
-            _context = context;
+            _applicationDbContext = context;
             _userManager = userManager;
             _signInManager = signInManager;
+            _logger = logger;
             _webHostEnvironment = webHostEnvironment;
         }
-        // GET: api/Asuransi
-        [HttpGet]
-        public async Task<IActionResult> GetAllAsuransi()
-        {
-            var records = _context.Asuransis.Where(a => a.IsDelete == false).ToList();
-            if (records == null || !records.Any())
-            {
-                return NotFound(new { message = "Tidak ada data ditemukan." });
-            }
-            return Ok(new { message = "Data ditemukan.", data = records });
-        }
-      
 
-        // GET: api/Asuransi/{id}
+        [HttpGet]
+        public async Task<IActionResult> GetAllAsuransi(int page = 1, int perPage = 10)
+        {
+            // Validasi agar page dan perPage minimal bernilai 1
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
+
+            // Query data
+            var query = from a in _applicationDbContext.Asuransis
+                        join u in _applicationDbContext.UserActives
+                        on a.CreateBy equals u.UserActiveId
+                        where a.IsDelete == false
+                        select new
+                        {
+                            CreatedDate = a.CreateDateTime,
+                            CreateBy = a.CreateBy,
+                            CreateByName = u.FullName,
+                            AsuransiId = a.AsuransiId,
+                            KodeAsuransi = a.KodeAsuransi,
+                            NamaAsuransi = a.NamaAsuransi,
+                            JenisAsuransi = a.JenisAsuransi,
+                            StatusAsuransi = a.StatusAsuransi,
+                            TanggalMulaiKerjasama = a.TanggalMulaiKerjasama,
+                            TanggalAkhirKerjasama = a.TanggalAkhirKerjasama
+                        };
+
+            // Hitung total data sebelum paginasi
+            var totalRows = query.Count();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            // Ambil data sesuai paging
+            var listdata = query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToList();
+
+            if (!listdata.Any())
+            {
+                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
+            }
+
+            // Return hasil dengan paging info
+            return Ok(new
+            {
+                message = "Berhasil || 200 OK",
+                data = listdata,
+                pagination = new
+                {
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalRows = totalRows,
+                    TotalPages = totalPages
+                }
+            });
+        }
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetAsuransiById(Guid id)
         {
-            var records = await _context.Asuransis.ToListAsync();
-            if (records == null)
+            var listdata = _applicationDbContext.Asuransis.Find(id);
+            if (listdata == null)
             {
-                return NotFound(new { message = $"Data dengan ID {id} tidak ditemukan." });
+                return NotFound(new { message = "Data tidak ditemukan." });
             }
-            return Ok(new { message = "Data ditemukan.", data = records });
+
+            return Ok(new
+            {
+                message = "Ditemukan || 200 OK",
+                data = listdata
+            });
         }
 
-        // POST: api/Asuransi
         [HttpPost]
-        //[Consumes("multipart/form-data")]
-        public async Task<IActionResult>AddAsuransi([FromBody] AsuransiViewModel vm)
+        public async Task<IActionResult> CreateAsuransi([FromBody] AsuransiViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
                 return BadRequest(new { message = "Data tidak valid. || 400 Bad Request" });
             }
+
             try
             {
-                //ambil user ID dari jwt claims
+                // **Ambil User ID dari JWT Claims**
                 var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var GetUserActive = _context.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
                 var UserActiveId = GetUserActive.UserActiveId;
 
                 if (string.IsNullOrEmpty(EmailLogin))
                 {
-                    return Unauthorized(new { message = "Anda tidak memiliki akses. || 401 Unauthorized" });
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
                 var dateNow = DateTimeOffset.Now;
                 var setDateNow = dateNow.ToString("yyMMdd");
 
                 // Ambil data terakhir untuk hari ini (tanpa ToString di query)
-                var lastCode = _context.Asuransis
+                var lastCode = _applicationDbContext.Asuransis
                     .Where(d => d.CreateDateTime.Date == dateNow.Date)
                     .OrderByDescending(k => k.KodeAsuransi)
                     .FirstOrDefault();
@@ -120,8 +172,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // cek duplikasi
-                var isDuplicate = _context.Asuransis
-                    .Any(c => c.KodeAsuransi == kode);
+                var isDuplicate = _applicationDbContext.Asuransis
+                    .Any(c => c.KodeAsuransi == kode && c.NamaAsuransi == vm.NamaAsuransi);
 
                 if (isDuplicate)
                 {
@@ -168,62 +220,70 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 //    fotoPath = "/FotoPasienBaru/user.jpg";
                 //}
 
-                var data = new Asuransi
+                // Validate ModelState
+                if (ModelState.IsValid)
                 {
-                    AsuransiId = Guid.NewGuid(),
-                    KodeAsuransi = kode,
-                    Createdate = DateTimeOffset.Now,
-                    NamaAsuransi = vm.NamaAsuransi,
-                    JenisAsuransi = vm.JenisAsuransi,
-                    KategoriAsuransi = vm.KategoriAsuransi,
-                    StatusAsuransi = vm.StatusAsuransi,
-                    TanggalMulaiKerjasama = vm.TanggalMulaiKerjasama,
-                    TanggalAkhirKerjasama = vm.TanggalAkhirKerjasama,
-                    RSRekanan = vm.RSRekanan,
-                    MetodeKlaim = vm.MetodeKlaim,
-                    WaktuKlaim = vm.WaktuKlaim,
-                    BatasMaxKlaimPerTahun = vm.BatasMaxKlaimPerTahun,
-                    BatasMaxKlaimPerKunjungan = vm.BatasMaxKlaimPerKunjungan,
-                    DokumenKlaim = vm.DokumenKlaim,
-                    Layanan = vm.Layanan,
-                    PersentasiBiayaPertanggungan = vm.PersentasiBiayaPertanggungan,
-                    ObatDitanggung = vm.ObatDitanggung,
-                    TambahanTanggungan = vm.TambahanTanggungan,
-                    BiayaTidakDitanggung = vm.BiayaTidakDitanggung,
-                    MasaTunggu = vm.MasaTunggu,
-                    MaxUsiaPasien = vm.MaxUsiaPasien,
-                    NoRekRumahSakit = vm.NoRekRumahSakit,
-                    NamaBank = vm.NamaBank,
-                    NamaBankCabang = vm.NamaBankCabang,
-                    TermOfPayment = vm.TermOfPayment,
-                    BatasWaktuPembayaran = vm.BatasWaktuPembayaran,
-                    PenaltiTerlambatBayar = vm.PenaltiTerlambatBayar,
-                    NamaPerusahaanAsuransi = vm.NamaPerusahaanAsuransi,
-                    AlamatPusat = vm.AlamatPusat,
-                    AlamatCabang = vm.AlamatCabang,
-                    NoTelepon = vm.NoTelepon,
-                    EmailPusat = vm.EmailPusat,
-                    NoHotlineDarurat = vm.NoHotlineDarurat,
-                    NamaPerwakilan = vm.NamaPerwakilan,
-                    NoTeleponPerwakilan = vm.NoTeleponPerwakilan,
-                    EmailPerwakilan = vm.EmailPerwakilan,
-                    JabatanPerwakilan = vm.JabatanPerwakilan,
-                    CreateDateTime = DateTimeOffset.Now,
-                    CreateBy = UserActiveId,
-                    UpdateDateTime = DateTimeOffset.Now,
-                    UpdateBy = UserActiveId,
-                    DeleteDateTime = DateTimeOffset.Now,
-                    DeleteBy = UserActiveId,
-                    IsDelete = false
-                };
+                    var data = new Asuransi
+                    {
+                        AsuransiId = Guid.NewGuid(),
+                        KodeAsuransi = kode,
+                        Createdate = DateTimeOffset.Now,
+                        NamaAsuransi = vm.NamaAsuransi,
+                        JenisAsuransi = vm.JenisAsuransi,
+                        KategoriAsuransi = vm.KategoriAsuransi,
+                        StatusAsuransi = vm.StatusAsuransi,
+                        TanggalMulaiKerjasama = vm.TanggalMulaiKerjasama,
+                        TanggalAkhirKerjasama = vm.TanggalAkhirKerjasama,
+                        RSRekanan = vm.RSRekanan,
+                        MetodeKlaim = vm.MetodeKlaim,
+                        WaktuKlaim = vm.WaktuKlaim,
+                        BatasMaxKlaimPerTahun = vm.BatasMaxKlaimPerTahun,
+                        BatasMaxKlaimPerKunjungan = vm.BatasMaxKlaimPerKunjungan,
+                        DokumenKlaim = vm.DokumenKlaim,
+                        Layanan = vm.Layanan,
+                        PersentasiBiayaPertanggungan = vm.PersentasiBiayaPertanggungan,
+                        ObatDitanggung = vm.ObatDitanggung,
+                        TambahanTanggungan = vm.TambahanTanggungan,
+                        BiayaTidakDitanggung = vm.BiayaTidakDitanggung,
+                        MasaTunggu = vm.MasaTunggu,
+                        MaxUsiaPasien = vm.MaxUsiaPasien,
+                        NoRekRumahSakit = vm.NoRekRumahSakit,
+                        NamaBank = vm.NamaBank,
+                        NamaBankCabang = vm.NamaBankCabang,
+                        TermOfPayment = vm.TermOfPayment,
+                        BatasWaktuPembayaran = vm.BatasWaktuPembayaran,
+                        PenaltiTerlambatBayar = vm.PenaltiTerlambatBayar,
+                        NamaPerusahaanAsuransi = vm.NamaPerusahaanAsuransi,
+                        AlamatPusat = vm.AlamatPusat,
+                        AlamatCabang = vm.AlamatCabang,
+                        NoTelepon = vm.NoTelepon,
+                        EmailPusat = vm.EmailPusat,
+                        NoHotlineDarurat = vm.NoHotlineDarurat,
+                        NamaPerwakilan = vm.NamaPerwakilan,
+                        NoTeleponPerwakilan = vm.NoTeleponPerwakilan,
+                        EmailPerwakilan = vm.EmailPerwakilan,
+                        JabatanPerwakilan = vm.JabatanPerwakilan,
+                        CreateDateTime = DateTimeOffset.Now,
+                        CreateBy = UserActiveId,
+                        UpdateDateTime = DateTimeOffset.Now,
+                        UpdateBy = UserActiveId,
+                        DeleteDateTime = DateTimeOffset.Now,
+                        DeleteBy = UserActiveId,
+                        IsDelete = false
+                    };
 
-                Console.WriteLine(data.NamaAsuransi);
-                _context.Asuransis.Add(data);
-                _context.SaveChanges();
-                return Created("", new
+                    Console.WriteLine(data.NamaAsuransi);
+                    _applicationDbContext.Asuransis.Add(data);
+                    _applicationDbContext.SaveChanges();
+                    return Created("", new
+                    {
+                        message = "Data berhasil ditambahkan. || 201 Created",
+                    });
+                }
+                else
                 {
-                    message = "Data berhasil ditambahkan. || 201 Created",
-                });
+                    return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
+                }
             }
             catch
             (Exception ex)
@@ -232,10 +292,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-
-        // PUT: api/Asuransi/{id}
         [HttpPut("{id}")]
-        //[Consumes("multipart/form-data")]
         public async Task<IActionResult> UpdateAsuransi(Guid id, [FromBody] AsuransiViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
@@ -245,9 +302,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
             try
             {
-                // ambil user ID dari jwt claims
+                //Ambil User ID dari JWT Claims
                 var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var GetUserActive = _context.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
                 var UserActiveId = GetUserActive.UserActiveId;
 
                 if (string.IsNullOrEmpty(EmailLogin))
@@ -255,14 +312,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "Anda tidak memiliki akses. || 401 Unauthorized" });
                 }
 
-                // cari data asuransi berdasarkan ID
-                var asuransi = _context.Asuransis.Find(id);
+                // **Cari Data**
+                var asuransi = _applicationDbContext.Asuransis.Find(id);
                 if (asuransi == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
-                // update data asuransi
+                // **Update Data**
                 asuransi.NamaAsuransi = vm.NamaAsuransi ?? asuransi.NamaAsuransi;
                 asuransi.JenisAsuransi = vm.JenisAsuransi ?? asuransi.JenisAsuransi;
                 asuransi.KategoriAsuransi = vm.KategoriAsuransi ?? asuransi.KategoriAsuransi;
@@ -335,8 +392,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 asuransi.UpdateDateTime = DateTimeOffset.Now;
                 asuransi.UpdateBy = UserActiveId;
-                _context.Asuransis.Update(asuransi);
-                _context.SaveChanges();
+
+                _applicationDbContext.Asuransis.Update(asuransi);
+                _applicationDbContext.SaveChanges();
+
                 return Ok(new
                 {
                     message = "Update Data Berhasil || 200 OK",
@@ -352,7 +411,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-        // DELETE: api/Asuransi/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteAsuransi(Guid id)
         {
@@ -360,7 +418,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             {
                 //Ambil User ID dari JWT Claims
                 var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var GetUserActive = _context.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
                 var UserActiveId = GetUserActive.UserActiveId;
 
                 if (string.IsNullOrEmpty(EmailLogin))
@@ -368,8 +426,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                // cari data asuransi
-                var asuransi = _context.Asuransis.Find(id);
+                // **Cari Data**
+                var asuransi = _applicationDbContext.Asuransis.Find(id);
                 if (asuransi == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -380,8 +438,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 asuransi.DeleteDateTime = DateTimeOffset.Now;
                 asuransi.IsDelete = true;
 
-                _context.Asuransis.Update(asuransi);
-                _context.SaveChanges();
+                _applicationDbContext.Asuransis.Update(asuransi);
+                _applicationDbContext.SaveChanges();
 
                 return Ok(new { message = "Data berhasil dihapus..." });
             }
@@ -392,119 +450,123 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet("paged")]
-        public IActionResult PegedPendaftaranPasienBaru(
+        public IActionResult PegedAsuransi(
         int page = 1,
         int perPage = 10,
         string? search = null,
         string? orderBy = "CreateDateTime",
-        string? sortDirection = "asc",
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ")]
-                DateTime? startDate = null,
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ")]
-                DateTime? endDate = null,
+        string? sortDirection = "desc",
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+        DateTime? startDate = null,
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+        DateTime? endDate = null,
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        {
+            var query = _applicationDbContext.Asuransis.Where(a => a.IsDelete == false).AsQueryable();
+
+            // Filter berdasarkan search
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(u =>
+                    (u.KodeAsuransi.Contains(search) || u.NamaAsuransi.Contains(search) || u.JenisAsuransi.Contains(search)) &&
+                    u.IsDelete == false
+                );
+            }
+
+            // Filter berdasarkan daterange jika keduanya memiliki nilai
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                query = query.Where(u =>
+                    u.CreateDateTime.Date >= startDate.Value.Date &&
+                    u.CreateDateTime.Date <= endDate.Value.Date &&
+                    u.IsDelete == false
+                );
+            }
+
+            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
+            if (periode.HasValue)
+            {
+                DateTime today = DateTime.UtcNow.Date;
+
+                switch (periode)
                 {
-                    if (startDate.HasValue && endDate.HasValue && startDate > endDate)
-                    {
-                        return BadRequest(new { message = "StartDate tidak boleh lebih besar dari EndDate." });
-                    }
-
-                    // Jika tidak menggunakan daterange, gunakan periode filter
-                    if (!startDate.HasValue && !endDate.HasValue && periode == null)
-                    {
-                        return BadRequest(new { message = "Harap pilih periode atau masukkan rentang tanggal yang valid." });
-                    }
-
-                    var query = _context.Asuransis.Where(a => a.IsDelete == false).AsQueryable();
-
-                    // 🔍 Filter berdasarkan search
-                    if (!string.IsNullOrWhiteSpace(search))
-                    {
-                        query = query.Where(u => u.KodeAsuransi.Contains(search) ||
-                                                 u.NamaAsuransi.Contains(search) ||
-                                                 u.Layanan.Contains(search));
-                    }
-
-                    // 📅 Filter berdasarkan daterange
-                    if (startDate.HasValue && endDate.HasValue)
-                    {
-                        query = query.Where(u => u.CreateDateTime.Date >= startDate.Value.Date &&
-                                                 u.CreateDateTime.Date <= endDate.Value.Date);
-                    }
-
-                    // 📆 Filter berdasarkan periode (Hari Ini, Minggu Ini, dll)
-                    if (periode.HasValue)
-                    {
-                        DateTime today = DateTime.UtcNow.Date;
-
-                        switch (periode)
-                        {
-                            case PeriodeFilter.Today:
-                                query = query.Where(u => u.CreateDateTime.Date == today);
-                                break;
-                            case PeriodeFilter.ThisWeek:
-                                query = query.Where(u => u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
-                                                         u.CreateDateTime.Date <= today);
-                                break;
-                            case PeriodeFilter.LastWeek:
-                                query = query.Where(u => u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                                                         u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek)));
-                                break;
-                            case PeriodeFilter.ThisMonth:
-                                query = query.Where(u => u.CreateDateTime.Month == today.Month &&
-                                                         u.CreateDateTime.Year == today.Year);
-                                break;
-                            case PeriodeFilter.LastMonth:
-                                query = query.Where(u => u.CreateDateTime.Month == today.Month - 1 &&
-                                                         u.CreateDateTime.Year == today.Year);
-                                break;
-                            case PeriodeFilter.ThisYear:
-                                query = query.Where(u => u.CreateDateTime.Year == today.Year);
-                                break;
-                            case PeriodeFilter.LastYear:
-                                query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
-                                break;
-                            case PeriodeFilter.Last3Months:
-                                query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
-                                break;
-                            case PeriodeFilter.Last6Months:
-                                query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
-                                break;
-                        }
-                    }
-
-                    // Sorting Data
-                    if (!string.IsNullOrEmpty(orderBy))
-                    {
-                        query = sortDirection?.ToLower() == "desc"
-                            ? query.OrderByDescending(e => EF.Property<object>(e, orderBy))
-                            : query.OrderBy(e => EF.Property<object>(e, orderBy));
-                    }
-
-                    // Pagination
-                    var totalRows = query.Count();
-                    var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-                    var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
-
-                    if (rows.Count == 0 && page > totalPages)
-                    {
-                        return NotFound(new { message = "Page not found." });
-                    }
-
-                    return Ok(new
-                    {
-                        status = "success",
-                        message = "Data retrieved successfully",
-                        data = new
-                        {
-                            Rows = rows,
-                            TotalRows = totalRows,
-                            CurrentPage = page,
-                            PerPage = perPage,
-                            TotalPages = totalPages
-                        }
-                    });
+                    case PeriodeFilter.Today:
+                        query = query.Where(u => u.CreateDateTime.Date == today && u.IsDelete == false);
+                        break;
+                    case PeriodeFilter.ThisWeek:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
+                            u.CreateDateTime.Date <= today &&
+                            u.IsDelete == false
+                        );
+                        break;
+                    case PeriodeFilter.LastWeek:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
+                            u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek)) &&
+                            u.IsDelete == false
+                        );
+                        break;
+                    case PeriodeFilter.ThisMonth:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Month == today.Month &&
+                            u.CreateDateTime.Year == today.Year &&
+                            u.IsDelete == false
+                        );
+                        break;
+                    case PeriodeFilter.LastMonth:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Month == today.Month - 1 &&
+                            u.CreateDateTime.Year == today.Year &&
+                            u.IsDelete == false
+                        );
+                        break;
+                    case PeriodeFilter.ThisYear:
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year && u.IsDelete == false);
+                        break;
+                    case PeriodeFilter.LastYear:
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1 && u.IsDelete == false);
+                        break;
+                    case PeriodeFilter.Last3Months:
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3) && u.IsDelete == false);
+                        break;
+                    case PeriodeFilter.Last6Months:
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6) && u.IsDelete == false);
+                        break;
                 }
+            }
 
+            // Sorting Data
+            if (!string.IsNullOrEmpty(orderBy))
+            {
+                query = sortDirection?.ToLower() == "desc"
+                    ? query.OrderByDescending(e => EF.Property<object>(e, orderBy))
+                    : query.OrderBy(e => EF.Property<object>(e, orderBy));
+            }
+
+            // Pagination
+            var totalRows = query.Count();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
+
+            if (rows.Count == 0 && page > totalPages)
+            {
+                return NotFound(new { message = "Page not found." });
+            }
+
+            return Ok(new
+            {
+                status = "success",
+                message = "Data retrieved successfully",
+                data = new
+                {
+                    Rows = rows,
+                    TotalRows = totalRows,
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalPages = totalPages
+                }
+            });
+        }
     }
 }
