@@ -63,7 +63,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         {
                             CreatedDate = a.CreateDateTime,
                             CreateBy = a.CreateBy,
-                            CreateByName = u.FullName,
                             KeanggotaanId = a.KeanggotaanId,
                             KodeKeanggotaan = a.KodeKeanggotaan,
                             JenisKeangotaan = a.JenisKeanggotaan,

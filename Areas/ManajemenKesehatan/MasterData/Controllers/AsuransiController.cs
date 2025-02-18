@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.Scaffolding.Shared.Messaging;
@@ -22,7 +23,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 {
     [ApiController]
     [Route("api/[controller]")]
-    //[Authorize]
+    [Authorize]
+    [EnableCors("AllowSpecific")]
     public class AsuransiController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -47,14 +49,89 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
         // GET: api/Asuransi
         [HttpGet]
-        public async Task<IActionResult> GetAllAsuransi()
+        public async Task<IActionResult> GetAllAsuransi(int page = 1, int perPage = 10)
         {
-            var records = _context.Asuransis.Where(a => a.IsDelete == false).ToList();
-            if (records == null || !records.Any())
+            // Validasi agar page dan perPage minimal bernilai 1
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
+
+            // Query data
+            var query = from a in _context.Asuransis
+                        join u in _context.UserActives
+                        on a.CreateBy equals u.UserActiveId
+                        where a.IsDelete == false
+                        select new
+                        {
+                            CreatedDate = a.CreateDateTime,
+                            CreateBy = a.CreateBy,
+                            CreateByName = u.FullName,
+                            AsuransiId = a.AsuransiId,
+                            KodeAsuransi = a.KodeAsuransi,
+                            NamaAsuransi = a.NamaAsuransi,
+                            JenisAsuransi = a.JenisAsuransi,
+                            KategoriAsuransi = a.KategoriAsuransi,
+                            StatusAsuransi = a.StatusAsuransi,
+                            TanggalMulaiKerjasama = a.TanggalMulaiKerjasama,
+                            TanggalAkhirKerjasama = a.TanggalAkhirKerjasama,
+                            RSRekanan = a.RSRekanan,
+                            MetodeKlaim = a.MetodeKlaim,
+                            WaktuKlaim = a.WaktuKlaim,
+                            BatasMaxKlaimPerTahun = a.BatasMaxKlaimPerTahun,
+                            BatasMaxKlaimPerKunjungan = a.BatasMaxKlaimPerKunjungan,
+                            DokumenKlaim = a.DokumenKlaim,
+                            Layanan = a.Layanan,
+                            PersentasiBiayaPertanggungan = a.PersentasiBiayaPertanggungan,
+                            ObatDitanggung = a.ObatDitanggung,
+                            TambahanTanggungan = a.TambahanTanggungan,
+                            BiayaTidakDitanggung = a.BiayaTidakDitanggung,
+                            MasaTunggu = a.MasaTunggu,
+                            MaxUsiaPasien = a.MaxUsiaPasien,
+                            NoRekRumahSakit = a.NoRekRumahSakit,
+                            NamaBank = a.NamaBank,
+                            NamaBankCabang = a.NamaBankCabang,
+                            TermOfPayment = a.TermOfPayment,
+                            BatasWaktuPembayaran = a.BatasWaktuPembayaran,
+                            PenaltiTerlambatBayar = a.PenaltiTerlambatBayar,
+                            NamaPerusahaanAsuransi = a.NamaPerusahaanAsuransi,
+                            AlamatPusat = a.AlamatPusat,
+                            AlamatCabang = a.AlamatCabang,
+                            NoTelepon = a.NoTelepon,
+                            EmailPusat = a.EmailPusat,
+                            NoHotlineDarurat = a.NoHotlineDarurat,
+                            NamaPerwakilan = a.NamaPerwakilan,
+                            NoTeleponPerwakilan = a.NoTeleponPerwakilan,
+                            EmailPerwakilan = a.EmailPerwakilan,
+                            JabatanPerwakilan = a.JabatanPerwakilan,
+                        };
+
+            // Hitung total data sebelum paginasi
+            var totalRows = query.Count();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            // Ambil data sesuai paging
+            var listdata = query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToList();
+
+            if (!listdata.Any())
             {
-                return NotFound(new { message = "Tidak ada data ditemukan." });
+                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
             }
-            return Ok(new { message = "Data ditemukan.", data = records });
+
+            // Return hasil dengan paging info
+            return Ok(new
+            {
+                message = "Berhasil || 200 OK",
+                data = listdata,
+                pagination = new
+                {
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalRows = totalRows,
+                    TotalPages = totalPages
+                }
+            });
         }
       
 
@@ -62,12 +139,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet("{id}")]
         public async Task<IActionResult> GetAsuransiById(Guid id)
         {
-            var records = await _context.Asuransis.ToListAsync();
-            if (records == null)
+            var listdata = _context.Asuransis.Find(id);
+            if (listdata == null)
             {
-                return NotFound(new { message = $"Data dengan ID {id} tidak ditemukan." });
+                return NotFound(new { message = "Data tidak ditemukan." });
             }
-            return Ok(new { message = "Data ditemukan.", data = records });
+
+            return Ok(new
+            {
+                message = "Ditemukan || 200 OK",
+                data = listdata
+            });
         }
 
         // POST: api/Asuransi
@@ -216,8 +298,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     DeleteBy = UserActiveId,
                     IsDelete = false
                 };
-
-                Console.WriteLine(data.NamaAsuransi);
                 _context.Asuransis.Add(data);
                 _context.SaveChanges();
                 return Created("", new
@@ -392,7 +472,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet("paged")]
-        public IActionResult PegedPendaftaranPasienBaru(
+        public IActionResult PegedAsuransi(
         int page = 1,
         int perPage = 10,
         string? search = null,
