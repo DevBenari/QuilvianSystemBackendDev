@@ -66,7 +66,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateByName = u.FullName,
                             KeanggotaanId = a.KeanggotaanId,
                             KodeKeanggotaan = a.KodeKeanggotaan,
-                            JenisKeangotaan = a.JenisKeanggotaan,
+                            JenisKeanggotaan = a.JenisKeanggotaan,
                             JenisPromo = a.JenisPromo
                         };
 
