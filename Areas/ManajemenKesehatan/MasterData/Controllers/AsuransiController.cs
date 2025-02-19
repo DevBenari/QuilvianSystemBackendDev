@@ -59,10 +59,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (perPage < 1) perPage = 10;
 
             // Query data
-
             var query = from a in _applicationDbContext.Asuransis
                         join u in _applicationDbContext.UserActives
-
                         on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
                         select new
@@ -113,7 +111,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         public async Task<IActionResult> GetAsuransiById(Guid id)
         {
             var listdata = _applicationDbContext.Asuransis.Find(id);
-
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -284,7 +281,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     });
                 }
                 else
-
                 {
                     return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
                 }
