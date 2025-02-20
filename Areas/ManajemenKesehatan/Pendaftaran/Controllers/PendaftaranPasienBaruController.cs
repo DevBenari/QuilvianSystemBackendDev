@@ -285,7 +285,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     NoTelepon1 = vm.NoTelepon1,
                     NoTelepon2 = vm.NoTelepon2,
                     NoTelepon3 = vm.NoTelepon3,
-                    KewarganegaraanId = vm.KewarganegaraanId,
+                    Kewarganegaraan = vm.Kewarganegaraan,
                     Suku = vm.Suku,
                     StatusKewarganegaraan = vm.StatusKewarganegaraan,
                     PekerjaanId = vm.PekerjaanId,
@@ -379,7 +379,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 pasien.NoTelepon1 = vm.NoTelepon1 ?? pasien.NoTelepon1;
                 pasien.NoTelepon2 = vm.NoTelepon2 ?? pasien.NoTelepon2;
                 pasien.NoTelepon3 = vm.NoTelepon3 ?? pasien.NoTelepon3;
-                pasien.KewarganegaraanId = vm.KewarganegaraanId ?? pasien.KewarganegaraanId;
+                pasien.Kewarganegaraan = vm.Kewarganegaraan ?? pasien.Kewarganegaraan;
                 pasien.Suku = vm.Suku ?? pasien.Suku;
                 pasien.StatusKewarganegaraan = vm.StatusKewarganegaraan ?? pasien.StatusKewarganegaraan;
                 pasien.PekerjaanId = vm.PekerjaanId ?? pasien.PekerjaanId;
