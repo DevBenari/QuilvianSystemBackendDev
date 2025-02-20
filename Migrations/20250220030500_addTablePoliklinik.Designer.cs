@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using QuilvianSystemBackendDev.Repositories;
 
@@ -11,9 +12,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250220030500_addTablePoliklinik")]
+    partial class addTablePoliklinik
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1458,9 +1460,8 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<Guid?>("KelurahanId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("Kewarganegaraan")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<Guid?>("KewarganegaraanId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("KodePasien")
                         .HasColumnType("nvarchar(max)");

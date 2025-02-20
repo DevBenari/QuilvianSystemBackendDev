@@ -30,6 +30,11 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<RoleUser> RoleUsers { get; set; }
         public DbSet<Jabatan> Jabatans { get; set; }
         public DbSet<Identitas> Identitass { get; set; }
+        public DbSet<Peralatan> Peralatans { get; set; }
+        public DbSet<KategoriPeralatan> KategoriPeralatans { get; set; }
+        public DbSet<Departement> Departements { get; set; }
+
+        public DbSet<Poliklinik> Polikliniks { get; set; }
 
         #endregion
 

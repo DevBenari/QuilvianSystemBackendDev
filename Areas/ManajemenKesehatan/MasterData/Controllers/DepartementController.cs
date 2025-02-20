@@ -1,9 +1,9 @@
-﻿using System.Linq;
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
@@ -12,7 +12,6 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
-using ZXing.QrCode.Internal;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
@@ -20,26 +19,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class AsuransiController : Controller
+    public class DepartementController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<AsuransiController> _logger;
+        private readonly ILogger<DepartementController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public AsuransiController
-        (
-            ApplicationDbContext context,
-            UserManager<ApplicationUser> userManager,
-            SignInManager<ApplicationUser> signInManager,
 
-            ILogger<AsuransiController> logger,
-            IWebHostEnvironment webHostEnvironment
-        )
+        public DepartementController
+            (ApplicationDbContext applicationDbContext, 
+            UserManager<ApplicationUser> userManager, 
+            SignInManager<ApplicationUser> signInManager, 
+            ILogger<DepartementController> logger, 
+            IWebHostEnvironment webHostEnvironment)
         {
-            _applicationDbContext = context;
+            _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
@@ -47,14 +44,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAllAsuransi(int page = 1, int perPage = 10)
+        public async Task<IActionResult> GetAllDepartement(int page = 1, int perPage = 10)
         {
             // Validasi agar page dan perPage minimal bernilai 1
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = from a in _applicationDbContext.Asuransis
+            var query = from a in _applicationDbContext.Departements
                         join u in _applicationDbContext.UserActives
                         on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
@@ -63,13 +60,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateDateTime = a.CreateDateTime,
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
-                            AsuransiId = a.AsuransiId,
-                            KodeAsuransi = a.KodeAsuransi,
-                            NamaAsuransi = a.NamaAsuransi,
-                            JenisAsuransi = a.JenisAsuransi,
-                            StatusAsuransi = a.StatusAsuransi,
-                            TanggalMulaiKerjasama = a.TanggalMulaiKerjasama,
-                            TanggalAkhirKerjasama = a.TanggalAkhirKerjasama
+                            DepartementId = a.DepartementId,
+                            KodeDepartement = a.KodeDepartement,
+                            NamaDepartement = a.NamaDepartement,
+                            KepalaDepartement = a.KepalaDepartement,
+                            Lokasi = a.Lokasi,
+                            Telepon = a.Telepon,
+                            Email = a.Email,
+                            JamBuka = a.JamBuka,
+                            JamTutup = a.JamTutup,
+                            Layanan = a.Layanan
+
                         };
 
             // Hitung total data sebelum paginasi
@@ -102,10 +103,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             });
         }
 
+
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetAsuransiById(Guid id)
+        public async Task<IActionResult> GetDepartementById(Guid id)
         {
-            var listdata = _applicationDbContext.Asuransis.Find(id);
+            var listdata = _applicationDbContext.Departements.Find(id);
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -119,7 +121,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateAsuransi([FromBody] AsuransiViewModel vm)
+        public async Task<IActionResult> CreateAsuransi([FromBody] DepartementViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -142,122 +144,54 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var setDateNow = dateNow.ToString("yyMMdd");
 
                 // Ambil data terakhir untuk hari ini (tanpa ToString di query)
-                var lastCode = _applicationDbContext.Asuransis
+                var lastCode = _applicationDbContext.Departements
                     .Where(d => d.CreateDateTime.Date == dateNow.Date)
-                    .OrderByDescending(k => k.KodeAsuransi)
+                    .OrderByDescending(k => k.KodeDepartement)
                     .FirstOrDefault();
 
                 string kode;
                 if (lastCode == null)
                 {
-                    kode = $"ASR{setDateNow}0001";
+                    kode = $"DPT{setDateNow}0001";
                 }
                 else
                 {
-                    var lastCodeTrim = lastCode.KodeAsuransi.Substring(3, 6);
+                    var lastCodeTrim = lastCode.KodeDepartement.Substring(3, 6);
 
                     if (lastCodeTrim != setDateNow)
                     {
-                        kode = $"ASR{setDateNow}0001";
+                        kode = $"DPT{setDateNow}0001";
                     }
                     else
                     {
-                        kode = $"ASR{setDateNow}" + (Convert.ToInt32(lastCode.KodeAsuransi.Substring(9)) + 1).ToString("D4");
+                        kode = $"DPT{setDateNow}" + (Convert.ToInt32(lastCode.KodeDepartement.Substring(9)) + 1).ToString("D4");
                     }
                 }
 
                 // cek duplikasi
-                var isDuplicate = _applicationDbContext.Asuransis
-                    .Any(c => c.KodeAsuransi == kode && c.NamaAsuransi == vm.NamaAsuransi);
+                var isDuplicate = _applicationDbContext.Departements
+                    .Any(c => c.KodeDepartement == kode && c.NamaDepartement == vm.NamaDepartement);
 
                 if (isDuplicate)
                 {
                     return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
                 }
 
-                // **Validasi & Simpan Foto dokumen klaim asuransi **
-                //string fotoPath = null;
-                //if (vm.DokumenKlaim != null && vm.DokumenKlaim.Length > 0)
-                //{
-                //    var maxSize = 2 * 1024 * 1024;
-                //    var allowedExtensions = new List<string> { ".jpg", ".jpeg", ".png" };
-                //    var fileExtension = Path.GetExtension(vm.DokumenKlaim.FileName).ToLower();
-
-                //    if (vm.DokumenKlaim.Length > maxSize)
-                //    {
-                //        return BadRequest(new { message = "Ukuran file terlalu besar! Maksimum 2MB." });
-                //    }
-
-                //    if (!allowedExtensions.Contains(fileExtension))
-                //    {
-                //        return BadRequest(new { message = "Format file tidak valid! Gunakan JPG atau PNG." });
-                //    }
-
-                //    var uploadFolder = Path.Combine(_webHostEnvironment.WebRootPath, "FotoPasienBaru");
-                //    if (!Directory.Exists(uploadFolder))
-                //    {
-                //        Directory.CreateDirectory(uploadFolder);
-                //    }
-
-                //    var fotoFileName = $"{}{fileExtension}";
-                //    var fotoFilePath = Path.Combine(uploadFolder, fotoFileName);
-
-                //    using (var stream = new FileStream(fotoFilePath, FileMode.Create))
-                //    {
-                //        vm.DokumenKlaim.CopyTo(stream);
-                //    }
-
-                //    fotoPath = $"/FotoPasienBaru/{fotoFileName}";
-                //}
-                //else
-                //{
-                //    //Jika user tidak upload foto, gunakan foto default
-                //    fotoPath = "/FotoPasienBaru/user.jpg";
-                //}
-
                 // Validate ModelState
                 if (ModelState.IsValid)
                 {
-                    var data = new Asuransi
+                    var data = new Departement
                     {
-                        AsuransiId = Guid.NewGuid(),
-                        KodeAsuransi = kode,
-                        Createdate = DateTimeOffset.Now,
-                        NamaAsuransi = vm.NamaAsuransi,
-                        JenisAsuransi = vm.JenisAsuransi,
-                        KategoriAsuransi = vm.KategoriAsuransi,
-                        StatusAsuransi = vm.StatusAsuransi,
-                        TanggalMulaiKerjasama = vm.TanggalMulaiKerjasama,
-                        TanggalAkhirKerjasama = vm.TanggalAkhirKerjasama,
-                        RSRekanan = vm.RSRekanan,
-                        MetodeKlaim = vm.MetodeKlaim,
-                        WaktuKlaim = vm.WaktuKlaim,
-                        BatasMaxKlaimPerTahun = vm.BatasMaxKlaimPerTahun,
-                        BatasMaxKlaimPerKunjungan = vm.BatasMaxKlaimPerKunjungan,
-                        DokumenKlaim = vm.DokumenKlaim,
+                        DepartementId = Guid.NewGuid(),
+                        KodeDepartement = kode,
+                        NamaDepartement = vm.NamaDepartement,
+                        KepalaDepartement = vm.KepalaDepartement,
+                        Lokasi = vm.Lokasi,
+                        Telepon = vm.Telepon,
+                        Email = vm.Email,
+                        JamBuka = vm.JamBuka,
+                        JamTutup = vm.JamTutup,
                         Layanan = vm.Layanan,
-                        PersentasiBiayaPertanggungan = vm.PersentasiBiayaPertanggungan,
-                        ObatDitanggung = vm.ObatDitanggung,
-                        TambahanTanggungan = vm.TambahanTanggungan,
-                        BiayaTidakDitanggung = vm.BiayaTidakDitanggung,
-                        MasaTunggu = vm.MasaTunggu,
-                        MaxUsiaPasien = vm.MaxUsiaPasien,
-                        NoRekRumahSakit = vm.NoRekRumahSakit,
-                        NamaBank = vm.NamaBank,
-                        NamaBankCabang = vm.NamaBankCabang,
-                        TermOfPayment = vm.TermOfPayment,
-                        BatasWaktuPembayaran = vm.BatasWaktuPembayaran,
-                        PenaltiTerlambatBayar = vm.PenaltiTerlambatBayar,
-                        NamaPerusahaanAsuransi = vm.NamaPerusahaanAsuransi,
-                        AlamatPusat = vm.AlamatPusat,
-                        AlamatCabang = vm.AlamatCabang,
-                        NoTelepon = vm.NoTelepon,
-                        EmailPusat = vm.EmailPusat,
-                        NoHotlineDarurat = vm.NoHotlineDarurat,
-                        NamaPerwakilan = vm.NamaPerwakilan,
-                        NoTeleponPerwakilan = vm.NoTeleponPerwakilan,
-                        EmailPerwakilan = vm.EmailPerwakilan,
-                        JabatanPerwakilan = vm.JabatanPerwakilan,
                         CreateDateTime = DateTimeOffset.Now,
                         CreateBy = UserActiveId,
                         UpdateDateTime = DateTimeOffset.Now,
@@ -267,8 +201,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         IsDelete = false
                     };
 
-                    Console.WriteLine(data.NamaAsuransi);
-                    _applicationDbContext.Asuransis.Add(data);
+                    _applicationDbContext.Departements.Add(data);
                     _applicationDbContext.SaveChanges();
                     return Created("", new
                     {
@@ -286,9 +219,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
-
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateAsuransi(Guid id, [FromBody] AsuransiViewModel vm)
+        public async Task<IActionResult> UpdateDepartement(Guid id, [FromBody] DepartementViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -308,94 +240,29 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // **Cari Data**
-                var asuransi = _applicationDbContext.Asuransis.Find(id);
-                if (asuransi == null)
+                var data = _applicationDbContext.Departements.Find(id);
+                if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
                 // **Update Data**
-                asuransi.NamaAsuransi = vm.NamaAsuransi ?? asuransi.NamaAsuransi;
-                asuransi.JenisAsuransi = vm.JenisAsuransi ?? asuransi.JenisAsuransi;
-                asuransi.KategoriAsuransi = vm.KategoriAsuransi ?? asuransi.KategoriAsuransi;
-                asuransi.StatusAsuransi = vm.StatusAsuransi ?? asuransi.StatusAsuransi;
-                asuransi.TanggalMulaiKerjasama = vm.TanggalMulaiKerjasama ?? asuransi.TanggalMulaiKerjasama;
-                asuransi.TanggalAkhirKerjasama = vm.TanggalAkhirKerjasama ?? asuransi.TanggalAkhirKerjasama;
-                asuransi.RSRekanan = vm.RSRekanan ?? asuransi.RSRekanan;
-                asuransi.MetodeKlaim = vm.MetodeKlaim ?? asuransi.MetodeKlaim;
-                asuransi.WaktuKlaim = vm.WaktuKlaim ?? asuransi.WaktuKlaim;
-                asuransi.BatasMaxKlaimPerTahun = vm.BatasMaxKlaimPerTahun ?? asuransi.BatasMaxKlaimPerTahun;
-                asuransi.BatasMaxKlaimPerKunjungan = vm.BatasMaxKlaimPerKunjungan ?? asuransi.BatasMaxKlaimPerKunjungan;
-                //asuransi.DokumenKlaim = vm.DokumenKlaim ?? asuransi.DokumenKlaim;
-                asuransi.Layanan = vm.Layanan ?? asuransi.Layanan;
-                asuransi.PersentasiBiayaPertanggungan = vm.PersentasiBiayaPertanggungan ?? asuransi.PersentasiBiayaPertanggungan;
-                asuransi.ObatDitanggung = vm.ObatDitanggung ?? asuransi.ObatDitanggung;
-                asuransi.TambahanTanggungan = vm.TambahanTanggungan ?? asuransi.TambahanTanggungan;
-                asuransi.BiayaTidakDitanggung = vm.BiayaTidakDitanggung ?? asuransi.BiayaTidakDitanggung;
-                asuransi.MasaTunggu = vm.MasaTunggu ?? asuransi.MasaTunggu;
-                asuransi.MaxUsiaPasien = vm.MaxUsiaPasien ?? asuransi.MaxUsiaPasien;
-                asuransi.NoRekRumahSakit = vm.NoRekRumahSakit ?? asuransi.NoRekRumahSakit;
-                asuransi.NamaBank = vm.NamaBank ?? asuransi.NamaBank;
-                asuransi.NamaBankCabang = vm.NamaBankCabang ?? asuransi.NamaBankCabang;
-                asuransi.TermOfPayment = vm.TermOfPayment ?? asuransi.TermOfPayment;
-                asuransi.BatasWaktuPembayaran = vm.BatasWaktuPembayaran ?? asuransi.BatasWaktuPembayaran;
-                asuransi.PenaltiTerlambatBayar = vm.PenaltiTerlambatBayar ?? asuransi.PenaltiTerlambatBayar;
-                asuransi.NamaPerusahaanAsuransi = vm.NamaPerusahaanAsuransi ?? asuransi.NamaPerusahaanAsuransi;
-                asuransi.AlamatPusat = vm.AlamatPusat ?? asuransi.AlamatPusat;
-                asuransi.AlamatCabang = vm.AlamatCabang ?? asuransi.AlamatCabang;
-                asuransi.NoTelepon = vm.NoTelepon ?? asuransi.NoTelepon;
-                asuransi.EmailPusat = vm.EmailPusat ?? asuransi.EmailPusat;
-                asuransi.NoHotlineDarurat = vm.NoHotlineDarurat ?? asuransi.NoHotlineDarurat;
-                asuransi.NamaPerwakilan = vm.NamaPerwakilan ?? asuransi.NamaPerwakilan;
-                asuransi.NoTeleponPerwakilan = vm.NoTeleponPerwakilan ?? asuransi.NoTeleponPerwakilan;
-                asuransi.EmailPerwakilan = vm.EmailPerwakilan ?? asuransi.EmailPerwakilan;
-                asuransi.JabatanPerwakilan = vm.JabatanPerwakilan ?? asuransi.JabatanPerwakilan;
+                data.NamaDepartement = vm.NamaDepartement;
+                data.KepalaDepartement = vm.KepalaDepartement;
+                data.Telepon = vm.Telepon;
+                data.Email = vm.Email;
+                data.JamBuka = vm.JamBuka;
+                data.JamTutup = vm.JamTutup;
+                data.Layanan = vm.Layanan;
+                data.UpdateDateTime = DateTimeOffset.Now;
+                data.UpdateBy = UserActiveId;
 
-                // **Update Foto Profil**
-                //if (vm.Foto != null && vm.Foto.Length > 0)
-                //{
-                //    var maxSize = 2 * 1024 * 1024;
-                //    var allowedExtensions = new List<string> { ".jpg", ".jpeg", ".png" };
-                //    var fileExtension = Path.GetExtension(vm.Foto.FileName).ToLower();
-
-                //    if (vm.Foto.Length > maxSize)
-                //    {
-                //        return BadRequest(new { message = "Ukuran file terlalu besar! Maksimum 2MB." });
-                //    }
-
-                //    if (!allowedExtensions.Contains(fileExtension))
-                //    {
-                //        return BadRequest(new { message = "Format file tidak valid! Gunakan JPG atau PNG." });
-                //    }
-
-                //    var uploadFolder = Path.Combine(_webHostEnvironment.WebRootPath, "FotoPasienBaru");
-                //    if (!Directory.Exists(uploadFolder))
-                //    {
-                //        Directory.CreateDirectory(uploadFolder);
-                //    }
-
-                //    var fotoFileName = $"{pasien.KodePasien}{fileExtension}";
-                //    var fotoFilePath = Path.Combine(uploadFolder, fotoFileName);
-
-                //    using (var stream = new FileStream(fotoFilePath, FileMode.Create))
-                //    {
-                //        vm.Foto.CopyTo(stream);
-                //    }
-
-                //    pasien.Foto = $"/FotoPasienBaru/{fotoFileName}";
-                //}
-
-                asuransi.UpdateDateTime = DateTimeOffset.Now;
-                asuransi.UpdateBy = UserActiveId;
-
-                _applicationDbContext.Asuransis.Update(asuransi);
+                _applicationDbContext.Departements.Update(data);
                 _applicationDbContext.SaveChanges();
 
                 return Ok(new
                 {
                     message = "Update Data Berhasil || 200 OK",
-                    //qrCodeUrl = $"{Request.Scheme}://{Request.Host}{pasien.QrCode}",
-                    //uploadFotoUrl = $"{Request.Scheme}://{Request.Host}{pasien.Foto}"
                 });
             }
             catch
@@ -422,18 +289,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // **Cari Data**
-                var asuransi = _applicationDbContext.Asuransis.Find(id);
-                if (asuransi == null)
+                var data = _applicationDbContext.Departements.Find(id);
+                if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
                 // **Soft Delete (Tandai Data sebagai Terhapus)**
-                asuransi.DeleteBy = UserActiveId;
-                asuransi.DeleteDateTime = DateTimeOffset.Now;
-                asuransi.IsDelete = true;
+                data.DeleteBy = UserActiveId;
+                data.DeleteDateTime = DateTimeOffset.Now;
+                data.IsDelete = true;
 
-                _applicationDbContext.Asuransis.Update(asuransi);
+                _applicationDbContext.Departements.Update(data);
                 _applicationDbContext.SaveChanges();
 
                 return Ok(new { message = "Data berhasil dihapus..." });
@@ -445,7 +312,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet("paged")]
-        public IActionResult PegedAsuransi(
+        public IActionResult PagedDepartement(
         int page = 1,
         int perPage = 10,
         string? search = null,
@@ -457,7 +324,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         DateTime? endDate = null,
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
-            var query = from a in _applicationDbContext.Asuransis
+            var query = from a in _applicationDbContext.Departements
                         join u in _applicationDbContext.UserActives
                         on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
@@ -466,21 +333,25 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateDateTime = a.CreateDateTime,
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
-                            AsuransiId = a.AsuransiId,
-                            KodeAsuransi = a.KodeAsuransi,
-                            NamaAsuransi = a.NamaAsuransi,
-                            JenisAsuransi = a.JenisAsuransi,
-                            StatusAsuransi = a.StatusAsuransi,
-                            TanggalMulaiKerjasama = a.TanggalMulaiKerjasama,
-                            TanggalAkhirKerjasama = a.TanggalAkhirKerjasama
+                            DepartementId = a.DepartementId,
+                            KodeDepartement = a.KodeDepartement,
+                            NamaDepartement = a.NamaDepartement,
+                            KepalaDepartement = a.KepalaDepartement,
+                            Lokasi = a.Lokasi,
+                            Telepon = a.Telepon,
+                            Email = a.Email,
+                            JamBuka = a.JamBuka,
+                            JamTutup = a.JamTutup,
+                            Layanan = a.Layanan
+
                         };
 
             // Filter berdasarkan search
             if (!string.IsNullOrWhiteSpace(search))
             {
                 query = query.Where(u =>
-                    u.KodeAsuransi.Contains(search) || u.NamaAsuransi.Contains(search) || u.JenisAsuransi.Contains(search)
-                    || u.StatusAsuransi.Contains(search)
+                    u.KodeDepartement.Contains(search) || u.NamaDepartement.Contains(search) || u.Layanan.Contains(search)
+                    || u.Lokasi.Contains(search)
                 );
             }
 
@@ -548,20 +419,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "KodeAsuransi" => query.OrderByDescending(u => u.KodeAsuransi),
-                    "NamaAsuransi" => query.OrderByDescending(u => u.NamaAsuransi),
-                    "JenisAsuransi" => query.OrderByDescending(u => u.JenisAsuransi),
-                    "StatusAsuransi" => query.OrderByDescending(u => u.StatusAsuransi),
+                    "KodeDepartement" => query.OrderByDescending(u => u.KodeDepartement),
+                    "NamaDepartement" => query.OrderByDescending(u => u.NamaDepartement),
+                    "LayananDepartement" => query.OrderByDescending(u => u.Layanan),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "KodeAsuransi" => query.OrderByDescending(u => u.KodeAsuransi),
-                    "NamaAsuransi" => query.OrderByDescending(u => u.NamaAsuransi),
-                    "JenisAsuransi" => query.OrderByDescending(u => u.JenisAsuransi),
-                    "StatusAsuransi" => query.OrderByDescending(u => u.StatusAsuransi),
+                    "KodeDepartement" => query.OrderByDescending(u => u.KodeDepartement),
+                    "NamaDepartement" => query.OrderByDescending(u => u.NamaDepartement),
+                    "LayananDepartement" => query.OrderByDescending(u => u.Layanan),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 };
 
@@ -589,5 +458,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
             });
         }
+
     }
 }
