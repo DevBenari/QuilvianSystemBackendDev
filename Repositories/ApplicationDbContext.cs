@@ -35,6 +35,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<Departement> Departements { get; set; }
 
         public DbSet<Poliklinik> Polikliniks { get; set; }
+        public DbSet<Persalinan> Persalinans { get; set; }
 
         #endregion
 
