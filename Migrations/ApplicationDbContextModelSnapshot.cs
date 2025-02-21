@@ -363,11 +363,13 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<bool>("IsDelete")
                         .HasColumnType("bit");
 
-                    b.Property<DateTime?>("JamBuka")
-                        .HasColumnType("datetime2");
+                    b.Property<string>("JamBuka")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime?>("JamTutup")
-                        .HasColumnType("datetime2");
+                    b.Property<string>("JamTutup")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("KepalaDepartement")
                         .IsRequired()
@@ -378,7 +380,6 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Layanan")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Lokasi")
@@ -1231,6 +1232,51 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.ToTable("MstPoliklinik", "dbo");
                 });
 
+            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Position", b =>
+                {
+                    b.Property<Guid>("PositionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CreateBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreateDateTime")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("DeleteBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("DeleteDateTime")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("DepartementId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("PositionCode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PositionName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("UpdateBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("UpdateDateTime")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("PositionId");
+
+                    b.HasIndex("DepartementId");
+
+                    b.ToTable("MstPosition", "dbo");
+                });
+
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Provinsi", b =>
                 {
                     b.Property<Guid>("ProvinsiId")
@@ -1851,6 +1897,15 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Navigation("KategoriPeralatans");
                 });
 
+            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Position", b =>
+                {
+                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Departement", "Departement")
+                        .WithMany("Positions")
+                        .HasForeignKey("DepartementId");
+
+                    b.Navigation("Departement");
+                });
+
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Provinsi", b =>
                 {
                     b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Negara", "Negara")
@@ -1858,6 +1913,11 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasForeignKey("NegaraId");
 
                     b.Navigation("Negara");
+                });
+
+            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Departement", b =>
+                {
+                    b.Navigation("Positions");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.KabupatenKota", b =>

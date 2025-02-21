@@ -1,10 +1,9 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using QuilvianSystemBackendDev.Models;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using QuilvianSystemBackendDev.Models;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
 {
-
     [Table("MstDepartement", Schema = "dbo")]
     public class Departement : UserActivity
     {
@@ -16,8 +15,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string Lokasi { get; set; }
         public string Telepon { get; set; }
         public string Email { get; set; }
-        public DateTime? JamBuka { get; set; }
-        public DateTime? JamTutup { get; set; }
-        public string Layanan { get; set; }
+        public string JamBuka { get; set; }
+        public string JamTutup { get; set; }
+        public string? Layanan { get; set; }
+        public ICollection<Position> Positions { get; set; }
+    }
+
+    [Table("MstPosition", Schema = "dbo")]
+    public class Position : UserActivity
+    {
+        [Key]
+        public Guid PositionId { get; set; }
+        public string PositionCode { get; set; }
+        public string PositionName { get; set; }
+        public Guid? DepartementId { get; set; }
+
+        //Relationship
+        [ForeignKey("DepartementId")]
+        public Departement? Departement { get; set; }
     }
 }

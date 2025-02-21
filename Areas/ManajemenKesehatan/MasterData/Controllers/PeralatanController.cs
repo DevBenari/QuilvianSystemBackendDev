@@ -53,7 +53,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             // Query data
             var query = from a in _applicationDbContext.Peralatans
                         join u in _applicationDbContext.UserActives
-                        on a.CreateBy equals u.UserActiveId
+                            on a.CreateBy equals u.UserActiveId
+                        join k in _applicationDbContext.KategoriPeralatans
+                            on a.KategoriPeralatanId equals k.KategoriPeralatanId
                         where a.IsDelete == false
                         select new
                         {
@@ -69,7 +71,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             Operational_status = a.Operational_status,
                             Department_name = a.Department_name,
                             Location = a.Location,
-                            KategoriPeralatanId = a.KategoriPeralatanId
+                            KategoriPeralatanId = a.KategoriPeralatanId,
+                            NamaKategoriPeralatan = k.NamaKategoriPeralatan,
 
                         };
 
@@ -327,7 +330,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         {
             var query = from a in _applicationDbContext.Peralatans
                         join u in _applicationDbContext.UserActives
-                        on a.CreateBy equals u.UserActiveId
+                            on a.CreateBy equals u.UserActiveId
+                        join k in _applicationDbContext.KategoriPeralatans
+                            on a.KategoriPeralatanId equals k.KategoriPeralatanId
                         where a.IsDelete == false
                         select new
                         {
@@ -343,7 +348,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             Operational_status = a.Operational_status,
                             Department_name = a.Department_name,
                             Location = a.Location,
-                            KategoriPeralatanId = a.KategoriPeralatanId
+                            KategoriPeralatanId = a.KategoriPeralatanId,
+                            NamaKategoriPeralatan = k.NamaKategoriPeralatan,
 
                         };
 

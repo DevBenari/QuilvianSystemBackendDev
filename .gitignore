@@ -361,3 +361,5 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+/Migrations/20250219071005_tambahtabeldepartemen.cs
+/Migrations/20250219071005_tambahtabeldepartemen.Designer.cs

@@ -7,8 +7,8 @@
         public string Lokasi { get; set; }
         public string Telepon { get; set; }
         public string Email { get; set; }
-        public DateTime? JamBuka { get; set; }
-        public DateTime? JamTutup { get; set; }
+        public string JamBuka { get; set; }
+        public string JamTutup { get; set; }
         public string Layanan { get; set; }
     }
 }

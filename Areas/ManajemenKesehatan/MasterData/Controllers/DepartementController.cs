@@ -30,10 +30,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
 
         public DepartementController
-            (ApplicationDbContext applicationDbContext, 
-            UserManager<ApplicationUser> userManager, 
-            SignInManager<ApplicationUser> signInManager, 
-            ILogger<DepartementController> logger, 
+            (ApplicationDbContext applicationDbContext,
+            UserManager<ApplicationUser> userManager,
+            SignInManager<ApplicationUser> signInManager,
+            ILogger<DepartementController> logger,
             IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
@@ -69,8 +69,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             Email = a.Email,
                             JamBuka = a.JamBuka,
                             JamTutup = a.JamTutup,
-                            Layanan = a.Layanan
-
+                            Layanan = a.Layanan,
                         };
 
             // Hitung total data sebelum paginasi
@@ -274,7 +273,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteAsuransi(Guid id)
+        public async Task<IActionResult> DeleteDepartement(Guid id)
         {
             try
             {
@@ -342,7 +341,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             Email = a.Email,
                             JamBuka = a.JamBuka,
                             JamTutup = a.JamTutup,
-                            Layanan = a.Layanan
+                            Layanan = a.Layanan,
 
                         };
 

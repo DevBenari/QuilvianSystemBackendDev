@@ -33,6 +33,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<Peralatan> Peralatans { get; set; }
         public DbSet<KategoriPeralatan> KategoriPeralatans { get; set; }
         public DbSet<Departement> Departements { get; set; }
+        public DbSet<Position> Positions { get; set; }
 
         public DbSet<Poliklinik> Polikliniks { get; set; }
         public DbSet<Persalinan> Persalinans { get; set; }
