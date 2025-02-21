@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
@@ -18,20 +19,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class KategoriPeralatanController : Controller
+    public class PoliklinikController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<KategoriPeralatanController> _logger;
+        private readonly ILogger<PoliklinikController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
-       
-        public KategoriPeralatanController
-            (ApplicationDbContext applicationDbContext, 
-            UserManager<ApplicationUser> userManager, 
-            SignInManager<ApplicationUser> signInManager, 
-            ILogger<KategoriPeralatanController> logger, 
+
+        public PoliklinikController
+            (ApplicationDbContext applicationDbContext,
+            UserManager<ApplicationUser> userManager,
+            SignInManager<ApplicationUser> signInManager,
+            ILogger<PoliklinikController> logger,
             IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
@@ -41,16 +42,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             _webHostEnvironment = webHostEnvironment;
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetAllKategoriPeralatan(int page = 1, int perPage = 10)
-        {
 
+        [HttpGet]
+        public async Task<IActionResult> GetAllPoliklinik(int page = 1, int perPage = 10)
+        {
             // Validasi agar page dan perPage minimal bernilai 1
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = from a in _applicationDbContext.KategoriPeralatans
+            var query = from a in _applicationDbContext.Polikliniks
                         join u in _applicationDbContext.UserActives
                         on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
@@ -59,10 +60,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateDateTime = a.CreateDateTime,
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
-                            NamaKategoriPeralatan = a.NamaKategoriPeralatan,
-                            KodeKategoriPeralatan = a.KodeKategoriPeralatan,
-                            KategoriPeralatanId = a.KategoriPeralatanId
-
+                            PoliklinikId = a.PoliklinikId,
+                            KodePoliklinik = a.KodePoliklinik,
+                            NamaPoliklinik = a.NamaPoliklinik,
+                            KepalaPoliklinik = a.KepalaPoliklinik,
+                            Lokasi = a.Lokasi,
+                            Telepon = a.Telepon,
+                            Email = a.Email,
+                            JamBuka = a.JamBuka,
+                            JamTutup = a.JamTutup,
+                            LayananPoliklinik = a.LayananPoliklinik,
+                            Deskripsi = a.Deskripsi
                         };
 
             // Hitung total data sebelum paginasi
@@ -96,9 +104,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetKategoriPeralatanById(Guid id)
+        public async Task<IActionResult> GetPoliklinikById(Guid id)
         {
-            var listdata = _applicationDbContext.KategoriPeralatans.Find(id);
+            var listdata = _applicationDbContext.Polikliniks.Find(id);
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -112,7 +120,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateKategoriPeralatan([FromBody] KategoriPeralatanViewModel vm)
+        public async Task<IActionResult> CreatePoliklinik([FromBody] PoliklinikViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -135,33 +143,33 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var setDateNow = dateNow.ToString("yyMMdd");
 
                 // Ambil data terakhir untuk hari ini (tanpa ToString di query)
-                var lastCode = _applicationDbContext.KategoriPeralatans
+                var lastCode = _applicationDbContext.Polikliniks
                     .Where(d => d.CreateDateTime.Date == dateNow.Date)
-                    .OrderByDescending(k => k.KodeKategoriPeralatan)
+                    .OrderByDescending(k => k.KodePoliklinik)
                     .FirstOrDefault();
 
                 string kode;
                 if (lastCode == null)
                 {
-                    kode = $"KPL{setDateNow}0001";
+                    kode = $"POL{setDateNow}0001";
                 }
                 else
                 {
-                    var lastCodeTrim = lastCode.KodeKategoriPeralatan.Substring(3, 6);
+                    var lastCodeTrim = lastCode.KodePoliklinik.Substring(3, 6);
 
                     if (lastCodeTrim != setDateNow)
                     {
-                        kode = $"KPL{setDateNow}0001";
+                        kode = $"POL{setDateNow}0001";
                     }
                     else
                     {
-                        kode = $"KPL{setDateNow}" + (Convert.ToInt32(lastCode.KodeKategoriPeralatan.Substring(9)) + 1).ToString("D4");
+                        kode = $"POL{setDateNow}" + (Convert.ToInt32(lastCode.KodePoliklinik.Substring(9)) + 1).ToString("D4");
                     }
                 }
 
                 // cek duplikasi
-                var isDuplicate = _applicationDbContext.KategoriPeralatans
-                    .Any(c => c.KodeKategoriPeralatan == kode && c.NamaKategoriPeralatan == vm.NamaKategoriPeralatan);
+                var isDuplicate = _applicationDbContext.Polikliniks
+                    .Any(c => c.KodePoliklinik == kode && c.NamaPoliklinik == vm.NamaPoliklinik);
 
                 if (isDuplicate)
                 {
@@ -171,11 +179,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 // Validate ModelState
                 if (ModelState.IsValid)
                 {
-                    var data = new KategoriPeralatan
+                    var data = new Poliklinik
                     {
-                        KategoriPeralatanId = Guid.NewGuid(),
-                        KodeKategoriPeralatan = kode,
-                        NamaKategoriPeralatan = vm.NamaKategoriPeralatan,
+                        PoliklinikId = Guid.NewGuid(),
+                        KodePoliklinik = kode,
+                        NamaPoliklinik = vm.NamaPoliklinik,
+                        KepalaPoliklinik = vm.KepalaPoliklinik,
+                        Lokasi = vm.Lokasi,
+                        Telepon = vm.Telepon,
+                        Email = vm.Email,
+                        JamBuka = vm.JamBuka,
+                        JamTutup = vm.JamTutup,
+                        LayananPoliklinik = vm.LayananPoliklinik,
+                        Deskripsi = vm.Deskripsi,
                         CreateDateTime = DateTimeOffset.Now,
                         CreateBy = UserActiveId,
                         UpdateDateTime = DateTimeOffset.Now,
@@ -185,7 +201,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         IsDelete = false
                     };
 
-                    _applicationDbContext.KategoriPeralatans.Add(data);
+                    _applicationDbContext.Polikliniks.Add(data);
                     _applicationDbContext.SaveChanges();
                     return Created("", new
                     {
@@ -205,56 +221,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateKategoriPeralatan(Guid id, [FromBody] KategoriPeralatanViewModel vm)
+        public async Task<IActionResult> UpdatePoliklinik(Guid id, [FromBody] PoliklinikViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
                 return BadRequest(new { message = "Data tidak valid. || 400 Bad Request" });
             }
-
-            try
+            var data = _applicationDbContext.Polikliniks.Find(id);
+            if (data == null)
             {
-                //Ambil User ID dari JWT Claims
-                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
-                var UserActiveId = GetUserActive.UserActiveId;
-
-                if (string.IsNullOrEmpty(EmailLogin))
-                {
-                    return Unauthorized(new { message = "Anda tidak memiliki akses. || 401 Unauthorized" });
-                }
-
-                // **Cari Data**
-                var data = _applicationDbContext.KategoriPeralatans.Find(id);
-                if (data == null)
-                {
-                    return NotFound(new { message = "Data tidak ditemukan." });
-                }
-
-                // **Update Data**
-                data.NamaKategoriPeralatan = vm.NamaKategoriPeralatan;
-                data.UpdateDateTime = DateTimeOffset.Now;
-                data.UpdateBy = UserActiveId;
-
-                _applicationDbContext.KategoriPeralatans.Update(data);
-                _applicationDbContext.SaveChanges();
-
-                return Ok(new
-                {
-                    message = "Update Data Berhasil || 200 OK",
-                });
+                return NotFound(new { message = "Data tidak ditemukan. || 404 Not Found" });
             }
-            catch
-            (Exception ex)
-            {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
-
-            }
-        }
-
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteKategoriPeralatan(Guid id)
-        {
             try
             {
                 // **Ambil User ID dari JWT Claims**
@@ -263,19 +240,69 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var UserActiveId = GetUserActive.UserActiveId;
                 if (string.IsNullOrEmpty(EmailLogin))
                 {
-                    return Unauthorized(new { message = "Anda tidak memiliki akses. || 401 Unauthorized" });
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
-                // **Cari Data**
-                var data = _applicationDbContext.KategoriPeralatans.Find(id);
-                if (data == null)
+                // cek duplikasi
+                var isDuplicate = _applicationDbContext.Polikliniks
+                    .Any(c => c.PoliklinikId != id && c.NamaPoliklinik == vm.NamaPoliklinik);
+                if (isDuplicate)
                 {
-                    return NotFound(new { message = "Data tidak ditemukan." });
+                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
                 }
-                // **Soft Delete Data**
+                // Validate ModelState
+                if (ModelState.IsValid)
+                {
+                    data.NamaPoliklinik = vm.NamaPoliklinik;
+                    data.KepalaPoliklinik = vm.KepalaPoliklinik;
+                    data.Lokasi = vm.Lokasi;
+                    data.Telepon = vm.Telepon;
+                    data.Email = vm.Email;
+                    data.JamBuka = vm.JamBuka;
+                    data.JamTutup = vm.JamTutup;
+                    data.LayananPoliklinik = vm.LayananPoliklinik;
+                    data.UpdateDateTime = DateTimeOffset.Now;
+                    data.UpdateBy = UserActiveId;
+                    _applicationDbContext.Polikliniks.Update(data);
+                    _applicationDbContext.SaveChanges();
+                    return Ok(new
+                    {
+                        message = "Data berhasil diubah. || 200 OK",
+                    });
+                }
+                else
+                {
+                    return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
+                }
+            }
+            catch
+            (Exception ex)
+            {
+                return BadRequest(new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeletePoliklinik(Guid id)
+        {
+            var data = _applicationDbContext.Polikliniks.Find(id);
+            if (data == null)
+            {
+                return NotFound(new { message = "Data tidak ditemukan. || 404 Not Found" });
+            }
+            try
+            {
+                // **Ambil User ID dari JWT Claims**
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
+                if (string.IsNullOrEmpty(EmailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
                 data.IsDelete = true;
                 data.DeleteDateTime = DateTimeOffset.Now;
                 data.DeleteBy = UserActiveId;
-                _applicationDbContext.KategoriPeralatans.Update(data);
+                _applicationDbContext.Polikliniks.Update(data);
                 _applicationDbContext.SaveChanges();
                 return Ok(new
                 {
@@ -285,14 +312,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             catch
             (Exception ex)
             {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+                return BadRequest(new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
 
 
-        // pagination
         [HttpGet("paged")]
-        public IActionResult PegedAsuransi(
+        public IActionResult PagedPoliklinik(
         int page = 1,
         int perPage = 10,
         string? search = null,
@@ -304,7 +330,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         DateTime? endDate = null,
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
-            var query = from a in _applicationDbContext.KategoriPeralatans
+            var query = from a in _applicationDbContext.Polikliniks
                         join u in _applicationDbContext.UserActives
                         on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
@@ -313,9 +339,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateDateTime = a.CreateDateTime,
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
-                            NamaKategoriPeralatan = a.NamaKategoriPeralatan,
-                            KodeKategoriPeralatan = a.KodeKategoriPeralatan,
-                            KategoriPeralatanId = a.KategoriPeralatanId
+                            PoliklinikId = a.PoliklinikId,
+                            KodePoliklinik = a.KodePoliklinik,
+                            NamaPoliklinik = a.NamaPoliklinik,
+                            KepalaPoliklinik = a.KepalaPoliklinik,
+                            Lokasi = a.Lokasi,
+                            Telepon = a.Telepon,
+                            Email = a.Email,
+                            JamBuka = a.JamBuka,
+                            JamTutup = a.JamTutup,
+                            LayananPoliklinik = a.LayananPoliklinik,
+                            Deskripsi = a.Deskripsi
 
                         };
 
@@ -323,7 +357,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (!string.IsNullOrWhiteSpace(search))
             {
                 query = query.Where(u =>
-                    u.KodeKategoriPeralatan.Contains(search) || u.NamaKategoriPeralatan.Contains(search) 
+                    u.KodePoliklinik.Contains(search) || u.NamaPoliklinik.Contains(search) || u.LayananPoliklinik.Contains(search)
+                    || u.Lokasi.Contains(search)
                 );
             }
 
@@ -391,16 +426,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "KodeKategoriPeralatan" => query.OrderByDescending(u => u.KodeKategoriPeralatan),
-                    "NamaKategoriPeralatan" => query.OrderByDescending(u => u.NamaKategoriPeralatan),
+                    "KodePoliklinik" => query.OrderByDescending(u => u.KodePoliklinik),
+                    "NamaPoliklinik" => query.OrderByDescending(u => u.NamaPoliklinik),
+                    "LayananPoliklinik" => query.OrderByDescending(u => u.LayananPoliklinik),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "KodeKategoriPeralatan" => query.OrderByDescending(u => u.KodeKategoriPeralatan),
-                    "NamaKategoriPeralatan" => query.OrderByDescending(u => u.NamaKategoriPeralatan),
+                    "KodePoliklinik" => query.OrderByDescending(u => u.KodePoliklinik),
+                    "NamaPoliklinik" => query.OrderByDescending(u => u.NamaPoliklinik),
+                    "LayananPoliklinik" => query.OrderByDescending(u => u.LayananPoliklinik),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 };
 
@@ -429,6 +466,5 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             });
         }
     }
-
 
 }
