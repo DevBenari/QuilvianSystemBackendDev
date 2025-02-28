@@ -22,6 +22,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:6.0
 # Set the working directory inside the container
 WORKDIR /app
 
+
 # Copy the published app from the previous image
 COPY --from=build /app/out .
 
