@@ -2,7 +2,7 @@
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
 {
-    [Table("MstPersalinan", Schema = "dbo")]
+    [Table("MstPersalinan", Schema = "public")]
     public class Persalinan
     {
         public Guid PersalinanId { get; set; }

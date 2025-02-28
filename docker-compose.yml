@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  web:
+    image: quilvian-postgre-api # Gantilah dengan nama image yang sudah kamu build
+    build: .
+    ports:
+      - "5000:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres-container;Port=5432;Username=sa;Password=Admin@1234;Database=QuilvianSystemBackendDev
+    depends_on:
+      - postgres-container
+
+  postgres-container:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: sa
+      POSTGRES_PASSWORD: Admin@1234
+      POSTGRES_DB: QuilvianSystemBackendDev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+volumes:
+  postgres-data:

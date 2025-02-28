@@ -15,9 +15,11 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 // Konfigurasi koneksi database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-{
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
-});
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+//builder.Services.AddDbContext<ApplicationDbContext>(options =>
+//{
+//    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+//});
 
 // Tambahkan layanan CORS
 builder.Services.AddCors(options =>

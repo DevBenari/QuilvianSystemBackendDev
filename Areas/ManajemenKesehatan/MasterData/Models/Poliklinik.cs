@@ -5,7 +5,7 @@ using QuilvianSystemBackendDev.Models;
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
 {
 
-    [Table("MstPoliklinik", Schema = "dbo")]
+    [Table("MstPoliklinik", Schema = "public")]
     public class Poliklinik : UserActivity
     {
         [Key]

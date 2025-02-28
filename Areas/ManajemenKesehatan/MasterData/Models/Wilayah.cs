@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
 {
-    [Table("MstProvinsi", Schema = "dbo")]
+    [Table("MstProvinsi", Schema = "public")]
     public class Provinsi : UserActivity
     {
         [Key]
@@ -19,7 +19,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public Negara? Negara { get; set; }        
     }
 
-    [Table("MstKabupatenKota", Schema = "dbo")]
+    [Table("MstKabupatenKota", Schema = "public")]
     public class KabupatenKota : UserActivity
     {
         [Key]
@@ -34,7 +34,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public Provinsi? Provinsi { get; set; }           
     }
 
-    [Table("MstKecamatan", Schema = "dbo")]
+    [Table("MstKecamatan", Schema = "public")]
     public class Kecamatan : UserActivity
     {
         [Key]
@@ -49,7 +49,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public KabupatenKota? KabupatenKota { get; set; }        
     }
 
-    [Table("MstKelurahan", Schema = "dbo")]
+    [Table("MstKelurahan", Schema = "public")]
     public class Kelurahan : UserActivity
     {
         [Key]
@@ -58,8 +58,5 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string NamaKelurahan { get; set; }
         public Guid? KecamatanId { get; set; }
 
-        //Relation
-        [ForeignKey("KecamatanId")]
-        public Kecamatan? Kecamatan { get; set; }
     }
 }
