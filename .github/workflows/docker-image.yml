@@ -9,10 +9,6 @@ jobs:
   build:
     runs-on: ubuntu-latest  # Workflow ini akan dijalankan di Ubuntu terbaru
 
-    env:
-      DOCKER_USERNAME: "ikbalyuliyanto7"  # Ganti dengan username Docker Hub Anda
-      DOCKER_PASSWORD: "dckr_pat_zIxZcT42yuw5GqAwGLSgn4lnCGk"  # Ganti dengan password atau token Docker Hub Anda
-
     steps:
       # Step 1: Checkout repository
       - name: Checkout repository
@@ -20,8 +16,10 @@ jobs:
 
       # Step 2: Login ke Docker Hub
       - name: Log in to Docker Hub
-        run: |
-          echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+        uses: docker/login-action@v2
+        with:
+          username: "ikbalyuliyanto7"  # Gunakan Docker Hub username dari GitHub Secrets
+          password: "dckr_pat_zIxZcT42yuw5GqAwGLSgn4lnCGk"  # Gunakan Docker Hub password/token dari GitHub Secrets
 
       # Step 3: Build Docker image
       - name: Build Docker image
