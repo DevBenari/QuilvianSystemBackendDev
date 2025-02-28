@@ -19,7 +19,7 @@ jobs:
         uses: docker/login-action@v2
         with:
           username: "ikbalyuliyanto7"  # Gunakan Docker Hub username dari GitHub Secrets
-          password: "dckr_pat_zIxZcT42yuw5GqAwGLSgn4lnCGk"  # Gunakan Docker Hub password/token dari GitHub Secrets
+          password: "dckr_pat_NGNArQqEZT9NiksMvXujctsIIWk"  # Gunakan Docker Hub password/token dari GitHub Secrets
 
       # Step 3: Build Docker image
       - name: Build Docker image
