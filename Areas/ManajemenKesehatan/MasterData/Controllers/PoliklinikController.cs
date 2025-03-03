@@ -70,7 +70,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             JamBuka = a.JamBuka,
                             JamTutup = a.JamTutup,
                             LayananPoliklinik = a.LayananPoliklinik,
-                            Deskripsi = a.Deskripsi
+                            Deskripsi = a.Deskripsi,
+                            //SubPolis = a.SubPolis
                         };
 
             // Hitung total data sebelum paginasi
@@ -188,6 +189,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         Lokasi = vm.Lokasi,
                         Telepon = vm.Telepon,
                         Email = vm.Email,
+                        HariOperasional = vm.HariOperasional,
                         JamBuka = vm.JamBuka,
                         JamTutup = vm.JamTutup,
                         LayananPoliklinik = vm.LayananPoliklinik,
@@ -349,8 +351,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             JamBuka = a.JamBuka,
                             JamTutup = a.JamTutup,
                             LayananPoliklinik = a.LayananPoliklinik,
-                            Deskripsi = a.Deskripsi
-
+                            Deskripsi = a.Deskripsi,
+                            //SubPolis = a.SubPolis
                         };
 
             // Filter berdasarkan search

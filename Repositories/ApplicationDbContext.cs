@@ -18,7 +18,6 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<Pekerjaan> Pekerjaans { get; set; }
         public DbSet<Title> Titles { get; set; }
         public DbSet<Dokter> Dokters { get; set; }
-        public DbSet<DokterPraktek> DokterPrakteks { get; set; }
         public DbSet<Provinsi> Provinsis { get; set; }
         public DbSet<KabupatenKota> KabupatenKotas { get; set; }
         public DbSet<Kecamatan> Kecamatans { get; set; }
@@ -34,9 +33,12 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<KategoriPeralatan> KategoriPeralatans { get; set; }
         public DbSet<Departement> Departements { get; set; }
         public DbSet<Position> Positions { get; set; }
-
         public DbSet<Poliklinik> Polikliniks { get; set; }
         public DbSet<Persalinan> Persalinans { get; set; }
+        public DbSet<SubPoli> SubPolis { get; set; }
+        public DbSet<JadwalPraktek> JadwalPrakteks { get; set; }
+        public DbSet<DokterPoli> DokterPolis { get; set; }
+        public DbSet<CoveranAsuransi> CoveranAsuransis { get; set; }
 
         #endregion
 

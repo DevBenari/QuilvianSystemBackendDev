@@ -307,64 +307,7 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.ToTable("MstDokter", "dbo");
                 });
 
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.DokterPraktek", b =>
-                {
-                    b.Property<Guid>("DokterPraktekId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("CreateBy")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTimeOffset>("CreateDateTime")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<Guid>("DeleteBy")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTimeOffset>("DeleteDateTime")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("Dokter")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("DokterId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Hari")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsDelete")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("JamKeluar")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("JamMasuk")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("JamPraktek")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Layanan")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("UpdateBy")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTimeOffset>("UpdateDateTime")
-                        .HasColumnType("datetimeoffset");
-
-                    b.HasKey("DokterPraktekId");
-
-                    b.HasIndex("DokterId");
-
-                    b.ToTable("MstDokterPraktek", "dbo");
-                });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.GolonganDarah", b =>
                 {
@@ -1309,16 +1252,7 @@ namespace QuilvianSystemBackendDev.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.DokterPraktek", b =>
-                {
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Dokter", "Dokters")
-                        .WithMany()
-                        .HasForeignKey("DokterId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
 
-                    b.Navigation("Dokters");
-                });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Kabupaten", b =>
                 {

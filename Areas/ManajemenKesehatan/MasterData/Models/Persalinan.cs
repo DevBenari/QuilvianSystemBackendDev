@@ -1,9 +1,10 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
+using QuilvianSystemBackendDev.Models;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
 {
-    [Table("MstPersalinan", Schema = "dbo")]
-    public class Persalinan
+    [Table("MstPersalinan", Schema = "public")]
+    public class Persalinan : UserActivity
     {
         public Guid PersalinanId { get; set; }
         public string KodePersalinan { get; set; }

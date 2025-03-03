@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
 {
-    [Table("PdfPasienBaru", Schema = "dbo")]
+    [Table("PdfPasienBaru", Schema = "public")]
     public class PendaftaranPasienBaru : UserActivity
     {
         [Key]
@@ -75,7 +75,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
         public string? InformasiSekolah { get; set; }
 
         // Informasi Tambahan
-        public string? Foto { get; set; }
+        public string? FotoName { get; set; }
+
+        public string? JudulFileFoto { get; set; }
+        
+        public string? FotoPath { get; set; }
+
+        [Column(TypeName = "VARBINARY(MAX)")]
+        public byte[]? ImageBytes { get; set; }
+        
         public string? QrCode { get; set; }
     }
 

@@ -4,7 +4,7 @@ using QuilvianSystemBackendDev.Models;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
 {
-    [Table("MstKategoriPeralatan", Schema = "dbo")]
+    [Table("MstKategoriPeralatan", Schema = "public")]
     public class KategoriPeralatan : UserActivity
     {
         [Key]

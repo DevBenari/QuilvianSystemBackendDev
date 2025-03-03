@@ -414,7 +414,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         CreateBy = UserActiveId,
                         KodeProvinsi = kode,
                         NamaProvinsi = vm.NamaProvinsi,
-                        NegaraId = vm.NegaraId
+                        NegaraId = vm.NegaraId,
+                        UpdateDateTime = DateTimeOffset.Now,
+                        UpdateBy = UserActiveId,
+                        DeleteDateTime = DateTimeOffset.Now,
+                        DeleteBy = UserActiveId,
+                        IsDelete = false
                     };
 
                     _applicationDbContext.Provinsis.Add(data);
@@ -504,7 +509,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         CreateBy = UserActiveId,
                         KodeKabupatenKota = kode,
                         NamaKabupatenKota = vm.NamaKabupatenKota,
-                        ProvinsiId = vm.ProvinsiId
+                        ProvinsiId = vm.ProvinsiId,
+                        UpdateDateTime = DateTimeOffset.Now,
+                        UpdateBy = UserActiveId,
+                        DeleteDateTime = DateTimeOffset.Now,
+                        DeleteBy = UserActiveId,
+                        IsDelete = false
                     };
 
                     _applicationDbContext.KabupatenKotas.Add(data);
@@ -595,6 +605,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         KodeKecamatan = kode,
                         NamaKecamatan = vm.NamaKecamatan,
                         KabupatenKotaId = vm.KabupatenKotaId,
+                        UpdateDateTime = DateTimeOffset.Now,
+                        UpdateBy = UserActiveId,
+                        DeleteDateTime = DateTimeOffset.Now,
+                        DeleteBy = UserActiveId,
+                        IsDelete = false
                     };
 
                     _applicationDbContext.Kecamatans.Add(data);
@@ -684,7 +699,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         CreateBy = UserActiveId,
                         KodeKelurahan = kode,
                         NamaKelurahan = vm.NamaKelurahan,
-                        KecamatanId = vm.KecamatanId
+                        KecamatanId = vm.KecamatanId,
+                        UpdateDateTime = DateTimeOffset.Now,
+                        UpdateBy = UserActiveId,
+                        DeleteDateTime = DateTimeOffset.Now,
+                        DeleteBy = UserActiveId,
+                        IsDelete = false
                     };
 
                     _applicationDbContext.Kelurahans.Add(data);
@@ -781,7 +801,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
-                // **Update Data Pasien**
+                // **Update Data Wilayah**
                 data.NamaKabupatenKota = vm.NamaKabupatenKota;
                 data.ProvinsiId = vm.ProvinsiId;
 
@@ -832,6 +852,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 // **Update Data Pasien**
                 data.NamaKecamatan = vm.NamaKecamatan;
                 data.KabupatenKotaId = vm.KabupatenKotaId;
+
 
                 data.UpdateBy = UserActiveId;
                 data.UpdateDateTime = DateTimeOffset.Now;

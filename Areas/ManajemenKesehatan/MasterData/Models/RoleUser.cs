@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
 {
-    [Table("AspNetUserRole", Schema = "dbo")]
+    [Table("AspNetUserRole", Schema = "public")]
     public class RoleUser
     {
         [Key]

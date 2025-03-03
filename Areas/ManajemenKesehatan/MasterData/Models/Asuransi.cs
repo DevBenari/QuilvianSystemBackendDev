@@ -1,10 +1,11 @@
-﻿using QuilvianSystemBackendDev.Models;
+﻿using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers;
+using QuilvianSystemBackendDev.Models;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
 {
-    [Table("MstAsuransi", Schema = "dbo")]
+    [Table("MstAsuransi", Schema = "public")]
     public class Asuransi : UserActivity
     {
         [Key]
@@ -21,6 +22,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public DateTimeOffset? TanggalMulaiKerjasama { get; set; }
         public DateTimeOffset? TanggalAkhirKerjasama { get; set; }
         public string? RSRekanan { get; set; }
+        public bool IsPKS { get; set; }
 
         // informasi klaim
         public string? MetodeKlaim { get; set; }
@@ -59,5 +61,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? NoTeleponPerwakilan { get; set; }
         public string? EmailPerwakilan { get; set; }
         public string? JabatanPerwakilan { get; set; }
+
+        public ICollection<CoveranAsuransi> CoveranAsuransis { get; set; }
     }
 }

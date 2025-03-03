@@ -13,9 +13,9 @@ using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers;
 using QuilvianSystemBackendDev.Models;
-using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Linq;
+using Microsoft.AspNetCore.Http;
 using ZXing.QrCode.Internal;
-using MessagePack;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
@@ -73,8 +73,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             Str = a.Str,
                             TglSip = a.TglSip,
                             TglStr = a.TglStr,
-                            PanggilDokter = a.PanggilDokter,
+                            FotoDokter = a.FotoDokter,
+                            ImageBytes = a.ImageBytes,
                             Nik = a.Nik,
+                            Nohp = a.Nohp,
+                            Alamat = a.Alamat,
+                            IsAsuransi = a.IsAsuransi,
                         };
 
             // Hitung total data sebelum paginasi
@@ -119,9 +123,35 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             return Ok(new { message = "Data ditemukan.", data = record });
         }
 
+        [HttpGet("get-image/{id}")]
+        public async Task<IActionResult> GetImage(Guid id)
+        {
+            var data = await _context.Dokters.FindAsync(id);
+
+            if (data == null || data.ImageBytes == null || data.ImageBytes.Length == 0)
+            {
+                return NotFound(new { message = "Data tidak ditemukan atau tidak memiliki gambar." });
+            }
+
+            string detectedFormat = GetImageFormat(data.ImageBytes);
+            string mimeType = detectedFormat == "image/png" ? "image/png" : "image/jpeg";
+
+            return File(data.ImageBytes, mimeType); // Mengembalikan gambar dengan format yang sesuai
+        }
+
+        public static string GetImageFormat(byte[] fileBytes)
+        {
+            if (fileBytes.Length < 4) return "Unknown";
+
+            if (fileBytes[0] == 0xFF && fileBytes[1] == 0xD8 && fileBytes[2] == 0xFF) return "image/jpeg";
+            if (fileBytes[0] == 0x89 && fileBytes[1] == 0x50 && fileBytes[2] == 0x4E && fileBytes[3] == 0x47) return "image/png";
+
+            return "Unknown";
+        }
+
         // POST: api/Dokter
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] DokterViewModel model)
+        public async Task<IActionResult> Create([FromForm] DokterViewModel model)
         {
             if (model == null || !ModelState.IsValid)
             {
@@ -172,10 +202,92 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var isDuplicate = _context.Dokters
                     .Any(c => c.KdDokter == kode && c.NmDokter == model.NmDokter);
 
+                // kode upload gambar dgn Base64
+                // Dapatkan ekstensi file berdasarkan Base64
+                //string extension = GetImageExtension(request.Base64Data);
+                //if (string.IsNullOrEmpty(extension))
+                //{
+                //    return BadRequest(new { message = "Invalid image format. Allowed formats: jpg, jpeg, png, gif, bmp, webp." });
+                //}
+
+                //// Folder penyimpanan (wwwroot/uploads)
+                //var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+                //if (!Directory.Exists(uploadsFolder))
+                //{
+                //    Directory.CreateDirectory(uploadsFolder);
+                //}
+
+                //// Nama file unik
+                //var fileName = $"image_{Guid.NewGuid()}.{extension}";
+                //var filePath = Path.Combine(uploadsFolder, fileName);
+
+                //// Hapus prefix base64 sebelum decoding
+                //var base64Data = Regex.Replace(request.Base64Data, @"^data:image\/[a-zA-Z]+;base64,", string.Empty);
+
+                //// Konversi base64 menjadi byte array
+                //var imageBytes = Convert.FromBase64String(base64Data);
+
+                //// Simpan file ke server
+                //await System.IO.File.WriteAllBytesAsync(filePath, imageBytes);
+
+                //// URL file yang disimpan
+                //var fileUrl = $"{Request.Scheme}://{Request.Host}/uploads/{fileName}";
+
+                //// **Validasi & Simpan Foto Profil**
+                //string fotoPath = null;
+                //if (model.FotoDokter != null && model.FotoDokter.Length > 0)
+                //{
+                //    var maxSize = 2 * 1024 * 1024;
+                //    var allowedExtensions = new List<string> { ".jpg", ".jpeg", ".png" };
+                //    var fileExtension = Path.GetExtension(model.FotoDokter.FileName).ToLower();
+
+                //    if (model.FotoDokter.Length > maxSize)
+                //    {
+                //        return BadRequest(new { message = "Ukuran file terlalu besar! Maksimum 2MB." });
+                //    }
+
+                //    if (!allowedExtensions.Contains(fileExtension))
+                //    {
+                //        return BadRequest(new { message = "Format file tidak valid! Gunakan JPG atau PNG." });
+                //    }
+
+                //    var uploadFolder = Path.Combine(_webHostEnvironment.WebRootPath, "FotoDokter");
+                //    if (!Directory.Exists(uploadFolder))
+                //    {
+                //        Directory.CreateDirectory(uploadFolder);
+                //    }
+
+                //    var fotoFileName = $"{kode}{fileExtension}";
+                //    var fotoFilePath = Path.Combine(uploadFolder, fotoFileName);
+
+                //    using (var stream = new FileStream(fotoFilePath, FileMode.Create))
+                //    {
+                //        model.FotoDokter.CopyTo(stream);
+                //    }
+
+                //    fotoPath = $"/FotoDokter/{fotoFileName}";
+                //}
+                //else
+                //{
+                //    //Jika user tidak upload foto, gunakan foto default
+                //    fotoPath = "/FotoDokter/dokter.jpg";
+                //}
+
                 if (isDuplicate)
                 {
                     return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
                 }
+
+                byte[] imageBytes = model.FotoByte.ToArray();
+                string detectedFormat = GetImageFormat(imageBytes);
+
+                if (detectedFormat == "Unknown")
+                {
+                    return BadRequest(new { message = "Format gambar tidak didukung. Hanya menerima JPG dan PNG." });
+                }
+
+                string uniqueFileName = $"{kode}_{model.NmDokter}";
+
 
                 if (ModelState.IsValid)
                 {
@@ -187,12 +299,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         Str = model.Str,
                         TglSip = model.TglSip,
                         TglStr = model.TglStr,
-                        PanggilDokter = model.PanggilDokter,
+                        FotoPath = $"/FotoDokter/{uniqueFileName}",
+                        ImageBytes = imageBytes,
+                        FotoDokter = uniqueFileName,
                         Nik = model.Nik,
                         KdDokter = kode,
+                        Email = model.Email,
+                        Nohp = model.Nohp,
+                        Alamat = model.Alamat,
                         CreateDateTime = DateTimeOffset.Now,
-                        CreateBy =UserActiveId,
-                        IsDelete = false
+                        CreateBy = UserActiveId,
+                        IsDelete = false,
+                        IsAsuransi = model.IsAsuransi,
                     };
                     _context.Dokters.Add(dokter);
                     _context.SaveChanges();
@@ -200,6 +318,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Created("", new
                     {
                         message = "Tambah Data Berhasil || 201 Created",
+                        //uploadFotoUrl = fotoPath != null ? $"{Request.Scheme}://{Request.Host}{fotoPath}" : null
                     });
 
                 }
@@ -214,12 +333,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
 
-           
+
         }
 
         // PUT: api/Dokter/{id}
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] DokterViewModel model)
+        public async Task<IActionResult> Update(Guid id, [FromForm] DokterViewModel model)
         {
             if (model == null || !ModelState.IsValid)
             {
@@ -251,8 +370,48 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.Str = model.Str ?? data.Str;
                 data.TglSip = model.TglSip ?? data.TglSip;
                 data.TglStr = model.TglStr ?? data.TglStr;
-                data.PanggilDokter = model.PanggilDokter ?? data.PanggilDokter;
                 data.Nik = model.Nik ?? data.Nik;
+                data.IsAsuransi = model.IsAsuransi ?? data.IsAsuransi;
+
+                byte[] imageBytes = model.FotoByte.ToArray();
+                string detectedFormat = GetImageFormat(imageBytes);
+
+                if (detectedFormat == "Unknown")
+                {
+                    return BadRequest(new { message = "Format gambar tidak didukung. Hanya menerima JPG dan PNG." });
+                }
+
+                data.ImageBytes = imageBytes;
+
+
+
+                // update foto
+                //if (model.FotoDokter != null && model.FotoDokter.Length > 0)
+                //{
+                //    var maxSize = 2 * 1024 * 1024;
+                //    var allowedExtensions = new List<string> { ".jpg", ".jpeg", ".png" };
+                //    var fileExtension = Path.GetExtension(model.FotoDokter.FileName).ToLower();
+                //    if (model.FotoDokter.Length > maxSize)
+                //    {
+                //        return BadRequest(new { message = "Ukuran file terlalu besar! Maksimum 2MB." });
+                //    }
+                //    if (!allowedExtensions.Contains(fileExtension))
+                //    {
+                //        return BadRequest(new { message = "Format file tidak valid! Gunakan JPG atau PNG." });
+                //    }
+                //    var uploadFolder = Path.Combine(_webHostEnvironment.WebRootPath, "FotoDokter");
+                //    if (!Directory.Exists(uploadFolder))
+                //    {
+                //        Directory.CreateDirectory(uploadFolder);
+                //    }
+                //    var fotoFileName = $"{data.KdDokter}{fileExtension}";
+                //    var fotoFilePath = Path.Combine(uploadFolder, fotoFileName);
+                //    using (var stream = new FileStream(fotoFilePath, FileMode.Create))
+                //    {
+                //        model.FotoDokter.CopyTo(stream);
+                //    }
+                //    data.FotoDokter = $"/FotoDokter/{fotoFileName}";
+                //}
 
                 data.UpdateDateTime = DateTimeOffset.Now;
                 data.UpdateBy = UserActiveId;
@@ -344,7 +503,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                          u.CreateDateTime.Date <= endDate.Value.Date);
             }
 
-            
+
 
             // Sorting Data
             if (!string.IsNullOrEmpty(orderBy))
@@ -378,6 +537,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
             });
         }
-        
+
     }
 }
