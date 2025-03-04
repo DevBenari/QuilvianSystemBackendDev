@@ -4,24 +4,25 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
 {
-    [Table("MstDepartement", Schema = "dbo")]
+    [Table("MstDepartement", Schema = "public")]
     public class Departement : UserActivity
     {
         [Key]
         public Guid DepartementId { get; set; }
+        [Required]
         public string KodeDepartement { get; set; }
-        public string NamaDepartement { get; set; }
-        public string KepalaDepartement { get; set; }
-        public string Lokasi { get; set; }
-        public string Telepon { get; set; }
-        public string Email { get; set; }
-        public string JamBuka { get; set; }
+        public string? NamaDepartement { get; set; }
+        public string? KepalaDepartement { get; set; }
+        public string? Lokasi { get; set; }
+        public string? Telepon { get; set; }
+        public string? Email { get; set; }
+        public string? JamBuka { get; set; }
         public string JamTutup { get; set; }
         public string? Layanan { get; set; }
         public ICollection<Position> Positions { get; set; }
     }
 
-    [Table("MstPosition", Schema = "dbo")]
+    [Table("MstPosition", Schema = "public")]
     public class Position : UserActivity
     {
         [Key]

@@ -230,6 +230,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         TanggalMulaiKerjasama = vm.TanggalMulaiKerjasama,
                         TanggalAkhirKerjasama = vm.TanggalAkhirKerjasama,
                         RSRekanan = vm.RSRekanan,
+                        IsPKS = vm.IsPKS,
                         MetodeKlaim = vm.MetodeKlaim,
                         WaktuKlaim = vm.WaktuKlaim,
                         BatasMaxKlaimPerTahun = vm.BatasMaxKlaimPerTahun,
@@ -314,42 +315,64 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
-                // **Update Data**
-                asuransi.NamaAsuransi = vm.NamaAsuransi ?? asuransi.NamaAsuransi;
-                asuransi.JenisAsuransi = vm.JenisAsuransi ?? asuransi.JenisAsuransi;
-                asuransi.KategoriAsuransi = vm.KategoriAsuransi ?? asuransi.KategoriAsuransi;
-                asuransi.StatusAsuransi = vm.StatusAsuransi ?? asuransi.StatusAsuransi;
-                asuransi.TanggalMulaiKerjasama = vm.TanggalMulaiKerjasama ?? asuransi.TanggalMulaiKerjasama;
-                asuransi.TanggalAkhirKerjasama = vm.TanggalAkhirKerjasama ?? asuransi.TanggalAkhirKerjasama;
-                asuransi.RSRekanan = vm.RSRekanan ?? asuransi.RSRekanan;
-                asuransi.MetodeKlaim = vm.MetodeKlaim ?? asuransi.MetodeKlaim;
-                asuransi.WaktuKlaim = vm.WaktuKlaim ?? asuransi.WaktuKlaim;
-                asuransi.BatasMaxKlaimPerTahun = vm.BatasMaxKlaimPerTahun ?? asuransi.BatasMaxKlaimPerTahun;
-                asuransi.BatasMaxKlaimPerKunjungan = vm.BatasMaxKlaimPerKunjungan ?? asuransi.BatasMaxKlaimPerKunjungan;
-                //asuransi.DokumenKlaim = vm.DokumenKlaim ?? asuransi.DokumenKlaim;
-                asuransi.Layanan = vm.Layanan ?? asuransi.Layanan;
-                asuransi.PersentasiBiayaPertanggungan = vm.PersentasiBiayaPertanggungan ?? asuransi.PersentasiBiayaPertanggungan;
-                asuransi.ObatDitanggung = vm.ObatDitanggung ?? asuransi.ObatDitanggung;
-                asuransi.TambahanTanggungan = vm.TambahanTanggungan ?? asuransi.TambahanTanggungan;
-                asuransi.BiayaTidakDitanggung = vm.BiayaTidakDitanggung ?? asuransi.BiayaTidakDitanggung;
-                asuransi.MasaTunggu = vm.MasaTunggu ?? asuransi.MasaTunggu;
-                asuransi.MaxUsiaPasien = vm.MaxUsiaPasien ?? asuransi.MaxUsiaPasien;
-                asuransi.NoRekRumahSakit = vm.NoRekRumahSakit ?? asuransi.NoRekRumahSakit;
-                asuransi.NamaBank = vm.NamaBank ?? asuransi.NamaBank;
-                asuransi.NamaBankCabang = vm.NamaBankCabang ?? asuransi.NamaBankCabang;
-                asuransi.TermOfPayment = vm.TermOfPayment ?? asuransi.TermOfPayment;
-                asuransi.BatasWaktuPembayaran = vm.BatasWaktuPembayaran ?? asuransi.BatasWaktuPembayaran;
-                asuransi.PenaltiTerlambatBayar = vm.PenaltiTerlambatBayar ?? asuransi.PenaltiTerlambatBayar;
-                asuransi.NamaPerusahaanAsuransi = vm.NamaPerusahaanAsuransi ?? asuransi.NamaPerusahaanAsuransi;
-                asuransi.AlamatPusat = vm.AlamatPusat ?? asuransi.AlamatPusat;
-                asuransi.AlamatCabang = vm.AlamatCabang ?? asuransi.AlamatCabang;
-                asuransi.NoTelepon = vm.NoTelepon ?? asuransi.NoTelepon;
-                asuransi.EmailPusat = vm.EmailPusat ?? asuransi.EmailPusat;
-                asuransi.NoHotlineDarurat = vm.NoHotlineDarurat ?? asuransi.NoHotlineDarurat;
-                asuransi.NamaPerwakilan = vm.NamaPerwakilan ?? asuransi.NamaPerwakilan;
-                asuransi.NoTeleponPerwakilan = vm.NoTeleponPerwakilan ?? asuransi.NoTeleponPerwakilan;
-                asuransi.EmailPerwakilan = vm.EmailPerwakilan ?? asuransi.EmailPerwakilan;
-                asuransi.JabatanPerwakilan = vm.JabatanPerwakilan ?? asuransi.JabatanPerwakilan;
+                if (ModelState.IsValid)
+                {
+                    // **Update Data**
+                    asuransi.NamaAsuransi = vm.NamaAsuransi ?? asuransi.NamaAsuransi;
+                    asuransi.JenisAsuransi = vm.JenisAsuransi ?? asuransi.JenisAsuransi;
+                    asuransi.KategoriAsuransi = vm.KategoriAsuransi ?? asuransi.KategoriAsuransi;
+                    asuransi.StatusAsuransi = vm.StatusAsuransi ?? asuransi.StatusAsuransi;
+                    asuransi.TanggalMulaiKerjasama = vm.TanggalMulaiKerjasama ?? asuransi.TanggalMulaiKerjasama;
+                    asuransi.TanggalAkhirKerjasama = vm.TanggalAkhirKerjasama ?? asuransi.TanggalAkhirKerjasama;
+                    asuransi.RSRekanan = vm.RSRekanan ?? asuransi.RSRekanan;
+                    asuransi.IsPKS = vm.IsPKS;
+                    asuransi.MetodeKlaim = vm.MetodeKlaim ?? asuransi.MetodeKlaim;
+                    asuransi.WaktuKlaim = vm.WaktuKlaim ?? asuransi.WaktuKlaim;
+                    asuransi.BatasMaxKlaimPerTahun = vm.BatasMaxKlaimPerTahun ?? asuransi.BatasMaxKlaimPerTahun;
+                    asuransi.BatasMaxKlaimPerKunjungan = vm.BatasMaxKlaimPerKunjungan ?? asuransi.BatasMaxKlaimPerKunjungan;
+                    //asuransi.DokumenKlaim = vm.DokumenKlaim ?? asuransi.DokumenKlaim;
+                    asuransi.Layanan = vm.Layanan ?? asuransi.Layanan;
+                    asuransi.PersentasiBiayaPertanggungan = vm.PersentasiBiayaPertanggungan ?? asuransi.PersentasiBiayaPertanggungan;
+                    asuransi.ObatDitanggung = vm.ObatDitanggung ?? asuransi.ObatDitanggung;
+                    asuransi.TambahanTanggungan = vm.TambahanTanggungan ?? asuransi.TambahanTanggungan;
+                    asuransi.BiayaTidakDitanggung = vm.BiayaTidakDitanggung ?? asuransi.BiayaTidakDitanggung;
+                    asuransi.MasaTunggu = vm.MasaTunggu ?? asuransi.MasaTunggu;
+                    asuransi.MaxUsiaPasien = vm.MaxUsiaPasien ?? asuransi.MaxUsiaPasien;
+                    asuransi.NoRekRumahSakit = vm.NoRekRumahSakit ?? asuransi.NoRekRumahSakit;
+                    asuransi.NamaBank = vm.NamaBank ?? asuransi.NamaBank;
+                    asuransi.NamaBankCabang = vm.NamaBankCabang ?? asuransi.NamaBankCabang;
+                    asuransi.TermOfPayment = vm.TermOfPayment ?? asuransi.TermOfPayment;
+                    asuransi.BatasWaktuPembayaran = vm.BatasWaktuPembayaran ?? asuransi.BatasWaktuPembayaran;
+                    asuransi.PenaltiTerlambatBayar = vm.PenaltiTerlambatBayar ?? asuransi.PenaltiTerlambatBayar;
+                    asuransi.NamaPerusahaanAsuransi = vm.NamaPerusahaanAsuransi ?? asuransi.NamaPerusahaanAsuransi;
+                    asuransi.AlamatPusat = vm.AlamatPusat ?? asuransi.AlamatPusat;
+                    asuransi.AlamatCabang = vm.AlamatCabang ?? asuransi.AlamatCabang;
+                    asuransi.NoTelepon = vm.NoTelepon ?? asuransi.NoTelepon;
+                    asuransi.EmailPusat = vm.EmailPusat ?? asuransi.EmailPusat;
+                    asuransi.NoHotlineDarurat = vm.NoHotlineDarurat ?? asuransi.NoHotlineDarurat;
+                    asuransi.NamaPerwakilan = vm.NamaPerwakilan ?? asuransi.NamaPerwakilan;
+                    asuransi.NoTeleponPerwakilan = vm.NoTeleponPerwakilan ?? asuransi.NoTeleponPerwakilan;
+                    asuransi.EmailPerwakilan = vm.EmailPerwakilan ?? asuransi.EmailPerwakilan;
+                    asuransi.JabatanPerwakilan = vm.JabatanPerwakilan ?? asuransi.JabatanPerwakilan;
+
+                    asuransi.UpdateDateTime = DateTimeOffset.Now;
+                    asuransi.UpdateBy = UserActiveId;
+
+                    _applicationDbContext.Asuransis.Update(asuransi);
+                    _applicationDbContext.SaveChanges();
+
+                    return Ok(new
+                    {
+                        message = "Update Data Berhasil || 200 OK",
+                        //qrCodeUrl = $"{Request.Scheme}://{Request.Host}{pasien.QrCode}",
+                        //uploadFotoUrl = $"{Request.Scheme}://{Request.Host}{pasien.Foto}"
+                    });
+                }
+                else
+                {
+                    return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
+                }
+
 
                 // **Update Foto Profil**
                 //if (vm.Foto != null && vm.Foto.Length > 0)
@@ -385,18 +408,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 //    pasien.Foto = $"/FotoPasienBaru/{fotoFileName}";
                 //}
 
-                asuransi.UpdateDateTime = DateTimeOffset.Now;
-                asuransi.UpdateBy = UserActiveId;
 
-                _applicationDbContext.Asuransis.Update(asuransi);
-                _applicationDbContext.SaveChanges();
-
-                return Ok(new
-                {
-                    message = "Update Data Berhasil || 200 OK",
-                    //qrCodeUrl = $"{Request.Scheme}://{Request.Host}{pasien.QrCode}",
-                    //uploadFotoUrl = $"{Request.Scheme}://{Request.Host}{pasien.Foto}"
-                });
             }
             catch
             (Exception ex)
