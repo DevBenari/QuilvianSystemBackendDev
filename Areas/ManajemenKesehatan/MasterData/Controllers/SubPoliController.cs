@@ -2,17 +2,19 @@
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient.Server;
 using Microsoft.EntityFrameworkCore;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
-using Swashbuckle.AspNetCore.Annotations;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewModels;
 using System.Security.Claims;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using Swashbuckle.AspNetCore.Annotations;
+using System.Linq;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
@@ -20,41 +22,39 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class GolonganDarahController : Controller
+    public class SubPoliController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<GolonganDarahController> _logger;
+        private readonly ILogger<SubPoliController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public GolonganDarahController
-        (
-            ApplicationDbContext context,
+        public SubPoliController
+            (ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-
-            ILogger<GolonganDarahController> logger,
-            IWebHostEnvironment webHostEnvironment
-        )
+            ILogger<SubPoliController> logger,
+            IWebHostEnvironment webHostEnvironment)
         {
-            _applicationDbContext = context;
+            _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
         }
 
+
         [HttpGet]
-        public async Task<IActionResult> GetAllGolonganDarah(int page = 1, int perPage = 10)
+        public async Task<IActionResult> GetAllSubPoli(int page = 1, int perPage = 10)
         {
             // Validasi agar page dan perPage minimal bernilai 1
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = from a in _applicationDbContext.GolonganDarahs
+            var query = from a in _applicationDbContext.SubPolis
                         join u in _applicationDbContext.UserActives
                         on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
@@ -63,9 +63,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateDateTime = a.CreateDateTime,
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
-                            GolonganDarahId = a.GolonganDarahId,
-                            KodeGolonganDarah = a.KodeGolonganDarah,
-                            NamaGolonganDarah = a.NamaGolonganDarah,
+                            SubPoliId = a.SubPoliId,
+                            KodeSubPoli = a.KodeSubPoli,
+                            NamaSubPoli = a.NamaSubPoli,
+                            KepalaSubPoli = a.KepalaSubPoli,
+                            Lokasi = a.Lokasi,
+                            Telepon = a.Telepon,
+                            Email = a.Email,
+                            JamBuka = a.JamBuka,
+                            JamTutup = a.JamTutup,
+                            LayananSubPoli = a.LayananSubPoli,
+                            Deskripsi = a.Deskripsi,
+                            PoliId = a.PoliId,
+                            NamaPoliklinik = a.Poliklinik.NamaPoliklinik
                         };
 
             // Hitung total data sebelum paginasi
@@ -96,12 +106,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     TotalPages = totalPages
                 }
             });
+
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetGolonganDarahById(Guid id)
+        public async Task<IActionResult> GetSubPoliById(Guid id)
         {
-            var listdata = _applicationDbContext.GolonganDarahs.Find(id);
+            var listdata = _applicationDbContext.SubPolis.Find(id);
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -115,11 +126,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateGolonganDarah([FromBody] GolonganDarahViewModel vm)
+        public async Task<IActionResult> CreateSubPoli([FromBody] SubPoliViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
-                return BadRequest(new { message = "Data tidak valid." });
+                return BadRequest(new { message = "Data tidak valid. || 400 Bad Request" });
             }
 
             try
@@ -138,57 +149,72 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var setDateNow = dateNow.ToString("yyMMdd");
 
                 // Ambil data terakhir untuk hari ini (tanpa ToString di query)
-                var lastCode = _applicationDbContext.GolonganDarahs
+                var lastCode = _applicationDbContext.SubPolis
                     .Where(d => d.CreateDateTime.Date == dateNow.Date)
-                    .OrderByDescending(k => k.KodeGolonganDarah)
+                    .OrderByDescending(k => k.KodeSubPoli)
                     .FirstOrDefault();
 
                 string kode;
                 if (lastCode == null)
                 {
-                    kode = $"GDR{setDateNow}0001";
+                    kode = $"SPL{setDateNow}0001";
                 }
                 else
                 {
-                    var lastCodeTrim = lastCode.KodeGolonganDarah.Substring(3, 6);
+                    var lastCodeTrim = lastCode.KodeSubPoli.Substring(3, 6);
 
                     if (lastCodeTrim != setDateNow)
                     {
-                        kode = $"GDR{setDateNow}0001";
+                        kode = $"SPL{setDateNow}0001";
                     }
                     else
                     {
-                        kode = $"GDR{setDateNow}" + (Convert.ToInt32(lastCode.KodeGolonganDarah.Substring(9)) + 1).ToString("D4");
+                        kode = $"SPL{setDateNow}" + (Convert.ToInt32(lastCode.KodeSubPoli.Substring(9)) + 1).ToString("D4");
                     }
                 }
 
-                // Cek Duplikasi
-                var isDuplicate = _applicationDbContext.GolonganDarahs
-                    .Any(c => c.KodeGolonganDarah == kode && c.NamaGolonganDarah == vm.NamaGolonganDarah);
+                // cek duplikasi
+                var isDuplicate = _applicationDbContext.SubPolis
+                    .Any(c => c.KodeSubPoli == kode && c.NamaSubPoli == vm.NamaSubPoli);
 
                 if (isDuplicate)
                 {
                     return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
                 }
+
                 // Validate ModelState
                 if (ModelState.IsValid)
                 {
-                    // Simpan Data
-                    var data = new GolonganDarah
+                    var data = new SubPoli
                     {
-                        GolonganDarahId = Guid.NewGuid(),
+                        SubPoliId = Guid.NewGuid(),
+                        KodeSubPoli = kode,
+                        NamaSubPoli = vm.NamaSubPoli,
+                        KepalaSubPoli = vm.KepalaSubPoli,
+                        Lokasi = vm.Lokasi,
+                        Telepon = vm.Telepon,
+                        Email = vm.Email,
+                        HariOperasional = vm.HariOperasional,
+                        JamBuka = vm.JamBuka,
+                        JamTutup = vm.JamTutup,
+                        LayananSubPoli = vm.LayananSubPoli,
+                        Deskripsi = vm.Deskripsi,
+                        PoliId = vm.PoliId,
                         CreateDateTime = DateTimeOffset.Now,
                         CreateBy = UserActiveId,
-                        KodeGolonganDarah = kode,
-                        NamaGolonganDarah = vm.NamaGolonganDarah
+                        UpdateDateTime = DateTimeOffset.Now,
+                        UpdateBy = UserActiveId,
+                        DeleteDateTime = DateTimeOffset.Now,
+                        DeleteBy = UserActiveId,
+                        IsDelete = false,
+                        
                     };
 
-                    _applicationDbContext.GolonganDarahs.Add(data);
+                    _applicationDbContext.SubPolis.Add(data);
                     _applicationDbContext.SaveChanges();
-
                     return Created("", new
                     {
-                        message = "Tambah Data Berhasil || 201 Created",
+                        message = "Data berhasil ditambahkan. || 201 Created",
                     });
                 }
                 else
@@ -196,99 +222,111 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
                 }
             }
-            catch (Exception ex)
+            catch
+            (Exception ex)
             {
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateGolonganDarah(Guid id, [FromBody] GolonganDarahViewModel vm)
+        public async Task<IActionResult> UpdateSubPoli(Guid id, [FromBody] SubPoliViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
-                return BadRequest(new { message = "Data tidak valid." });
+                return BadRequest(new { message = "Data tidak valid. || 400 Bad Request" });
             }
-
+            var data = _applicationDbContext.SubPolis.Find(id);
+            if (data == null)
+            {
+                return NotFound(new { message = "Data tidak ditemukan. || 404 Not Found" });
+            }
             try
             {
-                //Ambil User ID dari JWT Claims
+                // **Ambil User ID dari JWT Claims**
                 var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
                 var UserActiveId = GetUserActive.UserActiveId;
-
                 if (string.IsNullOrEmpty(EmailLogin))
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
-
-                // **Cari Data Pasien**
-                var data = _applicationDbContext.GolonganDarahs.Find(id);
-                if (data == null)
+                // cek duplikasi
+                var isDuplicate = _applicationDbContext.SubPolis
+                    .Any(c => c.SubPoliId != id && c.NamaSubPoli == vm.NamaSubPoli);
+                if (isDuplicate)
                 {
-                    return NotFound(new { message = "Data tidak ditemukan." });
+                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
                 }
-
-                // **Update Data Pasien**
-                data.NamaGolonganDarah = vm.NamaGolonganDarah;
-
-                data.UpdateBy = UserActiveId;
-                data.UpdateDateTime = DateTimeOffset.Now;
-
-                _applicationDbContext.GolonganDarahs.Update(data);
-                _applicationDbContext.SaveChanges();
-
-                return Ok(new
+                // Validate ModelState
+                if (ModelState.IsValid)
                 {
-                    message = "Update Data Berhasil || 200 OK",
-                });
+                    data.NamaSubPoli = vm.NamaSubPoli;
+                    data.KepalaSubPoli = vm.KepalaSubPoli;
+                    data.Lokasi = vm.Lokasi;
+                    data.Telepon = vm.Telepon;
+                    data.Email = vm.Email;
+                    data.JamBuka = vm.JamBuka;
+                    data.JamTutup = vm.JamTutup;
+                    data.LayananSubPoli = vm.KepalaSubPoli;
+                    data.UpdateDateTime = DateTimeOffset.Now;
+                    data.UpdateBy = UserActiveId;
+                    _applicationDbContext.SubPolis.Update(data);
+                    _applicationDbContext.SaveChanges();
+                    return Ok(new
+                    {
+                        message = "Data berhasil diubah. || 200 OK",
+                    });
+                }
+                else
+                {
+                    return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
+                }
             }
-            catch (Exception ex)
+            catch
+            (Exception ex)
             {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+                return BadRequest(new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteGolonganDarah(Guid id)
+        public async Task<IActionResult> DeleteSubPoli(Guid id)
         {
+            var data = _applicationDbContext.SubPolis.Find(id);
+            if (data == null)
+            {
+                return NotFound(new { message = "Data tidak ditemukan. || 404 Not Found" });
+            }
             try
             {
-                //Ambil User ID dari JWT Claims
+                // **Ambil User ID dari JWT Claims**
                 var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
                 var UserActiveId = GetUserActive.UserActiveId;
-
                 if (string.IsNullOrEmpty(EmailLogin))
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
-
-                // **Cari Data Pasien**
-                var data = _applicationDbContext.GolonganDarahs.Find(id);
-                if (data == null)
-                {
-                    return NotFound(new { message = "Data tidak ditemukan." });
-                }
-
-                // **Soft Delete (Tandai Data sebagai Terhapus)**
-                data.DeleteBy = UserActiveId;
-                data.DeleteDateTime = DateTimeOffset.Now;
                 data.IsDelete = true;
-
-                _applicationDbContext.GolonganDarahs.Update(data);
+                data.DeleteDateTime = DateTimeOffset.Now;
+                data.DeleteBy = UserActiveId;
+                _applicationDbContext.SubPolis.Update(data);
                 _applicationDbContext.SaveChanges();
-
-                return Ok(new { message = "Data berhasil dihapus..." });
+                return Ok(new
+                {
+                    message = "Data berhasil dihapus. || 200 OK",
+                });
             }
-            catch (Exception ex)
+            catch
+            (Exception ex)
             {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+                return BadRequest(new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
 
         [HttpGet("paged")]
-        public IActionResult PagedGolonganDarah(
+        public IActionResult PagedSubPoli(
         int page = 1,
         int perPage = 10,
         string? search = null,
@@ -300,7 +338,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         DateTime? endDate = null,
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
-            var query = from a in _applicationDbContext.GolonganDarahs
+            // Query data
+            var query = from a in _applicationDbContext.SubPolis
                         join u in _applicationDbContext.UserActives
                         on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
@@ -309,16 +348,27 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateDateTime = a.CreateDateTime,
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
-                            GolonganDarahId = a.GolonganDarahId,
-                            KodeGolonganDarah = a.KodeGolonganDarah,
-                            NamaGolonganDarah = a.NamaGolonganDarah,
+                            SubPoliId = a.SubPoliId,
+                            KodeSubPoli = a.KodeSubPoli,
+                            NamaSubPoli = a.NamaSubPoli,
+                            KepalaSubPoli = a.KepalaSubPoli,
+                            Lokasi = a.Lokasi,
+                            Telepon = a.Telepon,
+                            Email = a.Email,
+                            JamBuka = a.JamBuka,
+                            JamTutup = a.JamTutup,
+                            LayananSubPoli = a.LayananSubPoli,
+                            Deskripsi = a.Deskripsi,
+                            PoliId = a.PoliId,
+                            NamaPoliklinik = a.Poliklinik.NamaPoliklinik
                         };
 
             // Filter berdasarkan search
             if (!string.IsNullOrWhiteSpace(search))
             {
                 query = query.Where(u =>
-                    u.KodeGolonganDarah.Contains(search) || u.NamaGolonganDarah.Contains(search)
+                    u.KodeSubPoli.Contains(search) || u.NamaPoliklinik.Contains(search) || u.NamaSubPoli.Contains(search)
+                    || u.Lokasi.Contains(search)
                 );
             }
 
@@ -331,7 +381,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 );
             }
 
-            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll)
+            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
             if (periode.HasValue)
             {
                 DateTime today = DateTime.UtcNow.Date;
@@ -386,17 +436,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "KodeGolonganDarah" => query.OrderByDescending(u => u.KodeGolonganDarah),
-                    "NamaGolonganDarah" => query.OrderByDescending(u => u.NamaGolonganDarah),
+                    "KodeSubPoli" => query.OrderByDescending(u => u.KodeSubPoli),
+                    "NamaPoliklinik" => query.OrderByDescending(u => u.NamaPoliklinik),
+                    "NamaSubPoli" => query.OrderByDescending(u => u.NamaSubPoli),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
-                    "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    "KodeGolonganDarah" => query.OrderBy(u => u.KodeGolonganDarah),
-                    "NamaGolonganDarah" => query.OrderBy(u => u.NamaGolonganDarah),
-                    _ => query.OrderBy(u => u.CreateDateTime)
+                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
+                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
+                    "KodeSubPoli" => query.OrderByDescending(u => u.KodeSubPoli),
+                    "NamaPoliklinik" => query.OrderByDescending(u => u.NamaPoliklinik),
+                    "NamaSubPoli" => query.OrderByDescending(u => u.NamaSubPoli),
+                    _ => query.OrderByDescending(u => u.CreateDateTime)
                 };
 
             // Pagination
@@ -423,5 +475,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
             });
         }
+
     }
 }

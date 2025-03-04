@@ -13,6 +13,7 @@
         public DateTimeOffset? TanggalMulaiKerjasama { get; set; }
         public DateTimeOffset? TanggalAkhirKerjasama { get; set; }
         public string? RSRekanan { get; set; }
+        public bool IsPKS { get; set; }
 
         // informasi klaim
         public string? MetodeKlaim { get; set; }

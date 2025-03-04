@@ -11,6 +11,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public Guid NegaraId { get; set; }
         public string KodeNegara { get; set; }
         public string NamaNegara { get; set; }
-        public ICollection<Provinsi> Provinsi { get; set; }
+        public ICollection<Provinsi>? Provinsi { get; set; }
     }
 }

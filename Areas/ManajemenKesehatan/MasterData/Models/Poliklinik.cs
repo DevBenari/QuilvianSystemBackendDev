@@ -19,10 +19,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string HariOperasional {get; set; }
         public DateTime? JamBuka { get; set; }
         public DateTime? JamTutup { get; set; }
-        public string LayananPoliklinik { get; set; }
-        public int JumlahMaxPasien { get; set; }
-        public string Deskripsi { get; set; }
+        public string? LayananPoliklinik { get; set; }
+        public string? Deskripsi { get; set; }
 
-
+        // Relasi One-to-Many ke SubPoli
+        public ICollection<SubPoli> SubPolis { get; set; }
     }
 }

@@ -9,13 +9,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
     {
         [Key]
         public Guid DepartementId { get; set; }
+        [Required]
         public string KodeDepartement { get; set; }
-        public string NamaDepartement { get; set; }
-        public string KepalaDepartement { get; set; }
-        public string Lokasi { get; set; }
-        public string Telepon { get; set; }
-        public string Email { get; set; }
-        public string JamBuka { get; set; }
+        public string? NamaDepartement { get; set; }
+        public string? KepalaDepartement { get; set; }
+        public string? Lokasi { get; set; }
+        public string? Telepon { get; set; }
+        public string? Email { get; set; }
+        public string? JamBuka { get; set; }
         public string JamTutup { get; set; }
         public string? Layanan { get; set; }
         public ICollection<Position> Positions { get; set; }

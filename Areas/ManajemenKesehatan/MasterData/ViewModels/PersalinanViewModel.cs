@@ -1,14 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
-using QuilvianSystemBackendDev.Models;
-
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
+﻿namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels
 {
-    [Table("MstPersalinan", Schema = "public")]
-    public class Persalinan : UserActivity
+    public class PersalinanViewModel
     {
-        public Guid PersalinanId { get; set; }
-        public string KodePersalinan { get; set; }
-
         public string NamaPersalinan { get; set; }
         public DateTime? TanggalPersalinan { get; set; }
         public string TipePersalinan { get; set; }
@@ -35,6 +28,5 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string NamaAyah { get; set; }
         public string NamaIbu { get; set; }
         public string StatusBayi { get; set; }
-
     }
 }

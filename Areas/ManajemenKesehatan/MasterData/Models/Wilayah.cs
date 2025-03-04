@@ -58,5 +58,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string NamaKelurahan { get; set; }
         public Guid? KecamatanId { get; set; }
 
+        //Relation
+        [ForeignKey("KecamatanId")]
+        public Kecamatan? Kecamatan { get; set; }
     }
 }

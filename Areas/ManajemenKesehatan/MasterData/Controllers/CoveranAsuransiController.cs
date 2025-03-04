@@ -1,18 +1,19 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient.Server;
 using Microsoft.EntityFrameworkCore;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
-using Swashbuckle.AspNetCore.Annotations;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewModels;
 using System.Security.Claims;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using Swashbuckle.AspNetCore.Annotations;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
@@ -20,26 +21,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class GolonganDarahController : Controller
+    public class CoveranAsuransiController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<GolonganDarahController> _logger;
+        private readonly ILogger<CoveranAsuransiController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public GolonganDarahController
-        (
-            ApplicationDbContext context,
-            UserManager<ApplicationUser> userManager,
+        public CoveranAsuransiController(ApplicationDbContext
+            applicationDbContext, UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-
-            ILogger<GolonganDarahController> logger,
-            IWebHostEnvironment webHostEnvironment
-        )
+            ILogger<CoveranAsuransiController> logger,
+            IWebHostEnvironment webHostEnvironment)
         {
-            _applicationDbContext = context;
+            _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
@@ -47,14 +44,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAllGolonganDarah(int page = 1, int perPage = 10)
+        public async Task<IActionResult> GetAllCoveranAsuransi(int page = 1, int perPage = 10)
         {
             // Validasi agar page dan perPage minimal bernilai 1
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = from a in _applicationDbContext.GolonganDarahs
+            var query = from a in _applicationDbContext.CoveranAsuransis
                         join u in _applicationDbContext.UserActives
                         on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
@@ -63,9 +60,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateDateTime = a.CreateDateTime,
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
-                            GolonganDarahId = a.GolonganDarahId,
-                            KodeGolonganDarah = a.KodeGolonganDarah,
-                            NamaGolonganDarah = a.NamaGolonganDarah,
+                            CoveranAsuransiId = a.CoveranAsuransiId,
+                            KodeCoveranAsuransi = a.KodeCoveranAsuransi,
+                            NamaAsuransi = a.NamaAsuransi,
+                            ServiceCode = a.ServiceCode,
+                            ServiceDesc = a.ServiceDesc,
+                            ServiceCodeClass = a.ServiceCodeClass,
+                            Class = a.Class,
+                            IsSurgery = a.IsSurgery,
+                            Tarif = a.Tarif,
+                            TglBerlaku = a.TglBerlaku,
+                            TglBerakhir = a.TglBerakhir,
+                            IsPKS = a.IsPKS,
+                            AsuransiId = a.AsuransiId
                         };
 
             // Hitung total data sebelum paginasi
@@ -98,10 +105,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             });
         }
 
+
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetGolonganDarahById(Guid id)
+        public IActionResult GetCoveranAsuransi(Guid id)
         {
-            var listdata = _applicationDbContext.GolonganDarahs.Find(id);
+            var listdata = _applicationDbContext.CoveranAsuransis.Find(id);
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -114,12 +122,31 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             });
         }
 
+        [HttpGet("{NamaAsuransi}")]
+        public IActionResult GetCoveranAsuransiByName(string NamaAsuransi)
+        {
+            var listdata = _applicationDbContext.CoveranAsuransis
+                .Where(c => c.NamaAsuransi.ToLower().Contains(NamaAsuransi.ToLower()))
+                .ToList();
+
+            if (listdata == null || listdata.Count == 0)
+            {
+                return NotFound(new { message = "Data tidak ditemukan." });
+            }
+
+            return Ok(new
+            {
+                message = "Ditemukan || 200 OK",
+                data = listdata
+            });
+        }
+
         [HttpPost]
-        public async Task<IActionResult> CreateGolonganDarah([FromBody] GolonganDarahViewModel vm)
+        public async Task<IActionResult> CreateCoveranAsuransi([FromBody] CoveranAsuransiViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
-                return BadRequest(new { message = "Data tidak valid." });
+                return BadRequest(new { message = "Data tidak valid. || 400 Bad Request" });
             }
 
             try
@@ -138,57 +165,71 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var setDateNow = dateNow.ToString("yyMMdd");
 
                 // Ambil data terakhir untuk hari ini (tanpa ToString di query)
-                var lastCode = _applicationDbContext.GolonganDarahs
+                var lastCode = _applicationDbContext.CoveranAsuransis
                     .Where(d => d.CreateDateTime.Date == dateNow.Date)
-                    .OrderByDescending(k => k.KodeGolonganDarah)
+                    .OrderByDescending(k => k.KodeCoveranAsuransi)
                     .FirstOrDefault();
 
                 string kode;
                 if (lastCode == null)
                 {
-                    kode = $"GDR{setDateNow}0001";
+                    kode = $"CVA{setDateNow}0001";
                 }
                 else
                 {
-                    var lastCodeTrim = lastCode.KodeGolonganDarah.Substring(3, 6);
+                    var lastCodeTrim = lastCode.KodeCoveranAsuransi.Substring(3, 6);
 
                     if (lastCodeTrim != setDateNow)
                     {
-                        kode = $"GDR{setDateNow}0001";
+                        kode = $"CVA{setDateNow}0001";
                     }
                     else
                     {
-                        kode = $"GDR{setDateNow}" + (Convert.ToInt32(lastCode.KodeGolonganDarah.Substring(9)) + 1).ToString("D4");
+                        kode = $"CVA{setDateNow}" + (Convert.ToInt32(lastCode.KodeCoveranAsuransi.Substring(9)) + 1).ToString("D4");
                     }
                 }
 
-                // Cek Duplikasi
-                var isDuplicate = _applicationDbContext.GolonganDarahs
-                    .Any(c => c.KodeGolonganDarah == kode && c.NamaGolonganDarah == vm.NamaGolonganDarah);
+                // cek duplikasi
+                var isDuplicate = _applicationDbContext.CoveranAsuransis
+                    .Any(c => c.KodeCoveranAsuransi == kode);
 
                 if (isDuplicate)
                 {
                     return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
                 }
+
                 // Validate ModelState
                 if (ModelState.IsValid)
                 {
-                    // Simpan Data
-                    var data = new GolonganDarah
+                    var data = new CoveranAsuransi
                     {
-                        GolonganDarahId = Guid.NewGuid(),
+                        CoveranAsuransiId = Guid.NewGuid(),
+                        KodeCoveranAsuransi = kode,
+                        NamaAsuransi = vm.NamaAsuransi,
+                        ServiceCode = vm.ServiceCode,
+                        ServiceDesc = vm.ServiceDesc,
+                        ServiceCodeClass = vm.ServiceCodeClass,
+                        Class = vm.Class,
+                        IsSurgery = vm.IsSurgery,
+                        Tarif = vm.Tarif,
+                        TglBerlaku = vm.TglBerlaku,
+                        TglBerakhir = vm.TglBerakhir,
+                        IsPKS = vm.IsPKS,
+                        AsuransiId = vm.AsuransiId,
                         CreateDateTime = DateTimeOffset.Now,
                         CreateBy = UserActiveId,
-                        KodeGolonganDarah = kode,
-                        NamaGolonganDarah = vm.NamaGolonganDarah
+                        UpdateDateTime = DateTimeOffset.Now,
+                        UpdateBy = UserActiveId,
+                        DeleteDateTime = DateTimeOffset.Now,
+                        DeleteBy = UserActiveId,
+                        IsDelete = false
                     };
 
-                    _applicationDbContext.GolonganDarahs.Add(data);
+                    _applicationDbContext.CoveranAsuransis.Add(data);
                     _applicationDbContext.SaveChanges();
-
                     return Created("", new
                     {
-                        message = "Tambah Data Berhasil || 201 Created",
+                        message = "Data berhasil ditambahkan. || 201 Created",
                     });
                 }
                 else
@@ -196,99 +237,116 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
                 }
             }
-            catch (Exception ex)
+            catch
+            (Exception ex)
             {
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateGolonganDarah(Guid id, [FromBody] GolonganDarahViewModel vm)
+        public async Task<IActionResult> UpdateCoveranAsuransi(Guid id, [FromBody] CoveranAsuransiViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
-                return BadRequest(new { message = "Data tidak valid." });
+                return BadRequest(new { message = "Data tidak valid. || 400 Bad Request" });
             }
-
+            var data = _applicationDbContext.CoveranAsuransis.Find(id);
+            if (data == null)
+            {
+                return NotFound(new { message = "Data tidak ditemukan. || 404 Not Found" });
+            }
             try
             {
-                //Ambil User ID dari JWT Claims
+                // **Ambil User ID dari JWT Claims**
                 var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
                 var UserActiveId = GetUserActive.UserActiveId;
-
                 if (string.IsNullOrEmpty(EmailLogin))
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
-
-                // **Cari Data Pasien**
-                var data = _applicationDbContext.GolonganDarahs.Find(id);
-                if (data == null)
+                // cek duplikasi
+                var isDuplicate = _applicationDbContext.CoveranAsuransis
+                    .Any(c => c.CoveranAsuransiId != id);
+                if (isDuplicate)
                 {
-                    return NotFound(new { message = "Data tidak ditemukan." });
+                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
                 }
-
-                // **Update Data Pasien**
-                data.NamaGolonganDarah = vm.NamaGolonganDarah;
-
-                data.UpdateBy = UserActiveId;
-                data.UpdateDateTime = DateTimeOffset.Now;
-
-                _applicationDbContext.GolonganDarahs.Update(data);
-                _applicationDbContext.SaveChanges();
-
-                return Ok(new
+                // Validate ModelState
+                if (ModelState.IsValid)
                 {
-                    message = "Update Data Berhasil || 200 OK",
-                });
+                    data.NamaAsuransi = vm.NamaAsuransi;
+                    data.ServiceCode = vm.ServiceCode;
+                    data.ServiceDesc = vm.ServiceDesc;
+                    data.ServiceCodeClass = vm.ServiceCodeClass;
+                    data.Class = vm.Class;
+                    data.IsSurgery = vm.IsSurgery;
+                    data.Tarif = vm.Tarif;
+                    data.TglBerlaku = vm.TglBerlaku;
+                    data.TglBerakhir = vm.TglBerakhir;
+                    data.IsPKS = vm.IsPKS;
+                    data.AsuransiId = vm.AsuransiId;
+                    data.UpdateDateTime = DateTimeOffset.Now;
+                    data.UpdateBy = UserActiveId;
+                    _applicationDbContext.CoveranAsuransis.Update(data);
+                    _applicationDbContext.SaveChanges();
+                    return Ok(new
+                    {
+                        message = "Data berhasil diubah. || 200 OK",
+                    });
+                }
+                else
+                {
+                    return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
+                }
             }
-            catch (Exception ex)
+            catch
+            (Exception ex)
             {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+                return BadRequest(new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteGolonganDarah(Guid id)
+        public async Task<IActionResult> DeleteCoveranAsuransi(Guid id)
         {
+            var data = _applicationDbContext.CoveranAsuransis.Find(id);
+            if (data == null)
+            {
+                return NotFound(new { message = "Data tidak ditemukan. || 404 Not Found" });
+            }
             try
             {
-                //Ambil User ID dari JWT Claims
+                // **Ambil User ID dari JWT Claims**
                 var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
                 var UserActiveId = GetUserActive.UserActiveId;
-
                 if (string.IsNullOrEmpty(EmailLogin))
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                // **Cari Data Pasien**
-                var data = _applicationDbContext.GolonganDarahs.Find(id);
-                if (data == null)
-                {
-                    return NotFound(new { message = "Data tidak ditemukan." });
-                }
-
-                // **Soft Delete (Tandai Data sebagai Terhapus)**
-                data.DeleteBy = UserActiveId;
-                data.DeleteDateTime = DateTimeOffset.Now;
                 data.IsDelete = true;
+                data.DeleteDateTime = DateTimeOffset.Now;
+                data.DeleteBy = UserActiveId;
 
-                _applicationDbContext.GolonganDarahs.Update(data);
+                _applicationDbContext.CoveranAsuransis.Update(data);
                 _applicationDbContext.SaveChanges();
-
-                return Ok(new { message = "Data berhasil dihapus..." });
+                return Ok(new
+                {
+                    message = "Data berhasil dihapus. || 200 OK",
+                });
             }
-            catch (Exception ex)
+            catch
+            (Exception ex)
             {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+                return BadRequest(new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
 
         [HttpGet("paged")]
-        public IActionResult PagedGolonganDarah(
+        public IActionResult PagedCoveranAsuransi(
         int page = 1,
         int perPage = 10,
         string? search = null,
@@ -300,7 +358,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         DateTime? endDate = null,
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
-            var query = from a in _applicationDbContext.GolonganDarahs
+            // Query data
+            var query = from a in _applicationDbContext.CoveranAsuransis
                         join u in _applicationDbContext.UserActives
                         on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
@@ -309,16 +368,27 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateDateTime = a.CreateDateTime,
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
-                            GolonganDarahId = a.GolonganDarahId,
-                            KodeGolonganDarah = a.KodeGolonganDarah,
-                            NamaGolonganDarah = a.NamaGolonganDarah,
+                            CoveranAsuransiId = a.CoveranAsuransiId,
+                            KodeCoveranAsuransi = a.KodeCoveranAsuransi,
+                            NamaAsuransi = a.NamaAsuransi,
+                            ServiceCode = a.ServiceCode,
+                            ServiceDesc = a.ServiceDesc,
+                            ServiceCodeClass = a.ServiceCodeClass,
+                            Class = a.Class,
+                            IsSurgery = a.IsSurgery,
+                            Tarif = a.Tarif,
+                            TglBerlaku = a.TglBerlaku,
+                            TglBerakhir = a.TglBerakhir,
+                            IsPKS = a.IsPKS,
+                            AsuransiId = a.AsuransiId
                         };
 
             // Filter berdasarkan search
             if (!string.IsNullOrWhiteSpace(search))
             {
                 query = query.Where(u =>
-                    u.KodeGolonganDarah.Contains(search) || u.NamaGolonganDarah.Contains(search)
+                    u.KodeCoveranAsuransi.Contains(search) || u.NamaAsuransi.Contains(search) || u.Class.Contains(search)
+                    || u.ServiceDesc.Contains(search)
                 );
             }
 
@@ -331,7 +401,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 );
             }
 
-            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll)
+            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
             if (periode.HasValue)
             {
                 DateTime today = DateTime.UtcNow.Date;
@@ -386,17 +456,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "KodeGolonganDarah" => query.OrderByDescending(u => u.KodeGolonganDarah),
-                    "NamaGolonganDarah" => query.OrderByDescending(u => u.NamaGolonganDarah),
+                    "KodeCoveranAsuransi" => query.OrderByDescending(u => u.KodeCoveranAsuransi),
+                    "NamaAsuransi" => query.OrderByDescending(u => u.NamaAsuransi),
+                    "ServiceDesc" => query.OrderByDescending(u => u.ServiceDesc),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
-                    "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    "KodeGolonganDarah" => query.OrderBy(u => u.KodeGolonganDarah),
-                    "NamaGolonganDarah" => query.OrderBy(u => u.NamaGolonganDarah),
-                    _ => query.OrderBy(u => u.CreateDateTime)
+                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
+                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
+                    "KodeCoveranAsuransi" => query.OrderByDescending(u => u.KodeCoveranAsuransi),
+                    "NamaAsuransi" => query.OrderByDescending(u => u.NamaAsuransi),
+                    "ServiceDesc" => query.OrderByDescending(u => u.ServiceDesc),
+                    _ => query.OrderByDescending(u => u.CreateDateTime)
                 };
 
             // Pagination
@@ -422,6 +494,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     TotalPages = totalPages
                 }
             });
+
         }
     }
 }
