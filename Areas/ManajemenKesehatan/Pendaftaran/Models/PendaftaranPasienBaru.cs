@@ -80,9 +80,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
         public string? JudulFileFoto { get; set; }
         
         public string? FotoPath { get; set; }
-
-        [Column(TypeName = "VARBINARY(MAX)")]
-        public byte[]? ImageBytes { get; set; }
+        [Column(TypeName = "BYTEA")]
+        public byte[] ImageBytes { get; set; }
         
         public string? QrCode { get; set; }
     }

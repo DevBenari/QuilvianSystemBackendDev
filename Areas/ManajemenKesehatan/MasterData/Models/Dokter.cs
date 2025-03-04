@@ -25,8 +25,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? JudulFileFoto { get; set; }
         public string? FotoPath { get; set; }
 
-        [Column(TypeName = "VARBINARY(MAX)")]
-        public byte[]? ImageBytes { get; set; }
+
+        public string? ImageBytes { get; set; }
 
         //relasi ke dokter poli
         public ICollection<DokterPoli> DokterPolis { get; set; }

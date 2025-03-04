@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
-using QuilvianSystemBackendDev.Migrations;
 using QuilvianSystemBackendDev.Repositories;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json;
@@ -123,31 +122,31 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             return Ok(new { message = "Data ditemukan.", data = record });
         }
 
-        [HttpGet("get-image/{id}")]
-        public async Task<IActionResult> GetImage(Guid id)
-        {
-            var data = await _context.Dokters.FindAsync(id);
+        //[HttpGet("get-image/{id}")]
+        //public async Task<IActionResult> GetImage(Guid id)
+        //{
+        //    var data = await _context.Dokters.FindAsync(id);
 
-            if (data == null || data.ImageBytes == null || data.ImageBytes.Length == 0)
-            {
-                return NotFound(new { message = "Data tidak ditemukan atau tidak memiliki gambar." });
-            }
+        //    if (data == null || data.ImageBytes == null || data.ImageBytes.Length == 0)
+        //    {
+        //        return NotFound(new { message = "Data tidak ditemukan atau tidak memiliki gambar." });
+        //    }
 
-            string detectedFormat = GetImageFormat(data.ImageBytes);
-            string mimeType = detectedFormat == "image/png" ? "image/png" : "image/jpeg";
+        //    string detectedFormat = GetImageFormat(data.ImageBytes);
+        //    string mimeType = detectedFormat == "image/png" ? "image/png" : "image/jpeg";
 
-            return File(data.ImageBytes, mimeType); // Mengembalikan gambar dengan format yang sesuai
-        }
+        //    return File(data.ImageBytes, mimeType); // Mengembalikan gambar dengan format yang sesuai
+        //}
 
-        public static string GetImageFormat(byte[] fileBytes)
-        {
-            if (fileBytes.Length < 4) return "Unknown";
+        //public static string GetImageFormat(byte[] fileBytes)
+        //{
+        //    if (fileBytes.Length < 4) return "Unknown";
 
-            if (fileBytes[0] == 0xFF && fileBytes[1] == 0xD8 && fileBytes[2] == 0xFF) return "image/jpeg";
-            if (fileBytes[0] == 0x89 && fileBytes[1] == 0x50 && fileBytes[2] == 0x4E && fileBytes[3] == 0x47) return "image/png";
+        //    if (fileBytes[0] == 0xFF && fileBytes[1] == 0xD8 && fileBytes[2] == 0xFF) return "image/jpeg";
+        //    if (fileBytes[0] == 0x89 && fileBytes[1] == 0x50 && fileBytes[2] == 0x4E && fileBytes[3] == 0x47) return "image/png";
 
-            return "Unknown";
-        }
+        //    return "Unknown";
+        //}
 
         // POST: api/Dokter
         [HttpPost]
@@ -273,20 +272,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 //    fotoPath = "/FotoDokter/dokter.jpg";
                 //}
 
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
-                }
+                //if (isDuplicate)
+                //{
+                //    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
+                //}
 
-                byte[] imageBytes = model.FotoByte.ToArray();
-                string detectedFormat = GetImageFormat(imageBytes);
+                //byte[] imageBytes = model.FotoByte.ToArray();
+                //string detectedFormat = GetImageFormat(imageBytes);
 
-                if (detectedFormat == "Unknown")
-                {
-                    return BadRequest(new { message = "Format gambar tidak didukung. Hanya menerima JPG dan PNG." });
-                }
+                //if (detectedFormat == "Unknown")
+                //{
+                //    return BadRequest(new { message = "Format gambar tidak didukung. Hanya menerima JPG dan PNG." });
+                //}
 
-                string uniqueFileName = $"{kode}_{model.NmDokter}";
+                //string uniqueFileName = $"{kode}_{model.NmDokter}";
 
 
                 if (ModelState.IsValid)
@@ -299,9 +298,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         Str = model.Str,
                         TglSip = model.TglSip,
                         TglStr = model.TglStr,
-                        FotoPath = $"/FotoDokter/{uniqueFileName}",
-                        ImageBytes = imageBytes,
-                        FotoDokter = uniqueFileName,
+                        //FotoPath = $"/FotoDokter/{uniqueFileName}",
+                        //ImageBytes = imageBytes,
+                        //FotoDokter = uniqueFileName,
                         Nik = model.Nik,
                         KdDokter = kode,
                         Email = model.Email,
@@ -373,15 +372,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.Nik = model.Nik ?? data.Nik;
                 data.IsAsuransi = model.IsAsuransi ?? data.IsAsuransi;
 
-                byte[] imageBytes = model.FotoByte.ToArray();
-                string detectedFormat = GetImageFormat(imageBytes);
+                //byte[] imageBytes = model.FotoByte.ToArray();
+                //string detectedFormat = GetImageFormat(imageBytes);
 
-                if (detectedFormat == "Unknown")
-                {
-                    return BadRequest(new { message = "Format gambar tidak didukung. Hanya menerima JPG dan PNG." });
-                }
+                //if (detectedFormat == "Unknown")
+                //{
+                //    return BadRequest(new { message = "Format gambar tidak didukung. Hanya menerima JPG dan PNG." });
+                //}
 
-                data.ImageBytes = imageBytes;
+                //data.ImageBytes = imageBytes;
 
 
 

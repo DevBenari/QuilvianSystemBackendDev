@@ -19,6 +19,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
         public string? FotoDokter { get; set; }
         public string? JudulFileFoto { get; set; }
         public string? FotoPath { get; set; }
-        public List<byte>? FotoByte { get; set; }
+        public string? FotoByte { get; set; }
     }
 }

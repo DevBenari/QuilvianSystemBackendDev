@@ -71,7 +71,8 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                             NamaLengkap = a.NamaLengkap,
                             JenisKelamin = a.JenisKelamin,
                             FotoName = a.FotoName,
-                            ImageBytes = a.ImageBytes
+                            ImageBytes = a.ImageBytes,
+                            FotoPath = a.FotoPath,
                         };
 
             // Hitung total data sebelum paginasi
@@ -120,47 +121,47 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
             });
         }
 
-        [HttpGet("get-image/{id}")]
-        public async Task<IActionResult> GetImage(Guid id)
-        {
-            var data = await _applicationDbContext.PendaftaranPasienBarus.FindAsync(id);
+        //[HttpGet("get-image/{id}")]
+        //public async Task<IActionResult> GetImage(Guid id)
+        //{
+        //    var data = await _applicationDbContext.PendaftaranPasienBarus.FindAsync(id);
 
-            if (data == null || data.ImageBytes == null || data.ImageBytes.Length == 0)
-            {
-                return NotFound(new { message = "Data tidak ditemukan atau tidak memiliki gambar." });
-            }
+        //    if (data == null || data.ImageBytes == null || data.ImageBytes.Length == 0)
+        //    {
+        //        return NotFound(new { message = "Data tidak ditemukan atau tidak memiliki gambar." });
+        //    }
 
-            string detectedFormat = GetImageFormat(data.ImageBytes);
-            string mimeType = detectedFormat == "image/png" ? "image/png" : "image/jpeg";
+        //    //string detectedFormat = GetImageFormat(data.ImageBytes);
+        //    //string mimeType = detectedFormat == "image/png" ? "image/png" : "image/jpeg";
 
-            return File(data.ImageBytes, mimeType); // Mengembalikan gambar dengan format yang sesuai
-        }
+        //    return File(data.ImageBytes, mimeType); // Mengembalikan gambar dengan format yang sesuai
+        //}
 
-        public static string GetImageExtension(string base64String)
-        {
-            if (base64String.StartsWith("data:image/jpeg") || base64String.StartsWith("data:image/jpg"))
-                return "jpg";
-            if (base64String.StartsWith("data:image/png"))
-                return "png";
-            if (base64String.StartsWith("data:image/gif"))
-                return "gif";
-            if (base64String.StartsWith("data:image/bmp"))
-                return "bmp";
-            if (base64String.StartsWith("data:image/webp"))
-                return "webp";
+        //public static string GetImageExtension(string base64String)
+        //{
+        //    if (base64String.StartsWith("data:image/jpeg") || base64String.StartsWith("data:image/jpg"))
+        //        return "jpg";
+        //    if (base64String.StartsWith("data:image/png"))
+        //        return "png";
+        //    if (base64String.StartsWith("data:image/gif"))
+        //        return "gif";
+        //    if (base64String.StartsWith("data:image/bmp"))
+        //        return "bmp";
+        //    if (base64String.StartsWith("data:image/webp"))
+        //        return "webp";
 
-            return string.Empty; // Jika format tidak dikenali
-        }
+        //    return string.Empty; // Jika format tidak dikenali
+        //}
 
-        public static string GetImageFormat(byte[] fileBytes)
-        {
-            if (fileBytes.Length < 4) return "Unknown";
+        //public static string GetImageFormat(byte[] fileBytes)
+        //{
+        //    if (fileBytes.Length < 4) return "Unknown";
 
-            if (fileBytes[0] == 0xFF && fileBytes[1] == 0xD8 && fileBytes[2] == 0xFF) return "image/jpeg";
-            if (fileBytes[0] == 0x89 && fileBytes[1] == 0x50 && fileBytes[2] == 0x4E && fileBytes[3] == 0x47) return "image/png";
+        //    if (fileBytes[0] == 0xFF && fileBytes[1] == 0xD8 && fileBytes[2] == 0xFF) return "image/jpeg";
+        //    if (fileBytes[0] == 0x89 && fileBytes[1] == 0x50 && fileBytes[2] == 0x4E && fileBytes[3] == 0x47) return "image/png";
 
-            return "Unknown";
-        }
+        //    return "Unknown";
+        //}
 
         [HttpPost]
         public async Task<IActionResult> CreatePendaftaranPasienBaru([FromBody] PendaftaranPasienBaruViewModel vm)
@@ -307,16 +308,17 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 //    return BadRequest(new { message = "Invalid image format. Allowed formats: jpg, jpeg, png, gif, bmp, webp." });
                 //}
 
-                //// Folder penyimpanan (wwwroot/uploads)
-                //var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
-                //if (!Directory.Exists(uploadsFolder))
-                //{
-                //    Directory.CreateDirectory(uploadsFolder);
-                //}
+                // Folder penyimpanan (wwwroot/uploads)
+                var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "FotoPasienBaru");
+                if (!Directory.Exists(uploadsFolder))
+                {
+                    Directory.CreateDirectory(uploadsFolder);
+                }
+
 
                 //// Nama file unik
-                //var fileName = $"image_{Guid.NewGuid()}.{extension}";
-                //var filePath = Path.Combine(uploadsFolder, fileName);
+                string uniqueFileName = $"{kodePasien}_{vm.NamaLengkap}";
+                var filePath = Path.Combine(uploadsFolder, uniqueFileName);
 
                 //// Hapus prefix base64 sebelum decoding
                 //var base64Data = Regex.Replace(request.Base64Data, @"^data:image\/[a-zA-Z]+;base64,", string.Empty);
@@ -324,8 +326,8 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 //// Konversi base64 menjadi byte array
                 //var imageBytes = Convert.FromBase64String(base64Data);
 
-                //// Simpan file ke server
-                //await System.IO.File.WriteAllBytesAsync(filePath, imageBytes);
+                // Simpan file ke server
+                await System.IO.File.WriteAllBytesAsync(filePath, vm.ImageBytes);
 
                 //// URL file yang disimpan
                 //var fileUrl = $"{Request.Scheme}://{Request.Host}/uploads/{fileName}";
@@ -333,15 +335,15 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
 
 
                 // Validasi format gambar dari nama file
-                byte[] imageBytes = vm.FotoByte.ToArray();
-                string detectedFormat = GetImageFormat(imageBytes);
+                //byte[] imageBytes = vm.FotoByte.ToArray();
+                //string detectedFormat = GetImageFormat(imageBytes);
 
-                if (detectedFormat == "Unknown")
-                {
-                    return BadRequest(new { message = "Format gambar tidak didukung. Hanya menerima JPG dan PNG." });
-                }
+                //if (detectedFormat == "Unknown")
+                //{
+                //    return BadRequest(new { message = "Format gambar tidak didukung. Hanya menerima JPG dan PNG." });
+                //}
 
-                string uniqueFileName = $"{kodePasien}_{vm.NamaLengkap}";
+                
                 if (ModelState.IsValid)
                 {
                     // Simpan Data
@@ -399,10 +401,9 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                         HubunganAnak = vm.HubunganAnak,
                         InformasiSekolah = vm.InformasiSekolah,
                         FotoName = uniqueFileName,
-                        JudulFileFoto = vm.JudulFileFoto,
                         QrCode = $"/qrcodes/{qrCodeFileName}", // Simpan hanya path QR Code
-                        FotoPath = $"/FotoPasienBaru/{uniqueFileName}",
-                        ImageBytes = imageBytes,
+                        FotoPath = filePath,
+                        ImageBytes = vm.ImageBytes
                     };
                     _applicationDbContext.PendaftaranPasienBarus.Add(daftar);
                     _applicationDbContext.SaveChanges();
@@ -452,13 +453,23 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
-                byte[] imageBytes = vm.FotoByte.ToArray();
-                string detectedFormat = GetImageFormat(imageBytes);
+                //byte[] imageBytes = vm.FotoByte.ToArray();
+                //string detectedFormat = GetImageFormat(imageBytes);
 
-                if (detectedFormat == "Unknown")
+                //if (detectedFormat == "Unknown")
+                //{
+                //    return BadRequest(new { message = "Format gambar tidak didukung. Hanya menerima JPG dan PNG." });
+                //}
+
+                // Hapus gambar lama
+                var oldFilePath = vm.FotoPath;
+                if (System.IO.File.Exists(oldFilePath))
                 {
-                    return BadRequest(new { message = "Format gambar tidak didukung. Hanya menerima JPG dan PNG." });
+                    System.IO.File.Delete(oldFilePath);
                 }
+
+                // Simpan gambar baru
+                await System.IO.File.WriteAllBytesAsync(oldFilePath, vm.ImageBytes);
 
                 // **Update Data Pasien**
                 pasien.TipePasien = vm.TipePasien;
@@ -507,7 +518,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 pasien.PekerjaanOrangTua = vm.PekerjaanOrangTua ?? pasien.PekerjaanOrangTua;
                 pasien.HubunganAnak = vm.HubunganAnak ?? pasien.HubunganAnak;
                 pasien.InformasiSekolah = vm.InformasiSekolah ?? pasien.InformasiSekolah;
-                pasien.ImageBytes = imageBytes;
+                pasien.ImageBytes = vm.ImageBytes;
 
 
                 pasien.UpdateBy = UserActiveId;
@@ -580,6 +591,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
         DateTime? endDate = null,
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
+            // Query data
             var query = from a in _applicationDbContext.PendaftaranPasienBarus
                         join u in _applicationDbContext.UserActives
                         on a.CreateBy equals u.UserActiveId
@@ -596,6 +608,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                             JenisKelamin = a.JenisKelamin,
                             FotoName = a.FotoName,
                             ImageBytes = a.ImageBytes,
+                            FotoPath = a.FotoPath,
                             NoRekamMedisLama = a.NoRekamMedisLama
                         };
 
