@@ -1870,10 +1870,11 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.Property<Guid?>("KelurahanId")
                         .HasColumnType("uuid");
-
-                    b.Property<Guid?>("KewarganegaraanId")
-                        .HasColumnType("uuid");
-
+                        
+                    b.Property<string>("Kewarganegaraan")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+                        
                     b.Property<string>("KodePasien")
                         .HasColumnType("text");
 
