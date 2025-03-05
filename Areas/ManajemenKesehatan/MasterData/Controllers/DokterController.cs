@@ -169,12 +169,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var dateNow = DateTimeOffset.Now;
-                var setDateNow = DateTimeOffset.Now.ToString("yyMMdd");
+                var dateNow = DateTimeOffset.UtcNow;
+                var setDateNow = DateTimeOffset.UtcNow.ToString("yyMMdd");
 
                 // Generate UserActiveCode
                 var lastCode = _context.Dokters
-                    .Where(d => d.CreateDateTime.Date == dateNow.Date)
+                    .Where(d => d.CreateDateTime.Date == dateNow.UtcDateTime.Date)
                     .OrderByDescending(k => k.KdDokter)
                     .FirstOrDefault();
 
@@ -306,7 +306,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         Email = model.Email,
                         Nohp = model.Nohp,
                         Alamat = model.Alamat,
-                        CreateDateTime = DateTimeOffset.Now,
+                        CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = UserActiveId,
                         IsDelete = false,
                         IsAsuransi = model.IsAsuransi,
@@ -412,7 +412,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 //    data.FotoDokter = $"/FotoDokter/{fotoFileName}";
                 //}
 
-                data.UpdateDateTime = DateTimeOffset.Now;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
                 data.UpdateBy = UserActiveId;
 
                 _context.Dokters.Update(data);
@@ -452,7 +452,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // **Soft Delete (Tandai Data sebagai Terhapus)**
                 data.DeleteBy = UserActiveId;
-                data.DeleteDateTime = DateTimeOffset.Now;
+                data.DeleteDateTime = DateTimeOffset.UtcNow;
                 data.IsDelete = true;
 
                 _context.Dokters.Update(data);

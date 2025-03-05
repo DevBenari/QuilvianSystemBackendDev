@@ -136,12 +136,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var dateNow = DateTimeOffset.Now;
+                var dateNow = DateTimeOffset.UtcNow;
                 var setDateNow = dateNow.ToString("yyMMdd");
 
                 // Ambil data terakhir untuk hari ini (tanpa ToString di query)
                 var lastCode = _applicationDbContext.Keanggotaans
-                    .Where(d => d.CreateDateTime.Date == dateNow.Date)
+                    .Where(d => d.CreateDateTime.Date == dateNow.UtcDateTime.Date)
                     .OrderByDescending(k => k.KodeKeanggotaan)
                     .FirstOrDefault();
 
@@ -180,7 +180,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     var data = new Keanggotaan
                     {
                         KeanggotaanId = Guid.NewGuid(),
-                        CreateDateTime = DateTimeOffset.Now,
+                        CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = UserActiveId,
                         KodeKeanggotaan = kode,
                         JenisKeanggotaan = vm.JenisKeanggotaan,
@@ -237,7 +237,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.JenisKeanggotaan = vm.JenisKeanggotaan;
 
                 data.UpdateBy = UserActiveId;
-                data.UpdateDateTime = DateTimeOffset.Now;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
 
                 _applicationDbContext.Keanggotaans.Update(data);
                 _applicationDbContext.SaveChanges();
@@ -277,7 +277,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // **Soft Delete (Tandai Data sebagai Terhapus)**
                 data.DeleteBy = UserActiveId;
-                data.DeleteDateTime = DateTimeOffset.Now;
+                data.DeleteDateTime = DateTimeOffset.UtcNow;
                 data.IsDelete = true;
 
                 _applicationDbContext.Keanggotaans.Update(data);

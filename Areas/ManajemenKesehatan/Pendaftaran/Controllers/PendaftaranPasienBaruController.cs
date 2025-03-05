@@ -183,12 +183,12 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var dateNow = DateTimeOffset.Now;
+                var dateNow = DateTimeOffset.UtcNow;
                 var setDateNow = dateNow.ToString("yyMMdd");
 
                 // Ambil data terakhir untuk hari ini (tanpa ToString di query)
                 var lastCode = _applicationDbContext.PendaftaranPasienBarus
-                    .Where(d => d.CreateDateTime.Date == dateNow.Date)
+                    .Where(d => d.CreateDateTime.Date == dateNow.UtcDateTime.Date)
                     .OrderByDescending(k => k.KodePasien)
                     .FirstOrDefault();
 
@@ -350,7 +350,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     var daftar = new PendaftaranPasienBaru
                     {
                         PendaftaranPasienBaruId = Guid.NewGuid(),
-                        CreateDateTime = DateTimeOffset.Now,
+                        CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = UserActiveId,
                         KodePasien = kodePasien,
                         NoRekamMedis = noRekamMedis,
@@ -522,7 +522,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
 
 
                 pasien.UpdateBy = UserActiveId;
-                pasien.UpdateDateTime = DateTimeOffset.Now;
+                pasien.UpdateDateTime = DateTimeOffset.UtcNow;
 
                 _applicationDbContext.PendaftaranPasienBarus.Update(pasien);
                 _applicationDbContext.SaveChanges();
@@ -564,7 +564,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
 
                 // **Soft Delete (Tandai Data sebagai Terhapus)**
                 pasien.DeleteBy = UserActiveId;
-                pasien.DeleteDateTime = DateTimeOffset.Now;
+                pasien.DeleteDateTime = DateTimeOffset.UtcNow;
                 pasien.IsDelete = true;
 
                 _applicationDbContext.PendaftaranPasienBarus.Update(pasien);

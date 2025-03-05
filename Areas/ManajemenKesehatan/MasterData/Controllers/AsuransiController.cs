@@ -138,12 +138,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var dateNow = DateTimeOffset.Now;
+                var dateNow = DateTimeOffset.UtcNow;
                 var setDateNow = dateNow.ToString("yyMMdd");
 
                 // Ambil data terakhir untuk hari ini (tanpa ToString di query)
                 var lastCode = _applicationDbContext.Asuransis
-                    .Where(d => d.CreateDateTime.Date == dateNow.Date)
+                    .Where(d => d.CreateDateTime.Date == dateNow.UtcDateTime.Date)
                     .OrderByDescending(k => k.KodeAsuransi)
                     .FirstOrDefault();
 
@@ -222,7 +222,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     {
                         AsuransiId = Guid.NewGuid(),
                         KodeAsuransi = kode,
-                        Createdate = DateTimeOffset.Now,
+                        Createdate = DateTimeOffset.UtcNow,
                         NamaAsuransi = vm.NamaAsuransi,
                         JenisAsuransi = vm.JenisAsuransi,
                         KategoriAsuransi = vm.KategoriAsuransi,
@@ -259,11 +259,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         NoTeleponPerwakilan = vm.NoTeleponPerwakilan,
                         EmailPerwakilan = vm.EmailPerwakilan,
                         JabatanPerwakilan = vm.JabatanPerwakilan,
-                        CreateDateTime = DateTimeOffset.Now,
+                        CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = UserActiveId,
-                        UpdateDateTime = DateTimeOffset.Now,
+                        UpdateDateTime = DateTimeOffset.UtcNow,
                         UpdateBy = UserActiveId,
-                        DeleteDateTime = DateTimeOffset.Now,
+                        DeleteDateTime = DateTimeOffset.UtcNow,
                         DeleteBy = UserActiveId,
                         IsDelete = false
                     };
@@ -355,7 +355,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     asuransi.EmailPerwakilan = vm.EmailPerwakilan ?? asuransi.EmailPerwakilan;
                     asuransi.JabatanPerwakilan = vm.JabatanPerwakilan ?? asuransi.JabatanPerwakilan;
 
-                    asuransi.UpdateDateTime = DateTimeOffset.Now;
+                    asuransi.UpdateDateTime = DateTimeOffset.UtcNow;
                     asuransi.UpdateBy = UserActiveId;
 
                     _applicationDbContext.Asuransis.Update(asuransi);
@@ -442,7 +442,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // **Soft Delete (Tandai Data sebagai Terhapus)**
                 asuransi.DeleteBy = UserActiveId;
-                asuransi.DeleteDateTime = DateTimeOffset.Now;
+                asuransi.DeleteDateTime = DateTimeOffset.UtcNow;
                 asuransi.IsDelete = true;
 
                 _applicationDbContext.Asuransis.Update(asuransi);

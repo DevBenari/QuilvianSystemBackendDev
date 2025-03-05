@@ -366,12 +366,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var dateNow = DateTimeOffset.Now;
+                var dateNow = DateTimeOffset.UtcNow;
                 var setDateNow = dateNow.ToString("yyMMdd");
 
                 // Ambil data terakhir untuk hari ini (tanpa ToString di query)
                 var lastCode = _applicationDbContext.Provinsis
-                    .Where(d => d.CreateDateTime.Date == dateNow.Date)
+                    .Where(d => d.CreateDateTime.Date == dateNow.UtcDateTime.Date)
                     .OrderByDescending(k => k.KodeProvinsi)
                     .FirstOrDefault();
 
@@ -410,14 +410,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     var data = new Provinsi
                     {
                         ProvinsiId = Guid.NewGuid(),
-                        CreateDateTime = DateTimeOffset.Now,
+                        CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = UserActiveId,
                         KodeProvinsi = kode,
                         NamaProvinsi = vm.NamaProvinsi,
                         NegaraId = vm.NegaraId,
-                        UpdateDateTime = DateTimeOffset.Now,
+                        UpdateDateTime = DateTimeOffset.UtcNow,
                         UpdateBy = UserActiveId,
-                        DeleteDateTime = DateTimeOffset.Now,
+                        DeleteDateTime = DateTimeOffset.UtcNow,
                         DeleteBy = UserActiveId,
                         IsDelete = false
                     };
@@ -461,12 +461,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var dateNow = DateTimeOffset.Now;
+                var dateNow = DateTimeOffset.UtcNow;
                 var setDateNow = dateNow.ToString("yyMMdd");
 
                 // Ambil data terakhir untuk hari ini (tanpa ToString di query)
                 var lastCode = _applicationDbContext.KabupatenKotas
-                    .Where(d => d.CreateDateTime.Date == dateNow.Date)
+                    .Where(d => d.CreateDateTime.Date == dateNow.UtcDateTime.Date)
                     .OrderByDescending(k => k.KodeKabupatenKota)
                     .FirstOrDefault();
 
@@ -505,14 +505,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     var data = new KabupatenKota
                     {
                         KabupatenKotaId = Guid.NewGuid(),
-                        CreateDateTime = DateTimeOffset.Now,
+                        CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = UserActiveId,
                         KodeKabupatenKota = kode,
                         NamaKabupatenKota = vm.NamaKabupatenKota,
                         ProvinsiId = vm.ProvinsiId,
-                        UpdateDateTime = DateTimeOffset.Now,
+                        UpdateDateTime = DateTimeOffset.UtcNow,
                         UpdateBy = UserActiveId,
-                        DeleteDateTime = DateTimeOffset.Now,
+                        DeleteDateTime = DateTimeOffset.UtcNow,
                         DeleteBy = UserActiveId,
                         IsDelete = false
                     };
@@ -556,12 +556,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var dateNow = DateTimeOffset.Now;
+                var dateNow = DateTimeOffset.UtcNow;
                 var setDateNow = dateNow.ToString("yyMMdd");
 
                 // Ambil data terakhir untuk hari ini (tanpa ToString di query)
                 var lastCode = _applicationDbContext.Kecamatans
-                    .Where(d => d.CreateDateTime.Date == dateNow.Date)
+                    .Where(d => d.CreateDateTime.Date == dateNow.UtcDateTime.Date)
                     .OrderByDescending(k => k.KodeKecamatan)
                     .FirstOrDefault();
 
@@ -600,14 +600,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     var data = new Kecamatan
                     {
                         KecamatanId = Guid.NewGuid(),
-                        CreateDateTime = DateTimeOffset.Now,
+                        CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = UserActiveId,
                         KodeKecamatan = kode,
                         NamaKecamatan = vm.NamaKecamatan,
                         KabupatenKotaId = vm.KabupatenKotaId,
-                        UpdateDateTime = DateTimeOffset.Now,
+                        UpdateDateTime = DateTimeOffset.UtcNow,
                         UpdateBy = UserActiveId,
-                        DeleteDateTime = DateTimeOffset.Now,
+                        DeleteDateTime = DateTimeOffset.UtcNow,
                         DeleteBy = UserActiveId,
                         IsDelete = false
                     };
@@ -651,12 +651,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var dateNow = DateTimeOffset.Now;
+                var dateNow = DateTimeOffset.UtcNow;
                 var setDateNow = dateNow.ToString("yyMMdd");
 
                 // Ambil data terakhir untuk hari ini (tanpa ToString di query)
                 var lastCode = _applicationDbContext.Kelurahans
-                    .Where(d => d.CreateDateTime.Date == dateNow.Date)
+                    .Where(d => d.CreateDateTime.Date == dateNow.UtcDateTime.Date)
                     .OrderByDescending(k => k.KodeKelurahan)
                     .FirstOrDefault();
 
@@ -695,14 +695,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     var data = new Kelurahan
                     {
                         KelurahanId = Guid.NewGuid(),
-                        CreateDateTime = DateTimeOffset.Now,
+                        CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = UserActiveId,
                         KodeKelurahan = kode,
                         NamaKelurahan = vm.NamaKelurahan,
                         KecamatanId = vm.KecamatanId,
-                        UpdateDateTime = DateTimeOffset.Now,
+                        UpdateDateTime = DateTimeOffset.UtcNow,
                         UpdateBy = UserActiveId,
-                        DeleteDateTime = DateTimeOffset.Now,
+                        DeleteDateTime = DateTimeOffset.UtcNow,
                         DeleteBy = UserActiveId,
                         IsDelete = false
                     };
@@ -758,7 +758,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.NegaraId = vm.NegaraId;
 
                 data.UpdateBy = UserActiveId;
-                data.UpdateDateTime = DateTimeOffset.Now;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
 
                 _applicationDbContext.Provinsis.Update(data);
                 _applicationDbContext.SaveChanges();
@@ -806,7 +806,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.ProvinsiId = vm.ProvinsiId;
 
                 data.UpdateBy = UserActiveId;
-                data.UpdateDateTime = DateTimeOffset.Now;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
 
                 _applicationDbContext.KabupatenKotas.Update(data);
                 _applicationDbContext.SaveChanges();
@@ -855,7 +855,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
 
                 data.UpdateBy = UserActiveId;
-                data.UpdateDateTime = DateTimeOffset.Now;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
 
                 _applicationDbContext.Kecamatans.Update(data);
                 _applicationDbContext.SaveChanges();
@@ -903,7 +903,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.KecamatanId = vm.KecamatanId;
 
                 data.UpdateBy = UserActiveId;
-                data.UpdateDateTime = DateTimeOffset.Now;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
 
                 _applicationDbContext.Kelurahans.Update(data);
                 _applicationDbContext.SaveChanges();
@@ -943,7 +943,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // **Soft Delete (Tandai Data sebagai Terhapus)**
                 data.DeleteBy = UserActiveId;
-                data.DeleteDateTime = DateTimeOffset.Now;
+                data.DeleteDateTime = DateTimeOffset.UtcNow;
                 data.IsDelete = true;
 
                 _applicationDbContext.Provinsis.Update(data);
@@ -981,7 +981,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // **Soft Delete (Tandai Data sebagai Terhapus)**
                 data.DeleteBy = UserActiveId;
-                data.DeleteDateTime = DateTimeOffset.Now;
+                data.DeleteDateTime = DateTimeOffset.UtcNow;
                 data.IsDelete = true;
 
                 _applicationDbContext.KabupatenKotas.Update(data);
@@ -1019,7 +1019,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // **Soft Delete (Tandai Data sebagai Terhapus)**
                 data.DeleteBy = UserActiveId;
-                data.DeleteDateTime = DateTimeOffset.Now;
+                data.DeleteDateTime = DateTimeOffset.UtcNow;
                 data.IsDelete = true;
 
                 _applicationDbContext.Kecamatans.Update(data);
@@ -1057,7 +1057,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // **Soft Delete (Tandai Data sebagai Terhapus)**
                 data.DeleteBy = UserActiveId;
-                data.DeleteDateTime = DateTimeOffset.Now;
+                data.DeleteDateTime = DateTimeOffset.UtcNow;
                 data.IsDelete = true;
 
                 _applicationDbContext.Kelurahans.Update(data);

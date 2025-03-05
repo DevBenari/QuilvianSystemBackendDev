@@ -1,16 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
-using System.ComponentModel.DataAnnotations;
-using QuilvianSystemBackendDev.Models;
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
+﻿namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels
 {
-
-    [Table("MstOperasi", Schema = "public")]
-    public class Operasi : UserActivity
+    public class OperasiViewModel
     {
-        // informasi umum
-        [Key]
-        public Guid OperasiId { get; set; }
-        public string KodeOperasi { get; set; }
         public string JenisOperasi { get; set; }
         public string TipeOperasi { get; set; }
         public string NamaTindakanOperasi { get; set; }
@@ -35,6 +26,5 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public Guid PasienId { get; set; }
         public string NamaPasien { get; set; }
         public string KeluhanOperasi { get; set; }
-
     }
 }
