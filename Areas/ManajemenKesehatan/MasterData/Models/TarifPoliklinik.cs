@@ -2,6 +2,6 @@
 {
     public class TarifPoliklinik
     {
-
+        public Guid TarifPoliId { get; set; }
     }
 }
