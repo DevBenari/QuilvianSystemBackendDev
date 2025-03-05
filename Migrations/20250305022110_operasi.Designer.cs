@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -11,9 +12,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250305022110_operasi")]
+    partial class operasi
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -437,6 +439,7 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("JamTutup")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("KepalaDepartement")
@@ -558,9 +561,6 @@ namespace QuilvianSystemBackendDev.Migrations
                 {
                     b.Property<Guid>("DokterPoliId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("AsuransiId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("CreateBy")
@@ -1079,18 +1079,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("CatatanMedis")
                         .HasColumnType("text");
 
-                    b.Property<Guid>("CreateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("DeleteBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("DeleteDateTime")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<string>("DokterTambahan1")
                         .HasColumnType("text");
 
@@ -1105,9 +1093,6 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.Property<string>("DokterTambahan5")
                         .HasColumnType("text");
-
-                    b.Property<bool>("IsDelete")
-                        .HasColumnType("boolean");
 
                     b.Property<string>("JenisOperasi")
                         .IsRequired()
@@ -1164,12 +1149,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("TipeOperasi")
                         .IsRequired()
                         .HasColumnType("text");
-
-                    b.Property<Guid>("UpdateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("UpdateDateTime")
-                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("OperasiId");
 
@@ -1978,11 +1957,10 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.Property<Guid?>("KelurahanId")
                         .HasColumnType("uuid");
-                        
-                    b.Property<string>("Kewarganegaraan")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-                        
+
+                    b.Property<Guid?>("KewarganegaraanId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("KodePasien")
                         .HasColumnType("text");
 

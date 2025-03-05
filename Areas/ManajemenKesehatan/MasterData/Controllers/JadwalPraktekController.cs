@@ -143,12 +143,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var dateNow = DateTimeOffset.Now;
+                var dateNow = DateTimeOffset.UtcNow;
                 var setDateNow = dateNow.ToString("yyMMdd");
 
                 // Ambil data terakhir untuk hari ini (tanpa ToString di query)
                 var lastCode = _applicationDbContext.JadwalPrakteks
-                    .Where(d => d.CreateDateTime.Date == dateNow.Date)
+                    .Where(d => d.CreateDateTime.Date == dateNow.UtcDateTime.Date)
                     .OrderByDescending(k => k.KodeJadwalPraktek)
                     .FirstOrDefault();
 
@@ -197,7 +197,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         JamBerakhir = vm.JamBerakhir,
                         MaxPasien = vm.MaxPasien,
                         CreateBy = UserActiveId,
-                        CreateDateTime = DateTimeOffset.Now
+                        CreateDateTime = DateTimeOffset.UtcNow
 
                     };
 
@@ -264,7 +264,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     data.JamBerakhir = vm.JamBerakhir;
                     data.MaxPasien = vm.MaxPasien;
                     data.UpdateBy = UserActiveId;
-                    data.UpdateDateTime = DateTimeOffset.Now;
+                    data.UpdateDateTime = DateTimeOffset.UtcNow;
 
                     _applicationDbContext.JadwalPrakteks.Update(data);
                     _applicationDbContext.SaveChanges();
@@ -305,7 +305,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
                 data.IsDelete = true;
-                data.DeleteDateTime = DateTimeOffset.Now;
+                data.DeleteDateTime = DateTimeOffset.UtcNow;
                 data.DeleteBy = UserActiveId;
                 _applicationDbContext.JadwalPrakteks.Update(data);
                 _applicationDbContext.SaveChanges();

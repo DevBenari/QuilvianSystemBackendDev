@@ -13,12 +13,14 @@ using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using Swashbuckle.AspNetCore.Annotations;
 using System.Linq;
+using Humanizer;
+using System.Text.RegularExpressions;
 
 namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize] 
+    [Authorize]
     [EnableCors("AllowSpecific")]
     public class PendaftaranPasienBaruController : Controller
     {
@@ -68,6 +70,52 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                             NoRekamMedis = a.NoRekamMedis,
                             NamaLengkap = a.NamaLengkap,
                             JenisKelamin = a.JenisKelamin,
+                            FotoName = a.FotoName,
+                            ImageBytes = a.ImageBytes,
+                            FotoPath = a.FotoPath,
+                            NoRekamMedisLama = a.NoRekamMedisLama,
+                            TitleId = a.TitleId,
+                            IdentitasId = a.IdentitasId,
+                            NoIdentitas = a.NoIdentitas,
+                            TempatLahir = a.TempatLahir,
+                            TanggalLahir = a.TanggalLahir,
+                            Status = a.Status,
+                            AgamaId = a.AgamaId,
+                            PendidikanTerakhirId = a.PendidikanTerakhirId,
+                            AlamatIdentitas = a.AlamatIdentitas,
+                            AlamatDomisili = a.AlamatDomisili,
+                            NegaraId = a.NegaraId,
+                            ProvinsiId = a.ProvinsiId,
+                            KotaId = a.KotaId,
+                            KecKabId = a.KecKabId,
+                            KelurahanId = a.KelurahanId,
+                            KodePos = a.KodePos,
+                            Email = a.Email,
+                            NoTelepon1 = a.NoTelepon1,
+                            NoTelepon2 = a.NoTelepon2,
+                            NoTelepon3 = a.NoTelepon3,
+                            Kewarganegaraan = a.Kewarganegaraan,
+                            Suku = a.Suku,
+                            StatusKewarganegaraan = a.StatusKewarganegaraan,
+                            PekerjaanId = a.PekerjaanId,
+                            NamaPerusahaan = a.NamaPerusahaan,
+                            AlamatPerusahaan = a.AlamatPerusahaan,
+                            NoTeleponPerusahaan = a.NoTeleponPerusahaan,
+                            GolonganDarahId = a.GolonganDarahId,
+                            Alergi = a.Alergi,
+                            RiwayatPenyakit = a.RiwayatPenyakit,
+                            RiwayatOperasi = a.RiwayatOperasi,
+                            RiwayatPenyakitKeluarga = a.RiwayatPenyakitKeluarga,
+                            NamaKontakDarurat = a.NamaKontakDarurat,
+                            HubunganPasien = a.HubunganPasien,
+                            NoIdentitasDarurat = a.NoIdentitasDarurat,
+                            AlamatDarurat = a.AlamatDarurat,
+                            NoTeleponDarurat = a.NoTeleponDarurat,
+                            NamaOrangTua = a.NamaOrangTua,
+                            IdentitasOrangTua = a.IdentitasOrangTua,
+                            PekerjaanOrangTua = a.PekerjaanOrangTua,
+                            HubunganAnak = a.HubunganAnak,
+                            InformasiSekolah = a.InformasiSekolah
                         };
 
             // Hitung total data sebelum paginasi
@@ -98,7 +146,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     TotalPages = totalPages
                 }
             });
-        }        
+        }
 
         [HttpGet("{id}")]
         public IActionResult GetPendaftraanPasienBaruById(Guid id)
@@ -115,7 +163,49 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 data = listdata
             });
         }
-        
+
+        //[HttpGet("get-image/{id}")]
+        //public async Task<IActionResult> GetImage(Guid id)
+        //{
+        //    var data = await _applicationDbContext.PendaftaranPasienBarus.FindAsync(id);
+
+        //    if (data == null || data.ImageBytes == null || data.ImageBytes.Length == 0)
+        //    {
+        //        return NotFound(new { message = "Data tidak ditemukan atau tidak memiliki gambar." });
+        //    }
+
+        //    //string detectedFormat = GetImageFormat(data.ImageBytes);
+        //    //string mimeType = detectedFormat == "image/png" ? "image/png" : "image/jpeg";
+
+        //    return File(data.ImageBytes, mimeType); // Mengembalikan gambar dengan format yang sesuai
+        //}
+
+        //public static string GetImageExtension(string base64String)
+        //{
+        //    if (base64String.StartsWith("data:image/jpeg") || base64String.StartsWith("data:image/jpg"))
+        //        return "jpg";
+        //    if (base64String.StartsWith("data:image/png"))
+        //        return "png";
+        //    if (base64String.StartsWith("data:image/gif"))
+        //        return "gif";
+        //    if (base64String.StartsWith("data:image/bmp"))
+        //        return "bmp";
+        //    if (base64String.StartsWith("data:image/webp"))
+        //        return "webp";
+
+        //    return string.Empty; // Jika format tidak dikenali
+        //}
+
+        //public static string GetImageFormat(byte[] fileBytes)
+        //{
+        //    if (fileBytes.Length < 4) return "Unknown";
+
+        //    if (fileBytes[0] == 0xFF && fileBytes[1] == 0xD8 && fileBytes[2] == 0xFF) return "image/jpeg";
+        //    if (fileBytes[0] == 0x89 && fileBytes[1] == 0x50 && fileBytes[2] == 0x4E && fileBytes[3] == 0x47) return "image/png";
+
+        //    return "Unknown";
+        //}
+
         [HttpPost]
         public async Task<IActionResult> CreatePendaftaranPasienBaru([FromBody] PendaftaranPasienBaruViewModel vm)
         {
@@ -136,12 +226,12 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var dateNow = DateTimeOffset.Now;
+                var dateNow = DateTimeOffset.UtcNow;
                 var setDateNow = dateNow.ToString("yyMMdd");
 
                 // Ambil data terakhir untuk hari ini (tanpa ToString di query)
                 var lastCode = _applicationDbContext.PendaftaranPasienBarus
-                    .Where(d => d.CreateDateTime.Date == dateNow.Date)
+                    .Where(d => d.CreateDateTime.Date == dateNow.UtcDateTime.Date)
                     .OrderByDescending(k => k.KodePasien)
                     .FirstOrDefault();
 
@@ -214,112 +304,162 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 }
 
                 // **Validasi & Simpan Foto Profil**
-                string fotoPath = null;
-                if (vm.Foto != null && vm.Foto.Length > 0)
+                //string fotoPath = null;
+                //if (vm.Foto != null && vm.Foto.Length > 0)
+                //{
+                //    var maxSize = 2 * 1024 * 1024;
+                //    var allowedExtensions = new List<string> { ".jpg", ".jpeg", ".png" };
+                //    var fileExtension = Path.GetExtension(vm.Foto.FileName).ToLower();
+
+                //    if (vm.Foto.Length > maxSize)
+                //    {
+                //        return BadRequest(new { message = "Ukuran file terlalu besar! Maksimum 2MB." });
+                //    }
+
+                //    if (!allowedExtensions.Contains(fileExtension))
+                //    {
+                //        return BadRequest(new { message = "Format file tidak valid! Gunakan JPG atau PNG." });
+                //    }
+
+                //    var uploadFolder = Path.Combine(_webHostEnvironment.WebRootPath, "FotoPasienBaru");
+                //    if (!Directory.Exists(uploadFolder))
+                //    {
+                //        Directory.CreateDirectory(uploadFolder);
+                //    }
+
+                //    var fotoFileName = $"{kodePasien}{fileExtension}";
+                //    var fotoFilePath = Path.Combine(uploadFolder, fotoFileName);
+
+                //    using (var stream = new FileStream(fotoFilePath, FileMode.Create))
+                //    {
+                //        vm.Foto.CopyTo(stream);
+                //    }
+
+                //    fotoPath = $"/FotoPasienBaru/{fotoFileName}";
+                //}
+                //else
+                //{
+                //    //Jika user tidak upload foto, gunakan foto default
+                //    fotoPath = "/FotoPasienBaru/user.jpg";
+                //}
+
+                // kode upload gambar dgn Base64
+                // Dapatkan ekstensi file berdasarkan Base64
+                //string extension = GetImageExtension(request.Base64Data);
+                //if (string.IsNullOrEmpty(extension))
+                //{
+                //    return BadRequest(new { message = "Invalid image format. Allowed formats: jpg, jpeg, png, gif, bmp, webp." });
+                //}
+
+                // Folder penyimpanan (wwwroot/uploads)
+                var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "FotoPasienBaru");
+                if (!Directory.Exists(uploadsFolder))
                 {
-                    var maxSize = 2 * 1024 * 1024;
-                    var allowedExtensions = new List<string> { ".jpg", ".jpeg", ".png" };
-                    var fileExtension = Path.GetExtension(vm.Foto.FileName).ToLower();
+                    Directory.CreateDirectory(uploadsFolder);
+                }
 
-                    if (vm.Foto.Length > maxSize)
+
+                //// Nama file unik
+                string uniqueFileName = $"{kodePasien}_{vm.NamaLengkap}";
+                var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+                //// Hapus prefix base64 sebelum decoding
+                //var base64Data = Regex.Replace(request.Base64Data, @"^data:image\/[a-zA-Z]+;base64,", string.Empty);
+
+                //// Konversi base64 menjadi byte array
+                //var imageBytes = Convert.FromBase64String(base64Data);
+
+                // Simpan file ke server
+                await System.IO.File.WriteAllBytesAsync(filePath, vm.ImageBytes);
+
+                //// URL file yang disimpan
+                //var fileUrl = $"{Request.Scheme}://{Request.Host}/uploads/{fileName}";
+
+                // Validasi format gambar dari nama file
+                //byte[] imageBytes = vm.FotoByte.ToArray();
+                //string detectedFormat = GetImageFormat(imageBytes);
+
+                //if (detectedFormat == "Unknown")
+                //{
+                //    return BadRequest(new { message = "Format gambar tidak didukung. Hanya menerima JPG dan PNG." });
+                //}
+
+                
+                if (ModelState.IsValid)
+                {
+                    // Simpan Data
+                    var daftar = new PendaftaranPasienBaru
                     {
-                        return BadRequest(new { message = "Ukuran file terlalu besar! Maksimum 2MB." });
-                    }
+                        PendaftaranPasienBaruId = Guid.NewGuid(),
+                        CreateDateTime = DateTimeOffset.UtcNow,
+                        CreateBy = UserActiveId,
+                        KodePasien = kodePasien,
+                        NoRekamMedis = noRekamMedis,
+                        TipePasien = vm.TipePasien,
+                        NoRekamMedisLama = vm.NoRekamMedisLama,
+                        TitleId = vm.TitleId,
+                        NamaLengkap = vm.NamaLengkap,
+                        IdentitasId = vm.IdentitasId,
+                        NoIdentitas = vm.NoIdentitas,
+                        TempatLahir = vm.TempatLahir,
+                        TanggalLahir = vm.TanggalLahir,
+                        JenisKelamin = vm.JenisKelamin,
+                        Status = vm.Status,
+                        AgamaId = vm.AgamaId,
+                        PendidikanTerakhirId = vm.PendidikanTerakhirId,
+                        AlamatIdentitas = vm.AlamatIdentitas,
+                        AlamatDomisili = vm.AlamatDomisili,
+                        NegaraId = vm.NegaraId,
+                        ProvinsiId = vm.ProvinsiId,
+                        KotaId = vm.KotaId,
+                        KecKabId = vm.KecKabId,
+                        KelurahanId = vm.KelurahanId,
+                        KodePos = vm.KodePos,
+                        Email = vm.Email,
+                        NoTelepon1 = vm.NoTelepon1,
+                        NoTelepon2 = vm.NoTelepon2,
+                        NoTelepon3 = vm.NoTelepon3,
+                        Kewarganegaraan = vm.Kewarganegaraan,
+                        Suku = vm.Suku,
+                        StatusKewarganegaraan = vm.StatusKewarganegaraan,
+                        PekerjaanId = vm.PekerjaanId,
+                        NamaPerusahaan = vm.NamaPerusahaan,
+                        AlamatPerusahaan = vm.AlamatPerusahaan,
+                        NoTeleponPerusahaan = vm.NoTeleponPerusahaan,
+                        GolonganDarahId = vm.GolonganDarahId,
+                        Alergi = vm.Alergi,
+                        RiwayatPenyakit = vm.RiwayatPenyakit,
+                        RiwayatOperasi = vm.RiwayatOperasi,
+                        RiwayatPenyakitKeluarga = vm.RiwayatPenyakitKeluarga,
+                        NamaKontakDarurat = vm.NamaKontakDarurat,
+                        HubunganPasien = vm.HubunganPasien,
+                        NoIdentitasDarurat = vm.NoIdentitasDarurat,
+                        AlamatDarurat = vm.AlamatDarurat,
+                        NoTeleponDarurat = vm.NoTeleponDarurat,
+                        NamaOrangTua = vm.NamaOrangTua,
+                        IdentitasOrangTua = vm.IdentitasOrangTua,
+                        PekerjaanOrangTua = vm.PekerjaanOrangTua,
+                        HubunganAnak = vm.HubunganAnak,
+                        InformasiSekolah = vm.InformasiSekolah,
+                        FotoName = uniqueFileName,
+                        QrCode = $"/qrcodes/{qrCodeFileName}", // Simpan hanya path QR Code
+                        FotoPath = filePath,
+                        ImageBytes = vm.ImageBytes
+                    };
+                    _applicationDbContext.PendaftaranPasienBarus.Add(daftar);
+                    _applicationDbContext.SaveChanges();
 
-                    if (!allowedExtensions.Contains(fileExtension))
+                    return Created("", new
                     {
-                        return BadRequest(new { message = "Format file tidak valid! Gunakan JPG atau PNG." });
-                    }
-
-                    var uploadFolder = Path.Combine(_webHostEnvironment.WebRootPath, "FotoPasienBaru");
-                    if (!Directory.Exists(uploadFolder))
-                    {
-                        Directory.CreateDirectory(uploadFolder);
-                    }
-
-                    var fotoFileName = $"{kodePasien}{fileExtension}";
-                    var fotoFilePath = Path.Combine(uploadFolder, fotoFileName);
-
-                    using (var stream = new FileStream(fotoFilePath, FileMode.Create))
-                    {
-                        vm.Foto.CopyTo(stream);
-                    }
-
-                    fotoPath = $"/FotoPasienBaru/{fotoFileName}";
+                        message = "Tambah Data Berhasil || 201 Created",
+                        qrCodeUrl = $"{Request.Scheme}://{Request.Host}{daftar.QrCode}",
+                        uploadFotoUrl = $"{Request.Scheme}://{Request.Host}{daftar.FotoPath}"
+                    });
                 }
                 else
                 {
-                    //Jika user tidak upload foto, gunakan foto default
-                    fotoPath = "/FotoPasienBaru/user.jpg";
+                    return BadRequest(new { message = "Data tidak valid." });
                 }
-
-                // Simpan Data
-                var daftar = new PendaftaranPasienBaru
-                {
-                    PendaftaranPasienBaruId = Guid.NewGuid(),
-                    CreateDateTime = DateTimeOffset.Now,
-                    CreateBy = UserActiveId,
-                    KodePasien = kodePasien,
-                    NoRekamMedis = noRekamMedis,
-                    TipePasien = vm.TipePasien,
-                    NoRekamMedisLama = vm.NoRekamMedisLama,
-                    TitleId = vm.TitleId,
-                    NamaLengkap = vm.NamaLengkap,
-                    IdentitasId = vm.IdentitasId,
-                    NoIdentitas = vm.NoIdentitas,
-                    TempatLahir = vm.TempatLahir,
-                    TanggalLahir = vm.TanggalLahir,
-                    JenisKelamin = vm.JenisKelamin,
-                    Status = vm.Status,
-                    AgamaId = vm.AgamaId,
-                    PendidikanTerakhirId = vm.PendidikanTerakhirId,
-                    AlamatIdentitas = vm.AlamatIdentitas,
-                    AlamatDomisili = vm.AlamatDomisili,
-                    NegaraId = vm.NegaraId,
-                    ProvinsiId = vm.ProvinsiId,
-                    KotaId = vm.KotaId,
-                    KecKabId = vm.KecKabId,
-                    KelurahanId = vm.KelurahanId,
-                    KodePos = vm.KodePos,
-                    Email = vm.Email,
-                    NoTelepon1 = vm.NoTelepon1,
-                    NoTelepon2 = vm.NoTelepon2,
-                    NoTelepon3 = vm.NoTelepon3,
-                    Kewarganegaraan = vm.Kewarganegaraan,
-                    Suku = vm.Suku,
-                    StatusKewarganegaraan = vm.StatusKewarganegaraan,
-                    PekerjaanId = vm.PekerjaanId,
-                    NamaPerusahaan = vm.NamaPerusahaan,
-                    AlamatPerusahaan = vm.AlamatPerusahaan,
-                    NoTeleponPerusahaan = vm.NoTeleponPerusahaan,
-                    GolonganDarahId = vm.GolonganDarahId,
-                    Alergi = vm.Alergi,
-                    RiwayatPenyakit = vm.RiwayatPenyakit,
-                    RiwayatOperasi = vm.RiwayatOperasi,
-                    RiwayatPenyakitKeluarga = vm.RiwayatPenyakitKeluarga,
-                    NamaKontakDarurat = vm.NamaKontakDarurat,
-                    HubunganPasien = vm.HubunganPasien,
-                    NoIdentitasDarurat = vm.NoIdentitasDarurat,
-                    AlamatDarurat = vm.AlamatDarurat,
-                    NoTeleponDarurat = vm.NoTeleponDarurat,
-                    NamaOrangTua = vm.NamaOrangTua,
-                    IdentitasOrangTua = vm.IdentitasOrangTua,
-                    PekerjaanOrangTua = vm.PekerjaanOrangTua,
-                    HubunganAnak = vm.HubunganAnak,
-                    InformasiSekolah = vm.InformasiSekolah,
-                    Foto = fotoPath,
-                    QrCode = $"/qrcodes/{qrCodeFileName}" // Simpan hanya path QR Code
-                };
-
-                _applicationDbContext.PendaftaranPasienBarus.Add(daftar);
-                _applicationDbContext.SaveChanges();
-
-                return Created("", new
-                {
-                    message = "Tambah Data Berhasil || 201 Created",
-                    qrCodeUrl = $"{Request.Scheme}://{Request.Host}{daftar.QrCode}",
-                    uploadFotoUrl = fotoPath != null ? $"{Request.Scheme}://{Request.Host}{fotoPath}" : null
-                });
             }
             catch (Exception ex)
             {
@@ -353,6 +493,24 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
+
+                //byte[] imageBytes = vm.FotoByte.ToArray();
+                //string detectedFormat = GetImageFormat(imageBytes);
+
+                //if (detectedFormat == "Unknown")
+                //{
+                //    return BadRequest(new { message = "Format gambar tidak didukung. Hanya menerima JPG dan PNG." });
+                //}
+
+                // Hapus gambar lama
+                var oldFilePath = vm.FotoPath;
+                if (System.IO.File.Exists(oldFilePath))
+                {
+                    System.IO.File.Delete(oldFilePath);
+                }
+
+                // Simpan gambar baru
+                await System.IO.File.WriteAllBytesAsync(oldFilePath, vm.ImageBytes);
 
                 // **Update Data Pasien**
                 pasien.TipePasien = vm.TipePasien;
@@ -401,43 +559,11 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 pasien.PekerjaanOrangTua = vm.PekerjaanOrangTua ?? pasien.PekerjaanOrangTua;
                 pasien.HubunganAnak = vm.HubunganAnak ?? pasien.HubunganAnak;
                 pasien.InformasiSekolah = vm.InformasiSekolah ?? pasien.InformasiSekolah;
+                pasien.ImageBytes = vm.ImageBytes;
 
-                // **Update Foto Profil**
-                if (vm.Foto != null && vm.Foto.Length > 0)
-                {
-                    var maxSize = 2 * 1024 * 1024;
-                    var allowedExtensions = new List<string> { ".jpg", ".jpeg", ".png" };
-                    var fileExtension = Path.GetExtension(vm.Foto.FileName).ToLower();
-
-                    if (vm.Foto.Length > maxSize)
-                    {
-                        return BadRequest(new { message = "Ukuran file terlalu besar! Maksimum 2MB." });
-                    }
-
-                    if (!allowedExtensions.Contains(fileExtension))
-                    {
-                        return BadRequest(new { message = "Format file tidak valid! Gunakan JPG atau PNG." });
-                    }
-
-                    var uploadFolder = Path.Combine(_webHostEnvironment.WebRootPath, "FotoPasienBaru");
-                    if (!Directory.Exists(uploadFolder))
-                    {
-                        Directory.CreateDirectory(uploadFolder);
-                    }
-
-                    var fotoFileName = $"{pasien.KodePasien}{fileExtension}";
-                    var fotoFilePath = Path.Combine(uploadFolder, fotoFileName);
-
-                    using (var stream = new FileStream(fotoFilePath, FileMode.Create))
-                    {
-                        vm.Foto.CopyTo(stream);
-                    }
-
-                    pasien.Foto = $"/FotoPasienBaru/{fotoFileName}";
-                }                
 
                 pasien.UpdateBy = UserActiveId;
-                pasien.UpdateDateTime = DateTimeOffset.Now;
+                pasien.UpdateDateTime = DateTimeOffset.UtcNow;
 
                 _applicationDbContext.PendaftaranPasienBarus.Update(pasien);
                 _applicationDbContext.SaveChanges();
@@ -446,7 +572,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 {
                     message = "Update Data Berhasil || 200 OK",
                     qrCodeUrl = $"{Request.Scheme}://{Request.Host}{pasien.QrCode}",
-                    uploadFotoUrl = $"{Request.Scheme}://{Request.Host}{pasien.Foto}"
+                    uploadFotoUrl = $"{Request.Scheme}://{Request.Host}{pasien.FotoPath}"
                 });
             }
             catch (Exception ex)
@@ -455,7 +581,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
             }
         }
 
-        [HttpDelete("{id}")]        
+        [HttpDelete("{id}")]
         public async Task<IActionResult> DeletePendaftaranPasien(Guid id)
         {
             try
@@ -479,7 +605,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
 
                 // **Soft Delete (Tandai Data sebagai Terhapus)**
                 pasien.DeleteBy = UserActiveId;
-                pasien.DeleteDateTime = DateTimeOffset.Now;
+                pasien.DeleteDateTime = DateTimeOffset.UtcNow;
                 pasien.IsDelete = true;
 
                 _applicationDbContext.PendaftaranPasienBarus.Update(pasien);
@@ -506,6 +632,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
         DateTime? endDate = null,
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
+            // Query data
             var query = from a in _applicationDbContext.PendaftaranPasienBarus
                         join u in _applicationDbContext.UserActives
                         on a.CreateBy equals u.UserActiveId
@@ -518,16 +645,19 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                             PendaftaranPasienBaruId = a.PendaftaranPasienBaruId,
                             KodePasien = a.KodePasien,
                             NoRekamMedis = a.NoRekamMedis,
-                            NoRekamMedisLama = a.NoRekamMedisLama,
                             NamaLengkap = a.NamaLengkap,
                             JenisKelamin = a.JenisKelamin,
+                            FotoName = a.FotoName,
+                            ImageBytes = a.ImageBytes,
+                            FotoPath = a.FotoPath,
+                            NoRekamMedisLama = a.NoRekamMedisLama
                         };
 
             //Filter berdasarkan search
             if (!string.IsNullOrWhiteSpace(search))
             {
                 query = query.Where(u =>
-                    (u.KodePasien.Contains(search) || u.NamaLengkap.Contains(search) || u.NoRekamMedis.Contains(search) || u.NoRekamMedisLama.Contains(search))                   
+                    (u.KodePasien.Contains(search) || u.NamaLengkap.Contains(search) || u.NoRekamMedis.Contains(search) || u.NoRekamMedisLama.Contains(search))
                 );
             }
 

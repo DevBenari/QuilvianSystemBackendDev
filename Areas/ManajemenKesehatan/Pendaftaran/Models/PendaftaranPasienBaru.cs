@@ -75,7 +75,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
         public string? InformasiSekolah { get; set; }
 
         // Informasi Tambahan
-        public string? Foto { get; set; }
+        public string? FotoName { get; set; }
+
+        public string? JudulFileFoto { get; set; }
+        
+        public string? FotoPath { get; set; }
+        [Column(TypeName = "BYTEA")]
+        public byte[] ImageBytes { get; set; }
+        
         public string? QrCode { get; set; }
     }
 
