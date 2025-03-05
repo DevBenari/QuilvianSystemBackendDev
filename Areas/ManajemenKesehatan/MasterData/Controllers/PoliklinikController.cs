@@ -140,12 +140,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var dateNow = DateTimeOffset.Now;
+                var dateNow = DateTimeOffset.UtcNow;
                 var setDateNow = dateNow.ToString("yyMMdd");
 
                 // Ambil data terakhir untuk hari ini (tanpa ToString di query)
                 var lastCode = _applicationDbContext.Polikliniks
-                    .Where(d => d.CreateDateTime.Date == dateNow.Date)
+                    .Where(d => d.CreateDateTime.Date == dateNow.UtcDateTime.Date)
                     .OrderByDescending(k => k.KodePoliklinik)
                     .FirstOrDefault();
 
@@ -194,11 +194,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         JamTutup = vm.JamTutup,
                         LayananPoliklinik = vm.LayananPoliklinik,
                         Deskripsi = vm.Deskripsi,
-                        CreateDateTime = DateTimeOffset.Now,
+                        CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = UserActiveId,
-                        UpdateDateTime = DateTimeOffset.Now,
+                        UpdateDateTime = DateTimeOffset.UtcNow,
                         UpdateBy = UserActiveId,
-                        DeleteDateTime = DateTimeOffset.Now,
+                        DeleteDateTime = DateTimeOffset.UtcNow,
                         DeleteBy = UserActiveId,
                         IsDelete = false
                     };
@@ -262,7 +262,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     data.JamBuka = vm.JamBuka;
                     data.JamTutup = vm.JamTutup;
                     data.LayananPoliklinik = vm.LayananPoliklinik;
-                    data.UpdateDateTime = DateTimeOffset.Now;
+                    data.UpdateDateTime = DateTimeOffset.UtcNow;
                     data.UpdateBy = UserActiveId;
                     _applicationDbContext.Polikliniks.Update(data);
                     _applicationDbContext.SaveChanges();
@@ -302,7 +302,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
                 data.IsDelete = true;
-                data.DeleteDateTime = DateTimeOffset.Now;
+                data.DeleteDateTime = DateTimeOffset.UtcNow;
                 data.DeleteBy = UserActiveId;
                 _applicationDbContext.Polikliniks.Update(data);
                 _applicationDbContext.SaveChanges();

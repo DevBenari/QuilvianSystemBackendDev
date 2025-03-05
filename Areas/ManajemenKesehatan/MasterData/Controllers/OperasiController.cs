@@ -1,18 +1,18 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Cors;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient.Server;
 using Microsoft.EntityFrameworkCore;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
-using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
+using Newtonsoft.Json.Converters;
+using Newtonsoft.Json;
 using Swashbuckle.AspNetCore.Annotations;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Cors;
+using Microsoft.AspNetCore.Identity;
+using QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers;
+using QuilvianSystemBackendDev.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
@@ -20,42 +20,40 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class IdentitasController : Controller
+    public class OperasiController : Controller
     {
-        private readonly ApplicationDbContext _applicationDbContext;
+        private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<IdentitasController> _logger;
+        private readonly ILogger<OperasiController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public IdentitasController
-        (
-            ApplicationDbContext context,
+        public OperasiController
+            (ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-
-            ILogger<IdentitasController> logger,
-            IWebHostEnvironment webHostEnvironment
-        )
+            ILogger<OperasiController> logger,
+            IWebHostEnvironment webHostEnvironment)
         {
-            _applicationDbContext = context;
+            _context = context;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
         }
 
+        //get : api/operasi
         [HttpGet]
-        public async Task<IActionResult> GetAllIdentitas(int page = 1, int perPage = 10)
+        public async Task<IActionResult> GetAllOperasi(int page = 1, int perPage = 10)
         {
-            // Validasi agar page dan perPage minimal bernilai 1
+            // validasi pagging
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = from a in _applicationDbContext.Identitass
-                        join u in _applicationDbContext.UserActives
+            var query = from a in _context.Operasis
+                        join u in _context.UserActives
                         on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
                         select new
@@ -63,9 +61,28 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateDateTime = a.CreateDateTime,
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
-                            IdentitasId = a.IdentitasId,
-                            KodeIdentitas = a.KodeIdentitas,
-                            JenisIdentitas = a.JenisIdentitas,
+                            OperasiId = a.OperasiId,
+                            KodeOperasi = a.KodeOperasi,
+                            JenisOperasi = a.JenisOperasi,
+                            TipeOperasi = a.TipeOperasi,
+                            NamaTindakanOperasi = a.NamaTindakanOperasi,
+                            TanggalOperasi = a.TanggalOperasi,
+                            StatusOperasi = a.StatusOperasi,
+                            LamaOperasi = a.LamaOperasi,
+                            RuanganOperasi = a.RuanganOperasi,
+                            LokasiRuanganOperasi = a.LokasiRuanganOperasi,
+                            TipeCCVC = a.TipeCCVC,
+                            CatatanMedis = a.CatatanMedis,
+                            NamaDokterOperator = a.NamaDokterOperator,
+                            NamaDokterAnastesi = a.NamaDokterAnastesi,
+                            DokterTambahan1 = a.DokterTambahan1,
+                            DokterTambahan2 = a.DokterTambahan2,
+                            DokterTambahan3 = a.DokterTambahan3,
+                            DokterTambahan4 = a.DokterTambahan4,
+                            DokterTambahan5 = a.DokterTambahan5,
+                            PasienId = a.PasienId,
+                            NamaPasien = a.NamaPasien,
+                            KeluhanOperasi = a.KeluhanOperasi
                         };
 
             // Hitung total data sebelum paginasi
@@ -98,24 +115,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             });
         }
 
+        // GET: api/Operasi/{id}
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetIdentitasById(Guid id)
+        public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.Identitass.Find(id);
-            if (listdata == null)
+            var record = await _context.Operasis.FindAsync(id);
+            if (record == null)
             {
-                return NotFound(new { message = "Data tidak ditemukan." });
+                return NotFound(new { message = $"Data dengan ID {id} tidak ditemukan." });
             }
-
-            return Ok(new
-            {
-                message = "Ditemukan || 200 OK",
-                data = listdata
-            });
+            return Ok(new { message = "Data ditemukan.", data = record });
         }
 
+        // POST: api/Operasi
         [HttpPost]
-        public async Task<IActionResult> CreateIdentitas([FromBody] IdentitasViewModel vm)
+        public async Task<IActionResult> Create([FromForm] OperasiViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -126,7 +140,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             {
                 // **Ambil User ID dari JWT Claims**
                 var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var GetUserActive = _context.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
                 var UserActiveId = GetUserActive.UserActiveId;
 
                 if (string.IsNullOrEmpty(EmailLogin))
@@ -135,76 +149,93 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 var dateNow = DateTimeOffset.UtcNow;
-                var setDateNow = dateNow.ToString("yyMMdd");
+                var setDateNow = DateTimeOffset.UtcNow.ToString("yyMMdd");
 
-                // Ambil data terakhir untuk hari ini (tanpa ToString di query)
-                var lastCode = _applicationDbContext.Identitass
+                // Generate UserActiveCode
+                var lastCode = _context.Operasis
                     .Where(d => d.CreateDateTime.Date == dateNow.UtcDateTime.Date)
-                    .OrderByDescending(k => k.KodeIdentitas)
+                    .OrderByDescending(k => k.KodeOperasi)
                     .FirstOrDefault();
 
                 string kode;
                 if (lastCode == null)
                 {
-                    kode = $"IDT{setDateNow}0001";
+                    kode = $"OPR{setDateNow}0001";
+
                 }
                 else
                 {
-                    var lastCodeTrim = lastCode.KodeIdentitas.Substring(3, 6);
-
+                    var lastCodeTrim = lastCode.KodeOperasi.Substring(3, 6);
                     if (lastCodeTrim != setDateNow)
                     {
-                        kode = $"IDT{setDateNow}0001";
+                        kode = $"OPR{setDateNow}0001";
                     }
                     else
                     {
-                        kode = $"IDT{setDateNow}" + (Convert.ToInt32(lastCode.KodeIdentitas.Substring(9)) + 1).ToString("D4");
+                        kode = $"OPR{setDateNow}" + (Convert.ToInt32(lastCode.KodeOperasi.Substring(9)) + 1).ToString("D4");
                     }
                 }
 
                 // Cek Duplikasi
-                var isDuplicate = _applicationDbContext.Identitass
-                    .Any(c => c.KodeIdentitas == kode && c.JenisIdentitas == vm.JenisIdentitas);
+                var isDuplicate = _context.Operasis
+                    .Any(c => c.KodeOperasi == kode);
 
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
-                }
-
-                // Validate ModelState
                 if (ModelState.IsValid)
                 {
-                    // Simpan Data
-                    var data = new Identitas
+                    var data = new Operasi
                     {
-                        IdentitasId = Guid.NewGuid(),
+                        OperasiId = Guid.NewGuid(),
+                        KodeOperasi = kode,
+                        JenisOperasi = vm.JenisOperasi,
+                        TipeOperasi = vm.TipeOperasi,
+                        NamaTindakanOperasi = vm.NamaTindakanOperasi,
+                        TanggalOperasi = vm.TanggalOperasi,
+                        StatusOperasi = vm.StatusOperasi,
+                        LamaOperasi = vm.LamaOperasi,
+                        RuanganOperasi = vm.RuanganOperasi,
+                        LokasiRuanganOperasi = vm.LokasiRuanganOperasi,
+                        TipeCCVC = vm.TipeCCVC,
+                        CatatanMedis = vm.CatatanMedis,
+                        NamaDokterOperator = vm.NamaDokterOperator,
+                        NamaDokterAnastesi = vm.NamaDokterAnastesi,
+                        DokterTambahan1 = vm.DokterTambahan1,
+                        DokterTambahan2 = vm.DokterTambahan2,
+                        DokterTambahan3 = vm.DokterTambahan3,
+                        DokterTambahan4 = vm.DokterTambahan4,
+                        DokterTambahan5 = vm.DokterTambahan5,
+                        PasienId = vm.PasienId,
+                        NamaPasien = vm.NamaPasien,
+                        KeluhanOperasi = vm.KeluhanOperasi,
                         CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = UserActiveId,
-                        KodeIdentitas = kode,
-                        JenisIdentitas = vm.JenisIdentitas
+                        IsDelete = false,
+                        
                     };
-
-                    _applicationDbContext.Identitass.Add(data);
-                    _applicationDbContext.SaveChanges();
+                    _context.Operasis.Add(data);
+                    _context.SaveChanges();
 
                     return Created("", new
                     {
                         message = "Tambah Data Berhasil || 201 Created",
+                        //uploadFotoUrl = fotoPath != null ? $"{Request.Scheme}://{Request.Host}{fotoPath}" : null
                     });
+
                 }
                 else
                 {
                     return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
                 }
             }
+
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
 
+        // PUT: api/operasi/{id}
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateIdentitas(Guid id, [FromBody] IdentitasViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromForm] OperasiViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -213,9 +244,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
             try
             {
-                //Ambil User ID dari JWT Claims
+                // **Ambil User ID dari JWT Claims**
                 var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var GetUserActive = _context.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
                 var UserActiveId = GetUserActive.UserActiveId;
 
                 if (string.IsNullOrEmpty(EmailLogin))
@@ -223,41 +254,60 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                // **Cari Data Pasien**
-                var data = _applicationDbContext.Identitass.Find(id);
+                // cari data
+                var data = _context.Operasis.Find(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
-                // **Update Data Pasien**
-                data.JenisIdentitas = vm.JenisIdentitas;
+                //update data
+                data.JenisOperasi = vm.JenisOperasi;
+                data.TipeOperasi = vm.TipeOperasi;
+                data.NamaTindakanOperasi = vm.NamaTindakanOperasi;
+                data.TanggalOperasi = vm.TanggalOperasi;
+                data.StatusOperasi = vm.StatusOperasi;
+                data.LamaOperasi = vm.LamaOperasi;
+                data.RuanganOperasi = vm.RuanganOperasi;
+                data.LokasiRuanganOperasi = vm.LokasiRuanganOperasi;
+                data.TipeCCVC = vm.TipeCCVC;
+                data.CatatanMedis = vm.CatatanMedis;
+                data.NamaDokterOperator = vm.NamaDokterOperator;
+                data.NamaDokterAnastesi = vm.NamaDokterAnastesi;
+                data.DokterTambahan1 = vm.DokterTambahan1;
+                data.DokterTambahan2 = vm.DokterTambahan2;
+                data.DokterTambahan3 = vm.DokterTambahan3;
+                data.DokterTambahan4 = vm.DokterTambahan4;
+                data.DokterTambahan5 = vm.DokterTambahan5;
+                data.PasienId = vm.PasienId;
+                data.NamaPasien = vm.NamaPasien;
+                data.KeluhanOperasi = vm.KeluhanOperasi;
 
-                data.UpdateBy = UserActiveId;
+
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
+                data.UpdateBy = UserActiveId;
 
-                _applicationDbContext.Identitass.Update(data);
-                _applicationDbContext.SaveChanges();
+                _context.Operasis.Update(data);
+                _context.SaveChanges();
 
-                return Ok(new
-                {
-                    message = "Update Data Berhasil || 200 OK",
-                });
+                return Ok(new { message = "Data berhasil diupdate..." });
             }
+
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
 
+        // DELETE: api/Operasi/{id}
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteIdentitas(Guid id)
+        public async Task<IActionResult> Delete(Guid id)
         {
             try
             {
                 //Ambil User ID dari JWT Claims
                 var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var GetUserActive = _context.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
                 var UserActiveId = GetUserActive.UserActiveId;
 
                 if (string.IsNullOrEmpty(EmailLogin))
@@ -265,8 +315,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                // **Cari Data Pasien**
-                var data = _applicationDbContext.Identitass.Find(id);
+                // **Cari Data Dokter**
+                var data = _context.Operasis.Find(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -277,8 +327,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.DeleteDateTime = DateTimeOffset.UtcNow;
                 data.IsDelete = true;
 
-                _applicationDbContext.Identitass.Update(data);
-                _applicationDbContext.SaveChanges();
+                _context.Operasis.Update(data);
+                _context.SaveChanges();
 
                 return Ok(new { message = "Data berhasil dihapus..." });
             }
@@ -289,7 +339,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet("paged")]
-        public IActionResult PagedIdentitas(
+        public IActionResult PagedPosition(
         int page = 1,
         int perPage = 10,
         string? search = null,
@@ -301,8 +351,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         DateTime? endDate = null,
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
-            var query = from a in _applicationDbContext.Identitass
-                        join u in _applicationDbContext.UserActives
+            // Query data
+            var query = from a in _context.Operasis
+                        join u in _context.UserActives
                         on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
                         select new
@@ -310,16 +361,35 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateDateTime = a.CreateDateTime,
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
-                            IdentitasId = a.IdentitasId,
-                            KodeIdentitas = a.KodeIdentitas,
-                            JenisIdentitas = a.JenisIdentitas,
+                            OperasiId = a.OperasiId,
+                            KodeOperasi = a.KodeOperasi,
+                            JenisOperasi = a.JenisOperasi,
+                            TipeOperasi = a.TipeOperasi,
+                            NamaTindakanOperasi = a.NamaTindakanOperasi,
+                            TanggalOperasi = a.TanggalOperasi,
+                            StatusOperasi = a.StatusOperasi,
+                            LamaOperasi = a.LamaOperasi,
+                            RuanganOperasi = a.RuanganOperasi,
+                            LokasiRuanganOperasi = a.LokasiRuanganOperasi,
+                            TipeCCVC = a.TipeCCVC,
+                            CatatanMedis = a.CatatanMedis,
+                            NamaDokterOperator = a.NamaDokterOperator,
+                            NamaDokterAnastesi = a.NamaDokterAnastesi,
+                            DokterTambahan1 = a.DokterTambahan1,
+                            DokterTambahan2 = a.DokterTambahan2,
+                            DokterTambahan3 = a.DokterTambahan3,
+                            DokterTambahan4 = a.DokterTambahan4,
+                            DokterTambahan5 = a.DokterTambahan5,
+                            PasienId = a.PasienId,
+                            NamaPasien = a.NamaPasien,
+                            KeluhanOperasi = a.KeluhanOperasi
                         };
 
             // Filter berdasarkan search
             if (!string.IsNullOrWhiteSpace(search))
             {
                 query = query.Where(u =>
-                    u.KodeIdentitas.Contains(search) || u.JenisIdentitas.Contains(search)
+                    u.KodeOperasi.Contains(search) || u.NamaTindakanOperasi.Contains(search) || u.JenisOperasi.Contains(search)
                 );
             }
 
@@ -332,7 +402,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 );
             }
 
-            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll)
+            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
             if (periode.HasValue)
             {
                 DateTime today = DateTime.UtcNow.Date;
@@ -387,17 +457,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "KodeIdentitas" => query.OrderByDescending(u => u.KodeIdentitas),
-                    "JenisIdentitas" => query.OrderByDescending(u => u.JenisIdentitas),
+                    "KodeOperasi" => query.OrderByDescending(u => u.KodeOperasi),
+                    "JenisOperasi" => query.OrderByDescending(u => u.JenisOperasi),
+                    "NamaTindakanOperasi" => query.OrderByDescending(u => u.NamaTindakanOperasi),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
-                    "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    "KodeIdentitas" => query.OrderBy(u => u.KodeIdentitas),
-                    "JenisIdentitas" => query.OrderBy(u => u.JenisIdentitas),
-                    _ => query.OrderBy(u => u.CreateDateTime)
+                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
+                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
+                    "KodeOperasi" => query.OrderByDescending(u => u.KodeOperasi),
+                    "JenisOperasi" => query.OrderByDescending(u => u.JenisOperasi),
+                    "NamaTindakanOperasi" => query.OrderByDescending(u => u.NamaTindakanOperasi),
+                    _ => query.OrderByDescending(u => u.CreateDateTime)
                 };
 
             // Pagination

@@ -73,6 +73,49 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                             FotoName = a.FotoName,
                             ImageBytes = a.ImageBytes,
                             FotoPath = a.FotoPath,
+                            NoRekamMedisLama = a.NoRekamMedisLama,
+                            TitleId = a.TitleId,
+                            IdentitasId = a.IdentitasId,
+                            NoIdentitas = a.NoIdentitas,
+                            TempatLahir = a.TempatLahir,
+                            TanggalLahir = a.TanggalLahir,
+                            Status = a.Status,
+                            AgamaId = a.AgamaId,
+                            PendidikanTerakhirId = a.PendidikanTerakhirId,
+                            AlamatIdentitas = a.AlamatIdentitas,
+                            AlamatDomisili = a.AlamatDomisili,
+                            NegaraId = a.NegaraId,
+                            ProvinsiId = a.ProvinsiId,
+                            KotaId = a.KotaId,
+                            KecKabId = a.KecKabId,
+                            KelurahanId = a.KelurahanId,
+                            KodePos = a.KodePos,
+                            Email = a.Email,
+                            NoTelepon1 = a.NoTelepon1,
+                            NoTelepon2 = a.NoTelepon2,
+                            NoTelepon3 = a.NoTelepon3,
+                            Kewarganegaraan = a.Kewarganegaraan,
+                            Suku = a.Suku,
+                            StatusKewarganegaraan = a.StatusKewarganegaraan,
+                            PekerjaanId = a.PekerjaanId,
+                            NamaPerusahaan = a.NamaPerusahaan,
+                            AlamatPerusahaan = a.AlamatPerusahaan,
+                            NoTeleponPerusahaan = a.NoTeleponPerusahaan,
+                            GolonganDarahId = a.GolonganDarahId,
+                            Alergi = a.Alergi,
+                            RiwayatPenyakit = a.RiwayatPenyakit,
+                            RiwayatOperasi = a.RiwayatOperasi,
+                            RiwayatPenyakitKeluarga = a.RiwayatPenyakitKeluarga,
+                            NamaKontakDarurat = a.NamaKontakDarurat,
+                            HubunganPasien = a.HubunganPasien,
+                            NoIdentitasDarurat = a.NoIdentitasDarurat,
+                            AlamatDarurat = a.AlamatDarurat,
+                            NoTeleponDarurat = a.NoTeleponDarurat,
+                            NamaOrangTua = a.NamaOrangTua,
+                            IdentitasOrangTua = a.IdentitasOrangTua,
+                            PekerjaanOrangTua = a.PekerjaanOrangTua,
+                            HubunganAnak = a.HubunganAnak,
+                            InformasiSekolah = a.InformasiSekolah
                         };
 
             // Hitung total data sebelum paginasi
@@ -183,12 +226,12 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var dateNow = DateTimeOffset.Now;
+                var dateNow = DateTimeOffset.UtcNow;
                 var setDateNow = dateNow.ToString("yyMMdd");
 
                 // Ambil data terakhir untuk hari ini (tanpa ToString di query)
                 var lastCode = _applicationDbContext.PendaftaranPasienBarus
-                    .Where(d => d.CreateDateTime.Date == dateNow.Date)
+                    .Where(d => d.CreateDateTime.Date == dateNow.UtcDateTime.Date)
                     .OrderByDescending(k => k.KodePasien)
                     .FirstOrDefault();
 
@@ -332,64 +375,6 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 //// URL file yang disimpan
                 //var fileUrl = $"{Request.Scheme}://{Request.Host}/uploads/{fileName}";
 
-                // Simpan Data
-                var daftar = new PendaftaranPasienBaru
-                {
-                    PendaftaranPasienBaruId = Guid.NewGuid(),
-                    CreateDateTime = DateTimeOffset.Now,
-                    CreateBy = UserActiveId,
-                    KodePasien = kodePasien,
-                    NoRekamMedis = noRekamMedis,
-                    TipePasien = vm.TipePasien,
-                    NoRekamMedisLama = vm.NoRekamMedisLama,
-                    TitleId = vm.TitleId,
-                    NamaLengkap = vm.NamaLengkap,
-                    IdentitasId = vm.IdentitasId,
-                    NoIdentitas = vm.NoIdentitas,
-                    TempatLahir = vm.TempatLahir,
-                    TanggalLahir = vm.TanggalLahir,
-                    JenisKelamin = vm.JenisKelamin,
-                    Status = vm.Status,
-                    AgamaId = vm.AgamaId,
-                    PendidikanTerakhirId = vm.PendidikanTerakhirId,
-                    AlamatIdentitas = vm.AlamatIdentitas,
-                    AlamatDomisili = vm.AlamatDomisili,
-                    NegaraId = vm.NegaraId,
-                    ProvinsiId = vm.ProvinsiId,
-                    KotaId = vm.KotaId,
-                    KecKabId = vm.KecKabId,
-                    KelurahanId = vm.KelurahanId,
-                    KodePos = vm.KodePos,
-                    Email = vm.Email,
-                    NoTelepon1 = vm.NoTelepon1,
-                    NoTelepon2 = vm.NoTelepon2,
-                    NoTelepon3 = vm.NoTelepon3,
-                    Kewarganegaraan = vm.Kewarganegaraan,
-                    Suku = vm.Suku,
-                    StatusKewarganegaraan = vm.StatusKewarganegaraan,
-                    PekerjaanId = vm.PekerjaanId,
-                    NamaPerusahaan = vm.NamaPerusahaan,
-                    AlamatPerusahaan = vm.AlamatPerusahaan,
-                    NoTeleponPerusahaan = vm.NoTeleponPerusahaan,
-                    GolonganDarahId = vm.GolonganDarahId,
-                    Alergi = vm.Alergi,
-                    RiwayatPenyakit = vm.RiwayatPenyakit,
-                    RiwayatOperasi = vm.RiwayatOperasi,
-                    RiwayatPenyakitKeluarga = vm.RiwayatPenyakitKeluarga,
-                    NamaKontakDarurat = vm.NamaKontakDarurat,
-                    HubunganPasien = vm.HubunganPasien,
-                    NoIdentitasDarurat = vm.NoIdentitasDarurat,
-                    AlamatDarurat = vm.AlamatDarurat,
-                    NoTeleponDarurat = vm.NoTeleponDarurat,
-                    NamaOrangTua = vm.NamaOrangTua,
-                    IdentitasOrangTua = vm.IdentitasOrangTua,
-                    PekerjaanOrangTua = vm.PekerjaanOrangTua,
-                    HubunganAnak = vm.HubunganAnak,
-                    InformasiSekolah = vm.InformasiSekolah,
-                    Foto = fotoPath,
-                    QrCode = $"/qrcodes/{qrCodeFileName}" // Simpan hanya path QR Code
-                };
-
                 // Validasi format gambar dari nama file
                 //byte[] imageBytes = vm.FotoByte.ToArray();
                 //string detectedFormat = GetImageFormat(imageBytes);
@@ -406,7 +391,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     var daftar = new PendaftaranPasienBaru
                     {
                         PendaftaranPasienBaruId = Guid.NewGuid(),
-                        CreateDateTime = DateTimeOffset.Now,
+                        CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = UserActiveId,
                         KodePasien = kodePasien,
                         NoRekamMedis = noRekamMedis,
@@ -434,7 +419,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                         NoTelepon1 = vm.NoTelepon1,
                         NoTelepon2 = vm.NoTelepon2,
                         NoTelepon3 = vm.NoTelepon3,
-                        KewarganegaraanId = vm.KewarganegaraanId,
+                        Kewarganegaraan = vm.Kewarganegaraan,
                         Suku = vm.Suku,
                         StatusKewarganegaraan = vm.StatusKewarganegaraan,
                         PekerjaanId = vm.PekerjaanId,
@@ -578,7 +563,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
 
 
                 pasien.UpdateBy = UserActiveId;
-                pasien.UpdateDateTime = DateTimeOffset.Now;
+                pasien.UpdateDateTime = DateTimeOffset.UtcNow;
 
                 _applicationDbContext.PendaftaranPasienBarus.Update(pasien);
                 _applicationDbContext.SaveChanges();
@@ -620,7 +605,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
 
                 // **Soft Delete (Tandai Data sebagai Terhapus)**
                 pasien.DeleteBy = UserActiveId;
-                pasien.DeleteDateTime = DateTimeOffset.Now;
+                pasien.DeleteDateTime = DateTimeOffset.UtcNow;
                 pasien.IsDelete = true;
 
                 _applicationDbContext.PendaftaranPasienBarus.Update(pasien);

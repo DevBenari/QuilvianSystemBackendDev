@@ -17,7 +17,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? Telepon { get; set; }
         public string? Email { get; set; }
         public string? JamBuka { get; set; }
-        public string JamTutup { get; set; }
+        public string? JamTutup { get; set; }
         public string? Layanan { get; set; }
         public ICollection<Position> Positions { get; set; }
     }
