@@ -48,7 +48,6 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<DokterPoli> DokterPolis { get; set; }
         public DbSet<CoveranAsuransi> CoveranAsuransis { get; set; }
         public DbSet<Operasi> Operasis { get; set; }
-        public DbSet<DokterPraktek> DokterPrakteks { get; set; }
 
         #endregion
 
