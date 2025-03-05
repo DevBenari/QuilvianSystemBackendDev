@@ -332,7 +332,63 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 //// URL file yang disimpan
                 //var fileUrl = $"{Request.Scheme}://{Request.Host}/uploads/{fileName}";
 
-
+                // Simpan Data
+                var daftar = new PendaftaranPasienBaru
+                {
+                    PendaftaranPasienBaruId = Guid.NewGuid(),
+                    CreateDateTime = DateTimeOffset.Now,
+                    CreateBy = UserActiveId,
+                    KodePasien = kodePasien,
+                    NoRekamMedis = noRekamMedis,
+                    TipePasien = vm.TipePasien,
+                    NoRekamMedisLama = vm.NoRekamMedisLama,
+                    TitleId = vm.TitleId,
+                    NamaLengkap = vm.NamaLengkap,
+                    IdentitasId = vm.IdentitasId,
+                    NoIdentitas = vm.NoIdentitas,
+                    TempatLahir = vm.TempatLahir,
+                    TanggalLahir = vm.TanggalLahir,
+                    JenisKelamin = vm.JenisKelamin,
+                    Status = vm.Status,
+                    AgamaId = vm.AgamaId,
+                    PendidikanTerakhirId = vm.PendidikanTerakhirId,
+                    AlamatIdentitas = vm.AlamatIdentitas,
+                    AlamatDomisili = vm.AlamatDomisili,
+                    NegaraId = vm.NegaraId,
+                    ProvinsiId = vm.ProvinsiId,
+                    KotaId = vm.KotaId,
+                    KecKabId = vm.KecKabId,
+                    KelurahanId = vm.KelurahanId,
+                    KodePos = vm.KodePos,
+                    Email = vm.Email,
+                    NoTelepon1 = vm.NoTelepon1,
+                    NoTelepon2 = vm.NoTelepon2,
+                    NoTelepon3 = vm.NoTelepon3,
+                    Kewarganegaraan = vm.Kewarganegaraan,
+                    Suku = vm.Suku,
+                    StatusKewarganegaraan = vm.StatusKewarganegaraan,
+                    PekerjaanId = vm.PekerjaanId,
+                    NamaPerusahaan = vm.NamaPerusahaan,
+                    AlamatPerusahaan = vm.AlamatPerusahaan,
+                    NoTeleponPerusahaan = vm.NoTeleponPerusahaan,
+                    GolonganDarahId = vm.GolonganDarahId,
+                    Alergi = vm.Alergi,
+                    RiwayatPenyakit = vm.RiwayatPenyakit,
+                    RiwayatOperasi = vm.RiwayatOperasi,
+                    RiwayatPenyakitKeluarga = vm.RiwayatPenyakitKeluarga,
+                    NamaKontakDarurat = vm.NamaKontakDarurat,
+                    HubunganPasien = vm.HubunganPasien,
+                    NoIdentitasDarurat = vm.NoIdentitasDarurat,
+                    AlamatDarurat = vm.AlamatDarurat,
+                    NoTeleponDarurat = vm.NoTeleponDarurat,
+                    NamaOrangTua = vm.NamaOrangTua,
+                    IdentitasOrangTua = vm.IdentitasOrangTua,
+                    PekerjaanOrangTua = vm.PekerjaanOrangTua,
+                    HubunganAnak = vm.HubunganAnak,
+                    InformasiSekolah = vm.InformasiSekolah,
+                    Foto = fotoPath,
+                    QrCode = $"/qrcodes/{qrCodeFileName}" // Simpan hanya path QR Code
+                };
 
                 // Validasi format gambar dari nama file
                 //byte[] imageBytes = vm.FotoByte.ToArray();
@@ -496,7 +552,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 pasien.NoTelepon1 = vm.NoTelepon1 ?? pasien.NoTelepon1;
                 pasien.NoTelepon2 = vm.NoTelepon2 ?? pasien.NoTelepon2;
                 pasien.NoTelepon3 = vm.NoTelepon3 ?? pasien.NoTelepon3;
-                pasien.KewarganegaraanId = vm.KewarganegaraanId ?? pasien.KewarganegaraanId;
+                pasien.Kewarganegaraan = vm.Kewarganegaraan ?? pasien.Kewarganegaraan;
                 pasien.Suku = vm.Suku ?? pasien.Suku;
                 pasien.StatusKewarganegaraan = vm.StatusKewarganegaraan ?? pasien.StatusKewarganegaraan;
                 pasien.PekerjaanId = vm.PekerjaanId ?? pasien.PekerjaanId;
