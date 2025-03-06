@@ -7,7 +7,6 @@ using Microsoft.OpenApi.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
-using QuilvianSystemBackendDev.Services;
 using System.Text;
 
 
@@ -16,9 +15,12 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 // Konfigurasi koneksi database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-{
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
-});
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+//builder.Services.AddDbContext<ApplicationDbContext>(options =>
+//{
+//    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+//});
 
 // Tambahkan layanan CORS
 builder.Services.AddCors(options =>
@@ -114,7 +116,6 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowSpecific", policy =>
@@ -125,25 +126,12 @@ builder.Services.AddCors(options =>
     });
 });
 
-
-
 // Add services to the container.
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 
-builder.Services.AddSingleton<NFCReaderService>();
-
 var app = builder.Build();
-
-// Jalankan layanan NFC saat aplikasi dimulai
-var nfcService = app.Services.GetRequiredService<NFCReaderService>();
-Task.Run(async () =>
-{
-    await Task.Delay(5000);
-    Console.WriteLine("✅ NFC Service dimulai setelah 5 detik...");
-    nfcService.Start();
-});
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

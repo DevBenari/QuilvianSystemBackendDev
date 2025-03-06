@@ -1,0 +1,499 @@
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
+using QuilvianSystemBackendDev.Repositories;
+using Newtonsoft.Json.Converters;
+using Newtonsoft.Json;
+using Swashbuckle.AspNetCore.Annotations;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Cors;
+using Microsoft.AspNetCore.Identity;
+using QuilvianSystemBackendDev.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    [Authorize]
+    [EnableCors("AllowSpecific")]
+    public class OperasiController : Controller
+    {
+        private readonly ApplicationDbContext _context;
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly SignInManager<ApplicationUser> _signInManager;
+
+        private readonly ILogger<OperasiController> _logger;
+        private readonly IWebHostEnvironment _webHostEnvironment;
+
+        public OperasiController
+            (ApplicationDbContext context,
+            UserManager<ApplicationUser> userManager,
+            SignInManager<ApplicationUser> signInManager,
+            ILogger<OperasiController> logger,
+            IWebHostEnvironment webHostEnvironment)
+        {
+            _context = context;
+            _userManager = userManager;
+            _signInManager = signInManager;
+            _logger = logger;
+            _webHostEnvironment = webHostEnvironment;
+        }
+
+        //get : api/operasi
+        [HttpGet]
+        public async Task<IActionResult> GetAllOperasi(int page = 1, int perPage = 10)
+        {
+            // validasi pagging
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
+
+            // Query data
+            var query = from a in _context.Operasis
+                        join u in _context.UserActives
+                        on a.CreateBy equals u.UserActiveId
+                        where a.IsDelete == false
+                        select new
+                        {
+                            CreateDateTime = a.CreateDateTime,
+                            CreateBy = a.CreateBy,
+                            CreateByName = u.FullName,
+                            OperasiId = a.OperasiId,
+                            KodeOperasi = a.KodeOperasi,
+                            JenisOperasi = a.JenisOperasi,
+                            TipeOperasi = a.TipeOperasi,
+                            NamaTindakanOperasi = a.NamaTindakanOperasi,
+                            TanggalOperasi = a.TanggalOperasi,
+                            StatusOperasi = a.StatusOperasi,
+                            LamaOperasi = a.LamaOperasi,
+                            RuanganOperasi = a.RuanganOperasi,
+                            LokasiRuanganOperasi = a.LokasiRuanganOperasi,
+                            TipeCCVC = a.TipeCCVC,
+                            CatatanMedis = a.CatatanMedis,
+                            NamaDokterOperator = a.NamaDokterOperator,
+                            NamaDokterAnastesi = a.NamaDokterAnastesi,
+                            DokterTambahan1 = a.DokterTambahan1,
+                            DokterTambahan2 = a.DokterTambahan2,
+                            DokterTambahan3 = a.DokterTambahan3,
+                            DokterTambahan4 = a.DokterTambahan4,
+                            DokterTambahan5 = a.DokterTambahan5,
+                            PasienId = a.PasienId,
+                            NamaPasien = a.NamaPasien,
+                            KeluhanOperasi = a.KeluhanOperasi
+                        };
+
+            // Hitung total data sebelum paginasi
+            var totalRows = query.Count();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            // Ambil data sesuai paging
+            var listdata = query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToList();
+
+            if (!listdata.Any())
+            {
+                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
+            }
+
+            // Return hasil dengan paging info
+            return Ok(new
+            {
+                message = "Berhasil || 200 OK",
+                data = listdata,
+                pagination = new
+                {
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalRows = totalRows,
+                    TotalPages = totalPages
+                }
+            });
+        }
+
+        // GET: api/Operasi/{id}
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(Guid id)
+        {
+            var record = await _context.Operasis.FindAsync(id);
+            if (record == null)
+            {
+                return NotFound(new { message = $"Data dengan ID {id} tidak ditemukan." });
+            }
+            return Ok(new { message = "Data ditemukan.", data = record });
+        }
+
+        // POST: api/Operasi
+        [HttpPost]
+        public async Task<IActionResult> Create([FromForm] OperasiViewModel vm)
+        {
+            if (vm == null || !ModelState.IsValid)
+            {
+                return BadRequest(new { message = "Data tidak valid." });
+            }
+
+            try
+            {
+                // **Ambil User ID dari JWT Claims**
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _context.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
+
+                if (string.IsNullOrEmpty(EmailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                var dateNow = DateTimeOffset.UtcNow;
+                var setDateNow = DateTimeOffset.UtcNow.ToString("yyMMdd");
+
+                // Generate UserActiveCode
+                var lastCode = _context.Operasis
+                    .Where(d => d.CreateDateTime.Date == dateNow.UtcDateTime.Date)
+                    .OrderByDescending(k => k.KodeOperasi)
+                    .FirstOrDefault();
+
+                string kode;
+                if (lastCode == null)
+                {
+                    kode = $"OPR{setDateNow}0001";
+
+                }
+                else
+                {
+                    var lastCodeTrim = lastCode.KodeOperasi.Substring(3, 6);
+                    if (lastCodeTrim != setDateNow)
+                    {
+                        kode = $"OPR{setDateNow}0001";
+                    }
+                    else
+                    {
+                        kode = $"OPR{setDateNow}" + (Convert.ToInt32(lastCode.KodeOperasi.Substring(9)) + 1).ToString("D4");
+                    }
+                }
+
+                // Cek Duplikasi
+                var isDuplicate = _context.Operasis
+                    .Any(c => c.KodeOperasi == kode);
+
+                if (ModelState.IsValid)
+                {
+                    var data = new Operasi
+                    {
+                        OperasiId = Guid.NewGuid(),
+                        KodeOperasi = kode,
+                        JenisOperasi = vm.JenisOperasi,
+                        TipeOperasi = vm.TipeOperasi,
+                        NamaTindakanOperasi = vm.NamaTindakanOperasi,
+                        TanggalOperasi = vm.TanggalOperasi,
+                        StatusOperasi = vm.StatusOperasi,
+                        LamaOperasi = vm.LamaOperasi,
+                        RuanganOperasi = vm.RuanganOperasi,
+                        LokasiRuanganOperasi = vm.LokasiRuanganOperasi,
+                        TipeCCVC = vm.TipeCCVC,
+                        CatatanMedis = vm.CatatanMedis,
+                        NamaDokterOperator = vm.NamaDokterOperator,
+                        NamaDokterAnastesi = vm.NamaDokterAnastesi,
+                        DokterTambahan1 = vm.DokterTambahan1,
+                        DokterTambahan2 = vm.DokterTambahan2,
+                        DokterTambahan3 = vm.DokterTambahan3,
+                        DokterTambahan4 = vm.DokterTambahan4,
+                        DokterTambahan5 = vm.DokterTambahan5,
+                        PasienId = vm.PasienId,
+                        NamaPasien = vm.NamaPasien,
+                        KeluhanOperasi = vm.KeluhanOperasi,
+                        CreateDateTime = DateTimeOffset.UtcNow,
+                        CreateBy = UserActiveId,
+                        IsDelete = false,
+                        
+                    };
+                    _context.Operasis.Add(data);
+                    _context.SaveChanges();
+
+                    return Created("", new
+                    {
+                        message = "Tambah Data Berhasil || 201 Created",
+                        //uploadFotoUrl = fotoPath != null ? $"{Request.Scheme}://{Request.Host}{fotoPath}" : null
+                    });
+
+                }
+                else
+                {
+                    return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
+                }
+            }
+
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
+        // PUT: api/operasi/{id}
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(Guid id, [FromForm] OperasiViewModel vm)
+        {
+            if (vm == null || !ModelState.IsValid)
+            {
+                return BadRequest(new { message = "Data tidak valid." });
+            }
+
+            try
+            {
+                // **Ambil User ID dari JWT Claims**
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _context.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
+
+                if (string.IsNullOrEmpty(EmailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                // cari data
+                var data = _context.Operasis.Find(id);
+                if (data == null)
+                {
+                    return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                //update data
+                data.JenisOperasi = vm.JenisOperasi;
+                data.TipeOperasi = vm.TipeOperasi;
+                data.NamaTindakanOperasi = vm.NamaTindakanOperasi;
+                data.TanggalOperasi = vm.TanggalOperasi;
+                data.StatusOperasi = vm.StatusOperasi;
+                data.LamaOperasi = vm.LamaOperasi;
+                data.RuanganOperasi = vm.RuanganOperasi;
+                data.LokasiRuanganOperasi = vm.LokasiRuanganOperasi;
+                data.TipeCCVC = vm.TipeCCVC;
+                data.CatatanMedis = vm.CatatanMedis;
+                data.NamaDokterOperator = vm.NamaDokterOperator;
+                data.NamaDokterAnastesi = vm.NamaDokterAnastesi;
+                data.DokterTambahan1 = vm.DokterTambahan1;
+                data.DokterTambahan2 = vm.DokterTambahan2;
+                data.DokterTambahan3 = vm.DokterTambahan3;
+                data.DokterTambahan4 = vm.DokterTambahan4;
+                data.DokterTambahan5 = vm.DokterTambahan5;
+                data.PasienId = vm.PasienId;
+                data.NamaPasien = vm.NamaPasien;
+                data.KeluhanOperasi = vm.KeluhanOperasi;
+
+
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
+                data.UpdateBy = UserActiveId;
+
+                _context.Operasis.Update(data);
+                _context.SaveChanges();
+
+                return Ok(new { message = "Data berhasil diupdate..." });
+            }
+
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
+        // DELETE: api/Operasi/{id}
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(Guid id)
+        {
+            try
+            {
+                //Ambil User ID dari JWT Claims
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _context.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
+
+                if (string.IsNullOrEmpty(EmailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                // **Cari Data Dokter**
+                var data = _context.Operasis.Find(id);
+                if (data == null)
+                {
+                    return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                // **Soft Delete (Tandai Data sebagai Terhapus)**
+                data.DeleteBy = UserActiveId;
+                data.DeleteDateTime = DateTimeOffset.UtcNow;
+                data.IsDelete = true;
+
+                _context.Operasis.Update(data);
+                _context.SaveChanges();
+
+                return Ok(new { message = "Data berhasil dihapus..." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
+        [HttpGet("paged")]
+        public IActionResult PagedPosition(
+        int page = 1,
+        int perPage = 10,
+        string? search = null,
+        string? orderBy = "CreateDateTime",
+        string? sortDirection = "desc",
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+        DateTime? startDate = null,
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+        DateTime? endDate = null,
+        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        {
+            // Query data
+            var query = from a in _context.Operasis
+                        join u in _context.UserActives
+                        on a.CreateBy equals u.UserActiveId
+                        where a.IsDelete == false
+                        select new
+                        {
+                            CreateDateTime = a.CreateDateTime,
+                            CreateBy = a.CreateBy,
+                            CreateByName = u.FullName,
+                            OperasiId = a.OperasiId,
+                            KodeOperasi = a.KodeOperasi,
+                            JenisOperasi = a.JenisOperasi,
+                            TipeOperasi = a.TipeOperasi,
+                            NamaTindakanOperasi = a.NamaTindakanOperasi,
+                            TanggalOperasi = a.TanggalOperasi,
+                            StatusOperasi = a.StatusOperasi,
+                            LamaOperasi = a.LamaOperasi,
+                            RuanganOperasi = a.RuanganOperasi,
+                            LokasiRuanganOperasi = a.LokasiRuanganOperasi,
+                            TipeCCVC = a.TipeCCVC,
+                            CatatanMedis = a.CatatanMedis,
+                            NamaDokterOperator = a.NamaDokterOperator,
+                            NamaDokterAnastesi = a.NamaDokterAnastesi,
+                            DokterTambahan1 = a.DokterTambahan1,
+                            DokterTambahan2 = a.DokterTambahan2,
+                            DokterTambahan3 = a.DokterTambahan3,
+                            DokterTambahan4 = a.DokterTambahan4,
+                            DokterTambahan5 = a.DokterTambahan5,
+                            PasienId = a.PasienId,
+                            NamaPasien = a.NamaPasien,
+                            KeluhanOperasi = a.KeluhanOperasi
+                        };
+
+            // Filter berdasarkan search
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(u =>
+                    u.KodeOperasi.Contains(search) || u.NamaTindakanOperasi.Contains(search) || u.JenisOperasi.Contains(search)
+                );
+            }
+
+            // Filter berdasarkan daterange jika keduanya memiliki nilai
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                query = query.Where(u =>
+                    u.CreateDateTime.Date >= startDate.Value.Date &&
+                    u.CreateDateTime.Date <= endDate.Value.Date
+                );
+            }
+
+            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
+            if (periode.HasValue)
+            {
+                DateTime today = DateTime.UtcNow.Date;
+
+                switch (periode)
+                {
+                    case PeriodeFilter.Today:
+                        query = query.Where(u => u.CreateDateTime.Date == today);
+                        break;
+                    case PeriodeFilter.ThisWeek:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
+                            u.CreateDateTime.Date <= today
+                        );
+                        break;
+                    case PeriodeFilter.LastWeek:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
+                            u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek))
+                        );
+                        break;
+                    case PeriodeFilter.ThisMonth:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Month == today.Month &&
+                            u.CreateDateTime.Year == today.Year
+                        );
+                        break;
+                    case PeriodeFilter.LastMonth:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Month == today.Month - 1 &&
+                            u.CreateDateTime.Year == today.Year
+                        );
+                        break;
+                    case PeriodeFilter.ThisYear:
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
+                        break;
+                    case PeriodeFilter.LastYear:
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
+                        break;
+                    case PeriodeFilter.Last3Months:
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
+                        break;
+                    case PeriodeFilter.Last6Months:
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
+                        break;
+                }
+            }
+
+            // Sorting Data dengan cara yang lebih aman
+            query = sortDirection?.ToLower() == "desc"
+                ? orderBy switch
+                {
+                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
+                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
+                    "KodeOperasi" => query.OrderByDescending(u => u.KodeOperasi),
+                    "JenisOperasi" => query.OrderByDescending(u => u.JenisOperasi),
+                    "NamaTindakanOperasi" => query.OrderByDescending(u => u.NamaTindakanOperasi),
+                    _ => query.OrderByDescending(u => u.CreateDateTime)
+                }
+                : orderBy switch
+                {
+                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
+                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
+                    "KodeOperasi" => query.OrderByDescending(u => u.KodeOperasi),
+                    "JenisOperasi" => query.OrderByDescending(u => u.JenisOperasi),
+                    "NamaTindakanOperasi" => query.OrderByDescending(u => u.NamaTindakanOperasi),
+                    _ => query.OrderByDescending(u => u.CreateDateTime)
+                };
+
+            // Pagination
+            var totalRows = query.Count();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
+
+            if (rows.Count == 0 && page > totalPages)
+            {
+                return NotFound(new { message = "Page not found." });
+            }
+
+            return Ok(new
+            {
+                status = "success",
+                message = "Data retrieved successfully",
+                data = new
+                {
+                    Rows = rows,
+                    TotalRows = totalRows,
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalPages = totalPages
+                }
+            });
+        }
+    }
+}
