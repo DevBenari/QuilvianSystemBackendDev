@@ -22,7 +22,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public DateTime? JamBuka { get; set; }
         public DateTime? JamTutup { get; set; }
         public string? LayananSubPoli { get; set; }
-
+        public int JumlahMaxPasien { get; set; }
 
         // Relasi ke Poliklinik
         [ForeignKey("PoliId")]
