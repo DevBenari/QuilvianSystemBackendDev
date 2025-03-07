@@ -1,216 +1,605 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Linq;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
-using QuilvianSystemBackendDev.Migrations;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
+using Swashbuckle.AspNetCore.Annotations;
+using ZXing.QrCode.Internal;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
+    [EnableCors("AllowSpecific")]
     public class AsuransiController : Controller
     {
-        private readonly ApplicationDbContext _context;
+        private readonly ApplicationDbContext _applicationDbContext;
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly SignInManager<ApplicationUser> _signInManager;
 
-        public AsuransiController(ApplicationDbContext context)
+        private readonly ILogger<AsuransiController> _logger;
+        private readonly IWebHostEnvironment _webHostEnvironment;
+
+        public AsuransiController
+        (
+            ApplicationDbContext context,
+            UserManager<ApplicationUser> userManager,
+            SignInManager<ApplicationUser> signInManager,
+
+            ILogger<AsuransiController> logger,
+            IWebHostEnvironment webHostEnvironment
+        )
         {
-            _context = context;
+            _applicationDbContext = context;
+            _userManager = userManager;
+            _signInManager = signInManager;
+            _logger = logger;
+            _webHostEnvironment = webHostEnvironment;
         }
-        // GET: api/Asuransi
+
         [HttpGet]
-        public async Task<IActionResult> GetAllAsuransi()
+        public async Task<IActionResult> GetAllAsuransi(int page = 1, int perPage = 10)
         {
-            var records = await _context.Asuransis.ToListAsync();
-            if (records == null || !records.Any())
-            {
-                return NotFound(new { message = "Tidak ada data ditemukan." });
-            }
-            return Ok(new { message = "Data ditemukan.", data = records });
-        }
-      
+            // Validasi agar page dan perPage minimal bernilai 1
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
 
-        // GET: api/Asuransi/{id}
+            // Query data
+            var query = from a in _applicationDbContext.Asuransis
+                        join u in _applicationDbContext.UserActives
+                        on a.CreateBy equals u.UserActiveId
+                        where a.IsDelete == false
+                        select new
+                        {
+                            CreateDateTime = a.CreateDateTime,
+                            CreateBy = a.CreateBy,
+                            CreateByName = u.FullName,
+                            AsuransiId = a.AsuransiId,
+                            KodeAsuransi = a.KodeAsuransi,
+                            NamaAsuransi = a.NamaAsuransi,
+                            JenisAsuransi = a.JenisAsuransi,
+                            StatusAsuransi = a.StatusAsuransi,
+                            TanggalMulaiKerjasama = a.TanggalMulaiKerjasama,
+                            TanggalAkhirKerjasama = a.TanggalAkhirKerjasama
+                        };
+
+            // Hitung total data sebelum paginasi
+            var totalRows = query.Count();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            // Ambil data sesuai paging
+            var listdata = query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToList();
+
+            if (!listdata.Any())
+            {
+                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
+            }
+
+            // Return hasil dengan paging info
+            return Ok(new
+            {
+                message = "Berhasil || 200 OK",
+                data = listdata,
+                pagination = new
+                {
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalRows = totalRows,
+                    TotalPages = totalPages
+                }
+            });
+        }
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetAsuransiById(Guid id)
         {
-            var records = await _context.Asuransis.ToListAsync();
-            if (records == null)
+            var listdata = _applicationDbContext.Asuransis.Find(id);
+            if (listdata == null)
             {
-                return NotFound(new { message = $"Data dengan ID {id} tidak ditemukan." });
+                return NotFound(new { message = "Data tidak ditemukan." });
             }
-            return Ok(new { message = "Data ditemukan.", data = records });
+
+            return Ok(new
+            {
+                message = "Ditemukan || 200 OK",
+                data = listdata
+            });
         }
 
-        // POST: api/Asuransi
         [HttpPost]
-        public async Task<IActionResult>AddAsuransi([FromBody] AsuransiViewModel newAsuransi)
+        public async Task<IActionResult> CreateAsuransi([FromBody] AsuransiViewModel vm)
         {
-            var dateNow = DateTimeOffset.Now;
-            var day = dateNow.Day;
-            var month = dateNow.Month;
-            var year = dateNow.Year;
-
-            var setDateNow = DateTimeOffset.Now.ToString("yyMMdd");
-
-            // Generate UserActiveCode
-            var lastCode = _context.Asuransis
-                .Where(d => d.CreateDateTime.Day == day && d.CreateDateTime.Month == month && d.CreateDateTime.Year == year)
-                .OrderByDescending(k => k.KodeAsuransi)
-                .FirstOrDefault();
-
-            if (lastCode == null)
+            if (vm == null || !ModelState.IsValid)
             {
-                newAsuransi.KodeAsuransi = "ASR" + setDateNow + "0001";
+                return BadRequest(new { message = "Data tidak valid. || 400 Bad Request" });
             }
-            else
-            {
-                var lastCodeTrim = lastCode.KodeAsuransi.Substring(3, 6);
 
-                if (lastCodeTrim != setDateNow)
+            try
+            {
+                // **Ambil User ID dari JWT Claims**
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
+
+                if (string.IsNullOrEmpty(EmailLogin))
                 {
-                    newAsuransi.KodeAsuransi = "ASR" + setDateNow + "0001";
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                var dateNow = DateTimeOffset.UtcNow;
+                var setDateNow = dateNow.ToString("yyMMdd");
+
+                // Ambil data terakhir untuk hari ini (tanpa ToString di query)
+                var lastCode = _applicationDbContext.Asuransis
+                    .Where(d => d.CreateDateTime.Date == dateNow.UtcDateTime.Date)
+                    .OrderByDescending(k => k.KodeAsuransi)
+                    .FirstOrDefault();
+
+                string kode;
+                if (lastCode == null)
+                {
+                    kode = $"ASR{setDateNow}0001";
                 }
                 else
                 {
-                    newAsuransi.KodeAsuransi = "ASR" + setDateNow +
-                        (Convert.ToInt32(lastCode.KodeAsuransi.Substring(9)) + 1).ToString("D4");
-                }
-            }
+                    var lastCodeTrim = lastCode.KodeAsuransi.Substring(3, 6);
 
-            //VALIDATE MODELSTATE
-            if (ModelState.IsValid)
-            {
-                var asuransi = new Asuransi
-                {
-                    AsuransiId = Guid.NewGuid(),
-                    KodeAsuransi = newAsuransi.KodeAsuransi,
-                    NamaAsuransi = newAsuransi.NamaAsuransi,
-                    TipePerusahaan = newAsuransi.TipePerusahaan,
-                    Status = newAsuransi.Status,
-                    CreateDateTime = DateTimeOffset.Now,
-                    CreateBy = Guid.NewGuid(),
-                    UpdateDateTime = DateTimeOffset.Now,
-                    UpdateBy = Guid.NewGuid(),
-                    DeleteDateTime = DateTimeOffset.Now,
-                    DeleteBy = Guid.NewGuid(),
-                    IsDelete = false
-                };
-
-                //check duplikasi
-                var checkDuplicate = _context.Asuransis.Where(c => c.KodeAsuransi == newAsuransi.KodeAsuransi && c.NamaAsuransi == newAsuransi.NamaAsuransi).ToList();
-
-                if (checkDuplicate.Count == 0)
-                {
-                    var result = _context.Asuransis.Where(c => c.KodeAsuransi == newAsuransi.KodeAsuransi && c.NamaAsuransi == newAsuransi.NamaAsuransi).FirstOrDefault();
-                    if (result == null)
+                    if (lastCodeTrim != setDateNow)
                     {
-                        _context.Asuransis.Add(asuransi);
-                        _context.SaveChanges();
-                        return CreatedAtAction(nameof(GetAllAsuransi), new { message = "Tambah Data Berhasil || 201 Created" }, newAsuransi);
+                        kode = $"ASR{setDateNow}0001";
                     }
                     else
                     {
-                        return BadRequest(new { message = "Data tidak dapat di input !!! || 400 Bad Request" });
+                        kode = $"ASR{setDateNow}" + (Convert.ToInt32(lastCode.KodeAsuransi.Substring(9)) + 1).ToString("D4");
                     }
+                }
+
+                // cek duplikasi
+                var isDuplicate = _applicationDbContext.Asuransis
+                    .Any(c => c.KodeAsuransi == kode && c.NamaAsuransi == vm.NamaAsuransi);
+
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
+                }
+
+                // **Validasi & Simpan Foto dokumen klaim asuransi **
+                //string fotoPath = null;
+                //if (vm.DokumenKlaim != null && vm.DokumenKlaim.Length > 0)
+                //{
+                //    var maxSize = 2 * 1024 * 1024;
+                //    var allowedExtensions = new List<string> { ".jpg", ".jpeg", ".png" };
+                //    var fileExtension = Path.GetExtension(vm.DokumenKlaim.FileName).ToLower();
+
+                //    if (vm.DokumenKlaim.Length > maxSize)
+                //    {
+                //        return BadRequest(new { message = "Ukuran file terlalu besar! Maksimum 2MB." });
+                //    }
+
+                //    if (!allowedExtensions.Contains(fileExtension))
+                //    {
+                //        return BadRequest(new { message = "Format file tidak valid! Gunakan JPG atau PNG." });
+                //    }
+
+                //    var uploadFolder = Path.Combine(_webHostEnvironment.WebRootPath, "FotoPasienBaru");
+                //    if (!Directory.Exists(uploadFolder))
+                //    {
+                //        Directory.CreateDirectory(uploadFolder);
+                //    }
+
+                //    var fotoFileName = $"{}{fileExtension}";
+                //    var fotoFilePath = Path.Combine(uploadFolder, fotoFileName);
+
+                //    using (var stream = new FileStream(fotoFilePath, FileMode.Create))
+                //    {
+                //        vm.DokumenKlaim.CopyTo(stream);
+                //    }
+
+                //    fotoPath = $"/FotoPasienBaru/{fotoFileName}";
+                //}
+                //else
+                //{
+                //    //Jika user tidak upload foto, gunakan foto default
+                //    fotoPath = "/FotoPasienBaru/user.jpg";
+                //}
+
+                // Validate ModelState
+                if (ModelState.IsValid)
+                {
+                    var data = new Asuransi
+                    {
+                        AsuransiId = Guid.NewGuid(),
+                        KodeAsuransi = kode,
+                        Createdate = DateTimeOffset.UtcNow,
+                        NamaAsuransi = vm.NamaAsuransi,
+                        JenisAsuransi = vm.JenisAsuransi,
+                        KategoriAsuransi = vm.KategoriAsuransi,
+                        StatusAsuransi = vm.StatusAsuransi,
+                        TanggalMulaiKerjasama = vm.TanggalMulaiKerjasama,
+                        TanggalAkhirKerjasama = vm.TanggalAkhirKerjasama,
+                        RSRekanan = vm.RSRekanan,
+                        IsPKS = vm.IsPKS,
+                        MetodeKlaim = vm.MetodeKlaim,
+                        WaktuKlaim = vm.WaktuKlaim,
+                        BatasMaxKlaimPerTahun = vm.BatasMaxKlaimPerTahun,
+                        BatasMaxKlaimPerKunjungan = vm.BatasMaxKlaimPerKunjungan,
+                        DokumenKlaim = vm.DokumenKlaim,
+                        Layanan = vm.Layanan,
+                        PersentasiBiayaPertanggungan = vm.PersentasiBiayaPertanggungan,
+                        ObatDitanggung = vm.ObatDitanggung,
+                        TambahanTanggungan = vm.TambahanTanggungan,
+                        BiayaTidakDitanggung = vm.BiayaTidakDitanggung,
+                        MasaTunggu = vm.MasaTunggu,
+                        MaxUsiaPasien = vm.MaxUsiaPasien,
+                        NoRekRumahSakit = vm.NoRekRumahSakit,
+                        NamaBank = vm.NamaBank,
+                        NamaBankCabang = vm.NamaBankCabang,
+                        TermOfPayment = vm.TermOfPayment,
+                        BatasWaktuPembayaran = vm.BatasWaktuPembayaran,
+                        PenaltiTerlambatBayar = vm.PenaltiTerlambatBayar,
+                        NamaPerusahaanAsuransi = vm.NamaPerusahaanAsuransi,
+                        AlamatPusat = vm.AlamatPusat,
+                        AlamatCabang = vm.AlamatCabang,
+                        NoTelepon = vm.NoTelepon,
+                        EmailPusat = vm.EmailPusat,
+                        NoHotlineDarurat = vm.NoHotlineDarurat,
+                        NamaPerwakilan = vm.NamaPerwakilan,
+                        NoTeleponPerwakilan = vm.NoTeleponPerwakilan,
+                        EmailPerwakilan = vm.EmailPerwakilan,
+                        JabatanPerwakilan = vm.JabatanPerwakilan,
+                        CreateDateTime = DateTimeOffset.UtcNow,
+                        CreateBy = UserActiveId,
+                        UpdateDateTime = DateTimeOffset.UtcNow,
+                        UpdateBy = UserActiveId,
+                        DeleteDateTime = DateTimeOffset.UtcNow,
+                        DeleteBy = UserActiveId,
+                        IsDelete = false
+                    };
+
+                    Console.WriteLine(data.NamaAsuransi);
+                    _applicationDbContext.Asuransis.Add(data);
+                    _applicationDbContext.SaveChanges();
+                    return Created("", new
+                    {
+                        message = "Data berhasil ditambahkan. || 201 Created",
+                    });
                 }
                 else
                 {
-                    return Conflict(new { message = "Terdapat duplikasi data !!! || 409 Conflict Data" });
+                    return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
                 }
             }
-            else
+            catch
+            (Exception ex)
             {
-                return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
-
-
-            }
-        }    
-        
-
-        // PUT: api/Asuransi/{id}
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateAsuransi(Guid id, [FromBody] AsuransiViewModel updatedAsuransi)
-        {
-            //cek apakah data ada di database
-            var existingNegara = await _context.Asuransis.FindAsync(id);
-            if (existingNegara == null)
-            {
-                return NotFound(new { message = "Data tidak ditemukan. || 404 Not Found " });
-            }
-
-            //cek duplikat data
-            var checkDuplicate = _context.Asuransis.Where
-                (c => c.KodeAsuransi == updatedAsuransi.KodeAsuransi && c.NamaAsuransi == updatedAsuransi.NamaAsuransi
-                && c.AsuransiId != id).FirstOrDefault();
-            if (checkDuplicate != null)
-            {
-                return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
-            }
-
-            existingNegara.NamaAsuransi = updatedAsuransi.NamaAsuransi;
-            existingNegara.TipePerusahaan = updatedAsuransi.TipePerusahaan;
-            existingNegara.Status = updatedAsuransi.Status;
-            
-
-           
-
-            existingNegara.UpdateDateTime = DateTimeOffset.Now;
-            existingNegara.UpdateBy = Guid.NewGuid();  // Sesuaikan dengan ID pengguna yang mengupdate
-
-            // Simpan perubahan ke database
-            try
-            {
-                _context.Asuransis.Update(existingNegara);
-                await _context.SaveChangesAsync();
-
-                return CreatedAtAction(nameof(GetAllAsuransi), new { message = "Tambah Data Berhasil || 201 Created" }, updatedAsuransi);
-            }
-            catch (Exception ex)
-            {
-                // Tangani kesalahan jika ada
-                return StatusCode(500, new { message = "Terjadi kesalahan di server.", error = ex.Message });
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
 
-        // DELETE: api/Asuransi/{id}
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateAsuransi(Guid id, [FromBody] AsuransiViewModel vm)
+        {
+            if (vm == null || !ModelState.IsValid)
+            {
+                return BadRequest(new { message = "Data tidak valid. || 400 Bad Request" });
+            }
+
+            try
+            {
+                //Ambil User ID dari JWT Claims
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
+
+                if (string.IsNullOrEmpty(EmailLogin))
+                {
+                    return Unauthorized(new { message = "Anda tidak memiliki akses. || 401 Unauthorized" });
+                }
+
+                // **Cari Data**
+                var asuransi = _applicationDbContext.Asuransis.Find(id);
+                if (asuransi == null)
+                {
+                    return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                if (ModelState.IsValid)
+                {
+                    // **Update Data**
+                    asuransi.NamaAsuransi = vm.NamaAsuransi ?? asuransi.NamaAsuransi;
+                    asuransi.JenisAsuransi = vm.JenisAsuransi ?? asuransi.JenisAsuransi;
+                    asuransi.KategoriAsuransi = vm.KategoriAsuransi ?? asuransi.KategoriAsuransi;
+                    asuransi.StatusAsuransi = vm.StatusAsuransi ?? asuransi.StatusAsuransi;
+                    asuransi.TanggalMulaiKerjasama = vm.TanggalMulaiKerjasama ?? asuransi.TanggalMulaiKerjasama;
+                    asuransi.TanggalAkhirKerjasama = vm.TanggalAkhirKerjasama ?? asuransi.TanggalAkhirKerjasama;
+                    asuransi.RSRekanan = vm.RSRekanan ?? asuransi.RSRekanan;
+                    asuransi.IsPKS = vm.IsPKS;
+                    asuransi.MetodeKlaim = vm.MetodeKlaim ?? asuransi.MetodeKlaim;
+                    asuransi.WaktuKlaim = vm.WaktuKlaim ?? asuransi.WaktuKlaim;
+                    asuransi.BatasMaxKlaimPerTahun = vm.BatasMaxKlaimPerTahun ?? asuransi.BatasMaxKlaimPerTahun;
+                    asuransi.BatasMaxKlaimPerKunjungan = vm.BatasMaxKlaimPerKunjungan ?? asuransi.BatasMaxKlaimPerKunjungan;
+                    //asuransi.DokumenKlaim = vm.DokumenKlaim ?? asuransi.DokumenKlaim;
+                    asuransi.Layanan = vm.Layanan ?? asuransi.Layanan;
+                    asuransi.PersentasiBiayaPertanggungan = vm.PersentasiBiayaPertanggungan ?? asuransi.PersentasiBiayaPertanggungan;
+                    asuransi.ObatDitanggung = vm.ObatDitanggung ?? asuransi.ObatDitanggung;
+                    asuransi.TambahanTanggungan = vm.TambahanTanggungan ?? asuransi.TambahanTanggungan;
+                    asuransi.BiayaTidakDitanggung = vm.BiayaTidakDitanggung ?? asuransi.BiayaTidakDitanggung;
+                    asuransi.MasaTunggu = vm.MasaTunggu ?? asuransi.MasaTunggu;
+                    asuransi.MaxUsiaPasien = vm.MaxUsiaPasien ?? asuransi.MaxUsiaPasien;
+                    asuransi.NoRekRumahSakit = vm.NoRekRumahSakit ?? asuransi.NoRekRumahSakit;
+                    asuransi.NamaBank = vm.NamaBank ?? asuransi.NamaBank;
+                    asuransi.NamaBankCabang = vm.NamaBankCabang ?? asuransi.NamaBankCabang;
+                    asuransi.TermOfPayment = vm.TermOfPayment ?? asuransi.TermOfPayment;
+                    asuransi.BatasWaktuPembayaran = vm.BatasWaktuPembayaran ?? asuransi.BatasWaktuPembayaran;
+                    asuransi.PenaltiTerlambatBayar = vm.PenaltiTerlambatBayar ?? asuransi.PenaltiTerlambatBayar;
+                    asuransi.NamaPerusahaanAsuransi = vm.NamaPerusahaanAsuransi ?? asuransi.NamaPerusahaanAsuransi;
+                    asuransi.AlamatPusat = vm.AlamatPusat ?? asuransi.AlamatPusat;
+                    asuransi.AlamatCabang = vm.AlamatCabang ?? asuransi.AlamatCabang;
+                    asuransi.NoTelepon = vm.NoTelepon ?? asuransi.NoTelepon;
+                    asuransi.EmailPusat = vm.EmailPusat ?? asuransi.EmailPusat;
+                    asuransi.NoHotlineDarurat = vm.NoHotlineDarurat ?? asuransi.NoHotlineDarurat;
+                    asuransi.NamaPerwakilan = vm.NamaPerwakilan ?? asuransi.NamaPerwakilan;
+                    asuransi.NoTeleponPerwakilan = vm.NoTeleponPerwakilan ?? asuransi.NoTeleponPerwakilan;
+                    asuransi.EmailPerwakilan = vm.EmailPerwakilan ?? asuransi.EmailPerwakilan;
+                    asuransi.JabatanPerwakilan = vm.JabatanPerwakilan ?? asuransi.JabatanPerwakilan;
+
+                    asuransi.UpdateDateTime = DateTimeOffset.UtcNow;
+                    asuransi.UpdateBy = UserActiveId;
+
+                    _applicationDbContext.Asuransis.Update(asuransi);
+                    _applicationDbContext.SaveChanges();
+
+                    return Ok(new
+                    {
+                        message = "Update Data Berhasil || 200 OK",
+                        //qrCodeUrl = $"{Request.Scheme}://{Request.Host}{pasien.QrCode}",
+                        //uploadFotoUrl = $"{Request.Scheme}://{Request.Host}{pasien.Foto}"
+                    });
+                }
+                else
+                {
+                    return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
+                }
+
+
+                // **Update Foto Profil**
+                //if (vm.Foto != null && vm.Foto.Length > 0)
+                //{
+                //    var maxSize = 2 * 1024 * 1024;
+                //    var allowedExtensions = new List<string> { ".jpg", ".jpeg", ".png" };
+                //    var fileExtension = Path.GetExtension(vm.Foto.FileName).ToLower();
+
+                //    if (vm.Foto.Length > maxSize)
+                //    {
+                //        return BadRequest(new { message = "Ukuran file terlalu besar! Maksimum 2MB." });
+                //    }
+
+                //    if (!allowedExtensions.Contains(fileExtension))
+                //    {
+                //        return BadRequest(new { message = "Format file tidak valid! Gunakan JPG atau PNG." });
+                //    }
+
+                //    var uploadFolder = Path.Combine(_webHostEnvironment.WebRootPath, "FotoPasienBaru");
+                //    if (!Directory.Exists(uploadFolder))
+                //    {
+                //        Directory.CreateDirectory(uploadFolder);
+                //    }
+
+                //    var fotoFileName = $"{pasien.KodePasien}{fileExtension}";
+                //    var fotoFilePath = Path.Combine(uploadFolder, fotoFileName);
+
+                //    using (var stream = new FileStream(fotoFilePath, FileMode.Create))
+                //    {
+                //        vm.Foto.CopyTo(stream);
+                //    }
+
+                //    pasien.Foto = $"/FotoPasienBaru/{fotoFileName}";
+                //}
+
+
+            }
+            catch
+            (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+
+            }
+        }
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteAsuransi(Guid id)
         {
-            var record = await _context.Asuransis.FindAsync(id);
-            if (record == null)
+            try
             {
-                return NotFound(new { message = $"Data dengan ID {id} tidak ditemukan." });
+                //Ambil User ID dari JWT Claims
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
+
+                if (string.IsNullOrEmpty(EmailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                // **Cari Data**
+                var asuransi = _applicationDbContext.Asuransis.Find(id);
+                if (asuransi == null)
+                {
+                    return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                // **Soft Delete (Tandai Data sebagai Terhapus)**
+                asuransi.DeleteBy = UserActiveId;
+                asuransi.DeleteDateTime = DateTimeOffset.UtcNow;
+                asuransi.IsDelete = true;
+
+                _applicationDbContext.Asuransis.Update(asuransi);
+                _applicationDbContext.SaveChanges();
+
+                return Ok(new { message = "Data berhasil dihapus..." });
             }
-            _context.Asuransis.Remove(record);
-            await _context.SaveChangesAsync();
-            return Ok(new { message = "Data berhasil dihapus." });
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
         }
 
-        [HttpGet("Search")]
-        public async Task<IActionResult> Search([FromQuery] string keyword)
+        [HttpGet("paged")]
+        public IActionResult PegedAsuransi(
+        int page = 1,
+        int perPage = 10,
+        string? search = null,
+        string? orderBy = "CreateDateTime",
+        string? sortDirection = "desc",
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+        DateTime? startDate = null,
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+        DateTime? endDate = null,
+        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
-            // Validasi input keyword
-            if (string.IsNullOrWhiteSpace(keyword))
+            var query = from a in _applicationDbContext.Asuransis
+                        join u in _applicationDbContext.UserActives
+                        on a.CreateBy equals u.UserActiveId
+                        where a.IsDelete == false
+                        select new
+                        {
+                            CreateDateTime = a.CreateDateTime,
+                            CreateBy = a.CreateBy,
+                            CreateByName = u.FullName,
+                            AsuransiId = a.AsuransiId,
+                            KodeAsuransi = a.KodeAsuransi,
+                            NamaAsuransi = a.NamaAsuransi,
+                            JenisAsuransi = a.JenisAsuransi,
+                            StatusAsuransi = a.StatusAsuransi,
+                            TanggalMulaiKerjasama = a.TanggalMulaiKerjasama,
+                            TanggalAkhirKerjasama = a.TanggalAkhirKerjasama
+                        };
+
+            // Filter berdasarkan search
+            if (!string.IsNullOrWhiteSpace(search))
             {
-                return BadRequest(new { message = "Keyword tidak boleh kosong. || 400 Bad Request" });
+                query = query.Where(u =>
+                    u.KodeAsuransi.Contains(search) || u.NamaAsuransi.Contains(search) || u.JenisAsuransi.Contains(search)
+                    || u.StatusAsuransi.Contains(search)
+                );
             }
 
-            // Lakukan pencarian di database (case-insensitive)
-            var searchResults = await _context.Asuransis
-                .Where(n => EF.Functions.Like(n.NamaAsuransi, $"%{keyword}%") || EF.Functions.Like(n.KodeAsuransi, $"%{keyword}%"))
-                .ToListAsync();
-
-            // Jika tidak ada data ditemukan
-            if (!searchResults.Any())
+            // Filter berdasarkan daterange jika keduanya memiliki nilai
+            if (startDate.HasValue && endDate.HasValue)
             {
-                return NotFound(new { message = "Data tidak ditemukan. || 404 Not Found" });
+                query = query.Where(u =>
+                    u.CreateDateTime.Date >= startDate.Value.Date &&
+                    u.CreateDateTime.Date <= endDate.Value.Date
+                );
             }
 
-            // Mengembalikan hasil pencarian
-            return Ok(new { message = "Data ditemukan.", data = searchResults });
+            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
+            if (periode.HasValue)
+            {
+                DateTime today = DateTime.UtcNow.Date;
+
+                switch (periode)
+                {
+                    case PeriodeFilter.Today:
+                        query = query.Where(u => u.CreateDateTime.Date == today);
+                        break;
+                    case PeriodeFilter.ThisWeek:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
+                            u.CreateDateTime.Date <= today
+                        );
+                        break;
+                    case PeriodeFilter.LastWeek:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
+                            u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek))
+                        );
+                        break;
+                    case PeriodeFilter.ThisMonth:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Month == today.Month &&
+                            u.CreateDateTime.Year == today.Year
+                        );
+                        break;
+                    case PeriodeFilter.LastMonth:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Month == today.Month - 1 &&
+                            u.CreateDateTime.Year == today.Year
+                        );
+                        break;
+                    case PeriodeFilter.ThisYear:
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
+                        break;
+                    case PeriodeFilter.LastYear:
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
+                        break;
+                    case PeriodeFilter.Last3Months:
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
+                        break;
+                    case PeriodeFilter.Last6Months:
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
+                        break;
+                }
+            }
+
+            // Sorting Data dengan cara yang lebih aman
+            query = sortDirection?.ToLower() == "desc"
+                ? orderBy switch
+                {
+                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
+                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
+                    "KodeAsuransi" => query.OrderByDescending(u => u.KodeAsuransi),
+                    "NamaAsuransi" => query.OrderByDescending(u => u.NamaAsuransi),
+                    "JenisAsuransi" => query.OrderByDescending(u => u.JenisAsuransi),
+                    "StatusAsuransi" => query.OrderByDescending(u => u.StatusAsuransi),
+                    _ => query.OrderByDescending(u => u.CreateDateTime)
+                }
+                : orderBy switch
+                {
+                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
+                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
+                    "KodeAsuransi" => query.OrderByDescending(u => u.KodeAsuransi),
+                    "NamaAsuransi" => query.OrderByDescending(u => u.NamaAsuransi),
+                    "JenisAsuransi" => query.OrderByDescending(u => u.JenisAsuransi),
+                    "StatusAsuransi" => query.OrderByDescending(u => u.StatusAsuransi),
+                    _ => query.OrderByDescending(u => u.CreateDateTime)
+                };
+
+            // Pagination
+            var totalRows = query.Count();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
+
+            if (rows.Count == 0 && page > totalPages)
+            {
+                return NotFound(new { message = "Page not found." });
+            }
+
+            return Ok(new
+            {
+                status = "success",
+                message = "Data retrieved successfully",
+                data = new
+                {
+                    Rows = rows,
+                    TotalRows = totalRows,
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalPages = totalPages
+                }
+            });
         }
     }
 }

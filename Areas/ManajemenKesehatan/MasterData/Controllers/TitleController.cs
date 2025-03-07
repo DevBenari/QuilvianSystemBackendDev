@@ -1,11 +1,17 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient.Server;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
+using Swashbuckle.AspNetCore.Annotations;
 using System.Security.Claims;
 using static QRCoder.PayloadGenerator;
 
@@ -13,136 +19,411 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 {
     [ApiController]
     [Route("api/[controller]")]
-    //[Authorize]
+    [Authorize]
+    [EnableCors("AllowSpecific")]
     public class TitleController : Controller
     {
-        private readonly ApplicationDbContext _context;
+        private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly SignInManager<ApplicationUser> _signInManager;
 
-        public TitleController(
+        private readonly ILogger<TitleController> _logger;
+        private readonly IWebHostEnvironment _webHostEnvironment;
+
+        public TitleController
+        (
             ApplicationDbContext context,
-            UserManager<ApplicationUser> userManager
+            UserManager<ApplicationUser> userManager,
+            SignInManager<ApplicationUser> signInManager,
+
+            ILogger<TitleController> logger,
+            IWebHostEnvironment webHostEnvironment
         )
         {
-            _context = context;
+            _applicationDbContext = context;
             _userManager = userManager;
+            _signInManager = signInManager;
+            _logger = logger;
+            _webHostEnvironment = webHostEnvironment;
         }
 
-        // GET: api/Title
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAllTitle(int page = 1, int perPage = 10)
         {
-            var records = await _context.Titles.ToListAsync();
-            if (records == null || !records.Any())
+            // Validasi agar page dan perPage minimal bernilai 1
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
+
+            // Query data
+            var query = from a in _applicationDbContext.Titles
+                        join u in _applicationDbContext.UserActives
+                        on a.CreateBy equals u.UserActiveId
+                        where a.IsDelete == false
+                        select new
+                        {
+                            CreateDateTime = a.CreateDateTime,
+                            CreateBy = a.CreateBy,
+                            CreateByName = u.FullName,
+                            TitleId = a.TitleId,
+                            KodeTitle = a.KodeTitle,
+                            NamaTitle = a.NamaTitle,
+                        };
+
+            // Hitung total data sebelum paginasi
+            var totalRows = query.Count();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            // Ambil data sesuai paging
+            var listdata = query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToList();
+
+            if (!listdata.Any())
             {
-                return NotFound(new { message = "Tidak ada data ditemukan." });
+                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
             }
-            return Ok(new { message = "Data ditemukan.", data = records });
+
+            // Return hasil dengan paging info
+            return Ok(new
+            {
+                message = "Berhasil || 200 OK",
+                data = listdata,
+                pagination = new
+                {
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalRows = totalRows,
+                    TotalPages = totalPages
+                }
+            });
         }
 
-        // GET: api/Title/{id}
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(Guid id)
+        public async Task<IActionResult> GetTitleById(Guid id)
         {
-            var record = await _context.Titles.FindAsync(id);
-            if (record == null)
+            var listdata = _applicationDbContext.Titles.Find(id);
+            if (listdata == null)
             {
-                return NotFound(new { message = $"Data dengan ID {id} tidak ditemukan." });
+                return NotFound(new { message = "Data tidak ditemukan." });
             }
-            return Ok(new { message = "Data ditemukan.", data = record });
+
+            return Ok(new
+            {
+                message = "Ditemukan || 200 OK",
+                data = listdata
+            });
         }
 
-        // POST: api/Title
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] Title model)
+        public async Task<IActionResult> CreateTitle([FromBody] TitleViewModel vm)
         {
-            if (model == null)
+            if (vm == null || !ModelState.IsValid)
             {
                 return BadRequest(new { message = "Data tidak valid." });
-            }
-            model.TitleId = Guid.NewGuid();
-            _context.Titles.Add(model);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetById), new { id = model.TitleId }, model);
-        }
-
-        // PUT: api/Title/{id}
-        [HttpPut("{id}")]
-        //public async Task<IActionResult> Update(Guid id, [FromBody] TitleViewModel model)
-        //{
-        //    var existingRecord = await _context.Titles.FindAsync(id);
-        //    if (existingRecord == null)
-        //    {
-        //        return NotFound(new { message = "Data tidak ditemukan." });
-        //    }
-        //    // Update properties
-        //    foreach (var prop in model.GetType().GetProperties())
-        //    {
-        //        var value = prop.GetValue(model);
-        //        if (value != null)
-        //        {
-        //            prop.SetValue(existingRecord, value);
-        //        }
-        //    }
-
-        //    _context.Titles.Update(existingRecord);
-        //    await _context.SaveChangesAsync();
-
-        //    return Ok(new { message = "Data berhasil diperbarui." });
-        //}
-        public async Task<IActionResult> Update(Guid id, [FromBody] TitleViewModel update)
-        {
-            // Mendapatkan email dari claim yang terautentikasi
-            var email = User.FindFirst(ClaimTypes.Email)?.Value;
-            var user = await _userManager.FindByEmailAsync(email);
-
-            if (update == null)
-            {
-                return BadRequest("Data user tidak boleh kosong. || 400 Bad Request");
-            }
-
-            // Cari data berdasarkan ID
-            var vm = await _context.Titles.FindAsync(id);
-            if (vm == null)
-            {
-                return NotFound($"User dengan ID {id} tidak ditemukan. || 404 Not Found");
             }
 
             try
             {
-                // Perbarui data user
-                vm.UpdateDateTime = DateTime.Now;
-                vm.UpdateBy = Guid.Parse(user.Id); // Menyimpan userId sebagai GUID
-                vm.NamaTitle = update.NamaTitle;
+                // **Ambil User ID dari JWT Claims**
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
 
-                // Tandai data sebagai telah diubah
-                _context.Titles.Update(vm);
-                // Simpan perubahan ke database
-                await _context.SaveChangesAsync(); // Pastikan menggunakan SaveChangesAsync untuk operasi asinkron
+                if (string.IsNullOrEmpty(EmailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
 
-                return Ok(new { message = "Berhasil Update || 200 OK" });
+                var dateNow = DateTimeOffset.UtcNow;
+                var setDateNow = dateNow.ToString("yyMMdd");
+
+                // Ambil data terakhir untuk hari ini (tanpa ToString di query)
+                var lastCode = _applicationDbContext.Titles
+                    .Where(d => d.CreateDateTime.Date == dateNow.UtcDateTime.Date)
+                    .OrderByDescending(k => k.KodeTitle)
+                    .FirstOrDefault();
+
+                string kode;
+                if (lastCode == null)
+                {
+                    kode = $"TTL{setDateNow}0001";
+                }
+                else
+                {
+                    var lastCodeTrim = lastCode.KodeTitle.Substring(3, 6);
+
+                    if (lastCodeTrim != setDateNow)
+                    {
+                        kode = $"TTL{setDateNow}0001";
+                    }
+                    else
+                    {
+                        kode = $"TTL{setDateNow}" + (Convert.ToInt32(lastCode.KodeTitle.Substring(9)) + 1).ToString("D4");
+                    }
+                }
+
+                // Cek Duplikasi
+                var isDuplicate = _applicationDbContext.Titles
+                    .Any(c => c.KodeTitle == kode && c.NamaTitle == vm.NamaTitle);
+
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
+                }
+
+                // Validate ModelState
+                if (ModelState.IsValid)
+                {
+                    // Simpan Data
+                    var data = new Title
+                    {
+                        TitleId = Guid.NewGuid(),
+                        CreateDateTime = DateTimeOffset.UtcNow,
+                        CreateBy = UserActiveId,
+                        KodeTitle = kode,
+                        NamaTitle = vm.NamaTitle
+                    };
+
+                    _applicationDbContext.Titles.Add(data);
+                    _applicationDbContext.SaveChanges();
+
+                    return Created("", new
+                    {
+                        message = "Tambah Data Berhasil || 201 Created",
+                    });
+                }
+                else
+                {
+                    return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
+                }
             }
             catch (Exception ex)
             {
-                // Tangani error jika terjadi masalah
-                return StatusCode(500, $"Terjadi kesalahan saat memperbarui data: {ex.Message}");
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
 
-
-        // DELETE: api/Title/{id}
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(Guid id)
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateTitle(Guid id, [FromBody] TitleViewModel vm)
         {
-            var record = await _context.Titles.FindAsync(id);
-            if (record == null)
+            if (vm == null || !ModelState.IsValid)
             {
-                return NotFound(new { message = $"Data dengan ID {id} tidak ditemukan." });
+                return BadRequest(new { message = "Data tidak valid." });
             }
-            _context.Titles.Remove(record);
-            await _context.SaveChangesAsync();
-            return Ok(new { message = "Data berhasil dihapus." });
+
+            try
+            {
+                //Ambil User ID dari JWT Claims
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
+
+                if (string.IsNullOrEmpty(EmailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                // **Cari Data Pasien**
+                var data = _applicationDbContext.Titles.Find(id);
+                if (data == null)
+                {
+                    return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                // **Update Data Pasien**
+                data.NamaTitle = vm.NamaTitle;
+
+                data.UpdateBy = UserActiveId;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
+
+                _applicationDbContext.Titles.Update(data);
+                _applicationDbContext.SaveChanges();
+
+                return Ok(new
+                {
+                    message = "Update Data Berhasil || 200 OK",
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteTitle(Guid id)
+        {
+            try
+            {
+                //Ambil User ID dari JWT Claims
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
+
+                if (string.IsNullOrEmpty(EmailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                // **Cari Data Pasien**
+                var data = _applicationDbContext.Titles.Find(id);
+                if (data == null)
+                {
+                    return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                // **Soft Delete (Tandai Data sebagai Terhapus)**
+                data.DeleteBy = UserActiveId;
+                data.DeleteDateTime = DateTimeOffset.UtcNow;
+                data.IsDelete = true;
+
+                _applicationDbContext.Titles.Update(data);
+                _applicationDbContext.SaveChanges();
+
+                return Ok(new { message = "Data berhasil dihapus..." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
+        [HttpGet("paged")]
+        public IActionResult PagedTitle(
+        int page = 1,
+        int perPage = 10,
+        string? search = null,
+        string? orderBy = "CreateDateTime",
+        string? sortDirection = "desc",
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+        DateTime? startDate = null,
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+        DateTime? endDate = null,
+        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        {
+            var query = from a in _applicationDbContext.Titles
+                        join u in _applicationDbContext.UserActives
+                        on a.CreateBy equals u.UserActiveId
+                        where a.IsDelete == false
+                        select new
+                        {
+                            CreateDateTime = a.CreateDateTime,
+                            CreateBy = a.CreateBy,
+                            CreateByName = u.FullName,
+                            TitleId = a.TitleId,
+                            KodeTitle = a.KodeTitle,
+                            NamaTitle = a.NamaTitle,
+                        };
+
+            // Filter berdasarkan search
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(u =>
+                    u.KodeTitle.Contains(search) || u.NamaTitle.Contains(search)
+                );
+            }
+
+            // Filter berdasarkan daterange jika keduanya memiliki nilai
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                query = query.Where(u =>
+                    u.CreateDateTime.Date >= startDate.Value.Date &&
+                    u.CreateDateTime.Date <= endDate.Value.Date
+                );
+            }
+
+            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll)
+            if (periode.HasValue)
+            {
+                DateTime today = DateTime.UtcNow.Date;
+
+                switch (periode)
+                {
+                    case PeriodeFilter.Today:
+                        query = query.Where(u => u.CreateDateTime.Date == today);
+                        break;
+                    case PeriodeFilter.ThisWeek:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
+                            u.CreateDateTime.Date <= today
+                        );
+                        break;
+                    case PeriodeFilter.LastWeek:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
+                            u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek))
+                        );
+                        break;
+                    case PeriodeFilter.ThisMonth:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Month == today.Month &&
+                            u.CreateDateTime.Year == today.Year
+                        );
+                        break;
+                    case PeriodeFilter.LastMonth:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Month == today.Month - 1 &&
+                            u.CreateDateTime.Year == today.Year
+                        );
+                        break;
+                    case PeriodeFilter.ThisYear:
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
+                        break;
+                    case PeriodeFilter.LastYear:
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
+                        break;
+                    case PeriodeFilter.Last3Months:
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
+                        break;
+                    case PeriodeFilter.Last6Months:
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
+                        break;
+                }
+            }
+
+            // Sorting Data dengan cara yang lebih aman
+            query = sortDirection?.ToLower() == "desc"
+                ? orderBy switch
+                {
+                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
+                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
+                    "KodeTitle" => query.OrderByDescending(u => u.KodeTitle),
+                    "NamaTitle" => query.OrderByDescending(u => u.NamaTitle),
+                    _ => query.OrderByDescending(u => u.CreateDateTime)
+                }
+                : orderBy switch
+                {
+                    "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
+                    "CreateByName" => query.OrderBy(u => u.CreateByName),
+                    "KodeTitle" => query.OrderBy(u => u.KodeTitle),
+                    "NamaTitle" => query.OrderBy(u => u.NamaTitle),
+                    _ => query.OrderBy(u => u.CreateDateTime)
+                };
+
+            // Pagination
+            var totalRows = query.Count();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
+
+            if (rows.Count == 0 && page > totalPages)
+            {
+                return NotFound(new { message = "Page not found." });
+            }
+
+            return Ok(new
+            {
+                status = "success",
+                message = "Data retrieved successfully",
+                data = new
+                {
+                    Rows = rows,
+                    TotalRows = totalRows,
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalPages = totalPages
+                }
+            });
         }
     }
 }

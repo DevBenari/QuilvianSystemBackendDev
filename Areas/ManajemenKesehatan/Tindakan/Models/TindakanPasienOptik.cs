@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Tindakan.Models
 {
-    [Table("TndPasienOptik", Schema = "dbo")]
+    [Table("TndPasienOptik", Schema = "public")]
     public class TindakanPasienOptik : UserActivity
     {
         [Key]

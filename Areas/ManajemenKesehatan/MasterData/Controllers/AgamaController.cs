@@ -7,7 +7,6 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using Microsoft.AspNetCore.Cors;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controllers;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using Swashbuckle.AspNetCore.Annotations;
@@ -26,7 +25,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<PendaftaranPasienBaruController> _logger;
+        private readonly ILogger<AgamaController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
         public AgamaController
@@ -35,7 +34,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
 
-            ILogger<PendaftaranPasienBaruController> logger,
+            ILogger<AgamaController> logger,
             IWebHostEnvironment webHostEnvironment
         )
         {
@@ -47,18 +46,54 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAllAgama()
+        public async Task<IActionResult> GetAllAgama(int page = 1, int perPage = 10)
         {
-            var listdata = _applicationDbContext.Agamas.ToList();
-            if (listdata == null || !listdata.Any())
+            // Validasi agar page dan perPage minimal bernilai 1
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
+
+            // Query data
+            var query = from a in _applicationDbContext.Agamas
+                        join u in _applicationDbContext.UserActives
+                        on a.CreateBy equals u.UserActiveId
+                        where a.IsDelete == false
+                        select new
+                        {
+                            CreateDateTime = a.CreateDateTime,
+                            CreateBy = a.CreateBy,
+                            CreateByName = u.FullName,
+                            AgamaId = a.AgamaId,
+                            KodeAgama = a.KodeAgama,
+                            NamaAgama = a.NamaAgama,
+                        };
+
+            // Hitung total data sebelum paginasi
+            var totalRows = query.Count();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            // Ambil data sesuai paging
+            var listdata = query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToList();
+
+            if (!listdata.Any())
             {
-                return NotFound(new { message = "Belum ada data. || 404 Not Found" });
+                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
             }
 
+            // Return hasil dengan paging info
             return Ok(new
             {
                 message = "Berhasil || 200 OK",
-                data = listdata
+                data = listdata,
+                pagination = new
+                {
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalRows = totalRows,
+                    TotalPages = totalPages
+                }
             });
         }
 
@@ -79,7 +114,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateAgama([FromForm] AgamaViewModel vm)
+        public async Task<IActionResult> CreateAgama([FromBody] AgamaViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -98,12 +133,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var dateNow = DateTimeOffset.Now;
+                var dateNow = DateTimeOffset.UtcNow;
                 var setDateNow = dateNow.ToString("yyMMdd");
 
                 // Ambil data terakhir untuk hari ini (tanpa ToString di query)
                 var lastCode = _applicationDbContext.Agamas
-                    .Where(d => d.CreateDateTime.Date == dateNow.Date)
+                    .Where(d => d.CreateDateTime.Date == dateNow.UtcDateTime.Date)
                     .OrderByDescending(k => k.KodeAgama)
                     .FirstOrDefault();
 
@@ -135,23 +170,31 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
                 }
 
-                // Simpan Data
-                var data = new Agama
+                // Validate ModelState
+                if (ModelState.IsValid)
                 {
-                    AgamaId = Guid.NewGuid(),
-                    CreateDateTime = DateTimeOffset.Now,
-                    CreateBy = UserActiveId,                    
-                    KodeAgama = kode,
-                    NamaAgama = vm.NamaAgama                    
-                };
+                    // Simpan Data
+                    var data = new Agama
+                    {
+                        AgamaId = Guid.NewGuid(),
+                        CreateDateTime = DateTimeOffset.UtcNow,
+                        CreateBy = UserActiveId,
+                        KodeAgama = kode,
+                        NamaAgama = vm.NamaAgama
+                    };
 
-                _applicationDbContext.Agamas.Add(data);
-                _applicationDbContext.SaveChanges();
+                    _applicationDbContext.Agamas.Add(data);
+                    _applicationDbContext.SaveChanges();
 
-                return Created("", new
+                    return Created("", new
+                    {
+                        message = "Tambah Data Berhasil || 201 Created",
+                    });
+                }
+                else
                 {
-                    message = "Tambah Data Berhasil || 201 Created",                    
-                });
+                    return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
+                }
             }
             catch (Exception ex)
             {
@@ -160,8 +203,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPut("{id}")]
-        [Consumes("multipart/form-data")]
-        public async Task<IActionResult> UpdateAgama(Guid id, [FromForm] AgamaViewModel vm)
+        public async Task<IActionResult> UpdateAgama(Guid id, [FromBody] AgamaViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -180,18 +222,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                // **Cari Data Pasien**
+                // **Cari Data**
                 var data = _applicationDbContext.Agamas.Find(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
-                // **Update Data Pasien**
+                // **Update Data**
                 data.NamaAgama = vm.NamaAgama;
 
                 data.UpdateBy = UserActiveId;
-                data.UpdateDateTime = DateTimeOffset.Now;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
 
                 _applicationDbContext.Agamas.Update(data);
                 _applicationDbContext.SaveChanges();
@@ -222,7 +264,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                // **Cari Data Pasien**
+                // **Cari Data**
                 var data = _applicationDbContext.Agamas.Find(id);
                 if (data == null)
                 {
@@ -231,7 +273,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // **Soft Delete (Tandai Data sebagai Terhapus)**
                 data.DeleteBy = UserActiveId;
-                data.DeleteDateTime = DateTimeOffset.Now;
+                data.DeleteDateTime = DateTimeOffset.UtcNow;
                 data.IsDelete = true;
 
                 _applicationDbContext.Agamas.Update(data);
@@ -246,46 +288,50 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet("paged")]
-        public IActionResult PegedAgama(
+        public IActionResult PagedAgama(
         int page = 1,
         int perPage = 10,
         string? search = null,
         string? orderBy = "CreateDateTime",
-        string? sortDirection = "asc",
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ")]
+        string? sortDirection = "desc",
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
         DateTime? startDate = null,
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ")]
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
         DateTime? endDate = null,
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
-            if (startDate.HasValue && endDate.HasValue && startDate > endDate)
-            {
-                return BadRequest(new { message = "StartDate tidak boleh lebih besar dari EndDate." });
-            }
+            var query = from a in _applicationDbContext.Agamas
+                        join u in _applicationDbContext.UserActives
+                        on a.CreateBy equals u.UserActiveId
+                        where a.IsDelete == false
+                        select new
+                        {
+                            CreateDateTime = a.CreateDateTime,
+                            CreateBy = a.CreateBy,
+                            CreateByName = u.FullName,
+                            AgamaId = a.AgamaId,
+                            KodeAgama = a.KodeAgama,
+                            NamaAgama = a.NamaAgama,
+                        };
 
-            // Jika tidak menggunakan daterange, gunakan periode filter
-            if (!startDate.HasValue && !endDate.HasValue && periode == null)
-            {
-                return BadRequest(new { message = "Harap pilih periode atau masukkan rentang tanggal yang valid." });
-            }
-
-            var query = _applicationDbContext.Agamas.AsQueryable();
-
-            // 🔍 Filter berdasarkan search
+            // Filter berdasarkan search
             if (!string.IsNullOrWhiteSpace(search))
             {
-                query = query.Where(u => u.KodeAgama.Contains(search) ||
-                                         u.NamaAgama.Contains(search));
+                query = query.Where(u =>
+                    u.KodeAgama.Contains(search) || u.NamaAgama.Contains(search)
+                );
             }
 
-            // 📅 Filter berdasarkan daterange
+            // Filter berdasarkan daterange jika keduanya memiliki nilai
             if (startDate.HasValue && endDate.HasValue)
             {
-                query = query.Where(u => u.CreateDateTime.Date >= startDate.Value.Date &&
-                                         u.CreateDateTime.Date <= endDate.Value.Date);
+                query = query.Where(u =>
+                    u.CreateDateTime.Date >= startDate.Value.Date &&
+                    u.CreateDateTime.Date <= endDate.Value.Date
+                );
             }
 
-            // 📆 Filter berdasarkan periode (Hari Ini, Minggu Ini, dll)
+            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll)
             if (periode.HasValue)
             {
                 DateTime today = DateTime.UtcNow.Date;
@@ -296,20 +342,28 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         query = query.Where(u => u.CreateDateTime.Date == today);
                         break;
                     case PeriodeFilter.ThisWeek:
-                        query = query.Where(u => u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
-                                                 u.CreateDateTime.Date <= today);
+                        query = query.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
+                            u.CreateDateTime.Date <= today
+                        );
                         break;
                     case PeriodeFilter.LastWeek:
-                        query = query.Where(u => u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                                                 u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek)));
+                        query = query.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
+                            u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek))
+                        );
                         break;
                     case PeriodeFilter.ThisMonth:
-                        query = query.Where(u => u.CreateDateTime.Month == today.Month &&
-                                                 u.CreateDateTime.Year == today.Year);
+                        query = query.Where(u =>
+                            u.CreateDateTime.Month == today.Month &&
+                            u.CreateDateTime.Year == today.Year
+                        );
                         break;
                     case PeriodeFilter.LastMonth:
-                        query = query.Where(u => u.CreateDateTime.Month == today.Month - 1 &&
-                                                 u.CreateDateTime.Year == today.Year);
+                        query = query.Where(u =>
+                            u.CreateDateTime.Month == today.Month - 1 &&
+                            u.CreateDateTime.Year == today.Year
+                        );
                         break;
                     case PeriodeFilter.ThisYear:
                         query = query.Where(u => u.CreateDateTime.Year == today.Year);
@@ -326,13 +380,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
             }
 
-            // Sorting Data
-            if (!string.IsNullOrEmpty(orderBy))
-            {
-                query = sortDirection?.ToLower() == "desc"
-                    ? query.OrderByDescending(e => EF.Property<object>(e, orderBy))
-                    : query.OrderBy(e => EF.Property<object>(e, orderBy));
-            }
+            // Sorting Data dengan cara yang lebih aman
+            query = sortDirection?.ToLower() == "desc"
+                ? orderBy switch
+                {
+                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
+                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
+                    "KodeAgama" => query.OrderByDescending(u => u.KodeAgama),
+                    "NamaAgama" => query.OrderByDescending(u => u.NamaAgama),
+                    _ => query.OrderByDescending(u => u.CreateDateTime)
+                }
+                : orderBy switch
+                {
+                    "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
+                    "CreateByName" => query.OrderBy(u => u.CreateByName),
+                    "KodeAgama" => query.OrderBy(u => u.KodeAgama),
+                    "NamaAgama" => query.OrderBy(u => u.NamaAgama),
+                    _ => query.OrderBy(u => u.CreateDateTime)
+                };
 
             // Pagination
             var totalRows = query.Count();

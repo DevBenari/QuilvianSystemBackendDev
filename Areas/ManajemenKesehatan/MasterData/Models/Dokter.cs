@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
 {
-    [Table("MstDokter", Schema = "dbo")]
+    [Table("MstDokter", Schema = "public")]
     public class Dokter : UserActivity
     {
         [Key]
@@ -15,7 +15,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string Str { get; set; }
         public DateTime? TglSip { get; set; }
         public DateTime? TglStr { get; set; }
-        public string PanggilDokter { get; set; }
         public string Nik { get; set; }
+        public string Email { get; set; }
+        public string Nohp { get; set; }
+        public string Alamat { get; set; }
+        public bool? IsAsuransi { get; set; }
+
+        public string? FotoDokter { get; set; }
+        public string? JudulFileFoto { get; set; }
+        public string? FotoPath { get; set; }
+
+
+        public string? ImageBytes { get; set; }
+
+        //relasi ke dokter poli
+        public ICollection<DokterPoli> DokterPolis { get; set; }
+
     }
 }

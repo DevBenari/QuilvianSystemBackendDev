@@ -3,12 +3,12 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
 {
-    [Table("AspNetRoleUser", Schema = "dbo")]
+    [Table("AspNetUserRole", Schema = "public")]
     public class RoleUser
     {
         [Key]
-        public Guid RoleUserId { get; set; }
-        public Guid DepartemenId { get; set; }
-        public Guid PositionId { get; set; }
+        public Guid Id { get; set; }
+        public string RoleId { get; set; }
+        public string PositionId { get; set; }
     }
 }

@@ -1,205 +1,428 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient.Server;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
+using Swashbuckle.AspNetCore.Annotations;
+using System.Security.Claims;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
+    [EnableCors("AllowSpecific")]
     public class IdentitasController : Controller
     {
-        private readonly ApplicationDbContext _context;
+        private readonly ApplicationDbContext _applicationDbContext;
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly SignInManager<ApplicationUser> _signInManager;
 
-        public IdentitasController(ApplicationDbContext context)
+        private readonly ILogger<IdentitasController> _logger;
+        private readonly IWebHostEnvironment _webHostEnvironment;
+
+        public IdentitasController
+        (
+            ApplicationDbContext context,
+            UserManager<ApplicationUser> userManager,
+            SignInManager<ApplicationUser> signInManager,
+
+            ILogger<IdentitasController> logger,
+            IWebHostEnvironment webHostEnvironment
+        )
         {
-            _context = context;
+            _applicationDbContext = context;
+            _userManager = userManager;
+            _signInManager = signInManager;
+            _logger = logger;
+            _webHostEnvironment = webHostEnvironment;
         }
 
-        //get : api/identitas
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAllIdentitas(int page = 1, int perPage = 10)
         {
-            var records = await _context.Identitass.ToListAsync();
-            if (records == null || !records.Any())
+            // Validasi agar page dan perPage minimal bernilai 1
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
+
+            // Query data
+            var query = from a in _applicationDbContext.Identitass
+                        join u in _applicationDbContext.UserActives
+                        on a.CreateBy equals u.UserActiveId
+                        where a.IsDelete == false
+                        select new
+                        {
+                            CreateDateTime = a.CreateDateTime,
+                            CreateBy = a.CreateBy,
+                            CreateByName = u.FullName,
+                            IdentitasId = a.IdentitasId,
+                            KodeIdentitas = a.KodeIdentitas,
+                            JenisIdentitas = a.JenisIdentitas,
+                        };
+
+            // Hitung total data sebelum paginasi
+            var totalRows = query.Count();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            // Ambil data sesuai paging
+            var listdata = query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToList();
+
+            if (!listdata.Any())
             {
-                return NotFound(new { message = "Tidak ada data ditemukan." });
+                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
             }
-            return Ok(new { message = "Data ditemukan.", data = records });
-        }
 
-        //get : api/identitas/{id}
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(Guid id)
-        {
-            var record = await _context.Identitass.FindAsync(id);
-            if (record == null)
+            // Return hasil dengan paging info
+            return Ok(new
             {
-                return NotFound(new { message = $"Data dengan ID {id} tidak ditemukan." });
-            }
-            return Ok(new { message = "Data ditemukan.", data = record });
-        }
-
-        //post : api/identitas
-        [HttpPost]
-        public async Task<IActionResult> Create([FromBody] IdentitasViewModel model)
-        {
-            var dateNow = DateTimeOffset.Now;
-            var day = dateNow.Day;
-            var month = dateNow.Month;
-            var year = dateNow.Year;
-            var setDateNow = DateTimeOffset.Now.ToString("yyMMdd");
-
-            // Generate UserActiveCode
-            var lastCode = _context.Identitass
-                .Where(d => d.CreateDateTime.Day == day && d.CreateDateTime.Month == month && d.CreateDateTime.Year == year)
-                .OrderByDescending(d => d.CreateDateTime)
-                .FirstOrDefault();
-
-            if (lastCode == null)
-            { 
-                model.KdIdentitas = "IDT" + setDateNow + "0001";
-            }
-            else
-            {
-                var lastCodeTrim = lastCode.KdIdentitas.Substring(3, 6);
-
-                if (lastCodeTrim != setDateNow)
+                message = "Berhasil || 200 OK",
+                data = listdata,
+                pagination = new
                 {
-                    model.KdIdentitas = "IDT" + setDateNow + "0001";
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalRows = totalRows,
+                    TotalPages = totalPages
+                }
+            });
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetIdentitasById(Guid id)
+        {
+            var listdata = _applicationDbContext.Identitass.Find(id);
+            if (listdata == null)
+            {
+                return NotFound(new { message = "Data tidak ditemukan." });
+            }
+
+            return Ok(new
+            {
+                message = "Ditemukan || 200 OK",
+                data = listdata
+            });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CreateIdentitas([FromBody] IdentitasViewModel vm)
+        {
+            if (vm == null || !ModelState.IsValid)
+            {
+                return BadRequest(new { message = "Data tidak valid." });
+            }
+
+            try
+            {
+                // **Ambil User ID dari JWT Claims**
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
+
+                if (string.IsNullOrEmpty(EmailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                var dateNow = DateTimeOffset.UtcNow;
+                var setDateNow = dateNow.ToString("yyMMdd");
+
+                // Ambil data terakhir untuk hari ini (tanpa ToString di query)
+                var lastCode = _applicationDbContext.Identitass
+                    .Where(d => d.CreateDateTime.Date == dateNow.UtcDateTime.Date)
+                    .OrderByDescending(k => k.KodeIdentitas)
+                    .FirstOrDefault();
+
+                string kode;
+                if (lastCode == null)
+                {
+                    kode = $"IDT{setDateNow}0001";
                 }
                 else
                 {
-                    model.KdIdentitas = "IDT" + setDateNow +
-                        (Convert.ToInt32(lastCode.KdIdentitas.Substring(9)) + 1).ToString("D4");
-                }
-            }
+                    var lastCodeTrim = lastCode.KodeIdentitas.Substring(3, 6);
 
-            //validate model
-            if (ModelState.IsValid)
-            {
-                var identitas = new Identitas
-                {
-                    IdentitasId = Guid.NewGuid(),
-                    KdIdentitas = model.KdIdentitas,
-                    JenisIdentitas = model.JenisIdentitas,
-                    CreateDateTime = DateTimeOffset.Now,
-                    CreateBy = Guid.NewGuid(),
-                    UpdateDateTime = DateTimeOffset.Now,
-                    UpdateBy = Guid.NewGuid(),
-                    DeleteDateTime = DateTimeOffset.Now,
-                    DeleteBy = Guid.NewGuid(),
-                    IsDelete = false
-                };
-
-                var checkDuplicate = _context.Identitass.Where(c => c.KdIdentitas == model.KdIdentitas && c.JenisIdentitas == model.JenisIdentitas).ToList();
-
-                if (checkDuplicate.Count == 0)
-                {
-                    var result = _context.Identitass.Where(c => c.KdIdentitas == model.KdIdentitas && c.JenisIdentitas == model.JenisIdentitas).FirstOrDefault();
-                    if (result == null)
+                    if (lastCodeTrim != setDateNow)
                     {
-                        _context.Identitass.Add(identitas);
-                        _context.SaveChanges();
-                        return CreatedAtAction(nameof(GetAll), new { message = "Tambah Data Berhasil || 201 Created" }, model);
+                        kode = $"IDT{setDateNow}0001";
                     }
                     else
                     {
-                        return BadRequest(new { message = "Data tidak dapat di input !!! || 400 Bad Request" });
+                        kode = $"IDT{setDateNow}" + (Convert.ToInt32(lastCode.KodeIdentitas.Substring(9)) + 1).ToString("D4");
                     }
+                }
+
+                // Cek Duplikasi
+                var isDuplicate = _applicationDbContext.Identitass
+                    .Any(c => c.KodeIdentitas == kode && c.JenisIdentitas == vm.JenisIdentitas);
+
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
+                }
+
+                // Validate ModelState
+                if (ModelState.IsValid)
+                {
+                    // Simpan Data
+                    var data = new Identitas
+                    {
+                        IdentitasId = Guid.NewGuid(),
+                        CreateDateTime = DateTimeOffset.UtcNow,
+                        CreateBy = UserActiveId,
+                        KodeIdentitas = kode,
+                        JenisIdentitas = vm.JenisIdentitas
+                    };
+
+                    _applicationDbContext.Identitass.Add(data);
+                    _applicationDbContext.SaveChanges();
+
+                    return Created("", new
+                    {
+                        message = "Tambah Data Berhasil || 201 Created",
+                    });
                 }
                 else
                 {
-                    return Conflict(new { message = "Terdapat duplikasi data !!! || 409 Conflict Data" });
+                    return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
                 }
-            }
-            else
-            {
-                return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
-            }
-
-        }
-
-        //put : api/identitas/{id}
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] IdentitasViewModel model)
-        {
-            //cek apakah data ada di database
-            var existingIdentitas = await _context.Identitass.FindAsync(id);
-            if (existingIdentitas == null)
-            {
-                return NotFound(new { message = "Data tidak ditemukan. || 404 Not Found " });
-            }
-
-            //cek duplikat data
-            var checkDuplicate = _context.Identitass.Where
-                (c => c.KdIdentitas == model.KdIdentitas && c.JenisIdentitas == model.JenisIdentitas
-                && c.IdentitasId != id).FirstOrDefault();
-            if (checkDuplicate != null)
-            {
-                return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
-            }
-
-            existingIdentitas.JenisIdentitas = model.JenisIdentitas;
-
-
-
-            existingIdentitas.UpdateDateTime = DateTimeOffset.Now;
-            existingIdentitas.UpdateBy = Guid.NewGuid();  // Sesuaikan dengan ID pengguna yang mengupdate
-
-            // Simpan perubahan ke database
-            try
-            {
-                _context.Identitass.Update(existingIdentitas);
-                await _context.SaveChangesAsync();
-
-                return CreatedAtAction(nameof(GetAll), new { message = "Tambah Data Berhasil || 201 Created" }, model);
             }
             catch (Exception ex)
             {
-                // Tangani kesalahan jika ada
-                return StatusCode(500, new { message = "Terjadi kesalahan di server.", error = ex.Message });
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
 
-        //delete : api/identitas/{id}
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateIdentitas(Guid id, [FromBody] IdentitasViewModel vm)
+        {
+            if (vm == null || !ModelState.IsValid)
+            {
+                return BadRequest(new { message = "Data tidak valid." });
+            }
+
+            try
+            {
+                //Ambil User ID dari JWT Claims
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
+
+                if (string.IsNullOrEmpty(EmailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                // **Cari Data Pasien**
+                var data = _applicationDbContext.Identitass.Find(id);
+                if (data == null)
+                {
+                    return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                // **Update Data Pasien**
+                data.JenisIdentitas = vm.JenisIdentitas;
+
+                data.UpdateBy = UserActiveId;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
+
+                _applicationDbContext.Identitass.Update(data);
+                _applicationDbContext.SaveChanges();
+
+                return Ok(new
+                {
+                    message = "Update Data Berhasil || 200 OK",
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
         [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(Guid id)
+        public async Task<IActionResult> DeleteIdentitas(Guid id)
         {
-            var record = await _context.Identitass.FindAsync(id);
-            if (record == null)
+            try
             {
-                return NotFound(new { message = $"Data dengan ID {id} tidak ditemukan." });
+                //Ambil User ID dari JWT Claims
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
+
+                if (string.IsNullOrEmpty(EmailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                // **Cari Data Pasien**
+                var data = _applicationDbContext.Identitass.Find(id);
+                if (data == null)
+                {
+                    return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                // **Soft Delete (Tandai Data sebagai Terhapus)**
+                data.DeleteBy = UserActiveId;
+                data.DeleteDateTime = DateTimeOffset.UtcNow;
+                data.IsDelete = true;
+
+                _applicationDbContext.Identitass.Update(data);
+                _applicationDbContext.SaveChanges();
+
+                return Ok(new { message = "Data berhasil dihapus..." });
             }
-            _context.Identitass.Remove(record);
-            await _context.SaveChangesAsync();
-            return Ok(new { message = "Data berhasil dihapus." });
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
         }
 
-        //fungsi search
-        [HttpGet("Search")]
-        public async Task<IActionResult> Search([FromQuery] string keyword)
+        [HttpGet("paged")]
+        public IActionResult PagedIdentitas(
+        int page = 1,
+        int perPage = 10,
+        string? search = null,
+        string? orderBy = "CreateDateTime",
+        string? sortDirection = "desc",
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+        DateTime? startDate = null,
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+        DateTime? endDate = null,
+        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
-            // Validasi input keyword
-            if (string.IsNullOrWhiteSpace(keyword))
+            var query = from a in _applicationDbContext.Identitass
+                        join u in _applicationDbContext.UserActives
+                        on a.CreateBy equals u.UserActiveId
+                        where a.IsDelete == false
+                        select new
+                        {
+                            CreateDateTime = a.CreateDateTime,
+                            CreateBy = a.CreateBy,
+                            CreateByName = u.FullName,
+                            IdentitasId = a.IdentitasId,
+                            KodeIdentitas = a.KodeIdentitas,
+                            JenisIdentitas = a.JenisIdentitas,
+                        };
+
+            // Filter berdasarkan search
+            if (!string.IsNullOrWhiteSpace(search))
             {
-                return BadRequest(new { message = "Keyword tidak boleh kosong. || 400 Bad Request" });
+                query = query.Where(u =>
+                    u.KodeIdentitas.Contains(search) || u.JenisIdentitas.Contains(search)
+                );
             }
 
-            // Lakukan pencarian di database (case-insensitive)
-            var searchResults = await _context.Identitass
-                .Where(n => EF.Functions.Like(n.JenisIdentitas, $"%{keyword}%"))
-                .ToListAsync();
-
-            // Jika tidak ada data ditemukan
-            if (!searchResults.Any())
+            // Filter berdasarkan daterange jika keduanya memiliki nilai
+            if (startDate.HasValue && endDate.HasValue)
             {
-                return NotFound(new { message = "Data tidak ditemukan. || 404 Not Found" });
+                query = query.Where(u =>
+                    u.CreateDateTime.Date >= startDate.Value.Date &&
+                    u.CreateDateTime.Date <= endDate.Value.Date
+                );
             }
 
-            // Mengembalikan hasil pencarian
-            return Ok(new { message = "Data ditemukan.", data = searchResults });
+            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll)
+            if (periode.HasValue)
+            {
+                DateTime today = DateTime.UtcNow.Date;
+
+                switch (periode)
+                {
+                    case PeriodeFilter.Today:
+                        query = query.Where(u => u.CreateDateTime.Date == today);
+                        break;
+                    case PeriodeFilter.ThisWeek:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
+                            u.CreateDateTime.Date <= today
+                        );
+                        break;
+                    case PeriodeFilter.LastWeek:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
+                            u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek))
+                        );
+                        break;
+                    case PeriodeFilter.ThisMonth:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Month == today.Month &&
+                            u.CreateDateTime.Year == today.Year
+                        );
+                        break;
+                    case PeriodeFilter.LastMonth:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Month == today.Month - 1 &&
+                            u.CreateDateTime.Year == today.Year
+                        );
+                        break;
+                    case PeriodeFilter.ThisYear:
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
+                        break;
+                    case PeriodeFilter.LastYear:
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
+                        break;
+                    case PeriodeFilter.Last3Months:
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
+                        break;
+                    case PeriodeFilter.Last6Months:
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
+                        break;
+                }
+            }
+
+            // Sorting Data dengan cara yang lebih aman
+            query = sortDirection?.ToLower() == "desc"
+                ? orderBy switch
+                {
+                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
+                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
+                    "KodeIdentitas" => query.OrderByDescending(u => u.KodeIdentitas),
+                    "JenisIdentitas" => query.OrderByDescending(u => u.JenisIdentitas),
+                    _ => query.OrderByDescending(u => u.CreateDateTime)
+                }
+                : orderBy switch
+                {
+                    "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
+                    "CreateByName" => query.OrderBy(u => u.CreateByName),
+                    "KodeIdentitas" => query.OrderBy(u => u.KodeIdentitas),
+                    "JenisIdentitas" => query.OrderBy(u => u.JenisIdentitas),
+                    _ => query.OrderBy(u => u.CreateDateTime)
+                };
+
+            // Pagination
+            var totalRows = query.Count();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
+
+            if (rows.Count == 0 && page > totalPages)
+            {
+                return NotFound(new { message = "Page not found." });
+            }
+
+            return Ok(new
+            {
+                status = "success",
+                message = "Data retrieved successfully",
+                data = new
+                {
+                    Rows = rows,
+                    TotalRows = totalRows,
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalPages = totalPages
+                }
+            });
         }
     }
 }

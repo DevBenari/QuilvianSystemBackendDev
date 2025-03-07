@@ -21,4 +21,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? Layanan { get; set; }
         public ICollection<Position> Positions { get; set; }
     }
+
+    [Table("MstPosition", Schema = "public")]
+    public class Position : UserActivity
+    {
+        [Key]
+        public Guid PositionId { get; set; }
+        public string PositionCode { get; set; }
+        public string PositionName { get; set; }
+        public Guid? DepartementId { get; set; }
+
+        //Relationship
+        [ForeignKey("DepartementId")]
+        public Departement? Departement { get; set; }
+    }
 }

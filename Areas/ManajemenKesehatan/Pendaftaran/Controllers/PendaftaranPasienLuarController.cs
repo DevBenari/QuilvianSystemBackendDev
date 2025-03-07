@@ -51,11 +51,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
         [HttpPost("Registrasi")]
         public async Task<ActionResult<PendaftaranPasien>> PostPendaftaranPasienLuar(PendaftaranPasien pendaftaranPasien)
         {
-            var dateNow = DateTimeOffset.Now;
+            var dateNow = DateTimeOffset.UtcNow;
             var day = dateNow.Day;
             var month = dateNow.Month;
             var year = dateNow.Year;
-            var setDateNow = DateTimeOffset.Now.ToString("yyMMdd");
+            var setDateNow = DateTimeOffset.UtcNow.ToString("yyMMdd");
 
             var lastCode = _applicationDbContext.PendaftaranPasiens
                                 .Where(d => d.CreateDateTime.Day == day && d.CreateDateTime.Month == month && d.CreateDateTime.Year == year)
@@ -110,11 +110,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
         [HttpPost("Baru")]
         public async Task<ActionResult<PendaftaranPasienBaru>> PostPendaftaranPasienBaruLuar(PendaftaranPasienBaru pendaftaranPasienBaru)
         {
-            var dateNow = DateTimeOffset.Now;
+            var dateNow = DateTimeOffset.UtcNow;
             var day = dateNow.Day;
             var month = dateNow.Month;
             var year = dateNow.Year;
-            var setDateNow = DateTimeOffset.Now.ToString("yyMMdd");
+            var setDateNow = DateTimeOffset.UtcNow.ToString("yyMMdd");
 
             var lastCode = _applicationDbContext.PendaftaranPasienBarus
                                 .Where(d => d.CreateDateTime.Day == day && d.CreateDateTime.Month == month && d.CreateDateTime.Year == year)
