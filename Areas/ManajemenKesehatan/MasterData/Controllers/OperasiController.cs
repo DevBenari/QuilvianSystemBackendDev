@@ -129,7 +129,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
         // POST: api/Operasi
         [HttpPost]
-        public async Task<IActionResult> Create([FromForm] OperasiViewModel vm)
+        public async Task<IActionResult> Create([FromBody] OperasiViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -235,7 +235,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
         // PUT: api/operasi/{id}
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromForm] OperasiViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] OperasiViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {

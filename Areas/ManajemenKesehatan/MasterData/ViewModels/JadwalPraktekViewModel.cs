@@ -14,6 +14,5 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
         public string HariPraktek { get; set; }
         public DateTime? JamMulai { get; set; }
         public DateTime? JamBerakhir { get; set; }
-        public int MaxPasien { get; set; }
     }
 }

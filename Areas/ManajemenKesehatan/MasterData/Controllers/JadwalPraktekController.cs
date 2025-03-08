@@ -71,7 +71,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             HariPraktek = a.HariPraktek,
                             JamMulai = a.JamMulai,
                             JamBerakhir = a.JamBerakhir,
-                            MaxPasien = a.MaxPasien
                         };
 
             // Hitung total data sebelum paginasi
@@ -195,7 +194,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         HariPraktek = vm.HariPraktek,
                         JamMulai = vm.JamMulai,
                         JamBerakhir = vm.JamBerakhir,
-                        MaxPasien = vm.MaxPasien,
                         CreateBy = UserActiveId,
                         CreateDateTime = DateTimeOffset.UtcNow
 
@@ -262,7 +260,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     data.HariPraktek = vm.HariPraktek;
                     data.JamMulai = vm.JamMulai;
                     data.JamBerakhir = vm.JamBerakhir;
-                    data.MaxPasien = vm.MaxPasien;
                     data.UpdateBy = UserActiveId;
                     data.UpdateDateTime = DateTimeOffset.UtcNow;
 
@@ -355,7 +352,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             HariPraktek = a.HariPraktek,
                             JamMulai = a.JamMulai,
                             JamBerakhir = a.JamBerakhir,
-                            MaxPasien = a.MaxPasien
                         };
 
             // Filter berdasarkan search
