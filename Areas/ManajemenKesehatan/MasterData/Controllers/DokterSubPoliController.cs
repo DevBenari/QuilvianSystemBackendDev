@@ -1,41 +1,37 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using QuilvianSystemBackendDev.Models;
-using QuilvianSystemBackendDev.Repositories;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewModels;
-using System.Security.Claims;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
-using Swashbuckle.AspNetCore.Annotations;
-using System.Linq;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
-
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Models;
+using QuilvianSystemBackendDev.Repositories;
+using Swashbuckle.AspNetCore.Annotations;
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class SubPoliController : Controller
+    public class DokterSubPoliController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<SubPoliController> _logger;
+        private readonly ILogger<DokterSubPoliController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public SubPoliController
-            (ApplicationDbContext applicationDbContext,
-            UserManager<ApplicationUser> userManager,
-            SignInManager<ApplicationUser> signInManager,
-            ILogger<SubPoliController> logger,
+        public DokterSubPoliController
+            (ApplicationDbContext applicationDbContext, 
+            UserManager<ApplicationUser> userManager, 
+            SignInManager<ApplicationUser> signInManager, 
+            ILogger<DokterSubPoliController> logger, 
             IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
@@ -45,16 +41,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             _webHostEnvironment = webHostEnvironment;
         }
 
-
         [HttpGet]
-        public async Task<IActionResult> GetAllSubPoli(int page = 1, int perPage = 10)
+        public async Task<IActionResult> GetAllDokterSubPoli(int page = 1, int perPage = 10)
         {
             // Validasi agar page dan perPage minimal bernilai 1
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = from a in _applicationDbContext.SubPolis
+            var query = from a in _applicationDbContext.DokterSubPolis
                         join u in _applicationDbContext.UserActives
                         on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
@@ -63,20 +58,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateDateTime = a.CreateDateTime,
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
+                            KodeDokterSubPoli = a.KodeDokterSubPoli,
+                            NamaSubPoli = a.SubPoli.NamaSubPoli,
+                            DokterId = a.DokterId,
+                            NamaDokter = a.NamaDokter,
                             SubPoliId = a.SubPoliId,
-                            KodeSubPoli = a.KodeSubPoli,
-                            NamaSubPoli = a.NamaSubPoli,
-                            KepalaSubPoli = a.KepalaSubPoli,
-                            Lokasi = a.Lokasi,
-                            Telepon = a.Telepon,
-                            Email = a.Email,
-                            JamBuka = a.JamBuka,
-                            JamTutup = a.JamTutup,
-                            LayananSubPoli = a.LayananSubPoli,
-                            Deskripsi = a.Deskripsi,
-                            PoliId = a.PoliId,
-                            NamaPoliklinik = a.Poliklinik.NamaPoliklinik,
-                            JumlahMaxPasien =  a.JumlahMaxPasien,
                         };
 
             // Hitung total data sebelum paginasi
@@ -107,13 +93,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     TotalPages = totalPages
                 }
             });
-
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetSubPoliById(Guid id)
+        public async Task<IActionResult> GetDokterSubPoliById(Guid id)
         {
-            var listdata = _applicationDbContext.SubPolis.Find(id);
+            var listdata = _applicationDbContext.DokterSubPolis.Find(id);
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -126,8 +111,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             });
         }
 
+        // POST: api/DokterSubPoli
         [HttpPost]
-        public async Task<IActionResult> CreateSubPoli([FromBody] SubPoliViewModel vm)
+        public async Task<IActionResult> CreateDokterSubPoli([FromBody] DokterSubPoliViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -150,33 +136,33 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var setDateNow = dateNow.ToString("yyMMdd");
 
                 // Ambil data terakhir untuk hari ini (tanpa ToString di query)
-                var lastCode = _applicationDbContext.SubPolis
+                var lastCode = _applicationDbContext.DokterSubPolis
                     .Where(d => d.CreateDateTime.Date == dateNow.UtcDateTime.Date)
-                    .OrderByDescending(k => k.KodeSubPoli)
+                    .OrderByDescending(k => k.KodeDokterSubPoli)
                     .FirstOrDefault();
 
                 string kode;
-                if (lastCode == null)
+                if (lastCode == null || string.IsNullOrEmpty(lastCode.KodeDokterSubPoli))
                 {
-                    kode = $"SPL{setDateNow}0001";
+                    kode = $"DSL{setDateNow}0001";
                 }
                 else
                 {
-                    var lastCodeTrim = lastCode.KodeSubPoli.Substring(3, 6);
+                    var lastCodeTrim = lastCode.KodeDokterSubPoli.Substring(3, 6);
 
                     if (lastCodeTrim != setDateNow)
                     {
-                        kode = $"SPL{setDateNow}0001";
+                        kode = $"DSL{setDateNow}0001";
                     }
                     else
                     {
-                        kode = $"SPL{setDateNow}" + (Convert.ToInt32(lastCode.KodeSubPoli.Substring(9)) + 1).ToString("D4");
+                        kode = $"DSL{setDateNow}" + (Convert.ToInt32(lastCode.KodeDokterSubPoli.Substring(9)) + 1).ToString("D4");
                     }
                 }
 
                 // cek duplikasi
-                var isDuplicate = _applicationDbContext.SubPolis
-                    .Any(c => c.KodeSubPoli == kode && c.NamaSubPoli == vm.NamaSubPoli);
+                var isDuplicate = _applicationDbContext.DokterSubPolis
+                    .Any(c => c.KodeDokterSubPoli == kode);
 
                 if (isDuplicate)
                 {
@@ -186,33 +172,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 // Validate ModelState
                 if (ModelState.IsValid)
                 {
-                    var data = new SubPoli
+                    var data = new DokterSubPoli
                     {
-                        SubPoliId = Guid.NewGuid(),
-                        KodeSubPoli = kode,
-                        NamaSubPoli = vm.NamaSubPoli,
-                        KepalaSubPoli = vm.KepalaSubPoli,
-                        Lokasi = vm.Lokasi,
-                        Telepon = vm.Telepon,
-                        Email = vm.Email,
-                        HariOperasional = vm.HariOperasional,
-                        JamBuka = vm.JamBuka,
-                        JamTutup = vm.JamTutup,
-                        LayananSubPoli = vm.LayananSubPoli,
-                        Deskripsi = vm.Deskripsi,
-                        PoliId = vm.PoliId,
-                        JumlahMaxPasien = vm.JumlahMaxPasien,
-                        CreateDateTime = DateTimeOffset.UtcNow,
+                        DokterSubPoliId = Guid.NewGuid(),
+                        KodeDokterSubPoli = kode,
+                        DokterId = vm.DokterId,
+                        NamaDokter = vm.NamaDokter,
+                        SubPoliId = vm.SubPoliId,
+                        CreateDateTime = dateNow,
                         CreateBy = UserActiveId,
-                        UpdateDateTime = DateTimeOffset.UtcNow,
-                        UpdateBy = UserActiveId,
-                        DeleteDateTime = DateTimeOffset.UtcNow,
-                        DeleteBy = UserActiveId,
-                        IsDelete = false,
-                        
+                        IsDelete = false
                     };
 
-                    _applicationDbContext.SubPolis.Add(data);
+
+                    _applicationDbContext.DokterSubPolis.Add(data);
                     _applicationDbContext.SaveChanges();
                     return Created("", new
                     {
@@ -232,13 +205,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateSubPoli(Guid id, [FromBody] SubPoliViewModel vm)
+        public async Task<IActionResult> UpdateDokterSubPoli(Guid id, [FromBody] DokterSubPoliViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
                 return BadRequest(new { message = "Data tidak valid. || 400 Bad Request" });
             }
-            var data = _applicationDbContext.SubPolis.Find(id);
+            var data = _applicationDbContext.DokterSubPolis.Find(id);
             if (data == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan. || 404 Not Found" });
@@ -253,52 +226,47 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
+
                 // cek duplikasi
-                var isDuplicate = _applicationDbContext.SubPolis
-                    .Any(c => c.SubPoliId != id && c.NamaSubPoli == vm.NamaSubPoli);
+                var isDuplicate = _applicationDbContext.DokterSubPolis
+                    .Any(c => c.DokterSubPoliId != id);
                 if (isDuplicate)
                 {
                     return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
                 }
-                // Validate ModelState
+
                 if (ModelState.IsValid)
                 {
-                    data.NamaSubPoli = vm.NamaSubPoli;
-                    data.KepalaSubPoli = vm.KepalaSubPoli;
-                    data.Lokasi = vm.Lokasi;
-                    data.Telepon = vm.Telepon;
-                    data.Email = vm.Email;
-                    data.JamBuka = vm.JamBuka;
-                    data.JamTutup = vm.JamTutup;
-                    data.LayananSubPoli = vm.LayananSubPoli;
-                    data.Deskripsi = vm.Deskripsi;
-                    data.PoliId = vm.PoliId;
-                    data.JumlahMaxPasien = vm.JumlahMaxPasien;
+                    data.DokterId = vm.DokterId;
+                    data.SubPoliId = vm.SubPoliId;
+                    data.NamaDokter = vm.NamaDokter;
                     data.UpdateDateTime = DateTimeOffset.UtcNow;
                     data.UpdateBy = UserActiveId;
-                    _applicationDbContext.SubPolis.Update(data);
+
+                    _applicationDbContext.DokterSubPolis.Update(data);
                     _applicationDbContext.SaveChanges();
+
                     return Ok(new
                     {
                         message = "Data berhasil diubah. || 200 OK",
                     });
+
                 }
                 else
                 {
                     return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
                 }
             }
-            catch
-            (Exception ex)
+            catch (Exception ex)
             {
                 return BadRequest(new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteSubPoli(Guid id)
+        public async Task<IActionResult> DeleteDokterSubPoli(Guid id)
         {
-            var data = _applicationDbContext.SubPolis.Find(id);
+            var data = _applicationDbContext.DokterSubPolis.Find(id);
             if (data == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan. || 404 Not Found" });
@@ -316,22 +284,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.IsDelete = true;
                 data.DeleteDateTime = DateTimeOffset.UtcNow;
                 data.DeleteBy = UserActiveId;
-                _applicationDbContext.SubPolis.Update(data);
+                _applicationDbContext.DokterSubPolis.Update(data);
                 _applicationDbContext.SaveChanges();
                 return Ok(new
                 {
                     message = "Data berhasil dihapus. || 200 OK",
                 });
             }
-            catch
-            (Exception ex)
+            catch (Exception ex)
             {
                 return BadRequest(new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
 
         [HttpGet("paged")]
-        public IActionResult PagedSubPoli(
+        public IActionResult PagedDokterSubPoli(
         int page = 1,
         int perPage = 10,
         string? search = null,
@@ -344,7 +311,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
             // Query data
-            var query = from a in _applicationDbContext.SubPolis
+            var query = from a in _applicationDbContext.DokterSubPolis
                         join u in _applicationDbContext.UserActives
                         on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
@@ -353,28 +320,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateDateTime = a.CreateDateTime,
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
+                            KodeDokterSubPoli = a.KodeDokterSubPoli,
+                            NamaSubPoli = a.SubPoli.NamaSubPoli,
+                            DokterId = a.DokterId,
+                            NamaDokter = a.NamaDokter,
                             SubPoliId = a.SubPoliId,
-                            KodeSubPoli = a.KodeSubPoli,
-                            NamaSubPoli = a.NamaSubPoli,
-                            KepalaSubPoli = a.KepalaSubPoli,
-                            Lokasi = a.Lokasi,
-                            Telepon = a.Telepon,
-                            Email = a.Email,
-                            JamBuka = a.JamBuka,
-                            JamTutup = a.JamTutup,
-                            LayananSubPoli = a.LayananSubPoli,
-                            Deskripsi = a.Deskripsi,
-                            PoliId = a.PoliId,
-                            NamaPoliklinik = a.Poliklinik.NamaPoliklinik,
-                            JumlahMaxPasien = a.JumlahMaxPasien,
                         };
 
             // Filter berdasarkan search
             if (!string.IsNullOrWhiteSpace(search))
             {
                 query = query.Where(u =>
-                    u.KodeSubPoli.Contains(search) || u.NamaPoliklinik.Contains(search) || u.NamaSubPoli.Contains(search)
-                    || u.Lokasi.Contains(search)
+                    u.KodeDokterSubPoli.Contains(search) || u.NamaDokter.Contains(search)
                 );
             }
 
@@ -442,18 +399,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "KodeSubPoli" => query.OrderByDescending(u => u.KodeSubPoli),
-                    "NamaPoliklinik" => query.OrderByDescending(u => u.NamaPoliklinik),
-                    "NamaSubPoli" => query.OrderByDescending(u => u.NamaSubPoli),
+                    "NamaDokter" => query.OrderByDescending(u => u.NamaDokter),
+                    "KodeDokterSubPoli" => query.OrderByDescending(u => u.KodeDokterSubPoli),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "KodeSubPoli" => query.OrderByDescending(u => u.KodeSubPoli),
-                    "NamaPoliklinik" => query.OrderByDescending(u => u.NamaPoliklinik),
-                    "NamaSubPoli" => query.OrderByDescending(u => u.NamaSubPoli),
+                    "NamaDokter" => query.OrderByDescending(u => u.NamaDokter),
+                    "KodeDokterSubPoli" => query.OrderByDescending(u => u.KodeDokterSubPoli),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 };
 
@@ -480,6 +435,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     TotalPages = totalPages
                 }
             });
+
+
+
         }
 
     }

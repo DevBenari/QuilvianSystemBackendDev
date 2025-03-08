@@ -10,7 +10,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         [Key]
         public Guid JadwalPraktekId { get; set; }
         public Guid DokterId { get; set; }
-        public Guid DokterPoliId { get; set; }
+        public Guid? DokterPoliId { get; set; }
         public string NamaDokter { get; set; }
         public Guid? PoliId { get; set; } // Bisa null jika praktek di SubPoli
         public Guid? SubPoliId { get; set; } // Bisa null jika praktek di Poli
@@ -19,10 +19,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string HariPraktek { get; set; }
         public DateTime? JamMulai { get; set; }
         public DateTime? JamBerakhir { get; set; }
-        public int MaxPasien { get; set; }
 
         [ForeignKey("DokterPoliId")]
         public DokterPoli DokterPoli { get; set; }
+
+        [ForeignKey("DokterSubPoliId")]
+        public DokterSubPoli DokterSubPoli { get; set; }
 
 
     }

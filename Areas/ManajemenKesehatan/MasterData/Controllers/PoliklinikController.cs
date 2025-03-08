@@ -71,6 +71,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             JamTutup = a.JamTutup,
                             LayananPoliklinik = a.LayananPoliklinik,
                             Deskripsi = a.Deskripsi,
+                            HariOperasional = a.HariOperasional,
+                            JumlahMaxPasien = a.JumlahMaxPasien,
+
                             //SubPolis = a.SubPolis
                         };
 
@@ -192,6 +195,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         HariOperasional = vm.HariOperasional,
                         JamBuka = vm.JamBuka,
                         JamTutup = vm.JamTutup,
+                        JumlahMaxPasien = vm.JumlahMaxPasien,
                         LayananPoliklinik = vm.LayananPoliklinik,
                         Deskripsi = vm.Deskripsi,
                         CreateDateTime = DateTimeOffset.UtcNow,
@@ -264,6 +268,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     data.LayananPoliklinik = vm.LayananPoliklinik;
                     data.UpdateDateTime = DateTimeOffset.UtcNow;
                     data.UpdateBy = UserActiveId;
+                    data.JumlahMaxPasien = vm.JumlahMaxPasien;
                     _applicationDbContext.Polikliniks.Update(data);
                     _applicationDbContext.SaveChanges();
                     return Ok(new
@@ -352,6 +357,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             JamTutup = a.JamTutup,
                             LayananPoliklinik = a.LayananPoliklinik,
                             Deskripsi = a.Deskripsi,
+                            HariOperasional = a.HariOperasional,
+                            JumlahMaxPasien = a.JumlahMaxPasien,
+
                             //SubPolis = a.SubPolis
                         };
 
