@@ -69,7 +69,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             JenisAsuransi = a.JenisAsuransi,
                             StatusAsuransi = a.StatusAsuransi,
                             TanggalMulaiKerjasama = a.TanggalMulaiKerjasama,
-                            TanggalAkhirKerjasama = a.TanggalAkhirKerjasama
+                            TanggalAkhirKerjasama = a.TanggalAkhirKerjasama,
+                            MetodeKlaim = a.MetodeKlaim,
+                            BatasMaxKlaimPerTahun = a.BatasMaxKlaimPerTahun,
+                            BatasMaxKlaimPerKunjungan = a.BatasMaxKlaimPerKunjungan,
+                            PersentasiBiayaPertanggungan = a.PersentasiBiayaPertanggungan,
+                            TambahanTanggungan = a.TambahanTanggungan,
+                            NoRekRumahSakit = a.NoRekRumahSakit,
+                            NamaBank = a.NamaBank,
+                            TermOfPayment = a.TermOfPayment,
+                            NamaPerusahaanAsuransi = a.NamaPerusahaanAsuransi,
+                            NoTelepon = a.NoTelepon,
+                            EmailPusat = a.EmailPusat,
+                            IsPKS = a.IsPKS
                         };
 
             // Hitung total data sebelum paginasi
@@ -229,36 +241,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         StatusAsuransi = vm.StatusAsuransi,
                         TanggalMulaiKerjasama = vm.TanggalMulaiKerjasama,
                         TanggalAkhirKerjasama = vm.TanggalAkhirKerjasama,
-                        RSRekanan = vm.RSRekanan,
-                        IsPKS = vm.IsPKS,
                         MetodeKlaim = vm.MetodeKlaim,
-                        WaktuKlaim = vm.WaktuKlaim,
                         BatasMaxKlaimPerTahun = vm.BatasMaxKlaimPerTahun,
                         BatasMaxKlaimPerKunjungan = vm.BatasMaxKlaimPerKunjungan,
-                        DokumenKlaim = vm.DokumenKlaim,
-                        Layanan = vm.Layanan,
                         PersentasiBiayaPertanggungan = vm.PersentasiBiayaPertanggungan,
-                        ObatDitanggung = vm.ObatDitanggung,
                         TambahanTanggungan = vm.TambahanTanggungan,
-                        BiayaTidakDitanggung = vm.BiayaTidakDitanggung,
-                        MasaTunggu = vm.MasaTunggu,
-                        MaxUsiaPasien = vm.MaxUsiaPasien,
                         NoRekRumahSakit = vm.NoRekRumahSakit,
                         NamaBank = vm.NamaBank,
-                        NamaBankCabang = vm.NamaBankCabang,
                         TermOfPayment = vm.TermOfPayment,
-                        BatasWaktuPembayaran = vm.BatasWaktuPembayaran,
-                        PenaltiTerlambatBayar = vm.PenaltiTerlambatBayar,
                         NamaPerusahaanAsuransi = vm.NamaPerusahaanAsuransi,
-                        AlamatPusat = vm.AlamatPusat,
-                        AlamatCabang = vm.AlamatCabang,
                         NoTelepon = vm.NoTelepon,
                         EmailPusat = vm.EmailPusat,
-                        NoHotlineDarurat = vm.NoHotlineDarurat,
-                        NamaPerwakilan = vm.NamaPerwakilan,
-                        NoTeleponPerwakilan = vm.NoTeleponPerwakilan,
-                        EmailPerwakilan = vm.EmailPerwakilan,
-                        JabatanPerwakilan = vm.JabatanPerwakilan,
+                        IsPKS = vm.IsPKS,
                         CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = UserActiveId,
                         UpdateDateTime = DateTimeOffset.UtcNow,
@@ -324,36 +318,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     asuransi.StatusAsuransi = vm.StatusAsuransi ?? asuransi.StatusAsuransi;
                     asuransi.TanggalMulaiKerjasama = vm.TanggalMulaiKerjasama ?? asuransi.TanggalMulaiKerjasama;
                     asuransi.TanggalAkhirKerjasama = vm.TanggalAkhirKerjasama ?? asuransi.TanggalAkhirKerjasama;
-                    asuransi.RSRekanan = vm.RSRekanan ?? asuransi.RSRekanan;
                     asuransi.IsPKS = vm.IsPKS;
                     asuransi.MetodeKlaim = vm.MetodeKlaim ?? asuransi.MetodeKlaim;
-                    asuransi.WaktuKlaim = vm.WaktuKlaim ?? asuransi.WaktuKlaim;
                     asuransi.BatasMaxKlaimPerTahun = vm.BatasMaxKlaimPerTahun ?? asuransi.BatasMaxKlaimPerTahun;
                     asuransi.BatasMaxKlaimPerKunjungan = vm.BatasMaxKlaimPerKunjungan ?? asuransi.BatasMaxKlaimPerKunjungan;
-                    //asuransi.DokumenKlaim = vm.DokumenKlaim ?? asuransi.DokumenKlaim;
-                    asuransi.Layanan = vm.Layanan ?? asuransi.Layanan;
                     asuransi.PersentasiBiayaPertanggungan = vm.PersentasiBiayaPertanggungan ?? asuransi.PersentasiBiayaPertanggungan;
-                    asuransi.ObatDitanggung = vm.ObatDitanggung ?? asuransi.ObatDitanggung;
                     asuransi.TambahanTanggungan = vm.TambahanTanggungan ?? asuransi.TambahanTanggungan;
-                    asuransi.BiayaTidakDitanggung = vm.BiayaTidakDitanggung ?? asuransi.BiayaTidakDitanggung;
-                    asuransi.MasaTunggu = vm.MasaTunggu ?? asuransi.MasaTunggu;
-                    asuransi.MaxUsiaPasien = vm.MaxUsiaPasien ?? asuransi.MaxUsiaPasien;
                     asuransi.NoRekRumahSakit = vm.NoRekRumahSakit ?? asuransi.NoRekRumahSakit;
                     asuransi.NamaBank = vm.NamaBank ?? asuransi.NamaBank;
-                    asuransi.NamaBankCabang = vm.NamaBankCabang ?? asuransi.NamaBankCabang;
                     asuransi.TermOfPayment = vm.TermOfPayment ?? asuransi.TermOfPayment;
-                    asuransi.BatasWaktuPembayaran = vm.BatasWaktuPembayaran ?? asuransi.BatasWaktuPembayaran;
-                    asuransi.PenaltiTerlambatBayar = vm.PenaltiTerlambatBayar ?? asuransi.PenaltiTerlambatBayar;
                     asuransi.NamaPerusahaanAsuransi = vm.NamaPerusahaanAsuransi ?? asuransi.NamaPerusahaanAsuransi;
-                    asuransi.AlamatPusat = vm.AlamatPusat ?? asuransi.AlamatPusat;
-                    asuransi.AlamatCabang = vm.AlamatCabang ?? asuransi.AlamatCabang;
                     asuransi.NoTelepon = vm.NoTelepon ?? asuransi.NoTelepon;
                     asuransi.EmailPusat = vm.EmailPusat ?? asuransi.EmailPusat;
-                    asuransi.NoHotlineDarurat = vm.NoHotlineDarurat ?? asuransi.NoHotlineDarurat;
-                    asuransi.NamaPerwakilan = vm.NamaPerwakilan ?? asuransi.NamaPerwakilan;
-                    asuransi.NoTeleponPerwakilan = vm.NoTeleponPerwakilan ?? asuransi.NoTeleponPerwakilan;
-                    asuransi.EmailPerwakilan = vm.EmailPerwakilan ?? asuransi.EmailPerwakilan;
-                    asuransi.JabatanPerwakilan = vm.JabatanPerwakilan ?? asuransi.JabatanPerwakilan;
+                    asuransi.IsPKS = vm.IsPKS ;
+
 
                     asuransi.UpdateDateTime = DateTimeOffset.UtcNow;
                     asuransi.UpdateBy = UserActiveId;
@@ -484,7 +462,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             JenisAsuransi = a.JenisAsuransi,
                             StatusAsuransi = a.StatusAsuransi,
                             TanggalMulaiKerjasama = a.TanggalMulaiKerjasama,
-                            TanggalAkhirKerjasama = a.TanggalAkhirKerjasama
+                            TanggalAkhirKerjasama = a.TanggalAkhirKerjasama,
+                            MetodeKlaim = a.MetodeKlaim,
+                            BatasMaxKlaimPerTahun = a.BatasMaxKlaimPerTahun,
+                            BatasMaxKlaimPerKunjungan = a.BatasMaxKlaimPerKunjungan,
+                            PersentasiBiayaPertanggungan = a.PersentasiBiayaPertanggungan,
+                            TambahanTanggungan = a.TambahanTanggungan,
+                            NoRekRumahSakit = a.NoRekRumahSakit,
+                            NamaBank = a.NamaBank,
+                            TermOfPayment = a.TermOfPayment,
+                            NamaPerusahaanAsuransi = a.NamaPerusahaanAsuransi,
+                            NoTelepon = a.NoTelepon,
+                            EmailPusat = a.EmailPusat,
+                            IsPKS = a.IsPKS
                         };
 
             // Filter berdasarkan search

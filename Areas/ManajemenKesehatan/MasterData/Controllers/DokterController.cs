@@ -125,8 +125,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet("get-image/{id}")]
         public async Task<IActionResult> GetImage(Guid id)
         {
-            var fotoPath = _context.PendaftaranPasienBarus
-                .Where(p => p.PendaftaranPasienBaruId == id)
+            var fotoPath = _context.Dokters
+                .Where(p => p.DokterId == id)
                 .Select(p => p.FotoPath)
                 .FirstOrDefault();
 
@@ -163,7 +163,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
         // POST: api/Dokter
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] DokterViewModel vm)
+        public async Task<IActionResult> Create([FromForm] DokterViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -233,7 +233,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         return BadRequest(new { message = "Format file tidak valid! Gunakan JPG atau PNG." });
                     }
 
-                    var uploadFolder = Path.Combine(_webHostEnvironment.WebRootPath, "FotoPasienBaru");
+                    var uploadFolder = Path.Combine(_webHostEnvironment.WebRootPath, "FotoDokter");
                     if (!Directory.Exists(uploadFolder))
                     {
                         Directory.CreateDirectory(uploadFolder);

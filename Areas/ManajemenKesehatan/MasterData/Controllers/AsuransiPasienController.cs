@@ -1,16 +1,25 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
+using Swashbuckle.AspNetCore.Annotations;
 using System.Security.Claims;
+
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
+    [EnableCors("AllowSpecific")]
     public class AsuransiPasienController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
@@ -37,24 +46,50 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             _webHostEnvironment = webHostEnvironment;
         }
         [HttpGet]
-        public async Task<IActionResult> GetAsuransiPasien()
+        public async Task<IActionResult> GetAsuransiPasien(int page = 1, int perPage = 10)
         {
-            var result = await (from ap in _applicationDbContext.AsuransiPasiens
-                                join p in _applicationDbContext.PendaftaranPasienBarus on ap.PasienId equals p.PendaftaranPasienBaruId.ToString()
-                                join a in _applicationDbContext.Asuransis on ap.AsuransiId equals a.AsuransiId.ToString()
-                                select new
-                                {
-                                    ap.PasienId,
-                                    ap.AsuransiId,
-                                    NamaPasien = p.NamaLengkap,
-                                    NamaAsuransi = a.NamaAsuransi,
-                                    ap.NoPolis
-                                }).ToListAsync();
+            // Validasi agar page dan perPage minimal bernilai 1
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
+            var result = from ap in _applicationDbContext.AsuransiPasiens
+                         join p in _applicationDbContext.PendaftaranPasienBarus on ap.PasienId equals p.PendaftaranPasienBaruId.ToString()
+                         join a in _applicationDbContext.Asuransis on ap.AsuransiId equals a.AsuransiId.ToString()
+                         select new
+                         {
+                             ap.PasienId,
+                             ap.AsuransiId,
+                             NamaPasien = p.NamaLengkap,
+                             NamaAsuransi = a.NamaAsuransi,
+                             ap.NoPolis
+                         };
 
+            // Hitung total data sebelum paginasi
+            var totalRows = result.Count();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            // Ambil data sesuai paging
+            var listdata = result
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToList();
+
+            if (!listdata.Any())
+            {
+                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
+            }
+
+            // Return hasil dengan paging info
             return Ok(new
             {
-                message = "Ditemukan || 200 OK",
-                data = result
+                message = "Berhasil || 200 OK",
+                data = listdata,
+                pagination = new
+                {
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalRows = totalRows,
+                    TotalPages = totalPages
+                }
             });
         }
 
@@ -75,38 +110,64 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateAsuransiPasien([FromBody] AsuransiPasien request)
+        public async Task<IActionResult> CreateAsuransiPasien([FromBody] AsuransiPasienViewModel request)
         {
             if (request == null || string.IsNullOrEmpty(request.PasienId) || string.IsNullOrEmpty(request.AsuransiId))
             {
                 return BadRequest(new { message = "Data tidak boleh kosong!" });
             }
 
-            // Periksa apakah pasien dan asuransi ada di database
-            var pasienExists = _applicationDbContext.PendaftaranPasienBarus
-                                  .Any(p => p.PendaftaranPasienBaruId.ToString() == request.PasienId);
-
-            var asuransiExists = _applicationDbContext.Asuransis
-                                  .Any(a => a.AsuransiId.ToString() == request.AsuransiId);
-
-            if (!pasienExists || !asuransiExists)
+            try
             {
-                return NotFound(new { message = "Pasien atau Asuransi tidak ditemukan!" });
+                // **Ambil User ID dari JWT Claims**
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
+
+                if (string.IsNullOrEmpty(EmailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                // Periksa apakah pasien dan asuransi ada di database
+                var pasienExists = _applicationDbContext.PendaftaranPasienBarus
+                                      .Any(p => p.PendaftaranPasienBaruId.ToString() == request.PasienId);
+
+                var asuransiExists = _applicationDbContext.Asuransis
+                                      .Any(a => a.AsuransiId.ToString() == request.AsuransiId);
+
+                if (!pasienExists || !asuransiExists)
+                {
+                    return NotFound(new { message = "Pasien atau Asuransi tidak ditemukan!" });
+                }
+
+
+                //validate model state
+                if (ModelState.IsValid)
+                {
+                    var newAsuransiPasien = new AsuransiPasien
+                    {
+                        AsuransiPasienId = Guid.NewGuid(),
+                        PasienId = request.PasienId,
+                        AsuransiId = request.AsuransiId,
+                        NoPolis = request.NoPolis,
+                        CreateDateTime = DateTimeOffset.UtcNow,
+                        CreateBy = UserActiveId
+                    };
+
+                    _applicationDbContext.AsuransiPasiens.Add(newAsuransiPasien);
+                    await _applicationDbContext.SaveChangesAsync();
+                    return Ok(new { message = "Data berhasil ditambahkan!", data = newAsuransiPasien });
+                }
+                else
+                {
+                    return BadRequest(new { message = "Data tidak valid!" });
+                }
             }
-
-            // Membuat objek baru untuk ditambahkan ke database
-            var newAsuransiPasien = new AsuransiPasien
+            catch (Exception ex)
             {
-                AsuransiPasienId = Guid.NewGuid(),
-                PasienId = request.PasienId,
-                AsuransiId = request.AsuransiId,
-                NoPolis = request.NoPolis
-            };
-
-            _applicationDbContext.AsuransiPasiens.Add(newAsuransiPasien);
-            await _applicationDbContext.SaveChangesAsync();
-
-            return Ok(new { message = "Data berhasil ditambahkan!", data = newAsuransiPasien });
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
         }
 
         //[HttpPost]
@@ -197,5 +258,234 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         //        return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
         //    }
         //}
-    }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateAsuransiPasien(Guid id, [FromBody] AsuransiPasienViewModel request)
+        {
+            if (request == null || string.IsNullOrEmpty(request.PasienId) || string.IsNullOrEmpty(request.AsuransiId))
+            {
+                return BadRequest(new { message = "Data tidak boleh kosong!" });
+            }
+            try
+            {
+                // **Ambil User ID dari JWT Claims**
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
+                if (string.IsNullOrEmpty(EmailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+                // Periksa apakah pasien dan asuransi ada di database
+                var pasienExists = _applicationDbContext.PendaftaranPasienBarus
+                                      .Any(p => p.PendaftaranPasienBaruId.ToString() == request.PasienId);
+                var asuransiExists = _applicationDbContext.Asuransis
+                                      .Any(a => a.AsuransiId.ToString() == request.AsuransiId);
+                if (!pasienExists || !asuransiExists)
+                {
+                    return NotFound(new { message = "Pasien atau Asuransi tidak ditemukan!" });
+                }
+                //validate model state
+                if (ModelState.IsValid)
+                {
+                    var data = _applicationDbContext.AsuransiPasiens.Find(id);
+                    if (data == null)
+                    {
+                        return NotFound(new { message = "Data tidak ditemukan." });
+                    }
+                    data.PasienId = request.PasienId;
+                    data.AsuransiId = request.AsuransiId;
+                    data.NoPolis = request.NoPolis;
+
+                    data.UpdateDateTime = DateTimeOffset.UtcNow;
+                    data.UpdateBy = UserActiveId;
+
+                    _applicationDbContext.AsuransiPasiens.Update(data);
+                    await _applicationDbContext.SaveChangesAsync();
+                    return Ok(new { message = "Data berhasil diubah!", data });
+                }
+                else
+                {
+                    return BadRequest(new { message = "Data tidak valid!" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+    
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteAsuransiPasien(Guid id)
+        {
+            var data = _applicationDbContext.AsuransiPasiens.Find(id);
+            if (data == null)
+            {
+                return NotFound(new { message = "Data tidak ditemukan. || 404 Not Found" });
+            }
+            try
+            {
+                // **Ambil User ID dari JWT Claims**
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
+                if (string.IsNullOrEmpty(EmailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                data.IsDelete = true;
+                data.DeleteDateTime = DateTimeOffset.UtcNow;
+                data.DeleteBy = UserActiveId;
+
+                _applicationDbContext.AsuransiPasiens.Update(data);
+                _applicationDbContext.SaveChanges();
+                return Ok(new
+                {
+                    message = "Data berhasil dihapus. || 200 OK",
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
+        [HttpGet("paged")]
+        public IActionResult PagedDokterPoli(
+        int page = 1,
+        int perPage = 10,
+        string? search = null,
+        string? orderBy = "CreateDateTime",
+        string? sortDirection = "desc",
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+                DateTime? startDate = null,
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+                DateTime? endDate = null,
+        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        {
+            // Query data
+            var query = from ap in _applicationDbContext.AsuransiPasiens
+                        join p in _applicationDbContext.PendaftaranPasienBarus on ap.PasienId equals p.PendaftaranPasienBaruId.ToString()
+                        join a in _applicationDbContext.Asuransis on ap.AsuransiId equals a.AsuransiId.ToString()
+                        select new
+                        {
+                            CreateDateTime = a.CreateDateTime,
+                            CreateBy = a.CreateBy,
+                            ap.PasienId,
+                            ap.AsuransiId,
+                            NamaPasien = p.NamaLengkap,
+                            NamaAsuransi = a.NamaAsuransi,
+                            ap.NoPolis
+                        };
+
+            // Filter berdasarkan search
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(u =>
+                    u.NamaPasien.Contains(search) || u.NamaAsuransi.Contains(search)
+                );
+            }
+
+            // Filter berdasarkan daterange jika keduanya memiliki nilai
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                query = query.Where(u =>
+                    u.CreateDateTime.Date >= startDate.Value.Date &&
+                    u.CreateDateTime.Date <= endDate.Value.Date
+                );
+            }
+
+            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
+            if (periode.HasValue)
+            {
+                DateTime today = DateTime.UtcNow.Date;
+
+                switch (periode)
+                {
+                    case PeriodeFilter.Today:
+                        query = query.Where(u => u.CreateDateTime.Date == today);
+                        break;
+                    case PeriodeFilter.ThisWeek:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
+                            u.CreateDateTime.Date <= today
+                        );
+                        break;
+                    case PeriodeFilter.LastWeek:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
+                            u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek))
+                        );
+                        break;
+                    case PeriodeFilter.ThisMonth:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Month == today.Month &&
+                            u.CreateDateTime.Year == today.Year
+                        );
+                        break;
+                    case PeriodeFilter.LastMonth:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Month == today.Month - 1 &&
+                            u.CreateDateTime.Year == today.Year
+                        );
+                        break;
+                    case PeriodeFilter.ThisYear:
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
+                        break;
+                    case PeriodeFilter.LastYear:
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
+                        break;
+                    case PeriodeFilter.Last3Months:
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
+                        break;
+                    case PeriodeFilter.Last6Months:
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
+                        break;
+                }
+            }
+
+            // Sorting Data dengan cara yang lebih aman
+            query = sortDirection?.ToLower() == "desc"
+                ? orderBy switch
+                {
+                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
+                    "NamaAsuransi" => query.OrderByDescending(u => u.NamaAsuransi),
+                    "NamaPasien" => query.OrderByDescending(u => u.NamaPasien),
+                    _ => query.OrderByDescending(u => u.CreateDateTime)
+                }
+                : orderBy switch
+                {
+                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
+                    "NamaAsuransi" => query.OrderByDescending(u => u.NamaAsuransi),
+                    "NamaPasien" => query.OrderByDescending(u => u.NamaPasien),
+                    _ => query.OrderByDescending(u => u.CreateDateTime)
+                };
+
+            // Pagination
+            var totalRows = query.Count();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
+
+            if (rows.Count == 0 && page > totalPages)
+            {
+                return NotFound(new { message = "Page not found." });
+            }
+
+            return Ok(new
+            {
+                status = "success",
+                message = "Data retrieved successfully",
+                data = new
+                {
+                    Rows = rows,
+                    TotalRows = totalRows,
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalPages = totalPages
+                }
+            });
+        }
+    } 
 }
