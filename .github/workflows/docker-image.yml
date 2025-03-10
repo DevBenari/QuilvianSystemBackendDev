@@ -1,4 +1,4 @@
-name: QuilvianSystemBackendDevYasmine
+name: QuilvianSystemBackendDevQuilvianDev
 on:
   push:
     branches:
