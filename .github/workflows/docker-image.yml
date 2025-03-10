@@ -39,7 +39,7 @@ jobs:
           docker rm quilvian-container-QuilvianDev || true
 
           echo "Running new container..."
-          docker restart quilvian-container-QuilvianDev || docker run -d --name quilvian-container-QuilvianDev -p 80:80 quilvian-backend-QuilvianDev
+          docker restart quilvian-container-QuilvianDev || docker run -d --name quilvian-container-QuilvianDev -p 5003:80 quilvian-backend-QuilvianDev
 
           echo "Cleaning up unused Docker images..."
           docker system prune -af
