@@ -22,7 +22,7 @@ jobs:
     - name: Deploy to Server
       run: |
         ssh ${{ secrets.SSH_USER_BACKEND }}@${{ secrets.SSH_IP_BACKEND }} << 'EOF'
-          cd ~/QuilvianSystemBackendPostgre
+          cd ~/QuilvianSystemBackendDev-yasmina
 
           echo "Resetting local changes..."
           git reset --hard origin/yasmina
