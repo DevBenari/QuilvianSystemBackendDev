@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - yasmina  # Sesuaikan dengan branch utama Anda
+      
 jobs:
   deploy:
     runs-on: ubuntu-latest
