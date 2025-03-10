@@ -48,7 +48,7 @@ jobs:
             docker restart $CONTAINER_NAME
           else
             echo "Container does not exist, creating a new one..."
-            docker run -d --name $CONTAINER_NAME -p 5003:80 $IMAGE_NAME
+            docker run -d --name $CONTAINER_NAME -p 80:80 $IMAGE_NAME
           fi
 
           echo "Cleaning up unused Docker images..."
@@ -63,6 +63,7 @@ jobs:
               🔹 *Docker Image:* $IMAGE_NAME%0A
               🔹 *Container:* $CONTAINER_NAME%0A
               📅 *Tanggal:* $DEPLOY_TIME%0A
+              🛠️ Deployment dilakukan oleh Branch *QuilvianDev*%0A
               🔄 Container telah diperbarui dan berjalan dengan baik. 🎉"
         EOF
 # name: QuilvianSystemBackendDevQuilvianDev
