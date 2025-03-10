@@ -31,8 +31,8 @@ jobs:
           echo "Pulling latest changes..."
           git pull origin QuilvianDev
 
-          IMAGE_NAME="quilvian-backend-QuilvianDev"
-          CONTAINER_NAME="quilvian-container-QuilvianDev"
+          IMAGE_NAME="quilvian-backend-quilviandev"
+          CONTAINER_NAME="quilvian-container-quilviandev"
           DEPLOY_TIME=$(date +"%A, %d-%m-%Y %H:%M:%S") # Format: Senin, 10-03-2025 14:30:45
 
           echo "Building new Docker image..."
