@@ -1,32 +1,81 @@
-name: Build and Push Docker image to Docker Hub
-
+name: Deploy New Project
 on:
   push:
     branches:
-      - QuilvianDev  # Workflow ini akan berjalan setiap ada perubahan di branch 'QuilvianDev'
+      - yasmina
 
 jobs:
-  build:
-    runs-on: ubuntu-latest  # Workflow ini akan dijalankan di Ubuntu terbaru
+  deploy:
+    runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout repository
-      - name: Checkout repository
-        uses: actions/checkout@v2
+    - name: Checkout Repository
+      uses: actions/checkout@v4
 
-      # Step 2: Login ke Docker Hub
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: "ikbalyuliyanto7"  # Gunakan Docker Hub username dari GitHub Secrets
-          password: "dckr_pat_NGNArQqEZT9NiksMvXujctsIIWk"  # Gunakan Docker Hub password/token dari GitHub Secrets
+    - name: Setup SSH Connection
+      run: |
+        mkdir -p ~/.ssh
+        echo "-----BEGIN OPENSSH PRIVATE KEY-----
+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
+-----END OPENSSH PRIVATE KEY-----" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H 160.20.104.98 >> ~/.ssh/known_hosts  # Ganti dengan IP server
 
-      # Step 3: Build Docker image
-      - name: Build Docker image
-        run: |
-          docker build -t ikbalyuliyanto7/quilvian-postgre-api:latest .
-
-      # Step 4: Push Docker image to Docker Hub
-      - name: Push Docker image
-        run: |
-          docker push ikbalyuliyanto7/quilvian-postgre-api:latest
+    - name: Deploy to Server
+      run: |
+        ssh ecustomer@160.20.104.98 << 'EOF'  # Ganti 'user' dan IP sesuai kebutuhan
+          cd ~/QuilvianSystemBackendDev-yasmina
+          git reset --hard origin/yasmina
+          git clean -fd
+          git pull --depth=1 origin yasmina
+          docker build --cache-from=quilvian-backend-yasmina -t quilvian-backend-yasmina .
+          docker restart quilvian-container || docker run -d --name quilvian-container-yasmina -p 5002:80 quilvian-backend-yasmina
+          docker image prune -f
+          echo "Deployment completed!"
+        EOF
