@@ -1,4 +1,4 @@
-name: Deploy New Project
+name: QuilvianSystemBackendDevYasmine
 on:
   push:
     branches:
