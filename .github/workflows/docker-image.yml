@@ -45,9 +45,6 @@ jobs:
           docker stop $CONTAINER_NAME || true
           docker rm $CONTAINER_NAME || true
 
-          # echo "Running new container..."
-          # docker restart quilvian-container-yasmina || docker run -d --name quilvian-container-yasmina -p 5002:80 quilvian-backend-yasmina
-
           echo "Checking if container exists..."
           if [ "$(docker ps -a -q -f name=$CONTAINER_NAME)" ]; then
             echo "Container exists, restarting..."
