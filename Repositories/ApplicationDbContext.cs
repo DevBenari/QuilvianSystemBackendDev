@@ -50,6 +50,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<Operasi> Operasis { get; set; }
         public DbSet<DokterSubPoli> DokterSubPolis { get; set; }
         public DbSet<AsuransiPasien> AsuransiPasiens { get; set; }
+
         #endregion
 
         #region Areas Pendaftaran

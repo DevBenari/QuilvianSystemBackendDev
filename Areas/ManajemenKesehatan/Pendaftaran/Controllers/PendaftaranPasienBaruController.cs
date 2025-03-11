@@ -301,7 +301,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 var logoPath = Path.Combine(_webHostEnvironment.WebRootPath, "images", "logo.png");
 
                 // Generate QR Code dengan logo
-                var qrCodeImage = QrCodeHelper.GenerateQRCodeWithLogo(noRekamMedis, logoPath);
+                //var qrCodeImage = QrCodeHelper.GenerateQRCodeWithLogo(noRekamMedis, logoPath);
 
                 // Tentukan lokasi penyimpanan QR Code
                 var qrCodeFolder = Path.Combine(_webHostEnvironment.WebRootPath, "QRCodePasienBaru");
@@ -315,7 +315,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 var qrCodeFilePath = Path.Combine(qrCodeFolder, qrCodeFileName);
 
                 // Simpan QR Code sebagai file PNG
-                qrCodeImage.Save(qrCodeFilePath, System.Drawing.Imaging.ImageFormat.Png);
+                //qrCodeImage.Save(qrCodeFilePath, System.Drawing.Imaging.ImageFormat.Png);
 
                 // Cek Duplikasi
                 var isDuplicate = _applicationDbContext.PendaftaranPasienBarus
