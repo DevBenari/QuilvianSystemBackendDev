@@ -52,7 +52,7 @@ jobs:
           else
             echo "Container does not exist, creating a new one..."
 
-            docker run -d --name $CONTAINER_NAME -p 5003:80 $IMAGE_NAME
+            docker run -d --name $CONTAINER_NAME -p 80:5001 $IMAGE_NAME
           fi
 
           echo "Cleaning up unused Docker images..."
