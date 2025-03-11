@@ -1,8 +1,8 @@
-name: QuilvianSystemBackendDevYasmine
+name: QuilvianSystemBackendDevYasmina
 on:
   push:
     branches:
-      - yasmine  # Sesuaikan dengan branch utama Anda
+      - yasmina  # Sesuaikan dengan branch utama Anda
 
 jobs:
   deploy:
@@ -23,17 +23,17 @@ jobs:
       run: |
         ssh ${{ secrets.SSH_USER_BACKEND }}@${{ secrets.SSH_IP_BACKEND }} << 'EOF'
 
-          cd ~/QuilvianSystemBackendDev-yasmine
+          cd ~/QuilvianSystemBackendDev-yasmina
 
           echo "Resetting local changes..."
-          git reset --hard origin/yasmine
+          git reset --hard origin/yasmina
           git clean -fd
 
           echo "Pulling latest changes..."
-          git pull origin yasmine
+          git pull origin yasmina
 
           IMAGE_NAME="quilvian-backend-quilviandev"
-          CONTAINER_NAME="quilvian-container-yasmine"
+          CONTAINER_NAME="quilvian-container-yasmina"
 
           DEPLOY_TIME=$(date +"%A, %d-%m-%Y %H:%M:%S") # Format: Senin, 10-03-2025 14:30:45
 
