@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -11,9 +12,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250307075851_dokter2")]
+    partial class dokter2
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -198,10 +200,22 @@ namespace QuilvianSystemBackendDev.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("AlamatCabang")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AlamatPusat")
+                        .HasColumnType("text");
+
                     b.Property<int?>("BatasMaxKlaimPerKunjungan")
                         .HasColumnType("integer");
 
                     b.Property<int?>("BatasMaxKlaimPerTahun")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("BatasWaktuPembayaran")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("BiayaTidakDitanggung")
                         .HasColumnType("integer");
 
                     b.Property<Guid>("CreateBy")
@@ -219,6 +233,12 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<DateTimeOffset>("DeleteDateTime")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("DokumenKlaim")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EmailPerwakilan")
+                        .HasColumnType("text");
+
                     b.Property<string>("EmailPusat")
                         .HasColumnType("text");
 
@@ -227,6 +247,9 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.Property<bool?>("IsPKS")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("JabatanPerwakilan")
+                        .HasColumnType("text");
 
                     b.Property<string>("JenisAsuransi")
                         .HasColumnType("text");
@@ -237,6 +260,15 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("KodeAsuransi")
                         .HasColumnType("text");
 
+                    b.Property<string>("Layanan")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("MasaTunggu")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("MaxUsiaPasien")
+                        .HasColumnType("integer");
+
                     b.Property<string>("MetodeKlaim")
                         .HasColumnType("text");
 
@@ -246,7 +278,16 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("NamaBank")
                         .HasColumnType("text");
 
+                    b.Property<string>("NamaBankCabang")
+                        .HasColumnType("text");
+
                     b.Property<string>("NamaPerusahaanAsuransi")
+                        .HasColumnType("text");
+
+                    b.Property<string>("NamaPerwakilan")
+                        .HasColumnType("text");
+
+                    b.Property<string>("NoHotlineDarurat")
                         .HasColumnType("text");
 
                     b.Property<string>("NoRekRumahSakit")
@@ -255,8 +296,20 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("NoTelepon")
                         .HasColumnType("text");
 
+                    b.Property<string>("NoTeleponPerwakilan")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ObatDitanggung")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("PenaltiTerlambatBayar")
+                        .HasColumnType("integer");
+
                     b.Property<int?>("PersentasiBiayaPertanggungan")
                         .HasColumnType("integer");
+
+                    b.Property<string>("RSRekanan")
+                        .HasColumnType("text");
 
                     b.Property<string>("StatusAsuransi")
                         .HasColumnType("text");
@@ -279,50 +332,12 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<DateTimeOffset>("UpdateDateTime")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTimeOffset?>("WaktuKlaim")
+                        .HasColumnType("timestamp with time zone");
+
                     b.HasKey("AsuransiId");
 
                     b.ToTable("MstAsuransi", "public");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.AsuransiPasien", b =>
-                {
-                    b.Property<Guid>("AsuransiPasienId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("AsuransiId")
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("CreateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("DeleteBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("DeleteDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsDelete")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("NoPolis")
-                        .HasColumnType("text");
-
-                    b.Property<string>("PasienId")
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("UpdateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("UpdateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("AsuransiPasienId");
-
-                    b.ToTable("MstAsuransiPasien", "public");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.CoveranAsuransi", b =>
