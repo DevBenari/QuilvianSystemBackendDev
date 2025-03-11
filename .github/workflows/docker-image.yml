@@ -65,15 +65,14 @@ jobs:
 
 
           # Kirim notifikasi ke Telegram setelah update
-          curl -X POST https://api.telegram.org/bot7630899057:AAFqAUGUB7I5V9VGKXbcmoWmbYWvrdmnje8/sendMessage \
-
+          curl -X POST "https://api.telegram.org/bot7630899059:AAFqAUGUB7I5V9VGKXbcmoWmbYWvrdmnje8/sendMessage" \
               -d chat_id=-1002437306112 \
-              -d text="✅ Deployment Sukses! 🚀%0A
-              🔹 *Docker Image:* $IMAGE_NAME%0A
-              🔹 *Container:* $CONTAINER_NAME%0A
-              📅 *Tanggal:* $DEPLOY_TIME%0A
-              🛠️ Deployment dilakukan oleh Branch *QuilvianDev*%0A
-              🔄 Container telah diperbarui dan berjalan dengan baik. 🎉"
+              -d text="✅ Deployment Sukses! 🚀
+              *Docker Image:* $IMAGE_NAME
+              *Container:* $CONTAINER_NAME
+              *Tanggal:* $(date +'%Y-%m-%d %H:%M:%S')
+              Deployment dilakukan Backend *Yasmine*
+              🔄 Container telah diperbarui. 🎉"
         EOF
 # name: QuilvianSystemBackendDevQuilvianDev
 # on:
