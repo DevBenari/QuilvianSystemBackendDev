@@ -1,4 +1,5 @@
-﻿using QuilvianSystemBackendDev.Models;
+﻿using Newtonsoft.Json;
+using QuilvianSystemBackendDev.Models;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -13,8 +14,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string NmDokter { get; set; }
         public string Sip { get; set; }
         public string Str { get; set; }
-        public DateTime? TglSip { get; set; }
-        public DateTime? TglStr { get; set; }
+        [JsonConverter(typeof(DateOnlyJsonConverter))]
+        public DateOnly? TglSip { get; set; }
+        [JsonConverter(typeof(DateOnlyJsonConverter))]
+        public DateOnly? TglStr { get; set; }
         public string Nik { get; set; }
         public string Email { get; set; }
         public string Nohp { get; set; }

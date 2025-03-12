@@ -234,7 +234,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     {
                         AsuransiId = Guid.NewGuid(),
                         KodeAsuransi = kode,
-                        Createdate = DateTimeOffset.UtcNow,
+                        Createdate = DateOnly.FromDateTime(DateTime.Now),
                         NamaAsuransi = vm.NamaAsuransi,
                         JenisAsuransi = vm.JenisAsuransi,
                         KategoriAsuransi = vm.KategoriAsuransi,
@@ -262,7 +262,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         IsDelete = false
                     };
 
-                    Console.WriteLine(data.NamaAsuransi);
                     _applicationDbContext.Asuransis.Add(data);
                     _applicationDbContext.SaveChanges();
                     return Created("", new

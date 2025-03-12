@@ -2,6 +2,7 @@
 using QuilvianSystemBackendDev.Models;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
 {
@@ -11,15 +12,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         [Key]
         public Guid? AsuransiId { get; set; }
         public string? KodeAsuransi { get; set; }
-        public DateTimeOffset? Createdate { get; set; }
+        public DateOnly? Createdate { get; set; }
 
         // Informasi Asuransi
         public string? NamaAsuransi { get; set; }
         public string? JenisAsuransi { get; set; }
         public string? KategoriAsuransi { get; set; }
         public string? StatusAsuransi { get; set; }
-        public DateTimeOffset? TanggalMulaiKerjasama { get; set; }
-        public DateTimeOffset? TanggalAkhirKerjasama { get; set; }
+
+        [JsonConverter(typeof(DateOnlyJsonConverter))]
+        public DateOnly? TanggalMulaiKerjasama { get; set; }
+        [JsonConverter(typeof(DateOnlyJsonConverter))]
+        public DateOnly? TanggalAkhirKerjasama { get; set; }
 
         // Informasi Klaim
         public string? MetodeKlaim { get; set; }

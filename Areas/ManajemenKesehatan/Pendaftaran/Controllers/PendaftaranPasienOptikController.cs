@@ -1,39 +1,39 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
-using QuilvianSystemBackendDev.Repositories;
-using Newtonsoft.Json.Converters;
-using Newtonsoft.Json;
-using Swashbuckle.AspNetCore.Annotations;
-using System.Security.Claims;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
-using QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers;
-using QuilvianSystemBackendDev.Models;
+using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewModels;
+using QuilvianSystemBackendDev.Models;
+using QuilvianSystemBackendDev.Repositories;
+using Swashbuckle.AspNetCore.Annotations;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class OperasiController : Controller
+    public class PendaftaranPasienOptikController : Controller
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<OperasiController> _logger;
+        private readonly ILogger<PendaftaranPasienOptikController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public OperasiController
-            (ApplicationDbContext context,
-            UserManager<ApplicationUser> userManager,
-            SignInManager<ApplicationUser> signInManager,
-            ILogger<OperasiController> logger,
+        public PendaftaranPasienOptikController
+            (ApplicationDbContext context, 
+            UserManager<ApplicationUser> userManager, 
+            SignInManager<ApplicationUser> signInManager, 
+            ILogger<PendaftaranPasienOptikController> logger, 
             IWebHostEnvironment webHostEnvironment)
         {
             _context = context;
@@ -43,16 +43,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             _webHostEnvironment = webHostEnvironment;
         }
 
-        //get : api/operasi
         [HttpGet]
-        public async Task<IActionResult> GetAllOperasi(int page = 1, int perPage = 10)
+        public async Task<IActionResult> GetAllPdfPasienOptik(int page = 1, int perPage = 10)
         {
             // validasi pagging
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = from a in _context.Operasis
+            var query = from a in _context.PendaftaranPasienOptiks
                         join u in _context.UserActives
                         on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
@@ -61,28 +60,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateDateTime = a.CreateDateTime,
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
-                            OperasiId = a.OperasiId,
-                            KodeOperasi = a.KodeOperasi,
-                            JenisOperasi = a.JenisOperasi,
-                            TipeOperasi = a.TipeOperasi,
-                            NamaTindakanOperasi = a.NamaTindakanOperasi,
-                            TanggalOperasi = a.TanggalOperasi,
-                            StatusOperasi = a.StatusOperasi,
-                            LamaOperasi = a.LamaOperasi,
-                            RuanganOperasi = a.RuanganOperasi,
-                            LokasiRuanganOperasi = a.LokasiRuanganOperasi,
-                            TipeCCVC = a.TipeCCVC,
-                            CatatanMedis = a.CatatanMedis,
-                            NamaDokterOperator = a.NamaDokterOperator,
-                            NamaDokterAnastesi = a.NamaDokterAnastesi,
-                            DokterTambahan1 = a.DokterTambahan1,
-                            DokterTambahan2 = a.DokterTambahan2,
-                            DokterTambahan3 = a.DokterTambahan3,
-                            DokterTambahan4 = a.DokterTambahan4,
-                            DokterTambahan5 = a.DokterTambahan5,
-                            PasienId = a.PasienId,
+                            PendaftaranPasienOptikId = a.PendaftaranPasienOptikId,
+                            KodePasienOptik = a.KodePasienOptik,
                             NamaPasien = a.NamaPasien,
-                            KeluhanOperasi = a.KeluhanOperasi
+                            Title = a.Title,
+                            TTL = a.TTL,
+                            JenisKelamin = a.JenisKelamin,
+                            NoTelp = a.NoTelp,
+                            Alamat = a.Alamat,
+                            DokterOptik = a.DokterOptik,
                         };
 
             // Hitung total data sebelum paginasi
@@ -115,7 +101,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             });
         }
 
-        // GET: api/Operasi/{id}
+        
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
@@ -127,9 +113,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             return Ok(new { message = "Data ditemukan.", data = record });
         }
 
-        // POST: api/Operasi
+        
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] OperasiViewModel vm)
+        public async Task<IActionResult> Create([FromBody] PendaftaranPasienOptikViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -152,72 +138,59 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var setDateNow = DateTimeOffset.UtcNow.ToString("yyMMdd");
 
                 // Generate UserActiveCode
-                var lastCode = _context.Operasis
+                var lastCode = _context.PendaftaranPasienOptiks
                     .Where(d => d.CreateDateTime.Date == dateNow.UtcDateTime.Date)
-                    .OrderByDescending(k => k.KodeOperasi)
+                    .OrderByDescending(k => k.KodePasienOptik)
                     .FirstOrDefault();
 
                 string kode;
                 if (lastCode == null)
                 {
-                    kode = $"OPR{setDateNow}0001";
+                    kode = $"OPT{setDateNow}0001";
 
                 }
                 else
                 {
-                    var lastCodeTrim = lastCode.KodeOperasi.Substring(3, 6);
+                    var lastCodeTrim = lastCode.KodePasienOptik.Substring(3, 6);
                     if (lastCodeTrim != setDateNow)
                     {
-                        kode = $"OPR{setDateNow}0001";
+                        kode = $"OPT{setDateNow}0001";
                     }
                     else
                     {
-                        kode = $"OPR{setDateNow}" + (Convert.ToInt32(lastCode.KodeOperasi.Substring(9)) + 1).ToString("D4");
+                        kode = $"OPT{setDateNow}" + (Convert.ToInt32(lastCode.KodePasienOptik.Substring(9)) + 1).ToString("D4");
                     }
                 }
 
                 // Cek Duplikasi
-                var isDuplicate = _context.Operasis
-                    .Any(c => c.KodeOperasi == kode);
+                var isDuplicate = _context.PendaftaranPasienOptiks
+                    .Any(c => c.KodePasienOptik == kode);
 
                 if (ModelState.IsValid)
                 {
-                    var data = new Operasi
+                    var data = new PendaftaranPasienOptik
                     {
-                        OperasiId = Guid.NewGuid(),
-                        KodeOperasi = kode,
-                        JenisOperasi = vm.JenisOperasi,
-                        TipeOperasi = vm.TipeOperasi,
-                        NamaTindakanOperasi = vm.NamaTindakanOperasi,
-                        TanggalOperasi = vm.TanggalOperasi,
-                        StatusOperasi = vm.StatusOperasi,
-                        LamaOperasi = vm.LamaOperasi,
-                        RuanganOperasi = vm.RuanganOperasi,
-                        LokasiRuanganOperasi = vm.LokasiRuanganOperasi,
-                        TipeCCVC = vm.TipeCCVC,
-                        CatatanMedis = vm.CatatanMedis,
-                        NamaDokterOperator = vm.NamaDokterOperator,
-                        NamaDokterAnastesi = vm.NamaDokterAnastesi,
-                        DokterTambahan1 = vm.DokterTambahan1,
-                        DokterTambahan2 = vm.DokterTambahan2,
-                        DokterTambahan3 = vm.DokterTambahan3,
-                        DokterTambahan4 = vm.DokterTambahan4,
-                        DokterTambahan5 = vm.DokterTambahan5,
-                        PasienId = vm.PasienId,
+                        PendaftaranPasienOptikId = Guid.NewGuid(),
+                        KodePasienOptik = kode,
                         NamaPasien = vm.NamaPasien,
-                        KeluhanOperasi = vm.KeluhanOperasi,
+                        Title = vm.Title,
+                        //TTL = vm.TTL,
+                        JenisKelamin = vm.JenisKelamin,
+                        NoTelp = vm.NoTelp,
+                        Alamat = vm.Alamat,
+                        DokterOptik = vm.DokterOptik,
                         CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = UserActiveId,
                         IsDelete = false,
-                        
                     };
-                    _context.Operasis.Add(data);
+                   
+                    _context.PendaftaranPasienOptiks.Add(data);
                     _context.SaveChanges();
 
                     return Created("", new
                     {
                         message = "Tambah Data Berhasil || 201 Created",
-                        //uploadFotoUrl = fotoPath != null ? $"{Request.Scheme}://{Request.Host}{fotoPath}" : null
+                       
                     });
 
                 }
@@ -233,9 +206,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-        // PUT: api/operasi/{id}
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] OperasiViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] PendaftaranPasienOptikViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -255,37 +227,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // cari data
-                var data = _context.Operasis.Find(id);
+                var data = _context.PendaftaranPasienOptiks.Find(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
                 //update data
-                data.JenisOperasi = vm.JenisOperasi;
-                data.TipeOperasi = vm.TipeOperasi;
-                data.NamaTindakanOperasi = vm.NamaTindakanOperasi;
-                data.TanggalOperasi = vm.TanggalOperasi;
-                data.StatusOperasi = vm.StatusOperasi;
-                data.LamaOperasi = vm.LamaOperasi;
-                data.RuanganOperasi = vm.RuanganOperasi;
-                data.LokasiRuanganOperasi = vm.LokasiRuanganOperasi;
-                data.TipeCCVC = vm.TipeCCVC;
-                data.CatatanMedis = vm.CatatanMedis;
-                data.NamaDokterOperator = vm.NamaDokterOperator;
-                data.NamaDokterAnastesi = vm.NamaDokterAnastesi;
-                data.DokterTambahan1 = vm.DokterTambahan1;
-                data.DokterTambahan2 = vm.DokterTambahan2;
-                data.DokterTambahan3 = vm.DokterTambahan3;
-                data.DokterTambahan4 = vm.DokterTambahan4;
-                data.DokterTambahan5 = vm.DokterTambahan5;
-                data.PasienId = vm.PasienId;
                 data.NamaPasien = vm.NamaPasien;
-                data.KeluhanOperasi = vm.KeluhanOperasi;
+                data.Title = vm.Title;
+                //data.TTL = vm.TTL;
+                data.JenisKelamin = vm.JenisKelamin;
+                data.NoTelp = vm.NoTelp;
+                data.Alamat = vm.Alamat;
+                data.DokterOptik = vm.DokterOptik;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
+                data.UpdateBy = UserActiveId;
 
-
-
-                _context.Operasis.Update(data);
+                _context.PendaftaranPasienOptiks.Update(data);
                 _context.SaveChanges();
 
                 return Ok(new { message = "Data berhasil diupdate..." });
@@ -297,7 +256,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-        // DELETE: api/Operasi/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
@@ -314,7 +272,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // **Cari Data Dokter**
-                var data = _context.Operasis.Find(id);
+                var data = _context.PendaftaranPasienOptiks.Find(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -325,7 +283,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.DeleteDateTime = DateTimeOffset.UtcNow;
                 data.IsDelete = true;
 
-                _context.Operasis.Update(data);
+                _context.PendaftaranPasienOptiks.Update(data);
                 _context.SaveChanges();
 
                 return Ok(new { message = "Data berhasil dihapus..." });
@@ -337,20 +295,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet("paged")]
-        public IActionResult PagedOperasi(
+        public IActionResult PagedPdfPasienOptik(
         int page = 1,
         int perPage = 10,
         string? search = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-        DateTime? startDate = null,
+                DateTime? startDate = null,
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-        DateTime? endDate = null,
+                DateTime? endDate = null,
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
             // Query data
-            var query = from a in _context.Operasis
+            var query = from a in _context.PendaftaranPasienOptiks
                         join u in _context.UserActives
                         on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
@@ -359,35 +317,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateDateTime = a.CreateDateTime,
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
-                            OperasiId = a.OperasiId,
-                            KodeOperasi = a.KodeOperasi,
-                            JenisOperasi = a.JenisOperasi,
-                            TipeOperasi = a.TipeOperasi,
-                            NamaTindakanOperasi = a.NamaTindakanOperasi,
-                            TanggalOperasi = a.TanggalOperasi,
-                            StatusOperasi = a.StatusOperasi,
-                            LamaOperasi = a.LamaOperasi,
-                            RuanganOperasi = a.RuanganOperasi,
-                            LokasiRuanganOperasi = a.LokasiRuanganOperasi,
-                            TipeCCVC = a.TipeCCVC,
-                            CatatanMedis = a.CatatanMedis,
-                            NamaDokterOperator = a.NamaDokterOperator,
-                            NamaDokterAnastesi = a.NamaDokterAnastesi,
-                            DokterTambahan1 = a.DokterTambahan1,
-                            DokterTambahan2 = a.DokterTambahan2,
-                            DokterTambahan3 = a.DokterTambahan3,
-                            DokterTambahan4 = a.DokterTambahan4,
-                            DokterTambahan5 = a.DokterTambahan5,
-                            PasienId = a.PasienId,
+                            PendaftaranPasienOptikId = a.PendaftaranPasienOptikId,
+                            KodePasienOptik = a.KodePasienOptik,
                             NamaPasien = a.NamaPasien,
-                            KeluhanOperasi = a.KeluhanOperasi
+                            Title = a.Title,
+                            TTL = a.TTL,
+                            JenisKelamin = a.JenisKelamin,
+                            NoTelp = a.NoTelp,
+                            Alamat = a.Alamat,
+                            DokterOptik = a.DokterOptik,
                         };
 
             // Filter berdasarkan search
             if (!string.IsNullOrWhiteSpace(search))
             {
                 query = query.Where(u =>
-                    u.KodeOperasi.Contains(search) || u.NamaTindakanOperasi.Contains(search) || u.JenisOperasi.Contains(search)
+                    u.KodePasienOptik.Contains(search) || u.NamaPasien.Contains(search) || u.DokterOptik.Contains(search)
                 );
             }
 
@@ -455,18 +400,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "KodeOperasi" => query.OrderByDescending(u => u.KodeOperasi),
-                    "JenisOperasi" => query.OrderByDescending(u => u.JenisOperasi),
-                    "NamaTindakanOperasi" => query.OrderByDescending(u => u.NamaTindakanOperasi),
+                    "KodePasienOptik" => query.OrderByDescending(u => u.KodePasienOptik),
+                    "NamaPasien" => query.OrderByDescending(u => u.NamaPasien),
+                    "DokterOptik" => query.OrderByDescending(u => u.DokterOptik),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "KodeOperasi" => query.OrderByDescending(u => u.KodeOperasi),
-                    "JenisOperasi" => query.OrderByDescending(u => u.JenisOperasi),
-                    "NamaTindakanOperasi" => query.OrderByDescending(u => u.NamaTindakanOperasi),
+                    "KodePasienOptik" => query.OrderByDescending(u => u.KodePasienOptik),
+                    "NamaPasien" => query.OrderByDescending(u => u.NamaPasien),
+                    "DokterOptik" => query.OrderByDescending(u => u.DokterOptik),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 };
 
@@ -494,5 +439,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
             });
         }
+
     }
 }

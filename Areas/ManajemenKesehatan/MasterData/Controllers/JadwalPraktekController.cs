@@ -64,9 +64,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             UpdateBy = a.UpdateBy,
                             DokterId = a.DokterId,
                             DokterPoliId = a.DokterPoliId,
-                            NamaDokter = a.NamaDokter,
                             PoliId = a.PoliId,
-                            SubPoliId = a.SubPoliId,
                             WaktuPraktek = a.WaktuPraktek,
                             HariPraktek = a.HariPraktek,
                             JamMulai = a.JamMulai,
@@ -186,9 +184,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     {
                         DokterId = vm.DokterId,
                         DokterPoliId = vm.DokterPoliId,
-                        NamaDokter = vm.NamaDokter,
                         PoliId = vm.PoliId,
-                        SubPoliId = vm.SubPoliId,
                         KodeJadwalPraktek = kode,
                         WaktuPraktek = vm.WaktuPraktek,
                         HariPraktek = vm.HariPraktek,
@@ -253,9 +249,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     data.DokterId = vm.DokterId;
                     data.DokterPoliId = vm.DokterPoliId;
-                    data.NamaDokter = vm.NamaDokter;
                     data.PoliId = vm.PoliId;
-                    data.SubPoliId = vm.SubPoliId;
                     data.WaktuPraktek = vm.WaktuPraktek;
                     data.HariPraktek = vm.HariPraktek;
                     data.JamMulai = vm.JamMulai;
@@ -343,22 +337,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             UpdateBy = a.UpdateBy,
                             DokterId = a.DokterId,
                             DokterPoliId = a.DokterPoliId,
-                            NamaDokter = a.NamaDokter,
                             PoliId = a.PoliId,
-                            SubPoliId = a.SubPoliId,
                             JadwalPraktekId = a.JadwalPraktekId,
                             KodeJadwalPraktek = a.KodeJadwalPraktek,
                             WaktuPraktek = a.WaktuPraktek,
                             HariPraktek = a.HariPraktek,
                             JamMulai = a.JamMulai,
                             JamBerakhir = a.JamBerakhir,
+                            
                         };
 
             // Filter berdasarkan search
             if (!string.IsNullOrWhiteSpace(search))
             {
                 query = query.Where(u =>
-                    u.KodeJadwalPraktek.Contains(search) || u.NamaDokter.Contains(search) || u.HariPraktek.Contains(search)
+                    u.KodeJadwalPraktek.Contains(search)  || u.HariPraktek.Contains(search)
                 );
             }
 
@@ -427,7 +420,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
                     "KodeJadwalPraktek" => query.OrderByDescending(u => u.KodeJadwalPraktek),
-                    "NamaDokter" => query.OrderByDescending(u => u.NamaDokter),
                     "HariPraktek" => query.OrderByDescending(u => u.HariPraktek),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
@@ -436,7 +428,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
                     "KodeJadwalPraktek" => query.OrderByDescending(u => u.KodeJadwalPraktek),
-                    "NamaDokter" => query.OrderByDescending(u => u.NamaDokter),
                     "HariPraktek" => query.OrderByDescending(u => u.HariPraktek),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 };

@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 using QuilvianSystemBackendDev.Models;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
@@ -10,7 +11,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string KodePersalinan { get; set; }
 
         public string NamaPersalinan { get; set; }
-        public DateTime? TanggalPersalinan { get; set; }
+
+        [JsonConverter(typeof(DateOnlyJsonConverter))]
+        public DateOnly? TanggalPersalinan { get; set; }
         public string TipePersalinan { get; set; }
         public string TindakanPersalinan { get; set; }
         public string SubTindakanPersalinan { get; set; }
@@ -29,7 +32,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         // informasi bayi
         public string NamaBayi { get; set; }
         public string JenisKelaminBayi { get; set; }
-        public DateTime? TTLBayi { get; set; }
+        [JsonConverter(typeof(DateOnlyJsonConverter))]
+        public DateOnly? TTLBayi { get; set; }
         public string BeratBayi { get; set; }
         public string PanjangBayi { get; set; }
         public string NamaAyah { get; set; }

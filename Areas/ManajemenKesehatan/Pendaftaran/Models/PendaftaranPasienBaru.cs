@@ -1,6 +1,7 @@
 ﻿using QuilvianSystemBackendDev.Models;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
 {
@@ -22,7 +23,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
         public Guid IdentitasId { get; set; }
         public string NoIdentitas { get; set; } // KTP atau Passport
         public string? TempatLahir { get; set; }
-        public DateTimeOffset? TanggalLahir { get; set; }
+
+        [JsonConverter(typeof(DateOnlyJsonConverter))]
+        public DateOnly? TanggalLahir { get; set; }
         public string? JenisKelamin { get; set; }
         public string? Status { get; set; }
         public Guid? AgamaId { get; set; }

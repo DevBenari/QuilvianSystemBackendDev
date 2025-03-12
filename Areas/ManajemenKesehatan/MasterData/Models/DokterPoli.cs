@@ -11,9 +11,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public Guid DokterPoliId { get; set; }
         public Guid DokterId { get; set; }
         public Guid? PoliId { get; set; }
-        public string NamaDokter { get; set; }
         public string? KodeDokterPoli { get; set; }
-        public string? NamaPoliKlinik { get; set; }
 
         //relasi ke Asuransi
         [ForeignKey("AsuransiId")]

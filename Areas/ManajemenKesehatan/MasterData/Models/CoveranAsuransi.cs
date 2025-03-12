@@ -1,6 +1,7 @@
 ﻿using QuilvianSystemBackendDev.Models;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
 {
@@ -18,8 +19,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? Class { get; set; }
         public bool? IsSurgery { get; set; }
         public decimal? Tarif { get; set; }
-        public DateTime? TglBerlaku { get; set; }
-        public DateTime? TglBerakhir { get; set; }
+        [JsonConverter(typeof(DateOnlyJsonConverter))]
+        public DateOnly? TglBerlaku { get; set; }
+        [JsonConverter(typeof(DateOnlyJsonConverter))]
+        public DateOnly? TglBerakhir { get; set; }
         public bool? IsPKS { get; set; }
 
         //relasi ke Asuransi

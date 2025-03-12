@@ -64,7 +64,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             NamaPoliklinik = a.Poliklinik.NamaPoliklinik,
                             DokterId = a.DokterId,
                             PoliId = a.PoliId,
-                            NamaDokter = a.NamaDokter,
                         };
 
             // Hitung total data sebelum paginasi
@@ -180,8 +179,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         KodeDokterPoli = kode,
                         DokterId = vm.DokterId,
                         PoliId = vm.PoliId,
-                        NamaDokter = vm.NamaDokter,
-                        //NamaPol
                         CreateDateTime = dateNow,
                         CreateBy = UserActiveId,
                         IsDelete = false
@@ -244,7 +241,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     data.DokterId = vm.DokterId;
                     data.PoliId = vm.PoliId;
-                    data.NamaDokter = vm.NamaDokter;
                     data.UpdateDateTime = DateTimeOffset.UtcNow;
                     data.UpdateBy = UserActiveId;
 
@@ -332,7 +328,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             NamaPoliklinik = a.Poliklinik.NamaPoliklinik,
                             DokterId = a.DokterId,
                             PoliId = a.PoliId,
-                            NamaDokter = a.NamaDokter,
+                            NamaDokter = a.Dokter.NmDokter
                         };
 
             // Filter berdasarkan search
