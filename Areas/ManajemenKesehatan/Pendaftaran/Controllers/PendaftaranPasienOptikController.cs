@@ -174,7 +174,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         KodePasienOptik = kode,
                         NamaPasien = vm.NamaPasien,
                         Title = vm.Title,
-                        //TTL = vm.TTL,
+                        TTL = vm.TTL,
                         JenisKelamin = vm.JenisKelamin,
                         NoTelp = vm.NoTelp,
                         Alamat = vm.Alamat,
@@ -236,7 +236,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 //update data
                 data.NamaPasien = vm.NamaPasien;
                 data.Title = vm.Title;
-                //data.TTL = vm.TTL;
+                data.TTL = vm.TTL;
                 data.JenisKelamin = vm.JenisKelamin;
                 data.NoTelp = vm.NoTelp;
                 data.Alamat = vm.Alamat;

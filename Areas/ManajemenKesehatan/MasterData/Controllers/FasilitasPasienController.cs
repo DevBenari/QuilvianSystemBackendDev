@@ -3,42 +3,38 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewModels;
-using QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controllers
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class PendaftaranPasienUGDController : Controller
+    public class FasilitasPasienController : Controller
     {
-        private readonly ApplicationDbContext _applicationDbContext;
+        private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<PendaftaranPasienUGDController> _logger;
+        private readonly ILogger<FasilitasPasienController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public PendaftaranPasienUGDController
-            (ApplicationDbContext applicationDbContext,
-            UserManager<ApplicationUser> userManager,
-            SignInManager<ApplicationUser> signInManager,
-            ILogger<PendaftaranPasienUGDController> logger,
+        public FasilitasPasienController
+            (ApplicationDbContext context, 
+            UserManager<ApplicationUser> userManager, 
+            SignInManager<ApplicationUser> signInManager, 
+            ILogger<FasilitasPasienController> logger, 
             IWebHostEnvironment webHostEnvironment)
         {
-            _applicationDbContext = applicationDbContext;
+            _context = context;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
@@ -46,15 +42,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAllPendaftaranPasienUGD(int page = 1, int perPage = 10)
+        public async Task<IActionResult> GetAllFasilitasPasien(int page = 1, int perPage = 10)
         {
-            // Validasi agar page dan perPage minimal bernilai 1
+            // validasi pagging
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = from a in _applicationDbContext.PendaftaranPasienUGDs
-                        join u in _applicationDbContext.UserActives
+            var query = from a in _context.FasilitasPasiens
+                        join u in _context.UserActives
                         on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
                         select new
@@ -62,22 +58,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                             CreateDateTime = a.CreateDateTime,
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
-                            PendaftaranPasienUGDId = a.PendaftaranPasienUGDId,
-                            KodePasienUGD = a.KodePasienUGD,
-                            NamaPasien = a.NamaPasien,
-                            Title = a.Title,
-                            TTL = a.TTL,
-                            Umur = a.Umur,
-                            NoTelp = a.NoTelp,
-                            NamaDokterUGD = a.NamaDokterUGD,
-                            Diagnosa = a.Diagnosa,
-                            Tindakan = a.Tindakan,
-                            BiayaAdmin = a.BiayaAdmin,
-                            Kelas = a.Kelas,
-                            //a.AsuransiId,
-                            NoPolis = a.NoPolis,
-                            NamaAsuransi = a.NamaAsuransi,
-                            Afliasi = a.Afliasi
+                            FasilitasPasienId = a.FasilitasPasienId,
+                            KodeFasilitas = a.KodeFasilitas,
+                            NamaFasilitasPasien = a.NamaFasilitasPasien
                         };
 
             // Hitung total data sebelum paginasi
@@ -111,23 +94,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetPendaftaranPasienUGDById(Guid id)
+        public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.PendaftaranPasienUGDs.Find(id);
-            if (listdata == null)
+            var record = await _context.FasilitasPasiens.FindAsync(id);
+            if (record == null)
             {
-                return NotFound(new { message = "Data tidak ditemukan." });
+                return NotFound(new { message = $"Data dengan ID {id} tidak ditemukan." });
             }
-
-            return Ok(new
-            {
-                message = "Ditemukan || 200 OK",
-                data = listdata
-            });
+            return Ok(new { message = "Data ditemukan.", data = record });
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreatePendaftaranPasienUGD([FromBody] PendaftaranPasienUGDViewModel vm)
+        public async Task<IActionResult> Create([FromBody] FasilitasPasienViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -138,7 +116,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             {
                 // **Ambil User ID dari JWT Claims**
                 var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var GetUserActive = _context.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
                 var UserActiveId = GetUserActive.UserActiveId;
 
                 if (string.IsNullOrEmpty(EmailLogin))
@@ -150,73 +128,62 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 var setDateNow = DateTimeOffset.UtcNow.ToString("yyMMdd");
 
                 // Generate UserActiveCode
-                var lastCode = _applicationDbContext.PendaftaranPasienUGDs
+                var lastCode = _context.FasilitasPasiens
                     .Where(d => d.CreateDateTime.Date == dateNow.UtcDateTime.Date)
-                    .OrderByDescending(k => k.KodePasienUGD)
+                    .OrderByDescending(k => k.KodeFasilitas)
                     .FirstOrDefault();
 
                 string kode;
                 if (lastCode == null)
                 {
-                    kode = $"UGD{setDateNow}0001";
+                    kode = $"FPS{setDateNow}0001";
 
                 }
                 else
                 {
-                    var lastCodeTrim = lastCode.KodePasienUGD.Substring(3, 6);
+                    var lastCodeTrim = lastCode.KodeFasilitas.Substring(3, 6);
                     if (lastCodeTrim != setDateNow)
                     {
-                        kode = $"UGD{setDateNow}0001";
+                        kode = $"FPS{setDateNow}0001";
                     }
                     else
                     {
-                        kode = $"UGD{setDateNow}" + (Convert.ToInt32(lastCode.KodePasienUGD.Substring(9)) + 1).ToString("D4");
+                        kode = $"FPS{setDateNow}" + (Convert.ToInt32(lastCode.KodeFasilitas.Substring(9)) + 1).ToString("D4");
                     }
                 }
 
                 // Cek Duplikasi
-                var isDuplicate = _applicationDbContext.PendaftaranPasienUGDs
-                    .Any(c => c.KodePasienUGD == kode);
+                var isDuplicate = _context.FasilitasPasiens
+                    .Any(c => c.KodeFasilitas == kode);
 
                 if (ModelState.IsValid)
                 {
-                    var data = new PendaftaranPasienUGD
+                    var data = new FasilitasPasien
                     {
-                        PendaftaranPasienUGDId = Guid.NewGuid(),
-                        KodePasienUGD = kode,
-                        NamaPasien = vm.NamaPasien,
-                        Title = vm.Title,
-                        TTL = vm.TTL,
-                        Umur = vm.Umur,
-                        NoTelp = vm.NoTelp,
-                        NamaDokterUGD = vm.NamaDokterUGD,
-                        Diagnosa = vm.Diagnosa,
-                        Tindakan = vm.Tindakan,
-                        BiayaAdmin = vm.BiayaAdmin,
-                        Kelas = vm.Kelas,
-                        AsuransiId = vm.AsuransiId,
-                        NoPolis = vm.NoPolis,
-                        NamaAsuransi = vm.NamaAsuransi,
-                        Afliasi = vm.Afliasi,
+                        FasilitasPasienId = Guid.NewGuid(),
+                        KodeFasilitas = kode,
+                        NamaFasilitasPasien = vm.NamaFasilitasPasien,
                         CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = UserActiveId,
-                        IsDelete = false
-                    };
+                        IsDelete = false,
 
-                    _applicationDbContext.PendaftaranPasienUGDs.Add(data);
-                    _applicationDbContext.SaveChanges();
+                    };
+                    _context.FasilitasPasiens.Add(data);
+                    _context.SaveChanges();
 
                     return Created("", new
                     {
-                        message = "Tambah Data Berhasil || 201 Created"
-
+                        message = "Tambah Data Berhasil || 201 Created",
+                        //uploadFotoUrl = fotoPath != null ? $"{Request.Scheme}://{Request.Host}{fotoPath}" : null
                     });
+
                 }
                 else
                 {
-                    return BadRequest(new { message = "Data tidak valid." });
+                    return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
                 }
             }
+
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
@@ -224,17 +191,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdatePendaftaranPasienUGD(Guid id, [FromBody] PendaftaranPasienUGDViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] FasilitasPasienViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
                 return BadRequest(new { message = "Data tidak valid." });
             }
+
             try
             {
                 // **Ambil User ID dari JWT Claims**
                 var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var GetUserActive = _context.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
                 var UserActiveId = GetUserActive.UserActiveId;
 
                 if (string.IsNullOrEmpty(EmailLogin))
@@ -242,36 +210,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var data = _applicationDbContext.PendaftaranPasienUGDs.Find(id);
+                // cari data
+                var data = _context.FasilitasPasiens.Find(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
-                data.NamaPasien = vm.NamaPasien;
-                data.Title = vm.Title;
-                data.TTL = vm.TTL;
-                data.Umur = vm.Umur;
-                data.NoTelp = vm.NoTelp;
-                data.NamaDokterUGD = vm.NamaDokterUGD;
-                data.Diagnosa = vm.Diagnosa;
-                data.Tindakan = vm.Tindakan;
-                data.BiayaAdmin = vm.BiayaAdmin;
-                data.Kelas = vm.Kelas;
-                data.AsuransiId = vm.AsuransiId;
-                data.NoPolis = vm.NoPolis;
-                data.NamaAsuransi = vm.NamaAsuransi;
-                data.Afliasi = vm.Afliasi;
-
+                //update data
+                data.NamaFasilitasPasien = vm.NamaFasilitasPasien;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
                 data.UpdateBy = UserActiveId;
 
-
-                _applicationDbContext.PendaftaranPasienUGDs.Update(data);
-                _applicationDbContext.SaveChanges();
+                _context.FasilitasPasiens.Update(data);
+                _context.SaveChanges();
 
                 return Ok(new { message = "Data berhasil diupdate..." });
             }
+
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
@@ -285,7 +241,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             {
                 //Ambil User ID dari JWT Claims
                 var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var GetUserActive = _context.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
                 var UserActiveId = GetUserActive.UserActiveId;
 
                 if (string.IsNullOrEmpty(EmailLogin))
@@ -294,7 +250,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 }
 
                 // **Cari Data Dokter**
-                var data = _applicationDbContext.PendaftaranPasienUGDs.Find(id);
+                var data = _context.FasilitasPasiens.Find(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -305,8 +261,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 data.DeleteDateTime = DateTimeOffset.UtcNow;
                 data.IsDelete = true;
 
-                _applicationDbContext.PendaftaranPasienUGDs.Update(data);
-                _applicationDbContext.SaveChanges();
+                _context.FasilitasPasiens.Update(data);
+                _context.SaveChanges();
 
                 return Ok(new { message = "Data berhasil dihapus..." });
             }
@@ -317,21 +273,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
         }
 
         [HttpGet("paged")]
-        public IActionResult PagedPosition(
-           int page = 1,
-           int perPage = 10,
-           string? search = null,
-           string? orderBy = "CreateDateTime",
-           string? sortDirection = "desc",
-           [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+        public IActionResult PagedFasilitasPasien(
+        int page = 1,
+        int perPage = 10,
+        string? search = null,
+        string? orderBy = "CreateDateTime",
+        string? sortDirection = "desc",
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
         DateTime? startDate = null,
-           [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
         DateTime? endDate = null,
-           [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
             // Query data
-            var query = from a in _applicationDbContext.PendaftaranPasienUGDs
-                        join u in _applicationDbContext.UserActives
+            var query = from a in _context.FasilitasPasiens
+                        join u in _context.UserActives
                         on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
                         select new
@@ -339,29 +295,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                             CreateDateTime = a.CreateDateTime,
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
-                            PendaftaranPasienUGDId = a.PendaftaranPasienUGDId,
-                            KodePasienUGD = a.KodePasienUGD,
-                            NamaPasien = a.NamaPasien,
-                            Title = a.Title,
-                            TTL = a.TTL,
-                            Umur = a.Umur,
-                            NoTelp = a.NoTelp,
-                            NamaDokterUGD = a.NamaDokterUGD,
-                            Diagnosa = a.Diagnosa,
-                            Tindakan = a.Tindakan,
-                            BiayaAdmin = a.BiayaAdmin,
-                            Kelas = a.Kelas,
-                            //a.AsuransiId,
-                            NoPolis = a.NoPolis,
-                            NamaAsuransi = a.NamaAsuransi,
-                            Afliasi = a.Afliasi
+                            FasilitasPasienId = a.FasilitasPasienId,
+                            KodeFasilitas = a.KodeFasilitas,
+                            NamaFasilitasPasien = a.NamaFasilitasPasien
                         };
 
             // Filter berdasarkan search
             if (!string.IsNullOrWhiteSpace(search))
             {
                 query = query.Where(u =>
-                    u.KodePasienUGD.Contains(search) || u.NamaPasien.Contains(search) || u.Tindakan.Contains(search)
+                    u.NamaFasilitasPasien.Contains(search) || u.KodeFasilitas.Contains(search)
                 );
             }
 
@@ -429,20 +372,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "KodePasienUGD" => query.OrderByDescending(u => u.
-                    KodePasienUGD),
-                    "NamaPasien" => query.OrderByDescending(u => u.NamaPasien),
-                    "Tindakan" => query.OrderByDescending(u => u.Tindakan),
+                    "KodeFasilitas" => query.OrderByDescending(u => u.KodeFasilitas),
+                    "NamaFasilitasPasien" => query.OrderByDescending(u => u.NamaFasilitasPasien),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "KodePasienUGD" => query.OrderByDescending(u => u.
-                    KodePasienUGD),
-                    "NamaPasien" => query.OrderByDescending(u => u.NamaPasien),
-                    "Tindakan" => query.OrderByDescending(u => u.Tindakan),
+                    "KodeFasilitas" => query.OrderByDescending(u => u.KodeFasilitas),
+                    "NamaFasilitasPasien" => query.OrderByDescending(u => u.NamaFasilitasPasien),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 };
 

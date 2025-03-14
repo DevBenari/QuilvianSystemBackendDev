@@ -46,5 +46,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public bool? IsPKS { get; set; }
 
         public ICollection<CoveranAsuransi> CoveranAsuransis { get; set; }
+        public ICollection<DokterAsuransi> DokterAsuransis { get; set; }
     }
 }

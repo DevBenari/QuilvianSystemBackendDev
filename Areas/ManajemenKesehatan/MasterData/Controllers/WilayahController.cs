@@ -1664,10 +1664,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            // Query data
             var query = from a in _applicationDbContext.KodePoss
                         join u in _applicationDbContext.UserActives
-                        on a.CreateBy equals u.UserActiveId
+                            on a.CreateBy equals u.UserActiveId
+                        join kel in _applicationDbContext.Kelurahans
+                            on a.KelurahanId equals kel.KelurahanId
+                        join kec in _applicationDbContext.Kecamatans
+                            on kel.KecamatanId equals kec.KecamatanId
+                        join kab in _applicationDbContext.KabupatenKotas
+                            on kec.KabupatenKotaId equals kab.KabupatenKotaId
+                        join prov in _applicationDbContext.Provinsis
+                            on kab.ProvinsiId equals prov.ProvinsiId
                         where a.IsDelete == false
                         select new
                         {
@@ -1678,6 +1685,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             UniqueKodePos = a.UniqueKodePos,
                             KelurahanId = a.KelurahanId,
                             NamaKodePos = a.NamaKodePos,
+
+                            // Data Kelurahan
+                            NamaKelurahan = kel.NamaKelurahan,
+
+                            // Data Kecamatan
+                            KecamatanId = kel.KecamatanId,
+                            NamaKecamatan = kec.NamaKecamatan,
+
+                            // Data Kabupaten
+                            KabupatenKotaId = kec.KabupatenKotaId,
+                            NamaKabupatenKota = kab.NamaKabupatenKota,
+
+                            // Data Provinsi
+                            ProvinsiId = kab.ProvinsiId,
+                            NamaProvinsi = prov.NamaProvinsi
                         };
 
             // Hitung total data sebelum paginasi
@@ -1905,7 +1927,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         {
             var query = from a in _applicationDbContext.KodePoss
                         join u in _applicationDbContext.UserActives
-                        on a.CreateBy equals u.UserActiveId
+                            on a.CreateBy equals u.UserActiveId
+                        join kel in _applicationDbContext.Kelurahans
+                            on a.KelurahanId equals kel.KelurahanId
+                        join kec in _applicationDbContext.Kecamatans
+                            on kel.KecamatanId equals kec.KecamatanId
+                        join kab in _applicationDbContext.KabupatenKotas
+                            on kec.KabupatenKotaId equals kab.KabupatenKotaId
+                        join prov in _applicationDbContext.Provinsis
+                            on kab.ProvinsiId equals prov.ProvinsiId
                         where a.IsDelete == false
                         select new
                         {
@@ -1916,6 +1946,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             UniqueKodePos = a.UniqueKodePos,
                             KelurahanId = a.KelurahanId,
                             NamaKodePos = a.NamaKodePos,
+
+                            // Data Kelurahan
+                            NamaKelurahan = kel.NamaKelurahan,
+
+                            // Data Kecamatan
+                            KecamatanId = kel.KecamatanId,
+                            NamaKecamatan = kec.NamaKecamatan,
+
+                            // Data Kabupaten
+                            KabupatenKotaId = kec.KabupatenKotaId,
+                            NamaKabupatenKota = kab.NamaKabupatenKota,
+
+                            // Data Provinsi
+                            ProvinsiId = kab.ProvinsiId,
+                            NamaProvinsi = prov.NamaProvinsi
                         };
 
             // Filter berdasarkan search
@@ -1992,6 +2037,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
                     "UniqueKodePos" => query.OrderByDescending(u => u.UniqueKodePos),
                     "NamaKodePos" => query.OrderByDescending(u => u.NamaKodePos),
+                    "NamaKelurahan" => query.OrderByDescending(u => u.NamaKelurahan),
+                    "NamaKecamatan" => query.OrderByDescending(u => u.NamaKecamatan),
+                    "NamaKabupatenKota" => query.OrderByDescending(u => u.NamaKabupatenKota),
+                    "NamaProvinsi" => query.OrderByDescending(u => u.NamaProvinsi),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
@@ -2000,6 +2049,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
                     "UniqueKodePos" => query.OrderByDescending(u => u.UniqueKodePos),
                     "NamaKodePos" => query.OrderByDescending(u => u.NamaKodePos),
+                    "NamaKelurahan" => query.OrderByDescending(u => u.NamaKelurahan),
+                    "NamaKecamatan" => query.OrderByDescending(u => u.NamaKecamatan),
+                    "NamaKabupatenKota" => query.OrderByDescending(u => u.NamaKabupatenKota),
+                    "NamaProvinsi" => query.OrderByDescending(u => u.NamaProvinsi),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 };
 

@@ -30,5 +30,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         //relasi ke dokter poli
         public ICollection<DokterPoli> DokterPolis { get; set; }
 
+        //relasi ke dokter asuransi
+        public ICollection<DokterAsuransi> DokterAsuransis { get; set; }
+
     }
 }
