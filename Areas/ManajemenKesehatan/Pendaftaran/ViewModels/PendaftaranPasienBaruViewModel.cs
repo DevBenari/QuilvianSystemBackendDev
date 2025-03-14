@@ -34,7 +34,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewMode
         public int? NoTelepon3 { get; set; }
 
         // Informasi Grafis
-        public string Kewarganegaraan { get; set; }
+        public string? Kewarganegaraan { get; set; }
         public string? Suku { get; set; }
         public string? StatusKewarganegaraan { get; set; }
 
