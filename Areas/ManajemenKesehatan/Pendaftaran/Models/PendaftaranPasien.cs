@@ -22,7 +22,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
         public string Penjamin { get; set; }
         public string Layanan { get; set; }
         public string DokterPemeriksa { get; set; }
-
     }
 
 }
