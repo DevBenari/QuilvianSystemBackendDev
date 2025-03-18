@@ -1,5 +1,6 @@
 ﻿using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels
 {

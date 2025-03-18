@@ -1,11 +1,12 @@
-﻿namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels
+﻿using System.Text.Json.Serialization;
+
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels
 {
     public class AsuransiViewModel
     {
-        public string? KodeAsuransi { get; set; }
-        public DateTimeOffset? Createdate { get; set; }
+        public DateOnly? Createdate { get; set; }
 
-        //informasi Asuransi
+        // Informasi Asuransi
         public string? NamaAsuransi { get; set; }
         public string? JenisAsuransi { get; set; }
         public string? KategoriAsuransi { get; set; }
@@ -15,42 +16,27 @@
         public string? RSRekanan { get; set; }
         public bool IsPKS { get; set; }
 
-        // informasi klaim
+        // Informasi Klaim
         public string? MetodeKlaim { get; set; }
+
         public DateTime? WaktuKlaim { get; set; }
+
         public int? BatasMaxKlaimPerTahun { get; set; }
         public int? BatasMaxKlaimPerKunjungan { get; set; }
-        public string? DokumenKlaim { get; set; }
 
-        // informasi pertanggungan
-        public string? Layanan { get; set; }
+        // Informasi Pertanggungan
         public int? PersentasiBiayaPertanggungan { get; set; }
-        public string? ObatDitanggung { get; set; }
         public int? TambahanTanggungan { get; set; }
-        public int? BiayaTidakDitanggung { get; set; }
-        public int? MasaTunggu { get; set; }
-        public int? MaxUsiaPasien { get; set; }
 
-        //informasi pembayaran
+        // Informasi Pembayaran
         public string? NoRekRumahSakit { get; set; }
         public string? NamaBank { get; set; }
-        public string? NamaBankCabang { get; set; }
         public string? TermOfPayment { get; set; }
-        public DateTime? BatasWaktuPembayaran { get; set; }
-        public int? PenaltiTerlambatBayar { get; set; }
 
-        //informasi kontak dan dukungan
+        // Informasi Kontak Utama
         public string? NamaPerusahaanAsuransi { get; set; }
-        public string? AlamatPusat { get; set; }
-        public string? AlamatCabang { get; set; }
         public string? NoTelepon { get; set; }
         public string? EmailPusat { get; set; }
-        public string? NoHotlineDarurat { get; set; }
-
-        //informasi perwakilan asuransi
-        public string? NamaPerwakilan { get; set; }
-        public string? NoTeleponPerwakilan { get; set; }
-        public string? EmailPerwakilan { get; set; }
-        public string? JabatanPerwakilan { get; set; }
+        public bool? IsPKS { get; set; }
     }
 }

@@ -2,6 +2,7 @@
 using QuilvianSystemBackendDev.Models;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
 {
@@ -18,6 +19,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? JenisAsuransi { get; set; }
         public string? KategoriAsuransi { get; set; }
         public string? StatusAsuransi { get; set; }
+
         public DateTime? TanggalMulaiKerjasama { get; set; }
         public DateTime? TanggalAkhirKerjasama { get; set; }
 
@@ -40,6 +42,5 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? NoTelepon { get; set; }
         public string? EmailPusat { get; set; }
         public bool? IsPKS { get; set; }
-
     }
 }

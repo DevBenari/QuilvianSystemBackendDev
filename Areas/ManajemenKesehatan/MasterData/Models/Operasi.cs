@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 using QuilvianSystemBackendDev.Models;
+using Newtonsoft.Json;
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
 {
 
@@ -14,7 +15,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string JenisOperasi { get; set; }
         public string TipeOperasi { get; set; }
         public string NamaTindakanOperasi { get; set; }
-        public DateTime TanggalOperasi { get; set; }
+        [JsonConverter(typeof(DateOnlyJsonConverter))]
+        public DateOnly TanggalOperasi { get; set; }
         public string StatusOperasi { get; set; }
         public int LamaOperasi { get; set; }
         public string RuanganOperasi { get; set; }

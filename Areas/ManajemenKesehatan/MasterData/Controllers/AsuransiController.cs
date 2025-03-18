@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
@@ -262,7 +262,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         IsDelete = false
                     };
 
-                    Console.WriteLine(data.NamaAsuransi);
                     _applicationDbContext.Asuransis.Add(data);
                     _applicationDbContext.SaveChanges();
                     return Created("", new

@@ -13,7 +13,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewMode
         public Guid IdentitasId { get; set; }
         public string NoIdentitas { get; set; } // KTP atau Passport
         public string? TempatLahir { get; set; }
-        public DateTime? TanggalLahir { get; set; }
+        public DateOnly? TanggalLahir { get; set; }
         public string? JenisKelamin { get; set; }
         public string? Status { get; set; }
         public Guid? AgamaId { get; set; }
@@ -71,7 +71,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewMode
         //[SwaggerSchema(Format = "binary")]
         public IFormFile? Foto { get; set; }
         //public string? QrCode { get; set; }
-        public string? FotoName { get; set; }
+        //public string? FotoName { get; set; }
         public string? FotoPath { get; set; }
         //public List<byte>? FotoByte { get; set; }
         //public byte[]? ImageBytes { get; set; }

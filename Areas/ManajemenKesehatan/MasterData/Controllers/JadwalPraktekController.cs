@@ -319,6 +319,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             HariPraktek = a.HariPraktek,
                             JamMulai = a.JamMulai,
                             JamBerakhir = a.JamBerakhir,
+                            
                         };
 
            
