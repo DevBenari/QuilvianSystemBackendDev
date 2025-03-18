@@ -14,8 +14,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string KodeDokterAsuransi { get; set; }
         public string NamaAsuransi { get; set; }
 
-        
-
         //relasi ke Asuransi
         [ForeignKey("AsuransiId")]
         public Asuransi? Asuransi { get; set; }

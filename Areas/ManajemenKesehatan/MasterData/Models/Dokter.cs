@@ -27,11 +27,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? FotoName { get; set; }
         public string? FotoPath { get; set; }
 
-        //relasi ke dokter poli
-        public ICollection<DokterPoli> DokterPolis { get; set; }
+        ////relasi ke dokter poli
+        //public ICollection<DokterPoli> DokterPolis { get; set; }
 
-        //relasi ke dokter asuransi
-        public ICollection<DokterAsuransi> DokterAsuransis { get; set; }
+        ////relasi ke dokter asuransi
+        //public ICollection<DokterAsuransi> DokterAsuransis { get; set; }
 
     }
 }

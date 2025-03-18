@@ -1,39 +1,39 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
-using QuilvianSystemBackendDev.Repositories;
-using Newtonsoft.Json.Converters;
-using Newtonsoft.Json;
-using Swashbuckle.AspNetCore.Annotations;
-using System.Security.Claims;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
-using QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers;
-using QuilvianSystemBackendDev.Models;
+using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewModels;
+using QuilvianSystemBackendDev.Models;
+using QuilvianSystemBackendDev.Repositories;
+using Swashbuckle.AspNetCore.Annotations;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class OperasiController : Controller
+    public class PendaftaranPasienRadiologiController : Controller
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<OperasiController> _logger;
+        private readonly ILogger<PendaftaranPasienRadiologiController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public OperasiController
-            (ApplicationDbContext context,
-            UserManager<ApplicationUser> userManager,
-            SignInManager<ApplicationUser> signInManager,
-            ILogger<OperasiController> logger,
+        public PendaftaranPasienRadiologiController
+            (ApplicationDbContext context, 
+            UserManager<ApplicationUser> userManager, 
+            SignInManager<ApplicationUser> signInManager, 
+            ILogger<PendaftaranPasienRadiologiController> logger, 
             IWebHostEnvironment webHostEnvironment)
         {
             _context = context;
@@ -43,16 +43,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             _webHostEnvironment = webHostEnvironment;
         }
 
-        //get : api/operasi
         [HttpGet]
-        public async Task<IActionResult> GetAllOperasi(int page = 1, int perPage = 10)
+        public async Task<IActionResult> GetAllPdfPasienRadiologi(int page = 1, int perPage = 10)
         {
             // validasi pagging
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = from a in _context.Operasis
+            var query = from a in _context.PendaftaranPasienRadiologis
                         join u in _context.UserActives
                         on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
@@ -61,28 +60,30 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateDateTime = a.CreateDateTime,
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
-                            OperasiId = a.OperasiId,
-                            KodeOperasi = a.KodeOperasi,
-                            JenisOperasi = a.JenisOperasi,
-                            TipeOperasi = a.TipeOperasi,
-                            NamaTindakanOperasi = a.NamaTindakanOperasi,
-                            TanggalOperasi = a.TanggalOperasi,
-                            StatusOperasi = a.StatusOperasi,
-                            LamaOperasi = a.LamaOperasi,
-                            RuanganOperasi = a.RuanganOperasi,
-                            LokasiRuanganOperasi = a.LokasiRuanganOperasi,
-                            TipeCCVC = a.TipeCCVC,
-                            CatatanMedis = a.CatatanMedis,
-                            NamaDokterOperator = a.NamaDokterOperator,
-                            NamaDokterAnastesi = a.NamaDokterAnastesi,
-                            DokterTambahan1 = a.DokterTambahan1,
-                            DokterTambahan2 = a.DokterTambahan2,
-                            DokterTambahan3 = a.DokterTambahan3,
-                            DokterTambahan4 = a.DokterTambahan4,
-                            DokterTambahan5 = a.DokterTambahan5,
+                            PendaftaranPasienRadiologiId = a.PendaftaranPasienRadiologiId,
+                            KodePdfPasienRadiologi = a.KodePdfPasienRadiologi,
                             PasienId = a.PasienId,
+                            NoRekamMedis = a.NoRekamMedis,
+                            TanggalLahir = a.TanggalLahir,
+                            TanggalPendaftaran = a.TanggalPendaftaran,
                             NamaPasien = a.NamaPasien,
-                            KeluhanOperasi = a.KeluhanOperasi
+                            AlamatPasien = a.AlamatPasien,
+                            NoTelpPasien = a.NoTelpPasien,
+                            JenisKelamin = a.JenisKelamin,
+                            Email = a.Email,
+                            Title = a.Title,
+                            Provinsi = a.Provinsi,
+                            KabupatenKota = a.KabupatenKota,
+                            Kecamatan = a.Kecamatan,
+                            TipePasien = a.TipePasien,
+                            Asuransi = a.Asuransi,
+                            DokterPemeriksa = a.DokterPemeriksa,
+                            KodeMember = a.KodeMember,
+                            TipePemeriksaan = a.TipePemeriksaan,
+                            DiagnosaAwal = a.DiagnosaAwal,
+                            TipeRujukan = a.TipeRujukan,
+                            JenisKonsul = a.JenisKonsul,
+                            NamaRSRujukan = a.NamaRSRujukan
                         };
 
             // Hitung total data sebelum paginasi
@@ -115,11 +116,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             });
         }
 
-        // GET: api/Operasi/{id}
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var record = await _context.Operasis.FindAsync(id);
+            var record = await _context.PendaftaranPasienRadiologis.FindAsync(id);
             if (record == null)
             {
                 return NotFound(new { message = $"Data dengan ID {id} tidak ditemukan." });
@@ -127,9 +127,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             return Ok(new { message = "Data ditemukan.", data = record });
         }
 
-        // POST: api/Operasi
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] OperasiViewModel vm)
+        public async Task<IActionResult> Create([FromBody] PendaftaranPasienRadiologiViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -152,66 +151,67 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var setDateNow = DateTimeOffset.UtcNow.ToString("yyMMdd");
 
                 // Generate UserActiveCode
-                var lastCode = _context.Operasis
+                var lastCode = _context.PendaftaranPasienRadiologis
                     .Where(d => d.CreateDateTime.Date == dateNow.UtcDateTime.Date)
-                    .OrderByDescending(k => k.KodeOperasi)
+                    .OrderByDescending(k => k.KodePdfPasienRadiologi)
                     .FirstOrDefault();
 
                 string kode;
                 if (lastCode == null)
                 {
-                    kode = $"OPR{setDateNow}0001";
+                    kode = $"RAD{setDateNow}0001";
 
                 }
                 else
                 {
-                    var lastCodeTrim = lastCode.KodeOperasi.Substring(3, 6);
+                    var lastCodeTrim = lastCode.KodePdfPasienRadiologi.Substring(3, 6);
                     if (lastCodeTrim != setDateNow)
                     {
-                        kode = $"OPR{setDateNow}0001";
+                        kode = $"RAD{setDateNow}0001";
                     }
                     else
                     {
-                        kode = $"OPR{setDateNow}" + (Convert.ToInt32(lastCode.KodeOperasi.Substring(9)) + 1).ToString("D4");
+                        kode = $"RAD{setDateNow}" + (Convert.ToInt32(lastCode.KodePdfPasienRadiologi.Substring(9)) + 1).ToString("D4");
                     }
                 }
 
                 // Cek Duplikasi
-                var isDuplicate = _context.Operasis
-                    .Any(c => c.KodeOperasi == kode);
+                var isDuplicate = _context.PendaftaranPasienRadiologis
+                    .Any(c => c.KodePdfPasienRadiologi == kode);
 
                 if (ModelState.IsValid)
                 {
-                    var data = new Operasi
+                    var data = new PendaftaranPasienRadiologi
                     {
-                        OperasiId = Guid.NewGuid(),
-                        KodeOperasi = kode,
-                        JenisOperasi = vm.JenisOperasi,
-                        TipeOperasi = vm.TipeOperasi,
-                        NamaTindakanOperasi = vm.NamaTindakanOperasi,
-                        TanggalOperasi = vm.TanggalOperasi,
-                        StatusOperasi = vm.StatusOperasi,
-                        LamaOperasi = vm.LamaOperasi,
-                        RuanganOperasi = vm.RuanganOperasi,
-                        LokasiRuanganOperasi = vm.LokasiRuanganOperasi,
-                        TipeCCVC = vm.TipeCCVC,
-                        CatatanMedis = vm.CatatanMedis,
-                        NamaDokterOperator = vm.NamaDokterOperator,
-                        NamaDokterAnastesi = vm.NamaDokterAnastesi,
-                        DokterTambahan1 = vm.DokterTambahan1,
-                        DokterTambahan2 = vm.DokterTambahan2,
-                        DokterTambahan3 = vm.DokterTambahan3,
-                        DokterTambahan4 = vm.DokterTambahan4,
-                        DokterTambahan5 = vm.DokterTambahan5,
+                        PendaftaranPasienRadiologiId = Guid.NewGuid(),
+                        KodePdfPasienRadiologi = kode,
                         PasienId = vm.PasienId,
+                        NoRekamMedis = vm.NoRekamMedis,
+                        TanggalLahir = vm.TanggalLahir,
+                        TanggalPendaftaran = vm.TanggalPendaftaran,
                         NamaPasien = vm.NamaPasien,
-                        KeluhanOperasi = vm.KeluhanOperasi,
+                        JenisKelamin = vm.JenisKelamin,
+                        Email = vm.Email,
+                        Title = vm.Title,
+                        Provinsi = vm.Provinsi,
+                        KabupatenKota = vm.KabupatenKota,
+                        Kecamatan = vm.Kecamatan,
+                        TipePasien = vm.TipePasien,
+                        Asuransi = vm.Asuransi,
+                        DokterPemeriksa = vm.DokterPemeriksa,
+                        KodeMember = vm.KodeMember,
+                        TipePemeriksaan = vm.TipePemeriksaan,
+                        DiagnosaAwal = vm.DiagnosaAwal,
+                        TipeRujukan = vm.TipeRujukan,
+                        JenisKonsul = vm.JenisKonsul,
+                        NamaRSRujukan = vm.NamaRSRujukan,
+
                         CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = UserActiveId,
                         IsDelete = false,
-                        
+
                     };
-                    _context.Operasis.Add(data);
+                    _context.PendaftaranPasienRadiologis.Add(data);
                     _context.SaveChanges();
 
                     return Created("", new
@@ -233,9 +233,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-        // PUT: api/operasi/{id}
+
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] OperasiViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] PendaftaranPasienRadiologiViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -255,40 +255,39 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // cari data
-                var data = _context.Operasis.Find(id);
+                var data = _context.PendaftaranPasienRadiologis.Find(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
                 //update data
-                data.JenisOperasi = vm.JenisOperasi;
-                data.TipeOperasi = vm.TipeOperasi;
-                data.NamaTindakanOperasi = vm.NamaTindakanOperasi;
-                data.TanggalOperasi = vm.TanggalOperasi;
-                data.StatusOperasi = vm.StatusOperasi;
-                data.LamaOperasi = vm.LamaOperasi;
-                data.RuanganOperasi = vm.RuanganOperasi;
-                data.LokasiRuanganOperasi = vm.LokasiRuanganOperasi;
-                data.TipeCCVC = vm.TipeCCVC;
-                data.CatatanMedis = vm.CatatanMedis;
-                data.NamaDokterOperator = vm.NamaDokterOperator;
-                data.NamaDokterAnastesi = vm.NamaDokterAnastesi;
-                data.DokterTambahan1 = vm.DokterTambahan1;
-                data.DokterTambahan2 = vm.DokterTambahan2;
-                data.DokterTambahan3 = vm.DokterTambahan3;
-                data.DokterTambahan4 = vm.DokterTambahan4;
-                data.DokterTambahan5 = vm.DokterTambahan5;
+
                 data.PasienId = vm.PasienId;
+                data.NoRekamMedis = vm.NoRekamMedis;
+                data.TanggalLahir = vm.TanggalLahir;
+                data.TanggalPendaftaran = vm.TanggalPendaftaran;
                 data.NamaPasien = vm.NamaPasien;
-                data.KeluhanOperasi = vm.KeluhanOperasi;
+                data.JenisKelamin = vm.JenisKelamin;
+                data.Email = vm.Email;
+                data.Title = vm.Title;
+                data.Provinsi = vm.Provinsi;
+                data.KabupatenKota = vm.KabupatenKota;
+                data.Kecamatan = vm.Kecamatan;
+                data.TipePasien = vm.TipePasien;
+                data.Asuransi = vm.Asuransi;
+                data.DokterPemeriksa = vm.DokterPemeriksa;
+                data.KodeMember = vm.KodeMember;
+                data.TipePemeriksaan = vm.TipePemeriksaan;
+                data.DiagnosaAwal = vm.DiagnosaAwal;
+                data.TipeRujukan = vm.TipeRujukan;
+                data.JenisKonsul = vm.JenisKonsul;
+                data.NamaRSRujukan = vm.NamaRSRujukan;
 
                 data.UpdateBy = UserActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-
-
-                _context.Operasis.Update(data);
+                _context.PendaftaranPasienRadiologis.Update(data);
                 _context.SaveChanges();
 
                 return Ok(new { message = "Data berhasil diupdate..." });
@@ -300,7 +299,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-        // DELETE: api/Operasi/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
@@ -317,7 +315,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // **Cari Data Dokter**
-                var data = _context.Operasis.Find(id);
+                var data = _context.PendaftaranPasienRadiologis.Find(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -328,7 +326,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.DeleteDateTime = DateTimeOffset.UtcNow;
                 data.IsDelete = true;
 
-                _context.Operasis.Update(data);
+                _context.PendaftaranPasienRadiologis.Update(data);
                 _context.SaveChanges();
 
                 return Ok(new { message = "Data berhasil dihapus..." });
@@ -340,7 +338,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet("paged")]
-        public IActionResult PagedOperasi(
+        public IActionResult PagedPdfPasienRadiologi(
         int page = 1,
         int perPage = 10,
         string? search = null,
@@ -353,7 +351,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
             // Query data
-            var query = from a in _context.Operasis
+            var query = from a in _context.PendaftaranPasienRadiologis
                         join u in _context.UserActives
                         on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
@@ -362,35 +360,37 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateDateTime = a.CreateDateTime,
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
-                            OperasiId = a.OperasiId,
-                            KodeOperasi = a.KodeOperasi,
-                            JenisOperasi = a.JenisOperasi,
-                            TipeOperasi = a.TipeOperasi,
-                            NamaTindakanOperasi = a.NamaTindakanOperasi,
-                            TanggalOperasi = a.TanggalOperasi,
-                            StatusOperasi = a.StatusOperasi,
-                            LamaOperasi = a.LamaOperasi,
-                            RuanganOperasi = a.RuanganOperasi,
-                            LokasiRuanganOperasi = a.LokasiRuanganOperasi,
-                            TipeCCVC = a.TipeCCVC,
-                            CatatanMedis = a.CatatanMedis,
-                            NamaDokterOperator = a.NamaDokterOperator,
-                            NamaDokterAnastesi = a.NamaDokterAnastesi,
-                            DokterTambahan1 = a.DokterTambahan1,
-                            DokterTambahan2 = a.DokterTambahan2,
-                            DokterTambahan3 = a.DokterTambahan3,
-                            DokterTambahan4 = a.DokterTambahan4,
-                            DokterTambahan5 = a.DokterTambahan5,
+                            PendaftaranPasienRadiologiId = a.PendaftaranPasienRadiologiId,
+                            KodePdfPasienRadiologi = a.KodePdfPasienRadiologi,
                             PasienId = a.PasienId,
+                            NoRekamMedis = a.NoRekamMedis,
+                            TanggalLahir = a.TanggalLahir,
+                            TanggalPendaftaran = a.TanggalPendaftaran,
                             NamaPasien = a.NamaPasien,
-                            KeluhanOperasi = a.KeluhanOperasi
+                            AlamatPasien = a.AlamatPasien,
+                            NoTelpPasien = a.NoTelpPasien,
+                            JenisKelamin = a.JenisKelamin,
+                            Email = a.Email,
+                            Title = a.Title,
+                            Provinsi = a.Provinsi,
+                            KabupatenKota = a.KabupatenKota,
+                            Kecamatan = a.Kecamatan,
+                            TipePasien = a.TipePasien,
+                            Asuransi = a.Asuransi,
+                            DokterPemeriksa = a.DokterPemeriksa,
+                            KodeMember = a.KodeMember,
+                            TipePemeriksaan = a.TipePemeriksaan,
+                            DiagnosaAwal = a.DiagnosaAwal,
+                            TipeRujukan = a.TipeRujukan,
+                            JenisKonsul = a.JenisKonsul,
+                            NamaRSRujukan = a.NamaRSRujukan
                         };
 
             // Filter berdasarkan search
             if (!string.IsNullOrWhiteSpace(search))
             {
                 query = query.Where(u =>
-                    u.KodeOperasi.Contains(search) || u.NamaTindakanOperasi.Contains(search) || u.JenisOperasi.Contains(search)
+                    u.NamaPasien.Contains(search) || u.TipePemeriksaan.Contains(search) || u.DokterPemeriksa.Contains(search)
                 );
             }
 
@@ -458,18 +458,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "KodeOperasi" => query.OrderByDescending(u => u.KodeOperasi),
-                    "JenisOperasi" => query.OrderByDescending(u => u.JenisOperasi),
-                    "NamaTindakanOperasi" => query.OrderByDescending(u => u.NamaTindakanOperasi),
+                    "NamaPasien" => query.OrderByDescending(u => u.NamaPasien),
+                    "DokterPemeriksa" => query.OrderByDescending(u => u.DokterPemeriksa),
+                    "TipePemeriksaan" => query.OrderByDescending(u => u.TipePemeriksaan),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "KodeOperasi" => query.OrderByDescending(u => u.KodeOperasi),
-                    "JenisOperasi" => query.OrderByDescending(u => u.JenisOperasi),
-                    "NamaTindakanOperasi" => query.OrderByDescending(u => u.NamaTindakanOperasi),
+                    "NamaPasien" => query.OrderByDescending(u => u.NamaPasien),
+                    "DokterPemeriksa" => query.OrderByDescending(u => u.DokterPemeriksa),
+                    "TipePemeriksaan" => query.OrderByDescending(u => u.TipePemeriksaan),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 };
 
@@ -497,5 +497,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
             });
         }
+
     }
 }

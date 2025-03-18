@@ -105,7 +105,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var record = await _context.Operasis.FindAsync(id);
+            var record = await _context.PendaftaranPasienOptiks.FindAsync(id);
             if (record == null)
             {
                 return NotFound(new { message = $"Data dengan ID {id} tidak ditemukan." });

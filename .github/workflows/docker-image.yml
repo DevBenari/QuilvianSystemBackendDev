@@ -4,10 +4,10 @@ on:
     branches:
       - yasmina  # Sesuaikan dengan branch utama Anda
 
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
@@ -23,7 +23,7 @@ jobs:
       run: |
         ssh ${{ secrets.SSH_USER_BACKEND }}@${{ secrets.SSH_IP_BACKEND }} << 'EOF'
 
-          cd ~/QuilvianSystemBackendDev-QuilvianDev
+          cd ~/QuilvianSystemBackendDev-yasmina
 
           echo "Resetting local changes..."
           git reset --hard origin/yasmina
@@ -32,7 +32,7 @@ jobs:
           echo "Pulling latest changes..."
           git pull origin yasmina
 
-          IMAGE_NAME="quilvian-backend-quilviandev"
+          IMAGE_NAME="quilvian-backend-yasmina"
           CONTAINER_NAME="quilvian-container-yasmina"
 
           DEPLOY_TIME=$(date +"%A, %d-%m-%Y %H:%M:%S") 
