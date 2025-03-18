@@ -11,15 +11,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         [Key]
         public Guid? AsuransiId { get; set; }
         public string? KodeAsuransi { get; set; }
-        public DateTimeOffset? Createdate { get; set; }
+        public DateTime? Createdate { get; set; }
 
         // Informasi Asuransi
         public string? NamaAsuransi { get; set; }
         public string? JenisAsuransi { get; set; }
         public string? KategoriAsuransi { get; set; }
         public string? StatusAsuransi { get; set; }
-        public DateTimeOffset? TanggalMulaiKerjasama { get; set; }
-        public DateTimeOffset? TanggalAkhirKerjasama { get; set; }
+        public DateTime? TanggalMulaiKerjasama { get; set; }
+        public DateTime? TanggalAkhirKerjasama { get; set; }
 
         // Informasi Klaim
         public string? MetodeKlaim { get; set; }
@@ -41,6 +41,5 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? EmailPusat { get; set; }
         public bool? IsPKS { get; set; }
 
-        public ICollection<CoveranAsuransi> CoveranAsuransis { get; set; }
     }
 }

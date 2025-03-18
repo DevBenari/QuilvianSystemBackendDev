@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -11,9 +12,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250318014926_ubah_datetime")]
+    partial class ubah_datetime
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1492,11 +1494,11 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<bool>("IsDelete")
                         .HasColumnType("boolean");
 
-                    b.Property<TimeSpan?>("JamBuka")
-                        .HasColumnType("interval");
+                    b.Property<DateTime?>("JamBuka")
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<TimeSpan?>("JamTutup")
-                        .HasColumnType("interval");
+                    b.Property<DateTime?>("JamTutup")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("JumlahMaxPasien")
                         .HasColumnType("integer");

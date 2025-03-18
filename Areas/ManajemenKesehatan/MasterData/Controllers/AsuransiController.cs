@@ -234,7 +234,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     {
                         AsuransiId = Guid.NewGuid(),
                         KodeAsuransi = kode,
-                        Createdate = DateTimeOffset.UtcNow,
+                        Createdate = DateTime.UtcNow,
                         NamaAsuransi = vm.NamaAsuransi,
                         JenisAsuransi = vm.JenisAsuransi,
                         KategoriAsuransi = vm.KategoriAsuransi,

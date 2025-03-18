@@ -10,14 +10,14 @@
         public string? JenisAsuransi { get; set; }
         public string? KategoriAsuransi { get; set; }
         public string? StatusAsuransi { get; set; }
-        public DateTimeOffset? TanggalMulaiKerjasama { get; set; }
-        public DateTimeOffset? TanggalAkhirKerjasama { get; set; }
+        public DateTime? TanggalMulaiKerjasama { get; set; }
+        public DateTime? TanggalAkhirKerjasama { get; set; }
         public string? RSRekanan { get; set; }
         public bool IsPKS { get; set; }
 
         // informasi klaim
         public string? MetodeKlaim { get; set; }
-        public DateTimeOffset? WaktuKlaim { get; set; }
+        public DateTime? WaktuKlaim { get; set; }
         public int? BatasMaxKlaimPerTahun { get; set; }
         public int? BatasMaxKlaimPerKunjungan { get; set; }
         public string? DokumenKlaim { get; set; }

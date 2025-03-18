@@ -60,11 +60,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
                             DokterPoliId = a.DokterPoliId,
-                            KodeDokterPoli = a.KodeDokterPoli,
-                            NamaPoliklinik = a.Poliklinik.NamaPoliklinik,
                             DokterId = a.DokterId,
                             PoliId = a.PoliId,
-                            NamaDokter = a.NamaDokter,
                         };
 
             // Hitung total data sebelum paginasi
@@ -137,50 +134,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var dateNow = DateTimeOffset.UtcNow;
                 var setDateNow = dateNow.ToString("yyMMdd");
 
-                // Ambil data terakhir untuk hari ini (tanpa ToString di query)
-                var lastCode = _applicationDbContext.DokterPolis
-                    .Where(d => d.CreateDateTime.Date == dateNow.UtcDateTime.Date)
-                    .OrderByDescending(k => k.KodeDokterPoli)
-                    .FirstOrDefault();
 
                 string kode;
-                if (lastCode == null)
-                {
-                    kode = $"DPL{setDateNow}0001";
-                }
-                else
-                {
-                    var lastCodeTrim = lastCode.KodeDokterPoli.Substring(3, 6);
-
-                    if (lastCodeTrim != setDateNow)
-                    {
-                        kode = $"DPL{setDateNow}0001";
-                    }
-                    else
-                    {
-                        kode = $"DPL{setDateNow}" + (Convert.ToInt32(lastCode.KodeDokterPoli.Substring(9)) + 1).ToString("D4");
-                    }
-                }
-
-                // cek duplikasi
-                var isDuplicate = _applicationDbContext.DokterPolis
-                    .Any(c => c.KodeDokterPoli == kode);
-
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
-                }
-
+              
                 // Validate ModelState
                 if (ModelState.IsValid)
                 {
                     var data = new DokterPoli
                     {
                         DokterPoliId = Guid.NewGuid(),
-                        KodeDokterPoli = kode,
                         DokterId = vm.DokterId,
                         PoliId = vm.PoliId,
-                        NamaDokter = vm.NamaDokter,
                         //NamaPol
                         CreateDateTime = dateNow,
                         CreateBy = UserActiveId,
@@ -244,8 +208,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     data.DokterId = vm.DokterId;
                     data.PoliId = vm.PoliId;
-                    data.NamaDokter = vm.NamaDokter;
-                    data.UpdateDateTime = DateTimeOffset.UtcNow;
+                    data.UpdateDateTime = DateTime.UtcNow;
                     data.UpdateBy = UserActiveId;
 
                     _applicationDbContext.DokterPolis.Update(data);
@@ -328,20 +291,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
                             DokterPoliId = a.DokterPoliId,
-                            KodeDokterPoli = a.KodeDokterPoli,
-                            NamaPoliklinik = a.Poliklinik.NamaPoliklinik,
                             DokterId = a.DokterId,
                             PoliId = a.PoliId,
-                            NamaDokter = a.NamaDokter,
                         };
 
             // Filter berdasarkan search
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                query = query.Where(u =>
-                    u.KodeDokterPoli.Contains(search) || u.NamaDokter.Contains(search)
-                );
-            }
 
             // Filter berdasarkan daterange jika keduanya memiliki nilai
             if (startDate.HasValue && endDate.HasValue)
@@ -407,16 +361,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "NamaDokter" => query.OrderByDescending(u => u.NamaDokter),
-                    "KodeDokterPoli" => query.OrderByDescending(u => u.KodeDokterPoli),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "NamaDokter" => query.OrderByDescending(u => u.NamaDokter),
-                    "KodeDokterPoli" => query.OrderByDescending(u => u.KodeDokterPoli),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 };
 
@@ -443,8 +393,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     TotalPages = totalPages
                 }
             });
-
-
 
         }
 
