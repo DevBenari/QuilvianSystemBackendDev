@@ -10,7 +10,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
     {
         [Key]
         public Guid JadwalPraktekId { get; set; }
-        public Guid DokterId { get; set; }
+        public Guid? DokterId { get; set; }
         public Guid? DokterPoliId { get; set; }
         public Guid? PoliId { get; set; } // Bisa null jika praktek di SubPoli
         public string KodeJadwalPraktek { get; set; }

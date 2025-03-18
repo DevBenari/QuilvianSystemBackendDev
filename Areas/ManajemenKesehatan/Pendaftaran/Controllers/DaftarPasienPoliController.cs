@@ -62,7 +62,7 @@
 //        [HttpPost]
 //        public async Task<ActionResult<PendaftaranPasien>> PostPendaftaranPasien(PendaftaranPasien pendaftaranPasien)
 //        {
-//            var dateNow = DateTimeOffset.UtcNow;
+//             var dateNow = DateTime.UtcNow;;
 //            var day = dateNow.Day;
 //            var month = dateNow.Month;
 //            var year = dateNow.Year;

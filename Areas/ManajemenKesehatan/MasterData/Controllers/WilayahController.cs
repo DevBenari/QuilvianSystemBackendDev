@@ -366,12 +366,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var dateNow = DateTimeOffset.UtcNow;
+                 var dateNow = DateTime.UtcNow;;
                 var setDateNow = dateNow.ToString("yyMMdd");
 
                 // Ambil data terakhir untuk hari ini (tanpa ToString di query)
                 var lastCode = _applicationDbContext.Provinsis
-                    .Where(d => d.CreateDateTime.Date == dateNow.UtcDateTime.Date)
+                    .Where(d => d.CreateDateTime.Date == dateNow.Date)
                     .OrderByDescending(k => k.KodeProvinsi)
                     .FirstOrDefault();
 
@@ -461,12 +461,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var dateNow = DateTimeOffset.UtcNow;
+                 var dateNow = DateTime.UtcNow;;
                 var setDateNow = dateNow.ToString("yyMMdd");
 
                 // Ambil data terakhir untuk hari ini (tanpa ToString di query)
                 var lastCode = _applicationDbContext.KabupatenKotas
-                    .Where(d => d.CreateDateTime.Date == dateNow.UtcDateTime.Date)
+                    .Where(d => d.CreateDateTime.Date == dateNow.Date)
                     .OrderByDescending(k => k.KodeKabupatenKota)
                     .FirstOrDefault();
 
@@ -556,12 +556,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var dateNow = DateTimeOffset.UtcNow;
+                 var dateNow = DateTime.UtcNow;;
                 var setDateNow = dateNow.ToString("yyMMdd");
 
                 // Ambil data terakhir untuk hari ini (tanpa ToString di query)
                 var lastCode = _applicationDbContext.Kecamatans
-                    .Where(d => d.CreateDateTime.Date == dateNow.UtcDateTime.Date)
+                    .Where(d => d.CreateDateTime.Date == dateNow.Date)
                     .OrderByDescending(k => k.KodeKecamatan)
                     .FirstOrDefault();
 
@@ -651,12 +651,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var dateNow = DateTimeOffset.UtcNow;
+                 var dateNow = DateTime.UtcNow;;
                 var setDateNow = dateNow.ToString("yyMMdd");
 
                 // Ambil data terakhir untuk hari ini (tanpa ToString di query)
                 var lastCode = _applicationDbContext.Kelurahans
-                    .Where(d => d.CreateDateTime.Date == dateNow.UtcDateTime.Date)
+                    .Where(d => d.CreateDateTime.Date == dateNow.Date)
                     .OrderByDescending(k => k.KodeKelurahan)
                     .FirstOrDefault();
 
@@ -1764,12 +1764,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var dateNow = DateTimeOffset.UtcNow;
+                 var dateNow = DateTime.UtcNow;;
                 var setDateNow = DateTimeOffset.UtcNow.ToString("yyMMdd");
 
                 // Generate UserActiveCode
                 var lastCode = _applicationDbContext.KodePoss
-                    .Where(d => d.CreateDateTime.Date == dateNow.UtcDateTime.Date)
+                    .Where(d => d.CreateDateTime.Date == dateNow.Date)
                     .OrderByDescending(k => k.UniqueKodePos)
                     .FirstOrDefault();
 

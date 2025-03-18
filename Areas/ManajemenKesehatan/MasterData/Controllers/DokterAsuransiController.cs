@@ -126,12 +126,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var dateNow = DateTimeOffset.UtcNow;
+                 var dateNow = DateTime.UtcNow;;
                 var setDateNow = DateTimeOffset.UtcNow.ToString("yyMMdd");
 
                 // Generate UserActiveCode
                 var lastCode = _context.DokterAsuransis
-                    .Where(d => d.CreateDateTime.Date == dateNow.UtcDateTime.Date)
+                    .Where(d => d.CreateDateTime.Date == dateNow.Date)
                     .OrderByDescending(k => k.KodeDokterAsuransi)
                     .FirstOrDefault();
 

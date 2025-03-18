@@ -52,7 +52,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             // Query data
             var query = from a in _applicationDbContext.DokterPolis
                         join u in _applicationDbContext.UserActives
-                        on a.CreateBy equals u.UserActiveId
+                            on a.CreateBy equals u.UserActiveId
+                        join d in _applicationDbContext.Dokters
+                            on a.DokterId equals d.DokterId
+                        join p in _applicationDbContext.Polikliniks
+                            on a.PoliId equals p.PoliklinikId
                         where a.IsDelete == false
                         select new
                         {
@@ -62,6 +66,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             DokterPoliId = a.DokterPoliId,
                             DokterId = a.DokterId,
                             PoliId = a.PoliId,
+
+                            // Ambil Nama Dokter
+                            NmDokter = d.NmDokter,
+
+                            // Ambil Nama Poli
+                            NamaPoliklinik = p.NamaPoliklinik
                         };
 
             // Hitung total data sebelum paginasi
@@ -131,7 +141,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var dateNow = DateTimeOffset.UtcNow;
+                 var dateNow = DateTime.UtcNow;;
                 var setDateNow = dateNow.ToString("yyMMdd");
 
 
@@ -282,7 +292,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             // Query data
             var query = from a in _applicationDbContext.DokterPolis
                         join u in _applicationDbContext.UserActives
-                        on a.CreateBy equals u.UserActiveId
+                            on a.CreateBy equals u.UserActiveId
+                        join d in _applicationDbContext.Dokters
+                            on a.DokterId equals d.DokterId
+                        join p in _applicationDbContext.Polikliniks
+                            on a.PoliId equals p.PoliklinikId
                         where a.IsDelete == false
                         select new
                         {
@@ -292,6 +306,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             DokterPoliId = a.DokterPoliId,
                             DokterId = a.DokterId,
                             PoliId = a.PoliId,
+
+                            // Ambil Nama Dokter
+                            NmDokter = d.NmDokter,
+
+                            // Ambil Nama Poli
+                            NamaPoliklinik = p.NamaPoliklinik
                         };
 
             // Filter berdasarkan search

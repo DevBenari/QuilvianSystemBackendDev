@@ -4,8 +4,8 @@
     {
         public Guid? PasienId { get; set; }
         public string NoRekamMedis { get; set; }
-        public DateOnly? TanggalLahir { get; set; }
-        public DateOnly? TanggalPendaftaran { get; set; }
+        public DateTime? TanggalLahir { get; set; }
+        public DateTime? TanggalPendaftaran { get; set; }
         public string NamaPasien { get; set; }
         public string AlamatPasien { get; set; }
         public string NoTelpPasien { get; set; }

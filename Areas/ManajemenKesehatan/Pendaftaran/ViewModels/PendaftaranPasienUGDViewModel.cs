@@ -6,8 +6,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewMode
     {
         public string NamaPasien { get; set; }
         public string? Title { get; set; }
-        [JsonConverter(typeof(DateOnlyJsonConverter))]
-        public DateOnly? TTL { get; set; }
+        public DateTime? TTL { get; set; }
         public int Umur { get; set; }   // perhitungan dari tanggal lahir
         public string NoTelp { get; set; }
 

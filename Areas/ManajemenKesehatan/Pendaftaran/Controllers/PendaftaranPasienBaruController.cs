@@ -68,6 +68,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                             PendaftaranPasienBaruId = a.PendaftaranPasienBaruId,
                             KodePasien = a.KodePasien,
                             NoRekamMedis = a.NoRekamMedis,
+                            TipePasien = a.TipePasien,
                             NamaLengkap = a.NamaLengkap,
                             JenisKelamin = a.JenisKelamin,
                             FotoName = a.FotoName,
@@ -249,12 +250,12 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var dateNow = DateTimeOffset.UtcNow;
+                 var dateNow = DateTime.UtcNow;;
                 var setDateNow = dateNow.ToString("yyMMdd");
 
                 // Ambil data terakhir untuk hari ini (tanpa ToString di query)
                 var lastCode = _applicationDbContext.PendaftaranPasienBarus
-                    .Where(d => d.CreateDateTime.Date == dateNow.UtcDateTime.Date)
+                    .Where(d => d.CreateDateTime.Date == dateNow.Date)
                     .OrderByDescending(k => k.KodePasien)
                     .FirstOrDefault();
 
@@ -384,7 +385,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                         IdentitasId = vm.IdentitasId,
                         NoIdentitas = vm.NoIdentitas,
                         TempatLahir = vm.TempatLahir,
-                        //TanggalLahir = vm.TanggalLahir,
+                        TanggalLahir = vm.TanggalLahir,
                         JenisKelamin = vm.JenisKelamin,
                         Status = vm.Status,
                         AgamaId = vm.AgamaId,
@@ -656,6 +657,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                             PendaftaranPasienBaruId = a.PendaftaranPasienBaruId,
                             KodePasien = a.KodePasien,
                             NoRekamMedis = a.NoRekamMedis,
+                            TipePasien = a.TipePasien,
                             NamaLengkap = a.NamaLengkap,
                             JenisKelamin = a.JenisKelamin,
                             FotoName = a.FotoName,
