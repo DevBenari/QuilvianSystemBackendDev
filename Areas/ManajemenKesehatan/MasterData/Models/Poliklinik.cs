@@ -18,17 +18,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string Telepon { get; set; }
         public string Email { get; set; }
         public string HariOperasional {get; set; }
-
-        [JsonConverter(typeof(TimeOnlyJsonConverter))]
-        public TimeOnly? JamBuka { get; set; }
-
-        [JsonConverter(typeof(TimeOnlyJsonConverter))]
-        public TimeOnly? JamTutup { get; set; }
+        public TimeSpan? JamBuka { get; set; }
+        public TimeSpan? JamTutup { get; set; }
         public string? LayananPoliklinik { get; set; }
         public string? Deskripsi { get; set; }
         public int JumlahMaxPasien { get; set; }
 
-        // Relasi One-to-Many ke SubPoli
-        public ICollection<SubPoli> SubPolis { get; set; }
     }
 }

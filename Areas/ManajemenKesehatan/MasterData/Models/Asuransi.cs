@@ -12,7 +12,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         [Key]
         public Guid? AsuransiId { get; set; }
         public string? KodeAsuransi { get; set; }
-        public DateOnly? Createdate { get; set; }
+        public DateTime? Createdate { get; set; }
 
         // Informasi Asuransi
         public string? NamaAsuransi { get; set; }
@@ -20,10 +20,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? KategoriAsuransi { get; set; }
         public string? StatusAsuransi { get; set; }
 
-        [JsonConverter(typeof(DateOnlyJsonConverter))]
-        public DateOnly? TanggalMulaiKerjasama { get; set; }
-        [JsonConverter(typeof(DateOnlyJsonConverter))]
-        public DateOnly? TanggalAkhirKerjasama { get; set; }
+        public DateTime? TanggalMulaiKerjasama { get; set; }
+        public DateTime? TanggalAkhirKerjasama { get; set; }
 
         // Informasi Klaim
         public string? MetodeKlaim { get; set; }
@@ -44,8 +42,5 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? NoTelepon { get; set; }
         public string? EmailPusat { get; set; }
         public bool? IsPKS { get; set; }
-
-        public ICollection<CoveranAsuransi> CoveranAsuransis { get; set; }
-        public ICollection<DokterAsuransi> DokterAsuransis { get; set; }
     }
 }

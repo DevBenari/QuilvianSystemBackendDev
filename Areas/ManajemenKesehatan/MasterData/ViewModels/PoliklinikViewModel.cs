@@ -11,11 +11,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
         public string Email { get; set; }
         public string HariOperasional { get; set; }
 
-        [JsonConverter(typeof(TimeOnlyJsonConverter))]
-        public TimeOnly? JamBuka { get; set; }
+        public TimeSpan? JamBuka { get; set; }
+        public TimeSpan? JamTutup { get; set; }
 
-        [JsonConverter(typeof(TimeOnlyJsonConverter))]
-        public TimeOnly? JamTutup { get; set; }
         public string LayananPoliklinik { get; set; }
         public int JumlahMaxPasien { get; set; }
         public string Deskripsi { get; set; }

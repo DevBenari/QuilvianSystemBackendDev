@@ -24,8 +24,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
         public string NoIdentitas { get; set; } // KTP atau Passport
         public string? TempatLahir { get; set; }
 
-        [JsonConverter(typeof(DateOnlyJsonConverter))]
-        public DateOnly? TanggalLahir { get; set; }
+        public DateTime? TanggalLahir { get; set; }
+
         public string? JenisKelamin { get; set; }
         public string? Status { get; set; }
         public Guid? AgamaId { get; set; }

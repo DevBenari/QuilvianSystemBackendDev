@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
@@ -234,7 +234,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     {
                         AsuransiId = Guid.NewGuid(),
                         KodeAsuransi = kode,
-                        Createdate = DateOnly.FromDateTime(DateTime.Now),
+                        Createdate = DateTime.UtcNow,
                         NamaAsuransi = vm.NamaAsuransi,
                         JenisAsuransi = vm.JenisAsuransi,
                         KategoriAsuransi = vm.KategoriAsuransi,
