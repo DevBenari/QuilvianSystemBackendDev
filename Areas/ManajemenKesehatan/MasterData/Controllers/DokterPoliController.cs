@@ -145,7 +145,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         DokterPoliId = Guid.NewGuid(),
                         DokterId = vm.DokterId,
                         PoliId = vm.PoliId,
-                        //NamaPol
                         CreateDateTime = dateNow,
                         CreateBy = UserActiveId,
                         IsDelete = false

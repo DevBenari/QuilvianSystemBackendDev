@@ -269,6 +269,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     data.UpdateDateTime = DateTimeOffset.UtcNow;
                     data.UpdateBy = UserActiveId;
                     data.JumlahMaxPasien = vm.JumlahMaxPasien;
+                    data.Deskripsi = vm.Deskripsi;
+
                     _applicationDbContext.Polikliniks.Update(data);
                     _applicationDbContext.SaveChanges();
                     return Ok(new

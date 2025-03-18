@@ -1,9 +1,8 @@
-
-name: QuilvianSystemBackendDevQuilvianDev
+name: QuilvianSystemBackendDevyasmina
 on:
   push:
     branches:
-      - QuilvianDev  # Sesuaikan dengan branch utama Anda
+      - yasmina  # Sesuaikan dengan branch utama Anda
 
 jobs:
   deploy:
@@ -27,14 +26,14 @@ jobs:
           cd ~/QuilvianSystemBackendDev-QuilvianDev
 
           echo "Resetting local changes..."
-          git reset --hard origin/QuilvianDev
+          git reset --hard origin/yasmina
           git clean -fd
 
           echo "Pulling latest changes..."
-          git pull origin QuilvianDev
+          git pull origin yasmina
 
           IMAGE_NAME="quilvian-backend-quilviandev"
-          CONTAINER_NAME="quilvian-container-quilviandev"
+          CONTAINER_NAME="quilvian-container-yasmina"
 
           DEPLOY_TIME=$(date +"%A, %d-%m-%Y %H:%M:%S") 
 
@@ -68,6 +67,6 @@ jobs:
               *Docker Image:* $IMAGE_NAME
               *Container:* $CONTAINER_NAME
               *Tanggal:* $DEPLOY_TIME%0A
-              Deployment dilakukan Backend Branch *QuilvianDev*%0A
+              Deployment dilakukan Backend Branch *yasmina*%0A
               🔄 Container telah diperbarui dan berjalan dengan baik. 🎉"
         EOF

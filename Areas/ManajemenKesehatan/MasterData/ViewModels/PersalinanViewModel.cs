@@ -1,9 +1,12 @@
-﻿namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels
+﻿using System.Text.Json.Serialization;
+
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels
 {
     public class PersalinanViewModel
     {
         public string NamaPersalinan { get; set; }
-        public DateTime? TanggalPersalinan { get; set; }
+        [JsonConverter(typeof(DateOnlyJsonConverter))]
+        public DateOnly? TanggalPersalinan { get; set; }
         public string TipePersalinan { get; set; }
         public string TindakanPersalinan { get; set; }
         public string SubTindakanPersalinan { get; set; }
@@ -22,7 +25,8 @@
         // informasi bayi
         public string NamaBayi { get; set; }
         public string JenisKelaminBayi { get; set; }
-        public DateTime? TTLBayi { get; set; }
+        [JsonConverter(typeof(DateOnlyJsonConverter))]
+        public DateOnly? TTLBayi { get; set; }
         public string BeratBayi { get; set; }
         public string PanjangBayi { get; set; }
         public string NamaAyah { get; set; }
