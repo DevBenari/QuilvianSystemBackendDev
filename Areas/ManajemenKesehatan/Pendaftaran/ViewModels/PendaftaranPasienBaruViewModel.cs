@@ -65,8 +65,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewMode
         public string? HubunganAnak { get; set; }
         public string? InformasiSekolah { get; set; }
 
-
-
         //// Informasi Tambahan
         //[SwaggerSchema(Format = "binary")]
         public IFormFile? Foto { get; set; }

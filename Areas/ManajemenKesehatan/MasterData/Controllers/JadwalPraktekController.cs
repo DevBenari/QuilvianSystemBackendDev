@@ -168,7 +168,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         kode = $"JDW{setDateNow}" + (Convert.ToInt32(lastCode.KodeJadwalPraktek.Substring(9)) + 1).ToString("D4");
                     }
                 }
-
                 // cek duplikasi
                 var isDuplicate = _applicationDbContext.JadwalPrakteks
                     .Any(c => c.KodeJadwalPraktek == kode);
