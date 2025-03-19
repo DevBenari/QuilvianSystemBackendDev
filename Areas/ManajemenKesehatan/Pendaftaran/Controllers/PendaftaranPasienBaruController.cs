@@ -15,6 +15,7 @@ using Swashbuckle.AspNetCore.Annotations;
 using System.Linq;
 using Humanizer;
 using System.Text.RegularExpressions;
+using System.Globalization;
 
 namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
 {
@@ -78,7 +79,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                             IdentitasId = a.IdentitasId,
                             NoIdentitas = a.NoIdentitas,
                             TempatLahir = a.TempatLahir,
-                            TanggalLahir = a.TanggalLahir,
+                            TanggalLahir = a.TanggalLahir.HasValue ? a.TanggalLahir.Value.ToString("yyyy-MM-dd") : null,
                             Status = a.Status,
                             AgamaId = a.AgamaId,
                             PendidikanTerakhirId = a.PendidikanTerakhirId,
@@ -156,11 +157,65 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
             }
-
+            var parsed = listdata.TanggalLahir?.ToString("yyyy-MM-dd");
             return Ok(new
             {
                 message = "Ditemukan || 200 OK",
-                data = listdata
+                data = new
+                {
+                    listdata.PendaftaranPasienBaruId,
+                    listdata.KodePasien,
+                    listdata.NoRekamMedis,
+                    listdata.TipePasien,
+                    listdata.NoRekamMedisLama,
+                    listdata.TitleId,
+                    listdata.NamaLengkap,
+                    listdata.IdentitasId,
+                    listdata.NoIdentitas,
+                    listdata.TempatLahir,
+                    TanggalLahir = parsed,
+                    listdata.JenisKelamin,
+                    listdata.Status,
+                    listdata.AgamaId,
+                    listdata.PendidikanTerakhirId,
+                    listdata.AlamatIdentitas,
+                    listdata.AlamatDomisili,
+                    listdata.NegaraId,
+                    listdata.ProvinsiId,
+                    listdata.KotaId,
+                    listdata.KecKabId,
+                    listdata.KelurahanId,
+                    listdata.KodePos,
+                    listdata.Email,
+                    listdata.NoTelepon1,
+                    listdata.NoTelepon2,
+                    listdata.NoTelepon3,
+                    listdata.Kewarganegaraan,
+                    listdata.Suku,
+                    listdata.StatusKewarganegaraan,
+                    listdata.PekerjaanId,
+                    listdata.NamaPerusahaan,
+                    listdata.AlamatPerusahaan,
+                    listdata.NoTeleponPerusahaan,
+                    listdata.GolonganDarahId,
+                    listdata.Alergi,
+                    listdata.RiwayatPenyakit,
+                    listdata.RiwayatOperasi,
+                    listdata.RiwayatPenyakitKeluarga,
+                    listdata.NamaKontakDarurat,
+                    listdata.HubunganPasien,
+                    listdata.NoIdentitasDarurat,
+                    listdata.AlamatDarurat,
+                    listdata.NoTeleponDarurat,
+                    listdata.NamaOrangTua,
+                    listdata.IdentitasOrangTua,
+                    listdata.PekerjaanOrangTua,
+                    listdata.HubunganAnak,
+                    listdata.InformasiSekolah,
+                    listdata.FotoName,
+                    listdata.FotoPath,
+                    listdata.QrCode
+                }
             });
         }
 
@@ -369,6 +424,15 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     fotoPath = "/FotoPasienBaru/user.jpg";
                 }
 
+                // **Konversi `TanggalLahir` dari string "yyyy-MM-dd" ke `DateTime`**
+                if (!DateTime.TryParseExact(vm.TanggalLahir, "yyyy-MM-dd",
+                    CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsedDate))
+                {
+                    return BadRequest(new { message = "Format TanggalLahir tidak valid! Gunakan format yyyy-MM-dd." });
+                }
+                parsedDate = DateTime.SpecifyKind(parsedDate, DateTimeKind.Utc);
+
+
                 if (ModelState.IsValid)
                 {
                     // Simpan Data
@@ -386,7 +450,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                         IdentitasId = vm.IdentitasId,
                         NoIdentitas = vm.NoIdentitas,
                         TempatLahir = vm.TempatLahir,
-                        TanggalLahir = vm.TanggalLahir,
+                        TanggalLahir = parsedDate,
                         JenisKelamin = vm.JenisKelamin,
                         Status = vm.Status,
                         AgamaId = vm.AgamaId,
@@ -478,6 +542,15 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
+                // **Konversi `TanggalLahir` dari string "yyyy-MM-dd" ke `DateTime`**
+                if (!DateTime.TryParseExact(vm.TanggalLahir, "yyyy-MM-dd",
+                    CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsedDate))
+                {
+                    return BadRequest(new { message = "Format TanggalLahir tidak valid! Gunakan format yyyy-MM-dd." });
+
+                }
+                parsedDate = DateTime.SpecifyKind(parsedDate, DateTimeKind.Utc);
+
                 // **Update Data Pasien**
                 pasien.TipePasien = vm.TipePasien;
                 pasien.NoRekamMedisLama = vm.NoRekamMedisLama ?? pasien.NoRekamMedisLama;
@@ -486,7 +559,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 pasien.IdentitasId = vm.IdentitasId;
                 pasien.NoIdentitas = vm.NoIdentitas;
                 pasien.TempatLahir = vm.TempatLahir ?? pasien.TempatLahir;
-                pasien.TanggalLahir = vm.TanggalLahir != default ? vm.TanggalLahir : pasien.TanggalLahir;
+                pasien.TanggalLahir = vm.TanggalLahir != default ? parsedDate : pasien.TanggalLahir;
                 pasien.JenisKelamin = vm.JenisKelamin ?? pasien.JenisKelamin;
                 pasien.Status = vm.Status ?? pasien.Status;
                 pasien.AgamaId = vm.AgamaId ?? pasien.AgamaId;
@@ -668,7 +741,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                             IdentitasId = a.IdentitasId,
                             NoIdentitas = a.NoIdentitas,
                             TempatLahir = a.TempatLahir,
-                            TanggalLahir = a.TanggalLahir,
+                            TanggalLahir = a.TanggalLahir.HasValue ? a.TanggalLahir.Value.ToString("yyyy-MM-dd") : null,
                             Status = a.Status,
                             AgamaId = a.AgamaId,
                             PendidikanTerakhirId = a.PendidikanTerakhirId,
@@ -708,21 +781,28 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                             InformasiSekolah = a.InformasiSekolah
                         };
 
-            //Filter berdasarkan search
+            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             if (!string.IsNullOrWhiteSpace(search))
             {
+                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
-                    (u.KodePasien.Contains(search) || u.NamaLengkap.Contains(search) || u.NoRekamMedis.Contains(search) || u.NoRekamMedisLama.Contains(search))
+                    EF.Functions.ILike(u.NamaLengkap, search) ||
+                    EF.Functions.ILike(u.KodePasien, search) ||
+                    EF.Functions.ILike(u.NoRekamMedis, search) ||
+                    EF.Functions.ILike(u.NoRekamMedisLama, search) ||
+                    EF.Functions.ILike(u.JenisKelamin, search)
                 );
             }
 
-            //Filter berdasarkan daterange
+            //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
             {
+                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
+                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+
                 query = query.Where(u =>
-                    u.CreateDateTime.Date >= startDate.Value.Date &&
-                    u.CreateDateTime.Date <= endDate.Value.Date
-                );
+                    u.CreateDateTime >= startUtc &&
+                    u.CreateDateTime <= endUtc);
             }
 
             // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai

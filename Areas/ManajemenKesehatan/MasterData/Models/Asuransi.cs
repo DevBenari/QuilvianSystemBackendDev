@@ -20,8 +20,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? KategoriAsuransi { get; set; }
         public string? StatusAsuransi { get; set; }
 
-        public DateTime? TanggalMulaiKerjasama { get; set; }
-        public DateTime? TanggalAkhirKerjasama { get; set; }
+        public string? TanggalMulaiKerjasama { get; set; }
+        public string? TanggalAkhirKerjasama { get; set; }
 
         // Informasi Klaim
         public string? MetodeKlaim { get; set; }
