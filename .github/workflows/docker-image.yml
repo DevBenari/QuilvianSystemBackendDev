@@ -18,8 +18,7 @@ jobs:
           cd ~/QuilvianSystemBackendDev-yasmina
           echo "Running database migrations..."
           dotnet ef database update
-          EOF
-
+          
     - name: Setup SSH Connection
       run: |
         mkdir -p ~/.ssh
