@@ -12,6 +12,14 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
+    - name: Run Database Migration
+      run: |
+        ssh ${{ secrets.SSH_USER_BACKEND }}@${{ secrets.SSH_IP_BACKEND }} << 'EOF'
+          cd ~/QuilvianSystemBackendDev-yasmina
+          echo "Running database migrations..."
+          dotnet ef database update
+          EOF
+
     - name: Setup SSH Connection
       run: |
         mkdir -p ~/.ssh
