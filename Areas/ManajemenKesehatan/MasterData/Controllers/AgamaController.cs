@@ -12,6 +12,8 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using Swashbuckle.AspNetCore.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using System.Globalization;
+using Microsoft.IdentityModel.Tokens;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
@@ -188,7 +190,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var data = new Agama
                 {
                     AgamaId = Guid.NewGuid(),
-                    CreateDateTime = dateNow,
+                    CreateDateTime = dateNow.Date,// Konversi ke UTC,
                     CreateBy = userActiveId,
                     KodeAgama = kode,
                     NamaAgama = vm.NamaAgama
@@ -400,11 +402,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     );
                 }
 
-                // **Filter berdasarkan tanggal**
+                //// **Filter berdasarkan tanggal**
                 if (startDate.HasValue && endDate.HasValue)
                 {
-                    DateTime startUtc = startDate.Value.Date;
-                    DateTime endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1);
+                    DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
+                    DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
 
                     query = query.Where(u =>
                         u.CreateDateTime >= startUtc &&

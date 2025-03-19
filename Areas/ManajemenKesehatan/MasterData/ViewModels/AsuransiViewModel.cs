@@ -11,15 +11,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
         public string? JenisAsuransi { get; set; }
         public string? KategoriAsuransi { get; set; }
         public string? StatusAsuransi { get; set; }
-        public DateTime? TanggalMulaiKerjasama { get; set; }
-        public DateTime? TanggalAkhirKerjasama { get; set; }
+        public string? TanggalMulaiKerjasama { get; set; }
+        public string? TanggalAkhirKerjasama { get; set; }
         public string? RSRekanan { get; set; }
         public bool IsPKS { get; set; }
 
         // Informasi Klaim
         public string? MetodeKlaim { get; set; }
-
-        public DateTime? WaktuKlaim { get; set; }
 
         public int? BatasMaxKlaimPerTahun { get; set; }
         public int? BatasMaxKlaimPerKunjungan { get; set; }

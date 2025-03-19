@@ -1,9 +1,11 @@
+using System.Globalization;
 using System.Linq;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
@@ -81,7 +83,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             NamaPerusahaanAsuransi = a.NamaPerusahaanAsuransi,
                             NoTelepon = a.NoTelepon,
                             EmailPusat = a.EmailPusat,
-                            IsPKS = a.IsPKS
+                            IsPKS = a.IsPKS,
+                            Createdate = a.Createdate,
+
                         };
 
             // Hitung total data sebelum paginasi
@@ -187,45 +191,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
                 }
 
-                // **Validasi & Simpan Foto dokumen klaim asuransi **
-                //string fotoPath = null;
-                //if (vm.DokumenKlaim != null && vm.DokumenKlaim.Length > 0)
-                //{
-                //    var maxSize = 2 * 1024 * 1024;
-                //    var allowedExtensions = new List<string> { ".jpg", ".jpeg", ".png" };
-                //    var fileExtension = Path.GetExtension(vm.DokumenKlaim.FileName).ToLower();
-
-                //    if (vm.DokumenKlaim.Length > maxSize)
-                //    {
-                //        return BadRequest(new { message = "Ukuran file terlalu besar! Maksimum 2MB." });
-                //    }
-
-                //    if (!allowedExtensions.Contains(fileExtension))
-                //    {
-                //        return BadRequest(new { message = "Format file tidak valid! Gunakan JPG atau PNG." });
-                //    }
-
-                //    var uploadFolder = Path.Combine(_webHostEnvironment.WebRootPath, "FotoPasienBaru");
-                //    if (!Directory.Exists(uploadFolder))
-                //    {
-                //        Directory.CreateDirectory(uploadFolder);
-                //    }
-
-                //    var fotoFileName = $"{}{fileExtension}";
-                //    var fotoFilePath = Path.Combine(uploadFolder, fotoFileName);
-
-                //    using (var stream = new FileStream(fotoFilePath, FileMode.Create))
-                //    {
-                //        vm.DokumenKlaim.CopyTo(stream);
-                //    }
-
-                //    fotoPath = $"/FotoPasienBaru/{fotoFileName}";
-                //}
-                //else
-                //{
-                //    //Jika user tidak upload foto, gunakan foto default
-                //    fotoPath = "/FotoPasienBaru/user.jpg";
-                //}
 
                 // Validate ModelState
                 if (ModelState.IsValid)
@@ -239,7 +204,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         JenisAsuransi = vm.JenisAsuransi,
                         KategoriAsuransi = vm.KategoriAsuransi,
                         StatusAsuransi = vm.StatusAsuransi,
-                        TanggalMulaiKerjasama = vm.TanggalMulaiKerjasama,
+                        TanggalMulaiKerjasama =  vm.TanggalMulaiKerjasama,
                         TanggalAkhirKerjasama = vm.TanggalAkhirKerjasama,
                         MetodeKlaim = vm.MetodeKlaim,
                         BatasMaxKlaimPerTahun = vm.BatasMaxKlaimPerTahun,
@@ -488,10 +453,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             // Filter berdasarkan daterange jika keduanya memiliki nilai
             if (startDate.HasValue && endDate.HasValue)
             {
+                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
+                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+
                 query = query.Where(u =>
-                    u.CreateDateTime.Date >= startDate.Value.Date &&
-                    u.CreateDateTime.Date <= endDate.Value.Date
-                );
+                    u.CreateDateTime >= startUtc &&
+                    u.CreateDateTime <= endUtc);
             }
 
             // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
