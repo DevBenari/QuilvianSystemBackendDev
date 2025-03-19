@@ -13,7 +13,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
         public string? Title { get; set; }
 
         [JsonConverter(typeof(DateOnlyJsonConverter))]
-        public DateOnly? TTL { get; set; }
+        public DateTime? TTL { get; set; }
         public string JenisKelamin { get; set; } // radio button
         public string NoTelp { get; set; }
         public string? Alamat { get; set; }

@@ -37,6 +37,5 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
         public string? NamaPerusahaanAsuransi { get; set; }
         public string? NoTelepon { get; set; }
         public string? EmailPusat { get; set; }
-        public bool? IsPKS { get; set; }
     }
 }

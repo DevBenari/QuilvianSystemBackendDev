@@ -18,8 +18,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
         public string NoTelpPasien { get; set; }
         public string JenisKelamin { get; set; }
 
-        [JsonConverter(typeof(DateOnlyJsonConverter))]
-        public DateOnly? TanggalLahir { get; set; }
+        public DateTime? TanggalLahir { get; set; }
         public string? Title { get; set; }
 
         // keterangan ambulan

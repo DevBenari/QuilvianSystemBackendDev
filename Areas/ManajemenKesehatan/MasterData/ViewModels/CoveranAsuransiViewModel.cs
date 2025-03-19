@@ -14,13 +14,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
         public string Class { get; set; }
         public bool IsSurgery { get; set; }
         public int Tarif { get; set; }
-
-        [JsonConverter(typeof(DateOnlyJsonConverter))]
-
-        public DateOnly? TglBerlaku { get; set; }
-        [JsonConverter(typeof(DateOnlyJsonConverter))]
-
-        public DateOnly? TglBerakhir { get; set; }
+        public string? TglBerlaku { get; set; }
+        public string? TglBerakhir { get; set; }
         public bool? IsPKS { get; set; }
         public Guid? AsuransiId { get; set; }
     }

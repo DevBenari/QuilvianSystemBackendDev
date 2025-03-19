@@ -14,10 +14,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string NmDokter { get; set; }
         public string Sip { get; set; }
         public string Str { get; set; }
-        [JsonConverter(typeof(DateOnlyJsonConverter))]
-        public DateOnly? TglSip { get; set; }
-        [JsonConverter(typeof(DateOnlyJsonConverter))]
-        public DateOnly? TglStr { get; set; }
+        
+        public string? TglSip { get; set; }
+        
+        public string? TglStr { get; set; }
         public string Nik { get; set; }
         public string Email { get; set; }
         public string Nohp { get; set; }
@@ -27,11 +27,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? FotoName { get; set; }
         public string? FotoPath { get; set; }
 
-        //relasi ke dokter poli
-        public ICollection<DokterPoli> DokterPolis { get; set; }
-
-        //relasi ke dokter asuransi
-        public ICollection<DokterAsuransi> DokterAsuransis { get; set; }
 
     }
 }

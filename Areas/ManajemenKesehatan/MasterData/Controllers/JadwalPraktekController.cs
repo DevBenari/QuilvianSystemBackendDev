@@ -62,11 +62,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateByName = a.CreateBy,
                             UpdateDateTime = a.UpdateDateTime,
                             UpdateBy = a.UpdateBy,
+                            DokterId = a.DokterId,
                             DokterPoliId = a.DokterPoliId,
+                            PoliId = a.PoliId,
                             WaktuPraktek = a.WaktuPraktek,
                             HariPraktek = a.HariPraktek,
                             JamMulai = a.JamMulai,
                             JamBerakhir = a.JamBerakhir,
+                            KodeJadwalPraktek = a.KodeJadwalPraktek
                         };
 
             // Hitung total data sebelum paginasi
@@ -117,17 +120,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         // POST: api/JadwalPrakteks
-//        {  
-//  "dokterId": "d68e6c5f-2d50-4af5-aeb0-aebc8dac5779",
-//  "dokterPoliId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-//  "namaDokter": "string",
-//  "poliId": "ddc58eca-ca18-4bc7-b05d-fffe946a26a1",
-//  "waktuPraktek": "siang",
-//  "hariPraktek": "selasa",
-//  "jamMulai": "04:24:30",
-//  "jamBerakhir": "04:50:30"
-//}
-    [HttpPost]
+        [HttpPost]
         public async Task<IActionResult> Create([FromBody] JadwalPraktekViewModel vm)
         {
 
@@ -152,27 +145,54 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var setDateNow = dateNow.ToString("yyMMdd");
 
                 // Ambil data terakhir untuk hari ini (tanpa ToString di query)
-                var lastCode = _applicationDbContext.DokterPolis
-                    .Where(d => d.DokterId == vm.DokterId && d.PoliId == vm.PoliId)
-                    .OrderByDescending(k => k.DokterPoliId)
+                var lastCode = _applicationDbContext.JadwalPrakteks
+                    .Where(d => d.CreateDateTime.Date == dateNow.Date)
+                    .OrderByDescending(k => k.KodeJadwalPraktek)
                     .FirstOrDefault();
 
-                if (string.IsNullOrEmpty(EmailLogin))
+                string kode;
+                if (lastCode == null)
                 {
-                    return Unauthorized(new { message = "Dokter dengan poli "+ vm.PoliId +" Belum Ada" });
+                    kode = $"JDW{setDateNow}0001";
                 }
+                else
+                {
+                    var lastCodeTrim = lastCode.KodeJadwalPraktek.Substring(3, 6);
+
+                    if (lastCodeTrim != setDateNow)
+                    {
+                        kode = $"JDW{setDateNow}0001";
+                    }
+                    else
+                    {
+                        kode = $"JDW{setDateNow}" + (Convert.ToInt32(lastCode.KodeJadwalPraktek.Substring(9)) + 1).ToString("D4");
+                    }
+                }
+                // cek duplikasi
+                var isDuplicate = _applicationDbContext.JadwalPrakteks
+                    .Any(c => c.KodeJadwalPraktek == kode);
+
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
+                }
+
                 // Validate ModelState
                 if (ModelState.IsValid)
                 {
                     var data = new JadwalPraktek
                     {
+                        DokterId = vm.DokterId,
                         DokterPoliId = vm.DokterPoliId,
+                        PoliId = vm.PoliId,
+                        KodeJadwalPraktek = kode,
                         WaktuPraktek = vm.WaktuPraktek,
                         HariPraktek = vm.HariPraktek,
                         JamMulai = vm.JamMulai,
                         JamBerakhir = vm.JamBerakhir,
                         CreateBy = UserActiveId,
                         CreateDateTime = DateTimeOffset.UtcNow
+
                     };
 
                     _applicationDbContext.JadwalPrakteks.Add(data);
@@ -227,7 +247,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 // Validate ModelState
                 if (ModelState.IsValid)
                 {
+                    data.DokterId = vm.DokterId;
                     data.DokterPoliId = vm.DokterPoliId;
+                    data.PoliId = vm.PoliId;
                     data.WaktuPraktek = vm.WaktuPraktek;
                     data.HariPraktek = vm.HariPraktek;
                     data.JamMulai = vm.JamMulai;
@@ -313,8 +335,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateByName = a.CreateBy,
                             UpdateDateTime = a.UpdateDateTime,
                             UpdateBy = a.UpdateBy,
+                            DokterId = a.DokterId,
                             DokterPoliId = a.DokterPoliId,
+                            PoliId = a.PoliId,
                             JadwalPraktekId = a.JadwalPraktekId,
+                            KodeJadwalPraktek = a.KodeJadwalPraktek,
                             WaktuPraktek = a.WaktuPraktek,
                             HariPraktek = a.HariPraktek,
                             JamMulai = a.JamMulai,
@@ -322,7 +347,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             
                         };
 
-           
+            // Filter berdasarkan search
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(u =>
+                    u.KodeJadwalPraktek.Contains(search)  || u.HariPraktek.Contains(search)
+                );
+            }
+
             // Filter berdasarkan daterange jika keduanya memiliki nilai
             if (startDate.HasValue && endDate.HasValue)
             {
@@ -387,6 +419,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
+                    "KodeJadwalPraktek" => query.OrderByDescending(u => u.KodeJadwalPraktek),
                     "HariPraktek" => query.OrderByDescending(u => u.HariPraktek),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
@@ -394,6 +427,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
+                    "KodeJadwalPraktek" => query.OrderByDescending(u => u.KodeJadwalPraktek),
                     "HariPraktek" => query.OrderByDescending(u => u.HariPraktek),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 };

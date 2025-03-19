@@ -63,6 +63,10 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<PendaftaranPasienUGD> PendaftaranPasienUGDs { get; set; }
         public DbSet<PendaftaranPasienOptik> PendaftaranPasienOptiks { get; set; }
         public DbSet<PendaftaranPasienAmbulan> PendaftaranPasienAmbulans { get; set; }
+        public DbSet<PendaftaranPasienRehabMedik> PendaftaranPasienRehabMediks { get; set; }
+        public DbSet<PendaftaranPasienMCU> PendaftaranPasienMCUs { get; set; }
+        public DbSet<PendaftaranPasienRadiologi> PendaftaranPasienRadiologis { get; set; }
+        //public DbSet<PendaftaranPasienLaboratorium> PendaftaranPasienLaboratoriums { get; set; }
         #endregion
 
         #region Areas Tindakan
@@ -74,6 +78,6 @@ namespace QuilvianSystemBackendDev.Repositories
         //public DbSet<TindakanPasienOptik> TindakanPasienOptiks { get; set; }
         //public DbSet<TindakanPasienRadiologi> TindakanPasienRadiologis { get; set; }
         //public DbSet<TindakanPasienRehabilitas> TindakanPasienRehabilitass { get; set; }
-        #endregion        
+        #endregion
     }
 }

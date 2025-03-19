@@ -11,7 +11,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
         public Guid? PoliId { get; set; } // Bisa null jika praktek di SubPoli
         public string WaktuPraktek { get; set; } //pagi siang sore malam
         public string HariPraktek { get; set; }
-        public TimeSpan? JamMulai { get; set; }
-        public TimeSpan? JamBerakhir { get; set; }
+
+        [JsonConverter(typeof(TimeOnlyJsonConverter))]
+        public TimeOnly? JamMulai { get; set; }
+        [JsonConverter(typeof(TimeOnlyJsonConverter))]
+        public TimeOnly? JamBerakhir { get; set; }
     }
 }

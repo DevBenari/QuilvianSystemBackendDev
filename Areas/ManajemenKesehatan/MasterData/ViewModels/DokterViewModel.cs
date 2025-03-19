@@ -8,12 +8,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
         public string NmDokter { get; set; }
         public string Sip { get; set; }
         public string Str { get; set; }
-        [JsonConverter(typeof(DateOnlyJsonConverter))]
-        public DateOnly? TglSip { get; set; }
-
-        [JsonConverter(typeof(DateOnlyJsonConverter))]
-        public DateOnly? TglStr { get; set; }
-
+        public string? TglSip { get; set; }
+        public string? TglStr { get; set; }
         public string Nik { get; set; }
         public string Email { get; set; }
         public string Nohp { get; set; }
