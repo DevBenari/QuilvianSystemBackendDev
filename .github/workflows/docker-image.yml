@@ -18,6 +18,13 @@ jobs:
         echo "${{ secrets.SSH_PRIVATE_KEY_BACKEND }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
         ssh-keyscan -H ${{ secrets.SSH_IP_BACKEND }} >> ~/.ssh/known_hosts
+        
+    - name: Run Database Migration
+      run: |
+        ssh ${{ secrets.SSH_USER_BACKEND }}@${{ secrets.SSH_IP_BACKEND }} << 'EOF'
+          cd ~/QuilvianSystemBackendDev-yasmina
+          echo "Running database migrations..."
+          dotnet ef database update
 
     - name: Deploy to Server
       run: |
