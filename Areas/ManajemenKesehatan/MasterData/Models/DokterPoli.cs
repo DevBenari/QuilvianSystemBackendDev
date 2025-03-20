@@ -10,6 +10,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         [Key]
         public Guid DokterPoliId { get; set; }
         public Guid DokterId { get; set; }
-        public Guid? PoliId { get; set; }
+        public Guid PoliId { get; set; }
     }
 }

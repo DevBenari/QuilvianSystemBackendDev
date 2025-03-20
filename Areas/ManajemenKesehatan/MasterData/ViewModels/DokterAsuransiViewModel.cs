@@ -3,7 +3,7 @@
     public class DokterAsuransiViewModel
     {
         public Guid DokterId { get; set; }
-        public string NamaAsuransi { get; set; }
+        public Guid AsuransiId { get; set; }
 
     }
 }

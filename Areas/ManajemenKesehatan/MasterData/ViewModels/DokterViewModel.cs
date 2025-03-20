@@ -21,5 +21,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
         public string? FotoName { get; set; }
         public string? FotoPath { get; set; }
 
+        public List<Guid>? AsuransiId { get; set; }
+        public List<Guid>? PoliId { get; set; }
+
     }
 }
