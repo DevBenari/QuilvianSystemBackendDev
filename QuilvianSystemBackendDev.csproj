@@ -5,10 +5,6 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
-
-  <ItemGroup>
-    <None Include=".github\workflows\docker-image.yml" />
-  </ItemGroup>
  
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.29" />
@@ -29,6 +25,7 @@
   </ItemGroup>
  
   <ItemGroup>
+    <Folder Include=".github\workflows\" />
     <Folder Include="Areas\ManajemenKesehatan\Kunjungan\Models\" />
     <Folder Include="Areas\ManajemenKesehatan\Kunjungan\Controller\" />
     <Folder Include="Areas\ManajemenKesehatan\Kunjungan\ViewModel\" />

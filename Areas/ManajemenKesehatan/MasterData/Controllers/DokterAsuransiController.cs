@@ -61,7 +61,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateByName = u.FullName,
                             DokterAsuransiId = a.DokterAsuransiId,
                             DokterId = a.DokterId,
-                            KodeDokterAsuransi = a.KodeDokterAsuransi,
                             NamaAsuransi = a.NamaAsuransi,
                             NamaDokter = a.Dokter.NmDokter,
                         };
@@ -133,31 +132,30 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 // Generate UserActiveCode
                 var lastCode = _context.DokterAsuransis
                     .Where(d => d.CreateDateTime.Date == dateNow.Date)
-                    .OrderByDescending(k => k.KodeDokterAsuransi)
                     .FirstOrDefault();
 
-                string kode;
-                if (lastCode == null)
-                {
-                    kode = $"KDA{setDateNow}0001";
+                //string kode;
+                //if (lastCode == null)
+                //{
+                //    kode = $"KDA{setDateNow}0001";
 
-                }
-                else
-                {
-                    var lastCodeTrim = lastCode.KodeDokterAsuransi.Substring(3, 6);
-                    if (lastCodeTrim != setDateNow)
-                    {
-                        kode = $"KDA{setDateNow}0001";
-                    }
-                    else
-                    {
-                        kode = $"KDA{setDateNow}" + (Convert.ToInt32(lastCode.KodeDokterAsuransi.Substring(9)) + 1).ToString("D4");
-                    }
-                }
+                //}
+                //else
+                //{
+                //    var lastCodeTrim = lastCode.KodeDokterAsuransi.Substring(3, 6);
+                //    if (lastCodeTrim != setDateNow)
+                //    {
+                //        kode = $"KDA{setDateNow}0001";
+                //    }
+                //    else
+                //    {
+                //        kode = $"KDA{setDateNow}" + (Convert.ToInt32(lastCode.KodeDokterAsuransi.Substring(9)) + 1).ToString("D4");
+                //    }
+                //}
 
-                // Cek Duplikasi
-                var isDuplicate = _context.DokterAsuransis
-                    .Any(c => c.KodeDokterAsuransi == kode);
+                //// Cek Duplikasi
+                //var isDuplicate = _context.DokterAsuransis
+                //    .Any(c => c.KodeDokterAsuransi == kode);
 
                 if (ModelState.IsValid)
                 {
@@ -165,7 +163,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     {
                         DokterAsuransiId = Guid.NewGuid(),
                         DokterId = vm.DokterId,
-                        KodeDokterAsuransi = kode,
                         NamaAsuransi = vm.NamaAsuransi,
                         CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = UserActiveId,
@@ -303,7 +300,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateByName = u.FullName,
                             DokterAsuransiId = a.DokterAsuransiId,
                             DokterId = a.DokterId,
-                            KodeDokterAsuransi = a.KodeDokterAsuransi,
                             NamaAsuransi = a.NamaAsuransi,
                             NamaDokter = a.Dokter.NmDokter,
                         };

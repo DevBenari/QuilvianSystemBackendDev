@@ -564,10 +564,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<bool>("IsDelete")
                         .HasColumnType("boolean");
 
-                    b.Property<string>("KodeDokterAsuransi")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<string>("NamaAsuransi")
                         .IsRequired()
                         .HasColumnType("text");

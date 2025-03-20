@@ -10,8 +10,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         [Key]
         public Guid DokterAsuransiId { get; set; }
         public Guid DokterId { get; set; }
-
-        public string KodeDokterAsuransi { get; set; }
         public string NamaAsuransi { get; set; }
 
         //relasi ke Asuransi
