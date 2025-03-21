@@ -1,11 +1,10 @@
-using System.Globalization;
-using System.Linq;
+﻿using System.Globalization;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
+using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
@@ -14,7 +13,6 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
-using ZXing.QrCode.Internal;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
@@ -84,7 +82,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             NoTelepon = a.NoTelepon,
                             EmailPusat = a.EmailPusat,
                             IsPKS = a.IsPKS,
-                            Createdate = a.Createdate,
+                            TanggalRegist = a.TanggalRegist,
 
                         };
 
@@ -154,7 +152,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                 var dateNow = DateTime.UtcNow;;
+                var dateNow = DateTime.UtcNow; ;
                 var setDateNow = dateNow.ToString("yyMMdd");
 
                 // Ambil data terakhir untuk hari ini (tanpa ToString di query)
@@ -199,12 +197,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     {
                         AsuransiId = Guid.NewGuid(),
                         KodeAsuransi = kode,
-                        Createdate = DateTime.UtcNow,
+                        TanggalRegist = vm.TanggalRegist,
                         NamaAsuransi = vm.NamaAsuransi,
                         JenisAsuransi = vm.JenisAsuransi,
                         KategoriAsuransi = vm.KategoriAsuransi,
                         StatusAsuransi = vm.StatusAsuransi,
-                        TanggalMulaiKerjasama =  vm.TanggalMulaiKerjasama,
+                        TanggalMulaiKerjasama = vm.TanggalMulaiKerjasama,
                         TanggalAkhirKerjasama = vm.TanggalAkhirKerjasama,
                         MetodeKlaim = vm.MetodeKlaim,
                         BatasMaxKlaimPerTahun = vm.BatasMaxKlaimPerTahun,
@@ -220,10 +218,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         IsPKS = vm.IsPKS,
                         CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = UserActiveId,
-                        UpdateDateTime = DateTimeOffset.UtcNow,
-                        UpdateBy = UserActiveId,
-                        DeleteDateTime = DateTimeOffset.UtcNow,
-                        DeleteBy = UserActiveId,
                         IsDelete = false
                     };
 
@@ -294,7 +288,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     asuransi.NamaPerusahaanAsuransi = vm.NamaPerusahaanAsuransi ?? asuransi.NamaPerusahaanAsuransi;
                     asuransi.NoTelepon = vm.NoTelepon ?? asuransi.NoTelepon;
                     asuransi.EmailPusat = vm.EmailPusat ?? asuransi.EmailPusat;
-                    asuransi.IsPKS = vm.IsPKS ;
+                    asuransi.IsPKS = vm.IsPKS;
+                    asuransi.TanggalRegist = vm.TanggalRegist;
 
 
                     asuransi.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -306,51 +301,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Ok(new
                     {
                         message = "Update Data Berhasil || 200 OK",
-                        //qrCodeUrl = $"{Request.Scheme}://{Request.Host}{pasien.QrCode}",
-                        //uploadFotoUrl = $"{Request.Scheme}://{Request.Host}{pasien.Foto}"
+
                     });
                 }
                 else
                 {
                     return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
                 }
-
-
-                // **Update Foto Profil**
-                //if (vm.Foto != null && vm.Foto.Length > 0)
-                //{
-                //    var maxSize = 2 * 1024 * 1024;
-                //    var allowedExtensions = new List<string> { ".jpg", ".jpeg", ".png" };
-                //    var fileExtension = Path.GetExtension(vm.Foto.FileName).ToLower();
-
-                //    if (vm.Foto.Length > maxSize)
-                //    {
-                //        return BadRequest(new { message = "Ukuran file terlalu besar! Maksimum 2MB." });
-                //    }
-
-                //    if (!allowedExtensions.Contains(fileExtension))
-                //    {
-                //        return BadRequest(new { message = "Format file tidak valid! Gunakan JPG atau PNG." });
-                //    }
-
-                //    var uploadFolder = Path.Combine(_webHostEnvironment.WebRootPath, "FotoPasienBaru");
-                //    if (!Directory.Exists(uploadFolder))
-                //    {
-                //        Directory.CreateDirectory(uploadFolder);
-                //    }
-
-                //    var fotoFileName = $"{pasien.KodePasien}{fileExtension}";
-                //    var fotoFilePath = Path.Combine(uploadFolder, fotoFileName);
-
-                //    using (var stream = new FileStream(fotoFilePath, FileMode.Create))
-                //    {
-                //        vm.Foto.CopyTo(stream);
-                //    }
-
-                //    pasien.Foto = $"/FotoPasienBaru/{fotoFileName}";
-                //}
-
-
             }
             catch
             (Exception ex)
@@ -361,7 +318,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteAsuransi(Guid id)
+        public async Task<IActionResult> Delete(Guid id)
         {
             try
             {
@@ -375,7 +332,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                // **Cari Data**
+                // **Cari Data asuransi**
                 var asuransi = _applicationDbContext.Asuransis.Find(id);
                 if (asuransi == null)
                 {
@@ -383,12 +340,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // **Soft Delete (Tandai Data sebagai Terhapus)**
-                asuransi.DeleteBy = UserActiveId;
+
                 asuransi.DeleteDateTime = DateTimeOffset.UtcNow;
+                asuransi.DeleteBy = UserActiveId;
                 asuransi.IsDelete = true;
 
                 _applicationDbContext.Asuransis.Update(asuransi);
                 _applicationDbContext.SaveChanges();
+
 
                 return Ok(new { message = "Data berhasil dihapus..." });
             }

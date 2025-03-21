@@ -4,7 +4,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
 {
     public class AsuransiViewModel
     {
-        public DateOnly? Createdate { get; set; }
+        public string? TanggalRegist { get; set; }
 
         // Informasi Asuransi
         public string? NamaAsuransi { get; set; }
@@ -23,7 +23,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
         public int? BatasMaxKlaimPerKunjungan { get; set; }
 
         // Informasi Pertanggungan
-        public int? PersentasiBiayaPertanggungan { get; set; }
+        public decimal? PersentasiBiayaPertanggungan { get; set; }
         public int? TambahanTanggungan { get; set; }
 
         // Informasi Pembayaran

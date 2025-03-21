@@ -5,6 +5,13 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Areas\ManajemenKesehatan\Kunjungan\**" />
+    <Content Remove="Areas\ManajemenKesehatan\Kunjungan\**" />
+    <EmbeddedResource Remove="Areas\ManajemenKesehatan\Kunjungan\**" />
+    <None Remove="Areas\ManajemenKesehatan\Kunjungan\**" />
+  </ItemGroup>
  
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.29" />
@@ -26,9 +33,6 @@
  
   <ItemGroup>
     <Folder Include=".github\workflows\" />
-    <Folder Include="Areas\ManajemenKesehatan\Kunjungan\Models\" />
-    <Folder Include="Areas\ManajemenKesehatan\Kunjungan\Controller\" />
-    <Folder Include="Areas\ManajemenKesehatan\Kunjungan\ViewModel\" />
   </ItemGroup>
 
 </Project>
