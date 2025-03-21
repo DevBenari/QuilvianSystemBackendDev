@@ -18,8 +18,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
-    [EnableCors("AllowSpecific")]
+    //[Authorize]
+    //[EnableCors("AllowSpecific")]
     public class AsuransiPasienController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
