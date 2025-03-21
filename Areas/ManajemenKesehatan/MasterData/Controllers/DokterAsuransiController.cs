@@ -59,8 +59,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateDateTime = a.CreateDateTime,
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
+                            DokterAsuransiId = a.DokterAsuransiId,
                             AsuransiId = a.AsuransiId,
                             DokterId = a.DokterId,
+                            NamaAsuransi = a.NamaAsuransi,
+                            NamaDokter = a.Dokter.NmDokter,
                         };
 
             // Hitung total data sebelum paginasi
@@ -269,8 +272,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateDateTime = a.CreateDateTime,
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
+                            DokterAsuransiId = a.DokterAsuransiId,
                             AsuransiId = a.AsuransiId,
                             DokterId = a.DokterId,
+                            NamaAsuransi = a.NamaAsuransi,
+                            NamaDokter = a.Dokter.NmDokter,
                         };
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
