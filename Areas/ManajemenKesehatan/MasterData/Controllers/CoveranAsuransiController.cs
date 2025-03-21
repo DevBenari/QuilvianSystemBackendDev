@@ -122,25 +122,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             });
         }
 
-        [HttpGet("{NamaAsuransi}")]
-        public IActionResult GetCoveranAsuransiByName(string NamaAsuransi)
-        {
-            var listdata = _applicationDbContext.CoveranAsuransis
-                .Where(c => c.NamaAsuransi.ToLower().Contains(NamaAsuransi.ToLower()))
-                .ToList();
-
-            if (listdata == null || listdata.Count == 0)
-            {
-                return NotFound(new { message = "Data tidak ditemukan." });
-            }
-
-            return Ok(new
-            {
-                message = "Ditemukan || 200 OK",
-                data = listdata
-            });
-        }
-
         [HttpPost]
         public async Task<IActionResult> CreateCoveranAsuransi([FromBody] CoveranAsuransiViewModel vm)
         {
@@ -265,13 +246,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 if (string.IsNullOrEmpty(EmailLogin))
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
-                }
-                // cek duplikasi
-                var isDuplicate = _applicationDbContext.CoveranAsuransis
-                    .Any(c => c.CoveranAsuransiId != id);
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
                 }
                 // Validate ModelState
                 if (ModelState.IsValid)
