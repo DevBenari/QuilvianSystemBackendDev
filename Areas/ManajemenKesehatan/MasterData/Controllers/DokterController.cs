@@ -16,6 +16,8 @@ using System.Linq;
 using Microsoft.AspNetCore.Http;
 using ZXing.QrCode.Internal;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Migrations;
+using Microsoft.AspNetCore.Components.Routing;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
@@ -57,29 +59,56 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = from a in _context.Dokters
-                        join u in _context.UserActives
-                        on a.CreateBy equals u.UserActiveId
-                        where a.IsDelete == false
-                        select new
-                        {
-                            CreateDateTime = a.CreateDateTime,
-                            CreateBy = a.CreateBy,
-                            CreateByName = u.FullName,
-                            DokterId = a.DokterId,
-                            KdDokter = a.KdDokter,
-                            NmDokter = a.NmDokter,
-                            Sip = a.Sip,
-                            Str = a.Str,
-                            TglSip = a.TglSip,
-                            TglStr = a.TglStr,
-                            Nik = a.Nik,
-                            Nohp = a.Nohp,
-                            Alamat = a.Alamat,
-                            IsAsuransi = a.IsAsuransi,
-                            FotoName = a.FotoName,
-                            FotoPath = a.FotoPath,
-                        };
+            var query = _context.Dokters
+                .Where(d => !d.IsDelete)
+                .Select(d => new
+                {
+                    d.CreateDateTime,
+                    d.CreateBy,
+                    CreateByName = _context.UserActives
+                        .Where(u => u.UserActiveId == d.CreateBy)
+                        .Select(u => u.FullName)
+                        .FirstOrDefault(),
+                    d.DokterId,
+                    d.KdDokter,
+                    d.NmDokter,
+                    d.Sip,
+                    d.Str,
+                    d.TglSip,
+                    d.TglStr,
+                    d.Nik,
+                    d.Nohp,
+                    d.Alamat,
+                    d.IsAsuransi,
+                    d.FotoName,
+                    d.FotoPath,
+                    // Menambahkan daftar ID Asuransi
+                    AsuransiIds = _context.DokterAsuransis
+                        .Where(da => da.DokterId == d.DokterId)
+                        .Select(da => da.AsuransiId)
+                        .Distinct()
+                        .ToList(),
+
+                    NamaAsuransi = _context.DokterAsuransis
+                        .Where(da => da.DokterId == d.DokterId)
+                        .Join(_context.Asuransis, da => da.AsuransiId, a => a.AsuransiId, (da, a) => a.NamaAsuransi)
+                        .Distinct()
+                        .ToList(),
+
+                                // Menambahkan daftar ID Poli
+                    PoliIds = _context.DokterPolis
+                        .Where(dp => dp.DokterId == d.DokterId)
+                        .Select(dp => dp.PoliId)
+                        .Distinct()
+                        .ToList(),
+
+                    NamaPoli = _context.DokterPolis
+                        .Where(dp => dp.DokterId == d.DokterId)
+                        .Join(_context.Polikliniks, dp => dp.PoliId, p => p.PoliklinikId, (dp, p) => p.NamaPoliklinik)
+                        .Distinct()
+                        .ToList()
+                })
+                .ToList();
 
             // Hitung total data sebelum paginasi
             var totalRows = query.Count();
@@ -281,6 +310,38 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     _context.Dokters.Add(dokter);
                     _context.SaveChanges();
 
+                    if (vm.AsuransiId != null && vm.AsuransiId.Any())
+                    {
+                        var dokterAsuransiList = vm.AsuransiId.Select(asuransiId => new DokterAsuransi
+                        {
+                            DokterAsuransiId = Guid.NewGuid(),
+                            DokterId = dokter.DokterId, // Gunakan ID dokter yang baru dibuat
+                            AsuransiId = asuransiId, // Ambil ID asuransi dari list
+                            CreateDateTime = DateTimeOffset.UtcNow,
+                            CreateBy = UserActiveId,
+                            IsDelete = false,
+                        }).ToList();
+
+                        _context.DokterAsuransis.AddRange(dokterAsuransiList);
+                        await _context.SaveChangesAsync();
+                    }
+
+                    if (vm.PoliId != null && vm.PoliId.Any())
+                    {
+                        var dokterPoliList = vm.PoliId.Select(poliId => new DokterPoli
+                        {
+                            DokterPoliId = Guid.NewGuid(),
+                            DokterId = dokter.DokterId, // Gunakan ID dokter yang baru dibuat
+                            PoliId = poliId, // Ambil ID Poli dari list
+                            CreateDateTime = DateTimeOffset.UtcNow,
+                            CreateBy = UserActiveId,
+                            IsDelete = false,
+                        }).ToList();
+
+                        _context.DokterPolis.AddRange(dokterPoliList);
+                        await _context.SaveChangesAsync();
+                    }
+
                     return Created("", new
                     {
                         message = "Tambah Data Berhasil || 201 Created",
@@ -298,8 +359,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             {
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
-
-
         }
 
         // PUT: api/Dokter/{id}
@@ -390,6 +449,80 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 _context.Dokters.Update(data);
                 _context.SaveChanges();
+
+                // **Asuransi**
+                var asuransiLama = await _context.DokterAsuransis
+                    .Where(da => da.DokterId == data.DokterId)
+                    .ToListAsync();
+
+                if (vm.AsuransiId == null || !vm.AsuransiId.Any())
+                {
+                    // Jika daftar asuransi baru kosong, hapus semua asuransi lama
+                    _context.DokterAsuransis.RemoveRange(asuransiLama);
+                }
+                else
+                {
+                    // Hapus Asuransi Lama yang Tidak Ada dalam Daftar Baru
+                    var asuransiYangDihapus = asuransiLama
+                        .Where(da => !vm.AsuransiId.Contains(da.AsuransiId))
+                        .ToList();
+
+                    _context.DokterAsuransis.RemoveRange(asuransiYangDihapus);
+
+                    // Tambahkan Asuransi Baru yang Belum Ada
+                    var asuransiBaru = vm.AsuransiId
+                        .Where(asuransiId => !asuransiLama.Any(da => da.AsuransiId == asuransiId))
+                        .Select(asuransiId => new DokterAsuransi
+                        {
+                            DokterAsuransiId = Guid.NewGuid(),
+                            DokterId = data.DokterId,
+                            AsuransiId = asuransiId,
+                            CreateDateTime = DateTimeOffset.UtcNow,
+                            CreateBy = UserActiveId,
+                            IsDelete = false
+                        })
+                        .ToList();
+
+                    _context.DokterAsuransis.AddRange(asuransiBaru);
+                }
+
+                // **Poli**
+                var poliLama = await _context.DokterPolis
+                    .Where(dp => dp.DokterId == data.DokterId)
+                    .ToListAsync();
+
+                if (vm.PoliId == null || !vm.PoliId.Any())
+                {
+                    // Jika daftar poli baru kosong, hapus semua poli lama
+                    _context.DokterPolis.RemoveRange(poliLama);
+                }
+                else
+                {
+                    // Hapus Poli Lama yang Tidak Ada dalam Daftar Baru
+                    var poliYangDihapus = poliLama
+                        .Where(dp => !vm.PoliId.Contains(dp.PoliId))
+                        .ToList();
+
+                    _context.DokterPolis.RemoveRange(poliYangDihapus);
+
+                    // Tambahkan Poli Baru yang Belum Ada
+                    var poliBaru = vm.PoliId
+                        .Where(poliId => !poliLama.Any(dp => dp.PoliId == poliId))
+                        .Select(poliId => new DokterPoli
+                        {
+                            DokterPoliId = Guid.NewGuid(),
+                            DokterId = data.DokterId,
+                            PoliId = poliId,
+                            CreateDateTime = DateTimeOffset.UtcNow,
+                            CreateBy = UserActiveId,
+                            IsDelete = false
+                        })
+                        .ToList();
+
+                    _context.DokterPolis.AddRange(poliBaru);
+                }
+
+                await _context.SaveChangesAsync();
 
                 return Ok(new { message = "Data berhasil diupdate..." });
             }

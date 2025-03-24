@@ -56,6 +56,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                          join a in _applicationDbContext.Asuransis on ap.AsuransiId equals a.AsuransiId.ToString()
                          select new
                          {
+                             ap.AsuransiPasienId,
                              ap.PasienId,
                              ap.AsuransiId,
                              NamaPasien = p.NamaLengkap,

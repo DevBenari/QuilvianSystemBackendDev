@@ -176,8 +176,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     var newKunjungan = new Kunjungan
                     {
+                        JumlahKunjungan = "[]",
 
-                        
+
                     };
 
                     _applicationDbContext.Kunjungans.Add(newKunjungan);
