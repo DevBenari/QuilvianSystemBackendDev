@@ -246,7 +246,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
-
                 // Validate ModelState
                 if (ModelState.IsValid)
                 {
@@ -265,8 +264,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     data.UpdateBy = UserActiveId;
                     _applicationDbContext.CoveranAsuransis.Update(data);
                     _applicationDbContext.SaveChanges();
-
-
                     return Ok(new
                     {
                         message = "Data berhasil diubah. || 200 OK",

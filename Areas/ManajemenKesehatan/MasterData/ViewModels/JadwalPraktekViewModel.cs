@@ -9,7 +9,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
         public Guid DokterPoliId { get; set; }
         public string WaktuPraktek { get; set; } //pagi siang sore malam
         public string HariPraktek { get; set; }
-        public string JamMulai { get; set; }
-        public string JamBerakhir { get; set; }
+
+        [JsonConverter(typeof(TimeOnlyJsonConverter))]
+        public TimeOnly? JamMulai { get; set; }
+        [JsonConverter(typeof(TimeOnlyJsonConverter))]
+        public TimeOnly? JamBerakhir { get; set; }
     }
 }

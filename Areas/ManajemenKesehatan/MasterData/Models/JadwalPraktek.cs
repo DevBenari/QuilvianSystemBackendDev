@@ -15,9 +15,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string WaktuPraktek { get; set; } 
         public string HariPraktek { get; set; }
 
-        public string JamMulai { get; set; }
+        [JsonConverter(typeof(TimeOnlyJsonConverter))]
+        public TimeOnly? JamMulai { get; set; }
 
-        public string JamBerakhir { get; set; }
+        [JsonConverter(typeof(TimeOnlyJsonConverter))]
+        public TimeOnly? JamBerakhir { get; set; }
 
         [ForeignKey("DokterPoliId")]
         public DokterPoli DokterPoli { get; set; }

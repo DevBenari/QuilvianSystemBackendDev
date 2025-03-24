@@ -15,19 +15,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
         public string? Title { get; set; }
 
         [JsonConverter(typeof(DateOnlyJsonConverter))]
-        public DateTime? TTL { get; set; }
-        public int Umur { get; set; }   // perhitungan dari tanggal lahir
-        public string NoTelp { get; set; }
+        public DateOnly? TTL { get; set; }
+        public int? Umur { get; set; }   // perhitungan dari tanggal lahir
+        public string? NoTelp { get; set; }
 
         // informasi nakes yang menangani
-        public string NamaDokterUGD { get; set; }
-        public string Diagnosa { get; set; }
-        public string Tindakan { get; set; }
+        public string? NamaDokterUGD { get; set; }
+        public string? Diagnosa { get; set; }
+        public string? Tindakan { get; set; }
         
 
         // biaya
-        public decimal BiayaAdmin { get; set; }
-        public string Kelas { get; set; }
+        public decimal? BiayaAdmin { get; set; }
+        public string? Kelas { get; set; }
 
         // relasi ke asuransi pasien
         public string? AsuransiId { get; set; }
