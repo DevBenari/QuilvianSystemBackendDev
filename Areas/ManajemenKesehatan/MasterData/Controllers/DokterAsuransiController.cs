@@ -128,10 +128,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                  var dateNow = DateTime.UtcNow;;
                 var setDateNow = DateTimeOffset.UtcNow.ToString("yyMMdd");
 
-                // Generate UserActiveCode
-                var lastCode = _context.DokterAsuransis
-                    .Where(d => d.CreateDateTime.Date == dateNow.Date)
-                    .FirstOrDefault();
 
                 if (ModelState.IsValid)
                 {
