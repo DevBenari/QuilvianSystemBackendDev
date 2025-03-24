@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json.Converters;
@@ -58,13 +58,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         where a.IsDelete == false
                         select new
                         {
+                            JadwalPraktekId = a.JadwalPraktekId,
                             CreateDateTime = a.CreateDateTime,
                             CreateByName = a.CreateBy,
                             UpdateDateTime = a.UpdateDateTime,
                             UpdateBy = a.UpdateBy,
-                            DokterId = a.DokterId,
                             DokterPoliId = a.DokterPoliId,
-                            PoliId = a.PoliId,
                             WaktuPraktek = a.WaktuPraktek,
                             HariPraktek = a.HariPraktek,
                             JamMulai = a.JamMulai,
@@ -182,9 +181,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     var data = new JadwalPraktek
                     {
-                        DokterId = vm.DokterId,
                         DokterPoliId = vm.DokterPoliId,
-                        PoliId = vm.PoliId,
                         KodeJadwalPraktek = kode,
                         WaktuPraktek = vm.WaktuPraktek,
                         HariPraktek = vm.HariPraktek,
@@ -237,19 +234,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
-                // cek duplikasi
-                var isDuplicate = _applicationDbContext.JadwalPrakteks
-                    .Any(c => c.JadwalPraktekId != id);
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
-                }
+
                 // Validate ModelState
                 if (ModelState.IsValid)
                 {
-                    data.DokterId = vm.DokterId;
                     data.DokterPoliId = vm.DokterPoliId;
-                    data.PoliId = vm.PoliId;
                     data.WaktuPraktek = vm.WaktuPraktek;
                     data.HariPraktek = vm.HariPraktek;
                     data.JamMulai = vm.JamMulai;
@@ -335,16 +324,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateByName = a.CreateBy,
                             UpdateDateTime = a.UpdateDateTime,
                             UpdateBy = a.UpdateBy,
-                            DokterId = a.DokterId,
                             DokterPoliId = a.DokterPoliId,
-                            PoliId = a.PoliId,
                             JadwalPraktekId = a.JadwalPraktekId,
                             KodeJadwalPraktek = a.KodeJadwalPraktek,
                             WaktuPraktek = a.WaktuPraktek,
                             HariPraktek = a.HariPraktek,
                             JamMulai = a.JamMulai,
                             JamBerakhir = a.JamBerakhir,
-                            
+
                         };
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
