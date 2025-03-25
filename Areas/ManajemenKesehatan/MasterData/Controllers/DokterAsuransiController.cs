@@ -59,6 +59,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateDateTime = a.CreateDateTime,
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
+                            DokterAsuransiId = a.DokterAsuransiId,
                             AsuransiId = a.AsuransiId,
                             DokterId = a.DokterId,
                         };
@@ -269,11 +270,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateDateTime = a.CreateDateTime,
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
+                            DokterAsuransiId = a.DokterAsuransiId,
                             AsuransiId = a.AsuransiId,
                             DokterId = a.DokterId,
                         };
 
-            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
+            //// **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             //if (!string.IsNullOrWhiteSpace(search))
             //{
             //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
@@ -349,16 +351,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    //"NamaDokter" => query.OrderByDescending(u => u.NamaDokter),
-                    //"NamaAsuransi" => query.OrderByDescending(u => u.NamaAsuransi),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    //"NamaDokter" => query.OrderByDescending(u => u.NamaDokter),
-                    //"NamaAsuransi" => query.OrderByDescending(u => u.NamaAsuransi),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 };
 

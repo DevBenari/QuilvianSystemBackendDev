@@ -206,14 +206,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                // cek duplikasi
-                var isDuplicate = _applicationDbContext.DokterPolis
-                    .Any(c => c.DokterPoliId != id);
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
-                }
-
                 if (ModelState.IsValid)
                 {
                     data.DokterId = vm.DokterId;

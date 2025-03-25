@@ -18,8 +18,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 {
     [ApiController]
     [Route("api/[controller]")]
-    //[Authorize]
-    //[EnableCors("AllowSpecific")]
+    [Authorize]
+    [EnableCors("AllowSpecific")]
     public class AsuransiPasienController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
@@ -315,7 +315,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
-    
+
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteAsuransiPasien(Guid id)
@@ -490,5 +490,5 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
             });
         }
-    } 
+    }
 }

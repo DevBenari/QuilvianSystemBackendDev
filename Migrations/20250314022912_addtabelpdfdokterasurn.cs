@@ -25,7 +25,6 @@ namespace QuilvianSystemBackendDev.Migrations
                 {
                     DokterAsuransiId = table.Column<Guid>(type: "uuid", nullable: false),
                     DokterId = table.Column<Guid>(type: "uuid", nullable: false),
-                    KodeDokterAsuransi = table.Column<string>(type: "text", nullable: false),
                     NamaAsuransi = table.Column<string>(type: "text", nullable: false),
                     AsuransiId = table.Column<Guid>(type: "uuid", nullable: true),
                     CreateDateTime = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -11,9 +12,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250324040703_editradio2")]
+    partial class editradio2
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2142,6 +2144,7 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("AlamatPasien")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("Catatan")
@@ -2154,6 +2157,7 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("DaerahTujuan")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<Guid>("DeleteBy")
@@ -2169,15 +2173,16 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<string>("JenisKelamin")
+                        .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int?>("JumlahParamedis")
+                    b.Property<int>("JumlahParamedis")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("KelebihanJarak")
+                    b.Property<int>("KelebihanJarak")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("KelebihanWaktu")
+                    b.Property<int>("KelebihanWaktu")
                         .HasColumnType("integer");
 
                     b.Property<string>("KodePdfPasienAmbulan")
@@ -2185,6 +2190,7 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("LayananAmbulan")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("NamaPasien")
@@ -2196,6 +2202,7 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("NoTelpPasien")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<Guid>("PasienId")
@@ -2413,9 +2420,11 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("AlamatPasien")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("Asuransi")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<Guid>("CreateBy")
@@ -2431,30 +2440,37 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("DiagnosaAwal")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("DokterPemeriksa")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("Email")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<bool>("IsDelete")
                         .HasColumnType("boolean");
 
                     b.Property<string>("JenisKelamin")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("JenisKonsul")
                         .HasColumnType("text");
 
                     b.Property<string>("KabupatenKota")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("Kecamatan")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("KodeMember")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("KodePdfPasienMCU")
@@ -2462,9 +2478,11 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("NamaPasien")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("NamaRSRujukan")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("NoRekamMedis")
@@ -2472,12 +2490,14 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("NoTelpPasien")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<Guid?>("PasienId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("Provinsi")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<DateOnly?>("TanggalLahir")
@@ -2487,12 +2507,15 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("date");
 
                     b.Property<string>("TipePasien")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("TipePemeriksaan")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("TipeRujukan")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("Title")
@@ -2531,12 +2554,14 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("DokterOptik")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<bool>("IsDelete")
                         .HasColumnType("boolean");
 
                     b.Property<string>("JenisKelamin")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("KodePasienOptik")
@@ -2548,6 +2573,7 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("NoTelp")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<DateOnly?>("TTL")
@@ -2676,9 +2702,11 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("AlamatPasien")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("Asuransi")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<Guid>("CreateBy")
@@ -2694,30 +2722,37 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("DiagnosaAwal")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("DokterPemeriksa")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("Email")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<bool>("IsDelete")
                         .HasColumnType("boolean");
 
                     b.Property<string>("JenisKelamin")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("JenisKonsul")
                         .HasColumnType("text");
 
                     b.Property<string>("KabupatenKota")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("Kecamatan")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("KodeMember")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("KodePdfPasienRehabMedik")
@@ -2725,9 +2760,11 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("NamaPasien")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("NamaRSRujukan")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("NoRekamMedis")
@@ -2735,12 +2772,14 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("NoTelpPasien")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<Guid?>("PasienId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("Provinsi")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<DateOnly?>("TanggalLahir")
@@ -2750,12 +2789,15 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("date");
 
                     b.Property<string>("TipePasien")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("TipePemeriksaan")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("TipeRujukan")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("Title")
@@ -2784,7 +2826,7 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("AsuransiId")
                         .HasColumnType("text");
 
-                    b.Property<decimal?>("BiayaAdmin")
+                    b.Property<decimal>("BiayaAdmin")
                         .HasColumnType("numeric");
 
                     b.Property<Guid>("CreateBy")
@@ -2800,12 +2842,14 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Diagnosa")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<bool>("IsDelete")
                         .HasColumnType("boolean");
 
                     b.Property<string>("Kelas")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("KodePasienUGD")
@@ -2816,6 +2860,7 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("NamaDokterUGD")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("NamaPasien")
@@ -2826,18 +2871,20 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("NoTelp")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<DateOnly?>("TTL")
                         .HasColumnType("date");
 
                     b.Property<string>("Tindakan")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("Title")
                         .HasColumnType("text");
 
-                    b.Property<int?>("Umur")
+                    b.Property<int>("Umur")
                         .HasColumnType("integer");
 
                     b.Property<Guid>("UpdateBy")
@@ -2858,6 +2905,7 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("Alamat")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<Guid>("CreateBy")
@@ -2873,12 +2921,14 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("DokterPemeriksa")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<bool>("IsDelete")
                         .HasColumnType("boolean");
 
                     b.Property<string>("JenisKelamin")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("KodeRegistFasilitas")
@@ -2886,6 +2936,7 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("NamaFasilitasPasien")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("NamaPasien")
@@ -2897,6 +2948,7 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("NoTelepon")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<Guid>("PasienId")

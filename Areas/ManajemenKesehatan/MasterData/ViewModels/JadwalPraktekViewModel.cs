@@ -6,9 +6,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
 {
     public class JadwalPraktekViewModel
     {
-        public Guid DokterId { get; set; }
         public Guid DokterPoliId { get; set; }
-        public Guid? PoliId { get; set; } // Bisa null jika praktek di SubPoli
         public string WaktuPraktek { get; set; } //pagi siang sore malam
         public string HariPraktek { get; set; }
 
