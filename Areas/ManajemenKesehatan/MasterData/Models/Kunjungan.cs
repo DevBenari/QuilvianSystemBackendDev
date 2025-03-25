@@ -19,7 +19,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string TipePasien { get; set; }
         public string TipePembayaran { get; set; }
         public string Antrian { get; set; }
-        public string JenisKunjungan { get; set; }
         public string JumlahKunjungan { get; set; }
     }
 }
