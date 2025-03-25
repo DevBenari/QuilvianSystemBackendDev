@@ -142,9 +142,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var dateNow = DateTime.UtcNow;;
+                var dateNow = DateTime.UtcNow; ;
                 var setDateNow = dateNow.ToString("yyMMdd");
-              
+
                 // Validate ModelState
                 if (ModelState.IsValid)
                 {
@@ -178,7 +178,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-        
+
 
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateDokterPoli(Guid id, [FromBody] DokterPoliViewModel vm)
@@ -230,7 +230,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-        
+
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteDokterPoli(Guid id)

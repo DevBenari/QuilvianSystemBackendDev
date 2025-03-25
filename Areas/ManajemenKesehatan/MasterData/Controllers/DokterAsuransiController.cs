@@ -29,10 +29,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         private readonly IWebHostEnvironment _webHostEnvironment;
 
         public DokterAsuransiController
-            (ApplicationDbContext context, 
-            UserManager<ApplicationUser> userManager, 
-            SignInManager<ApplicationUser> signInManager, 
-            ILogger<DokterAsuransiController> logger, 
+            (ApplicationDbContext context,
+            UserManager<ApplicationUser> userManager,
+            SignInManager<ApplicationUser> signInManager,
+            ILogger<DokterAsuransiController> logger,
             IWebHostEnvironment webHostEnvironment)
         {
             _context = context;
@@ -62,8 +62,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             DokterAsuransiId = a.DokterAsuransiId,
                             AsuransiId = a.AsuransiId,
                             DokterId = a.DokterId,
-                            NamaAsuransi = a.NamaAsuransi,
-                            NamaDokter = a.Dokter.NmDokter,
                         };
 
             // Hitung total data sebelum paginasi
@@ -127,7 +125,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                 var dateNow = DateTime.UtcNow;;
+                var dateNow = DateTime.UtcNow; ;
                 var setDateNow = DateTimeOffset.UtcNow.ToString("yyMMdd");
 
 
@@ -142,7 +140,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         CreateBy = UserActiveId,
                         IsDelete = false,
                     };
-                    
+
                     _context.DokterAsuransis.Add(data);
                     _context.SaveChanges();
 
@@ -275,19 +273,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             DokterAsuransiId = a.DokterAsuransiId,
                             AsuransiId = a.AsuransiId,
                             DokterId = a.DokterId,
-                            NamaAsuransi = a.NamaAsuransi,
-                            NamaDokter = a.Dokter.NmDokter,
                         };
 
-            //// **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-            //if (!string.IsNullOrWhiteSpace(search))
-            //{
-            //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-            //    query = query.Where(u =>
-            //        EF.Functions.ILike(u.NamaDokter, search) ||
-            //        EF.Functions.ILike(u.NamaAsuransi, search)
-            //    );
-            //}
 
             //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
