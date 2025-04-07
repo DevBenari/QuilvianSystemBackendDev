@@ -56,6 +56,9 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<RegistFasilitasPasien> RegistFasilitasPasiens { get; set; }
         public DbSet<DokterAsuransi> DokterAsuransis { get; set; }
         public DbSet<Kunjungan> Kunjungans { get; set; }
+        public DbSet<KategoriObat> KategoriObats { get; set; }
+        public DbSet<Discount> Discounts { get; set; }
+        public DbSet<Measurement> Measurements { get; set; }
         #endregion
 
         #region Areas Pendaftaran
