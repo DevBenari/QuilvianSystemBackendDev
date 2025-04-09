@@ -74,7 +74,6 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                             JenisKelamin = a.JenisKelamin,
                             FotoName = a.FotoName,
                             FotoPath = a.FotoPath,
-                            NoRekamMedisLama = a.NoRekamMedisLama,
                             TitleId = a.TitleId,
                             IdentitasId = a.IdentitasId,
                             NoIdentitas = a.NoIdentitas,
@@ -117,6 +116,9 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                             PekerjaanOrangTua = a.PekerjaanOrangTua,
                             HubunganAnak = a.HubunganAnak,
                             InformasiSekolah = a.InformasiSekolah,
+                            imageUrl = !string.IsNullOrEmpty(a.FotoName)
+                                        ? $"{Request.Scheme}://{Request.Host}/FotoPasienBaru/{a.FotoName}"
+                                        : $"{Request.Scheme}://{Request.Host}/FotoPasienBaru/user.jpg",
                         };
 
             // Hitung total data sebelum paginasi
@@ -167,7 +169,6 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     listdata.KodePasien,
                     listdata.NoRekamMedis,
                     listdata.TipePasien,
-                    listdata.NoRekamMedisLama,
                     listdata.TitleId,
                     listdata.NamaLengkap,
                     listdata.IdentitasId,
@@ -214,7 +215,10 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     listdata.InformasiSekolah,
                     listdata.FotoName,
                     listdata.FotoPath,
-                    listdata.QrCode
+                    listdata.QrCode,
+                    imageUrl = !string.IsNullOrEmpty(listdata.FotoName)
+                        ? $"{Request.Scheme}://{Request.Host}/FotoPasienBaru/{listdata.FotoName}"
+                        : $"{Request.Scheme}://{Request.Host}/FotoPasienBaru/user.jpg",
                 }
             });
         }
@@ -306,7 +310,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                 var dateNow = DateTime.UtcNow;;
+                var dateNow = DateTime.UtcNow;;
                 var setDateNow = dateNow.ToString("yyMMdd");
 
                 // Ambil data terakhir untuk hari ini (tanpa ToString di query)
@@ -339,20 +343,27 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 var kodeHari = dateNow.ToString("dd");
                 var tipePasien = "10"; // Kode untuk Pasien Baru
 
-                var lastRekamMedis = _applicationDbContext.PendaftaranPasienBarus
+                // Ambil semua NoRekamMedis yang dibuat hari ini
+                var rekamMedisHariIni = _applicationDbContext.PendaftaranPasienBarus
+                    .Where(p => p.CreateDateTime.Date == dateNow.Date)
                     .OrderByDescending(p => p.NoRekamMedis)
-                    .FirstOrDefault();
+                    .ToList();
 
-                string noRekamMedis;
-                if (lastRekamMedis == null)
+                int nextNumber = 1;
+
+                if (rekamMedisHariIni.Any())
                 {
-                    noRekamMedis = $"{kodeTahun}-{kodeHari}-{tipePasien}-01";
+                    var lastRekamMedis = rekamMedisHariIni.FirstOrDefault();
+                    var lastNomorStr = lastRekamMedis.NoRekamMedis?.Split('-').LastOrDefault();
+
+                    if (int.TryParse(lastNomorStr, out int lastNumber))
+                    {
+                        nextNumber = lastNumber + 1;
+                    }
                 }
-                else
-                {
-                    var lastNo = Convert.ToInt32(lastRekamMedis.NoRekamMedis.Substring(9)) + 1;
-                    noRekamMedis = $"{kodeTahun}-{kodeHari}-{tipePasien}-{lastNo:D2}";
-                }
+
+                // Buat nomor rekam medis baru
+                string noRekamMedis = $"{kodeTahun}-{kodeHari}-{tipePasien}-{nextNumber:D2}";
 
                 // Path logo untuk QR Code
                 var logoPath = Path.Combine(_webHostEnvironment.WebRootPath, "images", "logo.png");
@@ -444,7 +455,6 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                         KodePasien = kodePasien,
                         NoRekamMedis = noRekamMedis,
                         TipePasien = vm.TipePasien,
-                        NoRekamMedisLama = vm.NoRekamMedisLama,
                         TitleId = vm.TitleId,
                         NamaLengkap = vm.NamaLengkap,
                         IdentitasId = vm.IdentitasId,
@@ -554,7 +564,6 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
 
                 // **Update Data Pasien**
                 pasien.TipePasien = vm.TipePasien;
-                pasien.NoRekamMedisLama = vm.NoRekamMedisLama ?? pasien.NoRekamMedisLama;
                 pasien.TitleId = vm.TitleId ?? pasien.TitleId;
                 pasien.NamaLengkap = vm.NamaLengkap;
                 pasien.IdentitasId = vm.IdentitasId;
@@ -737,7 +746,6 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                             JenisKelamin = a.JenisKelamin,
                             FotoName = a.FotoName,
                             FotoPath = a.FotoPath,
-                            NoRekamMedisLama = a.NoRekamMedisLama,
                             TitleId = a.TitleId,
                             IdentitasId = a.IdentitasId,
                             NoIdentitas = a.NoIdentitas,
@@ -790,7 +798,6 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     EF.Functions.ILike(u.NamaLengkap, search) ||
                     EF.Functions.ILike(u.KodePasien, search) ||
                     EF.Functions.ILike(u.NoRekamMedis, search) ||
-                    EF.Functions.ILike(u.NoRekamMedisLama, search) ||
                     EF.Functions.ILike(u.JenisKelamin, search)
                 );
             }
@@ -863,7 +870,6 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
                     "KodePasien" => query.OrderByDescending(u => u.KodePasien),
                     "NoRekamMedis" => query.OrderByDescending(u => u.NoRekamMedis),
-                    "NoRekamMedisLama" => query.OrderByDescending(u => u.NoRekamMedisLama),
                     "NamaLengkap" => query.OrderByDescending(u => u.NamaLengkap),
                     "JenisKelamin" => query.OrderByDescending(u => u.JenisKelamin),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
@@ -874,7 +880,6 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
                     "KodePasien" => query.OrderByDescending(u => u.KodePasien),
                     "NoRekamMedis" => query.OrderByDescending(u => u.NoRekamMedis),
-                    "NoRekamMedisLama" => query.OrderByDescending(u => u.NoRekamMedisLama),
                     "NamaLengkap" => query.OrderByDescending(u => u.NamaLengkap),
                     "JenisKelamin" => query.OrderByDescending(u => u.JenisKelamin),
                     _ => query.OrderByDescending(u => u.CreateDateTime)

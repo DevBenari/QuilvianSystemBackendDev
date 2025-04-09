@@ -15,7 +15,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
         public string? KodePasien { get; set; }        
         public string? NoRekamMedis { get; set; }
         public string TipePasien { get; set; }
-        public string? NoRekamMedisLama { get; set; }
 
         // Informasi Pasien
         public Guid? TitleId { get; set; }
@@ -41,9 +40,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
         public Guid? KelurahanId { get; set; }
         public string? KodePos { get; set; }
         public string? Email { get; set; }
-        public int? NoTelepon1 { get; set; }
-        public int? NoTelepon2 { get; set; }
-        public int? NoTelepon3 { get; set; }
+        public string? NoTelepon1 { get; set; }
+        public string? NoTelepon2 { get; set; }
+        public string? NoTelepon3 { get; set; }
 
         // Informasi Grafis
         public string? Kewarganegaraan { get; set; }

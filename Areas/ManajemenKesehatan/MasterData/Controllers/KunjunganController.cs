@@ -69,7 +69,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             AsuransiId = a.AsuransiId,
                             PoliklinikId = a.PoliklinikId,
                             DokterId = a.DokterId,
-                            TindakanId = a.TindakanId,
                             PasienId = a.PasienId,
                             NoRekamMedis = a.NoRekamMedis,
                             TipePasien = a.TipePasien,
@@ -197,7 +196,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         PasienId = request.PasienId,
                         DokterId = request.DokterId,
                         PoliklinikId = request.PoliklinikId,
-                        TindakanId = request.TindakanId,
                         AsuransiId = request.AsuransiId,
                         JumlahKunjungan = JsonSerializer.Serialize(new List<string> { $"{(request.JenisKunjungan == "Rawat Inap" ? "IP" : "OP")}-1" }),
                         CreateDateTime = DateTimeOffset.UtcNow,
@@ -303,7 +301,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 // Update properti lainnya
                 kunjunganPasien.DokterId = request.DokterId;
                 kunjunganPasien.PoliklinikId = request.PoliklinikId;
-                kunjunganPasien.TindakanId = request.TindakanId;
                 kunjunganPasien.AsuransiId = request.AsuransiId;
                 kunjunganPasien.NoRekamMedis = request.NoRekamMedis;
                 kunjunganPasien.TipePasien = request.TipePasien;
@@ -389,7 +386,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              AsuransiId = a.AsuransiId,
                              PoliklinikId = a.PoliklinikId,
                              DokterId = a.DokterId,
-                             TindakanId = a.TindakanId,
                              PasienId = a.PasienId,
                              NoRekamMedis = a.NoRekamMedis,
                              TipePasien = a.TipePasien,
