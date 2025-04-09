@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -10,7 +11,6 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
-using System.Security.Claims;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
@@ -18,20 +18,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class MeasurementController : Controller
+    public class TermOfPaymentController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<MeasurementController> _logger;
+        private readonly ILogger<TermOfPaymentController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public MeasurementController(
+        public TermOfPaymentController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<MeasurementController> logger,
+            ILogger<TermOfPaymentController> logger,
             IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
@@ -42,14 +42,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAllMeasure(int page = 1, int perPage = 10)
+        public async Task<IActionResult> GetAllTermOfPayment(int page = 1, int perPage = 10)
         {
             // Validasi agar page dan perPage minimal bernilai 1
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = from a in _applicationDbContext.Measurements
+            var query = from a in _applicationDbContext.TermOfPayments
                         join u in _applicationDbContext.UserActives
                         on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
@@ -58,9 +58,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateDateTime = a.CreateDateTime,
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
-                            MeasurementId = a.MeasurementId,
-                            MeasurementExtCode = a.MeasurementExtCode,
-                            NamaMeasurement = a.NamaMeasurement,
+                            TermOfPaymentCode = a.TermOfPaymentCode,
+                            TermOfPaymentName = a.TermOfPaymentName,
+                            Note = a.Note,
                         };
 
             // Hitung total data sebelum paginasi
@@ -94,9 +94,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetMeasureById(Guid id)
+        public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.Measurements.Find(id);
+            var listdata = _applicationDbContext.TermOfPayments.Find(id);
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -110,7 +110,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateMeasure([FromBody] MeasurementViewModel vm)
+        public async Task<IActionResult> CreateTermOfPayment([FromBody] TermOfPaymentViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -133,33 +133,33 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var setDateNow = dateNow.ToString("yyMMdd");
 
                 // Ambil data terakhir untuk hari ini (tanpa ToString di query)
-                var lastCode = _applicationDbContext.Measurements
+                var lastCode = _applicationDbContext.TermOfPayments
                     .Where(d => d.CreateDateTime.Date == dateNow.Date)
-                    .OrderByDescending(k => k.KodeMeasurement)
+                    .OrderByDescending(k => k.TermOfPaymentCode)
                     .FirstOrDefault();
 
                 string kode;
                 if (lastCode == null)
                 {
-                    kode = $"MSR{setDateNow}0001";
+                    kode = $"TOP{setDateNow}0001";
                 }
                 else
                 {
-                    var lastCodeTrim = lastCode.KodeMeasurement.Substring(3, 6);
+                    var lastCodeTrim = lastCode.TermOfPaymentCode.Substring(3, 6);
 
                     if (lastCodeTrim != setDateNow)
                     {
-                        kode = $"MSR{setDateNow}0001";
+                        kode = $"TOP{setDateNow}0001";
                     }
                     else
                     {
-                        kode = $"MSR{setDateNow}" + (Convert.ToInt32(lastCode.KodeMeasurement.Substring(9)) + 1).ToString("D4");
+                        kode = $"TOP{setDateNow}" + (Convert.ToInt32(lastCode.TermOfPaymentCode.Substring(9)) + 1).ToString("D4");
                     }
                 }
 
                 // Cek Duplikasi
-                var isDuplicate = _applicationDbContext.Measurements
-                    .Any(c => c.KodeMeasurement == kode && c.NamaMeasurement == vm.NamaMeasurement);
+                var isDuplicate = _applicationDbContext.TermOfPayments
+                    .Any(c => c.TermOfPaymentCode == kode && c.TermOfPaymentName == vm.TermOfPaymentName);
 
                 if (isDuplicate)
                 {
@@ -170,18 +170,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 if (ModelState.IsValid)
                 {
                     // Simpan Data
-                    var data = new Measurement
+                    var data = new TermOfPayment
                     {
-                        MeasurementId = Guid.NewGuid(),
-                        KodeMeasurement = kode,
-                        MeasurementExtCode = vm.MeasurementExtCode,
-                        NamaMeasurement = vm.NamaMeasurement,
+                        TermOfPaymentId = Guid.NewGuid(),
+                        TermOfPaymentCode = kode,
+                        TermOfPaymentName = vm.TermOfPaymentName,
                         Note = vm.Note,
                         CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = UserActiveId,
                     };
 
-                    _applicationDbContext.Measurements.Add(data);
+                    _applicationDbContext.TermOfPayments.Add(data);
                     _applicationDbContext.SaveChanges();
 
                     return Created("", new
@@ -201,7 +200,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateMeasure(Guid id, [FromBody] MeasurementViewModel vm)
+        public async Task<IActionResult> UpdateTermOfPayment(Guid id, [FromBody] TermOfPaymentViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -221,20 +220,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // **Cari Data Pasien**
-                var data = _applicationDbContext.Measurements.Find(id);
+                var data = _applicationDbContext.TermOfPayments.Find(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
                 // **Update Data Pasien**
-                data.NamaMeasurement = vm.NamaMeasurement;
-                data.MeasurementExtCode = vm.MeasurementExtCode;
+                data.TermOfPaymentName = vm.TermOfPaymentName;
+                data.Note = vm.Note;
 
                 data.UpdateBy = UserActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.Measurements.Update(data);
+                _applicationDbContext.TermOfPayments.Update(data);
                 _applicationDbContext.SaveChanges();
 
                 return Ok(new
@@ -249,7 +248,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteMeasure(Guid id)
+        public async Task<IActionResult> DeleteTermOfPayment(Guid id)
         {
             try
             {
@@ -264,7 +263,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // **Cari Data Pasien**
-                var data = _applicationDbContext.Measurements.Find(id);
+                var data = _applicationDbContext.TermOfPayments.Find(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -275,7 +274,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.DeleteDateTime = DateTimeOffset.UtcNow;
                 data.IsDelete = true;
 
-                _applicationDbContext.Measurements.Update(data);
+                _applicationDbContext.TermOfPayments.Update(data);
                 _applicationDbContext.SaveChanges();
 
                 return Ok(new { message = "Data berhasil dihapus..." });
@@ -287,7 +286,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet("paged")]
-        public IActionResult PagedMeasurement(
+        public IActionResult PagedTermOfPayment(
         int page = 1,
         int perPage = 10,
         string? search = null,
@@ -300,7 +299,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
             // Query data
-            var query = from a in _applicationDbContext.Measurements
+            var query = from a in _applicationDbContext.TermOfPayments
                         join u in _applicationDbContext.UserActives
                         on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
@@ -309,16 +308,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateDateTime = a.CreateDateTime,
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
-                            MeasurementId = a.MeasurementId,
-                            MeasurementExtCode = a.MeasurementExtCode,
-                            NamaMeasurement = a.NamaMeasurement,
+                            TermOfPaymentCode = a.TermOfPaymentCode,
+                            TermOfPaymentName = a.TermOfPaymentName,
+                            Note = a.Note,
                         };
 
             // Filter berdasarkan search
             if (!string.IsNullOrWhiteSpace(search))
             {
                 query = query.Where(u =>
-                    u.NamaMeasurement.Contains(search) || u.MeasurementExtCode.Contains(search)
+                    u.TermOfPaymentName.Contains(search) || u.TermOfPaymentCode.Contains(search)
                 );
             }
 
@@ -389,16 +388,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "MeasurementExtCode" => query.OrderByDescending(u => u.MeasurementExtCode),
-                    "NamaMeasurement" => query.OrderByDescending(u => u.NamaMeasurement),
+                    "TermOfPaymentCode" => query.OrderByDescending(u => u.TermOfPaymentCode),
+                    "TermOfPaymentName" => query.OrderByDescending(u => u.TermOfPaymentName),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
                     "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
                     "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    "MeasurementExtCode" => query.OrderBy(u => u.MeasurementExtCode),
-                    "NamaMeasurement" => query.OrderBy(u => u.NamaMeasurement),
+                    "TermOfPaymentCode" => query.OrderBy(u => u.TermOfPaymentCode),
+                    "TermOfPaymentName" => query.OrderBy(u => u.TermOfPaymentName),
                     _ => query.OrderBy(u => u.CreateDateTime)
                 };
 
@@ -426,6 +425,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
             });
         }
+
 
     }
 }

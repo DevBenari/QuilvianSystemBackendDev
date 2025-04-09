@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -10,7 +11,6 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
-using System.Security.Claims;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
@@ -18,20 +18,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class MeasurementController : Controller
+    public class WarehouseLocationController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<MeasurementController> _logger;
+        private readonly ILogger<WarehouseLocationController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public MeasurementController(
+        public WarehouseLocationController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<MeasurementController> logger,
+            ILogger<WarehouseLocationController> logger,
             IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
@@ -42,14 +42,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAllMeasure(int page = 1, int perPage = 10)
+        public async Task<IActionResult> GetAllWarehouse(int page = 1, int perPage = 10)
         {
             // Validasi agar page dan perPage minimal bernilai 1
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = from a in _applicationDbContext.Measurements
+            var query = from a in _applicationDbContext.WarehouseLocations
+                        where a.IsDelete == false
                         join u in _applicationDbContext.UserActives
                         on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
@@ -58,9 +59,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateDateTime = a.CreateDateTime,
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
-                            MeasurementId = a.MeasurementId,
-                            MeasurementExtCode = a.MeasurementExtCode,
-                            NamaMeasurement = a.NamaMeasurement,
+                            WarehouseLocationId = a.WarehouseLocationId,
+                            WarehouseLocationCode = a.WarehouseLocationCode,
+                            WarehouseLocationName = a.WarehouseLocationName,
+                            WarehouseManagerId = a.WarehouseManagerId,
+                            WarehouseManagerName = a.WarehouseManagerName,
+                            Address = a.Address,
                         };
 
             // Hitung total data sebelum paginasi
@@ -94,9 +98,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetMeasureById(Guid id)
+        public async Task<IActionResult> GetWarehouseById(Guid id)
         {
-            var listdata = _applicationDbContext.Measurements.Find(id);
+            var listdata = _applicationDbContext.WarehouseLocations.Find(id);
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -110,7 +114,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateMeasure([FromBody] MeasurementViewModel vm)
+        public async Task<IActionResult> CreateWarehouse([FromBody] WarehouseLocationViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -133,33 +137,33 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var setDateNow = dateNow.ToString("yyMMdd");
 
                 // Ambil data terakhir untuk hari ini (tanpa ToString di query)
-                var lastCode = _applicationDbContext.Measurements
+                var lastCode = _applicationDbContext.WarehouseLocations
                     .Where(d => d.CreateDateTime.Date == dateNow.Date)
-                    .OrderByDescending(k => k.KodeMeasurement)
+                    .OrderByDescending(k => k.WarehouseLocationCode)
                     .FirstOrDefault();
 
                 string kode;
                 if (lastCode == null)
                 {
-                    kode = $"MSR{setDateNow}0001";
+                    kode = $"WLC{setDateNow}0001";
                 }
                 else
                 {
-                    var lastCodeTrim = lastCode.KodeMeasurement.Substring(3, 6);
+                    var lastCodeTrim = lastCode.WarehouseLocationCode.Substring(3, 6);
 
                     if (lastCodeTrim != setDateNow)
                     {
-                        kode = $"MSR{setDateNow}0001";
+                        kode = $"WLC{setDateNow}0001";
                     }
                     else
                     {
-                        kode = $"MSR{setDateNow}" + (Convert.ToInt32(lastCode.KodeMeasurement.Substring(9)) + 1).ToString("D4");
+                        kode = $"WLC{setDateNow}" + (Convert.ToInt32(lastCode.WarehouseLocationCode.Substring(9)) + 1).ToString("D4");
                     }
                 }
 
                 // Cek Duplikasi
-                var isDuplicate = _applicationDbContext.Measurements
-                    .Any(c => c.KodeMeasurement == kode && c.NamaMeasurement == vm.NamaMeasurement);
+                var isDuplicate = _applicationDbContext.WarehouseLocations
+                    .Any(c => c.WarehouseLocationCode == kode && c.WarehouseLocationName == vm.WarehouseLocationName);
 
                 if (isDuplicate)
                 {
@@ -170,18 +174,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 if (ModelState.IsValid)
                 {
                     // Simpan Data
-                    var data = new Measurement
+                    var data = new WarehouseLocation
                     {
-                        MeasurementId = Guid.NewGuid(),
-                        KodeMeasurement = kode,
-                        MeasurementExtCode = vm.MeasurementExtCode,
-                        NamaMeasurement = vm.NamaMeasurement,
-                        Note = vm.Note,
+                        WarehouseLocationId = Guid.NewGuid(),
+                        WarehouseLocationCode = kode,
+                        WarehouseLocationName = vm.WarehouseLocationName,
+                        WarehouseManagerId = vm.WarehouseManagerId,
+                        WarehouseManagerName = vm.WarehouseManagerName,
+                        Address = vm.Address,
                         CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = UserActiveId,
                     };
 
-                    _applicationDbContext.Measurements.Add(data);
+                    _applicationDbContext.WarehouseLocations.Add(data);
                     _applicationDbContext.SaveChanges();
 
                     return Created("", new
@@ -201,7 +206,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateMeasure(Guid id, [FromBody] MeasurementViewModel vm)
+        public async Task<IActionResult> UpdateWarehouse(Guid id, [FromBody] WarehouseLocationViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -221,20 +226,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // **Cari Data Pasien**
-                var data = _applicationDbContext.Measurements.Find(id);
+                var data = _applicationDbContext.WarehouseLocations.Find(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
                 // **Update Data Pasien**
-                data.NamaMeasurement = vm.NamaMeasurement;
-                data.MeasurementExtCode = vm.MeasurementExtCode;
+                data.WarehouseLocationName = vm.WarehouseLocationName;
+                data.WarehouseManagerId = vm.WarehouseManagerId;
+                data.WarehouseManagerName = vm.WarehouseManagerName;
+                data.Address = vm.Address;
 
                 data.UpdateBy = UserActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.Measurements.Update(data);
+                _applicationDbContext.WarehouseLocations.Update(data);
                 _applicationDbContext.SaveChanges();
 
                 return Ok(new
@@ -249,7 +256,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteMeasure(Guid id)
+        public async Task<IActionResult> DeleteWarehouse(Guid id)
         {
             try
             {
@@ -264,7 +271,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // **Cari Data Pasien**
-                var data = _applicationDbContext.Measurements.Find(id);
+                var data = _applicationDbContext.WarehouseLocations.Find(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -275,7 +282,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.DeleteDateTime = DateTimeOffset.UtcNow;
                 data.IsDelete = true;
 
-                _applicationDbContext.Measurements.Update(data);
+                _applicationDbContext.WarehouseLocations.Update(data);
                 _applicationDbContext.SaveChanges();
 
                 return Ok(new { message = "Data berhasil dihapus..." });
@@ -300,7 +307,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
             // Query data
-            var query = from a in _applicationDbContext.Measurements
+            var query = from a in _applicationDbContext.WarehouseLocations
+                        where a.IsDelete == false
                         join u in _applicationDbContext.UserActives
                         on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
@@ -309,16 +317,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateDateTime = a.CreateDateTime,
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
-                            MeasurementId = a.MeasurementId,
-                            MeasurementExtCode = a.MeasurementExtCode,
-                            NamaMeasurement = a.NamaMeasurement,
+                            WarehouseLocationId = a.WarehouseLocationId,
+                            WarehouseLocationCode = a.WarehouseLocationCode,
+                            WarehouseLocationName = a.WarehouseLocationName,
+                            WarehouseManagerId = a.WarehouseManagerId,
+                            WarehouseManagerName = a.WarehouseManagerName,
+                            Address = a.Address,
                         };
 
             // Filter berdasarkan search
             if (!string.IsNullOrWhiteSpace(search))
             {
                 query = query.Where(u =>
-                    u.NamaMeasurement.Contains(search) || u.MeasurementExtCode.Contains(search)
+                    u.WarehouseLocationName.Contains(search) || u.WarehouseManagerName.Contains(search)
                 );
             }
 
@@ -389,16 +400,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "MeasurementExtCode" => query.OrderByDescending(u => u.MeasurementExtCode),
-                    "NamaMeasurement" => query.OrderByDescending(u => u.NamaMeasurement),
+                    "WarehouseManagerName" => query.OrderByDescending(u => u.WarehouseManagerName),
+                    "WarehouseLocationName" => query.OrderByDescending(u => u.WarehouseLocationName),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
                     "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
                     "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    "MeasurementExtCode" => query.OrderBy(u => u.MeasurementExtCode),
-                    "NamaMeasurement" => query.OrderBy(u => u.NamaMeasurement),
+                    "WarehouseManagerName" => query.OrderBy(u => u.WarehouseManagerName),
+                    "WarehouseLocationName" => query.OrderBy(u => u.WarehouseLocationName),
                     _ => query.OrderBy(u => u.CreateDateTime)
                 };
 
@@ -427,5 +438,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             });
         }
 
+
+
     }
+
+    
 }

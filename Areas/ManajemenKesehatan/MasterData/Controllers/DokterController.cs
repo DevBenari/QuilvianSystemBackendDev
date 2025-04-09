@@ -82,6 +82,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     d.IsAsuransi,
                     d.FotoName,
                     d.FotoPath,
+                    imageUrl = !string.IsNullOrEmpty(d.FotoName)
+                        ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
+                        : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg",
                     // Menambahkan daftar ID Asuransi
                     AsuransiIds = _context.DokterAsuransis
                         .Where(da => da.DokterId == d.DokterId)
@@ -283,6 +286,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     //Jika user tidak upload foto, gunakan foto default
                     fotoPath = "/FotoDokter/dokter.jpg";
+                    fotoFileName = "dokter.jpg";
                 }
 
                 if (ModelState.IsValid)

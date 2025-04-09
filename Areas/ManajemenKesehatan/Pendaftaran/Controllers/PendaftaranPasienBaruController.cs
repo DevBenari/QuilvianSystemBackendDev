@@ -500,6 +500,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     return Created("", new
                     {
                         message = "Tambah Data Berhasil || 201 Created",
+                        PasienBaruId = daftar.PendaftaranPasienBaruId,
                         qrCodeUrl = $"{Request.Scheme}://{Request.Host}{daftar.QrCode}",
                         url = $"{Request.Scheme}://{Request.Host}/FotoPasienBaru/{fotoFileName}"
                     });
