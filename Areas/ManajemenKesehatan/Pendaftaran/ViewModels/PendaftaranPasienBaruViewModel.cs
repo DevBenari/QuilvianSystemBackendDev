@@ -41,7 +41,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewMode
         public Guid? PekerjaanId { get; set; }
         public string? NamaPerusahaan { get; set; }
         public string? AlamatPerusahaan { get; set; }
-        public int? NoTeleponPerusahaan { get; set; }
+        public string? NoTeleponPerusahaan { get; set; }
 
         // Informasi Kesehatan
         public Guid? GolonganDarahId { get; set; }
