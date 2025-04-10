@@ -786,7 +786,11 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                             IdentitasOrangTua = a.IdentitasOrangTua,
                             PekerjaanOrangTua = a.PekerjaanOrangTua,
                             HubunganAnak = a.HubunganAnak,
-                            InformasiSekolah = a.InformasiSekolah
+                            InformasiSekolah = a.InformasiSekolah,
+                            imageUrl = !string.IsNullOrEmpty(a.FotoName)
+                                        ? $"{Request.Scheme}://{Request.Host}/FotoPasienBaru/{a.FotoName}"
+                                        : $"{Request.Scheme}://{Request.Host}/FotoPasienBaru/user.jpg",
+
                         };
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**

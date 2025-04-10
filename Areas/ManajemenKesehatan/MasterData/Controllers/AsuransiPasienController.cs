@@ -354,7 +354,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet("paged")]
-        public IActionResult PagedDokterPoli(
+        public IActionResult PagedAsuransiPasien(
         int page = 1,
         int perPage = 10,
         string? search = null,
