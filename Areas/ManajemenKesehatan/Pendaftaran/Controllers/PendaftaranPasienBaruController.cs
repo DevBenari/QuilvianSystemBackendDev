@@ -289,7 +289,6 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
         //    return "Unknown";
         //}
 
-        // iqbal
         [HttpPost]
         public async Task<IActionResult> CreatePendaftaranPasienBaru([FromForm] PendaftaranPasienBaruViewModel vm)
         {
