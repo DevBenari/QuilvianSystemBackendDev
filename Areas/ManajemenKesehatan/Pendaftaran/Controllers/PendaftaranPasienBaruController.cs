@@ -16,6 +16,7 @@ using System.Linq;
 using Humanizer;
 using System.Text.RegularExpressions;
 using System.Globalization;
+using ZXing.QrCode.Internal;
 
 namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
 {
@@ -119,6 +120,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                             imageUrl = !string.IsNullOrEmpty(a.FotoName)
                                         ? $"{Request.Scheme}://{Request.Host}/FotoPasienBaru/{a.FotoName}"
                                         : $"{Request.Scheme}://{Request.Host}/FotoPasienBaru/user.jpg",
+                            QRUrl = $"{Request.Scheme}://{Request.Host}/QRCodePasienBaru/{Path.GetFileName(a.QrCode)}",
                         };
 
             // Hitung total data sebelum paginasi
@@ -215,10 +217,10 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     listdata.InformasiSekolah,
                     listdata.FotoName,
                     listdata.FotoPath,
-                    listdata.QrCode,
                     imageUrl = !string.IsNullOrEmpty(listdata.FotoName)
                         ? $"{Request.Scheme}://{Request.Host}/FotoPasienBaru/{listdata.FotoName}"
                         : $"{Request.Scheme}://{Request.Host}/FotoPasienBaru/user.jpg",
+                    QRUrl = $"{Request.Scheme}://{Request.Host}/QRCodePasienBaru/{Path.GetFileName(listdata.QrCode)}",
                 }
             });
         }
@@ -499,7 +501,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                         HubunganAnak = vm.HubunganAnak,
                         InformasiSekolah = vm.InformasiSekolah,
                         FotoName = fotoFileName,
-                        QrCode = $"/qrcodes/{qrCodeFileName}", // Simpan hanya path QR Code
+                        QrCode = $"/QRCodePasienBaru/{qrCodeFileName}", // Simpan hanya path QR Code
                         FotoPath = fotoPath,
                         
                     };
@@ -790,6 +792,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                             imageUrl = !string.IsNullOrEmpty(a.FotoName)
                                         ? $"{Request.Scheme}://{Request.Host}/FotoPasienBaru/{a.FotoName}"
                                         : $"{Request.Scheme}://{Request.Host}/FotoPasienBaru/user.jpg",
+                            QRUrl = $"{Request.Scheme}://{Request.Host}/QRCodePasienBaru/{Path.GetFileName(a.QrCode)}",
 
                         };
 

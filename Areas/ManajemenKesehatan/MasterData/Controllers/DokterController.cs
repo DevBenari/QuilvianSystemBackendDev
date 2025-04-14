@@ -145,15 +145,75 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
         // GET: api/Dokter/{id}
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(Guid id)
+        public async Task<IActionResult> GetDokterById(Guid id)
         {
-            var record = await _context.Dokters.FindAsync(id);
-            if (record == null)
+            var dokter = await _context.Dokters
+                .Where(d => !d.IsDelete && d.DokterId == id)
+                .Select(d => new
+                {
+                    d.CreateDateTime,
+                    d.CreateBy,
+                    CreateByName = _context.UserActives
+                        .Where(u => u.UserActiveId == d.CreateBy)
+                        .Select(u => u.FullName)
+                        .FirstOrDefault(),
+                    d.DokterId,
+                    d.KdDokter,
+                    d.NmDokter,
+                    d.Sip,
+                    d.Str,
+                    d.TglSip,
+                    d.TglStr,
+                    d.Nik,
+                    d.Nohp,
+                    d.Alamat,
+                    d.IsAsuransi,
+                    d.FotoName,
+                    d.FotoPath,
+                    imageUrl = !string.IsNullOrEmpty(d.FotoName)
+                        ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
+                        : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg",
+
+                    // Menambahkan daftar ID Asuransi
+                    AsuransiIds = _context.DokterAsuransis
+                        .Where(da => da.DokterId == d.DokterId)
+                        .Select(da => da.AsuransiId)
+                        .Distinct()
+                        .ToList(),
+
+                    NamaAsuransi = _context.DokterAsuransis
+                        .Where(da => da.DokterId == d.DokterId)
+                        .Join(_context.Asuransis, da => da.AsuransiId, a => a.AsuransiId, (da, a) => a.NamaAsuransi)
+                        .Distinct()
+                        .ToList(),
+
+                    // Menambahkan daftar ID Poli
+                    PoliIds = _context.DokterPolis
+                        .Where(dp => dp.DokterId == d.DokterId)
+                        .Select(dp => dp.PoliId)
+                        .Distinct()
+                        .ToList(),
+
+                    NamaPoli = _context.DokterPolis
+                        .Where(dp => dp.DokterId == d.DokterId)
+                        .Join(_context.Polikliniks, dp => dp.PoliId, p => p.PoliklinikId, (dp, p) => p.NamaPoliklinik)
+                        .Distinct()
+                        .ToList()
+                })
+                .FirstOrDefaultAsync();
+
+            if (dokter == null)
             {
-                return NotFound(new { message = $"Data dengan ID {id} tidak ditemukan." });
+                return NotFound(new { message = $"Dokter dengan ID {id} tidak ditemukan || 404 Not Found" });
             }
-            return Ok(new { message = "Data ditemukan.", data = record });
+
+            return Ok(new
+            {
+                message = "Berhasil mengambil data dokter || 200 OK",
+                data = dokter
+            });
         }
+
 
         [HttpGet("get-image/{id}")]
         public async Task<IActionResult> GetImage(Guid id)
@@ -194,6 +254,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             var ext = Path.GetExtension(path).ToLowerInvariant();
             return types.ContainsKey(ext) ? types[ext] : "application/octet-stream";
         }
+
+
         // POST: api/Dokter
         [HttpPost]
         public async Task<IActionResult> Create([FromForm] DokterViewModel vm)
@@ -579,132 +641,148 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
         [HttpGet("paged")]
         public IActionResult PagedDokter(
-        int page = 1,
-        int perPage = 10,
-        string? search = null,
-        string? orderBy = "CreateDateTime",
-        string? sortDirection = "desc",
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-        DateTime? startDate = null,
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-        DateTime? endDate = null,
-        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+            int page = 1,
+            int perPage = 10,
+            string? search = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery] DateTime? startDate = null,
+            [FromQuery] DateTime? endDate = null,
+            [FromQuery] PeriodeFilter? periode = null)
         {
-            // Query data
-            var query = from a in _context.Dokters
-                        join u in _context.UserActives
-                        on a.CreateBy equals u.UserActiveId
-                        where a.IsDelete == false
-                        select new
-                        {
-                            CreateDateTime = a.CreateDateTime,
-                            CreateBy = a.CreateBy,
-                            CreateByName = u.FullName,
-                            DokterId = a.DokterId,
-                            KdDokter = a.KdDokter,
-                            NmDokter = a.NmDokter,
-                            Sip = a.Sip,
-                            Str = a.Str,
-                            TglSip = a.TglSip,
-                            TglStr = a.TglStr,
-                            Nik = a.Nik,
-                            Nohp = a.Nohp,
-                            Alamat = a.Alamat,
-                            IsAsuransi = a.IsAsuransi,
-                            FotoName = a.FotoName,
-                            FotoPath = a.FotoPath,
-                        };
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
 
-            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
+            // Ambil data dari Dokters yang belum dihapus
+            var query = _context.Dokters
+                .Where(d => !d.IsDelete)
+                .Select(d => new
+                {
+                    d.CreateDateTime,
+                    d.CreateBy,
+                    CreateByName = _context.UserActives
+                        .Where(u => u.UserActiveId == d.CreateBy)
+                        .Select(u => u.FullName)
+                        .FirstOrDefault(),
+                    d.DokterId,
+                    d.KdDokter,
+                    d.NmDokter,
+                    d.Sip,
+                    d.Str,
+                    d.TglSip,
+                    d.TglStr,
+                    d.Nik,
+                    d.Nohp,
+                    d.Alamat,
+                    d.IsAsuransi,
+                    d.FotoName,
+                    d.FotoPath,
+                    imageUrl = !string.IsNullOrEmpty(d.FotoName)
+                        ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
+                        : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg",
+
+                    AsuransiIds = _context.DokterAsuransis
+                        .Where(da => da.DokterId == d.DokterId)
+                        .Select(da => da.AsuransiId)
+                        .Distinct()
+                        .ToList(),
+
+                    NamaAsuransi = _context.DokterAsuransis
+                        .Where(da => da.DokterId == d.DokterId)
+                        .Join(_context.Asuransis, da => da.AsuransiId, a => a.AsuransiId, (da, a) => a.NamaAsuransi)
+                        .Distinct()
+                        .ToList(),
+
+                    PoliIds = _context.DokterPolis
+                        .Where(dp => dp.DokterId == d.DokterId)
+                        .Select(dp => dp.PoliId)
+                        .Distinct()
+                        .ToList(),
+
+                    NamaPoli = _context.DokterPolis
+                        .Where(dp => dp.DokterId == d.DokterId)
+                        .Join(_context.Polikliniks, dp => dp.PoliId, p => p.PoliklinikId, (dp, p) => p.NamaPoliklinik)
+                        .Distinct()
+                        .ToList()
+                });
+
+            // Search
             if (!string.IsNullOrWhiteSpace(search))
             {
-                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-                query = query.Where(u =>
-                    EF.Functions.ILike(u.KdDokter, search) ||
-                    EF.Functions.ILike(u.NmDokter, search)
-                );
+                string searchLower = search.ToLower();
+                query = query.Where(d =>
+                    EF.Functions.ILike(d.KdDokter, $"%{searchLower}%") ||
+                    EF.Functions.ILike(d.NmDokter, $"%{searchLower}%"));
             }
 
-            //// **Filter berdasarkan tanggal**
+            // Filter tanggal
             if (startDate.HasValue && endDate.HasValue)
             {
                 DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
                 DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
-
-                query = query.Where(u =>
-                    u.CreateDateTime >= startUtc &&
-                    u.CreateDateTime <= endUtc);
+                query = query.Where(d => d.CreateDateTime >= startUtc && d.CreateDateTime <= endUtc);
             }
 
-            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
+            // Filter berdasarkan periode waktu
             if (periode.HasValue)
             {
                 DateTime today = DateTime.UtcNow.Date;
-
                 switch (periode)
                 {
                     case PeriodeFilter.Today:
-                        query = query.Where(u => u.CreateDateTime.Date == today);
+                        query = query.Where(d => d.CreateDateTime.Date == today);
                         break;
                     case PeriodeFilter.ThisWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
-                            u.CreateDateTime.Date <= today
-                        );
+                        var weekStart = today.AddDays(-(int)today.DayOfWeek);
+                        query = query.Where(d => d.CreateDateTime.Date >= weekStart && d.CreateDateTime.Date <= today);
                         break;
                     case PeriodeFilter.LastWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek))
-                        );
+                        var lastWeekStart = today.AddDays(-7 - (int)today.DayOfWeek);
+                        var lastWeekEnd = lastWeekStart.AddDays(6);
+                        query = query.Where(d => d.CreateDateTime.Date >= lastWeekStart && d.CreateDateTime.Date <= lastWeekEnd);
                         break;
                     case PeriodeFilter.ThisMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month &&
-                            u.CreateDateTime.Year == today.Year
-                        );
+                        query = query.Where(d => d.CreateDateTime.Month == today.Month && d.CreateDateTime.Year == today.Year);
                         break;
                     case PeriodeFilter.LastMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month - 1 &&
-                            u.CreateDateTime.Year == today.Year
-                        );
+                        var lastMonth = today.AddMonths(-1);
+                        query = query.Where(d => d.CreateDateTime.Month == lastMonth.Month && d.CreateDateTime.Year == lastMonth.Year);
                         break;
                     case PeriodeFilter.ThisYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
+                        query = query.Where(d => d.CreateDateTime.Year == today.Year);
                         break;
                     case PeriodeFilter.LastYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
+                        query = query.Where(d => d.CreateDateTime.Year == today.Year - 1);
                         break;
                     case PeriodeFilter.Last3Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
+                        query = query.Where(d => d.CreateDateTime >= today.AddMonths(-3));
                         break;
                     case PeriodeFilter.Last6Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
+                        query = query.Where(d => d.CreateDateTime >= today.AddMonths(-6));
                         break;
                 }
             }
 
-            // Sorting Data dengan cara yang lebih aman
+            // Sorting
             query = sortDirection?.ToLower() == "desc"
-                ? orderBy switch
+                ? orderBy?.ToLower() switch
                 {
-                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "KdDokter" => query.OrderByDescending(u => u.KdDokter),
-                    "NmDokter" => query.OrderByDescending(u => u.NmDokter),
-                    _ => query.OrderByDescending(u => u.CreateDateTime)
+                    "createdatetime" => query.OrderByDescending(d => d.CreateDateTime),
+                    "createbyname" => query.OrderByDescending(d => d.CreateByName),
+                    "kddokter" => query.OrderByDescending(d => d.KdDokter),
+                    "nmdokter" => query.OrderByDescending(d => d.NmDokter),
+                    _ => query.OrderByDescending(d => d.CreateDateTime)
                 }
-                : orderBy switch
+                : orderBy?.ToLower() switch
                 {
-                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "KdDokter" => query.OrderByDescending(u => u.KdDokter),
-                    "NmDokter" => query.OrderByDescending(u => u.NmDokter),
-                    _ => query.OrderByDescending(u => u.CreateDateTime)
+                    "createdatetime" => query.OrderBy(d => d.CreateDateTime),
+                    "createbyname" => query.OrderBy(d => d.CreateByName),
+                    "kddokter" => query.OrderBy(d => d.KdDokter),
+                    "nmdokter" => query.OrderBy(d => d.NmDokter),
+                    _ => query.OrderBy(d => d.CreateDateTime)
                 };
 
-            // Pagination
+            // pagination
             var totalRows = query.Count();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
             var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
@@ -728,6 +806,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
             });
         }
+
 
     }
 }
