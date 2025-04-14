@@ -512,7 +512,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     {
                         message = "Tambah Data Berhasil || 201 Created",
                         PasienBaruId = daftar.PendaftaranPasienBaruId,
-                        qrCodeUrl = $"{Request.Scheme}://{Request.Host}{daftar.QrCode}",
+                        qrCodeUrl = $"{Request.Scheme}://{Request.Host}/QRCodePasienBaru/{Path.GetFileName(daftar.QrCode)}",
                         url = $"{Request.Scheme}://{Request.Host}/FotoPasienBaru/{fotoFileName}"
                     });
                 }
@@ -668,7 +668,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 return Ok(new
                 {
                     message = "Update Data Berhasil || 200 OK",
-                    qrCodeUrl = $"{Request.Scheme}://{Request.Host}{pasien.QrCode}",
+                    qrCodeUrl = $"{Request.Scheme}://{Request.Host}/QRCodePasienBaru/{Path.GetFileName(pasien.QrCode)}",
                     uploadFotoUrl = $"{Request.Scheme}://{Request.Host}{pasien.FotoPath}"
                 });
             }

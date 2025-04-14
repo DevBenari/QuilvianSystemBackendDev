@@ -277,7 +277,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                 var dateNow = DateTime.UtcNow;;
+                var dateNow = DateTime.UtcNow;;
                 var setDateNow = DateTimeOffset.UtcNow.ToString("yyMMdd");
 
                 // Generate UserActiveCode
@@ -433,7 +433,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         {
             if (vm == null || !ModelState.IsValid)
             {
-                return BadRequest(new { message = "Data tidak valid." });
+                return BadRequest(new { message = "Data tidak valid."});
             }
 
             try
@@ -806,7 +806,5 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
             });
         }
-
-
     }
 }

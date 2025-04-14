@@ -58,14 +58,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             var query = from a in _applicationDbContext.Kunjungans
                         join u in _applicationDbContext.UserActives
                         on a.CreateBy equals u.UserActiveId
+                        join p in _applicationDbContext.Polikliniks
+                        on a.PoliklinikId equals p.PoliklinikId
+                        join ps in _applicationDbContext.PendaftaranPasienBarus
+                        on a.PasienId equals ps.PendaftaranPasienBaruId
                         where a.IsDelete == false
                         select new
                         {
                             a.KunjunganID,
                             a.AsuransiId,
                             a.PoliklinikId,
+                            p.NamaPoliklinik,
                             a.DokterId,
                             a.PasienId,
+                            ps.NamaLengkap,
                             a.NoRekamMedis,
                             a.TipePasien,
                             a.TipePembayaran,
@@ -106,8 +112,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     item.KunjunganID,
                     item.AsuransiId,
                     item.PoliklinikId,
+                    item.NamaPoliklinik,
                     item.DokterId,
                     item.PasienId,
+                    item.NamaLengkap,
                     item.NoRekamMedis,
                     item.TipePasien,
                     item.TipePembayaran,
@@ -529,15 +537,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [FromQuery] PeriodeFilter? periode = null)
         {
             var query = from a in _applicationDbContext.Kunjungans
-                        join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId
+                        join u in _applicationDbContext.UserActives
+                        on a.CreateBy equals u.UserActiveId
+                        join p in _applicationDbContext.Polikliniks
+                        on a.PoliklinikId equals p.PoliklinikId
+                        join ps in _applicationDbContext.PendaftaranPasienBarus
+                        on a.PasienId equals ps.PendaftaranPasienBaruId
                         where a.IsDelete == false
                         select new
                         {
                             a.KunjunganID,
                             a.AsuransiId,
                             a.PoliklinikId,
+                            p.NamaPoliklinik,
                             a.DokterId,
                             a.PasienId,
+                            ps.NamaLengkap,
                             a.NoRekamMedis,
                             a.TipePasien,
                             a.TipePembayaran,
