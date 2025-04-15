@@ -61,9 +61,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
                             DokterAsuransiId = a.DokterAsuransiId,
+                            NmDokter = d.NmDokter,
                             AsuransiId = a.AsuransiId,
                             DokterId = a.DokterId,
                             FotoName = d.FotoName,
+                            
                             ImageUrl = !string.IsNullOrEmpty(d.FotoName)
                             ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
                             : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg"
@@ -277,10 +279,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
                             DokterAsuransiId = a.DokterAsuransiId,
+                            NmDokter = d.NmDokter,
                             AsuransiId = a.AsuransiId,
                             DokterId = a.DokterId,
-
                             FotoName = d.FotoName,
+
                             ImageUrl = !string.IsNullOrEmpty(d.FotoName)
                             ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
                             : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg"

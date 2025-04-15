@@ -54,7 +54,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
             var query = from a in _applicationDbContext.JadwalPrakteks
                         join u in _applicationDbContext.UserActives
-                        on a.CreateBy equals u.UserActiveId
+                            on a.CreateBy equals u.UserActiveId
+
+                        join dp in _applicationDbContext.DokterPolis
+                            on a.DokterPoliId equals dp.DokterPoliId
+
+                        join d in _applicationDbContext.Dokters
+                            on dp.DokterId equals d.DokterId
+
                         where a.IsDelete == false
                         select new
                         {
@@ -68,7 +75,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             HariPraktek = a.HariPraktek,
                             JamMulai = a.JamMulai,
                             JamBerakhir = a.JamBerakhir,
-                            KodeJadwalPraktek = a.KodeJadwalPraktek
+                            KodeJadwalPraktek = a.KodeJadwalPraktek,
+
+                            // nama dokter
+                            NamaDokter = d.NmDokter
                         };
 
             // Hitung total data sebelum paginasi
@@ -316,22 +326,31 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         {
             var query = from a in _applicationDbContext.JadwalPrakteks
                         join u in _applicationDbContext.UserActives
-                        on a.CreateBy equals u.UserActiveId
+                            on a.CreateBy equals u.UserActiveId
+
+                        join dp in _applicationDbContext.DokterPolis
+                            on a.DokterPoliId equals dp.DokterPoliId
+
+                        join d in _applicationDbContext.Dokters
+                            on dp.DokterId equals d.DokterId
+
                         where a.IsDelete == false
                         select new
                         {
+                            JadwalPraktekId = a.JadwalPraktekId,
                             CreateDateTime = a.CreateDateTime,
                             CreateByName = a.CreateBy,
                             UpdateDateTime = a.UpdateDateTime,
                             UpdateBy = a.UpdateBy,
                             DokterPoliId = a.DokterPoliId,
-                            JadwalPraktekId = a.JadwalPraktekId,
-                            KodeJadwalPraktek = a.KodeJadwalPraktek,
                             WaktuPraktek = a.WaktuPraktek,
                             HariPraktek = a.HariPraktek,
                             JamMulai = a.JamMulai,
                             JamBerakhir = a.JamBerakhir,
+                            KodeJadwalPraktek = a.KodeJadwalPraktek,
 
+                            // nama dokter
+                            NamaDokter = d.NmDokter
                         };
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
