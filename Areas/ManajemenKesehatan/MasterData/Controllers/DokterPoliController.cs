@@ -72,7 +72,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             NmDokter = d.NmDokter,
 
                             // Ambil Nama Poli
-                            NamaPoliklinik = p.NamaPoliklinik
+                            NamaPoliklinik = p.NamaPoliklinik,
+
+                            FotoName = d.FotoName,
+                            ImageUrl = !string.IsNullOrEmpty(d.FotoName)
+                                ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
+                                : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg"
+
                         };
 
             // Hitung total data sebelum paginasi
@@ -301,7 +307,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             NmDokter = d.NmDokter,
 
                             // Ambil Nama Poli
-                            NamaPoliklinik = p.NamaPoliklinik
+                            NamaPoliklinik = p.NamaPoliklinik,
+
+                            FotoName = d.FotoName,
+                            ImageUrl = !string.IsNullOrEmpty(d.FotoName)
+                                ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
+                                : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg"
                         };
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**

@@ -19,20 +19,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class CurrentMedicationController : Controller
+    public class SkalaPainController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<CurrentMedicationController> _logger;
+        private readonly ILogger<SkalaPainController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public CurrentMedicationController(
+        public SkalaPainController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<CurrentMedicationController> logger,
+            ILogger<SkalaPainController> logger,
             IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
@@ -43,15 +43,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll(int page=1, int perPage = 10)
+        public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
         {
             // Validasi agar page dan perPage minimal bernilai 1
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = from a in _applicationDbContext.CurrentMedications
-                        where a.IsDelete == false
+            var query = from a in _applicationDbContext.SkalaPains
                         join u in _applicationDbContext.UserActives
                         on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
@@ -60,14 +59,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateDateTime = a.CreateDateTime,
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
-                            CurrentMedicationId = a.CurrentMedicationID,
+                            SkalaPainId = a.SkalaPainId,
                             KunjunganId = a.KunjunganId,
-                            PendaftaranPasienBaruId = a.PendaftaranPasienBaruId,
-                            NoRekamMedis = a.NoRekamMedis,
-                            NamaObat = a.NamaObat,
-                            Dosis = a.Dosis,
-                            Frekuensi = a.Frekuensi,
-                            LamaKonsumsi = a.LamaKonsumsi,
+                            KodeSkalaPain = a.KodeSkalaPain,
+                            ScoreSkalaPain = a.ScoreSkalaPain,
+                            Deskripsi = a.Deskripsi,
+                            KategoriSkala = a.KategoriSkala,
                         };
 
             // Hitung total data sebelum paginasi
@@ -101,9 +98,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetCurrentMedicationById(Guid id)
+        public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.CurrentMedications.Find(id);
+            var listdata = _applicationDbContext.SkalaPains.Find(id);
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -117,7 +114,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] CurrentMedicationViewModel vm)
+        public async Task<IActionResult> CreateSkalaPain([FromBody] SkalaPainViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -151,36 +148,36 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var setDateNow = dateNow.ToString("yyMMdd"); // Format: YYMMDD
 
 
-                //// **Ambil Kode Terakhir**
-                //var lastCode = _applicationDbContext.Agamas
-                //    .Where(d => d.CreateDateTime.Date == dateNow.Date)
-                //    .OrderByDescending(k => k.CreateDateTime)
+                // **Ambil Kode Terakhir**
+                var lastCode = _applicationDbContext.SkalaPains
+                    .Where(d => d.CreateDateTime.Date == dateNow.Date)
+                    .OrderByDescending(k => k.CreateDateTime)
 
-                //    .FirstOrDefault();
+                    .FirstOrDefault();
 
-                //string kode;
-                //if (lastCode == null)
-                //{
-                //    kode = $"AGM{setDateNow}0001";
-                //}
-                //else
-                //{
-                //    var lastCodeTrim = lastCode.KodeAgama.Substring(3, 6);
-                //    if (lastCodeTrim != setDateNow)
-                //    {
-                //        kode = $"AGM{setDateNow}0001";
-                //    }
-                //    else
-                //    {
-                //        // Mengambil nomor urut terakhir dan menambah 1
-                //        var lastNumber = int.Parse(lastCode.KodeAgama.Substring(9));
-                //        kode = $"AGM{setDateNow}{(lastNumber + 1).ToString("D4")}";
-                //    }
-                //}
+                string kode;
+                if (lastCode == null)
+                {
+                    kode = $"SKP{setDateNow}0001";
+                }
+                else
+                {
+                    var lastCodeTrim = lastCode.KodeSkalaPain.Substring(3, 6);
+                    if (lastCodeTrim != setDateNow)
+                    {
+                        kode = $"SKP{setDateNow}0001";
+                    }
+                    else
+                    {
+                        // Mengambil nomor urut terakhir dan menambah 1
+                        var lastNumber = int.Parse(lastCode.KodeSkalaPain.Substring(9));
+                        kode = $"SKP{setDateNow}{(lastNumber + 1).ToString("D4")}";
+                    }
+                }
 
                 // **Cek Duplikasi**
-                bool isDuplicate = _applicationDbContext.CurrentMedications
-                    .Any(c => c.KunjunganId == vm.KunjunganId );
+                bool isDuplicate = _applicationDbContext.SkalaPains
+                    .Any(c => c.KodeSkalaPain == kode && c.KunjunganId == vm.KunjunganId);
 
                 if (isDuplicate)
                 {
@@ -188,21 +185,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // **Buat Data Baru**
-                var data = new CurrentMedication
+                var data = new SkalaPain
                 {
-                    CurrentMedicationID = Guid.NewGuid(),
+                    SkalaPainId = Guid.NewGuid(),
+                    CreateDateTime = dateNow.Date,// Konversi ke UTC,
+                    CreateBy = userActiveId,
+                    KodeSkalaPain = kode,
                     KunjunganId = vm.KunjunganId,
-                    PendaftaranPasienBaruId = vm.PendaftaranPasienBaruId,
-                    NoRekamMedis = vm.NoRekamMedis,
-                    NamaObat = vm.NamaObat,
-                    Dosis = vm.Dosis,
-                    Frekuensi = vm.Frekuensi,
-                    LamaKonsumsi = vm.LamaKonsumsi,
-                    IsDelete = false,
+                    ScoreSkalaPain = vm.ScoreSkalaPain,
+                    Deskripsi = vm.Deskripsi,
+                    KategoriSkalaEnum = vm.KategoriSkalaEnum,
                 };
 
                 // **Simpan ke Database**
-                _applicationDbContext.CurrentMedications.Add(data);
+                _applicationDbContext.SkalaPains.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -225,7 +221,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateCurrentMedication(Guid id, [FromBody] CurrentMedicationViewModel vm)
+        public async Task<IActionResult> UpdateSkalaPain(Guid id, [FromBody] SkalaPainViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -256,33 +252,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.CurrentMedications.FindAsync(id);
+                var data = await _applicationDbContext.SkalaPains.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
-                // **Cek Duplikasi**
-                bool isDuplicate = _applicationDbContext.CurrentMedications
-                    .Any(c => c.KunjunganId == vm.KunjunganId);
-
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
-                }
-
-                // **Update Data**
+                // **Update Data
                 data.KunjunganId = vm.KunjunganId;
-                data.PendaftaranPasienBaruId = vm.PendaftaranPasienBaruId;
-                data.NoRekamMedis = vm.NoRekamMedis;
-                data.NamaObat = vm.NamaObat;
-                data.Dosis = vm.Dosis;
-                data.Frekuensi = vm.Frekuensi;
-                data.LamaKonsumsi = vm.LamaKonsumsi;
+                data.KategoriSkalaEnum = vm.KategoriSkalaEnum;
+                data.ScoreSkalaPain = vm.ScoreSkalaPain;
+                data.Deskripsi = vm.Deskripsi;
+
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTime.UtcNow;
 
-                _applicationDbContext.CurrentMedications.Update(data);
+                _applicationDbContext.SkalaPains.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -304,8 +289,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
+
         [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(Guid id)
+        public async Task<IActionResult> DeleteSkalaPain(Guid id)
         {
             try
             {
@@ -331,7 +317,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.CurrentMedications.FindAsync(id);
+                var data = await _applicationDbContext.SkalaPains.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -343,7 +329,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 data.IsDelete = true;
 
-                _applicationDbContext.CurrentMedications.Update(data);
+                _applicationDbContext.SkalaPains.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -366,7 +352,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet("paged")]
-        public async Task<IActionResult> PagedCurrentMedication(
+        public async Task<IActionResult> PagedSkalaPain(
         int page = 1,
         int perPage = 10,
         string? search = null,
@@ -387,8 +373,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // Query data
-                var query = from a in _applicationDbContext.CurrentMedications
-                            where a.IsDelete == false
+                var query = from a in _applicationDbContext.SkalaPains
                             join u in _applicationDbContext.UserActives
                             on a.CreateBy equals u.UserActiveId
                             where a.IsDelete == false
@@ -397,14 +382,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 CreateDateTime = a.CreateDateTime,
                                 CreateBy = a.CreateBy,
                                 CreateByName = u.FullName,
-                                CurrentMedicationId = a.CurrentMedicationID,
+                                SkalaPainId = a.SkalaPainId,
                                 KunjunganId = a.KunjunganId,
-                                PendaftaranPasienBaruId = a.PendaftaranPasienBaruId,
-                                NoRekamMedis = a.NoRekamMedis,
-                                NamaObat = a.NamaObat,
-                                Dosis = a.Dosis,
-                                Frekuensi = a.Frekuensi,
-                                LamaKonsumsi = a.LamaKonsumsi,
+                                KodeSkalaPain = a.KodeSkalaPain,
+                                ScoreSkalaPain = a.ScoreSkalaPain,
+                                Deskripsi = a.Deskripsi,
+                                KategoriSkala = a.KategoriSkala,
                             };
 
                 // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
@@ -412,7 +395,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                     query = query.Where(u =>
-                        EF.Functions.ILike(u.NoRekamMedis, search)
+                        EF.Functions.ILike(u.ScoreSkalaPain, search) ||
+                        EF.Functions.ILike(u.KodeSkalaPain, search)
                     );
                 }
 
@@ -435,8 +419,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     "createdatetime" => isDescending ? query.OrderByDescending(u => u.CreateDateTime) : query.OrderBy(u => u.CreateDateTime),
                     "createbyname" => isDescending ? query.OrderByDescending(u => u.CreateByName) : query.OrderBy(u => u.CreateByName),
-                    "NoRekamMedis" => isDescending ? query.OrderByDescending(u => u.NoRekamMedis) : query.OrderBy(u => u.NoRekamMedis),
-                   
+                    "ScoreSkalaPain" => isDescending ? query.OrderByDescending(u => u.ScoreSkalaPain) : query.OrderBy(u => u.ScoreSkalaPain),
+                    "KodeSkalaPain" => isDescending ? query.OrderByDescending(u => u.KodeSkalaPain) : query.OrderBy(u => u.KodeSkalaPain),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 };
 
@@ -469,6 +453,5 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
-
     }
 }

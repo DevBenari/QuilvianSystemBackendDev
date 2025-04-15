@@ -51,6 +51,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
             // Query data
             var query = from a in _context.DokterAsuransis
+                        join d in _context.Dokters on a.DokterId equals d.DokterId
                         join u in _context.UserActives
                         on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
@@ -62,6 +63,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             DokterAsuransiId = a.DokterAsuransiId,
                             AsuransiId = a.AsuransiId,
                             DokterId = a.DokterId,
+                            FotoName = d.FotoName,
+                            ImageUrl = !string.IsNullOrEmpty(d.FotoName)
+                            ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
+                            : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg"
                         };
 
             // Hitung total data sebelum paginasi
@@ -262,6 +267,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         {
             // Query data
             var query = from a in _context.DokterAsuransis
+                        join d in _context.Dokters on a.DokterId equals d.DokterId
                         join u in _context.UserActives
                         on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
@@ -273,6 +279,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             DokterAsuransiId = a.DokterAsuransiId,
                             AsuransiId = a.AsuransiId,
                             DokterId = a.DokterId,
+
+                            FotoName = d.FotoName,
+                            ImageUrl = !string.IsNullOrEmpty(d.FotoName)
+                            ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
+                            : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg"
                         };
 
 
