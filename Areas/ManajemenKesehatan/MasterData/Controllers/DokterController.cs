@@ -492,7 +492,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     }
 
                     // **Simpan Foto Baru**
-                    var uploadFolder = Path.Combine(_webHostEnvironment.WebRootPath, "FotoPasienBaru");
+                    var uploadFolder = Path.Combine(_webHostEnvironment.WebRootPath, "FotoDokter");
                     if (!Directory.Exists(uploadFolder))
                     {
                         Directory.CreateDirectory(uploadFolder);
@@ -507,7 +507,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     }
 
                     data.FotoName = fotoFileName;
-                    data.FotoPath = $"/FotoPasienBaru/{fotoFileName}"; // Simpan path relatif
+                    data.FotoPath = $"/FotoDokter/{fotoFileName}"; // Simpan path relatif
                 }
 
                 data.UpdateDateTime = DateTimeOffset.UtcNow;

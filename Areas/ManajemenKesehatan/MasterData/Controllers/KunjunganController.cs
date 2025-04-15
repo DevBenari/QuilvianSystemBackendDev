@@ -42,11 +42,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             IWebHostEnvironment webHostEnvironment
         )
         {
-                    _applicationDbContext = context;
-                    _userManager = userManager;
-                    _signInManager = signInManager;
-                    _logger = logger;
-                    _webHostEnvironment = webHostEnvironment;
+            _applicationDbContext = context;
+            _userManager = userManager;
+            _signInManager = signInManager;
+            _logger = logger;
+            _webHostEnvironment = webHostEnvironment;
         }
 
         [HttpGet]
@@ -75,7 +75,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.NoRekamMedis,
                             a.TipePasien,
                             a.TipePembayaran,
-                            a.Antrian,
                             a.JumlahKunjungan,
                             a.CreateDateTime,
                             a.CreateBy,
@@ -119,7 +118,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     item.NoRekamMedis,
                     item.TipePasien,
                     item.TipePembayaran,
-                    item.Antrian,
                     JumlahKunjungan = parsedKunjungan,
                     item.CreateDateTime,
                     item.CreateBy,
@@ -231,23 +229,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // Ambil antrian terakhir berdasarkan DokterId & hari
-                var today = DateTime.UtcNow.Date;
-                var lastAntrian = _applicationDbContext.Kunjungans
-                    .Where(k => k.DokterId == request.DokterId && k.CreateDateTime.Date == today)
-                    .OrderByDescending(k => k.CreateDateTime)
-                    .FirstOrDefault();
+                //var today = DateTime.UtcNow.Date;
+                //var lastAntrian = _applicationDbContext.Kunjungans
+                //    .Where(k => k.DokterId == request.DokterId && k.CreateDateTime.Date == today)
+                //    .OrderByDescending(k => k.CreateDateTime)
+                //    .FirstOrDefault();
 
-                int nextNumber = 1;
-                if (lastAntrian != null && !string.IsNullOrWhiteSpace(lastAntrian.Antrian))
-                {
-                    var parts = lastAntrian.Antrian.Split('-');
-                    if (parts.Length == 2 && int.TryParse(parts[1], out int parsed))
-                    {
-                        nextNumber = parsed + 1;
-                    }
-                }
+                //int nextNumber = 1;
+                //if (lastAntrian != null && !string.IsNullOrWhiteSpace(lastAntrian.Antrian))
+                //{
+                //    var parts = lastAntrian.Antrian.Split('-');
+                //    if (parts.Length == 2 && int.TryParse(parts[1], out int parsed))
+                //    {
+                //        nextNumber = parsed + 1;
+                //    }
+                //}
 
-                string nomorAntrian = $"{formatNama} - {nextNumber:D3}";
+                //string nomorAntrian = $"{formatNama} - {nextNumber:D3}";
 
                 var kunjunganPasien = _applicationDbContext.Kunjungans
                     .FirstOrDefault(k => k.PasienId == request.PasienId);
@@ -274,7 +272,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         NoRekamMedis = request.NoRekamMedis,
                         TipePasien = request.TipePasien,
                         TipePembayaran = request.TipePembayaran,
-                        Antrian = nomorAntrian,
                         IsDelete = false
                     };
 
@@ -291,7 +288,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             request.DokterId,
                             NamaDokter = namaDokter,
                             JenisKunjungan = inputJenis,
-                            Antrian = nomorAntrian,
                             JumlahKunjungan = newRiwayat
                         }
                     });
@@ -335,7 +331,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 kunjunganPasien.JumlahKunjungan = JsonSerializer.Serialize(jumlahKunjungan);
-                kunjunganPasien.Antrian = nomorAntrian;
+                //kunjunganPasien.Antrian = nomorAntrian;
                 _applicationDbContext.Kunjungans.Update(kunjunganPasien);
 
                 await _applicationDbContext.SaveChangesAsync();
@@ -349,7 +345,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         request.DokterId,
                         NamaDokter = namaDokter,
                         JenisKunjungan = inputJenis,
-                        Antrian = nomorAntrian,
                         JumlahKunjungan = jumlahKunjungan
                     }
                 });
@@ -437,23 +432,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // Ambil antrian terakhir berdasarkan DokterId & hari
-                var today = DateTime.UtcNow.Date;
-                var lastAntrian = _applicationDbContext.Kunjungans
-                    .Where(k => k.DokterId == request.DokterId && k.CreateDateTime.Date == today)
-                    .OrderByDescending(k => k.CreateDateTime)
-                    .FirstOrDefault();
+                //var today = DateTime.UtcNow.Date;
+                //var lastAntrian = _applicationDbContext.Kunjungans
+                //    .Where(k => k.DokterId == request.DokterId && k.CreateDateTime.Date == today)
+                //    .OrderByDescending(k => k.CreateDateTime)
+                //    .FirstOrDefault();
 
-                int nextNumber = 1;
-                if (lastAntrian != null && !string.IsNullOrWhiteSpace(lastAntrian.Antrian))
-                {
-                    var parts = lastAntrian.Antrian.Split('-');
-                    if (parts.Length == 2 && int.TryParse(parts[1], out int parsed))
-                    {
-                        nextNumber = parsed + 1;
-                    }
-                }
+                //int nextNumber = 1;
+                //if (lastAntrian != null && !string.IsNullOrWhiteSpace(lastAntrian.Antrian))
+                //{
+                //    var parts = lastAntrian.Antrian.Split('-');
+                //    if (parts.Length == 2 && int.TryParse(parts[1], out int parsed))
+                //    {
+                //        nextNumber = parsed + 1;
+                //    }
+                //}
 
-                string nomorAntrian = $"{formatNama} - {nextNumber:D3}";
+                //string nomorAntrian = $"{formatNama} - {nextNumber:D3}";
 
                 // Deserialize jumlah kunjungan
                 List<KunjunganRiwayat> jumlahKunjungan = new()
@@ -500,7 +495,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 kunjunganPasien.TipePasien = request.TipePasien;
                 kunjunganPasien.TipePembayaran = request.TipePembayaran;
                 kunjunganPasien.JumlahKunjungan = JsonSerializer.Serialize(jumlahKunjungan);
-                kunjunganPasien.Antrian = nomorAntrian;
                 kunjunganPasien.UpdateDateTime = DateTimeOffset.UtcNow;
                 kunjunganPasien.UpdateBy = UserActiveId;
 
@@ -514,7 +508,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     {
                         NamaDokter = namaDokter,
                         JenisKunjungan = inputJenis,
-                        Antrian = nomorAntrian,
                         JumlahKunjungan = jumlahKunjungan
                     }
                 });
@@ -556,7 +549,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.NoRekamMedis,
                             a.TipePasien,
                             a.TipePembayaran,
-                            a.Antrian,
                             a.JumlahKunjungan,
                             a.CreateDateTime,
                             a.CreateBy,
@@ -671,7 +663,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     item.NoRekamMedis,
                     item.TipePasien,
                     item.TipePembayaran,
-                    item.Antrian,
                     JumlahKunjungan = parsed,
                     item.CreateDateTime,
                     item.CreateBy,
