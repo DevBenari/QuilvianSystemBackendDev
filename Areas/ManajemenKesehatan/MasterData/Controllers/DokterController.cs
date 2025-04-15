@@ -677,6 +677,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     d.Str,
                     d.TglSip,
                     d.TglStr,
+                    d.Spesialis,
                     d.Nik,
                     d.Nohp,
                     d.Alamat,
