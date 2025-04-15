@@ -26,7 +26,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
         public DateTime? TanggalLahir { get; set; }
 
         public string? JenisKelamin { get; set; }
-        public string? Status { get; set; }
+        public string? StatusPerkawinan { get; set; }
         public Guid? AgamaId { get; set; }
         public Guid? PendidikanTerakhirId { get; set; }
 

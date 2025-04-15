@@ -160,6 +160,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     d.DokterId,
                     d.KdDokter,
                     d.NmDokter,
+                    d.Spesialis,
                     d.Sip,
                     d.Str,
                     d.TglSip,
@@ -363,6 +364,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         TglStr = vm.TglStr,
                         FotoPath = fotoPath,
                         FotoName = fotoFileName,
+                        Spesialis = vm.Spesialis,
                         Nik = vm.Nik,
                         KdDokter = kode,
                         Email = vm.Email,
@@ -462,6 +464,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.TglSip = vm.TglSip ?? data.TglSip;
                 data.TglStr = vm.TglStr ?? data.TglStr;
                 data.Nik = vm.Nik ?? data.Nik;
+                data.Email = vm.Email ?? data.Email;
+                data.Nohp = vm.Nohp ?? data.Nohp;
+                data.Alamat = vm.Alamat ?? data.Alamat;
+                data.Spesialis = vm.Spesialis ?? data.Spesialis;
                 data.IsAsuransi = vm.IsAsuransi ?? data.IsAsuransi;
 
                 // **Update Foto Profil Jika Ada**

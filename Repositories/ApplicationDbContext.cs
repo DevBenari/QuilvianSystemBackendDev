@@ -66,6 +66,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<CoveranObatAsuransi> CoveranObatAsuransis { get; set; }
         public DbSet<CurrentMedication> CurrentMedications { get; set; }
         public DbSet<SkalaPain> SkalaPains { get; set; }
+        public DbSet<PainAssessment> PainAssessments { get; set; }
 
         #endregion
 

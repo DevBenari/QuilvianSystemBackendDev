@@ -14,14 +14,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string NmDokter { get; set; }
         public string Sip { get; set; }
         public string Str { get; set; }
-        
+        public string? Spesialis { get; set; }
+
         public string? TglSip { get; set; }
         
         public string? TglStr { get; set; }
-        public string Nik { get; set; }
-        public string Email { get; set; }
-        public string Nohp { get; set; }
-        public string Alamat { get; set; }
+        public string? Nik { get; set; }
+        public string? Email { get; set; }
+        public string? Nohp { get; set; }
+        public string? Alamat { get; set; }
         public bool? IsAsuransi { get; set; }
 
         public string? FotoName { get; set; }

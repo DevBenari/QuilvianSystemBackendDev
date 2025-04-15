@@ -80,7 +80,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                             NoIdentitas = a.NoIdentitas,
                             TempatLahir = a.TempatLahir,
                             TanggalLahir = a.TanggalLahir.HasValue ? a.TanggalLahir.Value.ToString("yyyy-MM-dd") : null,
-                            Status = a.Status,
+                            StatusPerkawinan = a.StatusPerkawinan,
                             AgamaId = a.AgamaId,
                             PendidikanTerakhirId = a.PendidikanTerakhirId,
                             AlamatIdentitas = a.AlamatIdentitas,
@@ -178,7 +178,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     listdata.TempatLahir,
                     TanggalLahir = parsed,
                     listdata.JenisKelamin,
-                    listdata.Status,
+                    listdata.StatusPerkawinan,
                     listdata.AgamaId,
                     listdata.PendidikanTerakhirId,
                     listdata.AlamatIdentitas,
@@ -463,7 +463,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                         TempatLahir = vm.TempatLahir,
                         TanggalLahir = parsedDate,
                         JenisKelamin = vm.JenisKelamin,
-                        Status = vm.Status,
+                        StatusPerkawinan = vm.StatusPerkawinan,
                         AgamaId = vm.AgamaId,
                         PendidikanTerakhirId = vm.PendidikanTerakhirId,
                         AlamatIdentitas = vm.AlamatIdentitas,
@@ -572,7 +572,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 pasien.TempatLahir = vm.TempatLahir ?? pasien.TempatLahir;
                 pasien.TanggalLahir = vm.TanggalLahir != default ? parsedDate : pasien.TanggalLahir;
                 pasien.JenisKelamin = vm.JenisKelamin ?? pasien.JenisKelamin;
-                pasien.Status = vm.Status ?? pasien.Status;
+                pasien.StatusPerkawinan = vm.StatusPerkawinan ?? pasien.StatusPerkawinan;
                 pasien.AgamaId = vm.AgamaId ?? pasien.AgamaId;
                 pasien.PendidikanTerakhirId = vm.PendidikanTerakhirId ?? pasien.PendidikanTerakhirId;
                 pasien.AlamatIdentitas = vm.AlamatIdentitas ?? pasien.AlamatIdentitas;
@@ -752,7 +752,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                             NoIdentitas = a.NoIdentitas,
                             TempatLahir = a.TempatLahir,
                             TanggalLahir = a.TanggalLahir.HasValue ? a.TanggalLahir.Value.ToString("yyyy-MM-dd") : null,
-                            Status = a.Status,
+                            Status = a.StatusPerkawinan,
                             AgamaId = a.AgamaId,
                             PendidikanTerakhirId = a.PendidikanTerakhirId,
                             AlamatIdentitas = a.AlamatIdentitas,
