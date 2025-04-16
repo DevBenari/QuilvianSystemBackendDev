@@ -265,32 +265,6 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
             return types.ContainsKey(ext) ? types[ext] : "application/octet-stream";
         }
 
-        //public static string GetImageExtension(string base64String)
-        //{
-        //    if (base64String.StartsWith("data:image/jpeg") || base64String.StartsWith("data:image/jpg"))
-        //        return "jpg";
-        //    if (base64String.StartsWith("data:image/png"))
-        //        return "png";
-        //    if (base64String.StartsWith("data:image/gif"))
-        //        return "gif";
-        //    if (base64String.StartsWith("data:image/bmp"))
-        //        return "bmp";
-        //    if (base64String.StartsWith("data:image/webp"))
-        //        return "webp";
-
-        //    return string.Empty; // Jika format tidak dikenali
-        //}
-
-        //public static string GetImageFormat(byte[] fileBytes)
-        //{
-        //    if (fileBytes.Length < 4) return "Unknown";
-
-        //    if (fileBytes[0] == 0xFF && fileBytes[1] == 0xD8 && fileBytes[2] == 0xFF) return "image/jpeg";
-        //    if (fileBytes[0] == 0x89 && fileBytes[1] == 0x50 && fileBytes[2] == 0x4E && fileBytes[3] == 0x47) return "image/png";
-
-        //    return "Unknown";
-        //}
-
         [HttpPost]
         public async Task<IActionResult> CreatePendaftaranPasienBaru([FromForm] PendaftaranPasienBaruViewModel vm)
         {
@@ -434,6 +408,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 {
                     //Jika user tidak upload foto, gunakan foto default
                     fotoPath = "/FotoPasienBaru/user.jpg";
+                    fotoFileName = "user.jpg";
                 }
 
                 // **Konversi `TanggalLahir` dari string "yyyy-MM-dd" ke `DateTime`**
@@ -512,6 +487,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     {
                         message = "Tambah Data Berhasil || 201 Created",
                         PasienBaruId = daftar.PendaftaranPasienBaruId,
+                        NomorRekamMedis = daftar.NoRekamMedis,
                         qrCodeUrl = $"{Request.Scheme}://{Request.Host}/QRCodePasienBaru/{Path.GetFileName(daftar.QrCode)}",
                         url = $"{Request.Scheme}://{Request.Host}/FotoPasienBaru/{fotoFileName}"
                     });
@@ -655,9 +631,6 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     pasien.FotoName = fotoFileName;
                     pasien.FotoPath = $"/FotoPasienBaru/{fotoFileName}"; // Simpan path relatif
                 }
-
-
-                
 
                 pasien.UpdateBy = UserActiveId;
                 pasien.UpdateDateTime = DateTimeOffset.UtcNow;

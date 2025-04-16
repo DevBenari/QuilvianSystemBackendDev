@@ -798,7 +798,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             {
                 return NotFound(new { message = "Page not found." });
             }
-
             return Ok(new
             {
                 status = "success",
