@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   web:
-    image: quilvian-postgre-api # Gantilah dengan nama image yang sudah kamu build
+    image: quilvian-postgre-api
     build: .
     ports:
       - "5000:80"
@@ -11,6 +11,12 @@ services:
       - ConnectionStrings__DefaultConnection=Host=postgres-container;Port=5432;Username=sa;Password=Admin@1234;Database=QuilvianSystemBackendDev
     depends_on:
       - postgres-container
+    volumes:
+      - ./wwwroot/images:/app/wwwroot/images
+      - ./wwwroot/FotoDokter:/app/wwwroot/FotoDokter
+      - ./wwwroot/FotoPasienBaru:/app/wwwroot/FotoPasienBaru
+      - ./wwwroot/QRCodePasienBaru:/app/wwwroot/QRCodePasienBaru
+      - ./wwwroot/scanktp:/app/wwwroot/scanktp
 
   postgres-container:
     image: postgres:13
