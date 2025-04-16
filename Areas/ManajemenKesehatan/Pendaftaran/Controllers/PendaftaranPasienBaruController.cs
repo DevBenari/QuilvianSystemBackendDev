@@ -344,7 +344,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 var logoPath = Path.Combine(_webHostEnvironment.WebRootPath, "images", "logo.png");
 
                 // Generate QR Code dengan logo
-                //var qrCodeImage = QrCodeHelper.GenerateQRCodeWithLogo(noRekamMedis, logoPath);
+                var qrCodeImage = QrCodeHelper.GenerateQRCodeWithLogo(noRekamMedis, logoPath);
 
                 // Tentukan lokasi penyimpanan QR Code
                 var qrCodeFolder = Path.Combine(_webHostEnvironment.WebRootPath, "QRCodePasienBaru");
@@ -357,8 +357,22 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 var qrCodeFileName = $"{noRekamMedis}.png";
                 var qrCodeFilePath = Path.Combine(qrCodeFolder, qrCodeFileName);
 
-                // Simpan QR Code sebagai file PNG
-                //qrCodeImage.Save(qrCodeFilePath, System.Drawing.Imaging.ImageFormat.Png);
+                // Simpan QR Code menggunakan MemoryStream seperti proses upload file
+                using (var memoryStream = new MemoryStream())
+                {
+                    // Simpan QR code ke stream dulu
+                    qrCodeImage.Save(memoryStream, System.Drawing.Imaging.ImageFormat.Png);
+                    memoryStream.Position = 0; // reset posisi stream
+
+                    using (var fileStream = new FileStream(qrCodeFilePath, FileMode.Create))
+                    {
+                        memoryStream.CopyTo(fileStream);
+                    }
+                }
+
+                // Simpan path untuk digunakan oleh aplikasi
+                var qrCodeRelativePath = $"/QRCodePasienBaru/{qrCodeFileName}";
+
 
                 // Cek Duplikasi
                 var isDuplicate = _applicationDbContext.PendaftaranPasienBarus
@@ -476,7 +490,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                         HubunganAnak = vm.HubunganAnak,
                         InformasiSekolah = vm.InformasiSekolah,
                         FotoName = fotoFileName,
-                        QrCode = $"/QRCodePasienBaru/{qrCodeFileName}", // Simpan hanya path QR Code
+                        QrCode = qrCodeRelativePath, // Simpan hanya path QR Code
                         FotoPath = fotoPath,
                         
                     };
@@ -488,7 +502,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                         message = "Tambah Data Berhasil || 201 Created",
                         PasienBaruId = daftar.PendaftaranPasienBaruId,
                         NomorRekamMedis = daftar.NoRekamMedis,
-                        qrCodeUrl = $"{Request.Scheme}://{Request.Host}/QRCodePasienBaru/{Path.GetFileName(daftar.QrCode)}",
+                        qrCodeUrl = $"{Request.Scheme}://{Request.Host}{qrCodeRelativePath}",
                         url = $"{Request.Scheme}://{Request.Host}/FotoPasienBaru/{fotoFileName}"
                     });
                 }
