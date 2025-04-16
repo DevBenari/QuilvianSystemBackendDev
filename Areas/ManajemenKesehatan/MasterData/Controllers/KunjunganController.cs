@@ -78,6 +78,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.JumlahKunjungan,
                             a.CreateDateTime,
                             a.CreateBy,
+                            a.IsFinished,
                             CreateByName = u.FullName
                         };
 
@@ -171,25 +172,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             try
             {
                 var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var GetUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
-                var UserActiveId = GetUserActive.UserActiveId;
-
                 if (string.IsNullOrEmpty(EmailLogin))
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                // Validasi tipe pasien
+                var GetUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+                var UserActiveId = GetUserActive?.UserActiveId ?? Guid.Empty;
+
                 if (!new[] { "Rujukan", "Umum" }.Contains(request.TipePasien, StringComparer.OrdinalIgnoreCase))
                 {
                     return BadRequest(new { message = "Tipe pasien tidak valid. Gunakan hanya 'Rujukan' atau 'Umum'." });
                 }
 
-                // Atur default jenis kunjungan
-                var inputJenis = string.IsNullOrWhiteSpace(request.JenisKunjungan) ||
-                                 request.JenisKunjungan.Trim().Equals("string", StringComparison.OrdinalIgnoreCase)
-                                 ? "Rawat Jalan"
-                                 : request.JenisKunjungan;
+                var inputJenis = string.IsNullOrWhiteSpace(request.JenisKunjungan) || request.JenisKunjungan.Equals("string", StringComparison.OrdinalIgnoreCase)
+                    ? "Rawat Jalan"
+                    : request.JenisKunjungan;
 
                 if (!new[] { "Rawat Inap", "Rawat Jalan" }.Contains(inputJenis, StringComparer.OrdinalIgnoreCase))
                 {
@@ -207,7 +205,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 string formatNama = "Dr.";
                 if (!string.IsNullOrWhiteSpace(namaDokter))
                 {
-                    // Hapus awalan jika ada
                     string namaClean = namaDokter
                         .Replace("dr.", "", StringComparison.OrdinalIgnoreCase)
                         .Replace("dr", "", StringComparison.OrdinalIgnoreCase)
@@ -215,130 +212,66 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         .Trim();
 
                     var parts = namaClean.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                    if (parts.Length >= 2)
-                    {
-                        var namaDepan = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(parts[0].ToLower());
-                        var inisialBelakang = parts[^1].Substring(0, 1).ToUpper();
-                        formatNama = $"Dr. {namaDepan} {inisialBelakang}";
-                    }
-                    else
-                    {
-                        var namaSatu = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(namaClean.ToLower());
-                        formatNama = $"Dr. {namaSatu}";
-                    }
+                    formatNama = parts.Length >= 2
+                        ? $"Dr. {CultureInfo.CurrentCulture.TextInfo.ToTitleCase(parts[0].ToLower())} {parts[^1][..1].ToUpper()}"
+                        : $"Dr. {CultureInfo.CurrentCulture.TextInfo.ToTitleCase(namaClean.ToLower())}";
                 }
 
-                // Ambil antrian terakhir berdasarkan DokterId & hari
-                //var today = DateTime.UtcNow.Date;
-                //var lastAntrian = _applicationDbContext.Kunjungans
-                //    .Where(k => k.DokterId == request.DokterId && k.CreateDateTime.Date == today)
-                //    .OrderByDescending(k => k.CreateDateTime)
-                //    .FirstOrDefault();
+                // Ambil semua kunjungan pasien sebelumnya untuk menghitung jumlah kunjungan kumulatif
+                var allKunjunganPasien = _applicationDbContext.Kunjungans
+                    .Where(k => k.PasienId == request.PasienId)
+                    .ToList();
 
-                //int nextNumber = 1;
-                //if (lastAntrian != null && !string.IsNullOrWhiteSpace(lastAntrian.Antrian))
-                //{
-                //    var parts = lastAntrian.Antrian.Split('-');
-                //    if (parts.Length == 2 && int.TryParse(parts[1], out int parsed))
-                //    {
-                //        nextNumber = parsed + 1;
-                //    }
-                //}
-
-                //string nomorAntrian = $"{formatNama} - {nextNumber:D3}";
-
-                var kunjunganPasien = _applicationDbContext.Kunjungans
-                    .FirstOrDefault(k => k.PasienId == request.PasienId);
-
-                // --- JIKA KUNJUNGAN PERTAMA
-                if (kunjunganPasien == null)
-                {
-                    List<KunjunganRiwayat> newRiwayat = new()
-                {
-                    new KunjunganRiwayat { Jenis = "IP", Jumlah = kodeJenis == "IP" ? 1 : 0 },
-                    new KunjunganRiwayat { Jenis = "OP", Jumlah = kodeJenis == "OP" ? 1 : 0 }
-                };
-
-                    var kunjunganBaru = new Kunjungan
-                    {
-                        KunjunganID = Guid.NewGuid(),
-                        PasienId = request.PasienId,
-                        DokterId = request.DokterId,
-                        PoliklinikId = request.PoliklinikId,
-                        AsuransiId = request.AsuransiId,
-                        JumlahKunjungan = JsonSerializer.Serialize(newRiwayat),
-                        CreateDateTime = DateTimeOffset.UtcNow,
-                        CreateBy = UserActiveId,
-                        NoRekamMedis = request.NoRekamMedis,
-                        TipePasien = request.TipePasien,
-                        TipePembayaran = request.TipePembayaran,
-                        IsDelete = false
-                    };
-
-                    _applicationDbContext.Kunjungans.Add(kunjunganBaru);
-
-                    await _applicationDbContext.SaveChangesAsync();
-
-                    return Ok(new
-                    {
-                        message = "Kunjungan berhasil ditambahkan",
-                        data = new
-                        {
-                            request.PasienId,
-                            request.DokterId,
-                            NamaDokter = namaDokter,
-                            JenisKunjungan = inputJenis,
-                            JumlahKunjungan = newRiwayat
-                        }
-                    });
-                }
-
-                // --- JIKA KUNJUNGAN SUDAH ADA
                 List<KunjunganRiwayat> jumlahKunjungan = new()
                 {
-                    new KunjunganRiwayat { Jenis = "IP", Jumlah = 0 },
-                    new KunjunganRiwayat { Jenis = "OP", Jumlah = 0 }
+                    new KunjunganRiwayat { Jenis = "IP", Jumlah = allKunjunganPasien
+                        .Where(k => !string.IsNullOrEmpty(k.JumlahKunjungan))
+                        .SelectMany(k => JsonSerializer.Deserialize<List<KunjunganRiwayat>>(k.JumlahKunjungan) ?? new List<KunjunganRiwayat>())
+                        .Where(k => k.Jenis == "IP")
+                        .Sum(k => k.Jumlah)
+                    },
+                    new KunjunganRiwayat { Jenis = "OP", Jumlah = allKunjunganPasien
+                        .Where(k => !string.IsNullOrEmpty(k.JumlahKunjungan))
+                        .SelectMany(k => JsonSerializer.Deserialize<List<KunjunganRiwayat>>(k.JumlahKunjungan) ?? new List<KunjunganRiwayat>())
+                        .Where(k => k.Jenis == "OP")
+                        .Sum(k => k.Jumlah)
+                    }
                 };
 
-                if (!string.IsNullOrWhiteSpace(kunjunganPasien.JumlahKunjungan))
+                // Tambahkan kunjungan baru sesuai jenis
+                var currentJenis = jumlahKunjungan.FirstOrDefault(k => k.Jenis == kodeJenis);
+                if (currentJenis != null)
                 {
-                    try
-                    {
-                        jumlahKunjungan = JsonSerializer.Deserialize<List<KunjunganRiwayat>>(kunjunganPasien.JumlahKunjungan)
-                                          ?? jumlahKunjungan;
-                    }
-                    catch
-                    {
-                        // fallback default list
-                    }
+                    currentJenis.Jumlah += 1;
+                }
+                else
+                {
+                    jumlahKunjungan.Add(new KunjunganRiwayat { Jenis = kodeJenis, Jumlah = 1 });
                 }
 
-                foreach (var jenis in new[] { "IP", "OP" })
+                var newKunjungan = new Kunjungan
                 {
-                    var current = jumlahKunjungan.FirstOrDefault(k => k.Jenis == jenis);
-                    if (current != null)
-                    {
-                        if (jenis == kodeJenis) current.Jumlah += 1;
-                    }
-                    else
-                    {
-                        jumlahKunjungan.Add(new KunjunganRiwayat
-                        {
-                            Jenis = jenis,
-                            Jumlah = jenis == kodeJenis ? 1 : 0
-                        });
-                    }
-                }
+                    KunjunganID = Guid.NewGuid(),
+                    PasienId = request.PasienId,
+                    DokterId = request.DokterId,
+                    PoliklinikId = request.PoliklinikId,
+                    AsuransiId = request.AsuransiId,
+                    JumlahKunjungan = JsonSerializer.Serialize(jumlahKunjungan),
+                    CreateDateTime = DateTimeOffset.UtcNow,
+                    CreateBy = UserActiveId,
+                    NoRekamMedis = request.NoRekamMedis,
+                    TipePasien = request.TipePasien,
+                    TipePembayaran = request.TipePembayaran,
+                    IsFinished = false,
+                    IsDelete = false
+                };
 
-                kunjunganPasien.JumlahKunjungan = JsonSerializer.Serialize(jumlahKunjungan);
-                //kunjunganPasien.Antrian = nomorAntrian;
-                _applicationDbContext.Kunjungans.Update(kunjunganPasien);
-
+                _applicationDbContext.Kunjungans.Add(newKunjungan);
                 await _applicationDbContext.SaveChangesAsync();
 
                 return Ok(new
                 {
-                    message = "Kunjungan berhasil ditambahkan",
+                    message = "Kunjungan baru berhasil ditambahkan.",
                     data = new
                     {
                         request.PasienId,
@@ -356,44 +289,42 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
 
+
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateKunjunganPasien(Guid id, [FromBody] KunjunganViewModel request)
+        public async Task<IActionResult> UpdateKunjunganPasien(Guid kunjunganId, [FromBody] KunjunganViewModel request)
         {
-            if (request == null || !request.PasienId.HasValue || request.PasienId == Guid.Empty)
+            if (request == null || kunjunganId == Guid.Empty)
             {
                 return BadRequest(new { message = "Data tidak boleh kosong!" });
             }
 
             try
             {
-                // Ambil user login
                 var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var GetUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
-                var UserActiveId = GetUserActive.UserActiveId;
-
                 if (string.IsNullOrEmpty(EmailLogin))
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                // Ambil data kunjungan berdasarkan id
-                var kunjunganPasien = await _applicationDbContext.Kunjungans.FindAsync(id);
-                if (kunjunganPasien == null)
+                var GetUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+                var UserActiveId = GetUserActive?.UserActiveId ?? Guid.Empty;
+
+                var kunjungan = _applicationDbContext.Kunjungans.FirstOrDefault(k => k.KunjunganID == kunjunganId);
+                if (kunjungan == null)
                 {
                     return NotFound(new { message = "Data kunjungan tidak ditemukan!" });
                 }
 
-                // Validasi TipePasien
+                // Validasi tipe pasien
                 if (!new[] { "Rujukan", "Umum" }.Contains(request.TipePasien, StringComparer.OrdinalIgnoreCase))
                 {
                     return BadRequest(new { message = "Tipe pasien tidak valid. Gunakan hanya 'Rujukan' atau 'Umum'." });
                 }
 
-                // Validasi JenisKunjungan
-                var inputJenis = string.IsNullOrWhiteSpace(request.JenisKunjungan) ||
-                         request.JenisKunjungan.Trim().Equals("string", StringComparison.OrdinalIgnoreCase)
-                         ? "Rawat Jalan"
-                         : request.JenisKunjungan;
+                // Validasi jenis kunjungan
+                var inputJenis = string.IsNullOrWhiteSpace(request.JenisKunjungan) || request.JenisKunjungan.Equals("string", StringComparison.OrdinalIgnoreCase)
+                    ? "Rawat Jalan"
+                    : request.JenisKunjungan;
 
                 if (!new[] { "Rawat Inap", "Rawat Jalan" }.Contains(inputJenis, StringComparer.OrdinalIgnoreCase))
                 {
@@ -402,113 +333,36 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 string kodeJenis = inputJenis == "Rawat Inap" ? "IP" : "OP";
 
-                // Ambil nama dokter
+                // Ambil nama dokter baru
                 var namaDokter = _applicationDbContext.Dokters
                     .Where(d => d.DokterId == request.DokterId)
                     .Select(d => d.NmDokter)
                     .FirstOrDefault() ?? "Dokter";
 
-                string formatNama = "Dr.";
-                if (!string.IsNullOrWhiteSpace(namaDokter))
-                {
-                    string namaClean = namaDokter
-                        .Replace("dr.", "", StringComparison.OrdinalIgnoreCase)
-                        .Replace("dr", "", StringComparison.OrdinalIgnoreCase)
-                        .Replace("dokter", "", StringComparison.OrdinalIgnoreCase)
-                        .Trim();
+                // Update semua field yang bisa diubah
+                kunjungan.DokterId = request.DokterId;
+                kunjungan.PoliklinikId = request.PoliklinikId;
+                kunjungan.AsuransiId = request.AsuransiId;
+                kunjungan.NoRekamMedis = request.NoRekamMedis;
+                kunjungan.TipePasien = request.TipePasien;
+                kunjungan.TipePembayaran = request.TipePembayaran;
+                kunjungan.IsFinished = request.IsFinished;
+                kunjungan.UpdateBy = UserActiveId;
+                kunjungan.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                    var parts = namaClean.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                    if (parts.Length >= 2)
-                    {
-                        var namaDepan = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(parts[0].ToLower());
-                        var inisialBelakang = parts[^1].Substring(0, 1).ToUpper();
-                        formatNama = $"Dr. {namaDepan} {inisialBelakang}";
-                    }
-                    else
-                    {
-                        var namaSatu = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(namaClean.ToLower());
-                        formatNama = $"Dr. {namaSatu}";
-                    }
-                }
-
-                // Ambil antrian terakhir berdasarkan DokterId & hari
-                //var today = DateTime.UtcNow.Date;
-                //var lastAntrian = _applicationDbContext.Kunjungans
-                //    .Where(k => k.DokterId == request.DokterId && k.CreateDateTime.Date == today)
-                //    .OrderByDescending(k => k.CreateDateTime)
-                //    .FirstOrDefault();
-
-                //int nextNumber = 1;
-                //if (lastAntrian != null && !string.IsNullOrWhiteSpace(lastAntrian.Antrian))
-                //{
-                //    var parts = lastAntrian.Antrian.Split('-');
-                //    if (parts.Length == 2 && int.TryParse(parts[1], out int parsed))
-                //    {
-                //        nextNumber = parsed + 1;
-                //    }
-                //}
-
-                //string nomorAntrian = $"{formatNama} - {nextNumber:D3}";
-
-                // Deserialize jumlah kunjungan
-                List<KunjunganRiwayat> jumlahKunjungan = new()
-                {
-                    new KunjunganRiwayat { Jenis = "IP", Jumlah = 0 },
-                    new KunjunganRiwayat { Jenis = "OP", Jumlah = 0 }
-                };
-
-                if (!string.IsNullOrWhiteSpace(kunjunganPasien.JumlahKunjungan))
-                {
-                    try
-                    {
-                        jumlahKunjungan = JsonSerializer.Deserialize<List<KunjunganRiwayat>>(kunjunganPasien.JumlahKunjungan)
-                                          ?? jumlahKunjungan;
-                    }
-                    catch
-                    {
-                        // fallback default
-                    }
-                }
-
-                // Update jumlah IP/OP
-                foreach (var jenis in new[] { "IP", "OP" })
-                {
-                    var current = jumlahKunjungan.FirstOrDefault(k => k.Jenis == jenis);
-                    if (current != null)
-                    {
-                        if (jenis == kodeJenis) current.Jumlah += 1;
-                    }
-                    else
-                    {
-                        jumlahKunjungan.Add(new KunjunganRiwayat
-                        {
-                            Jenis = jenis,
-                            Jumlah = jenis == kodeJenis ? 1 : 0
-                        });
-                    }
-                }
-
-                // Simpan perubahan
-                kunjunganPasien.DokterId = request.DokterId;
-                kunjunganPasien.PoliklinikId = request.PoliklinikId;
-                kunjunganPasien.AsuransiId = request.AsuransiId;
-                kunjunganPasien.TipePasien = request.TipePasien;
-                kunjunganPasien.TipePembayaran = request.TipePembayaran;
-                kunjunganPasien.JumlahKunjungan = JsonSerializer.Serialize(jumlahKunjungan);
-                kunjunganPasien.UpdateDateTime = DateTimeOffset.UtcNow;
-                kunjunganPasien.UpdateBy = UserActiveId;
-
-                _applicationDbContext.Kunjungans.Update(kunjunganPasien);
+                _applicationDbContext.Kunjungans.Update(kunjungan);
                 await _applicationDbContext.SaveChangesAsync();
 
                 return Ok(new
                 {
-                    message = "Kunjungan berhasil diperbarui",
+                    message = "Kunjungan berhasil diperbarui.",
                     data = new
                     {
+                        kunjungan.KunjunganID,
+                        request.PasienId,
+                        request.DokterId,
                         NamaDokter = namaDokter,
-                        JenisKunjungan = inputJenis,
-                        JumlahKunjungan = jumlahKunjungan
+                        JenisKunjungan = inputJenis
                     }
                 });
             }
@@ -517,6 +371,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 return StatusCode(500, new { message = $"Terjadi kesalahan: {ex.Message}" });
             }
         }
+
 
         [HttpGet("paged")]
         public IActionResult PagedKunjungan(
@@ -552,6 +407,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.JumlahKunjungan,
                             a.CreateDateTime,
                             a.CreateBy,
+                            a.IsFinished,
                             CreateByName = u.FullName
                         };
 
