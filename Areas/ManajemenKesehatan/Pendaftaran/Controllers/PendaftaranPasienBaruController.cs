@@ -346,54 +346,54 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 string QRPath = null;
                 string qrCodeFileName = null;
 
-                //// 1. Lokasi logo (pastikan file ada di folder wwwroot/images)
-                //var logoPath = Path.Combine(_webHostEnvironment.WebRootPath, "images", "logo.png");
-
-                //// 2. Generate QR code dengan logo asli sebagai byte[]
-                //var qrCodeBytes = QrCodeHelper.GenerateQrCodeWithLogoPngBytes(noRekamMedis, logoPath);
-
-                //// 3. Validasi folder tujuan penyimpanan QR code
-                //var uploadQrFolder = Path.Combine(_webHostEnvironment.WebRootPath, "QRCodePasienBaru");
-                //if (!Directory.Exists(uploadQrFolder))
-                //{
-                //    Directory.CreateDirectory(uploadQrFolder);
-                //}
-
-                //// 4. Tentukan nama file dan path penyimpanan
-                //qrCodeFileName = $"{noRekamMedis}.png";
-                //var qrCodeFilePath = Path.Combine(uploadQrFolder, qrCodeFileName);
-
-                //// 5. Simpan byte[] QR code ke dalam file menggunakan MemoryStream
-                //using (var memoryStream = new MemoryStream(qrCodeBytes))
-                //{
-                //    using (var stream = new FileStream(qrCodeFilePath, FileMode.Create))
-                //    {
-                //        memoryStream.CopyTo(stream); // Menyerupai vm.Foto.CopyTo()
-                //    }
-                //}
-
-                //// 6. Simpan path relatif ke database atau response
-                //QRPath = $"/QRCodePasienBaru/{qrCodeFileName}";
-
-                // Path logo untuk QR Code
+                // 1. Lokasi logo (pastikan file ada di folder wwwroot/images)
                 var logoPath = Path.Combine(_webHostEnvironment.WebRootPath, "images", "logo.png");
 
-                // Generate QR Code dengan logo
-                var qrCodeImage = QrCodeHelper.GenerateQRCodeWithLogo(noRekamMedis, logoPath);
+                // 2. Generate QR code dengan logo asli sebagai byte[]
+                var qrCodeBytes = QrCodeHelper.GenerateQrCodeWithLogoPngBytes(noRekamMedis, logoPath);
 
-                // Tentukan lokasi penyimpanan QR Code
-                var qrCodeFolder = Path.Combine(_webHostEnvironment.WebRootPath, "QRCodePasienBaru");
-                if (!Directory.Exists(qrCodeFolder))
+                // 3. Validasi folder tujuan penyimpanan QR code
+                var uploadQrFolder = Path.Combine(_webHostEnvironment.WebRootPath, "QRCodePasienBaru");
+                if (!Directory.Exists(uploadQrFolder))
                 {
-                    Directory.CreateDirectory(qrCodeFolder);
+                    Directory.CreateDirectory(uploadQrFolder);
                 }
 
-                // Nama file QR Code berdasarkan NoRekamMedis
+                // 4. Tentukan nama file dan path penyimpanan
                 qrCodeFileName = $"{noRekamMedis}.png";
-                var qrCodeFilePath = Path.Combine(qrCodeFolder, qrCodeFileName);
+                var qrCodeFilePath = Path.Combine(uploadQrFolder, qrCodeFileName);
 
-                // Simpan QR Code sebagai file PNG
-                qrCodeImage.Save(qrCodeFilePath, System.Drawing.Imaging.ImageFormat.Png);
+                // 5. Simpan byte[] QR code ke dalam file menggunakan MemoryStream
+                using (var memoryStream = new MemoryStream(qrCodeBytes))
+                {
+                    using (var stream = new FileStream(qrCodeFilePath, FileMode.Create))
+                    {
+                        memoryStream.CopyTo(stream); // Menyerupai vm.Foto.CopyTo()
+                    }
+                }
+
+                // 6. Simpan path relatif ke database atau response
+                QRPath = $"/QRCodePasienBaru/{qrCodeFileName}";
+
+                // Path logo untuk QR Code
+                //var logoPath = Path.Combine(_webHostEnvironment.WebRootPath, "images", "logo.png");
+
+                //// Generate QR Code dengan logo
+                //var qrCodeImage = QrCodeHelper.GenerateQRCodeWithLogo(noRekamMedis, logoPath);
+
+                //// Tentukan lokasi penyimpanan QR Code
+                //var qrCodeFolder = Path.Combine(_webHostEnvironment.WebRootPath, "QRCodePasienBaru");
+                //if (!Directory.Exists(qrCodeFolder))
+                //{
+                //    Directory.CreateDirectory(qrCodeFolder);
+                //}
+
+                //// Nama file QR Code berdasarkan NoRekamMedis
+                //qrCodeFileName = $"{noRekamMedis}.png";
+                //var qrCodeFilePath = Path.Combine(qrCodeFolder, qrCodeFileName);
+
+                //// Simpan QR Code sebagai file PNG
+                //qrCodeImage.Save(qrCodeFilePath, System.Drawing.Imaging.ImageFormat.Png);
 
                 // Cek Duplikasi
                 var isDuplicate = _applicationDbContext.PendaftaranPasienBarus
@@ -511,7 +511,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                         HubunganAnak = vm.HubunganAnak,
                         InformasiSekolah = vm.InformasiSekolah,
                         FotoName = fotoFileName,
-                        QrCode = qrCodeFilePath, // Simpan hanya path QR Code
+                        QrCode = QRPath, // Simpan hanya path QR Code
                         FotoPath = fotoPath,
                         //QrCodeImage = qrCodeBytes,
 
