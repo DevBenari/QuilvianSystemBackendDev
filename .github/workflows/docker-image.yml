@@ -49,9 +49,22 @@ jobs:
             echo "Container exists, restarting..."
             docker restart $CONTAINER_NAME
           else
-            echo "Container does not exist, creating a new one..."
+            # echo "Container does not exist, creating a new one..."
 
-            docker run -d --name $CONTAINER_NAME -p 5001:80 $IMAGE_NAME
+            # docker run -d --name $CONTAINER_NAME -p 5001:80 $IMAGE_NAME
+            echo "Container does not exist, creating a new one..."
+            docker run -d \
+              --name $CONTAINER_NAME \
+              -p 5001:80 \
+              -e ASPNETCORE_ENVIRONMENT=Development \
+              -e ConnectionStrings__DefaultConnection="Host=postgres-container;Port=5432;Username=sa;Password=Admin@1234;Database=QuilvianSystemBackendDev" \
+              -v /home/ecustomer/QuilvianSystemBackendDev-QuilvianDev/wwwroot/images:/app/wwwroot/images \
+              -v /home/ecustomer/QuilvianSystemBackendDev-QuilvianDev/wwwroot/FotoDokter:/app/wwwroot/FotoDokter \
+              -v /home/ecustomer/QuilvianSystemBackendDev-QuilvianDev/wwwroot/FotoPasienBaru:/app/wwwroot/FotoPasienBaru \
+              -v /home/ecustomer/QuilvianSystemBackendDev-QuilvianDev/wwwroot/QRCodePasienBaru:/app/wwwroot/QRCodePasienBaru \
+              -v /home/ecustomer/QuilvianSystemBackendDev-QuilvianDev/wwwroot/scanktp:/app/wwwroot/scanktp \
+              $IMAGE_NAME
+
           fi
 
           echo "Cleaning up unused Docker images..."

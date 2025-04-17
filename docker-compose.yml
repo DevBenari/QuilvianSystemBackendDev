@@ -31,3 +31,10 @@ services:
 
 volumes:
   postgres-data:
+
+# cd /home/ecustomer/QuilvianSystemBackendDev-QuilvianDev/ (masuk kefolder)
+# chmod -R 777 wwwroot/FotoDokter
+# chmod -R 777 wwwroot/FotoPasienBaru
+# chmod -R 777 wwwroot/QRCodePasienBaru
+# chmod -R 777 wwwroot/images
+# chmod -R 777 wwwroot/scanktp
