@@ -1,19 +1,17 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
-using QuilvianSystemBackendDev.Repositories;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
-using Microsoft.AspNetCore.Cors;
-using System.Security.Claims;
-using Microsoft.AspNetCore.Identity;
-using QuilvianSystemBackendDev.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
-using Swashbuckle.AspNetCore.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using System.Globalization;
-using Microsoft.IdentityModel.Tokens;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Models;
+using QuilvianSystemBackendDev.Repositories;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
@@ -21,26 +19,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class AgamaController : Controller
+    public class VitalSignController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<AgamaController> _logger;
+        private readonly ILogger<VitalSignController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public AgamaController
-        (
-            ApplicationDbContext context,
+        public VitalSignController(
+            ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-
-            ILogger<AgamaController> logger,
-            IWebHostEnvironment webHostEnvironment
-        )
+            ILogger<VitalSignController> logger,
+            IWebHostEnvironment webHostEnvironment)
         {
-            _applicationDbContext = context;
+            _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
@@ -48,14 +43,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAllAgama(int page = 1, int perPage = 10)
+        public async Task<IActionResult> GetAlLVitalSign(int page = 1, int perPage = 10)
         {
             // Validasi agar page dan perPage minimal bernilai 1
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = from a in _applicationDbContext.Agamas
+            var query = from a in _applicationDbContext.VitalSigns
                         join u in _applicationDbContext.UserActives
                         on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
@@ -64,9 +59,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateDateTime = a.CreateDateTime,
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
-                            AgamaId = a.AgamaId,
-                            KodeAgama = a.KodeAgama,
-                            NamaAgama = a.NamaAgama,
+                            VitalSignId = a.VitalSignId,
+                            KunjunganId = a.KunjunganId,
+                            Suhu = a.Suhu,
+                            HR = a.HR,
+                            RR = a.RR,
+                            TekananDarahSystolic = a.TekananDarahSystolic,
+                            TekananDarahDiastolic = a.TekananDarahDiastolic,
+                            SaturasiOksigen = a.SaturasiOksigen,
+                            Height = a.Height,
+                            Weight = a.Weight,
+                            BMI = a.BMI
                         };
 
             // Hitung total data sebelum paginasi
@@ -100,9 +103,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetAgamaById(Guid id)
+        public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.Agamas.Find(id);
+            var listdata = _applicationDbContext.VitalSigns.Find(id);
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -116,7 +119,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateAgama([FromBody] AgamaViewModel vm)
+        public async Task<IActionResult> CreateVitalSign([FromBody] VitalSignViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -151,35 +154,35 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
 
                 // **Ambil Kode Terakhir**
-                var lastCode = _applicationDbContext.Agamas
+                var lastCode = _applicationDbContext.VitalSigns
                     .Where(d => d.CreateDateTime.Date == dateNow.Date)
                     .OrderByDescending(k => k.CreateDateTime)
 
                     .FirstOrDefault();
 
-                string kode;
-                if (lastCode == null)
-                {
-                    kode = $"AGM{setDateNow}0001";
-                }
-                else
-                {
-                    var lastCodeTrim = lastCode.KodeAgama.Substring(3, 6);
-                    if (lastCodeTrim != setDateNow)
-                    {
-                        kode = $"AGM{setDateNow}0001";
-                    }
-                    else
-                    {
-                        // Mengambil nomor urut terakhir dan menambah 1
-                        var lastNumber = int.Parse(lastCode.KodeAgama.Substring(9));
-                        kode = $"AGM{setDateNow}{(lastNumber + 1).ToString("D4")}";
-                    }
-                }
+                //string kode;
+                //if (lastCode == null)
+                //{
+                //    kode = $"AGM{setDateNow}0001";
+                //}
+                //else
+                //{
+                //    var lastCodeTrim = lastCode.KodeAgama.Substring(3, 6);
+                //    if (lastCodeTrim != setDateNow)
+                //    {
+                //        kode = $"AGM{setDateNow}0001";
+                //    }
+                //    else
+                //    {
+                //        // Mengambil nomor urut terakhir dan menambah 1
+                //        var lastNumber = int.Parse(lastCode.KodeAgama.Substring(9));
+                //        kode = $"AGM{setDateNow}{(lastNumber + 1).ToString("D4")}";
+                //    }
+                //}
 
-                // **Cek Duplikasi**
-                bool isDuplicate = _applicationDbContext.Agamas
-                    .Any(c => c.KodeAgama == kode && c.NamaAgama.ToLower() == vm.NamaAgama.ToLower());
+                //// **Cek Duplikasi**
+                bool isDuplicate = _applicationDbContext.VitalSigns
+                                    .Any(c => c.KunjunganId == vm.KunjunganId);
 
                 if (isDuplicate)
                 {
@@ -187,17 +190,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // **Buat Data Baru**
-                var data = new Agama
+                var data = new VitalSign
                 {
-                    AgamaId = Guid.NewGuid(),
-                    CreateDateTime = dateNow.Date,// Konversi ke UTC,
-                    CreateBy = userActiveId,
-                    KodeAgama = kode,
-                    NamaAgama = vm.NamaAgama
+                    VitalSignId = Guid.NewGuid(),
+                    KunjunganId = vm.KunjunganId,
+                    Suhu = vm.Suhu,
+                    HR = vm.HR,
+                    RR = vm.RR,
+                    TekananDarahSystolic = vm.TekananDarahSystolic,
+                    TekananDarahDiastolic = vm.TekananDarahDiastolic,
+                    SaturasiOksigen = vm.SaturasiOksigen,
+                    Height = vm.Height,
+                    Weight = vm.Weight,
+                    BMI = vm.BMI,
                 };
 
                 // **Simpan ke Database**
-                _applicationDbContext.Agamas.Add(data);
+                _applicationDbContext.VitalSigns.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -220,7 +229,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateAgama(Guid id, [FromBody] AgamaViewModel vm)
+        public async Task<IActionResult> UpdateVitalSign(Guid id, [FromBody] VitalSignViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -251,27 +260,28 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.Agamas.FindAsync(id);
+                var data = await _applicationDbContext.VitalSigns.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
-                // **Cek Duplikasi NamaAgama**
-                bool isDuplicate = await _applicationDbContext.Agamas
-                    .AnyAsync(c => c.NamaAgama.ToLower() == vm.NamaAgama.ToLower() && c.AgamaId != id);
-
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
-                }
-
                 // **Update Data**
-                data.NamaAgama = vm.NamaAgama;
+                data.KunjunganId = vm.KunjunganId;
+                data.Suhu = vm.Suhu;
+                data.HR = vm.HR;
+                data.RR = vm.RR;
+                data.TekananDarahSystolic = vm.TekananDarahSystolic;
+                data.TekananDarahDiastolic = vm.TekananDarahDiastolic;
+                data.SaturasiOksigen = vm.SaturasiOksigen;
+                data.Height = vm.Height;
+                data.Weight = vm.Weight;
+                data.BMI = vm.BMI;
+
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTime.UtcNow;
 
-                _applicationDbContext.Agamas.Update(data);
+                _applicationDbContext.VitalSigns.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -320,7 +330,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.Agamas.FindAsync(id);
+                var data = await _applicationDbContext.VitalSigns.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -332,7 +342,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 data.IsDelete = true;
 
-                _applicationDbContext.Agamas.Update(data);
+                _applicationDbContext.VitalSigns.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -354,9 +364,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-
         [HttpGet("paged")]
-        public async Task<IActionResult> PagedAgama(
+        public async Task<IActionResult> PagedVitalSign(
         int page = 1,
         int perPage = 10,
         string? search = null,
@@ -376,8 +385,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
                 }
 
-                // **Query Dasar**
-                var query = from a in _applicationDbContext.Agamas
+                // Query data
+                var query = from a in _applicationDbContext.VitalSigns
                             join u in _applicationDbContext.UserActives
                             on a.CreateBy equals u.UserActiveId
                             where a.IsDelete == false
@@ -386,20 +395,28 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 CreateDateTime = a.CreateDateTime,
                                 CreateBy = a.CreateBy,
                                 CreateByName = u.FullName,
-                                AgamaId = a.AgamaId,
-                                KodeAgama = a.KodeAgama,
-                                NamaAgama = a.NamaAgama,
+                                VitalSignId = a.VitalSignId,
+                                KunjunganId = a.KunjunganId,
+                                Suhu = a.Suhu,
+                                HR = a.HR,
+                                RR = a.RR,
+                                TekananDarahSystolic = a.TekananDarahSystolic,
+                                TekananDarahDiastolic = a.TekananDarahDiastolic,
+                                SaturasiOksigen = a.SaturasiOksigen,
+                                Height = a.Height,
+                                Weight = a.Weight,
+                                BMI = a.BMI
                             };
 
                 // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-                if (!string.IsNullOrWhiteSpace(search))
-                {
-                    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-                    query = query.Where(u =>
-                        EF.Functions.ILike(u.KodeAgama, search) ||
-                        EF.Functions.ILike(u.NamaAgama, search)
-                    );
-                }
+                //if (!string.IsNullOrWhiteSpace(search))
+                //{
+                //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+                //    query = query.Where(u =>
+                //        EF.Functions.ILike(u.KodeAgama, search) ||
+                //        EF.Functions.ILike(u.NamaAgama, search)
+                //    );
+                //}
 
                 //// **Filter berdasarkan tanggal**
                 if (startDate.HasValue && endDate.HasValue)
@@ -416,14 +433,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var sortColumn = orderBy?.ToLower() ?? "createdatetime";
                 var isDescending = sortDirection?.ToLower() == "desc";
 
-                query = sortColumn switch
-                {
-                    "createdatetime" => isDescending ? query.OrderByDescending(u => u.CreateDateTime) : query.OrderBy(u => u.CreateDateTime),
-                    "createbyname" => isDescending ? query.OrderByDescending(u => u.CreateByName) : query.OrderBy(u => u.CreateByName),
-                    "kodeagama" => isDescending ? query.OrderByDescending(u => u.KodeAgama) : query.OrderBy(u => u.KodeAgama),
-                    "namaagama" => isDescending ? query.OrderByDescending(u => u.NamaAgama) : query.OrderBy(u => u.NamaAgama),
-                    _ => query.OrderByDescending(u => u.CreateDateTime)
-                };
+                //query = sortColumn switch
+                //{
+                //    "createdatetime" => isDescending ? query.OrderByDescending(u => u.CreateDateTime) : query.OrderBy(u => u.CreateDateTime),
+                //    "createbyname" => isDescending ? query.OrderByDescending(u => u.CreateByName) : query.OrderBy(u => u.CreateByName),
+                //    "kodeagama" => isDescending ? query.OrderByDescending(u => u.KodeAgama) : query.OrderBy(u => u.KodeAgama),
+                //    "namaagama" => isDescending ? query.OrderByDescending(u => u.NamaAgama) : query.OrderBy(u => u.NamaAgama),
+                //    _ => query.OrderByDescending(u => u.CreateDateTime)
+                //};
 
                 // **Pagination**
                 int totalRows = await query.CountAsync();
@@ -456,4 +473,3 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
     }
 }
-

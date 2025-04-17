@@ -1,14 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-using QuilvianSystemBackendDev.Models;
-
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
+﻿namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels
 {
-    [Table("MstVitalSign", Schema = "public")]
-    public class VitalSign : UserActivity
+    public class VitalSignViewModel
     {
-        [Key]
-        public Guid VitalSignId { get; set; }
         public Guid? KunjunganId { get; set; }
         public decimal? Suhu { get; set; }
         public int? HR { get; set; }

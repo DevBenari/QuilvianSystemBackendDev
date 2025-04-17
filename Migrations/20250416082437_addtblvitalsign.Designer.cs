@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -11,9 +12,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250416082437_addtblvitalsign")]
+    partial class addtblvitalsign
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2689,68 +2691,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.HasKey("UserActiveId");
 
                     b.ToTable("MstUserActive", "public");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.VitalSign", b =>
-                {
-                    b.Property<Guid>("VitalSignId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal?>("BMI")
-                        .HasColumnType("numeric");
-
-                    b.Property<Guid>("CreateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("DeleteBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("DeleteDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int?>("HR")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal?>("Height")
-                        .HasColumnType("numeric");
-
-                    b.Property<bool>("IsDelete")
-                        .HasColumnType("boolean");
-
-                    b.Property<Guid?>("KunjunganId")
-                        .HasColumnType("uuid");
-
-                    b.Property<int?>("RR")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal?>("SaturasiOksigen")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("Suhu")
-                        .HasColumnType("numeric");
-
-                    b.Property<int?>("TekananDarahDiastolic")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("TekananDarahSystolic")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid>("UpdateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("UpdateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<decimal?>("Weight")
-                        .HasColumnType("numeric");
-
-                    b.HasKey("VitalSignId");
-
-                    b.ToTable("MstVitalSign", "public");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.WarehouseLocation", b =>

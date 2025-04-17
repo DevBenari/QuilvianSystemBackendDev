@@ -80,6 +80,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
         public string? FotoName { get; set; }
         public string? FotoPath { get; set; }
         public string? QrCode { get; set; }
+        public byte[]? QrCodeImage { get; set; }
     }
 
 }
