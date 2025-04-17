@@ -10,7 +10,6 @@ using Swashbuckle.AspNetCore.Annotations;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
-using QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers;
 using QuilvianSystemBackendDev.Models;
 using System.Linq;
 using Microsoft.AspNetCore.Http;
@@ -31,13 +30,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<PendaftaranPasienBaruController> _logger;
+        private readonly ILogger<DokterController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
         public DokterController
             (ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<PendaftaranPasienBaruController> logger,
+            ILogger<DokterController> logger,
             IWebHostEnvironment webHostEnvironment
 
 
