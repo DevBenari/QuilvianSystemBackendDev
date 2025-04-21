@@ -82,6 +82,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.CreateDateTime,
                             a.CreateBy,
                             a.IsFinished,
+                            a.IsScreening,
                             a.Antrian,
                             d.NmDokter,
 
@@ -122,7 +123,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     item.DokterId,
                     item.NamaLengkap,
                     item.PasienId,
-
+                    item.IsScreening,
 
                     item.NoRekamMedis,
                     item.TipePasien,
@@ -283,6 +284,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     TipePembayaran = request.TipePembayaran,
                     IsFinished = false,
                     IsDelete = false,
+                    IsScreening = request.IsScreening,
                     Antrian = nomorAntrianFormatted  // Menyimpan nomor antrian ke dalam Kunjungan
                 };
 
@@ -404,6 +406,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 kunjungan.TipePasien = request.TipePasien;
                 kunjungan.TipePembayaran = request.TipePembayaran;
                 kunjungan.IsFinished = request.IsFinished;
+                kunjungan.IsScreening = request.IsScreening;
                 kunjungan.UpdateBy = UserActiveId;
                 kunjungan.UpdateDateTime = DateTimeOffset.UtcNow;
                 kunjungan.JumlahKunjungan = JsonSerializer.Serialize(jumlahKunjungan);
@@ -470,6 +473,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.CreateDateTime,
                             a.CreateBy,
                             a.IsFinished,
+                            a.IsScreening,
                             a.Antrian,
                             d.NmDokter,
 
@@ -603,6 +607,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     item.NmDokter,
                     item.NamaPoliklinik,
                     item.Antrian,
+                    item.IsScreening,
+                    item.IsFinished,
                 };
             }).ToList();
 
