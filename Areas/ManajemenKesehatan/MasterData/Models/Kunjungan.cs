@@ -18,5 +18,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string TipePembayaran { get; set; }
         public bool? IsFinished { get; set; }
         public string JumlahKunjungan { get; set; }
+        public string? Antrian {  get; set; }
     }
 }

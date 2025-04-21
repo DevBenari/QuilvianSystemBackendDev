@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion.Internal;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json.Converters;
@@ -55,20 +56,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            //query
             var query = from a in _applicationDbContext.Kunjungans
                         join u in _applicationDbContext.UserActives
-                            on a.CreateBy equals u.UserActiveId
+                        on a.CreateBy equals u.UserActiveId
                         join p in _applicationDbContext.Polikliniks
-                            on a.PoliklinikId equals p.PoliklinikId
+                        on a.PoliklinikId equals p.PoliklinikId
                         join ps in _applicationDbContext.PendaftaranPasienBarus
-                            on a.PasienId equals ps.PendaftaranPasienBaruId
-                        join dp in _applicationDbContext.DokterPolis
-                            on a.DokterId equals dp.DokterId
+                        on a.PasienId equals ps.PendaftaranPasienBaruId
                         join d in _applicationDbContext.Dokters
-                            on dp.DokterId equals d.DokterId
-                        join j in _applicationDbContext.JadwalPrakteks
-                            on dp.DokterPoliId equals j.DokterPoliId
+                        on a.DokterId equals d.DokterId
                         where a.IsDelete == false
                         select new
                         {
@@ -76,12 +72,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.AsuransiId,
                             a.PoliklinikId,
                             p.NamaPoliklinik,
-                            dp.DokterPoliId,
-                            dp.DokterId,
-                            d.NmDokter,
-                            j.HariPraktek,
-                            j.JamMulai,
-                            j.JamBerakhir,
+                            a.DokterId,
                             a.PasienId,
                             ps.NamaLengkap,
                             a.NoRekamMedis,
@@ -91,6 +82,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.CreateDateTime,
                             a.CreateBy,
                             a.IsFinished,
+                            a.Antrian,
+                            d.NmDokter,
+
                             CreateByName = u.FullName
                         };
 
@@ -126,8 +120,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     item.PoliklinikId,
                     item.NamaPoliklinik,
                     item.DokterId,
-                    item.PasienId,
                     item.NamaLengkap,
+                    item.PasienId,
+
+
                     item.NoRekamMedis,
                     item.TipePasien,
                     item.TipePembayaran,
@@ -135,11 +131,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     item.CreateDateTime,
                     item.CreateBy,
                     item.CreateByName,
-                    item.DokterPoliId,
+
                     item.NmDokter,
-                    item.JamMulai,
-                    item.JamBerakhir,
-                    item.HariPraktek,
+                    item.Antrian,
+                    item.IsFinished,
                 };
             }).ToList();
 
@@ -197,6 +192,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var GetUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
                 var UserActiveId = GetUserActive?.UserActiveId ?? Guid.Empty;
 
+                // Validasi tipe pasien
                 if (!new[] { "Rujukan", "Umum" }.Contains(request.TipePasien, StringComparer.OrdinalIgnoreCase))
                 {
                     return BadRequest(new { message = "Tipe pasien tidak valid. Gunakan hanya 'Rujukan' atau 'Umum'." });
@@ -234,26 +230,32 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         : $"Dr. {CultureInfo.CurrentCulture.TextInfo.ToTitleCase(namaClean.ToLower())}";
                 }
 
-                // Ambil semua kunjungan pasien sebelumnya untuk menghitung jumlah kunjungan kumulatif
+                // Menghitung nomor antrian berdasarkan dokter dan reset setiap hari
+                var today = DateTime.UtcNow.Date;  // Ambil tanggal hari ini
                 var allKunjunganPasien = _applicationDbContext.Kunjungans
-                    .Where(k => k.PasienId == request.PasienId)
+                    .Where(k => k.DokterId == request.DokterId && k.CreateDateTime.Date == today && k.IsDelete == false)
+                    .OrderByDescending(k => k.CreateDateTime)
                     .ToList();
 
+                int nomorAntrian = allKunjunganPasien.Count + 1;
+                string nomorAntrianFormatted = $"{formatNama} - {nomorAntrian:000}";  // Format seperti "Dr. Andrian - 001"
+
+                // Ambil semua kunjungan pasien sebelumnya untuk menghitung jumlah kunjungan kumulatif
                 List<KunjunganRiwayat> jumlahKunjungan = new()
-                {
-                    new KunjunganRiwayat { Jenis = "IP", Jumlah = allKunjunganPasien
-                        .Where(k => !string.IsNullOrEmpty(k.JumlahKunjungan))
-                        .SelectMany(k => JsonSerializer.Deserialize<List<KunjunganRiwayat>>(k.JumlahKunjungan) ?? new List<KunjunganRiwayat>())
-                        .Where(k => k.Jenis == "IP")
-                        .Sum(k => k.Jumlah)
-                    },
-                    new KunjunganRiwayat { Jenis = "OP", Jumlah = allKunjunganPasien
-                        .Where(k => !string.IsNullOrEmpty(k.JumlahKunjungan))
-                        .SelectMany(k => JsonSerializer.Deserialize<List<KunjunganRiwayat>>(k.JumlahKunjungan) ?? new List<KunjunganRiwayat>())
-                        .Where(k => k.Jenis == "OP")
-                        .Sum(k => k.Jumlah)
-                    }
-                };
+        {
+            new KunjunganRiwayat { Jenis = "IP", Jumlah = allKunjunganPasien
+                .Where(k => !string.IsNullOrEmpty(k.JumlahKunjungan))
+                .SelectMany(k => JsonSerializer.Deserialize<List<KunjunganRiwayat>>(k.JumlahKunjungan) ?? new List<KunjunganRiwayat>())
+                .Where(k => k.Jenis == "IP")
+                .Sum(k => k.Jumlah)
+            },
+            new KunjunganRiwayat { Jenis = "OP", Jumlah = allKunjunganPasien
+                .Where(k => !string.IsNullOrEmpty(k.JumlahKunjungan))
+                .SelectMany(k => JsonSerializer.Deserialize<List<KunjunganRiwayat>>(k.JumlahKunjungan) ?? new List<KunjunganRiwayat>())
+                .Where(k => k.Jenis == "OP")
+                .Sum(k => k.Jumlah)
+            }
+        };
 
                 // Tambahkan kunjungan baru sesuai jenis
                 var currentJenis = jumlahKunjungan.FirstOrDefault(k => k.Jenis == kodeJenis);
@@ -280,7 +282,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     TipePasien = request.TipePasien,
                     TipePembayaran = request.TipePembayaran,
                     IsFinished = false,
-                    IsDelete = false
+                    IsDelete = false,
+                    Antrian = nomorAntrianFormatted  // Menyimpan nomor antrian ke dalam Kunjungan
                 };
 
                 _applicationDbContext.Kunjungans.Add(newKunjungan);
@@ -295,7 +298,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         request.DokterId,
                         NamaDokter = namaDokter,
                         JenisKunjungan = inputJenis,
-                        JumlahKunjungan = jumlahKunjungan
+                        JumlahKunjungan = jumlahKunjungan,
+                        NomorAntrian = nomorAntrianFormatted  // Menyertakan nomor antrian pada respons
                     }
                 });
             }
@@ -306,11 +310,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
 
-
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateKunjunganPasien(Guid kunjunganId, [FromBody] KunjunganViewModel request)
+        public async Task<IActionResult> UpdateKunjunganPasien(Guid id, [FromBody] KunjunganViewModel request)
         {
-            if (request == null || kunjunganId == Guid.Empty)
+            if (request == null || id == Guid.Empty)
             {
                 return BadRequest(new { message = "Data tidak boleh kosong!" });
             }
@@ -326,7 +329,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var GetUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
                 var UserActiveId = GetUserActive?.UserActiveId ?? Guid.Empty;
 
-                var kunjungan = _applicationDbContext.Kunjungans.FirstOrDefault(k => k.KunjunganID == kunjunganId);
+                var kunjungan = _applicationDbContext.Kunjungans.FirstOrDefault(k => k.KunjunganID == id);
                 if (kunjungan == null)
                 {
                     return NotFound(new { message = "Data kunjungan tidak ditemukan!" });
@@ -356,7 +359,44 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     .Select(d => d.NmDokter)
                     .FirstOrDefault() ?? "Dokter";
 
-                // Update semua field yang bisa diubah
+                // Menghitung nomor antrian berdasarkan dokter
+                var allKunjunganPasien = _applicationDbContext.Kunjungans
+                    .Where(k => k.DokterId == request.DokterId && k.IsDelete == false)
+                    .OrderByDescending(k => k.CreateDateTime)
+                    .ToList();
+
+                int nomorAntrian = allKunjunganPasien.Count + 1;
+                string nomorAntrianFormatted = $"{namaDokter} - {nomorAntrian:000}";  // Format seperti "Dr. Andrian - 001"
+
+                // Ambil semua kunjungan pasien sebelumnya untuk menghitung jumlah kunjungan kumulatif
+                List<KunjunganRiwayat> jumlahKunjungan = new()
+                {
+                    new KunjunganRiwayat { Jenis = "IP", Jumlah = allKunjunganPasien
+                        .Where(k => !string.IsNullOrEmpty(k.JumlahKunjungan))
+                        .SelectMany(k => JsonSerializer.Deserialize<List<KunjunganRiwayat>>(k.JumlahKunjungan) ?? new List<KunjunganRiwayat>())
+                        .Where(k => k.Jenis == "IP")
+                        .Sum(k => k.Jumlah)
+                    },
+                    new KunjunganRiwayat { Jenis = "OP", Jumlah = allKunjunganPasien
+                        .Where(k => !string.IsNullOrEmpty(k.JumlahKunjungan))
+                        .SelectMany(k => JsonSerializer.Deserialize<List<KunjunganRiwayat>>(k.JumlahKunjungan) ?? new List<KunjunganRiwayat>())
+                        .Where(k => k.Jenis == "OP")
+                        .Sum(k => k.Jumlah)
+                    }
+                };
+
+                // Tambahkan kunjungan baru sesuai jenis
+                var currentJenis = jumlahKunjungan.FirstOrDefault(k => k.Jenis == kodeJenis);
+                if (currentJenis != null)
+                {
+                    currentJenis.Jumlah += 1;
+                }
+                else
+                {
+                    jumlahKunjungan.Add(new KunjunganRiwayat { Jenis = kodeJenis, Jumlah = 1 });
+                }
+
+                // Update data kunjungan
                 kunjungan.DokterId = request.DokterId;
                 kunjungan.PoliklinikId = request.PoliklinikId;
                 kunjungan.AsuransiId = request.AsuransiId;
@@ -366,6 +406,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 kunjungan.IsFinished = request.IsFinished;
                 kunjungan.UpdateBy = UserActiveId;
                 kunjungan.UpdateDateTime = DateTimeOffset.UtcNow;
+                kunjungan.JumlahKunjungan = JsonSerializer.Serialize(jumlahKunjungan);
+                kunjungan.Antrian = nomorAntrianFormatted;  // Update nomor antrian
 
                 _applicationDbContext.Kunjungans.Update(kunjungan);
                 await _applicationDbContext.SaveChangesAsync();
@@ -379,7 +421,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         request.PasienId,
                         request.DokterId,
                         NamaDokter = namaDokter,
-                        JenisKunjungan = inputJenis
+                        JenisKunjungan = inputJenis,
+                        Antrian = nomorAntrianFormatted  // Menyertakan nomor antrian pada respons
                     }
                 });
             }
@@ -395,25 +438,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         int page = 1,
         int perPage = 10,
         string? search = null,
-        string? orderBy = "Nama Poliklinik",
-        string? sortDirection = "asc",
+        string? orderBy = "CreateDateTime",
+        string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? startDate = null,
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? endDate = null,
         [FromQuery] PeriodeFilter? periode = null)
         {
             var query = from a in _applicationDbContext.Kunjungans
                         join u in _applicationDbContext.UserActives
-                            on a.CreateBy equals u.UserActiveId
+                        on a.CreateBy equals u.UserActiveId
                         join p in _applicationDbContext.Polikliniks
-                            on a.PoliklinikId equals p.PoliklinikId
+                        on a.PoliklinikId equals p.PoliklinikId
                         join ps in _applicationDbContext.PendaftaranPasienBarus
-                            on a.PasienId equals ps.PendaftaranPasienBaruId
-                        join dp in _applicationDbContext.DokterPolis
-                            on a.DokterId equals dp.DokterId
+                        on a.PasienId equals ps.PendaftaranPasienBaruId
                         join d in _applicationDbContext.Dokters
-                            on dp.DokterId equals d.DokterId
-                        join j in _applicationDbContext.JadwalPrakteks
-                            on dp.DokterPoliId equals j.DokterPoliId
+                        on a.DokterId equals d.DokterId
                         where a.IsDelete == false
                         select new
                         {
@@ -421,12 +460,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.AsuransiId,
                             a.PoliklinikId,
                             p.NamaPoliklinik,
-                            dp.DokterPoliId,
-                            dp.DokterId,
-                            d.NmDokter,
-                            j.HariPraktek,
-                            j.JamMulai,
-                            j.JamBerakhir,
+                            a.DokterId,
                             a.PasienId,
                             ps.NamaLengkap,
                             a.NoRekamMedis,
@@ -436,13 +470,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.CreateDateTime,
                             a.CreateBy,
                             a.IsFinished,
+                            a.Antrian,
+                            d.NmDokter,
+
                             CreateByName = u.FullName
                         };
 
+            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             if (!string.IsNullOrWhiteSpace(search))
             {
+                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
-                    u.TipePasien.Contains(search) || u.NoRekamMedis.Contains(search));
+                    EF.Functions.ILike(u.NamaLengkap, search) ||
+                    EF.Functions.ILike(u.NmDokter, search) ||
+                    EF.Functions.ILike(u.NoRekamMedis, search) ||
+                    EF.Functions.ILike(u.NamaPoliklinik, search) ||
+                    EF.Functions.ILike(u.Antrian, search)
+                );
             }
 
             if (startDate.HasValue && endDate.HasValue)
@@ -556,12 +600,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     item.CreateDateTime,
                     item.CreateBy,
                     item.CreateByName,
-                    item.DokterPoliId,
                     item.NmDokter,
-                    item.JamMulai,
-                    item.JamBerakhir,
-                    item.HariPraktek,
                     item.NamaPoliklinik,
+                    item.Antrian,
                 };
             }).ToList();
 
