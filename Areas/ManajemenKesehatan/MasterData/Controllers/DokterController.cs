@@ -363,7 +363,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     // Ganti IP di bawah dengan alamat Python Flask server Anda
                     var flaskResponse = await client.PostAsync("http://160.20.104.98:5050/upload", content);
 
-
                 }
                 else
                 {
