@@ -343,6 +343,27 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     }
 
                     fotoPath = $"/FotoDokter/{fotoFileName}";
+
+                    // 📤 **Kirim foto ke server Python Flask**
+                    using var client = new HttpClient();
+                    using var ms = new MemoryStream();
+                    await vm.Foto.CopyToAsync(ms);
+                    ms.Position = 0;
+
+                    var content = new MultipartFormDataContent {
+                        // File utama
+                        { new StreamContent(ms) {
+                            Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.Foto.ContentType) }
+                        }, "file", fotoFileName },
+
+                        // Nama folder tujuan di server Flask
+                        { new StringContent("images"), "folderTarget" }
+                    };
+
+                    // Ganti IP di bawah dengan alamat Python Flask server Anda
+                    var flaskResponse = await client.PostAsync("http://160.20.104.98:5050/upload", content);
+
+
                 }
                 else
                 {
