@@ -12,9 +12,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         [Key]
         public Guid PoliklinikId { get; set; }
         public string KodePoliklinik { get; set; }
+        public string KodeAntreanPoli { get; set; }
         public string NamaPoliklinik { get; set; }
         public string KepalaPoliklinik { get; set; }
-        public string Lokasi { get; set; }
+        public string Ruang { get; set; }
         public string Telepon { get; set; }
         public string Email { get; set; }
         public string HariOperasional {get; set; }

@@ -72,6 +72,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.AsuransiId,
                             a.PoliklinikId,
                             p.NamaPoliklinik,
+
                             a.DokterId,
                             a.PasienId,
                             ps.NamaLengkap,
@@ -243,20 +244,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Ambil semua kunjungan pasien sebelumnya untuk menghitung jumlah kunjungan kumulatif
                 List<KunjunganRiwayat> jumlahKunjungan = new()
-        {
-            new KunjunganRiwayat { Jenis = "IP", Jumlah = allKunjunganPasien
-                .Where(k => !string.IsNullOrEmpty(k.JumlahKunjungan))
-                .SelectMany(k => JsonSerializer.Deserialize<List<KunjunganRiwayat>>(k.JumlahKunjungan) ?? new List<KunjunganRiwayat>())
-                .Where(k => k.Jenis == "IP")
-                .Sum(k => k.Jumlah)
-            },
-            new KunjunganRiwayat { Jenis = "OP", Jumlah = allKunjunganPasien
-                .Where(k => !string.IsNullOrEmpty(k.JumlahKunjungan))
-                .SelectMany(k => JsonSerializer.Deserialize<List<KunjunganRiwayat>>(k.JumlahKunjungan) ?? new List<KunjunganRiwayat>())
-                .Where(k => k.Jenis == "OP")
-                .Sum(k => k.Jumlah)
-            }
-        };
+                {
+                    new KunjunganRiwayat { Jenis = "IP", Jumlah = allKunjunganPasien
+                        .Where(k => !string.IsNullOrEmpty(k.JumlahKunjungan))
+                        .SelectMany(k => JsonSerializer.Deserialize<List<KunjunganRiwayat>>(k.JumlahKunjungan) ?? new List<KunjunganRiwayat>())
+                        .Where(k => k.Jenis == "IP")
+                        .Sum(k => k.Jumlah)
+                    },
+                    new KunjunganRiwayat { Jenis = "OP", Jumlah = allKunjunganPasien
+                        .Where(k => !string.IsNullOrEmpty(k.JumlahKunjungan))
+                        .SelectMany(k => JsonSerializer.Deserialize<List<KunjunganRiwayat>>(k.JumlahKunjungan) ?? new List<KunjunganRiwayat>())
+                        .Where(k => k.Jenis == "OP")
+                        .Sum(k => k.Jumlah)
+                    }
+                };
 
                 // Tambahkan kunjungan baru sesuai jenis
                 var currentJenis = jumlahKunjungan.FirstOrDefault(k => k.Jenis == kodeJenis);
@@ -310,7 +311,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 return StatusCode(500, new { message = $"Terjadi kesalahan: {ex.Message}" });
             }
         }
-
 
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateKunjunganPasien(Guid id, [FromBody] KunjunganViewModel request)
