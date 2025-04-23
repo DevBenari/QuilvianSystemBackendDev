@@ -19,6 +19,7 @@ using System.Globalization;
 using ZXing.QrCode.Internal;
 using System.IO;
 using SixLabors.ImageSharp.PixelFormats;
+using System.Net.Http.Headers;
 
 namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
 {
@@ -302,7 +303,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     kodePasien = $"PSN{setDateNow}0001";
                 }
                 else
-                {
+               {
                     var lastCodeTrim = lastCode.KodePasien.Substring(3, 6);
 
                     if (lastCodeTrim != setDateNow)
@@ -375,23 +376,23 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 // 6. Simpan path relatif ke database atau response
                 QRPath = $"/QRCodePasienBaru/{qrCodeFileName}";
 
-                // 📤 **Kirim FILE QR ke server Python Flask**
+                // Upload QR ke server Flask setelah file sudah selesai ditulis
                 using var clientQR = new HttpClient();
-                using var msQR = new MemoryStream(qrCodeBytes);
-                msQR.Position = 0;
 
-                var contentQR = new MultipartFormDataContent {
-                        // File utama
-                        { new StreamContent(msQR) {
-                            Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.Foto.ContentType) }
-                        }, "file", qrCodeFileName },
+                using var qrUploadStream = new MemoryStream(qrCodeBytes); // langsung dari byte[], tidak dari file
+                var qrContent = new MultipartFormDataContent {
+                    {
+                        new StreamContent(qrUploadStream)
+                        {
+                            Headers = { ContentType = new MediaTypeHeaderValue("image/png") }
+                        },
+                        "file", qrCodeFileName
+                    },
+                    { new StringContent("QRCodePasienBaru"), "folderTarget" }
+                };
 
-                        // Nama folder tujuan di server Flask
-                        { new StringContent("QRCodePasienBaru"), "folderTarget" }
-                    };
+                var flaskResponseQR = await clientQR.PostAsync("http://160.20.104.98:5050/upload", qrContent);
 
-                // Ganti IP di bawah dengan alamat Python Flask server Anda
-                var flaskResponseQR = await clientQR.PostAsync("http://160.20.104.98:5050/upload", contentQR);
 
                 // Cek Duplikasi
                 var isDuplicate = _applicationDbContext.PendaftaranPasienBarus
@@ -436,6 +437,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     }
 
                     fotoPath = $"/FotoPasienBaru/{fotoFileName}";
+
                     // 📤 **Kirim foto ke server Python Flask**
                     using var client = new HttpClient();
                     using var ms = new MemoryStream();
