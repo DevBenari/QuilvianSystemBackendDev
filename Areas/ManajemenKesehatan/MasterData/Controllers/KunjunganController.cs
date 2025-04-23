@@ -435,7 +435,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPut("{id}/is-finished")]
-        public async Task<IActionResult> UpdateIsFinished(Guid id, [FromBody] bool isFinished)
+        public async Task<IActionResult> UpdateIsFinished(Guid id, [FromBody] UpdateIsFinishedViewModel request)
         {
             var kunjungan = await _applicationDbContext.Kunjungans.FindAsync(id);
             if (kunjungan == null)
@@ -448,7 +448,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
             var userId = user?.UserActiveId ?? Guid.Empty;
 
-            kunjungan.IsFinished = isFinished;
+            kunjungan.IsFinished = request.IsFinished;
             kunjungan.UpdateDateTime = DateTimeOffset.UtcNow;
             kunjungan.UpdateBy = userId;
 
