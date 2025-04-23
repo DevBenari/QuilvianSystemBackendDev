@@ -409,6 +409,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 existingKunjungan.Antrian = nomorAntrianFormatted;
                 existingKunjungan.UpdateDateTime = DateTimeOffset.UtcNow;
                 existingKunjungan.UpdateBy = userActiveId;
+                existingKunjungan.IsFinished = request.IsFinished;
 
                 await _applicationDbContext.SaveChangesAsync();
 
