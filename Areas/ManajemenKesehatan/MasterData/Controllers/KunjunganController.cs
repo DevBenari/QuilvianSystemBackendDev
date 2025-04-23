@@ -139,6 +139,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     item.CreateByName,
 
                     item.NmDokter,
+                    item.gambardokter,
+
                     item.Antrian,
                     item.IsFinished,
                 };
@@ -460,7 +462,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             return Ok(new { message = "Status isFinished berhasil diperbarui." });
         }
 
-        [HttpPut("{id}/is-screening")]
+        [HttpPut("{id}/is-screesning")]
         public async Task<IActionResult> UpdateIsScreening(Guid id, [FromBody] UpdateIsScreeningViewModel request)
         {
             var kunjungan = await _applicationDbContext.Kunjungans.FindAsync(id);
@@ -697,6 +699,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     item.Antrian,
                     item.IsScreening,
                     item.IsFinished,
+                    item.gambardokter,
                 };
             }).ToList();
 
