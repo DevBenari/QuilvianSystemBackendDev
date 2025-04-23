@@ -16,6 +16,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
+using SkiaSharp;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
@@ -430,6 +431,67 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = $"Terjadi kesalahan: {ex.Message}" });
+            }
+        }
+
+        [HttpPut("{id}/is-finished")]
+        public async Task<IActionResult> UpdateIsFinished(Guid id, [FromBody] bool isFinished)
+        {
+            var kunjungan = await _applicationDbContext.Kunjungans.FindAsync(id);
+            if (kunjungan == null)
+                return NotFound(new { message = "Kunjungan tidak ditemukan." });
+
+            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(EmailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var userId = user?.UserActiveId ?? Guid.Empty;
+
+            kunjungan.IsFinished = isFinished;
+            kunjungan.UpdateDateTime = DateTimeOffset.UtcNow;
+            kunjungan.UpdateBy = userId;
+
+            await _applicationDbContext.SaveChangesAsync();
+
+            return Ok(new { message = "Status isFinished berhasil diperbarui." });
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(Guid id)
+        {
+            try
+            {
+                //Ambil User ID dari JWT Claims
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
+
+                if (string.IsNullOrEmpty(EmailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                // **Cari Data Dokter**
+                var data = _applicationDbContext.Kunjungans.Find(id);
+                if (data == null)
+                {
+                    return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                // **Soft Delete (Tandai Data sebagai Terhapus)**
+                data.DeleteBy = UserActiveId;
+                data.DeleteDateTime = DateTimeOffset.UtcNow;
+                data.IsDelete = true;
+
+                _applicationDbContext.Kunjungans.Update(data);
+                _applicationDbContext.SaveChanges();
+
+                return Ok(new { message = "Data berhasil dihapus..." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
 
