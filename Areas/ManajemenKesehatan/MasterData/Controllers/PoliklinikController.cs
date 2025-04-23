@@ -74,6 +74,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             Deskripsi = a.Deskripsi,
                             HariOperasional = a.HariOperasional,
                             JumlahMaxPasien = a.JumlahMaxPasien,
+                            KodeAntreanPoli = a.KodeAntreanPoli,
 
                             //SubPolis = a.SubPolis
                         };
@@ -158,15 +159,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     kodePoliklinik = $"POL{setDateNow}{(lastNumber + 1).ToString("D4")}";
                 }
 
-                // Kode Antrean Poli (tanpa method terpisah)
-                var skipWords = new[] { "Poli", "dan" };
+                // Atur kata-kata yang akan di-skip
+                var skipWords = new[] { "Poli", "Poliklinik", "dan" };
+
+                // Bersihkan dan pecah nama poli
                 var words = vm.NamaPoliklinik
                     .Replace("(", "").Replace(")", "")
                     .Split(' ', StringSplitOptions.RemoveEmptyEntries)
                     .Where(w => !skipWords.Contains(w, StringComparer.OrdinalIgnoreCase))
                     .ToList();
 
+                // Default
                 string kodeAntrean = "XX";
+
+                // Generate kode awal
                 if (words.Count > 0)
                 {
                     if (words.Count == 1)
@@ -178,17 +184,29 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         kodeAntrean = (words[0][0].ToString() + words[1][0].ToString()).ToUpper();
                     }
 
+                    // Simpan kode awal sebagai base
+                    var baseKode = kodeAntrean;
                     int fallbackIndex = 1;
+
+                    // Loop untuk memastikan tidak duplikat
                     while (_applicationDbContext.Polikliniks.Any(p => p.KodeAntreanPoli == kodeAntrean))
                     {
+                        // Fallback huruf ke-2 dari kata kedua
                         if (words.Count > 1 && words[1].Length > fallbackIndex)
                         {
-                            kodeAntrean = (words[0][0].ToString() + words[1][fallbackIndex]).ToUpper();
+                            kodeAntrean = (words[0][0].ToString() + words[1][fallbackIndex].ToString()).ToUpper();
                             fallbackIndex++;
                         }
+                        // Jika kata kedua habis, coba huruf ke-2 dari kata pertama
+                        else if (words[0].Length > fallbackIndex)
+                        {
+                            kodeAntrean = (words[0][0].ToString() + words[0][fallbackIndex].ToString()).ToUpper();
+                            fallbackIndex++;
+                        }
+                        // Jika semua kombinasi huruf habis, tambahkan angka
                         else
                         {
-                            kodeAntrean = kodeAntrean[0] + fallbackIndex.ToString();
+                            kodeAntrean = baseKode + fallbackIndex.ToString();
                             fallbackIndex++;
                         }
                     }
@@ -283,6 +301,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     data.JumlahMaxPasien = vm.JumlahMaxPasien;
                     data.Deskripsi = vm.Deskripsi;
                     data.HariOperasional = vm.HariOperasional;
+                    
 
                     _applicationDbContext.Polikliniks.Update(data);
                     _applicationDbContext.SaveChanges();
@@ -321,9 +340,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
+
                 data.IsDelete = true;
                 data.DeleteDateTime = DateTimeOffset.UtcNow;
                 data.DeleteBy = UserActiveId;
+
                 _applicationDbContext.Polikliniks.Update(data);
                 _applicationDbContext.SaveChanges();
                 return Ok(new
@@ -374,6 +395,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             Deskripsi = a.Deskripsi,
                             HariOperasional = a.HariOperasional,
                             JumlahMaxPasien = a.JumlahMaxPasien,
+                            KodeAntreanPoli = a.KodeAntreanPoli,
 
                             //SubPolis = a.SubPolis
                         };
