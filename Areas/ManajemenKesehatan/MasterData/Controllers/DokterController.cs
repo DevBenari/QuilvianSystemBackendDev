@@ -357,7 +357,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         }, "file", fotoFileName },
 
                         // Nama folder tujuan di server Flask
-                        { new StringContent("images"), "folderTarget" }
+                        { new StringContent("FotoDokter"), "folderTarget" }
                     };
 
                     // Ganti IP di bawah dengan alamat Python Flask server Anda
