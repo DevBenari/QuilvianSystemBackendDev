@@ -6,7 +6,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
     {
         public string NamaPoliklinik { get; set; }
         public string KepalaPoliklinik { get; set; }
-        public string Lokasi { get; set; }
+        public string Ruang { get; set; }
         public string Telepon { get; set; }
         public string Email { get; set; }
         public string HariOperasional { get; set; }
