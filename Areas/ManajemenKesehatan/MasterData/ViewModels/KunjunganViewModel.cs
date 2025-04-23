@@ -8,7 +8,7 @@
         public Guid? PasienId { get; set; }
         public bool? IsFinished { get; set; } 
         public string NoRekamMedis { get; set; }
-        public string TipePasien { get; set; }
+        public string? TipePasien { get; set; }
         public string TipePembayaran { get; set; }
         public string? JenisKunjungan { get; set; }
         public bool? IsScreening { get; set; } 

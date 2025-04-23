@@ -14,7 +14,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public Guid? DokterId { get; set; }
         public Guid? PasienId { get; set; }
         public string NoRekamMedis {  get; set; }
-        public string TipePasien { get; set; }
+        public string? TipePasien { get; set; }
         public string TipePembayaran { get; set; }
         public bool? IsFinished { get; set; } = false;
         public string JumlahKunjungan { get; set; }
