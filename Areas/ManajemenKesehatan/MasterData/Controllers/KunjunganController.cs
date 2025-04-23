@@ -87,6 +87,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.IsScreening,
                             a.Antrian,
                             d.NmDokter,
+                            gambardokter = !string.IsNullOrEmpty(d.FotoName)
+                            ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
+                            : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg",
 
                             CreateByName = u.FullName
                         };
@@ -535,6 +538,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.IsScreening,
                             a.Antrian,
                             d.NmDokter,
+                            gambardokter = !string.IsNullOrEmpty(d.FotoName)
+                            ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
+                            : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg",
 
                             CreateByName = u.FullName
                         };
