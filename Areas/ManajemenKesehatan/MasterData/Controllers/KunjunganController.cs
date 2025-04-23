@@ -432,8 +432,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-
-
         [HttpGet("paged")]
         public IActionResult PagedKunjungan(
         int page = 1,

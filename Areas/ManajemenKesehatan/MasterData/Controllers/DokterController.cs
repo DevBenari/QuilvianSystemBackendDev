@@ -506,33 +506,34 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         return BadRequest(new { message = "Format file tidak valid! Gunakan JPG atau PNG." });
                     }
 
-                    // **Hapus Foto Lama Jika Ada**
-                    if (!string.IsNullOrEmpty(data.FotoPath) && !data.FotoPath.Contains("dokter.jpg"))
-                    {
-                        var oldFotoPath = Path.Combine(_webHostEnvironment.WebRootPath, data.FotoPath.TrimStart('/'));
-                        if (System.IO.File.Exists(oldFotoPath))
-                        {
-                            System.IO.File.Delete(oldFotoPath);
-                        }
-                    }
-
-                    // **Simpan Foto Baru**
-                    var uploadFolder = Path.Combine(_webHostEnvironment.WebRootPath, "FotoDokter");
-                    if (!Directory.Exists(uploadFolder))
-                    {
-                        Directory.CreateDirectory(uploadFolder);
-                    }
-
                     var fotoFileName = $"{data.KdDokter}{fileExtension}";
-                    var fotoFilePath = Path.Combine(uploadFolder, fotoFileName);
+                    var oldFileName = data.FotoName ?? "";
 
-                    using (var stream = new FileStream(fotoFilePath, FileMode.Create))
+                    using var client = new HttpClient();
+                    using var ms = new MemoryStream();
+                    await vm.Foto.CopyToAsync(ms);
+                    ms.Position = 0;
+
+                    var content = new MultipartFormDataContent
                     {
-                        await vm.Foto.CopyToAsync(stream);
+                        {
+                            new StreamContent(ms)
+                            {
+                                Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.Foto.ContentType) }
+                            }, "file", fotoFileName
+                        },
+                        { new StringContent("FotoDokter"), "folderTarget" },
+                        { new StringContent(oldFileName), "oldFileName" }
+                    };
+
+                    var flaskResponse = await client.PostAsync("http://160.20.104.98:5050/upload", content);
+                    if (!flaskResponse.IsSuccessStatusCode)
+                    {
+                        return StatusCode(500, new { message = "Gagal upload foto ke server Flask." });
                     }
 
                     data.FotoName = fotoFileName;
-                    data.FotoPath = $"/FotoDokter/{fotoFileName}"; // Simpan path relatif
+                    data.FotoPath = $"/FotoDokter/{fotoFileName}";
                 }
 
                 data.UpdateDateTime = DateTimeOffset.UtcNow;

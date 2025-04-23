@@ -375,25 +375,23 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 // 6. Simpan path relatif ke database atau response
                 QRPath = $"/QRCodePasienBaru/{qrCodeFileName}";
 
-                // Path logo untuk QR Code
-                //var logoPath = Path.Combine(_webHostEnvironment.WebRootPath, "images", "logo.png");
+                // 📤 **Kirim FILE QR ke server Python Flask**
+                using var clientQR = new HttpClient();
+                using var msQR = new MemoryStream(qrCodeBytes);
+                msQR.Position = 0;
 
-                //// Generate QR Code dengan logo
-                //var qrCodeImage = QrCodeHelper.GenerateQRCodeWithLogo(noRekamMedis, logoPath);
+                var contentQR = new MultipartFormDataContent {
+                        // File utama
+                        { new StreamContent(msQR) {
+                            Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.Foto.ContentType) }
+                        }, "file", qrCodeFileName },
 
-                //// Tentukan lokasi penyimpanan QR Code
-                //var qrCodeFolder = Path.Combine(_webHostEnvironment.WebRootPath, "QRCodePasienBaru");
-                //if (!Directory.Exists(qrCodeFolder))
-                //{
-                //    Directory.CreateDirectory(qrCodeFolder);
-                //}
+                        // Nama folder tujuan di server Flask
+                        { new StringContent("QRCodePasienBaru"), "folderTarget" }
+                    };
 
-                //// Nama file QR Code berdasarkan NoRekamMedis
-                //qrCodeFileName = $"{noRekamMedis}.png";
-                //var qrCodeFilePath = Path.Combine(qrCodeFolder, qrCodeFileName);
-
-                //// Simpan QR Code sebagai file PNG
-                //qrCodeImage.Save(qrCodeFilePath, System.Drawing.Imaging.ImageFormat.Png);
+                // Ganti IP di bawah dengan alamat Python Flask server Anda
+                var flaskResponseQR = await clientQR.PostAsync("http://160.20.104.98:5050/upload", contentQR);
 
                 // Cek Duplikasi
                 var isDuplicate = _applicationDbContext.PendaftaranPasienBarus
@@ -438,6 +436,24 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     }
 
                     fotoPath = $"/FotoPasienBaru/{fotoFileName}";
+                    // 📤 **Kirim foto ke server Python Flask**
+                    using var client = new HttpClient();
+                    using var ms = new MemoryStream();
+                    await vm.Foto.CopyToAsync(ms);
+                    ms.Position = 0;
+
+                    var content = new MultipartFormDataContent {
+                        // File utama
+                        { new StreamContent(ms) {
+                            Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.Foto.ContentType) }
+                        }, "file", fotoFileName },
+
+                        // Nama folder tujuan di server Flask
+                        { new StringContent("FotoPasienBaru"), "folderTarget" }
+                    };
+
+                    // Ganti IP di bawah dengan alamat Python Flask server Anda
+                    var flaskResponse = await client.PostAsync("http://160.20.104.98:5050/upload", content);
                 }
                 else
                 {
@@ -639,29 +655,30 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                         return BadRequest(new { message = "Format file tidak valid! Gunakan JPG atau PNG." });
                     }
 
-                    // **Hapus Foto Lama Jika Ada**
-                    if (!string.IsNullOrEmpty(pasien.FotoPath) && !pasien.FotoPath.Contains("user.jpg"))
-                    {
-                        var oldFotoPath = Path.Combine(_webHostEnvironment.WebRootPath, pasien.FotoPath.TrimStart('/'));
-                        if (System.IO.File.Exists(oldFotoPath))
-                        {
-                            System.IO.File.Delete(oldFotoPath);
-                        }
-                    }
-
-                    // **Simpan Foto Baru**
-                    var uploadFolder = Path.Combine(_webHostEnvironment.WebRootPath, "FotoPasienBaru");
-                    if (!Directory.Exists(uploadFolder))
-                    {
-                        Directory.CreateDirectory(uploadFolder);
-                    }
-
                     var fotoFileName = $"{pasien.KodePasien}{fileExtension}";
-                    var fotoFilePath = Path.Combine(uploadFolder, fotoFileName);
+                    var oldFileName = pasien.FotoName ?? "";
 
-                    using (var stream = new FileStream(fotoFilePath, FileMode.Create))
+                    using var client = new HttpClient();
+                    using var ms = new MemoryStream();
+                    await vm.Foto.CopyToAsync(ms);
+                    ms.Position = 0;
+
+                    var content = new MultipartFormDataContent
                     {
-                        await vm.Foto.CopyToAsync(stream);
+                        {
+                            new StreamContent(ms)
+                            {
+                                Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.Foto.ContentType) }
+                            }, "file", fotoFileName
+                        },
+                        { new StringContent("FotoPasienBaru"), "folderTarget" },
+                        { new StringContent(oldFileName), "oldFileName" }
+                    };
+
+                    var flaskResponse = await client.PostAsync("http://160.20.104.98:5050/upload", content);
+                    if (!flaskResponse.IsSuccessStatusCode)
+                    {
+                        return StatusCode(500, new { message = "Gagal upload foto ke server Flask." });
                     }
 
                     pasien.FotoName = fotoFileName;
