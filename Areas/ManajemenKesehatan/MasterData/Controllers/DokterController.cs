@@ -97,7 +97,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         .Distinct()
                         .ToList(),
 
-                                // Menambahkan daftar ID Poli
+                   // Menambahkan daftar ID Poli
                     PoliIds = _context.DokterPolis
                         .Where(dp => dp.DokterId == d.DokterId)
                         .Select(dp => dp.PoliId)

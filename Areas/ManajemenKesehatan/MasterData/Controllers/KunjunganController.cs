@@ -85,6 +85,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.CreateBy,
                             a.IsFinished,
                             a.IsScreening,
+                            a.IsPresent,
                             a.Antrian,
                             d.NmDokter,
                             gambardokter = !string.IsNullOrEmpty(d.FotoName)
@@ -129,6 +130,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     item.NamaLengkap,
                     item.PasienId,
                     item.IsScreening,
+                    item.IsPresent,
 
                     item.NoRekamMedis,
                     item.TipePasien,
@@ -291,8 +293,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     TipePembayaran = request.TipePembayaran,
                     IsFinished = false,
                     IsDelete = false,
-                    IsScreening = request.IsScreening,
-                    Antrian = nomorAntrianFormatted // Format akhir: BU001
+                    IsScreening = false,
+                    Antrian = nomorAntrianFormatted   // Format akhir: BU001
                 };
 
                 _applicationDbContext.Kunjungans.Add(newKunjungan);
@@ -375,26 +377,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     .ToList();
 
                 List<KunjunganRiwayat> jumlahKunjungan = new()
-        {
-            new KunjunganRiwayat
-            {
-                Jenis = "IP",
-                Jumlah = allKunjunganPasien
-                    .Where(k => !string.IsNullOrEmpty(k.JumlahKunjungan))
-                    .SelectMany(k => JsonSerializer.Deserialize<List<KunjunganRiwayat>>(k.JumlahKunjungan) ?? new List<KunjunganRiwayat>())
-                    .Where(k => k.Jenis == "IP")
-                    .Sum(k => k.Jumlah)
-            },
-            new KunjunganRiwayat
-            {
-                Jenis = "OP",
-                Jumlah = allKunjunganPasien
-                    .Where(k => !string.IsNullOrEmpty(k.JumlahKunjungan))
-                    .SelectMany(k => JsonSerializer.Deserialize<List<KunjunganRiwayat>>(k.JumlahKunjungan) ?? new List<KunjunganRiwayat>())
-                    .Where(k => k.Jenis == "OP")
-                    .Sum(k => k.Jumlah)
-            }
-        };
+                {
+                    new KunjunganRiwayat
+                    {
+                        Jenis = "IP",
+                        Jumlah = allKunjunganPasien
+                            .Where(k => !string.IsNullOrEmpty(k.JumlahKunjungan))
+                            .SelectMany(k => JsonSerializer.Deserialize<List<KunjunganRiwayat>>(k.JumlahKunjungan) ?? new List<KunjunganRiwayat>())
+                            .Where(k => k.Jenis == "IP")
+                            .Sum(k => k.Jumlah)
+                    },
+                    new KunjunganRiwayat
+                    {
+                        Jenis = "OP",
+                        Jumlah = allKunjunganPasien
+                            .Where(k => !string.IsNullOrEmpty(k.JumlahKunjungan))
+                            .SelectMany(k => JsonSerializer.Deserialize<List<KunjunganRiwayat>>(k.JumlahKunjungan) ?? new List<KunjunganRiwayat>())
+                            .Where(k => k.Jenis == "OP")
+                            .Sum(k => k.Jumlah)
+                    }
+                };
 
                 var currentJenis = jumlahKunjungan.FirstOrDefault(k => k.Jenis == kodeJenis);
                 if (currentJenis != null)
@@ -410,12 +412,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 existingKunjungan.NoRekamMedis = request.NoRekamMedis;
                 existingKunjungan.TipePasien = request.TipePasien;
                 existingKunjungan.TipePembayaran = request.TipePembayaran;
-                existingKunjungan.IsScreening = request.IsScreening;
+               
                 existingKunjungan.JumlahKunjungan = JsonSerializer.Serialize(jumlahKunjungan);
                 existingKunjungan.Antrian = nomorAntrianFormatted;
                 existingKunjungan.UpdateDateTime = DateTimeOffset.UtcNow;
                 existingKunjungan.UpdateBy = userActiveId;
-                existingKunjungan.IsFinished = request.IsFinished;
+                //existingKunjungan.IsFinished = request.IsFinished;
+                //existingKunjungan.IsScreening = request.IsScreening;
 
                 await _applicationDbContext.SaveChangesAsync();
 
@@ -462,7 +465,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             return Ok(new { message = "Status isFinished berhasil diperbarui." });
         }
 
-        [HttpPut("{id}/is-screesning")]
+        [HttpPut("{id}/is-screening")]
         public async Task<IActionResult> UpdateIsScreening(Guid id, [FromBody] UpdateIsScreeningViewModel request)
         {
             var kunjungan = await _applicationDbContext.Kunjungans.FindAsync(id);
@@ -477,6 +480,29 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             var userId = user?.UserActiveId ?? Guid.Empty;
 
             kunjungan.IsScreening = request.IsScreening;
+            kunjungan.UpdateDateTime = DateTimeOffset.UtcNow;
+            kunjungan.UpdateBy = userId;
+
+            await _applicationDbContext.SaveChangesAsync();
+
+            return Ok(new { message = "Status IsScreening berhasil diperbarui." });
+        }
+
+        [HttpPut("{id}/is-present")]
+        public async Task<IActionResult> UpdateIsPresent(Guid id, [FromBody] UpdateIsPresentViewModel request)
+        {
+            var kunjungan = await _applicationDbContext.Kunjungans.FindAsync(id);
+            if (kunjungan == null)
+                return NotFound(new { message = "Kunjungan tidak ditemukan." });
+
+            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(EmailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var userId = user?.UserActiveId ?? Guid.Empty;
+
+            kunjungan.IsPresent = request.IsPresent;
             kunjungan.UpdateDateTime = DateTimeOffset.UtcNow;
             kunjungan.UpdateBy = userId;
 
