@@ -127,8 +127,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     item.PoliklinikId,
                     item.NamaPoliklinik,
                     item.DokterId,
-                    item.NamaLengkap,
                     item.PasienId,
+                    item.NamaLengkap,
                     item.IsScreening,
                     item.IsPresent,
 
@@ -587,6 +587,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.CreateBy,
                             a.IsFinished,
                             a.IsScreening,
+                            a.IsPresent,
                             a.Antrian,
                             d.NmDokter,
                             gambardokter = !string.IsNullOrEmpty(d.FotoName)
@@ -713,6 +714,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     item.PoliklinikId,
                     item.DokterId,
                     item.PasienId,
+                    item.NamaLengkap,
                     item.NoRekamMedis,
                     item.TipePasien,
                     item.TipePembayaran,
@@ -725,6 +727,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     item.Antrian,
                     item.IsScreening,
                     item.IsFinished,
+                    item.IsPresent,
                     item.gambardokter,
                 };
             }).ToList();
