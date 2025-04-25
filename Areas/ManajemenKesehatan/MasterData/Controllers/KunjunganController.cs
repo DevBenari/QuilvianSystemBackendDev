@@ -294,6 +294,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     IsFinished = false,
                     IsDelete = false,
                     IsScreening = false,
+                    IsPresent = true,
                     Antrian = nomorAntrianFormatted   // Format akhir: BU001
                 };
 
@@ -417,6 +418,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 existingKunjungan.Antrian = nomorAntrianFormatted;
                 existingKunjungan.UpdateDateTime = DateTimeOffset.UtcNow;
                 existingKunjungan.UpdateBy = userActiveId;
+
                 //existingKunjungan.IsFinished = request.IsFinished;
                 //existingKunjungan.IsScreening = request.IsScreening;
 
