@@ -148,11 +148,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var setDateNow = dateNow.ToString("yyMMdd"); // Format: YYMMDD
 
 
-                // **Ambil Kode Terakhir**
+                // Ambil data terakhir untuk hari ini (tanpa ToString di query)
                 var lastCode = _applicationDbContext.SkalaPains
                     .Where(d => d.CreateDateTime.Date == dateNow.Date)
-                    .OrderByDescending(k => k.CreateDateTime)
-
+                    .OrderByDescending(k => k.KodeSkalaPain)
                     .FirstOrDefault();
 
                 string kode;
@@ -163,15 +162,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 else
                 {
                     var lastCodeTrim = lastCode.KodeSkalaPain.Substring(3, 6);
+
                     if (lastCodeTrim != setDateNow)
                     {
                         kode = $"SKP{setDateNow}0001";
                     }
                     else
                     {
-                        // Mengambil nomor urut terakhir dan menambah 1
-                        var lastNumber = int.Parse(lastCode.KodeSkalaPain.Substring(9));
-                        kode = $"SKP{setDateNow}{(lastNumber + 1).ToString("D4")}";
+                        kode = $"SKP{setDateNow}" + (Convert.ToInt32(lastCode.KodeSkalaPain.Substring(9)) + 1).ToString("D4");
                     }
                 }
 

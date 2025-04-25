@@ -237,10 +237,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     Deskripsi = vm.Deskripsi,
                     CreateDateTime = DateTimeOffset.UtcNow,
                     CreateBy = userActiveId,
-                    UpdateDateTime = DateTimeOffset.UtcNow,
-                    UpdateBy = userActiveId,
-                    DeleteDateTime = DateTimeOffset.UtcNow,
-                    DeleteBy = userActiveId,
+
                     IsDelete = false
                 };
 

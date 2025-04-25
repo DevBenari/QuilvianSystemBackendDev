@@ -203,6 +203,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     Height = vm.Height,
                     Weight = vm.Weight,
                     BMI = vm.BMI,
+
+                    CreateBy = userActiveId,
+                    CreateDateTime = DateTimeOffset.UtcNow
                 };
 
                 // **Simpan ke Database**
