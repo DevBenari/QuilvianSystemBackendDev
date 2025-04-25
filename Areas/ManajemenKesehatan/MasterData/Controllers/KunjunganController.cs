@@ -168,20 +168,98 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetKunjunganPasienById(Guid id)
+        public async Task<IActionResult> GetKunjunganById(Guid id)
         {
-            var listdata = _applicationDbContext.Kunjungans.Find(id);
-            if (listdata == null)
+            var query = from a in _applicationDbContext.Kunjungans
+                        join u in _applicationDbContext.UserActives
+                            on a.CreateBy equals u.UserActiveId
+                        join p in _applicationDbContext.Polikliniks
+                            on a.PoliklinikId equals p.PoliklinikId
+                        join ps in _applicationDbContext.PendaftaranPasienBarus
+                            on a.PasienId equals ps.PendaftaranPasienBaruId
+                        join d in _applicationDbContext.Dokters
+                            on a.DokterId equals d.DokterId
+                        where a.IsDelete == false && a.KunjunganID == id
+                        select new
+                        {
+                            a.KunjunganID,
+                            a.AsuransiId,
+                            a.PoliklinikId,
+                            p.NamaPoliklinik,
+
+                            a.DokterId,
+                            a.PasienId,
+                            ps.NamaLengkap,
+                            a.NoRekamMedis,
+                            a.TipePasien,
+                            a.TipePembayaran,
+                            a.JumlahKunjungan,
+                            a.CreateDateTime,
+                            a.CreateBy,
+                            a.IsFinished,
+                            a.IsScreening,
+                            a.IsPresent,
+                            a.Antrian,
+                            d.NmDokter,
+                            gambardokter = !string.IsNullOrEmpty(d.FotoName)
+                                ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
+                                : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg",
+
+                            CreateByName = u.FullName
+                        };
+
+            var item = await query.FirstOrDefaultAsync();
+
+            if (item == null)
             {
-                return NotFound(new { message = "Data tidak ditemukan." });
+                return NotFound(new { message = "Data kunjungan tidak ditemukan. || 404 Not Found" });
             }
+
+            List<KunjunganRiwayat> parsedKunjungan = new();
+            if (!string.IsNullOrWhiteSpace(item.JumlahKunjungan))
+            {
+                try
+                {
+                    parsedKunjungan = JsonSerializer.Deserialize<List<KunjunganRiwayat>>(item.JumlahKunjungan)
+                                      ?? new List<KunjunganRiwayat>();
+                }
+                catch
+                {
+                    parsedKunjungan = new(); // fallback jika JSON invalid
+                }
+            }
+
+            var result = new
+            {
+                item.KunjunganID,
+                item.AsuransiId,
+                item.PoliklinikId,
+                item.NamaPoliklinik,
+                item.DokterId,
+                item.PasienId,
+                item.NamaLengkap,
+                item.IsScreening,
+                item.IsPresent,
+                item.NoRekamMedis,
+                item.TipePasien,
+                item.TipePembayaran,
+                JumlahKunjungan = parsedKunjungan,
+                item.CreateDateTime,
+                item.CreateBy,
+                item.CreateByName,
+                item.NmDokter,
+                item.gambardokter,
+                item.Antrian,
+                item.IsFinished
+            };
 
             return Ok(new
             {
-                message = "Ditemukan || 200 OK",
-                data = listdata
+                message = "Data kunjungan berhasil ditemukan.",
+                data = result
             });
         }
+
 
         [HttpPost]
         public async Task<IActionResult> CreateKunjunganPasien([FromBody] KunjunganViewModel request)

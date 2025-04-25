@@ -199,6 +199,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     Frekuensi = vm.Frekuensi,
                     LamaKonsumsi = vm.LamaKonsumsi,
                     IsDelete = false,
+
+                    CreateBy = userActiveId,
+                    CreateDateTime = DateTimeOffset.UtcNow
                 };
 
                 // **Simpan ke Database**
