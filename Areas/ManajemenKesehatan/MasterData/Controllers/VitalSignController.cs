@@ -152,42 +152,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var dateNow = DateTime.UtcNow;
                 var setDateNow = dateNow.ToString("yyMMdd"); // Format: YYMMDD
 
+                ////// **Cek Duplikasi**
+                //bool isDuplicate = _applicationDbContext.VitalSigns
+                //                    .Any(c => c.KunjunganId == vm.KunjunganId);
 
-                // **Ambil Kode Terakhir**
-                var lastCode = _applicationDbContext.VitalSigns
-                    .Where(d => d.CreateDateTime.Date == dateNow.Date)
-                    .OrderByDescending(k => k.CreateDateTime)
-
-                    .FirstOrDefault();
-
-                //string kode;
-                //if (lastCode == null)
+                //if (isDuplicate)
                 //{
-                //    kode = $"AGM{setDateNow}0001";
+                //    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
                 //}
-                //else
-                //{
-                //    var lastCodeTrim = lastCode.KodeAgama.Substring(3, 6);
-                //    if (lastCodeTrim != setDateNow)
-                //    {
-                //        kode = $"AGM{setDateNow}0001";
-                //    }
-                //    else
-                //    {
-                //        // Mengambil nomor urut terakhir dan menambah 1
-                //        var lastNumber = int.Parse(lastCode.KodeAgama.Substring(9));
-                //        kode = $"AGM{setDateNow}{(lastNumber + 1).ToString("D4")}";
-                //    }
-                //}
-
-                //// **Cek Duplikasi**
-                bool isDuplicate = _applicationDbContext.VitalSigns
-                                    .Any(c => c.KunjunganId == vm.KunjunganId);
-
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
-                }
 
                 // **Buat Data Baru**
                 var data = new VitalSign
@@ -307,7 +279,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteAgama(Guid id)
+        public async Task<IActionResult> DeleteVitalSign(Guid id)
         {
             try
             {

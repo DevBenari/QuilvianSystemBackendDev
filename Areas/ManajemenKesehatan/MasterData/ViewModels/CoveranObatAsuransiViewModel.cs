@@ -4,16 +4,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
 {
     public class CoveranObatAsuransiViewModel
     {
-        public string? NamaAsuransi { get; set; }
-        public string? ServiceCode { get; set; }
-        public string? ServiceDesc { get; set; }
-        public string? ServiceCodeClass { get; set; }
-        public string? Class { get; set; }
-        public bool? IsSurgery { get; set; }
-        public decimal? Tarif { get; set; }
-        public string? TglBerlaku { get; set; }
-        public string? TglBerakhir { get; set; }
-        public bool? IsPKS { get; set; }
+        public Guid? ObatId { get; set; }
         public Guid? AsuransiId { get; set; }
+        public Guid? KategoriObatId { get; set; }
+        public string? NamaKategoriObat { get; set; }
+        public decimal? HargaRetail { get; set; }
+        public string? NamaAsuransi { get; set; }
+        public int? PersentaseDiskon { get; set; }
+        public decimal? TarifObatAsuransi { get; set; }
+        public bool? IsPKS { get; set; }
     }
 }

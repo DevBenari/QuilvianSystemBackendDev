@@ -68,6 +68,11 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<SkalaPain> SkalaPains { get; set; }
         public DbSet<PainAssessment> PainAssessments { get; set; }
         public DbSet<VitalSign> VitalSigns { get; set; }
+        public DbSet<SOAP> SOAPs { get; set; }
+        public DbSet<ICD10> ICD10s { get; set; }
+        public DbSet<DetailICD> DetailICDs { get; set; }
+        public DbSet<Resep> Reseps { get; set; }
+        public DbSet<DetailResep> DetailReseps { get; set; }
 
         #endregion
 

@@ -60,17 +60,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
                             CoveranObatAsuransiId = a.CoveranObatAsuransiId,
-                            NamaAsuransi = a.NamaAsuransi,
-                            ServiceCode = a.ServiceCode,
-                            ServiceDesc = a.ServiceDesc,
-                            ServiceCodeClass = a.ServiceCodeClass,
-                            Class = a.Class,
-                            IsSurgery = a.IsSurgery,
-                            Tarif = a.Tarif,
-                            TglBerlaku = a.TglBerlaku,
-                            TglBerakhir = a.TglBerakhir,
-                            IsPKS = a.IsPKS,
+                            ObatId = a.ObatId,
+                            KategoriObatId = a.KategoriObatId,
+                            NamaKategoriObat = a.NamaKategoriObat,
+                            HargaRetail = a.HargaRetail,
                             AsuransiId = a.AsuransiId,
+                            NamaAsuransi = a.NamaAsuransi,
+                            PersentaseDiskon = a.PersentaseDiskon,
+                            TarifObatAsuransi = a.TarifObatAsuransi,
+                            IsPKS = a.IsPKS,
                         };
 
             // Hitung total data sebelum paginasi
@@ -144,37 +142,37 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var setDateNow = dateNow.ToString("yyMMdd");
 
                 // Ambil data terakhir untuk hari ini (tanpa ToString di query)
-                var lastCode = _applicationDbContext.CoveranObatAsuransis
-                    .Where(d => d.CreateDateTime.Date == dateNow.Date)
-                    .OrderByDescending(k => k.KodeCoveranObat)
-                    .FirstOrDefault();
+                //var lastCode = _applicationDbContext.CoveranObatAsuransis
+                //    .Where(d => d.CreateDateTime.Date == dateNow.Date)
+                //    .OrderByDescending(k => k.KodeCoveranObat)
+                //    .FirstOrDefault();
 
-                string kode;
-                if (lastCode == null)
-                {
-                    kode = $"COA{setDateNow}0001";
-                }
-                else
-                {
-                    var lastCodeTrim = lastCode.KodeCoveranObat.Substring(3, 6);
+                //string kode;
+                //if (lastCode == null)
+                //{
+                //    kode = $"COA{setDateNow}0001";
+                //}
+                //else
+                //{
+                //    var lastCodeTrim = lastCode.KodeCoveranObat.Substring(3, 6);
 
-                    if (lastCodeTrim != setDateNow)
-                    {
-                        kode = $"COA{setDateNow}0001";
-                    }
-                    else
-                    {
-                        kode = $"COA{setDateNow}" + (Convert.ToInt32(lastCode.KodeCoveranObat.Substring(9)) + 1).ToString("D4");
-                    }
-                }
+                //    if (lastCodeTrim != setDateNow)
+                //    {
+                //        kode = $"COA{setDateNow}0001";
+                //    }
+                //    else
+                //    {
+                //        kode = $"COA{setDateNow}" + (Convert.ToInt32(lastCode.KodeCoveranObat.Substring(9)) + 1).ToString("D4");
+                //    }
+                //}
 
                 // Cek Duplikasi
                 var isDuplicate = _applicationDbContext.CoveranObatAsuransis
-                    .Any(c => c.KodeCoveranObat == kode);
+                    .Any(c => c.ObatId == vm.ObatId && c.AsuransiId == vm.AsuransiId);
 
                 if (isDuplicate)
                 {
-                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
+                    return Conflict(new { message = "Obat ini telah terdaftar pada asuransi ini" });
                 }
 
                 // Validate ModelState
@@ -184,20 +182,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     var data = new CoveranObatAsuransi
                     {
                         CoveranObatAsuransiId = Guid.NewGuid(),
-                        KodeCoveranObat = kode,
-                        NamaAsuransi = vm.NamaAsuransi,
-                        ServiceCode = vm.ServiceCode,
-                        ServiceDesc = vm.ServiceDesc,
-                        ServiceCodeClass = vm.ServiceCodeClass,
-                        Class = vm.Class,
-                        IsSurgery = vm.IsSurgery,
-                        Tarif = vm.Tarif,
-                        TglBerlaku = vm.TglBerlaku,
-                        TglBerakhir = vm.TglBerakhir,
-                        IsPKS = vm.IsPKS,
+                        ObatId = vm.ObatId,
                         AsuransiId = vm.AsuransiId,
+                        KategoriObatId = vm.KategoriObatId,
+                        NamaKategoriObat = vm.NamaKategoriObat,
+                        HargaRetail = vm.HargaRetail,
+                        NamaAsuransi = vm.NamaAsuransi,
+                        PersentaseDiskon = vm.PersentaseDiskon,
+                        TarifObatAsuransi = vm.TarifObatAsuransi,
+                        IsPKS = vm.IsPKS,
                         CreateDateTime = DateTimeOffset.UtcNow,
-                        CreateBy = UserActiveId,
+                        CreateBy = UserActiveId
                     };
 
                     _applicationDbContext.CoveranObatAsuransis.Add(data);
@@ -248,17 +243,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // **Update Data**
-                data.NamaAsuransi = vm.NamaAsuransi;
-                data.ServiceCode = vm.ServiceCode;
-                data.ServiceDesc = vm.ServiceDesc;
-                data.ServiceCodeClass = vm.ServiceCodeClass;
-                data.Class = vm.Class;
-                data.IsSurgery = vm.IsSurgery;
-                data.Tarif = vm.Tarif;
-                data.TglBerlaku = vm.TglBerlaku;
-                data.TglBerakhir = vm.TglBerakhir;
-                data.IsPKS = vm.IsPKS;
+                data.ObatId = vm.ObatId;
+                data.KategoriObatId = vm.KategoriObatId;
                 data.AsuransiId = vm.AsuransiId;
+                data.NamaKategoriObat = vm.NamaKategoriObat;
+                data.HargaRetail = vm.HargaRetail;
+                data.NamaAsuransi = vm.NamaAsuransi;
+                data.PersentaseDiskon = vm.PersentaseDiskon;
+                data.TarifObatAsuransi = vm.TarifObatAsuransi;
+                data.IsPKS = vm.IsPKS;
+
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
                 data.UpdateBy = UserActiveId;
 
@@ -339,24 +333,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
                             CoveranObatAsuransiId = a.CoveranObatAsuransiId,
-                            NamaAsuransi = a.NamaAsuransi,
-                            ServiceCode = a.ServiceCode,
-                            ServiceDesc = a.ServiceDesc,
-                            ServiceCodeClass = a.ServiceCodeClass,
-                            Class = a.Class,
-                            IsSurgery = a.IsSurgery,
-                            Tarif = a.Tarif,
-                            TglBerlaku = a.TglBerlaku,
-                            TglBerakhir = a.TglBerakhir,
-                            IsPKS = a.IsPKS,
+                            ObatId = a.ObatId,
+                            KategoriObatId = a.KategoriObatId,
+                            NamaKategoriObat = a.NamaKategoriObat,
+                            HargaRetail = a.HargaRetail,
                             AsuransiId = a.AsuransiId,
+                            NamaAsuransi = a.NamaAsuransi,
+                            PersentaseDiskon = a.PersentaseDiskon,
+                            TarifObatAsuransi = a.TarifObatAsuransi,
+                            IsPKS = a.IsPKS,
                         };
+
 
             // Filter berdasarkan search
             if (!string.IsNullOrWhiteSpace(search))
             {
                 query = query.Where(u =>
-                    u.NamaAsuransi.Contains(search) || u.ServiceDesc.Contains(search)
+                    u.NamaAsuransi.Contains(search) || u.NamaKategoriObat.Contains(search)
                 );
             }
 
@@ -428,7 +421,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
                     "NamaAsuransi" => query.OrderByDescending(u => u.NamaAsuransi),
-                    "ServiceDesc" => query.OrderByDescending(u => u.ServiceDesc),
+                    "NamaKategoriObat" => query.OrderByDescending(u => u.NamaKategoriObat),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
@@ -436,7 +429,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
                     "CreateByName" => query.OrderBy(u => u.CreateByName),
                     "NamaAsuransi" => query.OrderBy(u => u.NamaAsuransi),
-                    "ServiceDesc" => query.OrderBy(u => u.ServiceDesc),
+                    "NamaKategoriObat" => query.OrderByDescending(u => u.NamaKategoriObat),
                     _ => query.OrderBy(u => u.CreateDateTime)
                 };
 
