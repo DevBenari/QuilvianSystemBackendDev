@@ -1,16 +1,18 @@
-﻿using System.Security.Claims;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Cors;
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
+using QuilvianSystemBackendDev.Repositories;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
+using Microsoft.AspNetCore.Cors;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Identity;
+using QuilvianSystemBackendDev.Models;
+using Swashbuckle.AspNetCore.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
-using QuilvianSystemBackendDev.Models;
-using QuilvianSystemBackendDev.Repositories;
-using Swashbuckle.AspNetCore.Annotations;
+using System.Globalization;
+using Microsoft.IdentityModel.Tokens;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
@@ -23,18 +25,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-
         private readonly ILogger<ObatController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public ObatController(
-            ApplicationDbContext applicationDbContext,
+        public ObatController
+        (
+            ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ILogger<ObatController> logger,
-            IWebHostEnvironment webHostEnvironment)
+            IWebHostEnvironment webHostEnvironment
+        )
         {
-            _applicationDbContext = applicationDbContext;
+            _applicationDbContext = context;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
@@ -44,11 +47,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet]
         public async Task<IActionResult> GetAllObat(int page = 1, int perPage = 10)
         {
-            // Validasi agar page dan perPage minimal bernilai 1
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            // Query data
             var query = from a in _applicationDbContext.Obats
                         join u in _applicationDbContext.UserActives
                         on a.CreateBy equals u.UserActiveId
@@ -58,51 +59,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateDateTime = a.CreateDateTime,
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
-                            ProductId = a.ProductId,
-                            ProductCode = a.ProductCode,
-                            ProductName = a.ProductName,
-                            Barcode = a.Barcode,
-                            SupplierId = a.SupplierId,
-                            SupplierName = a.SupplierName,
-                            KategoryObatId = a.KategoryObatId,
-                            NamaKategoriObat = a.NamaKategoriObat,
-                            MeasurementId = a.MeasurementId,
-                            MeasurementName = a.MeasurementName,
-                            WarehouseLocationId = a.WarehouseLocationId,
-                            WarehouseLocationName = a.WarehouseLocationName,
-                            DiscountId = a.DiscountId,
-                            DiscountValue = a.DiscountValue,
-                            ExpiredDate = a.ExpiredDate,
-                            DosageStrength = a.DosageStrength,
-                            DosageVolume = a.DosageVolume,
-                            DosageForm = a.DosageForm,
-                            Stock = a.Stock,
-                            Cogs = a.Cogs,
-                            BuyPrice = a.BuyPrice,
-                            RetailPrice = a.RetailPrice,
-                            StorageLocation = a.StorageLocation,
-                            RackNumber = a.RackNumber,
-                            IsSupplierUtama = a.IsSupplierUtama,
+                            ObatId = a.ObatId,
+                            ObatCode = a.ObatCode,
+                            ObatName = a.ObatName,
                             IsActive = a.IsActive,
                             Note = a.Note,
                         };
 
-            // Hitung total data sebelum paginasi
-            var totalRows = query.Count();
+            var totalRows = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
 
-            // Ambil data sesuai paging
-            var listdata = query
+            var listdata = await query
                 .Skip((page - 1) * perPage)
                 .Take(perPage)
-                .ToList();
+                .ToListAsync();
 
             if (!listdata.Any())
             {
                 return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
             }
 
-            // Return hasil dengan paging info
             return Ok(new
             {
                 message = "Berhasil || 200 OK",
@@ -120,8 +96,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet("{id}")]
         public async Task<IActionResult> GetObatById(Guid id)
         {
-            var listdata = _applicationDbContext.Obats.Find(id);
-            if (listdata == null)
+            var obat = await _applicationDbContext.Obats.FindAsync(id);
+            if (obat == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
             }
@@ -129,7 +105,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             return Ok(new
             {
                 message = "Ditemukan || 200 OK",
-                data = listdata
+                data = obat
             });
         }
 
@@ -143,101 +119,87 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
             try
             {
-                // **Ambil User ID dari JWT Claims**
-                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
-                var UserActiveId = GetUserActive.UserActiveId;
+                if (!_applicationDbContext.Database.CanConnect())
+                {
+                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+                }
 
-                if (string.IsNullOrEmpty(EmailLogin))
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin))
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var dateNow = DateTime.UtcNow; ;
+                var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
+                if (getUserActive == null)
+                {
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+                }
+                var userActiveId = getUserActive.UserActiveId;
+
+                var dateNow = DateTime.UtcNow;
                 var setDateNow = dateNow.ToString("yyMMdd");
 
-                // Ambil data terakhir untuk hari ini (tanpa ToString di query)
                 var lastCode = _applicationDbContext.Obats
                     .Where(d => d.CreateDateTime.Date == dateNow.Date)
-                    .OrderByDescending(k => k.ProductCode)
+                    .OrderByDescending(k => k.CreateDateTime)
                     .FirstOrDefault();
 
                 string kode;
                 if (lastCode == null)
                 {
-                    kode = $"MDC{setDateNow}0001";
+                    kode = $"OBT{setDateNow}0001";
                 }
                 else
                 {
-                    var lastCodeTrim = lastCode.ProductCode.Substring(3, 6);
-
+                    var lastCodeTrim = lastCode.ObatCode.Substring(3, 6);
                     if (lastCodeTrim != setDateNow)
                     {
-                        kode = $"MDC{setDateNow}0001";
+                        kode = $"OBT{setDateNow}0001";
                     }
                     else
                     {
-                        kode = $"MDC{setDateNow}" + (Convert.ToInt32(lastCode.ProductCode.Substring(9)) + 1).ToString("D4");
+                        var lastNumber = int.Parse(lastCode.ObatCode.Substring(9));
+                        kode = $"OBT{setDateNow}{(lastNumber + 1).ToString("D4")}";
                     }
                 }
 
-                // Cek Duplikasi
-                var isDuplicate = _applicationDbContext.Obats
-                    .Any(c => c.ProductCode == kode && c.ProductName == vm.ProductName);
+                bool isDuplicate = _applicationDbContext.Obats
+                    .Any(c => c.ObatCode == kode && c.ObatName.ToLower() == vm.ObatName.ToLower());
 
                 if (isDuplicate)
                 {
                     return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
                 }
 
-                // Validate ModelState
-                if (ModelState.IsValid)
+                var data = new Obat
                 {
-                    // Simpan Data
-                    var data = new Obat
-                    {
-                        ProductId = Guid.NewGuid(),
-                        ProductCode = kode,
-                        ProductName = vm.ProductName,
-                        ProductExtCode = vm.ProductExtCode,
-                        Barcode = vm.Barcode,
-                        SupplierId = vm.SupplierId,
-                        SupplierName = vm.SupplierName,
-                        KategoryObatId = vm.KategoryObatId,
-                        NamaKategoriObat = vm.NamaKategoriObat,
-                        MeasurementId = vm.MeasurementId,
-                        MeasurementName = vm.MeasurementName,
-                        WarehouseLocationId = vm.WarehouseLocationId,
-                        WarehouseLocationName = vm.WarehouseLocationName,
-                        DiscountId = vm.DiscountId,
-                        DiscountValue = vm.DiscountValue,
-                        ExpiredDate = vm.ExpiredDate,
-                        DosageStrength = vm.DosageStrength,
-                        DosageVolume = vm.DosageVolume,
-                        DosageForm = vm.DosageForm,
-                        Stock = vm.Stock,
-                        Cogs = vm.Cogs,
-                        BuyPrice = vm.BuyPrice,
-                        RetailPrice = vm.RetailPrice,
-                        StorageLocation = vm.StorageLocation,
-                        RackNumber = vm.RackNumber,
-                        IsSupplierUtama = vm.IsSupplierUtama,
-                        IsActive = true,
-                        Note = vm.Note,
-                    };
+                    ObatId = Guid.NewGuid(),
+                    CreateDateTime = dateNow.Date,
+                    CreateBy = userActiveId,
+                    ObatCode = kode,
+                    ObatName = vm.ObatName,
+                    HargaJual = vm.HargaJual,
+                    Stock = vm.Stock,
+                    IsActive = vm.IsActive,
+                    Note = vm.Note
+                };
 
-                    _applicationDbContext.Obats.Add(data);
-                    _applicationDbContext.SaveChanges();
+                _applicationDbContext.Obats.Add(data);
+                int result = await _applicationDbContext.SaveChangesAsync();
 
-                    return Created("", new
-                    {
-                        message = "Tambah Data Berhasil || 201 Created",
-                    });
+                if (result > 0)
+                {
+                    return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
                 }
                 else
                 {
-                    return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
+                    return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
                 }
+            }
+            catch (DbUpdateException dbEx)
+            {
+                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
             }
             catch (Exception ex)
             {
@@ -250,71 +212,71 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         {
             if (vm == null || !ModelState.IsValid)
             {
-                return BadRequest(new { message = "Data tidak valid. || 400 Bad Request" });
+                return BadRequest(new { message = "Data tidak valid." });
             }
-            var data = _applicationDbContext.Obats.Find(id);
-            if (data == null)
-            {
-                return NotFound(new { message = "Data tidak ditemukan. || 404 Not Found" });
-            }
+
             try
             {
-                // **Ambil User ID dari JWT Claims**
-                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
-                var UserActiveId = GetUserActive.UserActiveId;
-                if (string.IsNullOrEmpty(EmailLogin))
+                if (!await _applicationDbContext.Database.CanConnectAsync())
+                {
+                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+                }
+
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin))
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
-                // Validate ModelState
-                if (ModelState.IsValid)
+
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+                if (getUserActive == null)
                 {
-                    // Update Data
-                    data.ProductExtCode = vm.ProductExtCode;
-                    data.ProductName = vm.ProductName;
-                    data.Barcode = vm.Barcode;
-                    data.SupplierId = vm.SupplierId;
-                    data.SupplierName = vm.SupplierName;
-                    data.KategoryObatId = vm.KategoryObatId;
-                    data.NamaKategoriObat = vm.NamaKategoriObat;
-                    data.MeasurementId = vm.MeasurementId;
-                    data.MeasurementName = vm.MeasurementName;
-                    data.WarehouseLocationId = vm.WarehouseLocationId;
-                    data.WarehouseLocationName = vm.WarehouseLocationName;
-                    data.DiscountId = vm.DiscountId;
-                    data.DiscountValue = vm.DiscountValue;
-                    data.ExpiredDate = vm.ExpiredDate;
-                    data.DosageStrength = vm.DosageStrength;
-                    data.DosageVolume = vm.DosageVolume;
-                    data.DosageForm = vm.DosageForm;
-                    data.Stock = vm.Stock;
-                    data.Cogs = vm.Cogs;
-                    data.BuyPrice = vm.BuyPrice;
-                    data.RetailPrice = vm.RetailPrice;
-                    data.StorageLocation = vm.StorageLocation;
-                    data.RackNumber = vm.RackNumber;
-                    data.IsSupplierUtama = vm.IsSupplierUtama;
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+                }
+                var userActiveId = getUserActive.UserActiveId;
 
-                    data.UpdateDateTime = DateTimeOffset.UtcNow;
-                    data.UpdateBy = UserActiveId;
+                var data = await _applicationDbContext.Obats.FindAsync(id);
+                if (data == null)
+                {
+                    return NotFound(new { message = "Data tidak ditemukan." });
+                }
 
-                    _applicationDbContext.Obats.Update(data);
-                    _applicationDbContext.SaveChanges();
-                    return Ok(new
-                    {
-                        message = "Data berhasil diubah. || 200 OK",
-                    });
+                bool isDuplicate = await _applicationDbContext.Obats
+                    .AnyAsync(c => c.ObatName.ToLower() == vm.ObatName.ToLower() && c.ObatId != id);
+
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
+                }
+
+                data.ObatName = vm.ObatName;
+                data.HargaJual = vm.HargaJual;
+                data.Stock = vm.Stock;
+                data.IsActive = vm.IsActive;
+                data.Note = vm.Note;
+                data.UpdateBy = userActiveId;
+                data.UpdateDateTime = DateTime.UtcNow;
+
+                _applicationDbContext.Obats.Update(data);
+                int result = await _applicationDbContext.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    return Ok(new { message = "Update Data Berhasil || 200 OK" });
                 }
                 else
                 {
-                    return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
+                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
                 }
             }
-            catch
-            (Exception ex)
+            catch (DbUpdateException dbEx)
             {
-                return BadRequest(new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
 
@@ -323,33 +285,50 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         {
             try
             {
-                //Ambil User ID dari JWT Claims
-                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
-                var UserActiveId = GetUserActive.UserActiveId;
+                if (!await _applicationDbContext.Database.CanConnectAsync())
+                {
+                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+                }
 
-                if (string.IsNullOrEmpty(EmailLogin))
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin))
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                // **Cari Data Pasien**
-                var data = _applicationDbContext.Obats.Find(id);
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+                if (getUserActive == null)
+                {
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+                }
+                var userActiveId = getUserActive.UserActiveId;
+
+                var data = await _applicationDbContext.Obats.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
-                // **Soft Delete (Tandai Data sebagai Terhapus)**
-                data.DeleteBy = UserActiveId;
-                data.DeleteDateTime = DateTimeOffset.UtcNow;
-                data.IsActive = false;
+                data.DeleteBy = userActiveId;
+                data.DeleteDateTime = DateTime.UtcNow;
                 data.IsDelete = true;
 
                 _applicationDbContext.Obats.Update(data);
-                _applicationDbContext.SaveChanges();
+                int result = await _applicationDbContext.SaveChangesAsync();
 
-                return Ok(new { message = "Data berhasil dihapus..." });
+                if (result > 0)
+                {
+                    return Ok(new { message = "Data berhasil dihapus (soft delete) || 200 OK" });
+                }
+                else
+                {
+                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
+                }
+            }
+            catch (DbUpdateException dbEx)
+            {
+                return StatusCode(500, new { message = $"Gagal menghapus data: {dbEx.InnerException?.Message}" });
             }
             catch (Exception ex)
             {
@@ -358,171 +337,83 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet("paged")]
-        public IActionResult PagedObat(
-        int page = 1,
-        int perPage = 10,
-        string? search = null,
-        string? orderBy = "CreateDateTime",
-        string? sortDirection = "desc",
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-        DateTime? startDate = null,
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-        DateTime? endDate = null,
-        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        public async Task<IActionResult> PagedObat(
+            int page = 1,
+            int perPage = 10,
+            string? search = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc")
         {
-            // Query data
-            var query = from a in _applicationDbContext.Obats
-                        join u in _applicationDbContext.UserActives
-                        on a.CreateBy equals u.UserActiveId
-                        where a.IsDelete == false
-                        select new
-                        {
-                            CreateDateTime = a.CreateDateTime,
-                            CreateBy = a.CreateBy,
-                            CreateByName = u.FullName,
-                            ProductId = a.ProductId,
-                            ProductCode = a.ProductCode,
-                            ProductName = a.ProductName,
-                            Barcode = a.Barcode,
-                            SupplierId = a.SupplierId,
-                            SupplierName = a.SupplierName,
-                            KategoryObatId = a.KategoryObatId,
-                            NamaKategoriObat = a.NamaKategoriObat,
-                            MeasurementId = a.MeasurementId,
-                            MeasurementName = a.MeasurementName,
-                            WarehouseLocationId = a.WarehouseLocationId,
-                            WarehouseLocationName = a.WarehouseLocationName,
-                            DiscountId = a.DiscountId,
-                            DiscountValue = a.DiscountValue,
-                            ExpiredDate = a.ExpiredDate,
-                            DosageStrength = a.DosageStrength,
-                            DosageVolume = a.DosageVolume,
-                            DosageForm = a.DosageForm,
-                            Stock = a.Stock,
-                            Cogs = a.Cogs,
-                            BuyPrice = a.BuyPrice,
-                            RetailPrice = a.RetailPrice,
-                            StorageLocation = a.StorageLocation,
-                            RackNumber = a.RackNumber,
-                            IsSupplierUtama = a.IsSupplierUtama,
-                            IsActive = a.IsActive,
-                            Note = a.Note,
-                        };
-
-            // Filter berdasarkan search
-            if (!string.IsNullOrWhiteSpace(search))
+            try
             {
-                query = query.Where(u =>
-                    u.ProductName.Contains(search) || u.SupplierName.Contains(search)
-                );
-            }
-
-            // Filter berdasarkan daterange jika keduanya memiliki nilai
-            if (startDate.HasValue && endDate.HasValue)
-            {
-                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
-                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
-
-                query = query.Where(u =>
-                    u.CreateDateTime >= startUtc &&
-                    u.CreateDateTime <= endUtc);
-            }
-
-
-            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll)
-            if (periode.HasValue)
-            {
-                DateTime today = DateTime.UtcNow.Date;
-
-                switch (periode)
+                if (!await _applicationDbContext.Database.CanConnectAsync())
                 {
-                    case PeriodeFilter.Today:
-                        query = query.Where(u => u.CreateDateTime.Date == today);
-                        break;
-                    case PeriodeFilter.ThisWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
-                            u.CreateDateTime.Date <= today
-                        );
-                        break;
-                    case PeriodeFilter.LastWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek))
-                        );
-                        break;
-                    case PeriodeFilter.ThisMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month &&
-                            u.CreateDateTime.Year == today.Year
-                        );
-                        break;
-                    case PeriodeFilter.LastMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month - 1 &&
-                            u.CreateDateTime.Year == today.Year
-                        );
-                        break;
-                    case PeriodeFilter.ThisYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
-                        break;
-                    case PeriodeFilter.LastYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
-                        break;
-                    case PeriodeFilter.Last3Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
-                        break;
-                    case PeriodeFilter.Last6Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
-                        break;
+                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
                 }
-            }
 
-            // Sorting Data dengan cara yang lebih aman
-            query = sortDirection?.ToLower() == "desc"
-                ? orderBy switch
+                var query = from a in _applicationDbContext.Obats
+                            join u in _applicationDbContext.UserActives
+                            on a.CreateBy equals u.UserActiveId
+                            where a.IsDelete == false
+                            select new
+                            {
+                                CreateDateTime = a.CreateDateTime,
+                                CreateBy = a.CreateBy,
+                                CreateByName = u.FullName,
+                                ObatId = a.ObatId,
+                                ObatCode = a.ObatCode,
+                                ObatName = a.ObatName,
+                                IsActive = a.IsActive,
+                                Note = a.Note,
+                            };
+
+                if (!string.IsNullOrWhiteSpace(search))
                 {
-                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "ProductName" => query.OrderByDescending(u => u.ProductName),
-                    "SupplierName" => query.OrderByDescending(u => u.SupplierName),
+                    search = $"%{search.ToLower()}%";
+                    query = query.Where(u =>
+                        EF.Functions.ILike(u.ObatName, search) ||
+                        EF.Functions.ILike(u.ObatCode, search)
+                    );
+                }
+
+                var sortColumn = orderBy?.ToLower() ?? "createdatetime";
+                var isDescending = sortDirection?.ToLower() == "desc";
+
+                query = sortColumn switch
+                {
+                    "createdatetime" => isDescending ? query.OrderByDescending(u => u.CreateDateTime) : query.OrderBy(u => u.CreateDateTime),
+                    "obatcode" => isDescending ? query.OrderByDescending(u => u.ObatCode) : query.OrderBy(u => u.ObatCode),
+                    "obatname" => isDescending ? query.OrderByDescending(u => u.ObatName) : query.OrderBy(u => u.ObatName),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
-                }
-                : orderBy switch
-                {
-                    "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    "ProductName" => query.OrderBy(u => u.ProductName),
-                    "SupplierName" => query.OrderBy(u => u.SupplierName),
-                    _ => query.OrderBy(u => u.CreateDateTime)
                 };
 
-            // Pagination
-            var totalRows = query.Count();
-            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
+                int totalRows = await query.CountAsync();
+                int totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+                var rows = await query.Skip((page - 1) * perPage).Take(perPage).ToListAsync();
 
-            if (rows.Count == 0 && page > totalPages)
-            {
-                return NotFound(new { message = "Page not found." });
-            }
-
-            return Ok(new
-            {
-                status = "success",
-                message = "Data retrieved successfully",
-                data = new
+                if (rows.Count == 0 && page > totalPages)
                 {
-                    Rows = rows,
-                    TotalRows = totalRows,
-                    CurrentPage = page,
-                    PerPage = perPage,
-                    TotalPages = totalPages
+                    return NotFound(new { message = "Page not found." });
                 }
-            });
+
+                return Ok(new
+                {
+                    status = "success",
+                    message = "Data retrieved successfully",
+                    data = new
+                    {
+                        Rows = rows,
+                        TotalRows = totalRows,
+                        CurrentPage = page,
+                        PerPage = perPage,
+                        TotalPages = totalPages
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
         }
-
-
-
     }
 }
