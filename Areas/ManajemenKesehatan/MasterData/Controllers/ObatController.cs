@@ -50,38 +50,40 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            // Query untuk mengambil data obat dengan relasi Kandungan dan Asuransi
-            var query = from a in _applicationDbContext.Obats
-                        join u in _applicationDbContext.UserActives
-                        on a.CreateBy equals u.UserActiveId
-                        join oa in _applicationDbContext.ObatAsuransis
-                        on a.ObatId equals oa.ObatId
-                        join asuransi in _applicationDbContext.Asuransis
-                        on oa.AsuransiId equals asuransi.AsuransiId
-                        join ok in _applicationDbContext.ObatKandungans
-                        on a.ObatId equals ok.ObatId
-                        join kandungan in _applicationDbContext.Kandungans
-                        on ok.KandunganId equals kandungan.KandunganId
-                        where a.IsDelete == false
-                        select new
-                        {
-                            CreateDateTime = a.CreateDateTime,
-                            CreateBy = a.CreateBy,
-                            CreateByName = u.FullName,
-                            ObatId = a.ObatId,
-                            ObatCode = a.ObatCode,
-                            ObatName = a.ObatName,
-                            IsActive = a.IsActive,
-                            Note = a.Note,
-                            KandunganName = kandungan.NamaKandungan,
-                            AsuransiName = asuransi.NamaAsuransi
-                        };
+            var query = _applicationDbContext.Obats
+                .Where(a => !a.IsDelete)
+                .Select(a => new
+                {
+                    a.CreateDateTime,
+                    a.CreateBy,
+                    CreateByName = _applicationDbContext.UserActives
+                        .Where(u => u.UserActiveId == a.CreateBy)
+                        .Select(u => u.FullName)
+                        .FirstOrDefault(),
+                    a.ObatId,
+                    a.ObatCode,
+                    a.ObatName,
+                    a.IsActive,
+                    a.Note,
+                    BentukObatName = _applicationDbContext.BentukObats
+                        .Where(bo => bo.BentukObatId == a.BentukObatId)
+                        .Select(bo => bo.NamaBentukObat)
+                        .FirstOrDefault(),
 
-            // Hitung total data sebelum paginasi
+                    KandunganNames = (from ok in _applicationDbContext.ObatKandungans
+                                      join k in _applicationDbContext.Kandungans on ok.KandunganId equals k.KandunganId
+                                      where ok.ObatId == a.ObatId
+                                      select k.NamaKandungan).Distinct().ToList(),
+
+                    AsuransiNames = (from oa in _applicationDbContext.ObatAsuransis
+                                     join asu in _applicationDbContext.Asuransis on oa.AsuransiId equals asu.AsuransiId
+                                     where oa.ObatId == a.ObatId
+                                     select asu.NamaAsuransi).Distinct().ToList()
+                });
+
             var totalRows = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
 
-            // Ambil data sesuai paging
             var listdata = await query
                 .Skip((page - 1) * perPage)
                 .Take(perPage)
@@ -92,7 +94,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
             }
 
-            // Return hasil dengan paging info
             return Ok(new
             {
                 message = "Berhasil || 200 OK",
@@ -106,6 +107,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
             });
         }
+
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetObatById(Guid id)
@@ -193,6 +195,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     CreateBy = userActiveId,
                     ObatCode = kode,
                     ObatName = vm.ObatName,
+                    BentukObatId = vm.BentukObatId,
                     HargaJual = vm.HargaJual,
                     Stock = vm.Stock,
                     IsActive = vm.IsActive,
@@ -265,6 +268,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 data.ObatName = vm.ObatName;
+                data.BentukObatId = vm.BentukObatId;
                 data.HargaJual = vm.HargaJual;
                 data.Stock = vm.Stock;
                 data.IsActive = vm.IsActive;
