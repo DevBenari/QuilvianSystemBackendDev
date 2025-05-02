@@ -50,9 +50,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
+            // Query untuk mengambil data obat dengan relasi Kandungan dan Asuransi
             var query = from a in _applicationDbContext.Obats
                         join u in _applicationDbContext.UserActives
                         on a.CreateBy equals u.UserActiveId
+                        join oa in _applicationDbContext.ObatAsuransis
+                        on a.ObatId equals oa.ObatId
+                        join asuransi in _applicationDbContext.Asuransis
+                        on oa.AsuransiId equals asuransi.AsuransiId
+                        join ok in _applicationDbContext.ObatKandungans
+                        on a.ObatId equals ok.ObatId
+                        join kandungan in _applicationDbContext.Kandungans
+                        on ok.KandunganId equals kandungan.KandunganId
                         where a.IsDelete == false
                         select new
                         {
@@ -64,11 +73,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             ObatName = a.ObatName,
                             IsActive = a.IsActive,
                             Note = a.Note,
+                            KandunganName = kandungan.NamaKandungan,
+                            AsuransiName = asuransi.NamaAsuransi
                         };
 
+            // Hitung total data sebelum paginasi
             var totalRows = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
 
+            // Ambil data sesuai paging
             var listdata = await query
                 .Skip((page - 1) * perPage)
                 .Take(perPage)
@@ -79,6 +92,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
             }
 
+            // Return hasil dengan paging info
             return Ok(new
             {
                 message = "Berhasil || 200 OK",
