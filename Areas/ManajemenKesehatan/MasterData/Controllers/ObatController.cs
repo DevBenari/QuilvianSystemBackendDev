@@ -64,8 +64,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             ObatName = a.ObatName,
                             IsActive = a.IsActive,
                             Note = a.Note,
-                            ZatAktif = a.ZatAktif,
-                            Fungsi = a.Fungsi,
                         };
 
             var totalRows = await query.CountAsync();

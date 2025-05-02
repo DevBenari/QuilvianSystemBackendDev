@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Tindakan.Models;
 using QuilvianSystemBackendDev.Models;
 
 namespace QuilvianSystemBackendDev.Repositories
@@ -73,6 +74,12 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<DetailICD> DetailICDs { get; set; }
         public DbSet<Resep> Reseps { get; set; }
         public DbSet<DetailResep> DetailReseps { get; set; }
+        public DbSet<MstTindakan> MstTindakans { get; set; } 
+        public DbSet<Kelas> Kelass { get; set; }
+        public DbSet<TarifKelas> TarifKelass { get; set; } 
+        public DbSet<CoveranTindakanAsuransi> CoveranTindakanAsuransis { get; set; }
+        public DbSet<TindakanPoliklinik> TindakanPolikliniks { get; set; }
+        public DbSet<TindakanKunjungan> TindakanKunjungans { get; set; }
 
         #endregion
 
@@ -89,6 +96,7 @@ namespace QuilvianSystemBackendDev.Repositories
         #endregion
 
         #region Areas Tindakan
+
         //public DbSet<TindakanPasienAmbulan> TindakanPasienAmbulans { get; set; }
         //public DbSet<TindakanPasienFasilitas> TindakanPasienFasilitass { get; set; }
         ////public DbSet<TindakanPasienGizi> TindakanPasienGizis { get; set; }

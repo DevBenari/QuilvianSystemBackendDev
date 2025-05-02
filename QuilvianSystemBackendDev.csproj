@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
@@ -43,6 +43,7 @@
  
   <ItemGroup>
     <Folder Include=".github\workflows\" />
+    <Folder Include="Areas\ManajemenKesehatan\Tindakan\ViewModels\" />
     <Folder Include="wwwroot\scanktp\tessdata\" />
   </ItemGroup>
 

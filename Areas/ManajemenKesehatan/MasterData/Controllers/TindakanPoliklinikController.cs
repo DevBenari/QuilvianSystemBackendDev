@@ -9,6 +9,7 @@ using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Tindakan.Models;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
@@ -19,20 +20,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class PainAssessmentController : Controller
+    public class TindakanPoliklinikController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<PainAssessmentController> _logger;
+        private readonly ILogger<TindakanPoliklinikController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public PainAssessmentController(
+
+        public TindakanPoliklinikController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<PainAssessmentController> logger,
+            ILogger<TindakanPoliklinikController> logger,
             IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
@@ -43,41 +45,27 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAllPainAssessment(int page = 1, int perPage = 10)
+        public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
         {
             // Validasi agar page dan perPage minimal bernilai 1
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = from a in _applicationDbContext.PainAssessments
+            var query = from a in _applicationDbContext.TindakanPolikliniks
                         join u in _applicationDbContext.UserActives
                         on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
                         select new
                         {
-                            CreateDateTime = a.CreateDateTime,
-                            CreateBy = a.CreateBy,
+                            a.CreateDateTime,
+                            a.CreateBy,
                             CreateByName = u.FullName,
-                            PainAssessmentId = a.PainAssessmentId,
-                            KunjunganId = a.KunjunganId,
-                            KeluhanUtama = a.KeluhanUtama,
-                            IsPain = a.IsPain,
-                            Pemicu = a.Pemicu,
-                            Kualitas = a.Kualitas,
-                            Lokasi = a.Lokasi,
-                            SkalaPainId = a.SkalaPainId,
-                            Frekuensi = a.Frekuensi,
-                            PainManagement = a.PainManagement,
-                            IsInheritedDisease = a.IsInheritedDisease,
-                            InheritedDisease = a.InheritedDisease,
-                            IsAlergic = a.IsAlergic,
-                            Alergic = a.Alergic,
-                            NafsuMakan = a.NafsuMakan,
-                            IsMual = a.IsMual,
-                            IsMuntah = a.IsMuntah,
-                            IsFallRisk = a.IsFallRisk,
-                            FallRisk = a.FallRisk,
+                            a.TindakanPoliklinikId,
+                            a.PoliklinikId,
+                            a.TindakanId,
+                            a.NamaTindakan,
+                            a.NamaPoliklinik,
                         };
 
             // Hitung total data sebelum paginasi
@@ -113,7 +101,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.PainAssessments.Find(id);
+            var listdata = _applicationDbContext.TindakanPolikliniks.Find(id);
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -127,7 +115,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreatePainAssessment([FromBody] PainAssessmentViewModel vm)
+        public async Task<IActionResult> CreateTindakanPoli([FromBody] TindakanPoliklinikViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -160,62 +148,34 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var dateNow = DateTime.UtcNow;
                 var setDateNow = dateNow.ToString("yyMMdd"); // Format: YYMMDD
 
+                ////// **Cek Duplikasi**
+                bool isDuplicate = _applicationDbContext.TindakanPolikliniks
+                                    .Any(c => c.TindakanId == vm.TindakanId &&
+                                    c.PoliklinikId == vm.PoliklinikId);
 
-                // **Ambil Kode Terakhir**
-                //var lastCode = _applicationDbContext.PainAssessments
-                //    .Where(d => d.CreateDateTime.Date == dateNow.Date)
-                //    .OrderByDescending(k => k.CreateDateTime)
-
-                //    .FirstOrDefault();
-
-                //string kode;
-                //if (lastCode == null)
-                //{
-                //    kode = $"AGM{setDateNow}0001";
-                //}
-                //else
-                //{
-                //    var lastCodeTrim = lastCode.KodeAgama.Substring(3, 6);
-                //    if (lastCodeTrim != setDateNow)
-                //    {
-                //        kode = $"AGM{setDateNow}0001";
-                //    }
-                //    else
-                //    {
-                //        // Mengambil nomor urut terakhir dan menambah 1
-                //        var lastNumber = int.Parse(lastCode.KodeAgama.Substring(9));
-                //        kode = $"AGM{setDateNow}{(lastNumber + 1).ToString("D4")}";
-                //    }
-                //}
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Tindakan sudah tersedia pada poliklinik ini" });
+                }
 
                 // **Buat Data Baru**
-                var data = new PainAssessment
+                var data = new TindakanPoliklinik
                 {
-                    PainAssessmentId = Guid.NewGuid(),
-                    CreateDateTime = DateTimeOffset.UtcNow,
-                    CreateBy = userActiveId,
-                    KunjunganId = vm.KunjunganId,
-                    KeluhanUtama = vm.KeluhanUtama,
-                    IsPain = vm.IsPain,
-                    Pemicu = vm.Pemicu,
-                    Kualitas = vm.Kualitas,
-                    Lokasi = vm.Lokasi,
-                    SkalaPainId = vm.SkalaPainId,
-                    Frekuensi = vm.Frekuensi,
-                    PainManagement = vm.PainManagement,
-                    IsInheritedDisease = vm.IsInheritedDisease,
-                    InheritedDisease = vm.InheritedDisease,
-                    IsAlergic = vm.IsAlergic,
-                    Alergic = vm.Alergic,
-                    NafsuMakan = vm.NafsuMakan,
-                    IsMual = vm.IsMual,
-                    IsMuntah = vm.IsMuntah,
-                    IsFallRisk = vm.IsFallRisk,
-                    FallRisk = vm.FallRisk
+                    TindakanPoliklinikId = Guid.NewGuid(),
+                    PoliklinikId = vm.PoliklinikId,
+                    TindakanId = vm.TindakanId,
+                    NamaTindakan = vm.NamaTindakan,
+                    NamaPoliklinik = vm.NamaPoliklinik,
+                    IsDelete = false,
+
+                    // **Set User Activity**
+                    UpdateBy = userActiveId,
+                    UpdateDateTime = DateTimeOffset.UtcNow,
+
                 };
 
                 // **Simpan ke Database**
-                _applicationDbContext.PainAssessments.Add(data);
+                _applicationDbContext.TindakanPolikliniks.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -238,7 +198,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdatePainAssessment(Guid id, [FromBody] PainAssessmentViewModel vm)
+        public async Task<IActionResult> UpdateTindakanPoli(Guid id, [FromBody] TindakanPoliklinikViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -269,36 +229,32 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.PainAssessments.FindAsync(id);
+                var data = await _applicationDbContext.TindakanPolikliniks.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
-
                 // **Update Data**
-                data.KunjunganId = vm.KunjunganId;
-                data.KeluhanUtama = vm.KeluhanUtama;
-                data.IsPain = vm.IsPain;
-                data.Pemicu = vm.Pemicu;
-                data.Kualitas = vm.Kualitas;
-                data.Lokasi = vm.Lokasi;
-                data.SkalaPainId = vm.SkalaPainId;
-                data.Frekuensi = vm.Frekuensi;
-                data.PainManagement = vm.PainManagement;
-                data.IsInheritedDisease = vm.IsInheritedDisease;
-                data.InheritedDisease = vm.InheritedDisease;
-                data.IsAlergic = vm.IsAlergic;
-                data.Alergic = vm.Alergic;
-                data.NafsuMakan = vm.NafsuMakan;
-                data.IsMual = vm.IsMual;
-                data.IsMuntah = vm.IsMuntah;
-                data.IsFallRisk = vm.IsFallRisk;
-                data.FallRisk = vm.FallRisk;
+                data.PoliklinikId = vm.PoliklinikId;
+                data.TindakanId = vm.TindakanId;
+                data.NamaTindakan = vm.NamaTindakan;
+                data.NamaPoliklinik = vm.NamaPoliklinik;
+
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.PainAssessments.Update(data);
+                ////// **Cek Duplikasi**
+                bool isDuplicate = _applicationDbContext.TindakanPolikliniks
+                                    .Any(c => c.TindakanId == vm.TindakanId &&
+                                    c.PoliklinikId == vm.PoliklinikId);
+
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Tindakan sudah tersedia pada poliklinik ini" });
+                }
+
+                _applicationDbContext.TindakanPolikliniks.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -320,9 +276,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteAgama(Guid id)
+        public async Task<IActionResult> DeleteTindakanPoli(Guid id)
         {
             try
             {
@@ -348,7 +303,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.PainAssessments.FindAsync(id);
+                var data = await _applicationDbContext.TindakanPolikliniks.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -360,7 +315,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 data.IsDelete = true;
 
-                _applicationDbContext.PainAssessments.Update(data);
+                _applicationDbContext.TindakanPolikliniks.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -382,119 +337,148 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-
         [HttpGet("paged")]
-        public async Task<IActionResult> PagedPainAssessment(
+        public IActionResult PagedTindakanPoli(
         int page = 1,
         int perPage = 10,
         string? search = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-        DateTime? startDate = null,
+                DateTime? startDate = null,
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-        DateTime? endDate = null,
+                DateTime? endDate = null,
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
-            try
+            // Query data
+            var query = from a in _applicationDbContext.TindakanPolikliniks
+                        join u in _applicationDbContext.UserActives
+                        on a.CreateBy equals u.UserActiveId
+                        where a.IsDelete == false
+                        select new
+                        {
+                            a.CreateDateTime,
+                            a.CreateBy,
+                            CreateByName = u.FullName,
+                            a.TindakanPoliklinikId,
+                            a.PoliklinikId,
+                            a.TindakanId,
+                            a.NamaTindakan,
+                            a.NamaPoliklinik,
+                        };
+
+            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
+            if (!string.IsNullOrWhiteSpace(search))
             {
-                // **Cek koneksi ke database**
-                if (!await _applicationDbContext.Database.CanConnectAsync())
+                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+                query = query.Where(u =>
+                    EF.Functions.ILike(u.NamaTindakan, search) ||
+                    EF.Functions.ILike(u.NamaPoliklinik, search)
+                );
+            }
+
+            //// **Filter berdasarkan tanggal**
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
+                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+
+                query = query.Where(u =>
+                    u.CreateDateTime >= startUtc &&
+                    u.CreateDateTime <= endUtc);
+            }
+
+            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
+            if (periode.HasValue)
+            {
+                DateTime today = DateTime.UtcNow.Date;
+
+                switch (periode)
                 {
-                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+                    case PeriodeFilter.Today:
+                        query = query.Where(u => u.CreateDateTime.Date == today);
+                        break;
+                    case PeriodeFilter.ThisWeek:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
+                            u.CreateDateTime.Date <= today
+                        );
+                        break;
+                    case PeriodeFilter.LastWeek:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
+                            u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)
+                        );
+                        break;
+                    case PeriodeFilter.ThisMonth:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Month == today.Month &&
+                            u.CreateDateTime.Year == today.Year
+                        );
+                        break;
+                    case PeriodeFilter.LastMonth:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Month == today.Month - 1 &&
+                            u.CreateDateTime.Year == today.Year
+                        );
+                        break;
+                    case PeriodeFilter.ThisYear:
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
+                        break;
+                    case PeriodeFilter.LastYear:
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
+                        break;
+                    case PeriodeFilter.Last3Months:
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
+                        break;
+                    case PeriodeFilter.Last6Months:
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
+                        break;
                 }
+            }
 
-                // Query data
-                var query = from a in _applicationDbContext.PainAssessments
-                            join u in _applicationDbContext.UserActives
-                            on a.CreateBy equals u.UserActiveId
-                            where a.IsDelete == false
-                            select new
-                            {
-                                CreateDateTime = a.CreateDateTime,
-                                CreateBy = a.CreateBy,
-                                CreateByName = u.FullName,
-                                PainAssessmentId = a.PainAssessmentId,
-                                KunjunganId = a.KunjunganId,
-                                KeluhanUtama = a.KeluhanUtama,
-                                IsPain = a.IsPain,
-                                Pemicu = a.Pemicu,
-                                Kualitas = a.Kualitas,
-                                Lokasi = a.Lokasi,
-                                SkalaPainId = a.SkalaPainId,
-                                Frekuensi = a.Frekuensi,
-                                PainManagement = a.PainManagement,
-                                IsInheritedDisease = a.IsInheritedDisease,
-                                InheritedDisease = a.InheritedDisease,
-                                IsAlergic = a.IsAlergic,
-                                Alergic = a.Alergic,
-                                NafsuMakan = a.NafsuMakan,
-                                IsMual = a.IsMual,
-                                IsMuntah = a.IsMuntah,
-                                IsFallRisk = a.IsFallRisk,
-                                FallRisk = a.FallRisk,
-                            };
-
-                // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-                if (!string.IsNullOrWhiteSpace(search))
+            // Sorting Data dengan cara yang lebih aman
+            query = sortDirection?.ToLower() == "desc"
+                ? orderBy switch
                 {
-                    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-                    query = query.Where(u =>
-                        EF.Functions.ILike(u.KeluhanUtama, search)
-                    );
+                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
+                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
+                    "NamaTindakan" => query.OrderByDescending(u => u.NamaTindakan),
+                    "NamaPoliklinik" => query.OrderByDescending(u => u.NamaPoliklinik),
+                    _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
-
-                //// **Filter berdasarkan tanggal**
-                if (startDate.HasValue && endDate.HasValue)
+                : orderBy switch
                 {
-                    DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
-                    DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
-
-                    query = query.Where(u =>
-                        u.CreateDateTime >= startUtc &&
-                        u.CreateDateTime <= endUtc);
-                }
-
-                // **Sorting Data dengan cara yang lebih aman**
-                var sortColumn = orderBy?.ToLower() ?? "createdatetime";
-                var isDescending = sortDirection?.ToLower() == "desc";
-
-                query = sortColumn switch
-                {
-                    "createdatetime" => isDescending ? query.OrderByDescending(u => u.CreateDateTime) : query.OrderBy(u => u.CreateDateTime),
-                    "createbyname" => isDescending ? query.OrderByDescending(u => u.CreateByName) : query.OrderBy(u => u.CreateByName),
-                    "KeluhanUtama" => isDescending ? query.OrderByDescending(u => u.KeluhanUtama) : query.OrderBy(u => u.KeluhanUtama),
+                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
+                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
+                    "NamaTindakan" => query.OrderByDescending(u => u.NamaTindakan),
+                    "NamaPoliklinik" => query.OrderByDescending(u => u.NamaPoliklinik),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 };
 
-                // **Pagination**
-                int totalRows = await query.CountAsync();
-                int totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-                var rows = await query.Skip((page - 1) * perPage).Take(perPage).ToListAsync();
+            // Pagination
+            var totalRows = query.Count();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
 
-                if (rows.Count == 0 && page > totalPages)
-                {
-                    return NotFound(new { message = "Page not found." });
-                }
-
-                return Ok(new
-                {
-                    status = "success",
-                    message = "Data retrieved successfully",
-                    data = new
-                    {
-                        Rows = rows,
-                        TotalRows = totalRows,
-                        CurrentPage = page,
-                        PerPage = perPage,
-                        TotalPages = totalPages
-                    }
-                });
-            }
-            catch (Exception ex)
+            if (rows.Count == 0 && page > totalPages)
             {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+                return NotFound(new { message = "Page not found." });
             }
+
+            return Ok(new
+            {
+                status = "success",
+                message = "Data retrieved successfully",
+                data = new
+                {
+                    Rows = rows,
+                    TotalRows = totalRows,
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalPages = totalPages
+                }
+            });
         }
     }
 }

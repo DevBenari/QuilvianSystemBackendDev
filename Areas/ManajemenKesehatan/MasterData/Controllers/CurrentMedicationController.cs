@@ -147,8 +147,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Ambil Tanggal Sekarang**
-                var dateNow = DateTime.UtcNow;
-                var setDateNow = dateNow.ToString("yyMMdd"); // Format: YYMMDD
+                //var dateNow = DateTime.UtcNow;
+                //var setDateNow = dateNow.ToString("yyMMdd"); // Format: YYMMDD
 
 
                 //// **Ambil Kode Terakhir**
@@ -274,7 +274,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.Frekuensi = vm.Frekuensi;
                 data.LamaKonsumsi = vm.LamaKonsumsi;
                 data.UpdateBy = userActiveId;
-                data.UpdateDateTime = DateTime.UtcNow;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
 
                 _applicationDbContext.CurrentMedications.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
@@ -333,7 +333,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // **Soft Delete (Tandai Data sebagai Terhapus)**
                 data.DeleteBy = userActiveId;
-                data.DeleteDateTime = DateTime.UtcNow;
+                data.DeleteDateTime = DateTimeOffset.UtcNow;
 
                 data.IsDelete = true;
 

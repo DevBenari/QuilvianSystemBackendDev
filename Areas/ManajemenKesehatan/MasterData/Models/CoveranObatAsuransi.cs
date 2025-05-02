@@ -17,6 +17,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? NamaAsuransi { get; set; }
         public int? PersentaseDiskon { get; set; }
         public decimal? TarifObatAsuransi { get; set; }
-        public bool? IsPKS { get; set; }
+        public string? Kelas { get; set; }
+        public Guid? KelasId { get; set; }
+        public string? NamaObat { get; set; }
     }
 }
