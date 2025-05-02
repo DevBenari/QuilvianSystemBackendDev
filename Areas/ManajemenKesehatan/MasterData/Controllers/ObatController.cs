@@ -63,6 +63,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     a.ObatId,
                     a.ObatCode,
                     a.ObatName,
+                    a.HargaAwal,
+                    a.HargaJual,
+                    a.Stock,
                     a.IsActive,
                     a.Note,
                     BentukObatName = _applicationDbContext.BentukObats
