@@ -142,10 +142,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
-                // **Ambil Tanggal Sekarang**
-                var dateNow = DateTime.UtcNow;
-                var setDateNow = dateNow.ToString("yyMMdd"); // Format: YYMMDD
-
                 // **Buat Data Baru**
                 var data = new DetailICD
                 {
@@ -154,7 +150,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     ICDId = vm.ICDId,
                     isUtama = vm.isUtama,
                     CreateBy = userActiveId,
-                    CreateDateTime = dateNow,
+                    CreateDateTime = DateTimeOffset.UtcNow,
                 };
 
                 // **Simpan ke Database**
@@ -224,7 +220,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.isUtama = vm.isUtama;
 
                 data.UpdateBy = userActiveId;
-                data.UpdateDateTime = DateTime.UtcNow;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
 
                 _applicationDbContext.DetailICDs.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
@@ -283,7 +279,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // **Soft Delete (Tandai Data sebagai Terhapus)**
                 data.DeleteBy = userActiveId;
-                data.DeleteDateTime = DateTime.UtcNow;
+                data.DeleteDateTime = DateTimeOffset.UtcNow;
 
                 data.IsDelete = true;
 

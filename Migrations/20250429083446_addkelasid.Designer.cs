@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -11,9 +12,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250429083446_addkelasid")]
+    partial class addkelasid
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1746,6 +1748,9 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<bool>("IsDelete")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("KategoriTindakan")
+                        .HasColumnType("text");
+
                     b.Property<string>("KodeTindakan")
                         .HasColumnType("text");
 
@@ -1849,9 +1854,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<DateOnly?>("ExpiredDate")
                         .HasColumnType("date");
 
-                    b.Property<string>("Fungsi")
-                        .HasColumnType("text");
-
                     b.Property<bool?>("IsActive")
                         .HasColumnType("boolean");
 
@@ -1918,9 +1920,6 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("WarehouseLocationName")
-                        .HasColumnType("text");
-
-                    b.Property<string>("ZatAktif")
                         .HasColumnType("text");
 
                     b.HasKey("ProductId");
@@ -2931,7 +2930,7 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.ToTable("MstSupplier", "public");
                 });
 
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.TarifKelas", b =>
+            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.TarifTindakan", b =>
                 {
                     b.Property<Guid>("TarifTindakanId")
                         .ValueGeneratedOnAdd()
@@ -2964,6 +2963,9 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("NamaPoliklinik")
                         .HasColumnType("text");
 
+                    b.Property<string>("NamaTindakan")
+                        .HasColumnType("text");
+
                     b.Property<Guid?>("PoliklinikId")
                         .HasColumnType("uuid");
 
@@ -2985,7 +2987,7 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<decimal?>("TarifTotal")
                         .HasColumnType("numeric");
 
-                    b.Property<Guid?>("TindakanPoliId")
+                    b.Property<Guid?>("TindakanId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("UpdateBy")
@@ -2996,7 +2998,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("TarifTindakanId");
 
-                    b.ToTable("MstTarifKelas", "public");
+                    b.ToTable("MstTarifTindakan", "public");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.TermOfPayment", b =>
@@ -4104,118 +4106,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.HasKey("RegistFasilitasPasienId");
 
                     b.ToTable("RgsFasilitasPasien", "public");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Tindakan.Models.TindakanKunjungan", b =>
-                {
-                    b.Property<Guid>("TindakanKunjunganId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("CreateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("DeleteBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("DeleteDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Disposition")
-                        .HasColumnType("text");
-
-                    b.Property<Guid?>("DokterId")
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("IsDelete")
-                        .HasColumnType("boolean");
-
-                    b.Property<Guid?>("KelasId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("KunjunganId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("NamaKelas")
-                        .HasColumnType("text");
-
-                    b.Property<string>("NamaPegawai")
-                        .HasColumnType("text");
-
-                    b.Property<Guid?>("PasienId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("PoliklinikId")
-                        .HasColumnType("uuid");
-
-                    b.Property<int?>("Quantity")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid?>("TarifKelasId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("TindakanPoliId")
-                        .HasColumnType("text");
-
-                    b.Property<decimal?>("Total")
-                        .HasColumnType("numeric");
-
-                    b.Property<Guid>("UpdateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("UpdateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("TindakanKunjunganId");
-
-                    b.ToTable("TindakanKunjungans");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Tindakan.Models.TindakanPoliklinik", b =>
-                {
-                    b.Property<Guid>("TindakanPoliklinikId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("CreateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("DeleteBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("DeleteDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsDelete")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("NamaPoliklinik")
-                        .HasColumnType("text");
-
-                    b.Property<string>("NamaTindakan")
-                        .HasColumnType("text");
-
-                    b.Property<Guid?>("PoliklinikId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("TindakanId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("UpdateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("UpdateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("TindakanPoliklinikId");
-
-                    b.ToTable("TindakanPolikliniks");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Models.ApplicationUser", b =>

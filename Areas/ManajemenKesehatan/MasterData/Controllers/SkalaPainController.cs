@@ -186,7 +186,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var data = new SkalaPain
                 {
                     SkalaPainId = Guid.NewGuid(),
-                    CreateDateTime = dateNow.Date,// Konversi ke UTC,
+                    CreateDateTime = DateTimeOffset.UtcNow,// Konversi ke UTC,
                     CreateBy = userActiveId,
                     KodeSkalaPain = kode,
                     KunjunganId = vm.KunjunganId,
@@ -263,7 +263,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.Deskripsi = vm.Deskripsi;
 
                 data.UpdateBy = userActiveId;
-                data.UpdateDateTime = DateTime.UtcNow;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
 
                 _applicationDbContext.SkalaPains.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
@@ -323,7 +323,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // **Soft Delete (Tandai Data sebagai Terhapus)**
                 data.DeleteBy = userActiveId;
-                data.DeleteDateTime = DateTime.UtcNow;
+                data.DeleteDateTime = DateTimeOffset.UtcNow;
 
                 data.IsDelete = true;
 

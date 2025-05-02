@@ -19,21 +19,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class ICD10Controller : Controller
+    public class CoveranTindakanAsuransiController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<ICD10Controller> _logger;
+        private readonly ILogger<CoveranTindakanAsuransiController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-
-        public ICD10Controller(
+        public CoveranTindakanAsuransiController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<ICD10Controller> logger,
+            ILogger<CoveranTindakanAsuransiController> logger,
             IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
@@ -44,14 +43,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAlLICD10(int page = 1, int perPage = 10)
+        public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
         {
             // Validasi agar page dan perPage minimal bernilai 1
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = from a in _applicationDbContext.ICD10s
+            var query = from a in _applicationDbContext.CoveranTindakanAsuransis
                         join u in _applicationDbContext.UserActives
                         on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
@@ -60,11 +59,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateDateTime = a.CreateDateTime,
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
-                            ICD = a.ICDId,
-                            ICDCode = a.ICDCode,
-                            ICDName = a.ICDName,
-                            DTDCode = a.DTDCode,
-                            NamaDiagnosa = a.NamaDiagnosa,
+                            CoveranTindakanAsuransiId = a.CoveranTindakanAsuransiId,
+                            TindakanId = a.TindakanId,
+                            NamaTindakan = a.NamaTindakan,
+                            PoliklinikId = a.PoliklinikId,
+                            NamaPoliklinik = a.NamaPoliklinik,
+                            KelasId = a.KelasId,
+                            NamaKelas = a.NamaKelas,
+                            AsuransiId = a.AsuransiId,
+                            TarifDokterAsuransi = a.TarifDokterAsuransi,
+                            TarifRsAsuransi = a.TarifRsAsuransi,
+                            TarifJpAsuransi = a.TarifJpAsuransi,
+                            TarifBahpAsuransi = a.TarifBahpAsuransi,
+                            TarifLainAsuransi = a.TarifLainAsuransi,
+                            TarifTotalAsuransi = a.TarifTotalAsuransi,
+                            KSOAsuransi = a.KSOAsuransi,
                         };
 
             // Hitung total data sebelum paginasi
@@ -100,7 +109,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.ICD10s.Find(id);
+            var listdata = _applicationDbContext.CoveranTindakanAsuransis.Find(id);
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -114,7 +123,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateICD([FromBody] ICD10ViewModel vm)
+        public async Task<IActionResult> Create([FromBody] CoveranTindakanAsuransiViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -144,28 +153,48 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 //// **Cek Duplikasi**
-                bool isDuplicate = _applicationDbContext.ICD10s
-                                    .Any(c => c.ICDCode == vm.ICDCode);
+                bool isDuplicate = _applicationDbContext.CoveranTindakanAsuransis
+                                    .Any(c => c.TindakanId == vm.TindakanId && c.AsuransiId == vm.AsuransiId);
 
                 if (isDuplicate)
                 {
-                    return Conflict(new { message = "Sudah terdapat kode ICD10 ini!" });
+                    return Conflict(new { message = "Tindakan sudah ada dalam asuransi ini" });
                 }
 
+                // **Hitung Tarif Total**
+                decimal total = (vm.TarifDokterAsuransi ?? 0) +
+                       (vm.TarifRsAsuransi ?? 0) +
+                       (vm.TarifJpAsuransi ?? 0) +
+                       (vm.TarifBahpAsuransi ?? 0) +
+                       (vm.TarifLainAsuransi ?? 0);
+
                 // **Buat Data Baru**
-                var data = new ICD10
+                var data = new CoveranTindakanAsuransi
                 {
-                    ICDId = Guid.NewGuid(),
-                    ICDCode = vm.ICDCode,
-                    ICDName = vm.ICDName,
-                    DTDCode = vm.DTDCode,
-                    NamaDiagnosa = vm.NamaDiagnosa,
+                    CoveranTindakanAsuransiId = Guid.NewGuid(),
+                    TindakanId = vm.TindakanId,
+                    NamaTindakan = vm.NamaTindakan,
+                    PoliklinikId = vm.PoliklinikId,
+                    NamaPoliklinik = vm.NamaPoliklinik,
+                    KelasId = vm.KelasId,
+                    NamaKelas = vm.NamaKelas,
+                    AsuransiId = vm.AsuransiId,
+                    TarifDokterAsuransi = vm.TarifDokterAsuransi,
+                    TarifRsAsuransi = vm.TarifRsAsuransi,
+                    TarifJpAsuransi = vm.TarifJpAsuransi,
+                    TarifBahpAsuransi = vm.TarifBahpAsuransi,
+                    TarifLainAsuransi = vm.TarifLainAsuransi,
+                    TarifTotalAsuransi = total,
+                    KSOAsuransi = vm.KSOAsuransi,
+                    // **User Activity**
                     CreateBy = userActiveId,
-                    CreateDateTime = DateTimeOffset.UtcNow
+                    CreateDateTime = DateTimeOffset.UtcNow,
+                    // **Status**
+                    IsDelete = false
                 };
-               
+
                 // **Simpan ke Database**
-                _applicationDbContext.ICD10s.Add(data);
+                _applicationDbContext.CoveranTindakanAsuransis.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -187,8 +216,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateICD10(Guid id, [FromBody] ICD10ViewModel vm)
+        [HttpPut("{id}")]   
+        public async Task<IActionResult> Update(Guid id, [FromBody] CoveranTindakanAsuransiViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -219,22 +248,37 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.ICD10s.FindAsync(id);
+                var data = await _applicationDbContext.CoveranTindakanAsuransis.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
                 // **Update Data**
-                data.ICDCode = vm.ICDCode;
-                data.ICDName = vm.ICDName;
-                data.DTDCode = vm.DTDCode;
-                data.NamaDiagnosa = vm.NamaDiagnosa;
+                data.TindakanId = vm.TindakanId;
+                data.NamaTindakan = vm.NamaTindakan;
+                data.PoliklinikId = vm.PoliklinikId;
+                data.NamaPoliklinik = vm.NamaPoliklinik;
+                data.KelasId = vm.KelasId;
+                data.NamaKelas = vm.NamaKelas;
+                data.AsuransiId = vm.AsuransiId;
+                data.TarifDokterAsuransi = vm.TarifDokterAsuransi;
+                data.TarifRsAsuransi = vm.TarifRsAsuransi;
+                data.TarifJpAsuransi = vm.TarifJpAsuransi;
+                data.TarifBahpAsuransi = vm.TarifBahpAsuransi;
+                data.TarifLainAsuransi = vm.TarifLainAsuransi;
+                data.TarifTotalAsuransi = (vm.TarifDokterAsuransi ?? 0) +
+                                          (vm.TarifRsAsuransi ?? 0) +
+                                          (vm.TarifJpAsuransi ?? 0) +
+                                          (vm.TarifBahpAsuransi ?? 0) +
+                                          (vm.TarifLainAsuransi ?? 0);
+                data.KSOAsuransi = vm.KSOAsuransi;
+
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.ICD10s.Update(data);
+                _applicationDbContext.CoveranTindakanAsuransis.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -257,7 +301,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteICD10(Guid id)
+        public async Task<IActionResult> Delete(Guid id)
         {
             try
             {
@@ -283,7 +327,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.ICD10s.FindAsync(id);
+                var data = await _applicationDbContext.CoveranTindakanAsuransis.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -295,7 +339,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 data.IsDelete = true;
 
-                _applicationDbContext.ICD10s.Update(data);
+                _applicationDbContext.CoveranTindakanAsuransis.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -318,19 +362,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet("paged")]
-        public IActionResult PagedICD10(
+        public IActionResult PagedPoliklinik(
         int page = 1,
         int perPage = 10,
         string? search = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                DateTime? startDate = null,
+            DateTime? startDate = null,
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                DateTime? endDate = null,
+            DateTime? endDate = null,
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
-        {
-            var query = from a in _applicationDbContext.ICD10s
+            {
+            // Query data
+            var query = from a in _applicationDbContext.CoveranTindakanAsuransis
                         join u in _applicationDbContext.UserActives
                         on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
@@ -339,11 +384,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateDateTime = a.CreateDateTime,
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
-                            ICD = a.ICDId,
-                            ICDCode = a.ICDCode,
-                            ICDName = a.ICDName,
-                            DTDCode = a.DTDCode,
-                            NamaDiagnosa = a.NamaDiagnosa,
+                            CoveranTindakanAsuransiId = a.CoveranTindakanAsuransiId,
+                            TindakanId = a.TindakanId,
+                            NamaTindakan = a.NamaTindakan,
+                            PoliklinikId = a.PoliklinikId,
+                            NamaPoliklinik = a.NamaPoliklinik,
+                            KelasId = a.KelasId,
+                            NamaKelas = a.NamaKelas,
+                            AsuransiId = a.AsuransiId,
+                            TarifDokterAsuransi = a.TarifDokterAsuransi,
+                            TarifRsAsuransi = a.TarifRsAsuransi,
+                            TarifJpAsuransi = a.TarifJpAsuransi,
+                            TarifBahpAsuransi = a.TarifBahpAsuransi,
+                            TarifLainAsuransi = a.TarifLainAsuransi,
+                            TarifTotalAsuransi = a.TarifTotalAsuransi,
+                            KSOAsuransi = a.KSOAsuransi,
                         };
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
@@ -351,10 +406,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             {
                 search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
-                    EF.Functions.ILike(u.ICDCode, search) ||
-                    EF.Functions.ILike(u.ICDName, search) ||
-                    EF.Functions.ILike(u.DTDCode, search) ||
-                    EF.Functions.ILike(u.NamaDiagnosa, search)
+                    EF.Functions.ILike(u.NamaTindakan, search) ||
+                    EF.Functions.ILike(u.NamaPoliklinik, search) ||
+                    EF.Functions.ILike(u.NamaKelas, search) 
                 );
             }
 
@@ -424,20 +478,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "ICDCode" => query.OrderByDescending(u => u.ICDCode),
-                    "ICDName" => query.OrderByDescending(u => u.ICDName),
-                    "DTDCode" => query.OrderByDescending(u => u.DTDCode),
-                    "NamaDiagnosa" => query.OrderByDescending(u => u.NamaDiagnosa),
+                    "NamaKelas" => query.OrderByDescending(u => u.NamaKelas),
+                    "NamaPoliklinik" => query.OrderByDescending(u => u.NamaPoliklinik),
+                    "NamaTindakan" => query.OrderByDescending(u => u.NamaTindakan),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "ICDCode" => query.OrderByDescending(u => u.ICDCode),
-                    "ICDName" => query.OrderByDescending(u => u.ICDName),
-                    "DTDCode" => query.OrderByDescending(u => u.DTDCode),
-                    "NamaDiagnosa" => query.OrderByDescending(u => u.NamaDiagnosa),
+                    "NamaKelas" => query.OrderByDescending(u => u.NamaKelas),
+                    "NamaPoliklinik" => query.OrderByDescending(u => u.NamaPoliklinik),
+                    "NamaTindakan" => query.OrderByDescending(u => u.NamaTindakan),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 };
 
@@ -467,6 +519,4 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
     }
-
-
 }

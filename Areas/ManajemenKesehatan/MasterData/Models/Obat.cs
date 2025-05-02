@@ -27,6 +27,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
 
         [JsonConverter(typeof(DateOnlyJsonConverter))]
         public DateOnly? ExpiredDate { get; set; }
+
+        // Field untuk informasi kandungan obat
+        public string? ZatAktif { get; set; }
+        public string? Fungsi { get; set; }
         public string? DosageStrength { get; set; }
         public string? DosageVolume { get; set; }
         public string? DosageForm { get; set; }

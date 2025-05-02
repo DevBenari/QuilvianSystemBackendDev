@@ -254,7 +254,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.BMI = vm.BMI;
 
                 data.UpdateBy = userActiveId;
-                data.UpdateDateTime = DateTime.UtcNow;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
 
                 _applicationDbContext.VitalSigns.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
@@ -313,7 +313,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // **Soft Delete (Tandai Data sebagai Terhapus)**
                 data.DeleteBy = userActiveId;
-                data.DeleteDateTime = DateTime.UtcNow;
+                data.DeleteDateTime = DateTimeOffset.UtcNow;
 
                 data.IsDelete = true;
 

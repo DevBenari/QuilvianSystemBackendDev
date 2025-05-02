@@ -85,6 +85,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             IsSupplierUtama = a.IsSupplierUtama,
                             IsActive = a.IsActive,
                             Note = a.Note,
+                            ZatAktif = a.ZatAktif,
+                            Fungsi = a.Fungsi,
                         };
 
             // Hitung total data sebelum paginasi
@@ -224,6 +226,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         IsSupplierUtama = vm.IsSupplierUtama,
                         IsActive = true,
                         Note = vm.Note,
+                        ZatAktif = vm.ZatAktif,
+                        Fungsi = vm.Fungsi,
+
+                        CreateDateTime = DateTimeOffset.UtcNow,
+                        CreateBy = UserActiveId,
                     };
 
                     _applicationDbContext.Obats.Add(data);
@@ -295,6 +302,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     data.StorageLocation = vm.StorageLocation;
                     data.RackNumber = vm.RackNumber;
                     data.IsSupplierUtama = vm.IsSupplierUtama;
+                    data.Note = vm.Note;
+                    data.ZatAktif = vm.ZatAktif;
+                    data.Fungsi = vm.Fungsi;
 
                     data.UpdateDateTime = DateTimeOffset.UtcNow;
                     data.UpdateBy = UserActiveId;
@@ -407,6 +417,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             IsSupplierUtama = a.IsSupplierUtama,
                             IsActive = a.IsActive,
                             Note = a.Note,
+                            ZatAktif = a.ZatAktif,
+                            Fungsi = a.Fungsi,
                         };
 
             // Filter berdasarkan search

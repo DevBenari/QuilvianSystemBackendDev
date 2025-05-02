@@ -68,7 +68,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             NamaAsuransi = a.NamaAsuransi,
                             PersentaseDiskon = a.PersentaseDiskon,
                             TarifObatAsuransi = a.TarifObatAsuransi,
-                            IsPKS = a.IsPKS,
+                            KelasId = a.KelasId,
+                            Kelas = a.Kelas,
+                            NamaObat = a.NamaObat,
                         };
 
             // Hitung total data sebelum paginasi
@@ -172,7 +174,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 if (isDuplicate)
                 {
-                    return Conflict(new { message = "Obat ini telah terdaftar pada asuransi ini" });
+                    return Conflict(new { message = "Obat telah terdaftar pada asuransi ini" });
                 }
 
                 // Validate ModelState
@@ -190,7 +192,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         NamaAsuransi = vm.NamaAsuransi,
                         PersentaseDiskon = vm.PersentaseDiskon,
                         TarifObatAsuransi = vm.TarifObatAsuransi,
-                        IsPKS = vm.IsPKS,
+                        Kelas = vm.Kelas,
+                        NamaObat = vm.NamaObat,
+                        KelasId = vm.KelasId,
                         CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = UserActiveId
                     };
@@ -251,7 +255,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.NamaAsuransi = vm.NamaAsuransi;
                 data.PersentaseDiskon = vm.PersentaseDiskon;
                 data.TarifObatAsuransi = vm.TarifObatAsuransi;
-                data.IsPKS = vm.IsPKS;
+                data.Kelas = vm.Kelas;
+                data.NamaObat = vm.NamaObat;
+                data.KelasId = vm.KelasId;
 
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
                 data.UpdateBy = UserActiveId;
@@ -341,7 +347,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             NamaAsuransi = a.NamaAsuransi,
                             PersentaseDiskon = a.PersentaseDiskon,
                             TarifObatAsuransi = a.TarifObatAsuransi,
-                            IsPKS = a.IsPKS,
+                            KelasId = a.KelasId,
+                            Kelas = a.Kelas,
+                            NamaObat = a.NamaObat,
+
                         };
 
 

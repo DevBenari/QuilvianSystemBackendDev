@@ -32,5 +32,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
         public string RackNumber { get; set; }
         public bool? IsSupplierUtama { get; set; }
         public string? Note { get; set; }
+
+        // Field untuk informasi kandungan obat
+        public string? ZatAktif { get; set; }
+        public string? Fungsi { get; set; }
     }
 }

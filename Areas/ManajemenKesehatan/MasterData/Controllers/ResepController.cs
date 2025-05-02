@@ -167,17 +167,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
-                // **Ambil Tanggal Sekarang**
-                var dateNow = DateTime.UtcNow;
-                var setDateNow = dateNow.ToString("yyMMdd"); // Format: YYMMDD
-
                 var resep = new Resep
                 {
                     ResepId = Guid.NewGuid(),
                     KunjunganId = vm.KunjunganId,
                     AsuransiId = vm.AsuransiId,
                     CreateBy = userActiveId,
-                    CreateDateTime = dateNow,
+                    CreateDateTime = DateTimeOffset.UtcNow,
                 };
 
                 _applicationDbContext.Reseps.Add(resep);
@@ -195,7 +191,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         SignaTambahan = obat.SignaTambahan,
                         InteraturObat = obat.InteraturObat,
                         CreateBy = userActiveId,
-                        CreateDateTime = dateNow,
+                        CreateDateTime = DateTimeOffset.UtcNow,
                     }).ToList();
 
                     _applicationDbContext.DetailReseps.AddRange(daftarobat);
