@@ -1,10 +1,11 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using QuilvianSystemBackendDev.Models;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
 {
     [Table("MstBentukObat", Schema = "public")]
-    public class BentukObat
+    public class BentukObat : UserActivity
     {
         [Key]
         public Guid BentukObatId { get; set; }

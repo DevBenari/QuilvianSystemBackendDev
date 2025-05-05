@@ -129,6 +129,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Insert data baru
                 obatAsuransi.ObatAsuransiId = Guid.NewGuid();
+
                 _applicationDbContext.ObatAsuransis.Add(obatAsuransi);
                 await _applicationDbContext.SaveChangesAsync();
 

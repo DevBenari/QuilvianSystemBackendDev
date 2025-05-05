@@ -9,6 +9,10 @@ using System.Threading.Tasks;
 using System.Security.Claims;
 using QuilvianSystemBackendDev.Models;
 using Microsoft.AspNetCore.Identity;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using Swashbuckle.AspNetCore.Annotations;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
@@ -114,6 +118,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
+                //var dateNow = DateTime.UtcNow;
+                //var setDateNow = dateNow.ToString("yyMMdd");
+
+                //// KodePoliklinik
+                //var lastCode = _applicationDbContext.Kandungans
+                //    .Where(d => d.CreateDateTime.Date == dateNow.Date)
+                //    .OrderByDescending(k => k.KodeKandungan)
+                //    .FirstOrDefault();
+
+                //string KodeKandungan;
+                //if (lastCode == null || lastCode.KodeKandungan.Substring(3, 6) != setDateNow)
+                //{
+                //    KodeKandungan = $"KDG{setDateNow}0001";
+                //}
+                //else
+                //{
+                //    int lastNumber = Convert.ToInt32(lastCode.KodeKandungan.Substring(9));
+                //    KodeKandungan = $"KDG{setDateNow}{(lastNumber + 1).ToString("D4")}";
+                //}
+
                 // Cek jika sudah ada data yang sama berdasarkan KodeKandungan
                 var isDuplicate = await _applicationDbContext.Kandungans
                     .AnyAsync(k => k.KodeKandungan == kandungan.KodeKandungan);
@@ -125,6 +149,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Insert data baru
                 kandungan.KandunganId = Guid.NewGuid();
+                kandungan.KodeKandungan = kandungan.KodeKandungan;
+                kandungan.NamaKandungan = kandungan.NamaKandungan;
+
+                kandungan.CreateBy = userActiveId;
+                kandungan.CreateDateTime = DateTimeOffset.UtcNow;
                 _applicationDbContext.Kandungans.Add(kandungan);
                 await _applicationDbContext.SaveChangesAsync();
 
@@ -147,6 +176,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
             try
             {
+                // **Ambil User ID dari JWT Claims**
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
+
+                if (string.IsNullOrEmpty(EmailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
                 // Cari data yang ingin diupdate
                 var data = await _applicationDbContext.Kandungans.FindAsync(id);
                 if (data == null)
@@ -166,6 +205,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 // Update data
                 data.KodeKandungan = kandungan.KodeKandungan;
                 data.NamaKandungan = kandungan.NamaKandungan;
+                data.UpdateBy = UserActiveId;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
 
                 _applicationDbContext.Kandungans.Update(data);
                 await _applicationDbContext.SaveChangesAsync();
@@ -199,6 +240,143 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             {
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
+        }
+
+        [HttpGet("paged")]
+        public IActionResult PagedKandungan(
+        int page = 1,
+        int perPage = 10,
+        string? search = null,
+        string? orderBy = "CreateDateTime",
+        string? sortDirection = "desc",
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+        DateTime? startDate = null,
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+        DateTime? endDate = null,
+        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        {
+            var query = from k in _applicationDbContext.Kandungans
+                        select new
+                        {
+                            KandunganId = k.KandunganId,
+                            KodeKandungan = k.KodeKandungan,
+                            NamaKandungan = k.NamaKandungan,
+                            CreateDateTime = k.CreateDateTime,
+                            k.CreateBy
+                        };
+
+            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+                query = query.Where(u =>
+                    EF.Functions.ILike(u.KodeKandungan, search) ||
+                    EF.Functions.ILike(u.NamaKandungan, search)
+                );
+            }
+
+            //// **Filter berdasarkan tanggal**
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
+                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+
+                query = query.Where(u =>
+                    u.CreateDateTime >= startUtc &&
+                    u.CreateDateTime <= endUtc);
+            }
+
+            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
+            if (periode.HasValue)
+            {
+                DateTime today = DateTime.UtcNow.Date;
+
+                switch (periode)
+                {
+                    case PeriodeFilter.Today:
+                        query = query.Where(u => u.CreateDateTime.Date == today);
+                        break;
+                    case PeriodeFilter.ThisWeek:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
+                            u.CreateDateTime.Date <= today
+                        );
+                        break;
+                    case PeriodeFilter.LastWeek:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
+                            u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek))
+                        );
+                        break;
+                    case PeriodeFilter.ThisMonth:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Month == today.Month &&
+                            u.CreateDateTime.Year == today.Year
+                        );
+                        break;
+                    case PeriodeFilter.LastMonth:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Month == today.Month - 1 &&
+                            u.CreateDateTime.Year == today.Year
+                        );
+                        break;
+                    case PeriodeFilter.ThisYear:
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
+                        break;
+                    case PeriodeFilter.LastYear:
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
+                        break;
+                    case PeriodeFilter.Last3Months:
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
+                        break;
+                    case PeriodeFilter.Last6Months:
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
+                        break;
+                }
+            }
+
+            // Sorting Data dengan cara yang lebih aman
+            query = sortDirection?.ToLower() == "desc"
+                ? orderBy switch
+                {
+                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
+                    "CreateByName" => query.OrderByDescending(u => u.CreateBy),
+                    "NamaKandungan" => query.OrderByDescending(u => u.NamaKandungan),
+                    "KodeKandungan" => query.OrderByDescending(u => u.KodeKandungan),
+                    _ => query.OrderByDescending(u => u.CreateDateTime)
+                }
+                : orderBy switch
+                {
+                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
+                    "CreateByName" => query.OrderByDescending(u => u.CreateBy),
+                    "NamaKandungan" => query.OrderByDescending(u => u.NamaKandungan),
+                    "KodeKandungan" => query.OrderByDescending(u => u.KodeKandungan),
+                    _ => query.OrderByDescending(u => u.CreateDateTime)
+                };
+
+            // Pagination
+            var totalRows = query.Count();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
+
+            if (rows.Count == 0 && page > totalPages)
+            {
+                return NotFound(new { message = "Page not found." });
+            }
+
+            return Ok(new
+            {
+                status = "success",
+                message = "Data retrieved successfully",
+                data = new
+                {
+                    Rows = rows,
+                    TotalRows = totalRows,
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalPages = totalPages
+                }
+            });
         }
     }
 }
