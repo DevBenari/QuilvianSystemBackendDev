@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Services;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
@@ -131,6 +132,9 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader();
     });
 });
+
+// add services untuk menampilkan data role
+builder.Services.AddScoped<serviceMasterData>();
 
 // Add services to the container.
 builder.Services.AddControllers();

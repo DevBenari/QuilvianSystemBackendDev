@@ -51,7 +51,9 @@ namespace QuilvianSystemBackendDev.Controllers
                         var claims = new List<Claim>
                         {
                             new Claim(JwtRegisteredClaimNames.Sub, model.Email),
-                            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+                            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                            //new Claim(ClaimTypes.Email, model.Email),
+                            //new Claim(ClaimTypes.Name,model.Email)
                         };
 
                         var token = new JwtSecurityToken(
@@ -92,7 +94,9 @@ namespace QuilvianSystemBackendDev.Controllers
                                 var claims = new[]
                                 {
                             new Claim(JwtRegisteredClaimNames.Sub, model.Email),
-                            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+                            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                            //new Claim(ClaimTypes.Email, model.Email),
+                            //new Claim(ClaimTypes.Name,model.Email)
                             };
 
                                 var token = new JwtSecurityToken(

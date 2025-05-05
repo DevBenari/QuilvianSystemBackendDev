@@ -84,6 +84,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<ObatKandungan> ObatKandungans { get; set; }
         public DbSet<Kandungan> Kandungans { get; set; }
         public DbSet<BentukObat> BentukObats { get; set; }
+        public DbSet<TipeUser> TipeUsers { get; set; }
 
         #endregion
 
