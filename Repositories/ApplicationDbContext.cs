@@ -74,12 +74,12 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<DetailICD> DetailICDs { get; set; }
         public DbSet<Resep> Reseps { get; set; }
         public DbSet<DetailResep> DetailReseps { get; set; }
-        public DbSet<MstTindakan> MstTindakans { get; set; } 
         public DbSet<Kelas> Kelass { get; set; }
         public DbSet<TarifKelas> TarifKelass { get; set; } 
         public DbSet<CoveranTindakanAsuransi> CoveranTindakanAsuransis { get; set; }
-        public DbSet<TindakanPoliklinik> TindakanPolikliniks { get; set; }
-        public DbSet<TindakanKunjungan> TindakanKunjungans { get; set; }
+        public DbSet<Tindakan> Tindakans { get; set; }
+        public DbSet<TindakanPoli> TindakanPolis { get; set; }
+        public DbSet<TindakanAsuransi> TindakanAsuransis { get; set; }
         public DbSet<ObatAsuransi> ObatAsuransis { get; set; }
         public DbSet<ObatKandungan> ObatKandungans { get; set; }
         public DbSet<Kandungan> Kandungans { get; set; }
