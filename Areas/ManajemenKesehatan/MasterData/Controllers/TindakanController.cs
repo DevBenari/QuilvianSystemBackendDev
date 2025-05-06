@@ -56,7 +56,30 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             t.KodeTindakan,
                             t.NamaTindakan,
                             CreateByName = u.FullName,
-                            CreateDateTime = t.CreateDateTime
+                            CreateDateTime = t.CreateDateTime,
+
+                            // Mengambil Asuransi terkait dengan TindakanId
+                            AsuransiNames = (from ta in _applicationDbContext.TindakanAsuransis
+                                             join asu in _applicationDbContext.Asuransis on ta.AsuransiId equals asu.AsuransiId
+                                             where ta.TindakanId == t.TindakanId
+                                             select asu.NamaAsuransi).Distinct().ToList(),
+
+                            // Mengambil Tarif Kelas terkait dengan TindakanId
+                            TarifKelas = (from tk in _applicationDbContext.TarifKelass
+                                          where tk.TindakanId == t.TindakanId
+                                          join k in _applicationDbContext.Kelass on tk.KelasId equals k.KelasId
+                                          select new
+                                          {
+                                              tk.TarifKelasId,
+                                              tk.TarifDokter,
+                                              tk.TarifRs,
+                                              tk.TarifJp,
+                                              tk.TarifBahp,
+                                              tk.TarifLain,
+                                              tk.TarifTotal,
+                                              tk.KSO,
+                                              NamaKelas = k.NamaKelas // Menambahkan Nama Kelas
+                                          }).ToList()
                         };
 
             var totalRows = query.Count();
@@ -82,6 +105,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
             });
         }
+
 
         // GET: api/tindakan/{id}
         [HttpGet("{id}")]

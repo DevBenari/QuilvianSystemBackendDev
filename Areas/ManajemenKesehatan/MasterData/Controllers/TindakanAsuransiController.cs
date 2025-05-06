@@ -111,7 +111,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         public async Task<IActionResult> GetTindakanAsuransiById(Guid id)
         {
             var data = await _applicationDbContext.TindakanAsuransis
-                .FirstOrDefaultAsync(t => t.TindakanAsuransiId == id && !t.IsDelete);
+                .Where(t => t.TindakanId == id && !t.IsDelete)
+                .ToListAsync();  // Mengambil semua data yang sesuai dalam bentuk list
 
             if (data == null)
             {

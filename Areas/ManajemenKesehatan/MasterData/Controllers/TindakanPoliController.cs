@@ -110,16 +110,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet("{id}")]
         public async Task<IActionResult> GetTindakanPoliById(Guid id)
         {
+            // Mengambil semua relasi Tindakan yang sesuai dengan TindakanId
             var data = await _applicationDbContext.TindakanPolis
-                .FirstOrDefaultAsync(t => t.TindakanPoliId == id && !t.IsDelete);
+                .Where(t => t.TindakanId == id && !t.IsDelete)
+                .ToListAsync();  // Mengambil semua data yang sesuai dalam bentuk list
 
-            if (data == null)
+            if (data == null || !data.Any())
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
             }
 
             return Ok(new { message = "Data ditemukan || 200 OK", data });
         }
+
 
         // DELETE: api/tindakanpoli/{id}
         [HttpDelete("{id}")]

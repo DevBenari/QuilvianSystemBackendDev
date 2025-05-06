@@ -2,9 +2,7 @@
 {
     public class TarifKelasViewModel
     {
-        public Guid? TindakanPoliId { get; set; }
-        public Guid? PoliklinikId { get; set; }
-        public string? NamaPoliklinik { get; set; }
+        public Guid? TindakanId { get; set; }
         public Guid? KelasId { get; set; }
         public string? NamaKelas { get; set; }
         public decimal? TarifDokter { get; set; }
