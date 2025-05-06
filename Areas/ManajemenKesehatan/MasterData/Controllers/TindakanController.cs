@@ -64,6 +64,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                              where ta.TindakanId == t.TindakanId
                                              select asu.NamaAsuransi).Distinct().ToList(),
 
+                            // Mengambil Poli terkait dengan TindakanId   
+                            PoliNames = (from tp in _applicationDbContext.TindakanPolis
+                                         join poli in _applicationDbContext.Polikliniks on tp.PoliId equals poli.PoliklinikId
+                                         where tp.TindakanId == t.TindakanId
+                                         select poli.NamaPoliklinik).Distinct().ToList(),
+
                             // Mengambil Tarif Kelas terkait dengan TindakanId
                             TarifKelas = (from tk in _applicationDbContext.TarifKelass
                                           where tk.TindakanId == t.TindakanId
