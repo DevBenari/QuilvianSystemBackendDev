@@ -62,6 +62,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         on a.CreateBy equals u.UserActiveId
                         join p in _applicationDbContext.Polikliniks
                         on a.PoliklinikId equals p.PoliklinikId
+                        join o in _applicationDbContext.Asuransis
+                        on a.AsuransiId equals o.AsuransiId
                         join ps in _applicationDbContext.PendaftaranPasienBarus
                         on a.PasienId equals ps.PendaftaranPasienBaruId
                         join d in _applicationDbContext.Dokters
@@ -71,9 +73,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         {
                             a.KunjunganID,
                             a.AsuransiId,
+                            o.NamaAsuransi,
                             a.PoliklinikId,
                             p.NamaPoliklinik,
-
                             a.DokterId,
                             a.PasienId,
                             ps.NamaLengkap,
@@ -124,6 +126,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     item.KunjunganID,
                     item.AsuransiId,
+                    item.NamaAsuransi,
                     item.PoliklinikId,
                     item.NamaPoliklinik,
                     item.DokterId,
@@ -170,20 +173,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet("{id}")]
         public async Task<IActionResult> GetKunjunganById(Guid id)
         {
+
             var query = from a in _applicationDbContext.Kunjungans
                         join u in _applicationDbContext.UserActives
-                            on a.CreateBy equals u.UserActiveId
+                        on a.CreateBy equals u.UserActiveId
                         join p in _applicationDbContext.Polikliniks
-                            on a.PoliklinikId equals p.PoliklinikId
+                        on a.PoliklinikId equals p.PoliklinikId
+                        join o in _applicationDbContext.Asuransis
+                        on a.AsuransiId equals o.AsuransiId
                         join ps in _applicationDbContext.PendaftaranPasienBarus
-                            on a.PasienId equals ps.PendaftaranPasienBaruId
+                        on a.PasienId equals ps.PendaftaranPasienBaruId
                         join d in _applicationDbContext.Dokters
-                            on a.DokterId equals d.DokterId
-                        where a.IsDelete == false && a.KunjunganID == id
+                        on a.DokterId equals d.DokterId
+                        where a.IsDelete == false
                         select new
                         {
                             a.KunjunganID,
                             a.AsuransiId,
+                            o.NamaAsuransi,
                             a.PoliklinikId,
                             p.NamaPoliklinik,
 
@@ -233,6 +240,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             {
                 item.KunjunganID,
                 item.AsuransiId,
+                item.NamaAsuransi,
                 item.PoliklinikId,
                 item.NamaPoliklinik,
                 item.DokterId,
@@ -645,6 +653,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         on a.CreateBy equals u.UserActiveId
                         join p in _applicationDbContext.Polikliniks
                         on a.PoliklinikId equals p.PoliklinikId
+                        join o in _applicationDbContext.Asuransis
+                        on a.AsuransiId equals o.AsuransiId
                         join ps in _applicationDbContext.PendaftaranPasienBarus
                         on a.PasienId equals ps.PendaftaranPasienBaruId
                         join d in _applicationDbContext.Dokters
@@ -654,6 +664,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         {
                             a.KunjunganID,
                             a.AsuransiId,
+                            o.NamaAsuransi,
                             a.PoliklinikId,
                             p.NamaPoliklinik,
                             a.DokterId,
