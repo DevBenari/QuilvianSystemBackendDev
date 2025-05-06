@@ -62,13 +62,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             AsuransiNames = (from ta in _applicationDbContext.TindakanAsuransis
                                              join asu in _applicationDbContext.Asuransis on ta.AsuransiId equals asu.AsuransiId
                                              where ta.TindakanId == t.TindakanId
-                                             select asu.NamaAsuransi).Distinct().ToList(),
+                                             select new
+                                             {
+                                                 AsuransiId = asu.AsuransiId,  // Menambahkan AsuransiId
+                                                 NamaAsuransi = asu.NamaAsuransi
+                                             }).Distinct().ToList(),
 
-                            // Mengambil Poli terkait dengan TindakanId   
+                            // Mengambil Poli terkait dengan TindakanId
                             PoliNames = (from tp in _applicationDbContext.TindakanPolis
                                          join poli in _applicationDbContext.Polikliniks on tp.PoliId equals poli.PoliklinikId
                                          where tp.TindakanId == t.TindakanId
-                                         select poli.NamaPoliklinik).Distinct().ToList(),
+                                         select new
+                                         {
+                                             PoliId = poli.PoliklinikId,  // Menambahkan PoliId
+                                             NamaPoliklinik = poli.NamaPoliklinik
+                                         }).Distinct().ToList(),
 
                             // Mengambil Tarif Kelas terkait dengan TindakanId
                             TarifKelas = (from tk in _applicationDbContext.TarifKelass
