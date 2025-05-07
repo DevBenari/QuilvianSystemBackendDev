@@ -52,8 +52,6 @@ namespace QuilvianSystemBackendDev.Controllers
                         {
                             new Claim(JwtRegisteredClaimNames.Sub, model.Email),
                             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                            //new Claim(ClaimTypes.Email, model.Email),
-                            //new Claim(ClaimTypes.Name,model.Email)
                         };
 
                         var token = new JwtSecurityToken(
@@ -95,8 +93,6 @@ namespace QuilvianSystemBackendDev.Controllers
                                 {
                             new Claim(JwtRegisteredClaimNames.Sub, model.Email),
                             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                            //new Claim(ClaimTypes.Email, model.Email),
-                            //new Claim(ClaimTypes.Name,model.Email)
                             };
 
                                 var token = new JwtSecurityToken(
@@ -142,7 +138,37 @@ namespace QuilvianSystemBackendDev.Controllers
 
             return Ok();
         }
+
+        [HttpPost("logout")]
+        [Authorize] // Hanya user login yang bisa logout
+        public async Task<IActionResult> Logout()
+        {
+            var email = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value
+                     ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(email))
+            {
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+            }
+
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null)
+            {
+                return NotFound(new { message = "User tidak ditemukan." });
+            }
+
+            user.IsOnline = false;
+
+            await _userManager.UpdateAsync(user);
+
+            // Karena JWT tidak bisa dihapus dari server, cukup beri respons sukses
+            return Ok(new
+            {
+                message = "Logout berhasil. Silakan hapus token dari browser."
+            });
+        }
     }
+
 
     public class LoginModel
     {

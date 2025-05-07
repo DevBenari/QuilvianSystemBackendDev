@@ -393,6 +393,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         CreateBy = UserActiveId,
                         IsDelete = false,
                         IsAsuransi = vm.IsAsuransi,
+                        IsActive = true,
                     };
                     _context.Dokters.Add(dokter);
                     _context.SaveChanges();
@@ -476,6 +477,30 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
+                // ✅ Update juga data di tabel UserActives
+                var userActive = await _context.UserActives
+                    .FirstOrDefaultAsync(u => u.FullName == data.NmDokter && u.Email == data.Email);
+
+                //update data di tabel ApplicationUser
+                var userLogin = await _userManager.FindByEmailAsync(data.Email.ToString());
+                if (userLogin == null)
+                {
+                    return NotFound(new { message = "User tidak ditemukan." });
+                }
+                else
+                {
+                    userLogin.NamaUser = vm.NmDokter;
+                    userLogin.Email = vm.Email;
+                    userLogin.UserName = vm.Email;
+                    userLogin.PhoneNumber = vm.Nohp;
+                }
+                var result = await _userManager.UpdateAsync(userLogin);
+                if (!result.Succeeded)
+                {
+                    return BadRequest(new { message = "Gagal memperbarui data user ApplicationUser." });
+                }
+
+
                 //update data
                 data.NmDokter = vm.NmDokter ?? data.NmDokter;
                 data.Sip = vm.Sip ?? data.Sip;
@@ -488,6 +513,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.Alamat = vm.Alamat ?? data.Alamat;
                 data.Spesialis = vm.Spesialis ?? data.Spesialis;
                 data.IsAsuransi = vm.IsAsuransi ?? data.IsAsuransi;
+
+                if (userActive != null)
+                {
+                    userActive.FullName = vm.NmDokter ?? userActive.FullName;
+                    userActive.IdentityNumber = vm.Nik ?? userActive.IdentityNumber;
+                    userActive.Email = vm.Email ?? userActive.Email;
+                    userActive.Address = vm.Alamat ?? userActive.Address;
+                    userActive.Handphone = vm.Nohp ?? userActive.Handphone;
+
+                    userActive.UpdateDateTime = DateTimeOffset.UtcNow;
+                    userActive.UpdateBy = UserActiveId;
+
+                    _context.UserActives.Update(userActive);
+                }
 
                 // **Update Foto Profil Jika Ada**
                 if (vm.Foto != null && vm.Foto.Length > 0)
@@ -540,6 +579,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.UpdateBy = UserActiveId;
 
                 _context.Dokters.Update(data);
+
                 _context.SaveChanges();
 
                 // **Asuransi**
@@ -616,6 +656,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 await _context.SaveChangesAsync();
 
+                
+
                 return Ok(new { message = "Data berhasil diupdate..." });
             }
 
@@ -648,10 +690,40 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
+                // cari data user di table user active
+                var user = _context.UserActives
+                        .FirstOrDefault(u => u.FullName == data.NmDokter && u.Email == data.Email);
+                if (user != null)
+                {
+                    // Hapus data userdokter dari tabel Dokter
+                    user.IsDelete = true;
+                    user.IsActive = false;
+                    user.DeleteBy = UserActiveId;
+                    user.DeleteDateTime = DateTimeOffset.UtcNow;
+
+                    _context.UserActives.Update(user);
+                    await _context.SaveChangesAsync();
+                }
+                else
+                {
+                    return NotFound(new { message = "User Active Dokter Ini Tidak Ditemukan" });
+                }
+
+                // Hapus user login dari tabel AspNetUsers (permanen)
+                var userLogin = await _userManager.FindByEmailAsync(data.Email);
+                if (userLogin != null)
+                {
+                    var result = await _userManager.DeleteAsync(userLogin);
+                    if (!result.Succeeded)
+                    {
+                        return BadRequest(new { message = "Gagal menghapus akun login dari sistem." });
+                    }
+                }
                 // **Soft Delete (Tandai Data sebagai Terhapus)**
                 data.DeleteBy = UserActiveId;
                 data.DeleteDateTime = DateTimeOffset.UtcNow;
                 data.IsDelete = true;
+                data.IsActive = false;
 
                 _context.Dokters.Update(data);
                 _context.SaveChanges();

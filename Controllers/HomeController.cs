@@ -9,6 +9,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using System.IdentityModel.Tokens.Jwt;
+using Microsoft.EntityFrameworkCore;
 
 namespace QuilvianSystemBackendDev.Controllers
 {
@@ -48,56 +49,126 @@ namespace QuilvianSystemBackendDev.Controllers
         [HttpGet]
         public async Task<IActionResult> Profile()
         {
-            ViewBag.Active = "Profile";
+            var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-            // untuk user tipe umum
-            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(EmailLogin))
+            if (string.IsNullOrEmpty(emailLogin))
             {
-                return Unauthorized(new { message = "User tidak terautentikasi!" });
+                return Unauthorized(new { message = "User tidak terautentikasi." });
             }
 
-            var GetUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
-            var UserActiveId = GetUserActive?.UserActiveId ?? Guid.Empty;
+            // Ambil user berdasarkan email
+            var user = await _applicationDbContext.UserActives
+                .FirstOrDefaultAsync(u => u.Email == emailLogin);
 
-            var getUser = await _serviceMasterData.GetCurrentUserByEmail(EmailLogin);
-
-            if (getUser != null)
+            if (user == null)
             {
+                var superadminModel = new UserActive
+                {
+                    FullName = user.FullName ?? "Superadmin",
+                    Email = user.Email,
+                    Handphone = "-",
+                    Gender = "-",
+                    PlaceOfBirth = "Jakarta",
+                    DateOfBirth = DateTime.MinValue,
+                    Address = "-",
+                    //Foto = null,
+                    //MstDepartmentUser = null,
+                    //MstPositionUser = null
+                };
+
+                ViewBag.IsSuperAdmin = true;
                 return Ok(new
                 {
-                    message = "Data user ditemukan",
-                    data = getUser
+                    message = "Data superadmin dummy",
+                    data = superadminModel
                 });
             }
 
-            var userLogin = await _userManager.FindByEmailAsync(EmailLogin);
-            if (userLogin == null)
+            // Ambil nama tipe user dari tabel MstTipeUser berdasarkan TipeUserId
+            var tipeUser = await _applicationDbContext.TipeUsers
+                .FirstOrDefaultAsync(t => t.TipeUserId == user.TipeUserId);
+
+            var tipeUserName = tipeUser?.NamaTipeUser ?? "Unknown";
+
+            // Cek apakah tipe user adalah dokter
+            if (tipeUserName.ToLower() == "dokter")
             {
-                return NotFound("Data user tidak ditemukan di sistem.");
+                var dokter = await _applicationDbContext.Dokters
+                    .FirstOrDefaultAsync(d => d.Email == user.Email);
+
+                if (dokter == null)
+                {
+                    return NotFound(new { message = "User adalah dokter, tapi data dokter tidak ditemukan." });
+                }
+
+                return Ok(new
+                {
+                    message = "Data dokter ditemukan",
+                    data = user,
+                    dokter = dokter
+                });
             }
 
-            // Buat dummy MstUserActive hanya untuk tampilan super admin
-            var superadminModel = new UserActive
-            {
-                FullName = userLogin.NamaUser ?? "Superadmin",
-                Email = userLogin.Email,
-                Handphone = "-",
-                Gender = "-",
-                PlaceOfBirth = "Jakarta",
-                DateOfBirth = DateTime.MinValue,
-                Address = "-",
-                //Foto = null,
-                //MstDepartmentUser = null,
-                //MstPositionUser = null
-            };
-
-            ViewBag.IsSuperAdmin = true;
+            // Jika bukan dokter
             return Ok(new
             {
-                message = "Data superadmin dummy",
-                data = superadminModel
+                message = "Data user ditemukan",
+                data = user,
+                TipeUser = tipeUser.NamaTipeUser
             });
         }
+        //public async Task<IActionResult> Profile()
+        //{
+        //    ViewBag.Active = "Profile";
+
+        //    // untuk user tipe umum
+        //    var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        //    if (string.IsNullOrEmpty(EmailLogin))
+        //    {
+        //        return Unauthorized(new { message = "User tidak terautentikasi!" });
+        //    }
+
+        //    var GetUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+        //    var UserActiveId = GetUserActive?.UserActiveId ?? Guid.Empty;
+
+        //    var getUser = await _serviceMasterData.GetCurrentUserByEmail(EmailLogin);
+
+        //    if (getUser != null)
+        //    {
+        //        return Ok(new
+        //        {
+        //            message = "Data user ditemukan",
+        //            data = getUser
+        //        });
+        //    }
+
+        //    var userLogin = await _userManager.FindByEmailAsync(EmailLogin);
+        //    if (userLogin == null)
+        //    {
+        //        return NotFound("Data user tidak ditemukan di sistem.");
+        //    }
+
+        //    // Buat dummy MstUserActive hanya untuk tampilan super admin
+        //    var superadminModel = new UserActive
+        //    {
+        //        FullName = userLogin.NamaUser ?? "Superadmin",
+        //        Email = userLogin.Email,
+        //        Handphone = "-",
+        //        Gender = "-",
+        //        PlaceOfBirth = "Jakarta",
+        //        DateOfBirth = DateTime.MinValue,
+        //        Address = "-",
+        //        //Foto = null,
+        //        //MstDepartmentUser = null,
+        //        //MstPositionUser = null
+        //    };
+
+        //    ViewBag.IsSuperAdmin = true;
+        //    return Ok(new
+        //    {
+        //        message = "Data superadmin dummy",
+        //        data = superadminModel
+        //    });
+        //}
     }
 }

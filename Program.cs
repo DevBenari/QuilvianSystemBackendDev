@@ -46,6 +46,7 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 
     options.Lockout.MaxFailedAccessAttempts = 3;
     options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
+    options.Lockout.AllowedForNewUsers = false;
 }).AddDefaultTokenProviders().AddEntityFrameworkStores<ApplicationDbContext>();
 
 builder.Services.AddHttpClient();
