@@ -20,30 +20,30 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    public class BentukObatController : Controller
+    public class SatuanController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
 
-        public BentukObatController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
+        public SatuanController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
         {
             _applicationDbContext = context;
             _userManager = userManager;
         }
 
-        // GET: api/BentukObat
+        // GET: api/Satuan
         [HttpGet]
-        public async Task<IActionResult> GetAllBentukObat(int page = 1, int perPage = 10)
+        public async Task<IActionResult> GetAllSatuan(int page = 1, int perPage = 10)
         {
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            var query = from b in _applicationDbContext.BentukObats
+            var query = from b in _applicationDbContext.Satuans
                         select new
                         {
-                            BentukObatId = b.BentukObatId,
-                            KodeBentukObat = b.KodeBentukObat,
-                            NamaBentukObat = b.NamaBentukObat
+                            SatuanId = b.SatuanId,
+                            KodeSatuan = b.KodeSatuan,
+                            NamaSatuan = b.NamaSatuan
                         };
 
             var totalRows = await query.CountAsync();
@@ -73,12 +73,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             });
         }
 
-        // GET: api/BentukObat/{id}
+        // GET: api/Satuan/{id}
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetBentukObatById(Guid id)
+        public async Task<IActionResult> GetSatuanById(Guid id)
         {
-            var bentukObat = await _applicationDbContext.BentukObats
-                .FirstOrDefaultAsync(b => b.BentukObatId == id);
+            var bentukObat = await _applicationDbContext.Satuans
+                .FirstOrDefaultAsync(b => b.SatuanId == id);
 
             if (bentukObat == null)
             {
@@ -92,11 +92,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             });
         }
 
-        // POST: api/BentukObat
+        // POST: api/Satuan
         [HttpPost]
-        public async Task<IActionResult> CreateBentukObat([FromBody] BentukObatViewModel bentukObatViewModel)
+        public async Task<IActionResult> CreateSatuan([FromBody] SatuanViewModel satuanViewModel)
         {
-            if (bentukObatViewModel == null)
+            if (satuanViewModel == null)
             {
                 return BadRequest(new { message = "Data tidak valid." });
             }
@@ -123,44 +123,44 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var dateNow = DateTime.UtcNow;
                 var setDateNow = dateNow.ToString("yyMMdd");
 
-                // Menentukan KodeBentukObat berdasarkan tanggal dan urutan
-                var lastCode = await _applicationDbContext.BentukObats
+                // Menentukan KodeSatuan berdasarkan tanggal dan urutan
+                var lastCode = await _applicationDbContext.Satuans
                     .Where(d => d.CreateDateTime.Date == dateNow.Date)
-                    .OrderByDescending(b => b.KodeBentukObat)
+                    .OrderByDescending(s => s.KodeSatuan)
                     .FirstOrDefaultAsync();
 
-                string KodeBentukObat;
-                if (lastCode == null || lastCode.KodeBentukObat.Substring(3, 6) != setDateNow)
+                string KodeSatuan;
+                if (lastCode == null || lastCode.KodeSatuan.Substring(3, 6) != setDateNow)
                 {
-                    KodeBentukObat = $"BKG{setDateNow}0001";
+                    KodeSatuan = $"SNG{setDateNow}0001"; // Format kode satuan baru
                 }
                 else
                 {
-                    int lastNumber = Convert.ToInt32(lastCode.KodeBentukObat.Substring(9));
-                    KodeBentukObat = $"BKG{setDateNow}{(lastNumber + 1).ToString("D4")}";
+                    int lastNumber = Convert.ToInt32(lastCode.KodeSatuan.Substring(9));
+                    KodeSatuan = $"SNG{setDateNow}{(lastNumber + 1).ToString("D4")}";
                 }
 
-                // Cek jika sudah ada data yang sama berdasarkan KodeBentukObat
-                var isDuplicate = await _applicationDbContext.BentukObats
-                    .AnyAsync(b => b.KodeBentukObat == KodeBentukObat);
+                // Cek jika sudah ada data yang sama berdasarkan KodeSatuan
+                var isDuplicate = await _applicationDbContext.Satuans
+                    .AnyAsync(s => s.KodeSatuan == KodeSatuan);
 
                 if (isDuplicate)
                 {
-                    return Conflict(new { message = "Data dengan kode bentuk obat yang sama sudah ada || 409 Conflict Data" });
+                    return Conflict(new { message = "Data dengan kode satuan yang sama sudah ada || 409 Conflict Data" });
                 }
 
-                // Convert ViewModel ke Entity BentukObat
-                var bentukObat = new BentukObat
+                // Convert ViewModel ke Entity Satuan
+                var satuan = new Satuan
                 {
-                    BentukObatId = Guid.NewGuid(),
-                    KodeBentukObat = KodeBentukObat,  // Gunakan kode yang sudah dihasilkan
-                    NamaBentukObat = bentukObatViewModel.NamaBentukObat,
+                    SatuanId = Guid.NewGuid(),
+                    KodeSatuan = KodeSatuan,  // Gunakan kode yang sudah dihasilkan
+                    NamaSatuan = satuanViewModel.NamaSatuan,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow
                 };
 
                 // Insert data baru ke database
-                _applicationDbContext.BentukObats.Add(bentukObat);
+                _applicationDbContext.Satuans.Add(satuan);
                 await _applicationDbContext.SaveChangesAsync();
 
                 return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
@@ -172,9 +172,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
 
-        // PUT: api/BentukObat/{id}
+        // PUT: api/Satuan/{id}
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateBentukObat(Guid id, [FromBody] BentukObat bentukObat)
+        public async Task<IActionResult> UpdateSatuan(Guid id, [FromBody] Satuan bentukObat)
         {
             if (bentukObat == null)
             {
@@ -200,15 +200,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // Cari data yang ingin diupdate
-                var data = await _applicationDbContext.BentukObats.FindAsync(id);
+                var data = await _applicationDbContext.Satuans.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
-                // Cek duplikasi berdasarkan NamaBentukObat
-                bool isDuplicate = await _applicationDbContext.BentukObats
-                    .AnyAsync(b => b.NamaBentukObat.ToLower() == bentukObat.NamaBentukObat.ToLower() && b.BentukObatId != id);
+                // Cek duplikasi berdasarkan NamaSatuan
+                bool isDuplicate = await _applicationDbContext.Satuans
+                    .AnyAsync(b => b.NamaSatuan.ToLower() == bentukObat.NamaSatuan.ToLower() && b.SatuanId != id);
 
                 if (isDuplicate)
                 {
@@ -216,12 +216,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // Update data
-                data.KodeBentukObat = bentukObat.KodeBentukObat;
-                data.NamaBentukObat = bentukObat.NamaBentukObat;
+                data.KodeSatuan = bentukObat.KodeSatuan;
+                data.NamaSatuan = bentukObat.NamaSatuan;
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.BentukObats.Update(data);
+                _applicationDbContext.Satuans.Update(data);
                 await _applicationDbContext.SaveChangesAsync();
 
                 return Ok(new { message = "Update Data Berhasil || 200 OK" });
@@ -232,19 +232,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-        // DELETE: api/BentukObat/{id}
+        // DELETE: api/Satuan/{id}
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteBentukObat(Guid id)
+        public async Task<IActionResult> DeleteSatuan(Guid id)
         {
             try
             {
-                var data = await _applicationDbContext.BentukObats.FindAsync(id);
+                var data = await _applicationDbContext.Satuans.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
-                _applicationDbContext.BentukObats.Remove(data);
+                _applicationDbContext.Satuans.Remove(data);
                 await _applicationDbContext.SaveChangesAsync();
 
                 return Ok(new { message = "Data berhasil dihapus || 200 OK" });
@@ -256,7 +256,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet("paged")]
-        public IActionResult PagedBentukObat(
+        public IActionResult PagedSatuan(
         int page = 1,
         int perPage = 10,
         string? search = null,
@@ -268,13 +268,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         DateTime? endDate = null,
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
-            var query = from b in _applicationDbContext.BentukObats
+            var query = from b in _applicationDbContext.Satuans
                         select new
                         {
                             CreateDateTime = b.CreateDateTime,
-                            BentukObatId = b.BentukObatId,
-                            KodeBentukObat = b.KodeBentukObat,
-                            NamaBentukObat = b.NamaBentukObat
+                            SatuanId = b.SatuanId,
+                            KodeSatuan = b.KodeSatuan,
+                            NamaSatuan = b.NamaSatuan
                         };
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
@@ -282,8 +282,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             {
                 search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
-                    EF.Functions.ILike(u.KodeBentukObat, search) ||
-                    EF.Functions.ILike(u.NamaBentukObat, search)
+                    EF.Functions.ILike(u.KodeSatuan, search) ||
+                    EF.Functions.ILike(u.NamaSatuan, search)
                 );
             }
 
@@ -352,15 +352,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 ? orderBy switch
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
-                    "NamaBentukObat" => query.OrderByDescending(u => u.NamaBentukObat),
-                    "KodeBentukObat" => query.OrderByDescending(u => u.KodeBentukObat),
+                    "NamaSatuan" => query.OrderByDescending(u => u.NamaSatuan),
+                    "KodeSatuan" => query.OrderByDescending(u => u.KodeSatuan),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
-                    "NamaBentukObat" => query.OrderByDescending(u => u.NamaBentukObat),
-                    "KodeBentukObat" => query.OrderByDescending(u => u.KodeBentukObat),
+                    "NamaSatuan" => query.OrderByDescending(u => u.NamaSatuan),
+                    "KodeSatuan" => query.OrderByDescending(u => u.KodeSatuan),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 };
 

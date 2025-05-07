@@ -161,16 +161,32 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 if (lastCode == null)
                 {
-                    kode = "KL001";
+                    // Pertama kali data dimasukkan, kode "KL001" untuk "Rawat Jalan"
+                    kode = "KL001"; // Gunakan kode KL001 untuk Rawat Jalan pertama
+
+                    var data = new Kelas
+                    {
+                        KelasId = Guid.NewGuid(),
+                        KodeKelas = kode,
+                        NamaKelas = "Rawat Jalan", // Nama kelas adalah Rawat Jalan
+                        DeskripsiKelas = vm.DeskripsiKelas,
+                        CreateBy = userActiveId,
+                        CreateDateTime = DateTimeOffset.UtcNow,
+                        IsDelete = false
+                    };
+
+                    // **Simpan ke Database**
+                    _applicationDbContext.Kelass.Add(data);
                 }
                 else
                 {
-                    var numberStr = lastCode.KodeKelas.Substring(2); // Ambil angka setelah 'TD'
+                    // Jika ada data sebelumnya, lanjutkan dengan urutan berikutnya
+                    var numberStr = lastCode.KodeKelas.Substring(2); // Ambil angka setelah 'KL'
 
                     if (int.TryParse(numberStr, out int lastNumber))
                     {
                         int nextNumber = lastNumber + 1;
-                        kode = $"KL{nextNumber:D3}"; // Gunakan D3 agar tetap 3 digit minimum, bisa lebih kalau > 999
+                        kode = $"KL{nextNumber:D3}"; // Gunakan D3 agar tetap 3 digit minimum
                     }
                     else
                     {
@@ -178,37 +194,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     }
                 }
 
-
-
-                //decimal total = (vm.TarifDokter ?? 0) +
-                //       (vm.TarifRs ?? 0) +
-                //       (vm.TarifJp ?? 0) +
-                //       (vm.TarifBahp ?? 0) +
-                //       (vm.TarifLain ?? 0);
-
                 // **Buat Data Baru**
-                var data = new Kelas
+                var newData = new Kelas
                 {
                     KelasId = Guid.NewGuid(),
                     KodeKelas = kode,
                     NamaKelas = vm.NamaKelas,
                     DeskripsiKelas = vm.DeskripsiKelas,
-                    //TarifDokter = vm.TarifDokter,
-                    //TarifRs = vm.TarifRs,
-                    //TarifJp = vm.TarifJp,
-                    //TarifBahp = vm.TarifBahp,
-                    //TarifLain = vm.TarifLain,
-                    //TarifTotal = total,
-                    //KSO = vm.KSO,
-
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                     IsDelete = false
                 };
 
-
                 // **Simpan ke Database**
-                _applicationDbContext.Kelass.Add(data);
+                _applicationDbContext.Kelass.Add(newData);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -229,6 +228,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
 
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateKelas(Guid id, [FromBody] KelasViewModel vm)

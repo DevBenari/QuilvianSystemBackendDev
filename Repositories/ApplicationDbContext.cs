@@ -76,6 +76,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<Kelas> Kelass { get; set; }
         public DbSet<TarifKelas> TarifKelass { get; set; } 
         public DbSet<CoveranTindakanAsuransi> CoveranTindakanAsuransis { get; set; }
+        public DbSet<Satuan> Satuans { get; set; }
         public DbSet<Tindakan> Tindakans { get; set; }
         public DbSet<TindakanPoli> TindakanPolis { get; set; }
         public DbSet<TindakanAsuransi> TindakanAsuransis { get; set; }

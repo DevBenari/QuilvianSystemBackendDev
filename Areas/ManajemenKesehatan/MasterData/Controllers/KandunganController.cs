@@ -13,6 +13,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using Swashbuckle.AspNetCore.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
@@ -93,9 +94,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
         // POST: api/Kandungan
         [HttpPost]
-        public async Task<IActionResult> CreateKandungan([FromBody] Kandungan kandungan)
+        public async Task<IActionResult> CreateKandungan([FromBody] KandunganViewModel kandunganViewModel)
         {
-            if (kandungan == null)
+            if (kandunganViewModel == null)
             {
                 return BadRequest(new { message = "Data tidak valid." });
             }
@@ -118,42 +119,47 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
-                //var dateNow = DateTime.UtcNow;
-                //var setDateNow = dateNow.ToString("yyMMdd");
+                // Mendapatkan tanggal sekarang
+                var dateNow = DateTime.UtcNow;
+                var setDateNow = dateNow.ToString("yyMMdd");
 
-                //// KodePoliklinik
-                //var lastCode = _applicationDbContext.Kandungans
-                //    .Where(d => d.CreateDateTime.Date == dateNow.Date)
-                //    .OrderByDescending(k => k.KodeKandungan)
-                //    .FirstOrDefault();
+                // Menentukan KodeKandungan berdasarkan tanggal dan urutan
+                var lastCode = await _applicationDbContext.Kandungans
+                    .Where(d => d.CreateDateTime.Date == dateNow.Date)
+                    .OrderByDescending(k => k.KodeKandungan)
+                    .FirstOrDefaultAsync();
 
-                //string KodeKandungan;
-                //if (lastCode == null || lastCode.KodeKandungan.Substring(3, 6) != setDateNow)
-                //{
-                //    KodeKandungan = $"KDG{setDateNow}0001";
-                //}
-                //else
-                //{
-                //    int lastNumber = Convert.ToInt32(lastCode.KodeKandungan.Substring(9));
-                //    KodeKandungan = $"KDG{setDateNow}{(lastNumber + 1).ToString("D4")}";
-                //}
+                string KodeKandungan;
+                if (lastCode == null || lastCode.KodeKandungan.Substring(3, 6) != setDateNow)
+                {
+                    KodeKandungan = $"KDG{setDateNow}0001";
+                }
+                else
+                {
+                    int lastNumber = Convert.ToInt32(lastCode.KodeKandungan.Substring(9));
+                    KodeKandungan = $"KDG{setDateNow}{(lastNumber + 1).ToString("D4")}";
+                }
 
                 // Cek jika sudah ada data yang sama berdasarkan KodeKandungan
                 var isDuplicate = await _applicationDbContext.Kandungans
-                    .AnyAsync(k => k.KodeKandungan == kandungan.KodeKandungan);
+                    .AnyAsync(k => k.KodeKandungan == KodeKandungan);
 
                 if (isDuplicate)
                 {
                     return Conflict(new { message = "Data dengan kode kandungan yang sama sudah ada || 409 Conflict Data" });
                 }
 
-                // Insert data baru
-                kandungan.KandunganId = Guid.NewGuid();
-                kandungan.KodeKandungan = kandungan.KodeKandungan;
-                kandungan.NamaKandungan = kandungan.NamaKandungan;
+                // Convert ViewModel ke Entity Kandungan
+                var kandungan = new Kandungan
+                {
+                    KandunganId = Guid.NewGuid(),
+                    KodeKandungan = KodeKandungan,  // Gunakan kode yang sudah dihasilkan
+                    NamaKandungan = kandunganViewModel.NamaKandungan,
+                    CreateBy = userActiveId,
+                    CreateDateTime = DateTimeOffset.UtcNow
+                };
 
-                kandungan.CreateBy = userActiveId;
-                kandungan.CreateDateTime = DateTimeOffset.UtcNow;
+                // Insert data baru ke database
                 _applicationDbContext.Kandungans.Add(kandungan);
                 await _applicationDbContext.SaveChangesAsync();
 
@@ -164,6 +170,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
 
         // PUT: api/Kandungan/{id}
         [HttpPut("{id}")]

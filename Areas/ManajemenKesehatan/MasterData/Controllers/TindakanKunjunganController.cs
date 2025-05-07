@@ -54,10 +54,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             var query = from a in _applicationDbContext.TindakanKunjungans
                         join u in _applicationDbContext.UserActives
                             on a.CreateBy equals u.UserActiveId
-                        join ps in _applicationDbContext.PendaftaranPasienBarus
-                            on a.PasienId equals ps.PendaftaranPasienBaruId
-                        join p in _applicationDbContext.Polikliniks
-                            on a.PoliklinikId equals p.PoliklinikId
                         where a.IsDelete == false
                         select new
                         {
@@ -66,19 +62,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateByName = u.FullName,
                             a.TindakanKunjunganId,
                             a.KunjunganId,
-                            a.PasienId,
-                            NamaPasien = ps.NamaLengkap,   // ✅ Tambahkan nama pasien
-                            a.DokterId,
-                            a.PoliklinikId,
-                            NamaPoliklinik = p.NamaPoliklinik, // ✅ Tambahkan nama poliklinik
-                            a.KelasId,
-                            a.NamaKelas,
-                            a.TindakanPoliId,
-                            a.TarifKelasId,
+                            a.TindakanId,
                             a.Quantity,
-                            a.Total,
-                            a.Disposition,
-                            a.NamaPegawai
+                            a.Total
                         };
 
             // Hitung total data sebelum paginasi
@@ -167,7 +153,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 //if (isDuplicate)
                 //{
-                //    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
+                //   return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
                 //}
 
                 // **Buat Data Baru**
@@ -175,17 +161,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     TindakanKunjunganId = Guid.NewGuid(),
                     KunjunganId = vm.KunjunganId,
-                    PasienId = vm.PasienId,
-                    DokterId = vm.DokterId,
-                    PoliklinikId = vm.PoliklinikId,
-                    KelasId = vm.KelasId,
-                    NamaKelas = vm.NamaKelas,
-                    TindakanPoliId = vm.TindakanPoliId,
-                    TarifKelasId = vm.TarifKelasId,
+                    TindakanId = vm.TindakanId,
                     Quantity = vm.Quantity,
                     Total = vm.Total,
-                    Disposition = vm.Disposition,
-                    NamaPegawai = vm.NamaPegawai,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow
                 };
@@ -253,17 +231,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // **Update Data**
                 data.KunjunganId = vm.KunjunganId;
-                data.PasienId = vm.PasienId;
-                data.DokterId = vm.DokterId;
-                data.PoliklinikId = vm.PoliklinikId;
-                data.KelasId = vm.KelasId;
-                data.NamaKelas = vm.NamaKelas;
-                data.TindakanPoliId = vm.TindakanPoliId;
-                data.TarifKelasId = vm.TarifKelasId;
+                data.TindakanId = vm.TindakanId;
                 data.Quantity = vm.Quantity;
                 data.Total = vm.Total;
-                data.Disposition = vm.Disposition;
-                data.NamaPegawai = vm.NamaPegawai;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -351,162 +321,148 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-        [HttpGet("paged")]
-        public IActionResult Paged(
-        int page = 1,
-        int perPage = 10,
-        string? search = null,
-        string? orderBy = "CreateDateTime",
-        string? sortDirection = "desc",
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-        DateTime? startDate = null,
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-        DateTime? endDate = null,
-        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
-        {
-            var query = from a in _applicationDbContext.TindakanKunjungans
-                        join u in _applicationDbContext.UserActives
-                            on a.CreateBy equals u.UserActiveId
-                        join ps in _applicationDbContext.PendaftaranPasienBarus
-                            on a.PasienId equals ps.PendaftaranPasienBaruId
-                        join p in _applicationDbContext.Polikliniks
-                            on a.PoliklinikId equals p.PoliklinikId
-                        where a.IsDelete == false
-                        select new
-                        {
-                            a.CreateDateTime,
-                            a.CreateBy,
-                            CreateByName = u.FullName,
-                            a.TindakanKunjunganId,
-                            a.KunjunganId,
-                            a.PasienId,
-                            NamaPasien = ps.NamaLengkap,   // ✅ Tambahkan nama pasien
-                            a.DokterId,
-                            a.PoliklinikId,
-                            NamaPoliklinik = p.NamaPoliklinik, // ✅ Tambahkan nama poliklinik
-                            a.KelasId,
-                            a.NamaKelas,
-                            a.TindakanPoliId,
-                            a.TarifKelasId,
-                            a.Quantity,
-                            a.Total,
-                            a.Disposition,
-                            a.NamaPegawai
-                        };
+        //[HttpGet("paged")]
+        //public IActionResult Paged(
+        //int page = 1,
+        //int perPage = 10,
+        //string? search = null,
+        //string? orderBy = "CreateDateTime",
+        //string? sortDirection = "desc",
+        //[FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+        //DateTime? startDate = null,
+        //[FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+        //DateTime? endDate = null,
+        //[FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        //{
+        //    var query = from a in _applicationDbContext.TindakanKunjungans
+        //                join u in _applicationDbContext.UserActives
+        //                    on a.CreateBy equals u.UserActiveId
+        //                where a.IsDelete == false
+        //                select new
+        //                {
+        //                    a.CreateDateTime,
+        //                    a.CreateBy,
+        //                    CreateByName = u.FullName,
+        //                    a.TindakanKunjunganId,
+        //                    a.KunjunganId,
+        //                    a.TindakanId,
+        //                    a.Quantity,
+        //                    a.Total
+        //                };
 
 
-            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-                query = query.Where(u =>
-                    EF.Functions.ILike(u.NamaPasien, search) ||
-                    EF.Functions.ILike(u.NamaPoliklinik, search)
-                );
-            }
+        //    // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
+        //    if (!string.IsNullOrWhiteSpace(search))
+        //    {
+        //        search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+        //        query = query.Where(u =>
+        //            EF.Functions.ILike(u.NamaPasien, search) ||
+        //            EF.Functions.ILike(u.NamaPoliklinik, search)
+        //        );
+        //    }
 
-            //// **Filter berdasarkan tanggal**
-            if (startDate.HasValue && endDate.HasValue)
-            {
-                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
-                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+        //    //// **Filter berdasarkan tanggal**
+        //    if (startDate.HasValue && endDate.HasValue)
+        //    {
+        //        DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
+        //        DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
 
-                query = query.Where(u =>
-                    u.CreateDateTime >= startUtc &&
-                    u.CreateDateTime <= endUtc);
-            }
+        //        query = query.Where(u =>
+        //            u.CreateDateTime >= startUtc &&
+        //            u.CreateDateTime <= endUtc);
+        //    }
 
-            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
-            if (periode.HasValue)
-            {
-                DateTime today = DateTime.UtcNow.Date;
+        //    // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
+        //    if (periode.HasValue)
+        //    {
+        //        DateTime today = DateTime.UtcNow.Date;
 
-                switch (periode)
-                {
-                    case PeriodeFilter.Today:
-                        query = query.Where(u => u.CreateDateTime.Date == today);
-                        break;
-                    case PeriodeFilter.ThisWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
-                            u.CreateDateTime.Date <= today
-                        );
-                        break;
-                    case PeriodeFilter.LastWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek))
-                        );
-                        break;
-                    case PeriodeFilter.ThisMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month &&
-                            u.CreateDateTime.Year == today.Year
-                        );
-                        break;
-                    case PeriodeFilter.LastMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month - 1 &&
-                            u.CreateDateTime.Year == today.Year
-                        );
-                        break;
-                    case PeriodeFilter.ThisYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
-                        break;
-                    case PeriodeFilter.LastYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
-                        break;
-                    case PeriodeFilter.Last3Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
-                        break;
-                    case PeriodeFilter.Last6Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
-                        break;
-                }
-            }
+        //        switch (periode)
+        //        {
+        //            case PeriodeFilter.Today:
+        //                query = query.Where(u => u.CreateDateTime.Date == today);
+        //                break;
+        //            case PeriodeFilter.ThisWeek:
+        //                query = query.Where(u =>
+        //                    u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
+        //                    u.CreateDateTime.Date <= today
+        //                );
+        //                break;
+        //            case PeriodeFilter.LastWeek:
+        //                query = query.Where(u =>
+        //                    u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
+        //                    u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek))
+        //                );
+        //                break;
+        //            case PeriodeFilter.ThisMonth:
+        //                query = query.Where(u =>
+        //                    u.CreateDateTime.Month == today.Month &&
+        //                    u.CreateDateTime.Year == today.Year
+        //                );
+        //                break;
+        //            case PeriodeFilter.LastMonth:
+        //                query = query.Where(u =>
+        //                    u.CreateDateTime.Month == today.Month - 1 &&
+        //                    u.CreateDateTime.Year == today.Year
+        //                );
+        //                break;
+        //            case PeriodeFilter.ThisYear:
+        //                query = query.Where(u => u.CreateDateTime.Year == today.Year);
+        //                break;
+        //            case PeriodeFilter.LastYear:
+        //                query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
+        //                break;
+        //            case PeriodeFilter.Last3Months:
+        //                query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
+        //                break;
+        //            case PeriodeFilter.Last6Months:
+        //                query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
+        //                break;
+        //        }
+        //    }
 
-            // Sorting Data dengan cara yang lebih aman
-            query = sortDirection?.ToLower() == "desc"
-                ? orderBy switch
-                {
-                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "NamaPoliklinik" => query.OrderByDescending(u => u.NamaPoliklinik),
-                    "NamaPasien" => query.OrderByDescending(u => u.NamaPasien),
-                    _ => query.OrderByDescending(u => u.CreateDateTime)
-                }
-                : orderBy switch
-                {
-                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "NamaPoliklinik" => query.OrderByDescending(u => u.NamaPoliklinik),
-                    "NamaPasien" => query.OrderByDescending(u => u.NamaPasien),
-                    _ => query.OrderByDescending(u => u.CreateDateTime)
-                };
+        //    // Sorting Data dengan cara yang lebih aman
+        //    query = sortDirection?.ToLower() == "desc"
+        //        ? orderBy switch
+        //        {
+        //            "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
+        //            "CreateByName" => query.OrderByDescending(u => u.CreateByName),
+        //            "NamaPoliklinik" => query.OrderByDescending(u => u.NamaPoliklinik),
+        //            "NamaPasien" => query.OrderByDescending(u => u.NamaPasien),
+        //            _ => query.OrderByDescending(u => u.CreateDateTime)
+        //        }
+        //        : orderBy switch
+        //        {
+        //            "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
+        //            "CreateByName" => query.OrderByDescending(u => u.CreateByName),
+        //            "NamaPoliklinik" => query.OrderByDescending(u => u.NamaPoliklinik),
+        //            "NamaPasien" => query.OrderByDescending(u => u.NamaPasien),
+        //            _ => query.OrderByDescending(u => u.CreateDateTime)
+        //        };
 
-            // Pagination
-            var totalRows = query.Count();
-            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
+        //    // Pagination
+        //    var totalRows = query.Count();
+        //    var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+        //    var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
 
-            if (rows.Count == 0 && page > totalPages)
-            {
-                return NotFound(new { message = "Page not found." });
-            }
+        //    if (rows.Count == 0 && page > totalPages)
+        //    {
+        //        return NotFound(new { message = "Page not found." });
+        //    }
 
-            return Ok(new
-            {
-                status = "success",
-                message = "Data retrieved successfully",
-                data = new
-                {
-                    Rows = rows,
-                    TotalRows = totalRows,
-                    CurrentPage = page,
-                    PerPage = perPage,
-                    TotalPages = totalPages
-                }
-            });
-        }
+        //    return Ok(new
+        //    {
+        //        status = "success",
+        //        message = "Data retrieved successfully",
+        //        data = new
+        //        {
+        //            Rows = rows,
+        //            TotalRows = totalRows,
+        //            CurrentPage = page,
+        //            PerPage = perPage,
+        //            TotalPages = totalPages
+        //        }
+        //    });
+        //}
     }
 }
