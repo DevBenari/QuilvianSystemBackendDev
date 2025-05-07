@@ -644,23 +644,59 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? endDate = null,
         [FromQuery] PeriodeFilter? periode = null)
         {
+            //var query = from a in _applicationDbContext.Kunjungans
+            //            join u in _applicationDbContext.UserActives
+            //            on a.CreateBy equals u.UserActiveId
+            //            join p in _applicationDbContext.Polikliniks
+            //            on a.PoliklinikId equals p.PoliklinikId
+            //            join o in _applicationDbContext.Asuransis
+            //            on a.AsuransiId equals o.AsuransiId
+            //            join ps in _applicationDbContext.PendaftaranPasienBarus
+            //            on a.PasienId equals ps.PendaftaranPasienBaruId
+            //            join d in _applicationDbContext.Dokters
+            //            on a.DokterId equals d.DokterId
+            //            where a.IsDelete == false
+            //            select new
+            //            {
+            //                a.KunjunganID,
+            //                a.AsuransiId,
+            //                o.NamaAsuransi,
+            //                a.PoliklinikId,
+            //                p.NamaPoliklinik,
+            //                a.DokterId,
+            //                a.PasienId,
+            //                ps.NamaLengkap,
+            //                a.NoRekamMedis,
+            //                a.TipePasien,
+            //                a.TipePembayaran,
+            //                a.JumlahKunjungan,
+            //                a.CreateDateTime,
+            //                a.CreateBy,
+            //                a.IsFinished,
+            //                a.IsScreening,
+            //                a.IsPresent,
+            //                a.Antrian,
+            //                d.NmDokter,
+            //                gambardokter = !string.IsNullOrEmpty(d.FotoName)
+            //                ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
+            //                : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg",
+
+            //                CreateByName = u.FullName
+            //            };
+
             var query = from a in _applicationDbContext.Kunjungans
-                        join u in _applicationDbContext.UserActives
-                        on a.CreateBy equals u.UserActiveId
-                        join p in _applicationDbContext.Polikliniks
-                        on a.PoliklinikId equals p.PoliklinikId
-                        join o in _applicationDbContext.Asuransis
-                        on a.AsuransiId equals o.AsuransiId
-                        join ps in _applicationDbContext.PendaftaranPasienBarus
-                        on a.PasienId equals ps.PendaftaranPasienBaruId
-                        join d in _applicationDbContext.Dokters
-                        on a.DokterId equals d.DokterId
+                        join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId
+                        join p in _applicationDbContext.Polikliniks on a.PoliklinikId equals p.PoliklinikId
+                        join o in _applicationDbContext.Asuransis on a.AsuransiId equals o.AsuransiId into asuransiGroup
+                        from o in asuransiGroup.DefaultIfEmpty() // Left Join Asuransi
+                        join ps in _applicationDbContext.PendaftaranPasienBarus on a.PasienId equals ps.PendaftaranPasienBaruId
+                        join d in _applicationDbContext.Dokters on a.DokterId equals d.DokterId
                         where a.IsDelete == false
                         select new
                         {
                             a.KunjunganID,
                             a.AsuransiId,
-                            o.NamaAsuransi,
+                            NamaAsuransi = o != null ? o.NamaAsuransi : "No", // Cek apakah ada asuransi
                             a.PoliklinikId,
                             p.NamaPoliklinik,
                             a.DokterId,
@@ -678,8 +714,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.Antrian,
                             d.NmDokter,
                             gambardokter = !string.IsNullOrEmpty(d.FotoName)
-                            ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
-                            : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg",
+                                ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
+                                : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg",
 
                             CreateByName = u.FullName
                         };
