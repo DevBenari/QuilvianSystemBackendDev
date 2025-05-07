@@ -12,8 +12,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public Guid DokterId { get; set; }
         public string KdDokter { get; set; }
         public string NmDokter { get; set; }
-        public string Sip { get; set; }
-        public string Str { get; set; }
+        public string? Sip { get; set; }
+        public string? Str { get; set; }
         public string? Spesialis { get; set; }
 
         public string? TglSip { get; set; }
@@ -27,6 +27,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
 
         public string? FotoName { get; set; }
         public string? FotoPath { get; set; }
+        public bool? IsActive { get; set; }
 
 
     }
