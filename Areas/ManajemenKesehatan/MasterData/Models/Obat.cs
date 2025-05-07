@@ -12,7 +12,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public Guid ObatId { get; set; }
         public string? ObatCode { get; set; }
         public string ObatName { get; set; }
-        public Guid BentukObatId { get; set; }
+        public string? JumlahSatuan { get; set; }
+        public Guid? SatuanId { get; set; }
+        public Guid? BentukObatId { get; set; }
         public decimal HargaJual { get; set; }
         public decimal? HargaAwal { get; set; }
         public bool? IsActive { get; set; }

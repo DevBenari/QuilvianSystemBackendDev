@@ -5,6 +5,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
     public class ObatViewModel
     {
         public string ObatName { get; set; }
+        public string? JumlahSatuan { get; set; }
+        public Guid? SatuanId { get; set; }
         public Guid BentukObatId { get; set; }
         public decimal HargaJual { get; set; }
         public decimal? HargaAwal { get; set; }
@@ -16,5 +18,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
         //public string Asuransi { get; set; }
         //public string KandunganObat { get; set; }
         //public string TipeHarga { get; set; } 
+    }
+
+    public class ObatKandunganViewModel
+    {
+        public Guid ObatId { get; set; }
+        public Guid KandunganId { get; set; }
+    }
+    public class ObatAsuransiViewModel
+    {
+        public Guid ObatId { get; set; }
+        public Guid AsuransiId { get; set; }
     }
 }

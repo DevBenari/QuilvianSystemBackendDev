@@ -60,7 +60,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         {
                             ResepId = r.ResepId,
                             KunjunganId = r.KunjunganId,
-                            AsuransiId = r.AsuransiId,
                             CreateDateTime = r.CreateDateTime,
                             CreateBy = r.CreateBy,
                             CreateByName = u.FullName,
@@ -132,7 +131,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             {
                 ResepId = resep.ResepId,
                 KunjunganId = resep.KunjunganId,
-                AsuransiId = resep.AsuransiId,
                 DetailObatResep = obatDetails
             };
 
@@ -171,7 +169,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     ResepId = Guid.NewGuid(),
                     KunjunganId = vm.KunjunganId,
-                    AsuransiId = vm.AsuransiId,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
@@ -251,7 +248,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // **Update data resep**
                 data.KunjunganId = vm.KunjunganId;
-                data.AsuransiId = vm.AsuransiId;
                 data.UpdateBy = UserActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
@@ -391,7 +387,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         {
                             ResepId = r.ResepId,
                             KunjunganId = r.KunjunganId,
-                            AsuransiId = r.AsuransiId,
                             CreateDateTime = r.CreateDateTime,
                             CreateBy = r.CreateBy,
                             CreateByName = u.FullName,
