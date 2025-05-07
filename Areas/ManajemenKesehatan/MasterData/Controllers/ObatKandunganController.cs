@@ -13,6 +13,8 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using Swashbuckle.AspNetCore.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
+using System.Data;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
@@ -97,7 +99,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
         // POST: api/ObatKandungan
         [HttpPost]
-        public async Task<IActionResult> CreateObatKandungan([FromBody] ObatKandungan obatKandungan)
+        public async Task<IActionResult> CreateObatKandungan([FromBody] ObatKandunganViewModel obatKandungan)
         {
             if (obatKandungan == null)
             {
@@ -131,24 +133,30 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Conflict(new { message = "Data sudah ada || 409 Conflict Data" });
                 }
 
-                // Insert data baru
-                obatKandungan.ObatKandunganId = Guid.NewGuid();
-                obatKandungan.KandunganId = obatKandungan.KandunganId;
-                obatKandungan.ObatId = obatKandungan.ObatId;
+                // Perbaiki penamaan variabel untuk membuat ObatKandungan baru
+                var obatKandunganEntity = new ObatKandungan
+                {
+                    ObatKandunganId = Guid.NewGuid(),
+                    ObatId = obatKandungan.ObatId,
+                    KandunganId = obatKandungan.KandunganId,
+                    CreateBy = userActiveId,
+                    CreateDateTime = DateTimeOffset.UtcNow
+                };
 
-                obatKandungan.CreateBy = userActiveId;
-                obatKandungan.CreateDateTime = DateTimeOffset.UtcNow;
-
-                _applicationDbContext.ObatKandungans.Add(obatKandungan);
+                // Menambahkan entitas obat kandungan ke database
+                _applicationDbContext.ObatKandungans.Add(obatKandunganEntity);
                 await _applicationDbContext.SaveChangesAsync();
 
+                // Kembalikan respons bahwa data berhasil dibuat
                 return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
             }
             catch (Exception ex)
             {
+                // Tangani kesalahan internal dengan memberikan respons yang sesuai
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
 
         // PUT: api/ObatKandungan/{id}
         [HttpPut("{id}")]

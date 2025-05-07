@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Security.Claims;
 using QuilvianSystemBackendDev.Models;
 using Microsoft.AspNetCore.Identity;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
@@ -93,7 +94,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
         // POST: api/ObatAsuransi
         [HttpPost]
-        public async Task<IActionResult> CreateObatAsuransi([FromBody] ObatAsuransi obatAsuransi)
+        public async Task<IActionResult> CreateObatAsuransi([FromBody] ObatAsuransiViewModel obatAsuransi)
         {
             if (obatAsuransi == null)
             {
@@ -127,10 +128,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Conflict(new { message = "Data sudah ada || 409 Conflict Data" });
                 }
 
-                // Insert data baru
-                obatAsuransi.ObatAsuransiId = Guid.NewGuid();
+                // Convert to entity model
+                var obatAsuransiEntity = new ObatAsuransi
+                {
+                    ObatAsuransiId = Guid.NewGuid(),
+                    ObatId = obatAsuransi.ObatId,
+                    AsuransiId = obatAsuransi.AsuransiId,
+                    CreateBy = userActiveId,
+                    CreateDateTime = DateTimeOffset.UtcNow
+                };
 
-                _applicationDbContext.ObatAsuransis.Add(obatAsuransi);
+                // Insert data baru ke database
+                _applicationDbContext.ObatAsuransis.Add(obatAsuransiEntity);
                 await _applicationDbContext.SaveChangesAsync();
 
                 return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
@@ -140,6 +149,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
 
         // PUT: api/ObatAsuransi/{id}
         [HttpPut("{id}")]
