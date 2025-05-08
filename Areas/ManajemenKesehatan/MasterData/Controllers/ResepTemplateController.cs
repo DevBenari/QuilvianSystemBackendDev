@@ -156,7 +156,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             try
             {
                 var resepTemplate = await _applicationDbContext.ResepTemplates
-                    .FirstOrDefaultAsync(rt => rt.ObatId == id);
+                    .FirstOrDefaultAsync(rt => rt.ResepTemplateId == id);
 
                 if (resepTemplate == null)
                     return NotFound(new { message = "Resep Template tidak ditemukan!" });
