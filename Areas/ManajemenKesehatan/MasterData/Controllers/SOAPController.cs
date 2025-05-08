@@ -314,23 +314,38 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet("paged")]
-        public IActionResult PagedSOAP(
-        int page = 1,
-        int perPage = 10,
-        string? search = null,
-        string? orderBy = "CreateDateTime",
-        string? sortDirection = "desc",
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                DateTime? startDate = null,
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                DateTime? endDate = null,
-        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        public async Task<IActionResult> PagedSOAP(
+            int page = 1,
+            int perPage = 10,
+            Guid? search = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+            DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+            DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null
+        )
         {
-            // Query data
+            if (!search.HasValue)
+            {
+                return BadRequest(new { message = "PasienId (search) is required." });
+            }
+
+            // Cari Kunjungan berdasarkan PasienId
+            var kunjungan = await _applicationDbContext.Kunjungans
+                .FirstOrDefaultAsync(k => k.PasienId == search);
+
+            if (kunjungan == null)
+            {
+                return NotFound(new { message = "Kunjungan untuk pasien ini tidak ditemukan." });
+            }
+
+            // Query data SOAP berdasarkan KunjunganId yang ditemukan
             var query = from a in _applicationDbContext.SOAPs
                         join u in _applicationDbContext.UserActives
                         on a.CreateBy equals u.UserActiveId
-                        where a.IsDelete == false
+                        where a.KunjunganId == kunjungan.KunjunganID && a.IsDelete == false
                         select new
                         {
                             CreateDateTime = a.CreateDateTime,
@@ -345,19 +360,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             Profesi = a.Profesi,
                         };
 
-            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-                query = query.Where(u =>
-                    EF.Functions.ILike(u.Subjective, search) ||
-                    EF.Functions.ILike(u.Objective, search) ||
-                    EF.Functions.ILike(u.Assessment, search) ||
-                    EF.Functions.ILike(u.Planning, search) 
-                );
-            }
-
-            //// **Filter berdasarkan tanggal**
+            // **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
             {
                 DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
@@ -368,7 +371,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     u.CreateDateTime <= endUtc);
             }
 
-            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
+            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll)
             if (periode.HasValue)
             {
                 DateTime today = DateTime.UtcNow.Date;
@@ -417,7 +420,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
             }
 
-            // Sorting Data dengan cara yang lebih aman
+            // Sorting Data
             query = sortDirection?.ToLower() == "desc"
                 ? orderBy switch
                 {
@@ -431,19 +434,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
                 : orderBy switch
                 {
-                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "Subjective" => query.OrderByDescending(u => u.Subjective),
-                    "Objective" => query.OrderByDescending(u => u.Objective),
-                    "Assessment" => query.OrderByDescending(u => u.Assessment),
-                    "Planning" => query.OrderByDescending(u => u.Planning),
-                    _ => query.OrderByDescending(u => u.CreateDateTime)
+                    "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
+                    "CreateByName" => query.OrderBy(u => u.CreateByName),
+                    "Subjective" => query.OrderBy(u => u.Subjective),
+                    "Objective" => query.OrderBy(u => u.Objective),
+                    "Assessment" => query.OrderBy(u => u.Assessment),
+                    "Planning" => query.OrderBy(u => u.Planning),
+                    _ => query.OrderBy(u => u.CreateDateTime)
                 };
 
             // Pagination
-            var totalRows = query.Count();
+            var totalRows = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
+            var rows = await query.Skip((page - 1) * perPage).Take(perPage).ToListAsync();
 
             if (rows.Count == 0 && page > totalPages)
             {
@@ -464,6 +467,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
             });
         }
+
 
 
     }
