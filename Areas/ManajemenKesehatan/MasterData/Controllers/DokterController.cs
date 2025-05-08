@@ -79,6 +79,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     d.Nohp,
                     d.Alamat,
                     d.IsAsuransi,
+                    d.IsActive,
                     d.FotoName,
                     d.FotoPath,
                     imageUrl = !string.IsNullOrEmpty(d.FotoName)
@@ -168,6 +169,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     d.Nohp,
                     d.Alamat,
                     d.IsAsuransi,
+                    d.IsActive,
                     d.FotoName,
                     d.FotoPath,
                     imageUrl = !string.IsNullOrEmpty(d.FotoName)
@@ -774,6 +776,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     d.Nohp,
                     d.Alamat,
                     d.IsAsuransi,
+                    d.IsActive,
                     d.FotoName,
                     d.FotoPath,
                     imageUrl = !string.IsNullOrEmpty(d.FotoName)

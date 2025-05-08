@@ -57,6 +57,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
+            // Hitung jumlah kunjungan per PasienId + JenisKunjungan
+            var jumlahPerJenis = _applicationDbContext.Kunjungans
+                .Where(k => !k.IsDelete)
+                .GroupBy(k => new { k.PasienId, k.JenisKunjungan })
+                .Select(g => new
+                {
+                    g.Key.PasienId,
+                    g.Key.JenisKunjungan,
+                    JumlahJenis = g.Count()
+                });
+
             var query = from a in _applicationDbContext.Kunjungans
                         join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId
                         join p in _applicationDbContext.Polikliniks on a.PoliklinikId equals p.PoliklinikId
@@ -64,7 +75,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         from o in asuransiGroup.DefaultIfEmpty() // Left Join Asuransi
                         join ps in _applicationDbContext.PendaftaranPasienBarus on a.PasienId equals ps.PendaftaranPasienBaruId
                         join d in _applicationDbContext.Dokters on a.DokterId equals d.DokterId
-                        where a.IsDelete == false
+                        join j in jumlahPerJenis on new { a.PasienId, a.JenisKunjungan } equals new { j.PasienId, j.JenisKunjungan }
+                        where a.IsDelete == false 
                         select new
                         {
                             a.KunjunganID,
@@ -78,7 +90,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.NoRekamMedis,
                             a.TipePasien,
                             a.TipePembayaran,
-                            a.JumlahKunjungan,
+                            a.JenisKunjungan,
                             a.CreateDateTime,
                             a.CreateBy,
                             a.IsFinished,
@@ -90,7 +102,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
                                 : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg",
 
-                            CreateByName = u.FullName
+                            CreateByName = u.FullName,
+
+                            // ⬅️ Tambahan jumlah jenis kunjungan
+                            JumlahJenisKunjungan = j.JumlahJenis
                         };
 
             var totalRows = query.Count();
@@ -102,50 +117,60 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 .ToList();
 
             // Deserialize JumlahKunjungan per item
-            var listdata = rawData.Select(item =>
-            {
-                List<KunjunganRiwayat> parsedKunjungan = new();
-                if (!string.IsNullOrWhiteSpace(item.JumlahKunjungan))
-                {
-                    try
-                    {
-                        parsedKunjungan = JsonSerializer.Deserialize<List<KunjunganRiwayat>>(item.JumlahKunjungan)
-                                          ?? new List<KunjunganRiwayat>();
-                    }
-                    catch
-                    {
-                        parsedKunjungan = new(); // fallback jika JSON invalid
-                    }
-                }
+            //var listdata = rawData.Select(item =>
+            //{
+            //    List<KunjunganRiwayat> parsedKunjungan = new();
+            //    if (!string.IsNullOrWhiteSpace(item.JumlahKunjungan))
+            //    {
+            //        try
+            //        {
+            //            parsedKunjungan = JsonSerializer.Deserialize<List<KunjunganRiwayat>>(item.JumlahKunjungan)
+            //                              ?? new List<KunjunganRiwayat>();
+            //        }
+            //        catch
+            //        {
+            //            parsedKunjungan = new(); // fallback jika JSON invalid
+            //        }
+            //    }
 
-                return new
-                {
-                    item.KunjunganID,
-                    item.AsuransiId,
-                    item.NamaAsuransi,
-                    item.PoliklinikId,
-                    item.NamaPoliklinik,
-                    item.DokterId,
-                    item.PasienId,
-                    item.NamaLengkap,
-                    item.IsScreening,
-                    item.IsPresent,
+            //    return new
+            //    {
+            //        item.KunjunganID,
+            //        item.AsuransiId,
+            //        item.NamaAsuransi,
+            //        item.PoliklinikId,
+            //        item.NamaPoliklinik,
+            //        item.DokterId,
+            //        item.PasienId,
+            //        item.NamaLengkap,
+            //        item.IsScreening,
+            //        item.IsPresent,
 
-                    item.NoRekamMedis,
-                    item.TipePasien,
-                    item.TipePembayaran,
-                    JumlahKunjungan = parsedKunjungan,
-                    item.CreateDateTime,
-                    item.CreateBy,
-                    item.CreateByName,
+            //        item.NoRekamMedis,
+            //        item.TipePasien,
+            //        item.TipePembayaran,
+            //        JumlahKunjungan = parsedKunjungan,
+            //        item.CreateDateTime,
+            //        item.CreateBy,
+            //        item.CreateByName,
 
-                    item.NmDokter,
-                    item.gambardokter,
+            //        item.NmDokter,
+            //        item.gambardokter,
 
-                    item.Antrian,
-                    item.IsFinished,
-                };
-            }).ToList();
+            //        item.Antrian,
+            //        item.IsFinished,
+            //    };
+            //}).ToList();
+
+            //if (!listdata.Any())
+            //{
+            //    return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
+            //}
+
+            var listdata = query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToList();
 
             if (!listdata.Any())
             {
@@ -170,23 +195,31 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         public async Task<IActionResult> GetKunjunganById(Guid id)
         {
 
+            // Hitung jumlah kunjungan per PasienId + JenisKunjungan
+            var jumlahPerJenis = _applicationDbContext.Kunjungans
+                .Where(k => !k.IsDelete)
+                .GroupBy(k => new { k.PasienId, k.JenisKunjungan })
+                .Select(g => new
+                {
+                    g.Key.PasienId,
+                    g.Key.JenisKunjungan,
+                    JumlahJenis = g.Count()
+                });
+
             var query = from a in _applicationDbContext.Kunjungans
-                        join u in _applicationDbContext.UserActives
-                        on a.CreateBy equals u.UserActiveId
-                        join p in _applicationDbContext.Polikliniks
-                        on a.PoliklinikId equals p.PoliklinikId
-                        join o in _applicationDbContext.Asuransis
-                        on a.AsuransiId equals o.AsuransiId
-                        join ps in _applicationDbContext.PendaftaranPasienBarus
-                        on a.PasienId equals ps.PendaftaranPasienBaruId
-                        join d in _applicationDbContext.Dokters
-                        on a.DokterId equals d.DokterId
-                        where a.IsDelete == false
+                        join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId
+                        join p in _applicationDbContext.Polikliniks on a.PoliklinikId equals p.PoliklinikId
+                        join o in _applicationDbContext.Asuransis on a.AsuransiId equals o.AsuransiId into asuransiGroup
+                        from o in asuransiGroup.DefaultIfEmpty() // Left Join Asuransi
+                        join ps in _applicationDbContext.PendaftaranPasienBarus on a.PasienId equals ps.PendaftaranPasienBaruId
+                        join d in _applicationDbContext.Dokters on a.DokterId equals d.DokterId
+                        join j in jumlahPerJenis on new { a.PasienId, a.JenisKunjungan } equals new { j.PasienId, j.JenisKunjungan }
+                        where a.IsDelete == false && a.KunjunganID == id
                         select new
                         {
                             a.KunjunganID,
                             a.AsuransiId,
-                            o.NamaAsuransi,
+                            NamaAsuransi = o != null ? o.NamaAsuransi : "No", // Cek apakah ada asuransi
                             a.PoliklinikId,
                             p.NamaPoliklinik,
                             a.DokterId,
@@ -195,7 +228,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.NoRekamMedis,
                             a.TipePasien,
                             a.TipePembayaran,
-                            a.JumlahKunjungan,
+                            a.JenisKunjungan,
                             a.CreateDateTime,
                             a.CreateBy,
                             a.IsFinished,
@@ -207,59 +240,62 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
                                 : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg",
 
-                            CreateByName = u.FullName
+                            CreateByName = u.FullName,
+
+                            // ⬅️ Tambahan jumlah jenis kunjungan
+                            JumlahJenisKunjungan = j.JumlahJenis
                         };
 
-            var item = await query.FirstOrDefaultAsync();
+            //var item = await query.FirstOrDefaultAsync();
 
-            if (item == null)
-            {
-                return NotFound(new { message = "Data kunjungan tidak ditemukan. || 404 Not Found" });
-            }
+            //if (item == null)
+            //{
+            //    return NotFound(new { message = "Data kunjungan tidak ditemukan. || 404 Not Found" });
+            //}
 
-            List<KunjunganRiwayat> parsedKunjungan = new();
-            if (!string.IsNullOrWhiteSpace(item.JumlahKunjungan))
-            {
-                try
-                {
-                    parsedKunjungan = JsonSerializer.Deserialize<List<KunjunganRiwayat>>(item.JumlahKunjungan)
-                                      ?? new List<KunjunganRiwayat>();
-                }
-                catch
-                {
-                    parsedKunjungan = new(); // fallback jika JSON invalid
-                }
-            }
+            //List<KunjunganRiwayat> parsedKunjungan = new();
+            //if (!string.IsNullOrWhiteSpace(item.JumlahKunjungan))
+            //{
+            //    try
+            //    {
+            //        parsedKunjungan = JsonSerializer.Deserialize<List<KunjunganRiwayat>>(item.JumlahKunjungan)
+            //                          ?? new List<KunjunganRiwayat>();
+            //    }
+            //    catch
+            //    {
+            //        parsedKunjungan = new(); // fallback jika JSON invalid
+            //    }
+            //}
 
-            var result = new
-            {
-                item.KunjunganID,
-                item.AsuransiId,
-                item.NamaAsuransi,
-                item.PoliklinikId,
-                item.NamaPoliklinik,
-                item.DokterId,
-                item.PasienId,
-                item.NamaLengkap,
-                item.IsScreening,
-                item.IsPresent,
-                item.NoRekamMedis,
-                item.TipePasien,
-                item.TipePembayaran,
-                JumlahKunjungan = parsedKunjungan,
-                item.CreateDateTime,
-                item.CreateBy,
-                item.CreateByName,
-                item.NmDokter,
-                item.gambardokter,
-                item.Antrian,
-                item.IsFinished
-            };
+            //var result = new
+            //{
+            //    item.KunjunganID,
+            //    item.AsuransiId,
+            //    item.NamaAsuransi,
+            //    item.PoliklinikId,
+            //    item.NamaPoliklinik,
+            //    item.DokterId,
+            //    item.PasienId,
+            //    item.NamaLengkap,
+            //    item.IsScreening,
+            //    item.IsPresent,
+            //    item.NoRekamMedis,
+            //    item.TipePasien,
+            //    item.TipePembayaran,
+            //    JumlahKunjungan = parsedKunjungan,
+            //    item.CreateDateTime,
+            //    item.CreateBy,
+            //    item.CreateByName,
+            //    item.NmDokter,
+            //    item.gambardokter,
+            //    item.Antrian,
+            //    item.IsFinished
+            //};
 
             return Ok(new
             {
                 message = "Data kunjungan berhasil ditemukan.",
-                data = result
+                data = query,
             });
         }
 
@@ -289,6 +325,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return BadRequest(new { message = "Tipe pasien tidak valid. Gunakan hanya 'Rujukan' atau 'Umum'." });
                 }
 
+                // Validasi jenis kunjungan
+                // jika tidak diisi automatis "Rawat Jalan"
                 var inputJenis = string.IsNullOrWhiteSpace(request.JenisKunjungan) || request.JenisKunjungan.Equals("string", StringComparison.OrdinalIgnoreCase)
                     ? "Rawat Jalan"
                     : request.JenisKunjungan;
@@ -322,42 +360,42 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 string nomorAntrianFormatted = $"{kodePoli}{nomorAntrian:000}"; // Contoh: BU001
 
                 // Hitung jumlah kunjungan IP dan OP dari dokter hari ini
-                var allKunjunganPasien = _applicationDbContext.Kunjungans
-                    .Where(k => k.PoliklinikId == request.PoliklinikId && k.CreateDateTime.Date == today && k.IsDelete == false)
-                    .ToList();
+                //var allKunjunganPasien = _applicationDbContext.Kunjungans
+                //    .Where(k => k.PoliklinikId == request.PoliklinikId && k.CreateDateTime.Date == today && k.IsDelete == false)
+                //    .ToList();
 
-                List<KunjunganRiwayat> jumlahKunjungan = new()
-                {
-                    new KunjunganRiwayat
-                    {
-                        Jenis = "IP",
-                        Jumlah = allKunjunganPasien
-                            .Where(k => !string.IsNullOrEmpty(k.JumlahKunjungan))
-                            .SelectMany(k => JsonSerializer.Deserialize<List<KunjunganRiwayat>>(k.JumlahKunjungan) ?? new List<KunjunganRiwayat>())
-                            .Where(k => k.Jenis == "IP")
-                            .Sum(k => k.Jumlah)
-                    },
-                    new KunjunganRiwayat
-                    {
-                        Jenis = "OP",
-                        Jumlah = allKunjunganPasien
-                            .Where(k => !string.IsNullOrEmpty(k.JumlahKunjungan))
-                            .SelectMany(k => JsonSerializer.Deserialize<List<KunjunganRiwayat>>(k.JumlahKunjungan) ?? new List<KunjunganRiwayat>())
-                            .Where(k => k.Jenis == "OP")
-                            .Sum(k => k.Jumlah)
-                    }
-                };
+                //List<KunjunganRiwayat> jumlahKunjungan = new()
+                //{
+                //    new KunjunganRiwayat
+                //    {
+                //        Jenis = "IP",
+                //        Jumlah = allKunjunganPasien
+                //            .Where(k => !string.IsNullOrEmpty(k.JumlahKunjungan))
+                //            .SelectMany(k => JsonSerializer.Deserialize<List<KunjunganRiwayat>>(k.JumlahKunjungan) ?? new List<KunjunganRiwayat>())
+                //            .Where(k => k.Jenis == "IP")
+                //            .Sum(k => k.Jumlah)
+                //    },
+                //    new KunjunganRiwayat
+                //    {
+                //        Jenis = "OP",
+                //        Jumlah = allKunjunganPasien
+                //            .Where(k => !string.IsNullOrEmpty(k.JumlahKunjungan))
+                //            .SelectMany(k => JsonSerializer.Deserialize<List<KunjunganRiwayat>>(k.JumlahKunjungan) ?? new List<KunjunganRiwayat>())
+                //            .Where(k => k.Jenis == "OP")
+                //            .Sum(k => k.Jumlah)
+                //    }
+                //};
 
-                // Tambahkan ke jenis kunjungan saat ini
-                var currentJenis = jumlahKunjungan.FirstOrDefault(k => k.Jenis == kodeJenis);
-                if (currentJenis != null)
-                {
-                    currentJenis.Jumlah += 1;
-                }
-                else
-                {
-                    jumlahKunjungan.Add(new KunjunganRiwayat { Jenis = kodeJenis, Jumlah = 1 });
-                }
+                //// Tambahkan ke jenis kunjungan saat ini
+                //var currentJenis = jumlahKunjungan.FirstOrDefault(k => k.Jenis == kodeJenis);
+                //if (currentJenis != null)
+                //{
+                //    currentJenis.Jumlah += 1;
+                //}
+                //else
+                //{
+                //    jumlahKunjungan.Add(new KunjunganRiwayat { Jenis = kodeJenis, Jumlah = 1 });
+                //}
 
                 var newKunjungan = new Kunjungan
                 {
@@ -366,7 +404,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     DokterId = request.DokterId,
                     PoliklinikId = request.PoliklinikId,
                     AsuransiId = request.AsuransiId,
-                    JumlahKunjungan = JsonSerializer.Serialize(jumlahKunjungan),
+                    //JumlahKunjungan = JsonSerializer.Serialize(jumlahKunjungan),
+                    JenisKunjungan = inputJenis,
                     CreateDateTime = DateTimeOffset.UtcNow,
                     CreateBy = UserActiveId,
                     NoRekamMedis = request.NoRekamMedis,
@@ -390,7 +429,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         request.PasienId,
                         request.DokterId,
                         JenisKunjungan = inputJenis,
-                        JumlahKunjungan = jumlahKunjungan,
                         NomorAntrian = nomorAntrianFormatted
                     }
                 });
@@ -454,37 +492,37 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 string nomorAntrianFormatted = $"{kodePoli}{nomorAntrian:000}";
 
                 // Hitung jumlah kunjungan berdasarkan poliklinik hari ini
-                var allKunjunganPasien = _applicationDbContext.Kunjungans
-                    .Where(k => k.PoliklinikId == request.PoliklinikId && k.CreateDateTime.Date == today && !k.IsDelete)
-                    .ToList();
+                //var allKunjunganPasien = _applicationDbContext.Kunjungans
+                //    .Where(k => k.PoliklinikId == request.PoliklinikId && k.CreateDateTime.Date == today && !k.IsDelete)
+                //    .ToList();
 
-                List<KunjunganRiwayat> jumlahKunjungan = new()
-                {
-                    new KunjunganRiwayat
-                    {
-                        Jenis = "IP",
-                        Jumlah = allKunjunganPasien
-                            .Where(k => !string.IsNullOrEmpty(k.JumlahKunjungan))
-                            .SelectMany(k => JsonSerializer.Deserialize<List<KunjunganRiwayat>>(k.JumlahKunjungan) ?? new List<KunjunganRiwayat>())
-                            .Where(k => k.Jenis == "IP")
-                            .Sum(k => k.Jumlah)
-                    },
-                    new KunjunganRiwayat
-                    {
-                        Jenis = "OP",
-                        Jumlah = allKunjunganPasien
-                            .Where(k => !string.IsNullOrEmpty(k.JumlahKunjungan))
-                            .SelectMany(k => JsonSerializer.Deserialize<List<KunjunganRiwayat>>(k.JumlahKunjungan) ?? new List<KunjunganRiwayat>())
-                            .Where(k => k.Jenis == "OP")
-                            .Sum(k => k.Jumlah)
-                    }
-                };
+                //List<KunjunganRiwayat> jumlahKunjungan = new()
+                //{
+                //    new KunjunganRiwayat
+                //    {
+                //        Jenis = "IP",
+                //        Jumlah = allKunjunganPasien
+                //            .Where(k => !string.IsNullOrEmpty(k.JumlahKunjungan))
+                //            .SelectMany(k => JsonSerializer.Deserialize<List<KunjunganRiwayat>>(k.JumlahKunjungan) ?? new List<KunjunganRiwayat>())
+                //            .Where(k => k.Jenis == "IP")
+                //            .Sum(k => k.Jumlah)
+                //    },
+                //    new KunjunganRiwayat
+                //    {
+                //        Jenis = "OP",
+                //        Jumlah = allKunjunganPasien
+                //            .Where(k => !string.IsNullOrEmpty(k.JumlahKunjungan))
+                //            .SelectMany(k => JsonSerializer.Deserialize<List<KunjunganRiwayat>>(k.JumlahKunjungan) ?? new List<KunjunganRiwayat>())
+                //            .Where(k => k.Jenis == "OP")
+                //            .Sum(k => k.Jumlah)
+                //    }
+                //};
 
-                var currentJenis = jumlahKunjungan.FirstOrDefault(k => k.Jenis == kodeJenis);
-                if (currentJenis != null)
-                    currentJenis.Jumlah += 1;
-                else
-                    jumlahKunjungan.Add(new KunjunganRiwayat { Jenis = kodeJenis, Jumlah = 1 });
+                //var currentJenis = jumlahKunjungan.FirstOrDefault(k => k.Jenis == kodeJenis);
+                //if (currentJenis != null)
+                //    currentJenis.Jumlah += 1;
+                //else
+                //    jumlahKunjungan.Add(new KunjunganRiwayat { Jenis = kodeJenis, Jumlah = 1 });
 
                 // Update semua field
                 existingKunjungan.PasienId = request.PasienId;
@@ -494,8 +532,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 existingKunjungan.NoRekamMedis = request.NoRekamMedis;
                 existingKunjungan.TipePasien = request.TipePasien;
                 existingKunjungan.TipePembayaran = request.TipePembayaran;
-               
-                existingKunjungan.JumlahKunjungan = JsonSerializer.Serialize(jumlahKunjungan);
+
+                existingKunjungan.JenisKunjungan = inputJenis;
                 existingKunjungan.Antrian = nomorAntrianFormatted;
                 existingKunjungan.UpdateDateTime = DateTimeOffset.UtcNow;
                 existingKunjungan.UpdateBy = userActiveId;
@@ -514,7 +552,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         request.DokterId,
                         request.PoliklinikId,
                         JenisKunjungan = inputJenis,
-                        JumlahKunjungan = jumlahKunjungan,
                         NomorAntrian = nomorAntrianFormatted
                     }
                 });
@@ -633,7 +670,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet("paged")]
-        public IActionResult PagedKunjungan(
+        public async Task<IActionResult> PagedKunjunganAsync(
         int page = 1,
         int perPage = 10,
         string? search = null,
@@ -643,7 +680,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? endDate = null,
         [FromQuery] PeriodeFilter? periode = null)
         {
-            // query
+
+            //Hitung jumlah kunjungan per PasienId + JenisKunjungan
+            var jumlahPerJenis = _applicationDbContext.Kunjungans
+                .Where(k => !k.IsDelete)
+                .GroupBy(k => new { k.PasienId, k.JenisKunjungan })
+                .Select(g => new
+                {
+                    g.Key.PasienId,
+                    g.Key.JenisKunjungan,
+                    JumlahJenis = g.Count()
+                });
+            
             var query = from a in _applicationDbContext.Kunjungans
                         join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId
                         join p in _applicationDbContext.Polikliniks on a.PoliklinikId equals p.PoliklinikId
@@ -651,6 +699,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         from o in asuransiGroup.DefaultIfEmpty() // Left Join Asuransi
                         join ps in _applicationDbContext.PendaftaranPasienBarus on a.PasienId equals ps.PendaftaranPasienBaruId
                         join d in _applicationDbContext.Dokters on a.DokterId equals d.DokterId
+                        join j in jumlahPerJenis on new { a.PasienId, a.JenisKunjungan } equals new { j.PasienId, j.JenisKunjungan }
                         where a.IsDelete == false
                         select new
                         {
@@ -665,7 +714,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.NoRekamMedis,
                             a.TipePasien,
                             a.TipePembayaran,
-                            a.JumlahKunjungan,
+                            a.JenisKunjungan,
                             a.CreateDateTime,
                             a.CreateBy,
                             a.IsFinished,
@@ -677,7 +726,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
                                 : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg",
 
-                            CreateByName = u.FullName
+                            CreateByName = u.FullName,
+
+                            // ⬅️ Tambahan jumlah jenis kunjungan
+                            JumlahJenisKunjungan = j.JumlahJenis
                         };
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
@@ -772,50 +824,52 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
             var totalRows = query.Count();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-            var rawData = query.Skip((page - 1) * perPage).Take(perPage).ToList();
+            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
 
             // Deserialize JumlahKunjungan per baris
-            var result = rawData.Select(item =>
-            {
-                List<KunjunganRiwayat> parsed = new();
-                if (!string.IsNullOrWhiteSpace(item.JumlahKunjungan))
-                {
-                    try
-                    {
-                        parsed = JsonSerializer.Deserialize<List<KunjunganRiwayat>>(item.JumlahKunjungan) ?? new();
-                    }
-                    catch
-                    {
-                        parsed = new();
-                    }
-                }
+            //var result = rawData.Select(item =>
+            //{
+            //    List<KunjunganRiwayat> parsed = new();
+            //    if (!string.IsNullOrWhiteSpace(item.JumlahKunjungan))
+            //    {
+            //        try
+            //        {
+            //            parsed = JsonSerializer.Deserialize<List<KunjunganRiwayat>>(item.JumlahKunjungan) ?? new();
+            //        }
+            //        catch
+            //        {
+            //            parsed = new();
+            //        }
+            //    }
 
-                return new
-                {
-                    item.KunjunganID,
-                    item.AsuransiId,
-                    item.PoliklinikId,
-                    item.DokterId,
-                    item.PasienId,
-                    item.NamaLengkap,
-                    item.NoRekamMedis,
-                    item.TipePasien,
-                    item.TipePembayaran,
-                    JumlahKunjungan = parsed,
-                    item.CreateDateTime,
-                    item.CreateBy,
-                    item.CreateByName,
-                    item.NmDokter,
-                    item.NamaPoliklinik,
-                    item.Antrian,
-                    item.IsScreening,
-                    item.IsFinished,
-                    item.IsPresent,
-                    item.gambardokter,
-                };
-            }).ToList();
+            //    return new
+            //    {
+            //        item.KunjunganID,
+            //        item.AsuransiId,
+            //        item.PoliklinikId,
+            //        item.DokterId,
+            //        item.PasienId,
+            //        item.NamaLengkap,
+            //        item.NoRekamMedis,
+            //        item.TipePasien,
+            //        item.TipePembayaran,
+            //        JumlahKunjungan = parsed,
+            //        item.CreateDateTime,
+            //        item.CreateBy,
+            //        item.CreateByName,
+            //        item.NmDokter,
+            //        item.NamaPoliklinik,
+            //        item.Antrian,
+            //        item.IsScreening,
+            //        item.IsFinished,
+            //        item.IsPresent,
+            //        item.gambardokter,
+            //    };
+            //}).ToList();
 
-            if (!result.Any() && page > totalPages)
+            // 🔸 Jumlah Jenis Kunjungan per pasien (terpisah, sebagai summary)
+
+            if (rows.Count == 0 && page > totalPages)
             {
                 return NotFound(new { message = "Page not found." });
             }
@@ -826,11 +880,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 message = "Data retrieved successfully",
                 data = new
                 {
-                    Rows = result,
+                    Rows = rows,
                     TotalRows = totalRows,
                     CurrentPage = page,
                     PerPage = perPage,
-                    TotalPages = totalPages
+                    TotalPages = totalPages,
                 }
             });
         }
