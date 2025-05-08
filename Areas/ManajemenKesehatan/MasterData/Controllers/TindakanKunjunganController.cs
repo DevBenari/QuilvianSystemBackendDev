@@ -158,7 +158,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     kelasKode = "KL001";  // Kode kelas untuk rawat jalan
                 }
-                else if (kunjungan.JenisKunjungan == "RI")  // Jenis Kunjungan adalah rawat inap
+                else if (kunjungan.JenisKunjungan == "IP")  // Jenis Kunjungan adalah rawat inap
                 {
                     kelasKode = "KL002";  // Kode kelas untuk rawat inap
                 }
