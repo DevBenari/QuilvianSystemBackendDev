@@ -405,7 +405,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     PoliklinikId = request.PoliklinikId,
                     AsuransiId = request.AsuransiId,
                     //JumlahKunjungan = JsonSerializer.Serialize(jumlahKunjungan),
-                    JenisKunjungan = inputJenis,
+                    JenisKunjungan = kodeJenis,
                     CreateDateTime = DateTimeOffset.UtcNow,
                     CreateBy = UserActiveId,
                     NoRekamMedis = request.NoRekamMedis,
@@ -533,7 +533,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 existingKunjungan.TipePasien = request.TipePasien;
                 existingKunjungan.TipePembayaran = request.TipePembayaran;
 
-                existingKunjungan.JenisKunjungan = inputJenis;
+                existingKunjungan.JenisKunjungan = kodeJenis;
                 existingKunjungan.Antrian = nomorAntrianFormatted;
                 existingKunjungan.UpdateDateTime = DateTimeOffset.UtcNow;
                 existingKunjungan.UpdateBy = userActiveId;
