@@ -164,7 +164,7 @@ namespace QuilvianSystemBackendDev.Controllers
             // Karena JWT tidak bisa dihapus dari server, cukup beri respons sukses
             return Ok(new
             {
-                message = "Logout berhasil. Silakan hapus token dari browser."
+                message = "Logout berhasil."
             });
         }
     }

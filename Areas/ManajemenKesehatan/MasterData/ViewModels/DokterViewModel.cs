@@ -19,8 +19,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
 
         // Informasi Tambahan
         public IFormFile? Foto { get; set; }
-        public string? FotoName { get; set; }
-        public string? FotoPath { get; set; }
 
         public List<Guid>? AsuransiId { get; set; }
         public List<Guid>? PoliId { get; set; }
