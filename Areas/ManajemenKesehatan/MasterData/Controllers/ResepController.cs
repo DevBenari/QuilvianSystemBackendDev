@@ -174,7 +174,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 };
 
                 _applicationDbContext.Reseps.Add(resep);
-                await _applicationDbContext.SaveChangesAsync();
 
                 if (vm.DaftarObat != null && vm.DaftarObat.Any())
                 {
@@ -192,7 +191,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     }).ToList();
 
                     _applicationDbContext.DetailReseps.AddRange(daftarobat);
-                    await _applicationDbContext.SaveChangesAsync();
                 }
                 int result = await _applicationDbContext.SaveChangesAsync();
                 if (result > 0)
