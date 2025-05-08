@@ -61,7 +61,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              ap.AsuransiId,
                              NamaPasien = p.NamaLengkap,
                              NamaAsuransi = a.NamaAsuransi,
-                             ap.NoPolis
+                             ap.NoPolis,
+                             ap.Umur
                          };
 
             // Hitung total data sebelum paginasi
@@ -152,6 +153,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         PasienId = request.PasienId,
                         AsuransiId = request.AsuransiId,
                         NoPolis = request.NoPolis,
+                        Umur = request.Umur,
                         CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = UserActiveId
                     };
@@ -297,6 +299,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     data.PasienId = request.PasienId;
                     data.AsuransiId = request.AsuransiId;
                     data.NoPolis = request.NoPolis;
+                    data.Umur = request.Umur;
 
                     data.UpdateDateTime = DateTimeOffset.UtcNow;
                     data.UpdateBy = UserActiveId;
@@ -378,7 +381,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             ap.AsuransiId,
                             NamaPasien = p.NamaLengkap,
                             NamaAsuransi = a.NamaAsuransi,
-                            ap.NoPolis
+                            ap.NoPolis,
+                            ap.Umur
                         };
 
             // Filter berdasarkan search

@@ -12,5 +12,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? PasienId { get; set; }
         public string? NoPolis { get; set; }
         public string? AsuransiId { get; set; }
+        public string Umur { get; set; }
     }
 }
