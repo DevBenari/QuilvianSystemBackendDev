@@ -105,7 +105,7 @@ namespace QuilvianSystemBackendDev.Controllers
                 {
                     message = "Data dokter ditemukan",
                     data = user,
-                    dokter = dokter
+                    dokter = dokter,
                 });
             }
 
