@@ -143,18 +143,48 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
-                // **Ambil Tanggal Sekarang**
-                var dateNow = DateTime.UtcNow;
-                var setDateNow = dateNow.ToString("yyMMdd"); // Format: YYMMDD
+                // **Ambil Kunjungan berdasarkan KunjunganId dari ViewModel**
+                var kunjungan = await _applicationDbContext.Kunjungans
+                    .FirstOrDefaultAsync(k => k.KunjunganID == vm.KunjunganId);
 
-                ////// **Cek Duplikasi**
-                //bool isDuplicate = _applicationDbContext.VitalSigns
-                //                    .Any(c => c.KunjunganId == vm.KunjunganId);
+                if (kunjungan == null)
+                {
+                    return NotFound(new { message = "Kunjungan tidak ditemukan." });
+                }
 
-                //if (isDuplicate)
-                //{
-                //   return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
-                //}
+                // **Tentukan Kelas berdasarkan JenisKunjungan**
+                string kelasKode = "";
+                if (kunjungan.JenisKunjungan == "OP")  // Jenis Kunjungan adalah rawat jalan
+                {
+                    kelasKode = "KL001";  // Kode kelas untuk rawat jalan
+                }
+                else if (kunjungan.JenisKunjungan == "RI")  // Jenis Kunjungan adalah rawat inap
+                {
+                    kelasKode = "KL002";  // Kode kelas untuk rawat inap
+                }
+
+                // Cari kelas berdasarkan kode kelas
+                var kelas = await _applicationDbContext.Kelass
+                    .FirstOrDefaultAsync(k => k.KodeKelas == kelasKode);
+
+                if (kelas == null)
+                {
+                    return NotFound(new { message = "Kelas untuk jenis kunjungan ini tidak ditemukan." });
+                }
+
+                // **Ambil Tarif berdasarkan TindakanId dan KelasId**
+                var tarifKelas = await _applicationDbContext.TarifKelass
+                    .FirstOrDefaultAsync(t => t.TindakanId == vm.TindakanId && t.KelasId == kelas.KelasId);
+
+                if (tarifKelas == null)
+                {
+                    return NotFound(new { message = "Tarif untuk tindakan dan kelas ini tidak ditemukan." });
+                }
+
+                // **Hitung Total berdasarkan TarifTotal dari TarifKelas dan Quantity**
+                var totalqty = tarifKelas.TarifTotal.HasValue
+                    ? tarifKelas.TarifTotal.Value * vm.Quantity  // Mengalikan tarif total dengan jumlah Quantity
+                    : 0; // Jika TarifTotal tidak ada, set total menjadi 0
 
                 // **Buat Data Baru**
                 var data = new TindakanKunjungan
@@ -163,7 +193,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     KunjunganId = vm.KunjunganId,
                     TindakanId = vm.TindakanId,
                     Quantity = vm.Quantity,
-                    Total = vm.Total,
+                    Total = totalqty, // Masukkan nilai Total yang telah dihitung
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow
                 };
@@ -190,6 +220,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
 
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateTindakanKunjungan(Guid id, [FromBody] TindakanKunjunganViewModel vm)
