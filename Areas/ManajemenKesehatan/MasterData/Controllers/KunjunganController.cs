@@ -81,7 +81,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         {
                             a.KunjunganID,
                             a.AsuransiId,
-                            NamaAsuransi = o != null ? o.NamaAsuransi : "No", // Cek apakah ada asuransi
+                            NamaAsuransi = o != null && o.NamaAsuransi != null ? o.NamaAsuransi : "No", // Cek apakah ada asuransi
                             a.PoliklinikId,
                             p.NamaPoliklinik,
                             a.DokterId,
@@ -219,7 +219,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         {
                             a.KunjunganID,
                             a.AsuransiId,
-                            NamaAsuransi = o != null ? o.NamaAsuransi : "No", // Cek apakah ada asuransi
+                            NamaAsuransi = o != null && o.NamaAsuransi != null ? o.NamaAsuransi : "No", // Cek apakah ada asuransi
                             a.PoliklinikId,
                             p.NamaPoliklinik,
                             a.DokterId,
@@ -705,7 +705,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         {
                             a.KunjunganID,
                             a.AsuransiId,
-                            NamaAsuransi = o != null ? o.NamaAsuransi : "No", // Cek apakah ada asuransi
+                            NamaAsuransi = o != null && o.NamaAsuransi != null ? o.NamaAsuransi : "No", // Cek apakah ada asuransi
                             a.PoliklinikId,
                             p.NamaPoliklinik,
                             a.DokterId,
