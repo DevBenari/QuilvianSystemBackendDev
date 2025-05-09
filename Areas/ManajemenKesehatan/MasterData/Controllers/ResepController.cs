@@ -191,6 +191,27 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     }).ToList();
 
                     _applicationDbContext.DetailReseps.AddRange(daftarobat);
+                    // **Pengurangan Stok untuk Obat**
+                    foreach (var obat in vm.DaftarObat)
+                    {
+                        var obatDb = await _applicationDbContext.Obats.FindAsync(obat.ObatId);
+
+                        if (obatDb == null)
+                        {
+                            return NotFound(new { message = "Obat tidak ditemukan." });
+                        }
+
+                        int qty = obat.Qty ?? 0; // Jika Qty adalah null, gunakan 0 sebagai default
+                        if (obatDb.Stock <= qty)
+                        {
+                            return BadRequest(new { message = $"Stok obat {obatDb.ObatName} tidak cukup." });
+                        }
+
+                        obatDb.Stock -= qty;
+
+                        // Update stok obat di database
+                        _applicationDbContext.Obats.Update(obatDb);
+                    }
                 }
                 int result = await _applicationDbContext.SaveChangesAsync();
                 if (result > 0)
@@ -219,6 +240,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             {
                 return BadRequest(new { message = "Data tidak valid!" });
             }
+
             try
             {
                 // **Cek koneksi ke database**
@@ -228,11 +250,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // **Ambil User ID dari JWT Claims**
-                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
-                var UserActiveId = GetUserActive.UserActiveId;
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var getUserActive = _applicationDbContext.UserActives.Where(u => u.Email == emailLogin).FirstOrDefault();
+                var userActiveId = getUserActive.UserActiveId;
 
-                if (string.IsNullOrEmpty(EmailLogin))
+                if (string.IsNullOrEmpty(emailLogin))
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
@@ -246,14 +268,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // **Update data resep**
                 data.KunjunganId = vm.KunjunganId;
-                data.UpdateBy = UserActiveId;
+                data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
                 _applicationDbContext.Reseps.Update(data);
                 await _applicationDbContext.SaveChangesAsync();
 
-                var dfObatLama = _applicationDbContext.DetailReseps.Where
-                    (d => d.ResepId == id).ToList();
+                var dfObatLama = _applicationDbContext.DetailReseps.Where(d => d.ResepId == id).ToList();
+
+                // **Mengembalikan stok obat yang sebelumnya terpakai**
+                foreach (var detail in dfObatLama)
+                {
+                    var obatDb = await _applicationDbContext.Obats.FindAsync(detail.ObatId);
+                    if (obatDb != null)
+                    {
+                        // Mengembalikan stok obat yang sudah terpakai
+                        obatDb.Stock += detail.Qty.GetValueOrDefault();
+
+                        _applicationDbContext.Obats.Update(obatDb);
+                    }
+                }
 
                 if (vm.DaftarObat == null || !vm.DaftarObat.Any())
                 {
@@ -267,19 +301,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                         if (existingDetail != null)
                         {
-                            // Update existing
+                            // **Update existing**
                             existingDetail.Qty = obat.Qty;
                             existingDetail.Signa = obat.Signa;
                             existingDetail.SignaTambahan = obat.SignaTambahan;
                             existingDetail.InteraturObat = obat.InteraturObat;
-                            existingDetail.UpdateBy = UserActiveId;
+                            existingDetail.UpdateBy = userActiveId;
                             existingDetail.UpdateDateTime = DateTimeOffset.UtcNow;
 
                             _applicationDbContext.DetailReseps.Update(existingDetail);
                         }
                         else
                         {
-                            // Insert new
+                            // **Insert new**
                             var newDetail = new DetailResep
                             {
                                 DetailResepId = Guid.NewGuid(),
@@ -289,15 +323,36 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 Signa = obat.Signa,
                                 SignaTambahan = obat.SignaTambahan,
                                 InteraturObat = obat.InteraturObat,
-                                CreateBy = UserActiveId,
+                                CreateBy = userActiveId,
                                 CreateDateTime = DateTimeOffset.UtcNow,
                             };
 
                             _applicationDbContext.DetailReseps.Add(newDetail);
                         }
+
+                        // **Kurangi stok obat**
+                        var obatDbUpdate = await _applicationDbContext.Obats.FindAsync(obat.ObatId);
+
+                        if (obatDbUpdate == null)
+                        {
+                            return NotFound(new { message = $"Obat dengan ID {obat.ObatId} tidak ditemukan." });
+                        }
+
+                        // Cek jika stok obat cukup
+                        if (obatDbUpdate.Stock < obat.Qty)
+                        {
+                            return BadRequest(new { message = $"Stok obat {obatDbUpdate.ObatName} tidak cukup." });
+                        }
+
+                        // **Kurangi stok obat** sesuai dengan jumlah (Qty) yang diresepkan
+                        obatDbUpdate.Stock -= obat.Qty.GetValueOrDefault();
+
+                        // Update stok di database
+                        _applicationDbContext.Obats.Update(obatDbUpdate);
                     }
                 }
 
+                // **Simpan perubahan ke database**
                 int result = await _applicationDbContext.SaveChangesAsync();
                 if (result > 0)
                 {
@@ -308,7 +363,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return StatusCode(500, new { message = "Data tidak berhasil diupdate ke database." });
                 }
             }
-
             catch (DbUpdateException dbEx)
             {
                 return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
@@ -316,9 +370,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
-
             }
         }
+
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteResep(Guid id)

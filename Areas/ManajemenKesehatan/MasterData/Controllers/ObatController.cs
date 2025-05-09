@@ -81,7 +81,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     AsuransiNames = (from oa in _applicationDbContext.ObatAsuransis
                                      join asu in _applicationDbContext.Asuransis on oa.AsuransiId equals asu.AsuransiId
                                      where oa.ObatId == a.ObatId
-                                     select asu.NamaAsuransi).Distinct().ToList()
+                                     select asu.NamaAsuransi).Distinct().ToList(),
+
+                    // New fields added
+                    a.Minimal,
+                    a.Maximal,
+                    a.Farmakologi,
+                    a.Peringatan,
+                    a.Indikasi,
+                    a.Kontraindikasi,
+                    a.CaraKerja,
+                    a.InteraksiObat,
+                    a.Dosis
                 });
 
             var totalRows = await query.CountAsync();
@@ -202,6 +213,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     HargaJual = vm.HargaJual,
                     Stock = vm.Stock,
                     IsActive = vm.IsActive,
+                    Minimal = vm.Minimal,  // Tambahkan properti baru
+                    Maximal = vm.Maximal,
+                    Farmakologi = vm.Farmakologi,
+                    Peringatan = vm.Peringatan,
+                    Indikasi = vm.Indikasi,
+                    Kontraindikasi = vm.Kontraindikasi,
+                    CaraKerja = vm.CaraKerja,
+                    InteraksiObat = vm.InteraksiObat,
+                    Dosis = vm.Dosis,
                     Note = vm.Note
                 };
 
@@ -276,6 +296,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.Stock = vm.Stock;
                 data.IsActive = vm.IsActive;
                 data.Note = vm.Note;
+
+
+                data.Minimal = vm.Minimal;  // Tambahkan properti baru
+                data.Maximal = vm.Maximal;
+                data.Farmakologi = vm.Farmakologi;
+                data.Peringatan = vm.Peringatan;
+                data.Indikasi = vm.Indikasi;
+                data.Kontraindikasi = vm.Kontraindikasi;
+                data.CaraKerja = vm.CaraKerja;
+                data.InteraksiObat = vm.InteraksiObat;
+                data.Dosis = vm.Dosis;
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTime.UtcNow;
 
@@ -386,6 +417,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 ObatName = a.ObatName,
                                 IsActive = a.IsActive,
                                 Note = a.Note,
+                                a.Minimal,
+                                a.Maximal,
+                                a.Farmakologi,
+                                a.Peringatan,
+                                a.Indikasi,
+                                a.Kontraindikasi,
+                                a.CaraKerja,
+                                a.InteraksiObat,
+                                a.Dosis
                             };
 
                 if (!string.IsNullOrWhiteSpace(search))

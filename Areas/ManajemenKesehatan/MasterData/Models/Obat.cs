@@ -19,6 +19,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public decimal? HargaAwal { get; set; }
         public bool? IsActive { get; set; }
         public int Stock { get; set; }
+        public int? Minimal { get; set; }
+        public int? Maximal { get; set; }
+        public string? Farmakologi { get; set; }
+        public string? Peringatan { get; set; }
+        public string? Indikasi { get; set; }
+        public string? Kontraindikasi { get; set; }
+        public string? CaraKerja { get; set; }
+        public string? InteraksiObat { get; set; }
+        public string? Dosis { get; set; }
         public string? Note { get; set; }
 
         //public string KategoriObat { get; set; }
