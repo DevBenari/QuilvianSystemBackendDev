@@ -62,16 +62,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         join t in _applicationDbContext.TipeUsers
                             on a.TipeUserId equals t.TipeUserId into tipeJoin
                         from tipe in tipeJoin.DefaultIfEmpty()
+                        join creator in _applicationDbContext.UserActives
+                            on a.CreateBy equals creator.UserActiveId into creatorJoin
+                        from creator in creatorJoin.DefaultIfEmpty()
                         where a.IsDelete == false
                         select new
                         {
-                            CreateDateTime = a.CreateDateTime,
-                            CreateBy = a.CreateBy,
-                            CreateByName = a.FullName,
-                            UserActiveId = a.UserActiveId,
-                            UserActiveCode = a.UserActiveCode,
-                            FullName = a.FullName,
-                            TipeUserId = a.TipeUserId,
+                            a.CreateDateTime,
+                            a.CreateBy,
+                            CreateByName = creator != null ? creator.FullName : "-",
+                            a.UserActiveId,
+                            a.UserActiveCode,
+                            a.FullName,
+                            a.TipeUserId,
                             NamaTipeUser = tipe != null ? tipe.NamaTipeUser : "-"
                         };
 
@@ -120,6 +123,92 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data = listdata
             });
         }
+
+        [HttpGet("UserActiveDoctors/{id}")]
+        public async Task<IActionResult> GetUserActiveDokterById(Guid id)
+        {
+            try
+            {
+                // Ambil data UserActive berdasarkan ID
+                var user = await _applicationDbContext.UserActives
+                    .Include(u => u.TipeUserId)
+                    .FirstOrDefaultAsync(u => u.UserActiveId == id && !u.IsDelete);
+
+                if (user == null)
+                {
+                    return NotFound(new { message = "UserActive tidak ditemukan." });
+                }
+
+                // Ambil nama tipe user
+                var tipeUser = await _applicationDbContext.TipeUsers
+                    .FirstOrDefaultAsync(t => t.TipeUserId == user.TipeUserId);
+                var tipeUserName = tipeUser?.NamaTipeUser ?? "Unknown";
+
+                // Cek jika user adalah dokter
+                object dataDokter = null;
+                if (tipeUserName.ToLower() == "dokter")
+                {
+                    var dokter = await _applicationDbContext.Dokters
+                        .FirstOrDefaultAsync(d => d.Email == user.Email && d.NmDokter == user.FullName && !d.IsDelete);
+
+                    if (dokter != null)
+                    {
+                        dataDokter = new
+                        {
+                            dokter.DokterId,
+                            dokter.KdDokter,
+                            dokter.NmDokter,
+                            dokter.Nik,
+                            dokter.Email,
+                            dokter.Nohp,
+                            dokter.Alamat,
+                            dokter.Spesialis,
+                            dokter.Str,
+                            dokter.Sip,
+                            dokter.TglSip,
+                            dokter.TglStr,
+                            dokter.IsActive,
+                            dokter.FotoName,
+                            dokter.FotoPath
+                        };
+                    }
+                }
+
+                return Ok(new
+                {
+                    message = "Berhasil mengambil data user active dokter",
+                    data = new
+                    {
+                        user.UserActiveId,
+                        user.UserActiveCode,
+                        user.FullName,
+                        user.Email,
+                        user.IdentityNumber,
+                        user.PlaceOfBirth,
+                        user.DateOfBirth,
+                        user.Gender,
+                        user.Handphone,
+                        user.Address,
+                        user.IsActive,
+                        user.TipeUserId,
+                        NamaTipeUser = tipeUserName,
+                        user.DepartemenId,
+                        user.PositionId,
+                        FotoPath = string.IsNullOrEmpty(user.FotoPath)
+                            ? "/FotoDokter/dokter.jpg"
+                            : user.FotoPath,
+
+                        // include dokter jika tipe user = dokter
+                        DokterInfo = dataDokter
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan: {ex.Message}" });
+            }
+        }
+
 
         [HttpPost("UserActiveDoctors")]
         public async Task<IActionResult> CreateUserActiveDokter([FromForm] UserActiveViewModel vm)
@@ -296,7 +385,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     var user = new UserActive
                     {
                         CreateDateTime = DateTimeOffset.UtcNow,
-                        CreateBy = Guid.NewGuid(),
+                        CreateBy = UserActiveId,
                         UserActiveId = Guid.NewGuid(),
                         UserActiveCode = kode,
                         FullName = vm.FullName,
@@ -511,7 +600,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     var user = new UserActive
                     {
                         CreateDateTime = DateTimeOffset.UtcNow,
-                        CreateBy = Guid.NewGuid(),
+                        CreateBy = UserActiveId,
                         UserActiveId = Guid.NewGuid(),
                         UserActiveCode = kode,
                         FullName = vm.FullName,
@@ -960,21 +1049,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         DateTime? endDate = null,
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
-            // Query data
+            // query
             var query = from a in _applicationDbContext.UserActives
                         join t in _applicationDbContext.TipeUsers
                             on a.TipeUserId equals t.TipeUserId into tipeJoin
                         from tipe in tipeJoin.DefaultIfEmpty()
+                        join creator in _applicationDbContext.UserActives
+                            on a.CreateBy equals creator.UserActiveId into creatorJoin
+                        from creator in creatorJoin.DefaultIfEmpty()
                         where a.IsDelete == false
                         select new
                         {
-                            CreateDateTime = a.CreateDateTime,
-                            CreateBy = a.CreateBy,
-                            CreateByName = a.FullName,
-                            UserActiveId = a.UserActiveId,
-                            UserActiveCode = a.UserActiveCode,
-                            FullName = a.FullName,
-                            TipeUserId = a.TipeUserId,
+                            a.CreateDateTime,
+                            a.CreateBy,
+                            CreateByName = creator != null ? creator.FullName : "-",
+                            a.UserActiveId,
+                            a.UserActiveCode,
+                            a.FullName,
+                            a.TipeUserId,
                             NamaTipeUser = tipe != null ? tipe.NamaTipeUser : "-"
                         };
 
@@ -983,7 +1075,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             {
                 search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
-                    EF.Functions.ILike(u.FullName, search)
+                    EF.Functions.ILike(u.FullName, search) ||
+                    EF.Functions.ILike(u.CreateByName, search) 
                 );
             }
 
