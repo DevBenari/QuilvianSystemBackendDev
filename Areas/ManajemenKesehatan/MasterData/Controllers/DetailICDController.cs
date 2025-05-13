@@ -51,7 +51,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = from a in _applicationDbContext.DetailICDs
+            var query = (from a in _applicationDbContext.DetailICDs
                         join u in _applicationDbContext.UserActives
                         on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
@@ -64,7 +64,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             SoapId = a.SoapId,
                             ICDId = a.ICDId,
                             isUtama = a.isUtama,
-                        };
+                        }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
             var totalRows = query.Count();

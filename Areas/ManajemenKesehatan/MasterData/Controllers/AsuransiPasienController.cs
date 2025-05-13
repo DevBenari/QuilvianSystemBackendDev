@@ -51,7 +51,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             // Validasi agar page dan perPage minimal bernilai 1
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
-            var result = from ap in _applicationDbContext.AsuransiPasiens
+            var result = (from ap in _applicationDbContext.AsuransiPasiens
                          join p in _applicationDbContext.PendaftaranPasienBarus on ap.PasienId equals p.PendaftaranPasienBaruId.ToString()
                          join a in _applicationDbContext.Asuransis on ap.AsuransiId equals a.AsuransiId.ToString()
                          select new
@@ -59,11 +59,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              ap.AsuransiPasienId,
                              ap.PasienId,
                              ap.AsuransiId,
+                             ap.CreateDateTime, 
                              NamaPasien = p.NamaLengkap,
                              NamaAsuransi = a.NamaAsuransi,
                              ap.NoPolis,
                              ap.Umur
-                         };
+                         }).OrderByDescending(ap => ap.CreateDateTime);
 
             // Hitung total data sebelum paginasi
             var totalRows = result.Count();

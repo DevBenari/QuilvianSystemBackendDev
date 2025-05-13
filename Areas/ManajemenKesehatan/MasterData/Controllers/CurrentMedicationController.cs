@@ -50,7 +50,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = from a in _applicationDbContext.CurrentMedications
+            var query = (from a in _applicationDbContext.CurrentMedications
                         where a.IsDelete == false
                         join u in _applicationDbContext.UserActives
                         on a.CreateBy equals u.UserActiveId
@@ -68,7 +68,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             Dosis = a.Dosis,
                             Frekuensi = a.Frekuensi,
                             LamaKonsumsi = a.LamaKonsumsi,
-                        };
+                        }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
             var totalRows = query.Count();

@@ -68,7 +68,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     JumlahJenis = g.Count()
                 });
 
-            var query = from a in _applicationDbContext.Kunjungans
+            var query = (from a in _applicationDbContext.Kunjungans
                         join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId
                         join p in _applicationDbContext.Polikliniks on a.PoliklinikId equals p.PoliklinikId
                         join o in _applicationDbContext.Asuransis on a.AsuransiId equals o.AsuransiId into asuransiGroup
@@ -106,7 +106,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                             // ⬅️ Tambahan jumlah jenis kunjungan
                             JumlahJenisKunjungan = j.JumlahJenis
-                        };
+                        }).OrderByDescending(a => a.CreateDateTime);
 
             var totalRows = query.Count();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);

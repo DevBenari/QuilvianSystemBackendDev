@@ -93,7 +93,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     a.CaraKerja,
                     a.InteraksiObat,
                     a.Dosis
-                });
+                }).OrderByDescending(a => a.CreateDateTime);
 
             var totalRows = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);

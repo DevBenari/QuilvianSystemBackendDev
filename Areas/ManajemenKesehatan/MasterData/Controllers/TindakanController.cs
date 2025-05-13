@@ -47,7 +47,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            var query = from t in _applicationDbContext.Tindakans
+            var query = (from t in _applicationDbContext.Tindakans
                         join u in _applicationDbContext.UserActives on t.CreateBy equals u.UserActiveId
                         where t.IsDelete == false
                         select new
@@ -94,7 +94,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                               tk.KSO,
                                               NamaKelas = k.NamaKelas // Menambahkan Nama Kelas
                                           }).ToList()
-                        };
+                        }).OrderByDescending(a => a.CreateDateTime);
 
             var totalRows = query.Count();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);

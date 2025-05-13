@@ -111,7 +111,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         .Distinct()
                         .ToList()
                 })
-                .ToList();
+                .ToList().OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
             var totalRows = query.Count();
