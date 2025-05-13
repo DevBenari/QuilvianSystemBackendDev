@@ -50,7 +50,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = from a in _context.FasilitasPasiens
+            var query = (from a in _context.FasilitasPasiens
                         join u in _context.UserActives
                         on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
@@ -62,7 +62,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             FasilitasPasienId = a.FasilitasPasienId,
                             KodeFasilitas = a.KodeFasilitas,
                             NamaFasilitasPasien = a.NamaFasilitasPasien
-                        };
+                        }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
             var totalRows = query.Count();

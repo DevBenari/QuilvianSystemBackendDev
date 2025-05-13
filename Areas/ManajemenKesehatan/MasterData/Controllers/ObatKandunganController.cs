@@ -39,17 +39,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            var query = from ok in _applicationDbContext.ObatKandungans
+            var query = (from ok in _applicationDbContext.ObatKandungans
                         join o in _applicationDbContext.Obats on ok.ObatId equals o.ObatId
                         join k in _applicationDbContext.Kandungans on ok.KandunganId equals k.KandunganId
                         select new
                         {
+                            CreateDateTime = ok.CreateDateTime,
                             ObatKandunganId = ok.ObatKandunganId,
                             ObatId = ok.ObatId,
                             ObatName = o.ObatName,
                             KandunganId = ok.KandunganId,
                             KandunganName = k.NamaKandungan
-                        };
+                        }).OrderByDescending(a => a.CreateDateTime);
 
             var totalRows = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);

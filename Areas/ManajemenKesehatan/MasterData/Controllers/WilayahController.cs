@@ -58,21 +58,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = from a in _applicationDbContext.Provinsis
-                        join u in _applicationDbContext.UserActives
-                        on a.CreateBy equals u.UserActiveId
-                        where a.IsDelete == false
-                        select new
-                        {
-                            CreateDateTime = a.CreateDateTime,
-                            CreateBy = a.CreateBy,
-                            CreateByName = u.FullName,
-                            ProvinsiId = a.ProvinsiId,
-                            KodeProvinsi = a.KodeProvinsi,
-                            NamaProvinsi = a.NamaProvinsi,
-                            NegaraId = a.NegaraId,
-                            NamaNegara = a.Negara.NamaNegara
-                        };
+            var query = (from a in _applicationDbContext.Provinsis
+                         join u in _applicationDbContext.UserActives
+                         on a.CreateBy equals u.UserActiveId
+                         where a.IsDelete == false
+                         select new
+                         {
+                             CreateDateTime = a.CreateDateTime,
+                             CreateBy = a.CreateBy,
+                             CreateByName = u.FullName,
+                             ProvinsiId = a.ProvinsiId,
+                             KodeProvinsi = a.KodeProvinsi,
+                             NamaProvinsi = a.NamaProvinsi,
+                             NegaraId = a.NegaraId,
+                             NamaNegara = a.Negara.NamaNegara
+                         });
 
             // Hitung total data sebelum paginasi
             var totalRows = query.Count();
@@ -112,7 +112,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = from a in _applicationDbContext.KabupatenKotas
+            var query = (from a in _applicationDbContext.KabupatenKotas
                         join u in _applicationDbContext.UserActives
                         on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
@@ -126,7 +126,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             NamaKabupatenKota = a.NamaKabupatenKota,
                             ProvinsiId = a.ProvinsiId,
                             NamaProvinsi = a.Provinsi.NamaProvinsi
-                        };
+                        });
 
             // Hitung total data sebelum paginasi
             var totalRows = query.Count();

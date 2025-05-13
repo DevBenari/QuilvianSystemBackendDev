@@ -50,7 +50,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = from a in _context.DokterAsuransis
+            var query = (from a in _context.DokterAsuransis
                         where a.IsDelete == false
                         join d in _context.Dokters on a.DokterId equals d.DokterId into dokterGroup
                         from d in dokterGroup.DefaultIfEmpty()
@@ -69,7 +69,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             ImageUrl = d != null && !string.IsNullOrEmpty(d.FotoName)
                                                            ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
                                                            : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg"
-                        };
+                        }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
             var totalRows = query.Count();

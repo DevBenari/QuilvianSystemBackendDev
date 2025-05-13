@@ -51,7 +51,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = from a in _applicationDbContext.DokterPolis
+            var query = (from a in _applicationDbContext.DokterPolis
                         join u in _applicationDbContext.UserActives
                             on a.CreateBy equals u.UserActiveId
                         join d in _applicationDbContext.Dokters
@@ -79,7 +79,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
                                 : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg"
 
-                        };
+                        }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
             var totalRows = query.Count();
