@@ -131,25 +131,27 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             {
                 // Ambil data UserActive berdasarkan ID
                 var user = await _applicationDbContext.UserActives
-                    .Include(u => u.TipeUserId)
-                    .FirstOrDefaultAsync(u => u.UserActiveId == id && !u.IsDelete);
+                    .FirstOrDefaultAsync(u => u.UserActiveId == id && (u.IsDelete == null || u.IsDelete == false));
 
                 if (user == null)
                 {
                     return NotFound(new { message = "UserActive tidak ditemukan." });
                 }
 
-                // Ambil nama tipe user
+                // Ambil nama tipe user dari TipeUsers
                 var tipeUser = await _applicationDbContext.TipeUsers
                     .FirstOrDefaultAsync(t => t.TipeUserId == user.TipeUserId);
                 var tipeUserName = tipeUser?.NamaTipeUser ?? "Unknown";
 
-                // Cek jika user adalah dokter
+                // Jika user adalah dokter, cari data dari tabel Dokter
                 object dataDokter = null;
                 if (tipeUserName.ToLower() == "dokter")
                 {
                     var dokter = await _applicationDbContext.Dokters
-                        .FirstOrDefaultAsync(d => d.Email == user.Email && d.NmDokter == user.FullName && !d.IsDelete);
+                        .FirstOrDefaultAsync(d =>
+                            d.Email == user.Email &&
+                            d.NmDokter == user.FullName &&
+                            (d.IsDelete == null || d.IsDelete == false));
 
                     if (dokter != null)
                     {
@@ -194,11 +196,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         NamaTipeUser = tipeUserName,
                         user.DepartemenId,
                         user.PositionId,
-                        FotoPath = string.IsNullOrEmpty(user.FotoPath)
+                        FotoPath = string.IsNullOrWhiteSpace(user.FotoPath)
                             ? "/FotoDokter/dokter.jpg"
                             : user.FotoPath,
-
-                        // include dokter jika tipe user = dokter
                         DokterInfo = dataDokter
                     }
                 });
@@ -208,6 +208,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 return StatusCode(500, new { message = $"Terjadi kesalahan: {ex.Message}" });
             }
         }
+
 
 
         [HttpPost("UserActiveDoctors")]
