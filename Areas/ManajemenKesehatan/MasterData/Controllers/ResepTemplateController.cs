@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using QuilvianSystemBackendDev.Repositories;
 using System.Security.Claims;
+using SkiaSharp;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
@@ -24,41 +25,58 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
         // **View ResepTemplate**
         [HttpGet]
-        public async Task<IActionResult> GetAllUniqueResepTemplate()
+        public async Task<IActionResult> GetResepTemplates(int page = 1, int perPage = 10)
         {
-            try
-            {
-                // Query untuk mengambil data unik berdasarkan Judul dan KodeResepTemplate
-                var query = from rt in _applicationDbContext.ResepTemplates
-                            group rt by new { rt.Judul, rt.DokterId } into grouped
-                            select new
-                            {
-                                grouped.Key.Judul,
-                                grouped.Key.DokterId,
-                                // Ambil data pertama dari group, bisa juga memilih data lainnya seperti ObatId, DokterId, dll
-                                ResepTemplateId = grouped.FirstOrDefault().ResepTemplateId,
-                                ObatId = grouped.FirstOrDefault().ObatId,
-                                KodeResepTemplate = grouped.FirstOrDefault().KodeResepTemplate,
-                                Qty = grouped.FirstOrDefault().Qty,
-                                Signa = grouped.FirstOrDefault().Signa,
-                                SignaTambahan = grouped.FirstOrDefault().SignaTambahan,
-                                InteraturObat = grouped.FirstOrDefault().InteraturObat
-                            };
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
 
-                // Execute query dan ambil hasilnya
-                var result = await query.ToListAsync();
-
-                if (!result.Any())
+            // Query untuk mengambil data resep template
+            var query = _applicationDbContext.ResepTemplates
+                .Where(r => !r.IsDelete)  // Jika ada properti "IsDelete" untuk soft delete
+                .Select(r => new
                 {
-                    return NotFound(new { message = "Data tidak ditemukan!" });
-                }
+                    r.ResepTemplateId,
+                    r.ObatId,
+                    r.KodeResepTemplate,
+                    r.Judul,
+                    r.DokterId,
+                    r.Qty,
+                    r.Signa,
+                    r.SignaTambahan,
+                    r.InteraturObat,
+                    CreateDateTime = r.CreateDateTime,
+                    CreateBy = r.CreateBy,
+                    UpdateDateTime = r.UpdateDateTime,
+                    UpdateBy = r.UpdateBy
+                });
 
-                return Ok(new { message = "Berhasil || 200 OK", data = result });
-            }
-            catch (Exception ex)
+            // Menghitung jumlah total data
+            var totalRows = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            // Ambil data berdasarkan halaman yang diminta
+            var listdata = await query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToListAsync();
+
+            if (!listdata.Any())
             {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+                return NotFound(new { message = "Data tidak ditemukan." });
             }
+
+            return Ok(new
+            {
+                message = "Data berhasil ditemukan.",
+                data = listdata,
+                pagination = new
+                {
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalRows = totalRows,
+                    TotalPages = totalPages
+                }
+            });
         }
         // **Create ResepTemplate**
         [HttpPost]
@@ -181,14 +199,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         // **Get ResepTemplate By ID**
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetResepTemplateById(Guid id)
+        [HttpGet("{idDokter}")]
+        public async Task<IActionResult> GetResepTemplateById(Guid idDokter)
         {
             try
             {
                 // Query untuk mengambil data yang unik berdasarkan Judul
                 var query = from rt in _applicationDbContext.ResepTemplates
-                            where rt.DokterId == id
+                            where rt.DokterId == idDokter
                             group rt by rt.Judul into grouped
                             select new
                             {
@@ -220,6 +238,30 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteResepTemplate(Guid id)
+        {
+            try
+            {
+                var resepTemplate = await _applicationDbContext.ResepTemplates
+                    .FirstOrDefaultAsync(r => r.ResepTemplateId == id);
+
+                if (resepTemplate == null)
+                {
+                    return NotFound(new { message = "ResepTemplate dengan ID tersebut tidak ditemukan." });
+                }
+
+                // Hard delete: menghapus data dari database
+                _applicationDbContext.ResepTemplates.Remove(resepTemplate);
+                await _applicationDbContext.SaveChangesAsync();
+
+                return Ok(new { message = "Data berhasil dihapus (hard delete)." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan: {ex.Message}" });
+            }
+        }
 
         // **Get All ResepTemplate (Paged)**
         [HttpGet("paged")]
