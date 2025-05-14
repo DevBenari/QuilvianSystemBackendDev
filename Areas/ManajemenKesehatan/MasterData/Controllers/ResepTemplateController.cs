@@ -237,7 +237,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 return StatusCode(500, new { message = $"Terjadi kesalahan: {ex.Message}" });
             }
         }
-
+        // deelete resep template
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteResepTemplate(Guid id)
         {
