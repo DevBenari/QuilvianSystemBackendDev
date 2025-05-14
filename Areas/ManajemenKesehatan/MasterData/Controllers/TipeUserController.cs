@@ -152,7 +152,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     .FirstOrDefault();
 
                 string kode;
-                if (lastCode == null || lastCode.KodeTipeUser.Substring(3, 6) != setDateNow)
+                if (lastCode == null)
                 {
                     kode = $"TPU{setDateNow}0001";
                 }

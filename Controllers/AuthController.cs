@@ -91,8 +91,8 @@ namespace QuilvianSystemBackendDev.Controllers
 
                                 var claims = new[]
                                 {
-                            new Claim(JwtRegisteredClaimNames.Sub, model.Email),
-                            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                                new Claim(JwtRegisteredClaimNames.Sub, model.Email),
+                                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                             };
 
                                 var token = new JwtSecurityToken(
