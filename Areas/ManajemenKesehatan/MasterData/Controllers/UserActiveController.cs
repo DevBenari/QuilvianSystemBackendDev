@@ -75,7 +75,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.UserActiveCode,
                             a.FullName,
                             a.TipeUserId,
-                            NamaTipeUser = tipe != null ? tipe.NamaTipeUser : "-"
+                            NamaTipeUser = tipe != null ? tipe.NamaTipeUser : "-",
+                            a.Email,
                         };
 
             // Hitung total data sebelum paginasi
@@ -1068,7 +1069,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.UserActiveCode,
                             a.FullName,
                             a.TipeUserId,
-                            NamaTipeUser = tipe != null ? tipe.NamaTipeUser : "-"
+                            NamaTipeUser = tipe != null ? tipe.NamaTipeUser : "-",
+                            a.Email
                         };
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
