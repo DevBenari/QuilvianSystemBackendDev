@@ -15,7 +15,6 @@ using System.Linq;
 using Microsoft.AspNetCore.Http;
 using ZXing.QrCode.Internal;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
-using QuilvianSystemBackendDev.Migrations;
 using Microsoft.AspNetCore.Components.Routing;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
