@@ -440,7 +440,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                     query = query.Where(u =>
-                        EF.Functions.ILike(u.KeluhanUtama, search)
+                        EF.Functions.ILike(u.KeluhanUtama, search) ||
+                        EF.Functions.ILike(u.KunjunganId.ToString().ToLower(), search)
                     );
                 }
 
