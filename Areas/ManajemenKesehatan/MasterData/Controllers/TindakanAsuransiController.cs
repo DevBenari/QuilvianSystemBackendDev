@@ -44,7 +44,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
         }
-        // Tambah get
+        // Tambah getsdfd
         [HttpGet]
         public async Task<IActionResult> GetAlL(int page = 1, int perPage = 10)
         {
