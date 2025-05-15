@@ -58,14 +58,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = from a in _applicationDbContext.UserActives
+            var query = (from a in _applicationDbContext.UserActives
+
                         join t in _applicationDbContext.TipeUsers
                             on a.TipeUserId equals t.TipeUserId into tipeJoin
                         from tipe in tipeJoin.DefaultIfEmpty()
+
+                        join dept in _applicationDbContext.Departements
+                            on a.DepartemenId equals dept.DepartementId into deptJoin
+                        from dept in deptJoin.DefaultIfEmpty()
+
+                        join pos in _applicationDbContext.Positions
+                            on a.PositionId equals pos.PositionId into posJoin
+                        from pos in posJoin.DefaultIfEmpty()
+
                         join creator in _applicationDbContext.UserActives
                             on a.CreateBy equals creator.UserActiveId into creatorJoin
                         from creator in creatorJoin.DefaultIfEmpty()
+
                         where a.IsDelete == false
+
                         select new
                         {
                             a.CreateDateTime,
@@ -74,10 +86,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.UserActiveId,
                             a.UserActiveCode,
                             a.FullName,
+                            a.Email,
                             a.TipeUserId,
                             NamaTipeUser = tipe != null ? tipe.NamaTipeUser : "-",
-                            a.Email,
-                        };
+                            a.DepartemenId,
+                            NamaDepartemen = dept != null ? dept.NamaDepartement : "-",
+                            a.PositionId,
+                            NamaPosisi = pos != null ? pos.PositionName : "-"
+                        }).OrderByDescending(a=>a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
             var totalRows = query.Count();
@@ -112,16 +128,54 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet("{id}")]
         public IActionResult GetUserById(Guid id)
         {
-            var listdata = _applicationDbContext.UserActives.Find(id);
-            if (listdata == null)
+            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.UserActiveId == id);
+            if (user == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
             }
 
+            // Ambil nama departemen, posisi, dan tipe user (boleh null)
+            var departemen = _applicationDbContext.Departements
+                .FirstOrDefault(d => d.DepartementId == user.DepartemenId);
+
+            var posisi = _applicationDbContext.Positions
+                .FirstOrDefault(p => p.PositionId == user.PositionId);
+
+            var tipeUser = _applicationDbContext.TipeUsers
+                .FirstOrDefault(t => t.TipeUserId == user.TipeUserId);
+
             return Ok(new
             {
                 message = "Ditemukan || 200 OK",
-                data = listdata
+                data = new
+                {
+                    user.UserActiveId,
+                    user.UserActiveCode,
+                    user.FullName,
+                    user.IdentityNumber,
+                    user.PlaceOfBirth,
+                    user.DateOfBirth,
+                    user.Gender,
+                    user.Address,
+                    user.Handphone,
+                    user.Email,
+                    user.IsActive,
+                    user.DepartemenId,
+                    NamaDepartemen = departemen?.NamaDepartement ?? null,
+                    user.PositionId,
+                    NamaPosisi = posisi?.PositionName ?? null,
+                    user.TipeUserId,
+                    NamaTipeUser = tipeUser?.NamaTipeUser ?? null,
+                    user.FotoName,
+                    user.FotoPath,
+                    user.CreateDateTime,
+                    user.CreateBy,
+                    user.UpdateDateTime,
+                    user.UpdateBy,
+                    user.DeleteDateTime,
+                    user.DeleteBy,
+                    user.IsDelete
+                }
             });
         }
 
@@ -1050,13 +1104,25 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         {
             // query
             var query = from a in _applicationDbContext.UserActives
+
                         join t in _applicationDbContext.TipeUsers
                             on a.TipeUserId equals t.TipeUserId into tipeJoin
                         from tipe in tipeJoin.DefaultIfEmpty()
+
+                        join dept in _applicationDbContext.Departements
+                            on a.DepartemenId equals dept.DepartementId into deptJoin
+                        from dept in deptJoin.DefaultIfEmpty()
+
+                        join pos in _applicationDbContext.Positions
+                            on a.PositionId equals pos.PositionId into posJoin
+                        from pos in posJoin.DefaultIfEmpty()
+
                         join creator in _applicationDbContext.UserActives
                             on a.CreateBy equals creator.UserActiveId into creatorJoin
                         from creator in creatorJoin.DefaultIfEmpty()
+
                         where a.IsDelete == false
+
                         select new
                         {
                             a.CreateDateTime,
@@ -1065,9 +1131,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.UserActiveId,
                             a.UserActiveCode,
                             a.FullName,
-                            //a.TipeUserId,
+                            a.Email,
+                            a.TipeUserId,
                             NamaTipeUser = tipe != null ? tipe.NamaTipeUser : "-",
-                            a.Email
+                            a.DepartemenId,
+                            NamaDepartemen = dept != null ? dept.NamaDepartement : "-",
+                            a.PositionId,
+                            NamaPosisi = pos != null ? pos.PositionName : "-"
                         };
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
@@ -1076,7 +1146,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
                     EF.Functions.ILike(u.FullName, search) ||
-                    EF.Functions.ILike(u.CreateByName, search) 
+                    EF.Functions.ILike(u.CreateByName, search)  ||
+                    EF.Functions.ILike(u.Email, search) 
                 );
             }
 
@@ -1148,6 +1219,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
                     "UserActiveCode" => query.OrderByDescending(u => u.UserActiveCode),
                     "FullName" => query.OrderByDescending(u => u.FullName),
+
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
