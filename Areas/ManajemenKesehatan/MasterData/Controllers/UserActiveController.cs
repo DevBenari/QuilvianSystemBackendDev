@@ -717,6 +717,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             Alamat = vm.Address,
                             FotoPath = fotoPath,
                             FotoName = fotoFileName,
+                            UserActiveId = user.UserActiveId,
                             CreateDateTime = DateTimeOffset.UtcNow,
                             CreateBy = UserActiveId,
                             IsActive = true,
