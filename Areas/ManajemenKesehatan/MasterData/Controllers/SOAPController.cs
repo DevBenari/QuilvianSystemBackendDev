@@ -117,7 +117,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             });
         }
 
-        [HttpGet("{kunjunganid}")]
+        [HttpGet("kunjungan/{kunjunganid}")]
         public async Task<IActionResult> GetByKunjunganId(Guid kunjunganid)
         {
             var listdata = _applicationDbContext.SOAPs
