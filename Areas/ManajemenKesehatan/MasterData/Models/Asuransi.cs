@@ -12,35 +12,32 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         [Key]
         public Guid? AsuransiId { get; set; }
         public string? KodeAsuransi { get; set; }
-        public string? TanggalRegist { get; set; }
 
         // Informasi Asuransi
         public string? NamaAsuransi { get; set; }
         public string? JenisAsuransi { get; set; }
-        public string? KategoriAsuransi { get; set; }
-        public string? StatusAsuransi { get; set; }
+        public bool? StatusAsuransi { get; set; }
 
         public string? TanggalMulaiKerjasama { get; set; }
         public string? TanggalAkhirKerjasama { get; set; }
 
         // Informasi Klaim
         public string? MetodeKlaim { get; set; }
-        public int? BatasMaxKlaimPerTahun { get; set; }
-        public int? BatasMaxKlaimPerKunjungan { get; set; }
 
         // Informasi Pertanggungan
-        public decimal? PersentasiBiayaPertanggungan { get; set; }
         public int? TambahanTanggungan { get; set; }
 
         // Informasi Pembayaran
-        public string? NoRekRumahSakit { get; set; }
-        public string? NamaBank { get; set; }
         public string? TermOfPayment { get; set; }
 
         // Informasi Kontak Utama
         public string? NamaPerusahaanAsuransi { get; set; }
-        public string? NoTelepon { get; set; }
         public string? EmailPusat { get; set; }
+        public string? namaPIC { get; set; }
+        public string? noPic { get; set; }
+        public string? noVerificationAdmin { get; set; }
+        public string? Alamat { get; set; }
+        public string? Keterangan { get; set; }
         public bool? IsPKS { get; set; }
     }
 }

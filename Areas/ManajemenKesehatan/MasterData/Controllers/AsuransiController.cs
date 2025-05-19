@@ -60,29 +60,42 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         where a.IsDelete == false
                         select new
                         {
+                            // Metadata
                             CreateDateTime = a.CreateDateTime,
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
+
+                            // Identitas Asuransi
                             AsuransiId = a.AsuransiId,
                             KodeAsuransi = a.KodeAsuransi,
+
+                            // Informasi Asuransi
                             NamaAsuransi = a.NamaAsuransi,
                             JenisAsuransi = a.JenisAsuransi,
                             StatusAsuransi = a.StatusAsuransi,
                             TanggalMulaiKerjasama = a.TanggalMulaiKerjasama,
                             TanggalAkhirKerjasama = a.TanggalAkhirKerjasama,
+
+                            // Informasi Klaim
                             MetodeKlaim = a.MetodeKlaim,
-                            BatasMaxKlaimPerTahun = a.BatasMaxKlaimPerTahun,
-                            BatasMaxKlaimPerKunjungan = a.BatasMaxKlaimPerKunjungan,
-                            PersentasiBiayaPertanggungan = a.PersentasiBiayaPertanggungan,
+
+                            // Pertanggungan
                             TambahanTanggungan = a.TambahanTanggungan,
-                            NoRekRumahSakit = a.NoRekRumahSakit,
-                            NamaBank = a.NamaBank,
+
+                            // Pembayaran
                             TermOfPayment = a.TermOfPayment,
+
+                            // Kontak Utama
                             NamaPerusahaanAsuransi = a.NamaPerusahaanAsuransi,
-                            NoTelepon = a.NoTelepon,
                             EmailPusat = a.EmailPusat,
-                            IsPKS = a.IsPKS,
-                            TanggalRegist = a.TanggalRegist,
+                            namaPIC = a.namaPIC,
+                            noPic = a.noPic,
+                            noVerificationAdmin = a.noVerificationAdmin,
+                            Alamat = a.Alamat,
+                            Keterangan = a.Keterangan,
+
+                            // Status PKS
+                            IsPKS = a.IsPKS
 
                         }).OrderByDescending(a => a.CreateDateTime);
 
@@ -197,29 +210,41 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     {
                         AsuransiId = Guid.NewGuid(),
                         KodeAsuransi = kode,
-                        TanggalRegist = vm.TanggalRegist,
+
+                        // Informasi Asuransi
                         NamaAsuransi = vm.NamaAsuransi,
                         JenisAsuransi = vm.JenisAsuransi,
-                        KategoriAsuransi = vm.KategoriAsuransi,
                         StatusAsuransi = vm.StatusAsuransi,
                         TanggalMulaiKerjasama = vm.TanggalMulaiKerjasama,
                         TanggalAkhirKerjasama = vm.TanggalAkhirKerjasama,
+
+                        // Informasi Klaim
                         MetodeKlaim = vm.MetodeKlaim,
-                        BatasMaxKlaimPerTahun = vm.BatasMaxKlaimPerTahun,
-                        BatasMaxKlaimPerKunjungan = vm.BatasMaxKlaimPerKunjungan,
-                        PersentasiBiayaPertanggungan = vm.PersentasiBiayaPertanggungan,
+
+                        // Informasi Pertanggungan
                         TambahanTanggungan = vm.TambahanTanggungan,
-                        NoRekRumahSakit = vm.NoRekRumahSakit,
-                        NamaBank = vm.NamaBank,
+
+                        // Informasi Pembayaran
                         TermOfPayment = vm.TermOfPayment,
+
+                        // Informasi Kontak Utama
                         NamaPerusahaanAsuransi = vm.NamaPerusahaanAsuransi,
-                        NoTelepon = vm.NoTelepon,
                         EmailPusat = vm.EmailPusat,
+                        namaPIC = vm.namaPIC,
+                        noPic = vm.noPic,
+                        noVerificationAdmin = vm.noVerificationAdmin,
+                        Alamat = vm.Alamat,
+                        Keterangan = vm.Keterangan,
+
+                        // Status PKS
                         IsPKS = vm.IsPKS,
+
+                        // Metadata
                         CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = UserActiveId,
                         IsDelete = false
                     };
+
 
                     _applicationDbContext.Asuransis.Add(data);
                     _applicationDbContext.SaveChanges();
@@ -272,24 +297,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     // **Update Data**
                     asuransi.NamaAsuransi = vm.NamaAsuransi ?? asuransi.NamaAsuransi;
                     asuransi.JenisAsuransi = vm.JenisAsuransi ?? asuransi.JenisAsuransi;
-                    asuransi.KategoriAsuransi = vm.KategoriAsuransi ?? asuransi.KategoriAsuransi;
                     asuransi.StatusAsuransi = vm.StatusAsuransi ?? asuransi.StatusAsuransi;
                     asuransi.TanggalMulaiKerjasama = vm.TanggalMulaiKerjasama ?? asuransi.TanggalMulaiKerjasama;
                     asuransi.TanggalAkhirKerjasama = vm.TanggalAkhirKerjasama ?? asuransi.TanggalAkhirKerjasama;
                     asuransi.IsPKS = vm.IsPKS;
                     asuransi.MetodeKlaim = vm.MetodeKlaim ?? asuransi.MetodeKlaim;
-                    asuransi.BatasMaxKlaimPerTahun = vm.BatasMaxKlaimPerTahun ?? asuransi.BatasMaxKlaimPerTahun;
-                    asuransi.BatasMaxKlaimPerKunjungan = vm.BatasMaxKlaimPerKunjungan ?? asuransi.BatasMaxKlaimPerKunjungan;
-                    asuransi.PersentasiBiayaPertanggungan = vm.PersentasiBiayaPertanggungan ?? asuransi.PersentasiBiayaPertanggungan;
                     asuransi.TambahanTanggungan = vm.TambahanTanggungan ?? asuransi.TambahanTanggungan;
-                    asuransi.NoRekRumahSakit = vm.NoRekRumahSakit ?? asuransi.NoRekRumahSakit;
-                    asuransi.NamaBank = vm.NamaBank ?? asuransi.NamaBank;
                     asuransi.TermOfPayment = vm.TermOfPayment ?? asuransi.TermOfPayment;
                     asuransi.NamaPerusahaanAsuransi = vm.NamaPerusahaanAsuransi ?? asuransi.NamaPerusahaanAsuransi;
-                    asuransi.NoTelepon = vm.NoTelepon ?? asuransi.NoTelepon;
                     asuransi.EmailPusat = vm.EmailPusat ?? asuransi.EmailPusat;
                     asuransi.IsPKS = vm.IsPKS;
-                    asuransi.TanggalRegist = vm.TanggalRegist;
 
 
                     asuransi.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -387,15 +404,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             TanggalMulaiKerjasama = a.TanggalMulaiKerjasama,
                             TanggalAkhirKerjasama = a.TanggalAkhirKerjasama,
                             MetodeKlaim = a.MetodeKlaim,
-                            BatasMaxKlaimPerTahun = a.BatasMaxKlaimPerTahun,
-                            BatasMaxKlaimPerKunjungan = a.BatasMaxKlaimPerKunjungan,
-                            PersentasiBiayaPertanggungan = a.PersentasiBiayaPertanggungan,
                             TambahanTanggungan = a.TambahanTanggungan,
-                            NoRekRumahSakit = a.NoRekRumahSakit,
-                            NamaBank = a.NamaBank,
                             TermOfPayment = a.TermOfPayment,
                             NamaPerusahaanAsuransi = a.NamaPerusahaanAsuransi,
-                            NoTelepon = a.NoTelepon,
                             EmailPusat = a.EmailPusat,
                             IsPKS = a.IsPKS
                         };
@@ -405,7 +416,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             {
                 query = query.Where(u =>
                     u.KodeAsuransi.Contains(search) || u.NamaAsuransi.Contains(search) || u.JenisAsuransi.Contains(search)
-                    || u.StatusAsuransi.Contains(search)
                 );
             }
 

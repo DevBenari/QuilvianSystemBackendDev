@@ -51,22 +51,25 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
             // Query data
             var query = (from a in _applicationDbContext.SOAPs
-                        join u in _applicationDbContext.UserActives
-                        on a.CreateBy equals u.UserActiveId
-                        where a.IsDelete == false
-                        select new
-                        {
-                            CreateDateTime = a.CreateDateTime,
-                            CreateBy = a.CreateBy,
-                            CreateByName = u.FullName,
-                            SOAPID = a.SOAPID,
-                            KunjunganId = a.KunjunganId,
-                            Subjective = a.Subjective,
-                            Objective = a.Objective,
-                            Assessment = a.Assessment,
-                            Planning = a.Planning,
-                            Profesi = a.Profesi, 
-                        }).OrderByDescending(a => a.CreateDateTime);
+                         join u in _applicationDbContext.UserActives
+                             on a.CreateBy equals u.UserActiveId
+                         join k in _applicationDbContext.Kunjungans
+                             on a.KunjunganId equals k.KunjunganID
+                         where a.IsDelete == false
+                         select new
+                         {
+                             CreateDateTime = a.CreateDateTime,
+                             CreateBy = a.CreateBy,
+                             CreateByName = u.FullName,
+                             SOAPID = a.SOAPID,
+                             KunjunganId = a.KunjunganId,
+                             PasienId = k.PasienId, // Tambahan ini
+                             Subjective = a.Subjective,
+                             Objective = a.Objective,
+                             Assessment = a.Assessment,
+                             Planning = a.Planning,
+                             Profesi = a.Profesi,
+                         }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
             var totalRows = query.Count();
@@ -344,7 +347,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             // Query data SOAP berdasarkan KunjunganId yang ditemukan
             var query = from a in _applicationDbContext.SOAPs
                         join u in _applicationDbContext.UserActives
-                        on a.CreateBy equals u.UserActiveId
+                            on a.CreateBy equals u.UserActiveId
+                        join k in _applicationDbContext.Kunjungans
+                            on a.KunjunganId equals k.KunjunganID
                         where a.KunjunganId == kunjungan.KunjunganID && a.IsDelete == false
                         select new
                         {
@@ -358,6 +363,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             Assessment = a.Assessment,
                             Planning = a.Planning,
                             Profesi = a.Profesi,
+                            k.PasienId
                         };
 
             // **Filter berdasarkan tanggal**
