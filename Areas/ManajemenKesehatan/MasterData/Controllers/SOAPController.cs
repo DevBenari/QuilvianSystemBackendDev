@@ -121,7 +121,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         public async Task<IActionResult> GetByKunjunganId(Guid kunjunganid)
         {
             var listdata = _applicationDbContext.SOAPs
-                .FirstOrDefaultAsync(x => x.KunjunganId == kunjunganid);
+                .FirstOrDefault(x => x.KunjunganId == kunjunganid);
 
             if (listdata == null)
             {
