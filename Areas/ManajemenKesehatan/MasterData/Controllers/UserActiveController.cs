@@ -18,6 +18,7 @@ using SkiaSharp;
 using Swashbuckle.AspNetCore.Annotations;
 using System.Data;
 using System.Globalization;
+using System.Net.Http.Headers;
 using System.Security.Claims;
 using static QRCoder.PayloadGenerator;
 
@@ -568,6 +569,38 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
                 parsedDate = DateTime.SpecifyKind(parsedDate, DateTimeKind.Utc);
 
+                // Ambil tipe user
+                var tipeUser = await _applicationDbContext.TipeUsers.FirstOrDefaultAsync(t => t.TipeUserId == vm.TipeUserId);
+                var isDokter = tipeUser?.NamaTipeUser.ToLower() == "dokter";
+
+                // Jika dokter, generate kode dokter untuk nama file
+                string kodeDokter = "";
+                if (isDokter)
+                {
+                    var lastDr = _applicationDbContext.Dokters
+                        .Where(d => d.CreateDateTime.Date == dateNow.Date)
+                        .OrderByDescending(k => k.KdDokter)
+                        .FirstOrDefault();
+
+                    if (lastDr == null)
+                    {
+                        kodeDokter = "DKR" + setDateNow + "0001";
+                    }
+                    else
+                    {
+                        var lastCodeTrim = lastDr.KdDokter.Substring(3, 6);
+
+                        if (lastCodeTrim != setDateNow)
+                        {
+                            kodeDokter = "DKR" + setDateNow + "0001";
+                        }
+                        else
+                        {
+                            kodeDokter = "DKR" + setDateNow +
+                                (Convert.ToInt32(lastDr.KdDokter.Substring(9)) + 1).ToString("D4");
+                        }
+                    }
+                }
 
                 // validasi foto
                 string fotoPath = null;
@@ -579,56 +612,42 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     var fileExtension = Path.GetExtension(vm.Foto.FileName).ToLower();
 
                     if (vm.Foto.Length > maxSize)
-                    {
                         return BadRequest(new { message = "Ukuran file terlalu besar! Maksimum 2MB." });
-                    }
 
                     if (!allowedExtensions.Contains(fileExtension))
-                    {
                         return BadRequest(new { message = "Format file tidak valid! Gunakan JPG atau PNG." });
-                    }
 
-                    var uploadFolder = Path.Combine(_webHostEnvironment.WebRootPath, "FotoUser");
-                    if (!Directory.Exists(uploadFolder))
-                    {
-                        Directory.CreateDirectory(uploadFolder);
-                    }
+                    var folder = isDokter ? "FotoDokter" : "FotoUser";
+                    var uploadFolder = Path.Combine(_webHostEnvironment.WebRootPath, folder);
+                    if (!Directory.Exists(uploadFolder)) Directory.CreateDirectory(uploadFolder);
 
-                    fotoFileName = $"{kode}{fileExtension}";
+                    fotoFileName = isDokter ? $"{kodeDokter}{fileExtension}" : $"{kode}{fileExtension}";
                     var fotoFilePath = Path.Combine(uploadFolder, fotoFileName);
 
                     using (var stream = new FileStream(fotoFilePath, FileMode.Create))
-                    {
-                        vm.Foto.CopyTo(stream);
-                    }
+                        await vm.Foto.CopyToAsync(stream);
 
-                    fotoPath = $"/FotoUser/{fotoFileName}";
+                    fotoPath = $"/{folder}/{fotoFileName}";
 
-                    // 📤 **Kirim foto ke server Python Flask**
                     using var client = new HttpClient();
                     using var ms = new MemoryStream();
                     await vm.Foto.CopyToAsync(ms);
                     ms.Position = 0;
 
-                    var content = new MultipartFormDataContent {
-                        // File utama
-                        { new StreamContent(ms) {
-                            Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.Foto.ContentType) }
-                        }, "file", fotoFileName },
+                    var content = new MultipartFormDataContent
+                {
+                    { new StreamContent(ms) { Headers = { ContentType = new MediaTypeHeaderValue(vm.Foto.ContentType) } }, "file", fotoFileName },
+                    { new StringContent(folder), "folderTarget" }
+                };
 
-                        // Nama folder tujuan di server Flask
-                        { new StringContent("FotoUser"), "folderTarget" }
-                        };
-
-                    // Ganti IP di bawah dengan alamat Python Flask server Anda
-                    var flaskResponse = await client.PostAsync("http://160.20.104.98:5050/upload", content);
+                    await client.PostAsync("http://160.20.104.98:5050/upload", content);
                 }
                 else
                 {
-                    //Jika user tidak upload foto, gunakan foto default
-                    fotoPath = "/FotoUser/user.jpg";
-                    fotoFileName = "user.jpg";
+                    fotoPath = isDokter ? "/FotoDokter/dokter.jpg" : "/FotoUser/user.jpg";
+                    fotoFileName = isDokter ? "dokter.jpg" : "user.jpg";
                 }
+
                 // Cek Duplikasi
                 var isDuplicate = _applicationDbContext.UserActives
                     .Any(c => c.UserActiveCode == kode && c.Email == vm.Email);
@@ -679,20 +698,36 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                     var resultLogin = await _userManager.CreateAsync(userLogin, passTglLahir);
 
-                    if (resultLogin.Succeeded)
-                    {
-                        _applicationDbContext.UserActives.Add(user);
-                        _applicationDbContext.SaveChanges();
+                    if (!resultLogin.Succeeded)
+                        return BadRequest(new { message = "Gagal membuat user login." });
 
-                        return Created("", new
-                        {
-                            message = "Tambah Data Berhasil || 201 Created"
-                        });
-                    }
-                    else
+                    _applicationDbContext.UserActives.Add(user);
+
+                    // ✅ Jika tipe user adalah dokter → buat entri di tabel Dokter
+                    if (isDokter)
                     {
-                        return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
+                        var dokter = new Dokter
+                        {
+                            DokterId = Guid.NewGuid(),
+                            KdDokter = kodeDokter,
+                            NmDokter = vm.FullName,
+                            Email = vm.Email,
+                            Nohp = vm.Handphone,
+                            Nik = vm.IdentityNumber,
+                            Alamat = vm.Address,
+                            FotoPath = fotoPath,
+                            FotoName = fotoFileName,
+                            CreateDateTime = DateTimeOffset.UtcNow,
+                            CreateBy = UserActiveId,
+                            IsActive = true,
+                            IsDelete = false
+                        };
+                        _applicationDbContext.Dokters.Add(dokter);
                     }
+
+                    await _applicationDbContext.SaveChangesAsync();
+
+                    return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
                 }
                 else
                 {
@@ -933,6 +968,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
                 parsedDate = DateTime.SpecifyKind(parsedDate, DateTimeKind.Utc);
 
+                // cara tipe user dokter
+                var tipeUser = await _applicationDbContext.TipeUsers.FirstOrDefaultAsync(t => t.TipeUserId == vm.TipeUserId);
+                var isDokter = tipeUser?.NamaTipeUser.ToLower() == "dokter";
+
+                //cari data dokter
+                var dataDokter = _applicationDbContext.Dokters
+                    .FirstOrDefault(d => d.NmDokter == data.FullName && d.Email == data.Email);
+
                 //update data di tabel ApplicationUser
                 var userLogin = await _userManager.FindByEmailAsync(data.Email.ToString());
                 if (userLogin == null)
@@ -960,10 +1003,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.Email = vm.Email;
                 data.IsActive = vm.IsActive;
 
+                string fotoFileName = data.FotoName;
+                string fotoPath = data.FotoPath;
                 // validasi edit foto
                 if (vm.Foto != null && vm.Foto.Length > 0)
                 {
-                    var maxSize = 2 * 1024 * 1024; // Maksimum 2MB
+                    var maxSize = 2 * 1024 * 1024;
                     var allowedExtensions = new List<string> { ".jpg", ".jpeg", ".png" };
                     var fileExtension = Path.GetExtension(vm.Foto.FileName).ToLower();
 
@@ -977,8 +1022,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         return BadRequest(new { message = "Format file tidak valid! Gunakan JPG atau PNG." });
                     }
 
-                    var fotoFileName = $"{data.UserActiveCode}{fileExtension}";
-                    var oldFileName = data.FotoName ?? "";
+                    var folder = isDokter ? "FotoDokter" : "FotoUser";
+                    var fotoBaseName = isDokter && dataDokter != null ? dataDokter.KdDokter : data.UserActiveCode;
+                    if (isDokter && dataDokter != null)
+                    {
+                        fotoBaseName = dataDokter.KdDokter;
+                    }
+                    fotoFileName = $"{fotoBaseName}{fileExtension}";
+                    var uploadPath = Path.Combine(_webHostEnvironment.WebRootPath, folder);
+                    if (!Directory.Exists(uploadPath)) Directory.CreateDirectory(uploadPath);
+
+                    var fotoFilePath = Path.Combine(uploadPath, fotoFileName);
+                    using var stream = new FileStream(fotoFilePath, FileMode.Create);
+                    await vm.Foto.CopyToAsync(stream);
 
                     using var client = new HttpClient();
                     using var ms = new MemoryStream();
@@ -987,30 +1043,41 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                     var content = new MultipartFormDataContent
                     {
-                        {
-                            new StreamContent(ms)
-                            {
-                                Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.Foto.ContentType) }
-                            }, "file", fotoFileName
-                        },
-                        { new StringContent("FotoUser"), "folderTarget" },
-                        { new StringContent(oldFileName), "oldFileName" }
+                        { new StreamContent(ms) { Headers = { ContentType = new MediaTypeHeaderValue(vm.Foto.ContentType) } }, "file", fotoFileName },
+                        { new StringContent(folder), "folderTarget" },
+                        { new StringContent(data.FotoName ?? ""), "oldFileName" }
                     };
 
-                    var flaskResponse = await client.PostAsync("http://160.20.104.98:5050/upload", content);
-                    if (!flaskResponse.IsSuccessStatusCode)
+                    var response = await client.PostAsync("http://160.20.104.98:5050/upload", content);
+                    if (!response.IsSuccessStatusCode)
                     {
                         return StatusCode(500, new { message = "Gagal upload foto ke server Flask." });
                     }
 
+                    fotoPath = $"/{folder}/{fotoFileName}";
                     data.FotoName = fotoFileName;
-                    data.FotoPath = $"/FotoUser/{fotoFileName}";
+                    data.FotoPath = fotoPath;
                 }
+
 
                 data.UpdateBy = UserActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
                 await _applicationDbContext.SaveChangesAsync();
 
+                // perbarui data user dokter di tabel dokter
+                if (isDokter && dataDokter != null)
+                {
+                    dataDokter.NmDokter = vm.FullName;
+                    dataDokter.Email = vm.Email;
+                    dataDokter.Nik = vm.IdentityNumber;
+                    dataDokter.Nohp = vm.Handphone;
+                    dataDokter.Alamat = vm.Address;
+                    dataDokter.FotoPath = fotoPath;
+                    dataDokter.FotoName = fotoFileName;
+                    dataDokter.UpdateDateTime = data.UpdateDateTime;
+                    dataDokter.UpdateBy = UserActiveId;
+                    _applicationDbContext.Dokters.Update(dataDokter);
+                }
 
                 // Reset password lama (jika ada)
                 var newPassword = parsedDate.ToString("ddMMMyyyy");
@@ -1038,7 +1105,51 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-        [HttpDelete("{id}")] 
+        [HttpPost("UbahPassword")]
+        public async Task<IActionResult> UbahPassword(ResetPasswordViewModel vm)
+        {
+            if (vm == null || !ModelState.IsValid)
+            {
+                return BadRequest(new { message = "Data tidak valid." });
+            }
+
+            try
+            {
+                // **Ambil User ID dari JWT Claims**
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
+
+                if (string.IsNullOrEmpty(EmailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                // cari user 
+                var user = await _userManager.FindByEmailAsync(EmailLogin);
+                if (user == null)
+                {
+                    return NotFound(new { message = "User tidak ditemukan." });
+                }
+
+                // Generate token dan ubah password langsung
+                var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+                var result = await _userManager.ResetPasswordAsync(user, token, vm.NewPassword);
+
+                if(!result.Succeeded)
+                {
+                    return BadRequest(new { message = "Gagal mengubah password.", errors = result.Errors.Select(e => e.Description) });
+                }
+
+                return Ok(new { message = "Password berhasil diubah." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
+            [HttpDelete("{id}")] 
         public async Task <IActionResult> DeleteUser(Guid id)
         {
             try
