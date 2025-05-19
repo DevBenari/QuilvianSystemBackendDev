@@ -696,14 +696,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                     var passTglLahir = parsedDate.ToString("ddMMMyyyy");
 
+                    using var transaction = await _applicationDbContext.Database.BeginTransactionAsync();
+
                     var resultLogin = await _userManager.CreateAsync(userLogin, passTglLahir);
 
                     if (!resultLogin.Succeeded)
-                        return BadRequest(new { message = "Gagal membuat user login." });
+                    {
+                        var errorMessage = string.Join(", ", resultLogin.Errors.Select(e => e.Description));
+                        await transaction.RollbackAsync();
+                        return BadRequest(new { message = $"Gagal membuat user login: {errorMessage}" });
+                    }
 
                     _applicationDbContext.UserActives.Add(user);
 
-                    // ✅ Jika tipe user adalah dokter → buat entri di tabel Dokter
+                    // Jika tipe user adalah dokter → buat entri di tabel Dokter
                     if (isDokter)
                     {
                         var dokter = new Dokter
@@ -727,6 +733,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     }
 
                     await _applicationDbContext.SaveChangesAsync();
+                    await transaction.CommitAsync();
 
                     return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
                 }
@@ -936,6 +943,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             try
             {
                 // **Ambil User ID dari JWT Claims**
+                using var transaction = await _applicationDbContext.Database.BeginTransactionAsync();
                 var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
                 var UserActiveId = GetUserActive.UserActiveId;
@@ -1003,6 +1011,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.Handphone = vm.Handphone;
                 data.Email = vm.Email;
                 data.IsActive = vm.IsActive;
+                data.UpdateBy = UserActiveId;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
+
 
                 string fotoFileName = data.FotoName;
                 string fotoPath = data.FotoPath;
@@ -1031,6 +1042,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     }
                     fotoFileName = $"{fotoBaseName}{fileExtension}";
                     var uploadPath = Path.Combine(_webHostEnvironment.WebRootPath, folder);
+
                     if (!Directory.Exists(uploadPath)) Directory.CreateDirectory(uploadPath);
 
                     var fotoFilePath = Path.Combine(uploadPath, fotoFileName);
@@ -1061,11 +1073,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
 
-                data.UpdateBy = UserActiveId;
-                data.UpdateDateTime = DateTimeOffset.UtcNow;
-                await _applicationDbContext.SaveChangesAsync();
-
-                // perbarui data user dokter di tabel dokter
+                // Update Dokter jika diperlukan
                 if (isDokter && dataDokter != null)
                 {
                     dataDokter.NmDokter = vm.FullName;
@@ -1080,25 +1088,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     _applicationDbContext.Dokters.Update(dataDokter);
                 }
 
-                // Reset password lama (jika ada)
+                // Reset password
                 var newPassword = parsedDate.ToString("ddMMMyyyy");
                 var token = await _userManager.GeneratePasswordResetTokenAsync(userLogin);
                 var resetPassResult = await _userManager.ResetPasswordAsync(userLogin, token, newPassword);
 
                 if (!resetPassResult.Succeeded)
                 {
+                    await transaction.RollbackAsync();
                     return BadRequest(new { message = "Gagal mengubah password. Pastikan password valid." });
                 }
-                else
-                {
-                    _applicationDbContext.UserActives.Update(data);
-                    _applicationDbContext.SaveChanges();
 
-                    return Created("", new
-                    {
-                        message = "Update Data Berhasil || 201 Created"
-                    });
-                }
+                // Simpan semua perubahan
+                _applicationDbContext.UserActives.Update(data);
+                await _applicationDbContext.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return Created("", new
+                {
+                    message = "Update Data Berhasil || 201 Created"
+                });
             }
             catch (Exception ex)
             {
@@ -1150,7 +1159,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-            [HttpDelete("{id}")] 
+        [HttpDelete("{id}")] 
         public async Task <IActionResult> DeleteUser(Guid id)
         {
             try
