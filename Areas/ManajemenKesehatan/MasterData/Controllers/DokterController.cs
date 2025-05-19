@@ -818,7 +818,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 string searchLower = search.ToLower();
                 query = query.Where(d =>
                     EF.Functions.ILike(d.KdDokter, $"%{searchLower}%") ||
-                    EF.Functions.ILike(d.NmDokter, $"%{searchLower}%"));
+                    EF.Functions.ILike(d.NmDokter, $"%{searchLower}%") ||
+                    EF.Functions.ILike(d.Email, $"%{searchLower}%") 
+                    );
             }
 
             // Filter tanggal
@@ -875,16 +877,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     "createdatetime" => query.OrderByDescending(d => d.CreateDateTime),
                     "createbyname" => query.OrderByDescending(d => d.CreateByName),
-                    "kddokter" => query.OrderByDescending(d => d.KdDokter),
-                    "nmdokter" => query.OrderByDescending(d => d.NmDokter),
+                    "Kode Dokter" => query.OrderByDescending(d => d.KdDokter),
+                    "Nama Dokter" => query.OrderByDescending(d => d.NmDokter),
+                    "Email" => query.OrderByDescending(d => d.Email),
                     _ => query.OrderByDescending(d => d.CreateDateTime)
                 }
                 : orderBy?.ToLower() switch
                 {
                     "createdatetime" => query.OrderBy(d => d.CreateDateTime),
                     "createbyname" => query.OrderBy(d => d.CreateByName),
-                    "kddokter" => query.OrderBy(d => d.KdDokter),
-                    "nmdokter" => query.OrderBy(d => d.NmDokter),
+                    "Kode Dokter" => query.OrderBy(d => d.KdDokter),
+                    "Nama Dokter" => query.OrderBy(d => d.NmDokter),
+                    "Email" => query.OrderBy(d => d.Email),
                     _ => query.OrderBy(d => d.CreateDateTime)
                 };
 
