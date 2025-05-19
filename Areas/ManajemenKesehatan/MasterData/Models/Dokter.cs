@@ -28,6 +28,5 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? FotoName { get; set; }
         public string? FotoPath { get; set; }
         public bool? IsActive { get; set; }
-        public Guid? UserActiveId { get; set; }
     }
 }
