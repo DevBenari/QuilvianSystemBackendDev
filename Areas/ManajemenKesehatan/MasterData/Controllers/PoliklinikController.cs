@@ -54,7 +54,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             // Query data
             var query = (from a in _applicationDbContext.Polikliniks
                         join u in _applicationDbContext.UserActives
-                        on a.CreateBy equals u.UserActiveId
+                        on a.CreateBy equals u.UserActiveId into creatorJoin
+                        from u in creatorJoin.DefaultIfEmpty()
                         where a.IsDelete == false
                         select new
                         {

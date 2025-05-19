@@ -278,7 +278,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var dateNow = DateTime.UtcNow;;
+                var dateNow = DateTime.UtcNow; ;
                 var setDateNow = DateTimeOffset.UtcNow.ToString("yyMMdd");
 
                 // Generate UserActiveCode
@@ -305,6 +305,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         kode = $"DKR{setDateNow}" + (Convert.ToInt32(lastCode.KdDokter.Substring(9)) + 1).ToString("D4");
                     }
                 }
+
 
                 // Cek Duplikasi
                 var isDuplicate = _context.Dokters
@@ -450,13 +451,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
+
         // PUT: api/Dokter/{id}
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, [FromForm] DokterViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
-                return BadRequest(new { message = "Data tidak valid."});
+                return BadRequest(new { message = "Data tidak valid." });
             }
 
             try
@@ -575,13 +577,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     data.FotoName = fotoFileName;
                     data.FotoPath = $"/FotoDokter/{fotoFileName}";
                 }
+                
+                    data.UpdateDateTime = DateTimeOffset.UtcNow;
+                    data.UpdateBy = UserActiveId;
 
-                data.UpdateDateTime = DateTimeOffset.UtcNow;
-                data.UpdateBy = UserActiveId;
-
-                _context.Dokters.Update(data);
-
-                _context.SaveChanges();
+                    _context.Dokters.Update(data);
+                    _context.SaveChanges();
 
                 // **Asuransi**
                 var asuransiLama = await _context.DokterAsuransis
@@ -618,7 +619,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                     _context.DokterAsuransis.AddRange(asuransiBaru);
                 }
-
                 // **Poli**
                 var poliLama = await _context.DokterPolis
                     .Where(dp => dp.DokterId == data.DokterId)
@@ -657,7 +657,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 await _context.SaveChangesAsync();
 
-                
+
 
                 return Ok(new { message = "Data berhasil diupdate..." });
             }
