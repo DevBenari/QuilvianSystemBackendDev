@@ -299,7 +299,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             });
         }
 
-
         [HttpPost]
         public async Task<IActionResult> CreateKunjunganPasien([FromBody] KunjunganViewModel request)
         {
@@ -350,7 +349,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Hitung nomor antrian hari ini berdasarkan Poliklinik
                 var today = DateTime.UtcNow.Date;
+                var isAlreadyRegistered = _applicationDbContext.Kunjungans.Any(k =>
+                    k.PoliklinikId == request.PoliklinikId &&
+                    k.DokterId == request.DokterId &&
+                    k.PasienId == request.PasienId &&
+                    k.CreateDateTime.Date == today &&
+                    !k.IsDelete);
 
+                if (isAlreadyRegistered)
+                {
+                    return BadRequest(new { message = "Pasien sudah terdaftar untuk kunjungan dengan poli dan dokter yang sama pada hari ini." });
+                }
                 var jumlahAntrianHariIni = _applicationDbContext.Kunjungans
                     .Count(k => k.PoliklinikId == request.PoliklinikId
                                 && k.CreateDateTime.Date == today
@@ -358,44 +367,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 int nomorAntrian = jumlahAntrianHariIni + 1;
                 string nomorAntrianFormatted = $"{kodePoli}{nomorAntrian:000}"; // Contoh: BU001
-
-                // Hitung jumlah kunjungan IP dan OP dari dokter hari ini
-                //var allKunjunganPasien = _applicationDbContext.Kunjungans
-                //    .Where(k => k.PoliklinikId == request.PoliklinikId && k.CreateDateTime.Date == today && k.IsDelete == false)
-                //    .ToList();
-
-                //List<KunjunganRiwayat> jumlahKunjungan = new()
-                //{
-                //    new KunjunganRiwayat
-                //    {
-                //        Jenis = "IP",
-                //        Jumlah = allKunjunganPasien
-                //            .Where(k => !string.IsNullOrEmpty(k.JumlahKunjungan))
-                //            .SelectMany(k => JsonSerializer.Deserialize<List<KunjunganRiwayat>>(k.JumlahKunjungan) ?? new List<KunjunganRiwayat>())
-                //            .Where(k => k.Jenis == "IP")
-                //            .Sum(k => k.Jumlah)
-                //    },
-                //    new KunjunganRiwayat
-                //    {
-                //        Jenis = "OP",
-                //        Jumlah = allKunjunganPasien
-                //            .Where(k => !string.IsNullOrEmpty(k.JumlahKunjungan))
-                //            .SelectMany(k => JsonSerializer.Deserialize<List<KunjunganRiwayat>>(k.JumlahKunjungan) ?? new List<KunjunganRiwayat>())
-                //            .Where(k => k.Jenis == "OP")
-                //            .Sum(k => k.Jumlah)
-                //    }
-                //};
-
-                //// Tambahkan ke jenis kunjungan saat ini
-                //var currentJenis = jumlahKunjungan.FirstOrDefault(k => k.Jenis == kodeJenis);
-                //if (currentJenis != null)
-                //{
-                //    currentJenis.Jumlah += 1;
-                //}
-                //else
-                //{
-                //    jumlahKunjungan.Add(new KunjunganRiwayat { Jenis = kodeJenis, Jumlah = 1 });
-                //}
 
                 var newKunjungan = new Kunjungan
                 {
