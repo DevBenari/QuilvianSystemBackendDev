@@ -252,9 +252,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         NamaTipeUser = tipeUserName,
                         user.DepartemenId,
                         user.PositionId,
-                        FotoPath = string.IsNullOrWhiteSpace(user.FotoPath)
-                            ? "/FotoDokter/dokter.jpg"
-                            : user.FotoPath,
+                        //FotoPath = string.IsNullOrWhiteSpace(user.FotoPath)
+                        //    ? "/FotoDokter/dokter.jpg"
+                        //    : user.FotoPath,
+                        user.FotoName,
+                        user.FotoPath,
                         DokterInfo = dataDokter
                     }
                 });
