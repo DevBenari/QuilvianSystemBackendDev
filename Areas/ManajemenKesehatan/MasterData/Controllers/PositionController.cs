@@ -50,7 +50,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            var query = from a in _applicationDbContext.Positions
+            var query = (from a in _applicationDbContext.Positions
                         join u in _applicationDbContext.UserActives
                             on a.CreateBy equals u.UserActiveId
                         join d in _applicationDbContext.Departements
@@ -66,7 +66,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             PositionId = a.PositionId,
                             PositionCode = a.PositionCode,
                             PositionName = a.PositionName,
-                        };
+                        }).OrderByDescending(a => a.CreateDateTime);
             // Hitung total data sebelum paginasi
             var totalRows = query.Count();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);

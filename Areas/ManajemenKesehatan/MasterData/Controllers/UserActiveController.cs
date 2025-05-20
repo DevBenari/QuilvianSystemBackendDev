@@ -734,7 +734,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                     await _applicationDbContext.SaveChangesAsync();
                     await transaction.CommitAsync();
-
+                    
                     return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
                 }
                 else
@@ -1017,6 +1017,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 string fotoFileName = data.FotoName;
                 string fotoPath = data.FotoPath;
+
                 // validasi edit foto
                 if (vm.Foto != null && vm.Foto.Length > 0)
                 {
@@ -1152,6 +1153,54 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 return Ok(new { message = "Password berhasil diubah." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
+        [HttpPost("ResetPassword/{id}")]
+        public async Task<IActionResult> ResetPassword(Guid id)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new { message = "Data tidak valid." });
+            }
+            try
+            {
+                // **Ambil User ID dari JWT Claims**
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
+
+                if (string.IsNullOrEmpty(EmailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+                // cari user 
+                var user = await _userManager.FindByEmailAsync(EmailLogin);
+                if (user == null)
+                {
+                    return NotFound(new { message = "User tidak ditemukan." });
+                }
+                // cari data user active
+                var data = _applicationDbContext.UserActives.Find(id);
+                if (data == null)
+                {
+                    return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                var NewPassword = data.DateOfBirth.ToString("ddMMMyyyy");
+
+                // Generate token dan ubah password langsung
+                var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+                var result = await _userManager.ResetPasswordAsync(user, token, NewPassword);
+                if (!result.Succeeded)
+                {
+                    return BadRequest(new { message = "Gagal mengubah password.", errors = result.Errors.Select(e => e.Description) });
+                }
+                return Ok(new { message = "Reset Password Berhasil" });
             }
             catch (Exception ex)
             {
