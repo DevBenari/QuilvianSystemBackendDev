@@ -93,7 +93,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.DepartemenId,
                             NamaDepartemen = dept != null ? dept.NamaDepartement : "-",
                             a.PositionId,
-                            NamaPosisi = pos != null ? pos.PositionName : "-"
+                            NamaPosisi = pos != null ? pos.PositionName : "-",
+                            a.IdentityNumber,
+                            a.PlaceOfBirth,
+                            a.FotoName,
+                            a.FotoPath,
                         }).OrderByDescending(a=>a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -1309,7 +1313,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.DepartemenId,
                             NamaDepartemen = dept != null ? dept.NamaDepartement : "-",
                             a.PositionId,
-                            NamaPosisi = pos != null ? pos.PositionName : "-"
+                            NamaPosisi = pos != null ? pos.PositionName : "-",
+                            a.IsActive,
+                            a.FotoName,
+                            a.FotoPath,
+                            a.IdentityNumber,
+                            a.PlaceOfBirth,
                         };
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
