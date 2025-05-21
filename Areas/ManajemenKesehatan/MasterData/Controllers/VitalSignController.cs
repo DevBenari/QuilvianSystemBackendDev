@@ -341,16 +341,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
         [HttpGet("paged")]
         public async Task<IActionResult> PagedVitalSign(
-        int page = 1,
-        int perPage = 10,
-        string? search = null,
-        string? orderBy = "CreateDateTime",
-        string? sortDirection = "desc",
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-        DateTime? startDate = null,
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-        DateTime? endDate = null,
-        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+            int page = 1,
+            int perPage = 10,
+            string? search = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null,
+            [FromQuery] Guid? KunjunganId = null
+        )
         {
             try
             {
