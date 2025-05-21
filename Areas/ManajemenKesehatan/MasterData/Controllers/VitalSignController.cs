@@ -348,8 +348,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             string? sortDirection = "desc",
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? startDate = null,
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? endDate = null,
-            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null,
-            [FromQuery] Guid? KunjunganId = null
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null
+            //[FromQuery] Guid? KunjunganId = null
         )
         {
             try
@@ -383,15 +383,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 BMI = a.BMI
                             };
 
-                // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-                //if (!string.IsNullOrWhiteSpace(search))
-                //{
-                //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-                //    query = query.Where(u =>
-                //        EF.Functions.ILike(u.KodeAgama, search) ||
-                //        EF.Functions.ILike(u.NamaAgama, search)
-                //    );
-                //}
+                //**Filter berdasarkan search(Perbaikan agar bisa mencari 1 huruf)**
+                if (!string.IsNullOrWhiteSpace(search))
+                {
+                    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+                    query = query.Where(u =>
+                        EF.Functions.ILike(u.KunjunganId.ToString(), search) 
+                    );
+                }
 
                 //// **Filter berdasarkan tanggal**
                 if (startDate.HasValue && endDate.HasValue)
