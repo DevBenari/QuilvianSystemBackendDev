@@ -506,7 +506,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return BadRequest(new { message = "Gagal memperbarui data user ApplicationUser." });
                 }
 
-
                 //update data
                 data.NmDokter = vm.NmDokter ?? data.NmDokter;
                 data.Sip = vm.Sip ?? data.Sip;

@@ -1214,6 +1214,117 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
+        [HttpPut("UpdateFoto/{id}")]
+        public async Task<IActionResult> UpdateFoto(Guid id, [FromForm] UpdateFotoViewModel vm)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new { message = "Data tidak valid." });
+            }
+            try
+            {
+                // **Ambil User ID dari JWT Claims**  
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
+
+                if (string.IsNullOrEmpty(EmailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                // cari data user actives  
+                var data = _applicationDbContext.UserActives.Find(id);
+                if (data == null)
+                {
+                    return NotFound(new { message = "Data user tidak ditemukan." });
+                }
+
+                // cara tipe user dokter  
+                var tipeUser = await _applicationDbContext.TipeUsers.FirstOrDefaultAsync(t => t.TipeUserId == data.TipeUserId);
+                var isDokter = tipeUser?.NamaTipeUser.ToLower() == "dokter";
+                var dataDokter = isDokter
+                    ? _applicationDbContext.Dokters.FirstOrDefault(d => d.NmDokter == data.FullName && d.Email == data.Email)
+                    : null;
+
+                // variabel lokasi foto
+                string fotoFileName = data.FotoName;
+                string fotoPath = data.FotoPath;
+
+                // validasi edit foto  
+                if (vm.Foto != null && vm.Foto.Length > 0)
+                {
+                    var maxSize = 2 * 1024 * 1024;
+                    var allowedExtensions = new List<string> { ".jpg", ".jpeg", ".png" };
+                    var fileExtension = Path.GetExtension(vm.Foto.FileName).ToLower();
+
+                    if (vm.Foto.Length > maxSize)
+                    {
+                        return BadRequest(new { message = "Ukuran file terlalu besar! Maksimum 2MB." });
+                    }
+
+                    if (!allowedExtensions.Contains(fileExtension))
+                    {
+                        return BadRequest(new { message = "Format file tidak valid! Gunakan JPG atau PNG." });
+                    }
+
+                    var folder = isDokter ? "FotoDokter" : "FotoUser";
+                    var fotoBaseName = isDokter && dataDokter != null ? dataDokter.KdDokter : data.UserActiveCode;
+                    fotoFileName = $"{fotoBaseName}{fileExtension}";
+                    var uploadPath = Path.Combine(_webHostEnvironment.WebRootPath, folder);
+
+                    if (!Directory.Exists(uploadPath)) Directory.CreateDirectory(uploadPath);
+
+                    var fotoFilePath = Path.Combine(uploadPath, fotoFileName);
+                    using var stream = new FileStream(fotoFilePath, FileMode.Create);
+                    await vm.Foto.CopyToAsync(stream);
+
+                    using var client = new HttpClient();
+                    using var ms = new MemoryStream();
+                    await vm.Foto.CopyToAsync(ms);
+                    ms.Position = 0;
+
+                    var content = new MultipartFormDataContent
+                    {
+                       { new StreamContent(ms) { Headers = { ContentType = new MediaTypeHeaderValue(vm.Foto.ContentType) } }, "file", fotoFileName },
+                       { new StringContent(folder), "folderTarget" },
+                       { new StringContent(data.FotoName ?? ""), "oldFileName" }
+                    };
+
+                    var response = await client.PostAsync("http://160.20.104.98:5050/upload", content);
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        return StatusCode(500, new { message = "Gagal upload foto ke server Flask." });
+                    }
+
+                    fotoPath = $"/{folder}/{fotoFileName}";
+                    data.FotoName = fotoFileName;
+                    data.FotoPath = fotoPath;
+                }
+
+                // Update data dokter  
+                if (isDokter && dataDokter != null)
+                {
+                    dataDokter.FotoPath = fotoPath;
+                    dataDokter.FotoName = fotoFileName;
+                    dataDokter.UpdateDateTime = DateTimeOffset.UtcNow;
+                    dataDokter.UpdateBy = UserActiveId;
+                    _applicationDbContext.Dokters.Update(dataDokter);
+                }
+
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
+                data.UpdateBy = UserActiveId;
+                _applicationDbContext.UserActives.Update(data);
+                await _applicationDbContext.SaveChangesAsync();
+
+                return Ok(new { message = "Foto berhasil diperbarui." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
         [HttpDelete("{id}")] 
         public async Task <IActionResult> DeleteUser(Guid id)
         {
