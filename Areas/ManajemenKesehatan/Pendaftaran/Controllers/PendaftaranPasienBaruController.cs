@@ -235,6 +235,81 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
             });
         }
 
+        [HttpGet("nik/{nik}")]
+        public IActionResult GetPendaftraanPasienBaruByNik(string nik)
+        {
+            var listdata = _applicationDbContext.PendaftaranPasienBarus
+                .Where(p => p.NoIdentitas == nik)
+                .FirstOrDefault();
+
+            if (listdata == null)
+            {
+                return NotFound(new { message = "Data tidak ditemukan." });
+            }
+            var parsed = listdata.TanggalLahir?.ToString("yyyy-MM-dd");
+            return Ok(new
+            {
+                message = "Ditemukan || 200 OK",
+                data = new
+                {
+                    listdata.PendaftaranPasienBaruId,
+                    listdata.KodePasien,
+                    listdata.NoRekamMedis,
+                    listdata.TipePasien,
+                    listdata.TitleId,
+                    listdata.NamaLengkap,
+                    listdata.IdentitasId,
+                    listdata.NoIdentitas,
+                    listdata.TempatLahir,
+                    TanggalLahir = parsed,
+                    listdata.JenisKelamin,
+                    listdata.StatusPerkawinan,
+                    listdata.AgamaId,
+                    listdata.PendidikanTerakhirId,
+                    listdata.AlamatIdentitas,
+                    listdata.AlamatDomisili,
+                    listdata.NegaraId,
+                    listdata.ProvinsiId,
+                    listdata.KotaId,
+                    listdata.KecKabId,
+                    listdata.KelurahanId,
+                    listdata.KodePos,
+                    listdata.Email,
+                    listdata.NoTelepon1,
+                    listdata.NoTelepon2,
+                    listdata.NoTelepon3,
+                    listdata.Kewarganegaraan,
+                    listdata.Suku,
+                    listdata.StatusKewarganegaraan,
+                    listdata.PekerjaanId,
+                    listdata.NamaPerusahaan,
+                    listdata.AlamatPerusahaan,
+                    listdata.NoTeleponPerusahaan,
+                    listdata.GolonganDarahId,
+                    listdata.Alergi,
+                    listdata.RiwayatPenyakit,
+                    listdata.RiwayatOperasi,
+                    listdata.RiwayatPenyakitKeluarga,
+                    listdata.NamaKontakDarurat,
+                    listdata.HubunganPasien,
+                    listdata.NoIdentitasDarurat,
+                    listdata.AlamatDarurat,
+                    listdata.NoTeleponDarurat,
+                    listdata.NamaOrangTua,
+                    listdata.IdentitasOrangTua,
+                    listdata.PekerjaanOrangTua,
+                    listdata.HubunganAnak,
+                    listdata.InformasiSekolah,
+                    listdata.FotoName,
+                    listdata.FotoPath,
+                    imageUrl = !string.IsNullOrEmpty(listdata.FotoName)
+                        ? $"{Request.Scheme}://{Request.Host}/FotoPasienBaru/{listdata.FotoName}"
+                        : $"{Request.Scheme}://{Request.Host}/FotoPasienBaru/user.jpg",
+                    QRUrl = $"{Request.Scheme}://{Request.Host}/QRCodePasienBaru/{Path.GetFileName(listdata.QrCode)}",
+                }
+            });
+        }
+
         [HttpGet("get-image/{id}")]
         public async Task<IActionResult> GetImage(Guid id)
         {
