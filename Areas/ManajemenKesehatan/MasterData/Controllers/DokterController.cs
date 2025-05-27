@@ -672,49 +672,126 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         // DELETE: api/Dokter/{id}
+        //[HttpDelete("{id}")]
+        //public async Task<IActionResult> Delete(Guid id)
+        //{
+        //    try
+        //    {
+        //        //Ambil User ID dari JWT Claims
+        //        var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        //        var GetUserActive = _context.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+        //        var UserActiveId = GetUserActive.UserActiveId;
+
+        //        if (string.IsNullOrEmpty(EmailLogin))
+        //        {
+        //            return Unauthorized(new { message = "User tidak terautentikasi!" });
+        //        }
+
+        //        // **Cari Data Dokter**
+        //        var data = _context.Dokters.Find(id);
+        //        if (data == null)
+        //        {
+        //            return NotFound(new { message = "Data tidak ditemukan." });
+        //        }
+
+        //        // cari data user di table user active
+        //        var user = _context.UserActives
+        //                .FirstOrDefault(u => u.FullName == data.NmDokter && u.Email == data.Email);
+        //        if (user != null)
+        //        {
+        //            // Hapus data userdokter dari tabel Dokter
+        //            user.IsDelete = true;
+        //            user.IsActive = false;
+        //            user.DeleteBy = UserActiveId;
+        //            user.DeleteDateTime = DateTimeOffset.UtcNow;
+
+        //            _context.UserActives.Update(user);
+        //            await _context.SaveChangesAsync();
+        //        }
+        //        else
+        //        {
+        //            return NotFound(new { message = "User Active Dokter Ini Tidak Ditemukan" });
+        //        }
+
+        //        // Hapus user login dari tabel AspNetUsers (permanen)
+        //        var userLogin = await _userManager.FindByEmailAsync(data.Email);
+        //        if (userLogin != null)
+        //        {
+        //            var result = await _userManager.DeleteAsync(userLogin);
+        //            if (!result.Succeeded)
+        //            {
+        //                return BadRequest(new { message = "Gagal menghapus akun login dari sistem." });
+        //            }
+        //        }
+        //        // **Soft Delete (Tandai Data sebagai Terhapus)**
+        //        data.DeleteBy = UserActiveId;
+        //        data.DeleteDateTime = DateTimeOffset.UtcNow;
+        //        data.IsDelete = true;
+        //        data.IsActive = false;
+
+        //        _context.Dokters.Update(data);
+        //        _context.SaveChanges();
+
+        //        return Ok(new { message = "Data berhasil dihapus..." });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+        //    }
+        //}
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
             try
             {
-                //Ambil User ID dari JWT Claims
-                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var GetUserActive = _context.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
-                var UserActiveId = GetUserActive.UserActiveId;
-
-                if (string.IsNullOrEmpty(EmailLogin))
+                // Ambil Email dari JWT Claims
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin))
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                // **Cari Data Dokter**
-                var data = _context.Dokters.Find(id);
-                if (data == null)
+                // Ambil User Active yang login
+                var userActive = await _context.UserActives.FirstOrDefaultAsync(u => u.Email == emailLogin);
+                if (userActive == null)
                 {
-                    return NotFound(new { message = "Data tidak ditemukan." });
+                    return Unauthorized(new { message = "User aktif tidak ditemukan." });
                 }
 
-                // cari data user di table user active
-                var user = _context.UserActives
-                        .FirstOrDefault(u => u.FullName == data.NmDokter && u.Email == data.Email);
+                var userActiveId = userActive.UserActiveId;
+
+                // ===== 1. SOFT DELETE DATA DOKTER =====
+                var dokter = await _context.Dokters.FindAsync(id);
+                if (dokter == null)
+                {
+                    return NotFound(new { message = "Data Dokter tidak ditemukan." });
+                }
+
+                dokter.IsDelete = true;
+                dokter.IsActive = false;
+                dokter.DeleteBy = userActiveId;
+                dokter.DeleteDateTime = DateTimeOffset.UtcNow;
+                _context.Dokters.Update(dokter);
+
+                // ===== 2. SOFT DELETE USERACTIVE DOKTER =====
+                var user = await _context.UserActives
+                    .FirstOrDefaultAsync(u => u.FullName == dokter.NmDokter && u.Email == dokter.Email);
                 if (user != null)
                 {
-                    // Hapus data userdokter dari tabel Dokter
                     user.IsDelete = true;
                     user.IsActive = false;
-                    user.DeleteBy = UserActiveId;
+                    user.DeleteBy = userActiveId;
                     user.DeleteDateTime = DateTimeOffset.UtcNow;
-
                     _context.UserActives.Update(user);
-                    await _context.SaveChangesAsync();
                 }
                 else
                 {
-                    return NotFound(new { message = "User Active Dokter Ini Tidak Ditemukan" });
+                    return NotFound(new { message = "User Active Dokter ini tidak ditemukan." });
                 }
 
-                // Hapus user login dari tabel AspNetUsers (permanen)
-                var userLogin = await _userManager.FindByEmailAsync(data.Email);
+                // ===== 3. DELETE USER LOGIN DARI ASPNETUSERS =====
+                var userLogin = await _userManager.FindByEmailAsync(dokter.Email);
                 if (userLogin != null)
                 {
                     var result = await _userManager.DeleteAsync(userLogin);
@@ -723,16 +800,31 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         return BadRequest(new { message = "Gagal menghapus akun login dari sistem." });
                     }
                 }
-                // **Soft Delete (Tandai Data sebagai Terhapus)**
-                data.DeleteBy = UserActiveId;
-                data.DeleteDateTime = DateTimeOffset.UtcNow;
-                data.IsDelete = true;
-                data.IsActive = false;
 
-                _context.Dokters.Update(data);
-                _context.SaveChanges();
+                // ===== 4. SOFT DELETE DOKTER POLI =====
+                var dokterPoli = await _context.DokterPolis.FindAsync(id);
+                if (dokterPoli != null)
+                {
+                    dokterPoli.IsDelete = true;
+                    dokterPoli.DeleteBy = userActiveId;
+                    dokterPoli.DeleteDateTime = DateTimeOffset.UtcNow;
+                    _context.DokterPolis.Update(dokterPoli);
+                }
 
-                return Ok(new { message = "Data berhasil dihapus..." });
+                // ===== 5. SOFT DELETE DOKTER ASURANSI =====
+                var dokterAsuransi = await _context.DokterAsuransis.FindAsync(id);
+                if (dokterAsuransi != null)
+                {
+                    dokterAsuransi.IsDelete = true;
+                    dokterAsuransi.DeleteBy = userActiveId;
+                    dokterAsuransi.DeleteDateTime = DateTimeOffset.UtcNow;
+                    _context.DokterAsuransis.Update(dokterAsuransi);
+                }
+
+                // Simpan semua perubahan sekaligus
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "Data berhasil dihapus." });
             }
             catch (Exception ex)
             {

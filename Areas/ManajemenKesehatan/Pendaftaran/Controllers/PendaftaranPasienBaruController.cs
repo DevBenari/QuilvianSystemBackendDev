@@ -83,6 +83,13 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                             NoIdentitas = a.NoIdentitas,
                             TempatLahir = a.TempatLahir,
                             TanggalLahir = a.TanggalLahir.HasValue ? a.TanggalLahir.Value.ToString("yyyy-MM-dd") : null,
+                            Umur = a.TanggalLahir.HasValue
+    ? (int?)(
+        DateTime.Today.Year - a.TanggalLahir.Value.Year -
+        (DateTime.Today < a.TanggalLahir.Value.AddYears(DateTime.Today.Year - a.TanggalLahir.Value.Year) ? 1 : 0)
+      )
+    : null,
+
                             StatusPerkawinan = a.StatusPerkawinan,
                             AgamaId = a.AgamaId,
                             PendidikanTerakhirId = a.PendidikanTerakhirId,

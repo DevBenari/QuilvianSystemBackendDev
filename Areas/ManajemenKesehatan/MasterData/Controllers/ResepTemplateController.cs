@@ -37,6 +37,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     r.ResepTemplateId,
                     r.ObatId,
+                    ObatName = r.Obat.ObatName,
                     r.KodeResepTemplate,
                     r.Judul,
                     r.DokterId,

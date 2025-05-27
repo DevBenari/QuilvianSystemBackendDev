@@ -10,6 +10,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         [Key]
         public Guid ResepTemplateId { get; set; }
         public Guid? ObatId { get; set; }
+        public Obat Obat { get; set; }
         public string? KodeResepTemplate { get; set; }
         public string? Judul { get; set; }
         public Guid? DokterId { get; set; }
