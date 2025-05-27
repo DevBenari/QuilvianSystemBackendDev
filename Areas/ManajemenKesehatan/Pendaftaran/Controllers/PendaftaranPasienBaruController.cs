@@ -478,7 +478,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
 
                 // Cek Duplikasi
                 var isDuplicate = _applicationDbContext.PendaftaranPasienBarus
-                    .Any(c => c.KodePasien == kodePasien && c.NamaLengkap == vm.NamaLengkap && c.NoIdentitas == vm.NoIdentitas);
+                    .Any(c => c.KodePasien == kodePasien && c.NoIdentitas == vm.NoIdentitas);
 
                 if (isDuplicate)
                 {
