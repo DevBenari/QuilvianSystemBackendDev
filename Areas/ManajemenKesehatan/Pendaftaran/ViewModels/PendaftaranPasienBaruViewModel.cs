@@ -7,6 +7,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewMode
     {        
         // Informasi Pasien
         public string? TipePasien { get; set; }
+        public string? TipePendaftaran { get; set; } // Rawat Jalan, Rawat Inap, Darurat, dll.
         public Guid? TitleId { get; set; }
         public string NamaLengkap { get; set; }
         public Guid IdentitasId { get; set; }

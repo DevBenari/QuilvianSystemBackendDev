@@ -82,13 +82,14 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                             IdentitasId = a.IdentitasId,
                             NoIdentitas = a.NoIdentitas,
                             TempatLahir = a.TempatLahir,
+                            TipePendaftaran = a.TipePendaftaran,
                             TanggalLahir = a.TanggalLahir.HasValue ? a.TanggalLahir.Value.ToString("yyyy-MM-dd") : null,
                             Umur = a.TanggalLahir.HasValue
-    ? (int?)(
-        DateTime.Today.Year - a.TanggalLahir.Value.Year -
-        (DateTime.Today < a.TanggalLahir.Value.AddYears(DateTime.Today.Year - a.TanggalLahir.Value.Year) ? 1 : 0)
-      )
-    : null,
+                                    ? (int?)(
+                                        DateTime.Today.Year - a.TanggalLahir.Value.Year -
+                                        (DateTime.Today < a.TanggalLahir.Value.AddYears(DateTime.Today.Year - a.TanggalLahir.Value.Year) ? 1 : 0)
+                                      )
+                                    : null,
 
                             StatusPerkawinan = a.StatusPerkawinan,
                             AgamaId = a.AgamaId,
@@ -172,6 +173,15 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 return NotFound(new { message = "Data tidak ditemukan." });
             }
             var parsed = listdata.TanggalLahir?.ToString("yyyy-MM-dd");
+
+            int? umur = null;
+            if (listdata.TanggalLahir.HasValue)
+            {
+                var today = DateTime.Today;
+                var lahir = listdata.TanggalLahir.Value;
+                umur = today.Year - lahir.Year;
+                if (lahir.Date > today.AddYears(-umur.Value)) umur--;
+            }
             return Ok(new
             {
                 message = "Ditemukan || 200 OK",
@@ -181,12 +191,14 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     listdata.KodePasien,
                     listdata.NoRekamMedis,
                     listdata.TipePasien,
+                    listdata.TipePendaftaran,
                     listdata.TitleId,
                     listdata.NamaLengkap,
                     listdata.IdentitasId,
                     listdata.NoIdentitas,
                     listdata.TempatLahir,
                     TanggalLahir = parsed,
+                    Umur = umur,
                     listdata.JenisKelamin,
                     listdata.StatusPerkawinan,
                     listdata.AgamaId,
@@ -246,7 +258,17 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
             }
+
             var parsed = listdata.TanggalLahir?.ToString("yyyy-MM-dd");
+
+            int? umur = null;
+            if (listdata.TanggalLahir.HasValue)
+            {
+                var today = DateTime.Today;
+                var lahir = listdata.TanggalLahir.Value;
+                umur = today.Year - lahir.Year;
+                if (lahir.Date > today.AddYears(-umur.Value)) umur--;
+            }
             return Ok(new
             {
                 message = "Ditemukan || 200 OK",
@@ -262,6 +284,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     listdata.NoIdentitas,
                     listdata.TempatLahir,
                     TanggalLahir = parsed,
+                    Umur = umur,
                     listdata.JenisKelamin,
                     listdata.StatusPerkawinan,
                     listdata.AgamaId,
@@ -566,6 +589,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                         KodePasien = kodePasien,
                         NoRekamMedis = noRekamMedis,
                         TipePasien = vm.TipePasien,
+                        TipePendaftaran = vm.TipePendaftaran,
                         TitleId = vm.TitleId,
                         NamaLengkap = vm.NamaLengkap,
                         IdentitasId = vm.IdentitasId,
@@ -677,6 +701,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
 
                 // **Update Data Pasien**
                 pasien.TipePasien = vm.TipePasien;
+                pasien.TipePendaftaran = vm.TipePendaftaran ?? pasien.TipePendaftaran;
                 pasien.TitleId = vm.TitleId ?? pasien.TitleId;
                 pasien.NamaLengkap = vm.NamaLengkap;
                 pasien.IdentitasId = vm.IdentitasId;
@@ -861,8 +886,16 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                             IdentitasId = a.IdentitasId,
                             NoIdentitas = a.NoIdentitas,
                             TempatLahir = a.TempatLahir,
+                            TipePendaftaran = a.TipePendaftaran,
                             TanggalLahir = a.TanggalLahir.HasValue ? a.TanggalLahir.Value.ToString("yyyy-MM-dd") : null,
-                            Status = a.StatusPerkawinan,
+                            Umur = a.TanggalLahir.HasValue
+                                    ? (int?)(
+                                        DateTime.Today.Year - a.TanggalLahir.Value.Year -
+                                        (DateTime.Today < a.TanggalLahir.Value.AddYears(DateTime.Today.Year - a.TanggalLahir.Value.Year) ? 1 : 0)
+                                      )
+                                    : null,
+
+                            StatusPerkawinan = a.StatusPerkawinan,
                             AgamaId = a.AgamaId,
                             PendidikanTerakhirId = a.PendidikanTerakhirId,
                             AlamatIdentitas = a.AlamatIdentitas,
@@ -903,7 +936,6 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                                         ? $"{Request.Scheme}://{Request.Host}/FotoPasienBaru/{a.FotoName}"
                                         : $"{Request.Scheme}://{Request.Host}/FotoPasienBaru/user.jpg",
                             QRUrl = $"{Request.Scheme}://{Request.Host}/QRCodePasienBaru/{Path.GetFileName(a.QrCode)}",
-
                         };
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
@@ -914,7 +946,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     EF.Functions.ILike(u.NamaLengkap, search) ||
                     EF.Functions.ILike(u.KodePasien, search) ||
                     EF.Functions.ILike(u.NoRekamMedis, search) ||
-                    EF.Functions.ILike(u.JenisKelamin, search)
+                    EF.Functions.ILike(u.NoIdentitas, search)
                 );
             }
 
@@ -987,7 +1019,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     "KodePasien" => query.OrderByDescending(u => u.KodePasien),
                     "NoRekamMedis" => query.OrderByDescending(u => u.NoRekamMedis),
                     "NamaLengkap" => query.OrderByDescending(u => u.NamaLengkap),
-                    "JenisKelamin" => query.OrderByDescending(u => u.JenisKelamin),
+                    "NoIdentitas" => query.OrderByDescending(u => u.NoIdentitas),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
@@ -997,7 +1029,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     "KodePasien" => query.OrderByDescending(u => u.KodePasien),
                     "NoRekamMedis" => query.OrderByDescending(u => u.NoRekamMedis),
                     "NamaLengkap" => query.OrderByDescending(u => u.NamaLengkap),
-                    "JenisKelamin" => query.OrderByDescending(u => u.JenisKelamin),
+                    "NoIdentitas" => query.OrderByDescending(u => u.NoIdentitas),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 };
 
