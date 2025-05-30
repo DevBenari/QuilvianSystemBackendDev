@@ -567,6 +567,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             (Convert.ToInt32(lastCode.UserActiveCode.Substring(9)) + 1).ToString("D4");
                     }
                 }
+
                 // **Konversi `TanggalLahir` dari string "yyyy-MM-dd" ke `DateTime`**
                 if (!DateTime.TryParseExact(vm.DateOfBirth, "yyyy-MM-dd",
                     CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsedDate))

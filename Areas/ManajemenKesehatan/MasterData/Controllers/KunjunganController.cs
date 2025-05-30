@@ -116,57 +116,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 .Take(perPage)
                 .ToList();
 
-            // Deserialize JumlahKunjungan per item
-            //var listdata = rawData.Select(item =>
-            //{
-            //    List<KunjunganRiwayat> parsedKunjungan = new();
-            //    if (!string.IsNullOrWhiteSpace(item.JumlahKunjungan))
-            //    {
-            //        try
-            //        {
-            //            parsedKunjungan = JsonSerializer.Deserialize<List<KunjunganRiwayat>>(item.JumlahKunjungan)
-            //                              ?? new List<KunjunganRiwayat>();
-            //        }
-            //        catch
-            //        {
-            //            parsedKunjungan = new(); // fallback jika JSON invalid
-            //        }
-            //    }
-
-            //    return new
-            //    {
-            //        item.KunjunganID,
-            //        item.AsuransiId,
-            //        item.NamaAsuransi,
-            //        item.PoliklinikId,
-            //        item.NamaPoliklinik,
-            //        item.DokterId,
-            //        item.PasienId,
-            //        item.NamaLengkap,
-            //        item.IsScreening,
-            //        item.IsPresent,
-
-            //        item.NoRekamMedis,
-            //        item.TipePasien,
-            //        item.TipePembayaran,
-            //        JumlahKunjungan = parsedKunjungan,
-            //        item.CreateDateTime,
-            //        item.CreateBy,
-            //        item.CreateByName,
-
-            //        item.NmDokter,
-            //        item.gambardokter,
-
-            //        item.Antrian,
-            //        item.IsFinished,
-            //    };
-            //}).ToList();
-
-            //if (!listdata.Any())
-            //{
-            //    return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
-            //}
-
             var listdata = query
                 .Skip((page - 1) * perPage)
                 .Take(perPage)
@@ -245,52 +194,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             // ⬅️ Tambahan jumlah jenis kunjungan
                             JumlahJenisKunjungan = j.JumlahJenis
                         };
-
-            //var item = await query.FirstOrDefaultAsync();
-
-            //if (item == null)
-            //{
-            //    return NotFound(new { message = "Data kunjungan tidak ditemukan. || 404 Not Found" });
-            //}
-
-            //List<KunjunganRiwayat> parsedKunjungan = new();
-            //if (!string.IsNullOrWhiteSpace(item.JumlahKunjungan))
-            //{
-            //    try
-            //    {
-            //        parsedKunjungan = JsonSerializer.Deserialize<List<KunjunganRiwayat>>(item.JumlahKunjungan)
-            //                          ?? new List<KunjunganRiwayat>();
-            //    }
-            //    catch
-            //    {
-            //        parsedKunjungan = new(); // fallback jika JSON invalid
-            //    }
-            //}
-
-            //var result = new
-            //{
-            //    item.KunjunganID,
-            //    item.AsuransiId,
-            //    item.NamaAsuransi,
-            //    item.PoliklinikId,
-            //    item.NamaPoliklinik,
-            //    item.DokterId,
-            //    item.PasienId,
-            //    item.NamaLengkap,
-            //    item.IsScreening,
-            //    item.IsPresent,
-            //    item.NoRekamMedis,
-            //    item.TipePasien,
-            //    item.TipePembayaran,
-            //    JumlahKunjungan = parsedKunjungan,
-            //    item.CreateDateTime,
-            //    item.CreateBy,
-            //    item.CreateByName,
-            //    item.NmDokter,
-            //    item.gambardokter,
-            //    item.Antrian,
-            //    item.IsFinished
-            //};
 
             return Ok(new
             {
@@ -796,47 +699,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             var totalRows = query.Count();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
             var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
-
-            // Deserialize JumlahKunjungan per baris
-            //var result = rawData.Select(item =>
-            //{
-            //    List<KunjunganRiwayat> parsed = new();
-            //    if (!string.IsNullOrWhiteSpace(item.JumlahKunjungan))
-            //    {
-            //        try
-            //        {
-            //            parsed = JsonSerializer.Deserialize<List<KunjunganRiwayat>>(item.JumlahKunjungan) ?? new();
-            //        }
-            //        catch
-            //        {
-            //            parsed = new();
-            //        }
-            //    }
-
-            //    return new
-            //    {
-            //        item.KunjunganID,
-            //        item.AsuransiId,
-            //        item.PoliklinikId,
-            //        item.DokterId,
-            //        item.PasienId,
-            //        item.NamaLengkap,
-            //        item.NoRekamMedis,
-            //        item.TipePasien,
-            //        item.TipePembayaran,
-            //        JumlahKunjungan = parsed,
-            //        item.CreateDateTime,
-            //        item.CreateBy,
-            //        item.CreateByName,
-            //        item.NmDokter,
-            //        item.NamaPoliklinik,
-            //        item.Antrian,
-            //        item.IsScreening,
-            //        item.IsFinished,
-            //        item.IsPresent,
-            //        item.gambardokter,
-            //    };
-            //}).ToList();
 
             // 🔸 Jumlah Jenis Kunjungan per pasien (terpisah, sebagai summary)
 
