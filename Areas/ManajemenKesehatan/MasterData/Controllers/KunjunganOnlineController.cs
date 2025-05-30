@@ -223,13 +223,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Cek apakah user GUEST sudah ada
                 var isGuest = _applicationDbContext.UserActives
-                    .Any(u => u.FullName.ToLower() == "guest");
+                    .Any(u => u.FullName.ToLower().Trim() == "guest");
 
                 if (!isGuest)
                 {
                     // Cari TipeUserId untuk "Guest"
                     var tipeGuestId = _applicationDbContext.TipeUsers
-                        .Where(t => t.NamaTipeUser.ToLower() == "guest")
+                        .Where(t => t.NamaTipeUser.ToLower().Trim() == "guest")
                         .Select(t => t.TipeUserId)
                         .FirstOrDefault();
 
@@ -367,7 +367,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 return Ok(new
                 {
-                    message = "Kunjungan baru berhasil ditambahkan.",
+                    message = "Pendaftaran kujungan online berhasil ditambahkan.",
                     data = new
                     {
                         pasienRM.PendaftaranPasienBaruId,
