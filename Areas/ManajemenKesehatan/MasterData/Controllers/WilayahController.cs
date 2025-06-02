@@ -1107,7 +1107,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 query = query.Where(u =>
                     EF.Functions.ILike(u.KodeProvinsi, search) ||
                     EF.Functions.ILike(u.NamaProvinsi, search) ||
-                    EF.Functions.ILike(u.ProvinsiId.ToString(), search) 
+                    EF.Functions.ILike(u.NegaraId.ToString(), search) 
                 );
             }
 
@@ -1253,7 +1253,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 query = query.Where(u =>
                     EF.Functions.ILike(u.KodeKabupatenKota, search) ||
                     EF.Functions.ILike(u.NamaKabupatenKota, search) ||
-                    EF.Functions.ILike(u.KabupatenKotaId.ToString(), search) 
+                    EF.Functions.ILike(u.ProvinsiId.ToString(), search) 
                 );
             }
 
@@ -1405,7 +1405,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 query = query.Where(u =>
                     EF.Functions.ILike(u.KodeKecamatan, search) ||
                     EF.Functions.ILike(u.NamaKecamatan, search) ||
-                    EF.Functions.ILike(u.KecamatanId.ToString(), search)
+                    EF.Functions.ILike(u.KabupatenKotaId.ToString(), search)
                 );
             }
 
@@ -1563,7 +1563,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 query = query.Where(u =>
                     EF.Functions.ILike(u.KodeKelurahan, search) ||
                     EF.Functions.ILike(u.NamaKelurahan, search) ||
-                    EF.Functions.ILike(u.KelurahanId.ToString(), search)
+                    EF.Functions.ILike(u.KecamatanId.ToString(), search)
                 );
             }
 
