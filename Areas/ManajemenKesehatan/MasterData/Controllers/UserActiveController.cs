@@ -272,7 +272,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
 
-
         //[HttpPost("UserActiveDoctors")]
         //public async Task<IActionResult> CreateUserActiveDokter([FromForm] UserActiveViewModel vm)
         //{
@@ -1442,7 +1441,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 query = query.Where(u =>
                     EF.Functions.ILike(u.FullName, search) ||
                     EF.Functions.ILike(u.CreateByName, search)  ||
-                    EF.Functions.ILike(u.Email, search) 
+                    EF.Functions.ILike(u.Email, search) ||
+                    EF.Functions.ILike(u.NamaTipeUser, search)
                 );
             }
 
@@ -1514,6 +1514,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
                     "UserActiveCode" => query.OrderByDescending(u => u.UserActiveCode),
                     "FullName" => query.OrderByDescending(u => u.FullName),
+                    "TipeUser" => query.OrderByDescending(u => u.NamaTipeUser),
 
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
@@ -1523,6 +1524,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     "CreateByName" => query.OrderBy(u => u.CreateByName),
                     "UserActiveCode" => query.OrderBy(u => u.UserActiveCode),
                     "FullName" => query.OrderBy(u => u.FullName),
+                    "TipeUser" => query.OrderBy(u => u.NamaTipeUser),
                     _ => query.OrderBy(u => u.CreateDateTime)
                 };
 
