@@ -946,7 +946,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             {
                 return BadRequest(new { message = "Data tidak valid." });
             }
-
             try
             {
                 // **Ambil User ID dari JWT Claims**
@@ -1017,6 +1016,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.Address = vm.Address;
                 data.Handphone = vm.Handphone;
                 data.Email = vm.Email;
+                data.TipeUserId = vm.TipeUserId;
+                data.DepartemenId = vm.DepartemenId;
+                data.PositionId = vm.PositionId;
                 data.IsActive = vm.IsActive;
                 data.UpdateBy = UserActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
