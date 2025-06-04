@@ -78,6 +78,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             IsMuntah = a.IsMuntah,
                             IsFallRisk = a.IsFallRisk,
                             FallRisk = a.FallRisk,
+                            IsBCGimunisasi = a.IsBCGimunisasi,
+                            IsHepatitisBImunisasi = a.IsHepatitisBImunisasi,
+                            IsPolioImunisasi = a.IsPolioImunisasi,
+                            IsDPTImunisasi = a.IsDPTImunisasi,
+                            IsCampakImunisasi = a.IsCampakImunisasi,
+                            IsAsiEksklusif = a.IsAsiEksklusif,
+                            StatusMpasi = a.StatusMpasi,
+                            IsAtaksia = a.IsAtaksia,
+                            IsPosturalInstability = a.IsPosturalInstability,
+                            HasilResikoJatuh = a.HasilResikoJatuh,
+                            IsMotorikAktif = a.IsMotorikAktif,
+                            IsResponsAuditori = a.IsResponsAuditori,
+                            IsInteraksiSosial = a.IsInteraksiSosial
+
                         }).OrderByDescending(a => a.CreateDateTime); ;
 
             // Hitung total data sebelum paginasi
@@ -160,34 +174,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var dateNow = DateTime.UtcNow;
                 var setDateNow = dateNow.ToString("yyMMdd"); // Format: YYMMDD
 
-
-                // **Ambil Kode Terakhir**
-                //var lastCode = _applicationDbContext.PainAssessments
-                //    .Where(d => d.CreateDateTime.Date == dateNow.Date)
-                //    .OrderByDescending(k => k.CreateDateTime)
-
-                //    .FirstOrDefault();
-
-                //string kode;
-                //if (lastCode == null)
-                //{
-                //    kode = $"AGM{setDateNow}0001";
-                //}
-                //else
-                //{
-                //    var lastCodeTrim = lastCode.KodeAgama.Substring(3, 6);
-                //    if (lastCodeTrim != setDateNow)
-                //    {
-                //        kode = $"AGM{setDateNow}0001";
-                //    }
-                //    else
-                //    {
-                //        // Mengambil nomor urut terakhir dan menambah 1
-                //        var lastNumber = int.Parse(lastCode.KodeAgama.Substring(9));
-                //        kode = $"AGM{setDateNow}{(lastNumber + 1).ToString("D4")}";
-                //    }
-                //}
-
                 // **Buat Data Baru**
                 var data = new PainAssessment
                 {
@@ -211,7 +197,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     IsMual = vm.IsMual,
                     IsMuntah = vm.IsMuntah,
                     IsFallRisk = vm.IsFallRisk,
-                    FallRisk = vm.FallRisk
+                    FallRisk = vm.FallRisk,
+                    IsBCGimunisasi = vm.IsBCGimunisasi,
+                    IsHepatitisBImunisasi = vm.IsHepatitisBImunisasi,
+                    IsPolioImunisasi = vm.IsPolioImunisasi,
+                    IsDPTImunisasi = vm.IsDPTImunisasi,
+                    IsCampakImunisasi = vm.IsCampakImunisasi,
+                    IsAsiEksklusif = vm.IsAsiEksklusif,
+                    StatusMpasi = vm.StatusMpasi,
+                    IsAtaksia = vm.IsAtaksia,
+                    IsPosturalInstability = vm.IsPosturalInstability,
+                    HasilResikoJatuh = vm.HasilResikoJatuh,
+                    IsMotorikAktif = vm.IsMotorikAktif,
+                    IsResponsAuditori = vm.IsResponsAuditori,
+                    IsInteraksiSosial = vm.IsInteraksiSosial,
                 };
 
                 // **Simpan ke Database**
@@ -295,6 +294,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.IsMuntah = vm.IsMuntah;
                 data.IsFallRisk = vm.IsFallRisk;
                 data.FallRisk = vm.FallRisk;
+                data.IsBCGimunisasi = vm.IsBCGimunisasi;
+                data.IsHepatitisBImunisasi = vm.IsHepatitisBImunisasi;
+                data.IsPolioImunisasi = vm.IsPolioImunisasi;
+                data.IsDPTImunisasi = vm.IsDPTImunisasi;
+                data.IsCampakImunisasi = vm.IsCampakImunisasi;
+                data.IsAsiEksklusif = vm.IsAsiEksklusif;
+                data.StatusMpasi = vm.StatusMpasi;
+                data.IsAtaksia = vm.IsAtaksia;
+                data.IsPosturalInstability = vm.IsPosturalInstability;
+                data.HasilResikoJatuh = vm.HasilResikoJatuh;
+                data.IsMotorikAktif = vm.IsMotorikAktif;
+                data.IsResponsAuditori = vm.IsResponsAuditori;
+                data.IsInteraksiSosial = vm.IsInteraksiSosial;
+
+
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
@@ -433,6 +447,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 IsMuntah = a.IsMuntah,
                                 IsFallRisk = a.IsFallRisk,
                                 FallRisk = a.FallRisk,
+                                IsBCGimunisasi = a.IsBCGimunisasi,
+                                IsHepatitisBImunisasi = a.IsHepatitisBImunisasi,
+                                IsPolioImunisasi = a.IsPolioImunisasi,
+                                IsDPTImunisasi = a.IsDPTImunisasi,
+                                IsCampakImunisasi = a.IsCampakImunisasi,
+                                IsAsiEksklusif = a.IsAsiEksklusif,
+                                StatusMpasi = a.StatusMpasi,
+                                IsAtaksia = a.IsAtaksia,
+                                IsPosturalInstability = a.IsPosturalInstability,
+                                HasilResikoJatuh = a.HasilResikoJatuh,
+                                IsMotorikAktif = a.IsMotorikAktif,
+                                IsResponsAuditori = a.IsResponsAuditori,
+                                IsInteraksiSosial = a.IsInteraksiSosial
                             };
 
                 // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**

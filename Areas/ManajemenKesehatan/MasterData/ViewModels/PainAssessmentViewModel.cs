@@ -35,7 +35,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
 
         [DefaultValue(false)]
         public bool? IsFallRisk { get; set; }
-
         public string? FallRisk { get; set; }
+
+        public bool? IsBCGimunisasi { get; set; }
+        public bool? IsHepatitisBImunisasi { get; set; }
+        public bool? IsPolioImunisasi { get; set; }
+        public bool? IsDPTImunisasi { get; set; }
+        public bool? IsCampakImunisasi { get; set; }
+        public bool? IsAsiEksklusif { get; set; }
+        public string? StatusMpasi { get; set; }
+        public bool? IsAtaksia { get; set; }
+        public bool? IsPosturalInstability { get; set; }
+        public string? HasilResikoJatuh { get; set; }
+        public bool? IsMotorikAktif { get; set; }
+        public bool? IsResponsAuditori { get; set; }
+        public bool? IsInteraksiSosial { get; set; }
     }
 }
