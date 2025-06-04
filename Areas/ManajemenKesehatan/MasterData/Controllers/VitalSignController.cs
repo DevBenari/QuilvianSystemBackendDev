@@ -69,7 +69,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             SaturasiOksigen = a.SaturasiOksigen,
                             Height = a.Height,
                             Weight = a.Weight,
-                            BMI = a.BMI
+                            BMI = a.BMI,
+                            LingkarKepalaBayi = a.LingkarKepalaBayi
                         }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -175,7 +176,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     Height = vm.Height,
                     Weight = vm.Weight,
                     BMI = vm.BMI,
-
+                    LingkarKepalaBayi = vm.LingkarKepalaBayi,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow
                 };
@@ -252,6 +253,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.Height = vm.Height;
                 data.Weight = vm.Weight;
                 data.BMI = vm.BMI;
+                data.LingkarKepalaBayi = vm.LingkarKepalaBayi;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -380,7 +382,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 SaturasiOksigen = a.SaturasiOksigen,
                                 Height = a.Height,
                                 Weight = a.Weight,
-                                BMI = a.BMI
+                                BMI = a.BMI,
+                                LingkarKepalaBayi = a.LingkarKepalaBayi
                             };
 
                 //**Filter berdasarkan search(Perbaikan agar bisa mencari 1 huruf)**

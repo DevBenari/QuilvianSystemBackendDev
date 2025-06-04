@@ -19,5 +19,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public decimal? Height { get; set; }
         public decimal? Weight { get; set; }
         public decimal? BMI { get; set; }
+        public decimal? LingkarKepalaBayi { get; set; }
     }
 }
