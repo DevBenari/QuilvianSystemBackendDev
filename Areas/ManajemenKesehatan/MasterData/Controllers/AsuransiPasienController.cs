@@ -45,6 +45,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
         }
+
         [HttpGet]
         public async Task<IActionResult> GetAsuransiPasien(int page = 1, int perPage = 10)
         {
@@ -62,6 +63,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              ap.CreateDateTime, 
                              NamaPasien = p.NamaLengkap,
                              NamaAsuransi = a.NamaAsuransi,
+                             a.IsPKS,
                              ap.NoPolis,
                              ap.Umur
                          }).OrderByDescending(ap => ap.CreateDateTime);
@@ -382,6 +384,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             ap.AsuransiId,
                             NamaPasien = p.NamaLengkap,
                             NamaAsuransi = a.NamaAsuransi,
+                            a.IsPKS,
                             ap.NoPolis,
                             ap.Umur
                         };
