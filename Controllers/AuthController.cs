@@ -86,15 +86,15 @@ namespace QuilvianSystemBackendDev.Controllers
                         else if (user.IsActive != false && user != null)
                         {
 
-                            //// Ambil data dari UserActive + relasi TipeUser
-                            //var userActive = _context.UserActives
-                            //    .FirstOrDefault(u => u.Email == model.Email && u.IsActive);
+                            // Ambil data dari UserActive + relasi TipeUser
+                            var userActive = _context.UserActives
+                                .FirstOrDefault(u => u.Email == model.Email && u.IsActive);
 
-                            //// Ambil nama tipe user dari TipeUserId
-                            //var roleName = _context.TipeUsers
-                            //    .Where(t => t.TipeUserId == userActive.TipeUserId)
-                            //    .Select(t => t.NamaTipeUser)
-                            //    .FirstOrDefault() ?? "Guest";
+                            // Ambil nama tipe user dari TipeUserId
+                            var roleName = _context.TipeUsers
+                                .Where(t => t.TipeUserId == userActive.TipeUserId)
+                                .Select(t => t.NamaTipeUser)
+                                .FirstOrDefault() ?? "Guest";
 
                             // Cek password
                             var result = await _signInManager.CheckPasswordSignInAsync(user, model.Password, true);
@@ -111,7 +111,7 @@ namespace QuilvianSystemBackendDev.Controllers
                                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                                 //new Claim("userId", userActive.UserActiveId.ToString()),
                                 //new Claim("fullName", userActive.FullName ?? ""),
-                                //new Claim("role", roleName)
+                                new Claim("role", roleName)
                                 };
 
                                 var token = new JwtSecurityToken(
