@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using QuilvianSystemBackendDev.Models;
+using QuilvianSystemBackendDev.Repositories;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -13,6 +15,7 @@ namespace QuilvianSystemBackendDev.Controllers
     [Route("api/[controller]")]
     public class AuthController : Controller
     {
+        private readonly ApplicationDbContext _context;
         private readonly IConfiguration _configuration;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
@@ -20,12 +23,14 @@ namespace QuilvianSystemBackendDev.Controllers
         (
             IConfiguration configuration,
             UserManager<ApplicationUser> userManager,
-            SignInManager<ApplicationUser> signInManager
+            SignInManager<ApplicationUser> signInManager,
+            ApplicationDbContext context
         )
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _configuration = configuration;
+            _context = context;
         }
 
 
@@ -80,6 +85,17 @@ namespace QuilvianSystemBackendDev.Controllers
                         }
                         else if (user.IsActive != false && user != null)
                         {
+
+                            // Ambil data dari UserActive + relasi TipeUser
+                            var userActive = _context.UserActives
+                                .FirstOrDefault(u => u.Email == model.Email && u.IsActive);
+
+                            // Ambil nama tipe user dari TipeUserId
+                            var roleName = _context.TipeUsers
+                                .Where(t => t.TipeUserId == userActive.TipeUserId)
+                                .Select(t => t.NamaTipeUser)
+                                .FirstOrDefault() ?? "Guest";
+
                             // Cek password
                             var result = await _signInManager.CheckPasswordSignInAsync(user, model.Password, true);
                             if (result.Succeeded)
@@ -93,7 +109,10 @@ namespace QuilvianSystemBackendDev.Controllers
                                 {
                                 new Claim(JwtRegisteredClaimNames.Sub, model.Email),
                                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                            };
+                                //new Claim("userId", userActive.UserActiveId.ToString()),
+                                //new Claim("fullName", userActive.FullName ?? ""),
+                                new Claim("role", roleName)
+                                };
 
                                 var token = new JwtSecurityToken(
                                     issuer: jwtSettings["Issuer"],
