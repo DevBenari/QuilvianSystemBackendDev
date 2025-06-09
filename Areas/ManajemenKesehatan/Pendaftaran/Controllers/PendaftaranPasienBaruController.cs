@@ -119,14 +119,15 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                             RiwayatOperasi = a.RiwayatOperasi,
                             RiwayatPenyakitKeluarga = a.RiwayatPenyakitKeluarga,
                             NamaKontakDarurat = a.NamaKontakDarurat,
-                            HubunganPasien = a.HubunganPasien,
+                            HubunganKeluarga1 = a.HubunganKeluarga1,
                             NoIdentitasDarurat = a.NoIdentitasDarurat,
                             AlamatDarurat = a.AlamatDarurat,
                             NoTeleponDarurat = a.NoTeleponDarurat,
                             NamaOrangTua = a.NamaOrangTua,
                             IdentitasOrangTua = a.IdentitasOrangTua,
                             PekerjaanOrangTua = a.PekerjaanOrangTua,
-                            HubunganAnak = a.HubunganAnak,
+                            HubunganKeluarga2 = a.HubunganKeluarga2,
+                            HubunganKeluarga3 = a.HubunganKeluarga3,
                             InformasiSekolah = a.InformasiSekolah,
                             imageUrl = !string.IsNullOrEmpty(a.FotoName)
                                         ? $"{Request.Scheme}://{Request.Host}/FotoPasienBaru/{a.FotoName}"
@@ -228,14 +229,15 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     listdata.RiwayatOperasi,
                     listdata.RiwayatPenyakitKeluarga,
                     listdata.NamaKontakDarurat,
-                    listdata.HubunganPasien,
+                    listdata.HubunganKeluarga1,
                     listdata.NoIdentitasDarurat,
                     listdata.AlamatDarurat,
                     listdata.NoTeleponDarurat,
                     listdata.NamaOrangTua,
                     listdata.IdentitasOrangTua,
                     listdata.PekerjaanOrangTua,
-                    listdata.HubunganAnak,
+                    listdata.HubunganKeluarga2,
+                    listdata.HubunganKeluarga3,
                     listdata.InformasiSekolah,
                     listdata.FotoName,
                     listdata.FotoPath,
@@ -314,14 +316,15 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     listdata.RiwayatOperasi,
                     listdata.RiwayatPenyakitKeluarga,
                     listdata.NamaKontakDarurat,
-                    listdata.HubunganPasien,
+                    listdata.HubunganKeluarga1,
                     listdata.NoIdentitasDarurat,
                     listdata.AlamatDarurat,
                     listdata.NoTeleponDarurat,
                     listdata.NamaOrangTua,
                     listdata.IdentitasOrangTua,
                     listdata.PekerjaanOrangTua,
-                    listdata.HubunganAnak,
+                    listdata.HubunganKeluarga2,
+                    listdata.HubunganKeluarga3,
                     listdata.InformasiSekolah,
                     listdata.FotoName,
                     listdata.FotoPath,
@@ -625,14 +628,15 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                         RiwayatOperasi = vm.RiwayatOperasi,
                         RiwayatPenyakitKeluarga = vm.RiwayatPenyakitKeluarga,
                         NamaKontakDarurat = vm.NamaKontakDarurat,
-                        HubunganPasien = vm.HubunganPasien,
+                        HubunganKeluarga1 = vm.HubunganKeluarga1,
                         NoIdentitasDarurat = vm.NoIdentitasDarurat,
                         AlamatDarurat = vm.AlamatDarurat,
                         NoTeleponDarurat = vm.NoTeleponDarurat,
                         NamaOrangTua = vm.NamaOrangTua,
                         IdentitasOrangTua = vm.IdentitasOrangTua,
                         PekerjaanOrangTua = vm.PekerjaanOrangTua,
-                        HubunganAnak = vm.HubunganAnak,
+                        HubunganKeluarga2 = vm.HubunganKeluarga2,
+                        HubunganKeluarga3 = vm.HubunganKeluarga3,
                         InformasiSekolah = vm.InformasiSekolah,
                         FotoName = fotoFileName,
                         QrCode = QRPath, // Simpan hanya path QR Code
@@ -737,14 +741,15 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 pasien.RiwayatOperasi = vm.RiwayatOperasi ?? pasien.RiwayatOperasi;
                 pasien.RiwayatPenyakitKeluarga = vm.RiwayatPenyakitKeluarga ?? pasien.RiwayatPenyakitKeluarga;
                 pasien.NamaKontakDarurat = vm.NamaKontakDarurat ?? pasien.NamaKontakDarurat;
-                pasien.HubunganPasien = vm.HubunganPasien ?? pasien.HubunganPasien;
+                pasien.HubunganKeluarga1 = vm.HubunganKeluarga1 ?? pasien.HubunganKeluarga1;
                 pasien.NoIdentitasDarurat = vm.NoIdentitasDarurat ?? pasien.NoIdentitasDarurat;
                 pasien.AlamatDarurat = vm.AlamatDarurat ?? pasien.AlamatDarurat;
                 pasien.NoTeleponDarurat = vm.NoTeleponDarurat ?? pasien.NoTeleponDarurat;
                 pasien.NamaOrangTua = vm.NamaOrangTua ?? pasien.NamaOrangTua;
                 pasien.IdentitasOrangTua = vm.IdentitasOrangTua ?? pasien.IdentitasOrangTua;
                 pasien.PekerjaanOrangTua = vm.PekerjaanOrangTua ?? pasien.PekerjaanOrangTua;
-                pasien.HubunganAnak = vm.HubunganAnak ?? pasien.HubunganAnak;
+                pasien.HubunganKeluarga2 = vm.HubunganKeluarga2 ?? pasien.HubunganKeluarga2;
+                pasien.HubunganKeluarga3 = vm.HubunganKeluarga3 ?? pasien.HubunganKeluarga3;
                 pasien.InformasiSekolah = vm.InformasiSekolah ?? pasien.InformasiSekolah;
 
                 // **Update Foto Profil Jika Ada**
@@ -923,14 +928,15 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                             RiwayatOperasi = a.RiwayatOperasi,
                             RiwayatPenyakitKeluarga = a.RiwayatPenyakitKeluarga,
                             NamaKontakDarurat = a.NamaKontakDarurat,
-                            HubunganPasien = a.HubunganPasien,
+                            HubunganKeluarga1 = a.HubunganKeluarga1,
                             NoIdentitasDarurat = a.NoIdentitasDarurat,
                             AlamatDarurat = a.AlamatDarurat,
                             NoTeleponDarurat = a.NoTeleponDarurat,
                             NamaOrangTua = a.NamaOrangTua,
                             IdentitasOrangTua = a.IdentitasOrangTua,
                             PekerjaanOrangTua = a.PekerjaanOrangTua,
-                            HubunganAnak = a.HubunganAnak,
+                            HubunganKeluarga2 = a.HubunganKeluarga2,
+                            HubunganKeluarga3 = a.HubunganKeluarga3,
                             InformasiSekolah = a.InformasiSekolah,
                             imageUrl = !string.IsNullOrEmpty(a.FotoName)
                                         ? $"{Request.Scheme}://{Request.Host}/FotoPasienBaru/{a.FotoName}"
