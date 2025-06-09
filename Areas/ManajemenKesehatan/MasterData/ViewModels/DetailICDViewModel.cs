@@ -2,7 +2,7 @@
 {
     public class DetailICDViewModel
     {
-        public Guid? SoapId { get; set; }
+        public Guid? KunjunganId { get; set; }
         public Guid? ICDId { get; set; }
         public bool? isUtama { get; set; }
     }

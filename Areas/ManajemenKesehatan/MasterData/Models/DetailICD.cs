@@ -9,7 +9,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
     {
         [Key]
         public Guid DetailICDId { get; set; }
-        public Guid? SoapId { get; set; }
+        public Guid? KunjunganId { get; set; }
         public Guid? ICDId { get; set; }
         public bool? isUtama { get; set; }
     }
