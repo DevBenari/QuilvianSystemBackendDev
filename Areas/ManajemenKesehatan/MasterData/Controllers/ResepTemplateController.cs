@@ -23,6 +23,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         {
             _applicationDbContext = applicationDbContext;
         }
+
+
         // **View ResepTemplate**
         [HttpGet]
         public async Task<IActionResult> GetResepTemplates(int page = 1, int perPage = 10)
@@ -79,6 +81,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
             });
         }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(Guid id)
+        {
+            var listdata = _applicationDbContext.ResepTemplates.Find(id);
+            if (listdata == null)
+            {
+                return NotFound(new { message = "Data tidak ditemukan." });
+            }
+
+            return Ok(new
+            {
+                message = "Ditemukan || 200 OK",
+                data = listdata
+            });
+        }
+
+
         // **Create ResepTemplate**
         [HttpPost]
         public async Task<IActionResult> CreateResepTemplate([FromBody] ResepTemplateViewModel resepTemplateViewModel)

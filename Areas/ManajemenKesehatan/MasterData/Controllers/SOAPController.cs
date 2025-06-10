@@ -135,6 +135,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             });
         }
 
+        [HttpGet("pasien/{pasienid}")]
+        public async Task<IActionResult> GetByPasienId(Guid pasienId)
+        {
+            var listdata = _applicationDbContext.SOAPs
+                .FirstOrDefault(x => x.KunjunganId == pasienId);
+
+            if (listdata == null)
+            {
+                return NotFound(new { message = "Data tidak ditemukan." });
+            }
+
+            return Ok(new
+            {
+                message = "Ditemukan || 200 OK",
+                data = listdata
+            });
+        }
+
         [HttpPost]
         public async Task<IActionResult> CreateSOAP([FromBody] SOAPViewModel vm)
         {
