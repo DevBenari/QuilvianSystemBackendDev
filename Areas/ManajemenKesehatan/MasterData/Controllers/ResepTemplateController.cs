@@ -219,9 +219,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-        // **Get ResepTemplate By ID**
-        [HttpGet("{idDokter}")]
-        public async Task<IActionResult> GetResepTemplateById(Guid idDokter)
+        [HttpGet("ResepByDokter/{idDokter}")]
+        public async Task<IActionResult> GetResepTemplateByDokter(Guid idDokter)
         {
             try
             {

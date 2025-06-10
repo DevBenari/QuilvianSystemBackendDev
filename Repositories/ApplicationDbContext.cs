@@ -86,6 +86,13 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<Kandungan> Kandungans { get; set; }
         public DbSet<BentukObat> BentukObats { get; set; }
         public DbSet<TipeUser> TipeUsers { get; set; }
+        public DbSet<Benefit> Benefits { get; set; }
+        public DbSet<Membership> Membership { get; set; }
+        public DbSet<BenefitEntitiyMapping> BenefitEntitiyMappings { get; set; }
+        public DbSet<DetailMembership> DetailMembership { get; set; }
+        public DbSet<PasienBenefitAsign> PasienBenefitAsigns { get; set; }
+        public DbSet<PasienBenefitOverride> PasienBenefitOverrides { get; set; }
+
 
         #endregion
 

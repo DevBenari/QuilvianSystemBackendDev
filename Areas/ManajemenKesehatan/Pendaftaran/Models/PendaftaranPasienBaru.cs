@@ -78,6 +78,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
         public string? InformasiSekolah { get; set; }
         public string? HubunganKeluarga3 { get; set; } // Data karyawan rumah sakit yang input
 
+        // Informasi Membership
+        public Guid? MembershipId { get; set; }
+
         // Informasi Tambahan
         public string? FotoName { get; set; }
         public string? FotoPath { get; set; }

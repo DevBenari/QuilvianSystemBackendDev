@@ -66,8 +66,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewMode
         public string? InformasiSekolah { get; set; }
         public string? HubunganKeluarga3 { get; set; } // Hubungan dengan pasien, misal: Ayah, Ibu, Kakek, Nenek, dll.
 
-        //// Informasi Tambahan
-        //[SwaggerSchema(Format = "binary")]
+        //// Informasi Membership
+        public Guid? MembershipId { get; set; }
+
         public IFormFile? Foto { get; set; }
 
         //public IFormFile? QR { get; set; } = null;

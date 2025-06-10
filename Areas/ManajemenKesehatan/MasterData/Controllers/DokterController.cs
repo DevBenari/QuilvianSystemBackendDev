@@ -158,6 +158,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         .Where(u => u.UserActiveId == d.CreateBy)
                         .Select(u => u.FullName)
                         .FirstOrDefault(),
+                    Email = _context.UserActives
+                        .Where(u => u.FullName == d.NmDokter)
+                        .Select(u => u.Email)
+                        .FirstOrDefault(),
                     d.DokterId,
                     d.KdDokter,
                     d.NmDokter,
@@ -259,7 +263,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             return types.ContainsKey(ext) ? types[ext] : "application/octet-stream";
         }
 
-
+        // Ga dipake
         // POST: api/Dokter
         [HttpPost]
         public async Task<IActionResult> Create([FromForm] DokterViewModel vm)
