@@ -16,6 +16,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public decimal? BiayaTambahan { get; set; }
         public bool? Diskon { get; set; }
         public bool? IsAktif { get; set; } = true;
+        public bool? IsGratis { get; set; }
         public DateTime? StartDate { get; set; }
         public DateTime? EndDate { get; set; }
     }

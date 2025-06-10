@@ -507,7 +507,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var result = await _userManager.UpdateAsync(userLogin);
                 if (!result.Succeeded)
                 {
-                    return BadRequest(new { message = "Gagal memperbarui data user ApplicationUser." });
+                    return BadRequest(new { message = "Email telah terdaftar, silakan gunakan email yang berbeda" });
                 }
 
                 //update data
