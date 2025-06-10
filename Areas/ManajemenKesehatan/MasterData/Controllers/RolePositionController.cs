@@ -104,20 +104,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         {
             try
             {
-                var rolePosition = await _applicationDbContext.RolePositions
-                    .FirstOrDefaultAsync(r => r.Id == id);
+                var rolePositions = await _applicationDbContext.RolePositions
+                    .Where(r => r.PositionId == id.ToString())  // Mengambil semua RolePosition yang memiliki PositionId sama
+                    .ToListAsync();  // Mengambil hasil sebagai list secara asinkron
 
-                if (rolePosition == null)
+                if (rolePositions == null || !rolePositions.Any())
                 {
                     return NotFound(new { success = false, message = "RolePosition tidak ditemukan." });
                 }
 
-                return Ok(new
+                // Mengembalikan data yang lebih dari satu dengan properti yang diinginkan
+                return Ok(rolePositions.Select(rp => new
                 {
-                    rolePosition.Id,
-                    rolePosition.RoleId,
-                    rolePosition.PositionId
-                });
+                    rp.Id,
+                    rp.RoleId,
+                    rp.PositionId
+                }));
             }
             catch (Exception ex)
             {
