@@ -33,15 +33,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         {
             try
             {
-                var rolePositions = await _applicationDbContext.RolePositions
-                    .Select(r => new
-                    {
-                        r.Id,
-                        r.RoleId,
-                        r.PositionId
-                    })
-                    .OrderBy(r => r.RoleId)
-                    .ToListAsync();
+                var rolePositions = await (from rp in _applicationDbContext.RolePositions
+                                           join role in _applicationDbContext.Roles on rp.RoleId equals role.Id
+                                           join position in _applicationDbContext.Positions on rp.PositionId equals position.PositionId.ToString()
+                                           orderby role.Id
+                                           select new
+                                           {
+                                               rp.Id,
+                                               rp.RoleId,
+                                               RoleName = role.Name,
+                                               rp.PositionId,
+                                               PositionName = position.PositionName
+                                           }).ToListAsync();
+
 
                 return Ok(rolePositions); // JSON result
             }
