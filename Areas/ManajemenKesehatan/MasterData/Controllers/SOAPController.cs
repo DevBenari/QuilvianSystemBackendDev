@@ -66,10 +66,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              PasienId = k.PasienId, // Tambahan ini
                              Subjective = a.Subjective,
                              Objective = a.Objective,
-                             Assessment = a.Assessment,
+                             Assessment = (a.Assessment ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
                              Planning = a.Planning,
                              Profesi = a.Profesi,
-                         }).OrderByDescending(a => a.CreateDateTime);
+                         }).OrderByDescending(a => a.CreateDateTime).ToList();
 
             // Hitung total data sebelum paginasi
             var totalRows = query.Count();
@@ -78,8 +78,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             // Ambil data sesuai paging
             var listdata = query
                 .Skip((page - 1) * perPage)
-                .Take(perPage)
-                .ToList();
+                .Take(perPage).ToList();
 
             if (!listdata.Any())
             {
@@ -173,13 +172,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             return Ok(new
             {
                 message = "Ditemukan || 200 OK",
-                data = new
+                data = new 
                 {
                     listdata.SOAPID,
                     listdata.KunjunganId,
                     listdata.Subjective,
                     listdata.Objective,
-                    Assesment = listdata.Assessment?.Split(',').ToList(),
+                    Assesment  = listdata.Assessment?.Split(',').ToList(),
                     listdata.Planning,
                     listdata.Profesi,
                     listdata.CreateBy,
@@ -432,7 +431,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             KunjunganId = a.KunjunganId,
                             Subjective = a.Subjective,
                             Objective = a.Objective,
-                            Assessment = a.Assessment,
+                            Assessment = (a.Assessment ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
                             Planning = a.Planning,
                             Profesi = a.Profesi,
                             k.PasienId
