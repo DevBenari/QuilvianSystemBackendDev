@@ -212,29 +212,28 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     var dokter = await _applicationDbContext.Dokters
                         .FirstOrDefaultAsync(d =>
-                            d.Email == user.Email &&
-                            d.NmDokter == user.FullName &&
-                            (d.IsDelete == null || d.IsDelete == false));
+                            d.UserActiveId == user.UserActiveId &&
+                            (d.IsDelete == false));
 
                     if (dokter != null)
                     {
                         dataDokter = new
                         {
                             dokter.DokterId,
-                            dokter.KdDokter,
-                            dokter.NmDokter,
-                            dokter.Nik,
-                            dokter.Email,
-                            dokter.Nohp,
-                            dokter.Alamat,
-                            dokter.Spesialis,
-                            dokter.Str,
-                            dokter.Sip,
-                            dokter.TglSip,
-                            dokter.TglStr,
-                            dokter.IsActive,
-                            dokter.FotoName,
-                            dokter.FotoPath
+                            //dokter.KdDokter,
+                            //dokter.NmDokter,
+                            //dokter.Nik,
+                            //dokter.Email,
+                            //dokter.Nohp,
+                            //dokter.Alamat,
+                            //dokter.Spesialis,
+                            //dokter.Str,
+                            //dokter.Sip,
+                            //dokter.TglSip,
+                            //dokter.TglStr,
+                            //dokter.IsActive,
+                            //dokter.FotoName,
+                            //dokter.FotoPath
                         };
                     }
                 }
@@ -264,7 +263,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         //    : user.FotoPath,
                         user.FotoName,
                         user.FotoPath,
-                        DokterInfo = dataDokter
+                        dataDokter,
                     }
                 });
             }

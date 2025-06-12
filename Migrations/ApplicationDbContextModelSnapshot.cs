@@ -1107,7 +1107,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("DokterPoliId");
 
-                    b.ToTable("DokterPolis");
+                    b.ToTable("DokterPolis", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.FasilitasPasien", b =>
@@ -3296,7 +3296,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("SukuId");
 
-                    b.ToTable("Sukus");
+                    b.ToTable("Sukus", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Supplier", b =>
@@ -3600,7 +3600,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("TindakanKunjunganId");
 
-                    b.ToTable("TindakanKunjungans");
+                    b.ToTable("TindakanKunjungans", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.TindakanPoli", b =>
@@ -4420,7 +4420,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("PendaftaranPasienOptikId");
 
-                    b.ToTable("PendaftaranPasienOptiks");
+                    b.ToTable("PendaftaranPasienOptiks", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models.PendaftaranPasienRadiologi", b =>
