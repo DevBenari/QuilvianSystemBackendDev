@@ -73,7 +73,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                     d.Qty,
                                     d.Signa,
                                     d.SignaTambahan,
-                                    d.InteraturObat
+                                    d.InteraturObat,
+                                    d.CreateBy,
+                                    d.CreateDateTime,
                                 }).ToList()
                         }).OrderByDescending(a => a.CreateDateTime);
 
@@ -124,7 +126,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     d.Qty,
                     d.Signa,
                     d.SignaTambahan,
-                    d.InteraturObat
+                    d.InteraturObat,
+                    d.CreateBy,
+                    d.CreateDateTime,
                 }).ToListAsync();
 
             var result = new
@@ -452,7 +456,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                     d.Qty,
                                     d.Signa,
                                     d.SignaTambahan,
-                                    d.InteraturObat
+                                    d.InteraturObat,
+                                    d.CreateBy,
+                                    d.CreateDateTime,
                                 }).ToList()
                         };
 

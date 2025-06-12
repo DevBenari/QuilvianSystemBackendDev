@@ -239,7 +239,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                     rt.Qty,
                                     rt.Signa,
                                     rt.SignaTambahan,
-                                    rt.InteraturObat
+                                    rt.InteraturObat,
+                                    rt.CreateBy,
+                                    rt.CreateDateTime,
                                 }).ToList()
                             };
 
@@ -301,7 +303,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             rt.Signa,
                             rt.SignaTambahan,
                             rt.InteraturObat,
-                            rt.KodeResepTemplate // Menambahkan KodeResepTemplate dalam query
+                            rt.KodeResepTemplate, // Menambahkan KodeResepTemplate dalam query,
+                            rt.CreateBy,
+                            rt.CreateDateTime,
                         };
 
             // Hitung total data sebelum paginasi

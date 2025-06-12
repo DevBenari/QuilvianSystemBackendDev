@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using QuilvianSystemBackendDev.Models;
 using System.Security.Claims;
+using SkiaSharp;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
@@ -108,6 +109,39 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     TotalRows = totalRows,
                     TotalPages = totalPages
                 }
+            });
+        }
+
+        [HttpGet("JadwalByDokter/{DokterId}")]
+        public IActionResult GetJadwalPraktekByDokterId(Guid DokterId)
+        {
+            var data = from jp in _applicationDbContext.JadwalPrakteks
+                       join dp in _applicationDbContext.DokterPolis on jp.DokterPoliId equals dp.DokterPoliId
+                       join d in _applicationDbContext.Dokters on dp.DokterId equals d.DokterId
+                       join p in _applicationDbContext.Polikliniks on dp.PoliId equals p.PoliklinikId
+                       where jp.IsDelete == false && dp.IsDelete == false && d.DokterId == DokterId
+                       select new
+                       {
+                           jp.JadwalPraktekId,
+                           jp.KodeJadwalPraktek,
+                           jp.HariPraktek,
+                           jp.WaktuPraktek,
+                           jp.JamMulai,
+                           jp.JamBerakhir,
+                           NamaPoliklinik = p.NamaPoliklinik,
+                           d.NmDokter,
+                           d.KdDokter,
+                           d.Email
+                       };
+
+            var result = data.ToList();
+            if (!result.Any())
+                return NotFound(new { message = "Jadwal tidak ditemukan untuk dokter ini." });
+
+            return Ok(new
+            {
+                message = "Berhasil mengambil data jadwal",
+                data = result
             });
         }
 
