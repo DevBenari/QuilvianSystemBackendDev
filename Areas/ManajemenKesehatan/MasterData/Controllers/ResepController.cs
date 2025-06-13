@@ -62,6 +62,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             KunjunganId = r.KunjunganId,
                             CreateDateTime = r.CreateDateTime,
                             CreateBy = r.CreateBy,
+                            r.AntrianRegistrasi,
+                            r.AntrianResep,
+                            r.AsuransiId,
+                            r.NamaAsuransi,
+                            r.PasienId,
+                            r.NamaPasien,
+                            r.PoliklinikId,
+                            r.NamaPoliklinik,
+                            r.DokterId,
+                            r.NamaDokter,
+                            r.StatusPembuatanResep,
+                            r.StatusPengambilan,
+                            r.IsCanceled,
+                            r.TanggalPembuatanResep,
                             CreateByName = u.FullName,
                             DaftarObat = _applicationDbContext.DetailReseps
                                 .Where(d => d.ResepId == r.ResepId)
@@ -135,6 +149,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             {
                 ResepId = resep.ResepId,
                 KunjunganId = resep.KunjunganId,
+                resep.AsuransiId,
+                resep.NamaAsuransi,
+                resep.PasienId,
+                resep.NamaPasien,
+                resep.PoliklinikId,
+                resep.NamaPoliklinik,
+                resep.DokterId,
+                resep.NamaDokter,
+                resep.AntrianResep,
+                resep.AntrianRegistrasi,
+                resep.StatusPembuatanResep,
+                resep.StatusPengambilan,
+                resep.IsCanceled,
+                resep.TanggalPembuatanResep,
                 DetailObatResep = obatDetails
             };
 
@@ -169,10 +197,46 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
+                // get nomor antrian kunjungan
+                var kunjungan = await _applicationDbContext.Kunjungans
+                            .Where(k => k.KunjunganID == vm.KunjunganId)
+                            .FirstOrDefaultAsync();
+                if (kunjungan == null)
+                {
+                    return NotFound(new { message = "Data antrian kunjungan tidak ditemukan." });
+                }
+                string antrian = kunjungan.Antrian;
+
+                // Buat nomor antrean resep
+                var today = DateTime.UtcNow.Date;
+
+                var lastResep = await _applicationDbContext.Reseps
+                    .Where(r => r.KunjunganId == vm.KunjunganId && r.CreateDateTime.Date == today)
+                    .OrderByDescending(r => r.AntrianResep)
+                    .FirstOrDefaultAsync();
+
+                int nextAntrian = (lastResep?.AntrianResep ?? 0) + 1;
+
+
+
                 var resep = new Resep
                 {
                     ResepId = Guid.NewGuid(),
                     KunjunganId = vm.KunjunganId,
+                    AsuransiId = vm.AsuransiId,
+                    NamaAsuransi = vm.NamaAsuransi,
+                    PasienId = vm.PasienId,
+                    NamaPasien = vm.NamaPasien,
+                    PoliklinikId = vm.PoliklinikId,
+                    NamaPoliklinik = vm.NamaPoliklinik,
+                    DokterId = vm.DokterId,
+                    NamaDokter = vm.NamaDokter,
+                    AntrianResep = nextAntrian, 
+                    AntrianRegistrasi = antrian,
+                    StatusPembuatanResep = vm.StatusPembuatanResep,
+                    StatusPengambilan = vm.StatusPengambilan ?? false, // Jika StatusPengambilan adalah null, gunakan false sebagai default
+                    IsCanceled = vm.IsCanceled ?? false, // Jika IsCanceled adalah null, gunakan false sebagai default
+                    TanggalPembuatanResep = vm.TanggalPembuatanResep ?? DateOnly.FromDateTime(DateTime.UtcNow), // Jika TanggalPembuatanResep adalah null, gunakan tanggal saat ini
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
@@ -272,6 +336,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // **Update data resep**
                 data.KunjunganId = vm.KunjunganId;
+                data.AsuransiId = vm.AsuransiId;
+                data.NamaAsuransi = vm.NamaAsuransi;
+                data.PasienId = vm.PasienId;
+                data.NamaPasien = vm.NamaPasien;
+                data.PoliklinikId = vm.PoliklinikId;
+                data.NamaPoliklinik = vm.NamaPoliklinik;
+                data.DokterId = vm.DokterId;
+                data.NamaDokter = vm.NamaDokter;
+                data.StatusPembuatanResep = vm.StatusPembuatanResep;
+                data.StatusPengambilan = vm.StatusPengambilan ?? false; // Jika StatusPengambilan adalah null, gunakan false sebagai default
+                data.IsCanceled = vm.IsCanceled ?? false; // Jika IsCanceled adalah null, gunakan false sebagai default
+                data.TanggalPembuatanResep = vm.TanggalPembuatanResep;
+
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
@@ -446,6 +523,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateDateTime = r.CreateDateTime,
                             CreateBy = r.CreateBy,
                             CreateByName = u.FullName,
+                            r.AntrianRegistrasi,
+                            r.AntrianResep,
+                            r.AsuransiId,
+                            r.NamaAsuransi,
+                            r.PasienId,
+                            r.NamaPasien,
+                            r.PoliklinikId,
+                            r.NamaPoliklinik,
+                            r.DokterId,
+                            r.NamaDokter,
+                            r.StatusPembuatanResep,
+                            r.StatusPengambilan,
+                            r.IsCanceled,
+                            r.TanggalPembuatanResep,
                             DaftarObat = _applicationDbContext.DetailReseps
                                 .Where(d => d.ResepId == r.ResepId)
                                 .Select(d => new

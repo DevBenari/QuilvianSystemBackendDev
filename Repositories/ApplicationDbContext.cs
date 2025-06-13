@@ -92,7 +92,8 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<DetailMembership> DetailMembership { get; set; }
         public DbSet<PasienBenefitAsign> PasienBenefitAsigns { get; set; }
         public DbSet<PasienBenefitOverride> PasienBenefitOverrides { get; set; }
-
+        public DbSet<KonversiSatuan> KonversiSatuans { get; set; }
+        public DbSet<FarmasiRJ> FarmasiRJs { get; set; }
 
         #endregion
 

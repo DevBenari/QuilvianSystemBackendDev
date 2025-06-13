@@ -65,7 +65,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             ICDName = a.ICDName,
                             DTDCode = a.DTDCode,
                             NamaDiagnosa = a.NamaDiagnosa,
-                        }).OrderByDescending(a => a.CreateDateTime);
+                        }).OrderByDescending(a => a.ICDCode);
 
             // Hitung total data sebelum paginasi
             var totalRows = query.Count();
