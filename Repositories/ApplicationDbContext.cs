@@ -1,5 +1,8 @@
 ﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Models;
+using QuilvianSystemBackendDev.Areas.Keuangan.Models.Kasir;
+using QuilvianSystemBackendDev.Areas.Keuangan;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
 using QuilvianSystemBackendDev.Models;
@@ -96,6 +99,14 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<FarmasiRJ> FarmasiRJs { get; set; }
 
         #endregion
+
+        #region Areas Keuangan
+        public DbSet<MetodePembayaran> MetodePembayarans { get; set; }
+        public DbSet<Diskon> Diskons { get; set; }
+        public DbSet<BiayaAdministrasi> BiayaAdministrasis { get; set; }
+        public DbSet<MainKasir> MainKasirs { get; set; }
+        #endregion
+
 
         #region Areas Pendaftaran
         public DbSet<PendaftaranPasienBaru> PendaftaranPasienBarus { get; set; }

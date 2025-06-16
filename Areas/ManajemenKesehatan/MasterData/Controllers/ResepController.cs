@@ -236,6 +236,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     StatusPembuatanResep = vm.StatusPembuatanResep,
                     StatusPengambilan = vm.StatusPengambilan ?? false, // Jika StatusPengambilan adalah null, gunakan false sebagai default
                     IsCanceled = vm.IsCanceled ?? false, // Jika IsCanceled adalah null, gunakan false sebagai default
+                    IsLunas = vm.IsLunas,
                     TanggalPembuatanResep = vm.TanggalPembuatanResep ?? DateOnly.FromDateTime(DateTime.UtcNow), // Jika TanggalPembuatanResep adalah null, gunakan tanggal saat ini
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
@@ -347,6 +348,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.StatusPembuatanResep = vm.StatusPembuatanResep;
                 data.StatusPengambilan = vm.StatusPengambilan ?? false; // Jika StatusPengambilan adalah null, gunakan false sebagai default
                 data.IsCanceled = vm.IsCanceled ?? false; // Jika IsCanceled adalah null, gunakan false sebagai default
+                data.IsLunas = vm.IsLunas; 
                 data.TanggalPembuatanResep = vm.TanggalPembuatanResep;
 
                 data.UpdateBy = userActiveId;
