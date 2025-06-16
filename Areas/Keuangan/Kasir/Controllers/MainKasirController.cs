@@ -65,7 +65,6 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
                              CreateByName = u.FullName,
                              KasirId = a.KasirId,
                              KunjunganId = a.KunjunganId,
-                             ResepId = a.ResepId,
                              BiayaAdministrasiKode = a.BiayaAdministrasiKode,
                              MetodePembayaranId = a.MetodePembayaranId,
                              NamaMetode = a.NamaMetode,
@@ -159,7 +158,6 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
                 {
                     KasirId = Guid.NewGuid(),
                     KunjunganId = vm.KunjunganId,
-                    ResepId = vm.ResepId,
                     BiayaAdministrasiKode = vm.BiayaAdministrasiKode,
                     MetodePembayaranId = vm.MetodePembayaranId,
                     NamaMetode = vm.NamaMetode,
@@ -237,7 +235,6 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
 
                 // **Update Data**
                 data.KunjunganId = vm.KunjunganId;
-                data.ResepId = vm.ResepId;
                 data.BiayaAdministrasiKode = vm.BiayaAdministrasiKode;
                 data.MetodePembayaranId = vm.MetodePembayaranId;
                 data.NamaMetode = vm.NamaMetode;
@@ -359,7 +356,6 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
                              CreateByName = u.FullName,
                              KasirId = a.KasirId,
                              KunjunganId = a.KunjunganId,
-                             ResepId = a.ResepId,
                              BiayaAdministrasiKode = a.BiayaAdministrasiKode,
                              MetodePembayaranId = a.MetodePembayaranId,
                              NamaMetode = a.NamaMetode,

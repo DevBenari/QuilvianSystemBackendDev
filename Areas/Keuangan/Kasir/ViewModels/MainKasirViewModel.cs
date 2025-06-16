@@ -3,7 +3,6 @@
 public class MainKasirViewModel
 {
     public Guid? KunjunganId { get; set; }
-    public Guid? ResepId { get; set; }
     public string? BiayaAdministrasiKode { get; set; }
     public Guid? MetodePembayaranId { get; set; }
     public string? NamaMetode { get; set; }
