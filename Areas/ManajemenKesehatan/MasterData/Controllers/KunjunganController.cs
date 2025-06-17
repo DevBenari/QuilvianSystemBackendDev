@@ -87,6 +87,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.DokterId,
                             a.PasienId,
                             ps.NamaLengkap,
+                            Umur = ps.TanggalLahir.HasValue
+                                    ? (int?)(
+                                        DateTime.Today.Year - ps.TanggalLahir.Value.Year -
+                                        (DateTime.Today < ps.TanggalLahir.Value.AddYears(DateTime.Today.Year - ps.TanggalLahir.Value.Year) ? 1 : 0)
+                                      )
+                                    : null,
                             a.NoRekamMedis,
                             a.TipePasien,
                             a.TipePembayaran,
@@ -174,6 +180,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.DokterId,
                             a.PasienId,
                             ps.NamaLengkap,
+                            Umur = ps.TanggalLahir.HasValue
+                                    ? (int?)(
+                                        DateTime.Today.Year - ps.TanggalLahir.Value.Year -
+                                        (DateTime.Today < ps.TanggalLahir.Value.AddYears(DateTime.Today.Year - ps.TanggalLahir.Value.Year) ? 1 : 0)
+                                      )
+                                    : null,
                             a.NoRekamMedis,
                             a.TipePasien,
                             a.TipePembayaran,
@@ -585,6 +597,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.DokterId,
                             a.PasienId,
                             ps.NamaLengkap,
+                            Umur = ps.TanggalLahir.HasValue
+                                    ? (int?)(
+                                        DateTime.Today.Year - ps.TanggalLahir.Value.Year -
+                                        (DateTime.Today < ps.TanggalLahir.Value.AddYears(DateTime.Today.Year - ps.TanggalLahir.Value.Year) ? 1 : 0)
+                                      )
+                                    : null,
                             a.NoRekamMedis,
                             a.TipePasien,
                             a.TipePembayaran,
