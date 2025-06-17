@@ -564,7 +564,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? startDate = null,
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? endDate = null,
-        [FromQuery] PeriodeFilter? periode = null)
+        [FromQuery] PeriodeFilter? periode = null,
+        [FromQuery] bool? isFinished = null, // ✅ ditambahkan di sini
+        [FromQuery] bool? isScreening = null, // ✅ ditambahkan di sini
+        [FromQuery] bool? isPresent = null // ✅ ditambahkan di sini
+        )
+
         {
 
             //Hitung jumlah kunjungan per PasienId + JenisKunjungan
@@ -623,6 +628,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             // ⬅️ Tambahan jumlah jenis kunjungan
                             JumlahJenisKunjungan = j.JumlahJenis
                         };
+            // ✅ Filter berdasarkan isFinished jika diberikan
+            if (isFinished.HasValue)
+            {
+                query = query.Where(u => u.IsFinished == isFinished.Value);
+            }
+
+            // ✅ Filter berdasarkan IsPresent jika diberikan
+            if (isPresent.HasValue)
+            {
+                query = query.Where(u => u.IsPresent == isPresent.Value);
+            }
+
+            // ✅ Filter berdasarkan isFinished jika diberikan
+            if (isScreening.HasValue)
+            {
+                query = query.Where(u => u.IsScreening == isScreening.Value);
+            }
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             if (!string.IsNullOrWhiteSpace(search))
