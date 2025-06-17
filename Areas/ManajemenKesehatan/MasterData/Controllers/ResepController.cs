@@ -77,20 +77,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             r.IsCanceled,
                             r.TanggalPembuatanResep,
                             CreateByName = u.FullName,
-                            DaftarObat = _applicationDbContext.DetailReseps
-                                .Where(d => d.ResepId == r.ResepId)
-                                .Select(d => new
-                                {
-                                    d.DetailResepId,
-                                    d.ResepId,
-                                    d.ObatId,
-                                    d.Qty,
-                                    d.Signa,
-                                    d.SignaTambahan,
-                                    d.InteraturObat,
-                                    d.CreateBy,
-                                    d.CreateDateTime,
-                                }).ToList()
+                            DaftarObat = (from d in _applicationDbContext.DetailReseps
+                                          join o in _applicationDbContext.Obats // Asumsi nama tabel obat adalah MasterObat
+                                              on d.ObatId equals o.ObatId // Asumsi primary key tabel obat adalah ObatId
+                                          where d.ResepId == r.ResepId
+                                          select new
+                                          {
+                                              d.DetailResepId,
+                                              d.ResepId,
+                                              d.ObatId,
+                                              o.ObatName, // Menambahkan NamaObat dari tabel MasterObat
+                                              d.Qty,
+                                              d.Signa,
+                                              d.SignaTambahan,
+                                              d.InteraturObat,
+                                              d.CreateBy,
+                                              d.CreateDateTime,
+                                          }).ToList()
                         }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -130,20 +133,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (resep == null)
                 return NotFound(new { message = "Resep tidak ditemukan!" });
 
-            var obatDetails = await _applicationDbContext.DetailReseps
-                .Where(d => d.ResepId == id)
-                .Select(d => new
-                {
-                    d.DetailResepId,
-                    d.ResepId,
-                    d.ObatId,
-                    d.Qty,
-                    d.Signa,
-                    d.SignaTambahan,
-                    d.InteraturObat,
-                    d.CreateBy,
-                    d.CreateDateTime,
-                }).ToListAsync();
+            var obatDetails = (from d in _applicationDbContext.DetailReseps
+                               join o in _applicationDbContext.Obats // Asumsi nama tabel obat adalah MasterObat
+                                   on d.ObatId equals o.ObatId // Asumsi primary key tabel obat adalah ObatId
+                               where d.ResepId == id
+                               select new
+                               {
+                                   d.DetailResepId,
+                                   d.ResepId,
+                                   d.ObatId,
+                                   o.ObatName, // Menambahkan NamaObat dari tabel MasterObat
+                                   d.Qty,
+                                   d.Signa,
+                                   d.SignaTambahan,
+                                   d.InteraturObat,
+                                   d.CreateBy,
+                                   d.CreateDateTime,
+                               }).ToListAsync();
 
             var result = new
             {
@@ -539,20 +545,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             r.StatusPengambilan,
                             r.IsCanceled,
                             r.TanggalPembuatanResep,
-                            DaftarObat = _applicationDbContext.DetailReseps
-                                .Where(d => d.ResepId == r.ResepId)
-                                .Select(d => new
-                                {
-                                    d.DetailResepId,
-                                    d.ResepId,
-                                    d.ObatId,
-                                    d.Qty,
-                                    d.Signa,
-                                    d.SignaTambahan,
-                                    d.InteraturObat,
-                                    d.CreateBy,
-                                    d.CreateDateTime,
-                                }).ToList()
+                            DaftarObat = (from d in _applicationDbContext.DetailReseps
+                                          join o in _applicationDbContext.Obats // Asumsi nama tabel obat adalah MasterObat
+                                              on d.ObatId equals o.ObatId // Asumsi primary key tabel obat adalah ObatId
+                                          where d.ResepId == r.ResepId
+                                          select new
+                                          {
+                                              d.DetailResepId,
+                                              d.ResepId,
+                                              d.ObatId,
+                                              o.ObatName, // Menambahkan NamaObat dari tabel MasterObat
+                                              d.Qty,
+                                              d.Signa,
+                                              d.SignaTambahan,
+                                              d.InteraturObat,
+                                              d.CreateBy,
+                                              d.CreateDateTime,
+                                          }).ToList()
                         };
 
             // Search

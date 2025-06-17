@@ -22,4 +22,5 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public bool? IsScreening { get; set; }
         public bool? IsPresent { get; set; }
     }
+
 }

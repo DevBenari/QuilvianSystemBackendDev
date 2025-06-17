@@ -81,18 +81,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         {
                             a.KunjunganID,
                             a.AsuransiId,
-                            NamaAsuransi = o != null && o.NamaAsuransi != null ? o.NamaAsuransi : "No", // Cek apakah ada asuransi
+                            NamaAsuransi = o != null && o.NamaAsuransi != null ? o.NamaAsuransi : "Tunai", // Cek apakah ada asuransi
                             a.PoliklinikId,
                             p.NamaPoliklinik,
                             a.DokterId,
                             a.PasienId,
                             ps.NamaLengkap,
-                            Umur = ps.TanggalLahir.HasValue
-                                    ? (int?)(
-                                        DateTime.Today.Year - ps.TanggalLahir.Value.Year -
-                                        (DateTime.Today < ps.TanggalLahir.Value.AddYears(DateTime.Today.Year - ps.TanggalLahir.Value.Year) ? 1 : 0)
-                                      )
-                                    : null,
+                            ps.TanggalLahir,    
                             a.NoRekamMedis,
                             a.TipePasien,
                             a.TipePembayaran,
@@ -174,18 +169,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         {
                             a.KunjunganID,
                             a.AsuransiId,
-                            NamaAsuransi = o != null && o.NamaAsuransi != null ? o.NamaAsuransi : "No", // Cek apakah ada asuransi
+                            NamaAsuransi = o != null && o.NamaAsuransi != null ? o.NamaAsuransi : "Tunai", // Cek apakah ada asuransi
                             a.PoliklinikId,
                             p.NamaPoliklinik,
                             a.DokterId,
                             a.PasienId,
                             ps.NamaLengkap,
-                            Umur = ps.TanggalLahir.HasValue
-                                    ? (int?)(
-                                        DateTime.Today.Year - ps.TanggalLahir.Value.Year -
-                                        (DateTime.Today < ps.TanggalLahir.Value.AddYears(DateTime.Today.Year - ps.TanggalLahir.Value.Year) ? 1 : 0)
-                                      )
-                                    : null,
+                            ps.TanggalLahir,
                             a.NoRekamMedis,
                             a.TipePasien,
                             a.TipePembayaran,
@@ -567,7 +557,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [FromQuery] PeriodeFilter? periode = null,
         [FromQuery] bool? isFinished = null, // ✅ ditambahkan di sini
         [FromQuery] bool? isScreening = null, // ✅ ditambahkan di sini
-        [FromQuery] bool? isPresent = null // ✅ ditambahkan di sini
+        [FromQuery] bool? isPresent = null,
+        [FromQuery] TipePasienFilter? TipePasien = null// ✅ ditambahkan di sini
         )
 
         {
@@ -583,6 +574,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     JumlahJenis = g.Count()
                 });
             
+
             var query = from a in _applicationDbContext.Kunjungans
                         join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId
                         join p in _applicationDbContext.Polikliniks on a.PoliklinikId equals p.PoliklinikId
@@ -596,18 +588,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         {
                             a.KunjunganID,
                             a.AsuransiId,
-                            NamaAsuransi = o != null && o.NamaAsuransi != null ? o.NamaAsuransi : "No", // Cek apakah ada asuransi
+                            NamaAsuransi = o != null && o.NamaAsuransi != null ? o.NamaAsuransi : "Tunai", // Cek apakah ada asuransi
                             a.PoliklinikId,
                             p.NamaPoliklinik,
                             a.DokterId,
                             a.PasienId,
                             ps.NamaLengkap,
-                            Umur = ps.TanggalLahir.HasValue
-                                    ? (int?)(
-                                        DateTime.Today.Year - ps.TanggalLahir.Value.Year -
-                                        (DateTime.Today < ps.TanggalLahir.Value.AddYears(DateTime.Today.Year - ps.TanggalLahir.Value.Year) ? 1 : 0)
-                                      )
-                                    : null,
+                            ps.TanggalLahir,
                             a.NoRekamMedis,
                             a.TipePasien,
                             a.TipePembayaran,
@@ -645,6 +632,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             {
                 query = query.Where(u => u.IsScreening == isScreening.Value);
             }
+
+            if (TipePasien.HasValue)
+            {
+                query = query.Where(u => u.TipePasien == TipePasien.Value.ToString());
+            }
+
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             if (!string.IsNullOrWhiteSpace(search))
