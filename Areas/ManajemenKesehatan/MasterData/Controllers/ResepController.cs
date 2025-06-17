@@ -53,48 +53,48 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
             // Query utama
             var query = (from r in _applicationDbContext.Reseps
-                        join u in _applicationDbContext.UserActives
-                            on r.CreateBy equals u.UserActiveId
-                        where r.IsDelete == false // jika ada field IsDelete
-                        select new
-                        {
-                            ResepId = r.ResepId,
-                            KunjunganId = r.KunjunganId,
-                            CreateDateTime = r.CreateDateTime,
-                            CreateBy = r.CreateBy,
-                            r.AntrianRegistrasi,
-                            r.AntrianResep,
-                            r.AsuransiId,
-                            r.NamaAsuransi,
-                            r.PasienId,
-                            r.NamaPasien,
-                            r.PoliklinikId,
-                            r.NamaPoliklinik,
-                            r.DokterId,
-                            r.NamaDokter,
-                            r.StatusPembuatanResep,
-                            r.StatusPengambilan,
-                            r.IsCanceled,
-                            r.TanggalPembuatanResep,
-                            CreateByName = u.FullName,
-                            DaftarObat = (from d in _applicationDbContext.DetailReseps
-                                          join o in _applicationDbContext.Obats // Asumsi nama tabel obat adalah MasterObat
-                                              on d.ObatId equals o.ObatId // Asumsi primary key tabel obat adalah ObatId
-                                          where d.ResepId == r.ResepId
-                                          select new
-                                          {
-                                              d.DetailResepId,
-                                              d.ResepId,
-                                              d.ObatId,
-                                              o.ObatName, // Menambahkan NamaObat dari tabel MasterObat
-                                              d.Qty,
-                                              d.Signa,
-                                              d.SignaTambahan,
-                                              d.InteraturObat,
-                                              d.CreateBy,
-                                              d.CreateDateTime,
-                                          }).ToList()
-                        }).OrderByDescending(a => a.CreateDateTime);
+                         join u in _applicationDbContext.UserActives
+                             on r.CreateBy equals u.UserActiveId
+                         where r.IsDelete == false // jika ada field IsDelete
+                         select new
+                         {
+                             ResepId = r.ResepId,
+                             KunjunganId = r.KunjunganId,
+                             CreateDateTime = r.CreateDateTime,
+                             CreateBy = r.CreateBy,
+                             r.AntrianRegistrasi,
+                             r.AntrianResep,
+                             r.AsuransiId,
+                             r.NamaAsuransi,
+                             r.PasienId,
+                             r.NamaPasien,
+                             r.PoliklinikId,
+                             r.NamaPoliklinik,
+                             r.DokterId,
+                             r.NamaDokter,
+                             r.StatusPembuatanResep,
+                             r.StatusPengambilan,
+                             r.IsCancelled,
+                             r.TanggalPembuatanResep,
+                             CreateByName = u.FullName,
+                             DaftarObat = (from d in _applicationDbContext.DetailReseps
+                                           join o in _applicationDbContext.Obats // Asumsi nama tabel obat adalah MasterObat
+                                               on d.ObatId equals o.ObatId // Asumsi primary key tabel obat adalah ObatId
+                                           where d.ResepId == r.ResepId
+                                           select new
+                                           {
+                                               d.DetailResepId,
+                                               d.ResepId,
+                                               d.ObatId,
+                                               o.ObatName, // Menambahkan NamaObat dari tabel MasterObat
+                                               d.Qty,
+                                               d.Signa,
+                                               d.SignaTambahan,
+                                               d.InteraturObat,
+                                               d.CreateBy,
+                                               d.CreateDateTime,
+                                           }).ToList()
+                         }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
             var totalRows = query.Count();
@@ -167,7 +167,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 resep.AntrianRegistrasi,
                 resep.StatusPembuatanResep,
                 resep.StatusPengambilan,
-                resep.IsCanceled,
+                resep.IsCancelled,
                 resep.TanggalPembuatanResep,
                 DetailObatResep = obatDetails
             };
@@ -237,11 +237,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     NamaPoliklinik = vm.NamaPoliklinik,
                     DokterId = vm.DokterId,
                     NamaDokter = vm.NamaDokter,
-                    AntrianResep = nextAntrian, 
+                    AntrianResep = nextAntrian,
                     AntrianRegistrasi = antrian,
                     StatusPembuatanResep = vm.StatusPembuatanResep,
-                    StatusPengambilan = vm.StatusPengambilan ?? false, // Jika StatusPengambilan adalah null, gunakan false sebagai default
-                    IsCanceled = vm.IsCanceled ?? false, // Jika IsCanceled adalah null, gunakan false sebagai default
+                    //StatusPengambilan = vm.StatusPengambilan ?? false, // Jika StatusPengambilan adalah null, gunakan false sebagai default
+                    //IsCanceled = vm.IsCanceled ?? false, // Jika IsCanceled adalah null, gunakan false sebagai default
                     IsLunas = vm.IsLunas,
                     TanggalPembuatanResep = vm.TanggalPembuatanResep ?? DateOnly.FromDateTime(DateTime.UtcNow), // Jika TanggalPembuatanResep adalah null, gunakan tanggal saat ini
                     CreateBy = userActiveId,
@@ -308,6 +308,52 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
+        [HttpPut("{id}/is-cancelled")]
+        public async Task<IActionResult> UpdateIsFinished(Guid id, [FromBody] IsCancelledResepViewModel request)
+        {
+            var data = await _applicationDbContext.Reseps.FindAsync(id);
+            if (data == null)
+                return NotFound(new { message = "Resep tidak ditemukan." });
+
+            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(EmailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var userId = user?.UserActiveId ?? Guid.Empty;
+
+            data.IsCancelled = request.IsCancelled;
+            data.UpdateDateTime = DateTimeOffset.UtcNow;
+            data.UpdateBy = userId;
+
+            await _applicationDbContext.SaveChangesAsync();
+
+            return Ok(new { message = "Status isFinished berhasil diperbarui." });
+        }
+
+        [HttpPut("{id}/is-cancelled")]
+        public async Task<IActionResult> UpdateStatusAmbilResep(Guid id, [FromBody] StatusPengambilanViewModel request)
+        {
+            var data = await _applicationDbContext.Reseps.FindAsync(id);
+            if (data == null)
+                return NotFound(new { message = "Resep tidak ditemukan." });
+
+            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(EmailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var userId = user?.UserActiveId ?? Guid.Empty;
+
+            data.StatusPengambilan = request.StatusPengambilan;
+            data.UpdateDateTime = DateTimeOffset.UtcNow;
+            data.UpdateBy = userId;
+
+            await _applicationDbContext.SaveChangesAsync();
+
+            return Ok(new { message = "Status isFinished berhasil diperbarui." });
+        }
+
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateResep(Guid id, [FromBody] ResepViewModel vm)
         {
@@ -352,9 +398,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.DokterId = vm.DokterId;
                 data.NamaDokter = vm.NamaDokter;
                 data.StatusPembuatanResep = vm.StatusPembuatanResep;
-                data.StatusPengambilan = vm.StatusPengambilan ?? false; // Jika StatusPengambilan adalah null, gunakan false sebagai default
-                data.IsCanceled = vm.IsCanceled ?? false; // Jika IsCanceled adalah null, gunakan false sebagai default
-                data.IsLunas = vm.IsLunas; 
+                //data.StatusPengambilan = vm.StatusPengambilan ?? false; // Jika StatusPengambilan adalah null, gunakan false sebagai default
+                data.IsLunas = vm.IsLunas;
                 data.TanggalPembuatanResep = vm.TanggalPembuatanResep;
 
                 data.UpdateBy = userActiveId;
@@ -543,7 +588,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             r.NamaDokter,
                             r.StatusPembuatanResep,
                             r.StatusPengambilan,
-                            r.IsCanceled,
+                            r.IsCancelled,
                             r.TanggalPembuatanResep,
                             DaftarObat = (from d in _applicationDbContext.DetailReseps
                                           join o in _applicationDbContext.Obats // Asumsi nama tabel obat adalah MasterObat
