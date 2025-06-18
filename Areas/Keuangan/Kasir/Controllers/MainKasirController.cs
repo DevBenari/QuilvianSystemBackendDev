@@ -515,19 +515,21 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
                                 .Where(x => x.dr != null && x.o != null)
                                 .Select(x => new
                                 {
-                                    Qty = x.dr.Qty,
-                                    HargaJual = x.o.HargaJual
-                                }).ToList();
+                                    Qty = x.dr.Qty ?? 0,
+                                    HargaJual = x.o.HargaJual,
+                                }).Distinct().ToList();
 
                 decimal totalBiayaObat = (decimal)daftarObat.Sum(x => x.Qty * x.HargaJual);
 
                 // total nominal tindakan
                 var daftarTindakan = result
-                                    .Where(x => x.k.KunjunganID == baselineBill.k.KunjunganID && x.to != null)
-                                    .Select(x => x.to.Total ?? 0)
-                                    .ToList();
-
-                decimal totalBiayaTindakan = daftarTindakan.Sum();
+                                    .Where(x => x.to != null && x.t != null)
+                                    .Select(x => new
+                                    {
+                                        Quantity = x.to.Quantity ?? 0,
+                                        Total = x.to.Total ?? 0
+                                    }).Distinct().ToList();
+                decimal totalBiayaTindakan = (decimal)daftarTindakan.Sum(x => x.Quantity * x.Total);
 
                 // inseert new data
                 var data = new MainKasir
