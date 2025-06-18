@@ -331,7 +331,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             return Ok(new { message = "Status isFinished berhasil diperbarui." });
         }
 
-        [HttpPut("{id}/is-cancelled")]
+        [HttpPut("{id}/is-taken")]
         public async Task<IActionResult> UpdateStatusAmbilResep(Guid id, [FromBody] StatusPengambilanViewModel request)
         {
             var data = await _applicationDbContext.Reseps.FindAsync(id);
