@@ -54,9 +54,9 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
 
             // Query data
             var query = (from a in _applicationDbContext.Diskons
-                         join u in _applicationDbContext.UserActives
+                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false
+                         where a.IsDelete == false || a.IsDelete == null
                          select new
                          {
                              CreateDateTime = a.CreateDateTime,
