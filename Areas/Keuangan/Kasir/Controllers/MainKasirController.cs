@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -315,10 +316,22 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
-                
-                
-                
-                // Inside the Create method, replace the problematic line:
+                // cek validasi kunjungan id
+                var datakunjungan = await _applicationDbContext.Kunjungans
+                    .FirstOrDefaultAsync(k => k.KunjunganID == vm.KunjunganId && !k.IsDelete);
+                if (datakunjungan == null)
+                {
+                    return NotFound(new { message = "Kunjungan tidak ditemukan atau sudah dihapus." });
+                }
+
+                // cek validasi diskon
+                var datadiskon = await _applicationDbContext.Diskons.FirstOrDefaultAsync(d => d.DiskonId == vm.DiskonId);
+                if (datadiskon == null)
+                {
+                    return NotFound(new { message = "Diskon tidak ditemukan." });
+                }
+
+                 // Inside the Create method, replace the problematic line:
                 var data = new MainKasir
                 {
                     KasirId = Guid.NewGuid(),

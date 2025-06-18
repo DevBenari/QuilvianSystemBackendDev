@@ -75,6 +75,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              r.StatusPembuatanResep,
                              r.StatusPengambilan,
                              r.IsCancelled,
+                             r.IsLunas,
                              r.TanggalPembuatanResep,
                              CreateByName = u.FullName,
                              DaftarObat = (from d in _applicationDbContext.DetailReseps
@@ -589,6 +590,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             r.StatusPembuatanResep,
                             r.StatusPengambilan,
                             r.IsCancelled,
+                                                         r.IsLunas,
                             r.TanggalPembuatanResep,
                             DaftarObat = (from d in _applicationDbContext.DetailReseps
                                           join o in _applicationDbContext.Obats // Asumsi nama tabel obat adalah MasterObat
