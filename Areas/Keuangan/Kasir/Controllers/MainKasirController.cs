@@ -260,13 +260,40 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
                     };
                 }).ToList();
 
+            var baselineBill = await query.FirstOrDefaultAsync();
+            if (baselineBill == null)
+            {
+                return NotFound(new { message = "Data billing kasir untuk kunjungan ini tidak ditemukan. || 404 Not Found" });
+            }
+
+            // hitung total biaya obat
+            var daftarObat = result
+                            .Where(x => x.dr != null && x.o != null)
+                            .Select(x => new
+                            {
+                                Qty = x.dr.Qty ?? 0,
+                                HargaJual = x.o.HargaJual,
+                            }).Distinct().ToList();
+
+            decimal totalBiayaObat = (decimal)daftarObat.Sum(x => x.Qty * x.HargaJual);
+
+            // total nominal tindakan
+            var daftarTindakan = result
+                                .Where(x=> x.to != null && x.t != null)
+                                .Select(x=> new
+                                {
+                                    Quantity = x.to.Quantity ?? 0,
+                                    Total = x.to.Total ?? 0
+                                }).Distinct().ToList();
+
+            decimal totalBiayaTindakan = (decimal)daftarTindakan.Sum(x => x.Quantity * x.Total);
 
             if (!kasirData.Any())
             {
                 return NotFound(new { message = "Data billing kasir untuk kunjungan ini tidak ditemukan. || 404 Not Found" });
             }
 
-            return Ok(new { status = "success", data = kasirData.FirstOrDefault() }); // Mengembalikan hanya satu item karena ini adalah view untuk satu kunjunganId
+            return Ok(new { status = "success", data = kasirData.FirstOrDefault(), totalobat=totalBiayaObat, totaltindakan=totalBiayaTindakan }); // Mengembalikan hanya satu item karena ini adalah view untuk satu kunjunganId
         }
 
 
