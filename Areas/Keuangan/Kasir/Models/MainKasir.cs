@@ -15,6 +15,7 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Models.Kasir
         public string? NamaMetode { get; set; }
         public Guid? DiskonId { get; set; }
         public decimal? NominalPembayaran { get; set; }
+        public decimal? TotalBiayaObat { get; set; }
         public string? StatusPembayaran { get; set; }
         public string? Keterangan { get; set; }
         public DateTimeOffset? TglPembayaran { get; set; }
