@@ -53,6 +53,31 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
             _webHostEnvironment = webHostEnvironment;
         }
 
+        public static string HitungUmurLengkap(DateTime? tanggalLahir)
+        {
+            if (!tanggalLahir.HasValue) return "-";
+
+            var today = DateTime.Today;
+            int tahun = today.Year - tanggalLahir.Value.Year;
+            int bulan = today.Month - tanggalLahir.Value.Month;
+            int hari = today.Day - tanggalLahir.Value.Day;
+
+            if (hari < 0)
+            {
+                bulan--;
+                var prevMonth = today.AddMonths(-1);
+                hari += DateTime.DaysInMonth(prevMonth.Year, prevMonth.Month);
+            }
+
+            if (bulan < 0)
+            {
+                tahun--;
+                bulan += 12;
+            }
+
+            return $"{tahun} tahun {bulan} bulan {hari} hari";
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetAllPendaftaranPasienBaru(int page = 1, int perPage = 10)
         {
@@ -84,13 +109,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                             TempatLahir = a.TempatLahir,
                             TipePendaftaran = a.TipePendaftaran,
                             TanggalLahir = a.TanggalLahir.HasValue ? a.TanggalLahir.Value.ToString("yyyy-MM-dd") : null,
-                            Umur = a.TanggalLahir.HasValue
-                                    ? (int?)(
-                                        DateTime.Today.Year - a.TanggalLahir.Value.Year -
-                                        (DateTime.Today < a.TanggalLahir.Value.AddYears(DateTime.Today.Year - a.TanggalLahir.Value.Year) ? 1 : 0)
-                                      )
-                                    : null,
-
+                            Umur = HitungUmurLengkap(a.TanggalLahir),
                             StatusPerkawinan = a.StatusPerkawinan,
                             AgamaId = a.AgamaId,
                             PendidikanTerakhirId = a.PendidikanTerakhirId,
@@ -176,14 +195,6 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
             }
             var parsed = listdata.TanggalLahir?.ToString("yyyy-MM-dd");
 
-            int? umur = null;
-            if (listdata.TanggalLahir.HasValue)
-            {
-                var today = DateTime.Today;
-                var lahir = listdata.TanggalLahir.Value;
-                umur = today.Year - lahir.Year;
-                if (lahir.Date > today.AddYears(-umur.Value)) umur--;
-            }
             return Ok(new
             {
                 message = "Ditemukan || 200 OK",
@@ -200,7 +211,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     listdata.NoIdentitas,
                     listdata.TempatLahir,
                     TanggalLahir = parsed,
-                    Umur = umur,
+                    Umur = HitungUmurLengkap(listdata.TanggalLahir),
                     listdata.JenisKelamin,
                     listdata.StatusPerkawinan,
                     listdata.AgamaId,
@@ -265,14 +276,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
 
             var parsed = listdata.TanggalLahir?.ToString("yyyy-MM-dd");
 
-            int? umur = null;
-            if (listdata.TanggalLahir.HasValue)
-            {
-                var today = DateTime.Today;
-                var lahir = listdata.TanggalLahir.Value;
-                umur = today.Year - lahir.Year;
-                if (lahir.Date > today.AddYears(-umur.Value)) umur--;
-            }
+
             return Ok(new
             {
                 message = "Ditemukan || 200 OK",
@@ -288,7 +292,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     listdata.NoIdentitas,
                     listdata.TempatLahir,
                     TanggalLahir = parsed,
-                    Umur = umur,
+                    Umur = HitungUmurLengkap(listdata.TanggalLahir),
                     listdata.JenisKelamin,
                     listdata.StatusPerkawinan,
                     listdata.AgamaId,
@@ -898,13 +902,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                             TempatLahir = a.TempatLahir,
                             TipePendaftaran = a.TipePendaftaran,
                             TanggalLahir = a.TanggalLahir.HasValue ? a.TanggalLahir.Value.ToString("yyyy-MM-dd") : null,
-                            Umur = a.TanggalLahir.HasValue
-                                    ? (int?)(
-                                        DateTime.Today.Year - a.TanggalLahir.Value.Year -
-                                        (DateTime.Today < a.TanggalLahir.Value.AddYears(DateTime.Today.Year - a.TanggalLahir.Value.Year) ? 1 : 0)
-                                      )
-                                    : null,
-
+                            Umur = HitungUmurLengkap(a.TanggalLahir),
                             StatusPerkawinan = a.StatusPerkawinan,
                             AgamaId = a.AgamaId,
                             PendidikanTerakhirId = a.PendidikanTerakhirId,

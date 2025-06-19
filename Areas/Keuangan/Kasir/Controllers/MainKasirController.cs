@@ -50,6 +50,31 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
             _webHostEnvironment = webHostEnvironment;
         }
 
+        public static string HitungUmurLengkap(DateTime? tanggalLahir)
+        {
+            if (!tanggalLahir.HasValue) return "-";
+
+            var today = DateTime.Today;
+            int tahun = today.Year - tanggalLahir.Value.Year;
+            int bulan = today.Month - tanggalLahir.Value.Month;
+            int hari = today.Day - tanggalLahir.Value.Day;
+
+            if (hari < 0)
+            {
+                bulan--;
+                var prevMonth = today.AddMonths(-1);
+                hari += DateTime.DaysInMonth(prevMonth.Year, prevMonth.Month);
+            }
+
+            if (bulan < 0)
+            {
+                tahun--;
+                bulan += 12;
+            }
+
+            return $"{tahun} tahun {bulan} bulan {hari} hari";
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
         {
@@ -207,13 +232,10 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
                         firstItem.k.PasienId,
                         NoRM = firstItem.p?.NoRekamMedis ?? "-",
                         NamaPasien = firstItem.p?.NamaLengkap ?? "-",
-                        UmurPasien = firstItem.p?.TanggalLahir.HasValue == true
-                            ? (int?)((DateTime.Today.Year - firstItem.p.TanggalLahir.Value.Year) -
-                                    (DateTime.Today < firstItem.p.TanggalLahir.Value.AddYears(DateTime.Today.Year - firstItem.p.TanggalLahir.Value.Year) ? 1 : 0))
-                            : null,
+                        UmurPasien = HitungUmurLengkap(firstItem.p?.TanggalLahir),
                         JenisKelamin = firstItem.p?.JenisKelamin,
                         AsuransiId = firstItem.k.AsuransiId,
-                        NamaPerusahaan = firstItem.a?.NamaAsuransi ?? "Tunai", // NamaAsuransi akan null jika tidak ada asuransi
+                        NamaPerusahaan = firstItem.a?.NamaAsuransi ?? null, // NamaAsuransi akan null jika tidak ada asuransi
                         NoPolis = firstItem.ap?.NoPolis ?? "-",
                         DokterId = firstItem.k.DokterId,
                         NamaDokter = firstItem.d?.NmDokter ?? "-",
@@ -396,13 +418,10 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
                         firstItem.k.PasienId,
                         NoRM = firstItem.p?.NoRekamMedis ?? "-",
                         NamaPasien = firstItem.p?.NamaLengkap ?? "-",
-                        UmurPasien = firstItem.p?.TanggalLahir.HasValue == true
-                            ? (int?)((DateTime.Today.Year - firstItem.p.TanggalLahir.Value.Year) -
-                                    (DateTime.Today < firstItem.p.TanggalLahir.Value.AddYears(DateTime.Today.Year - firstItem.p.TanggalLahir.Value.Year) ? 1 : 0))
-                            : null,
+                        UmurPasien = HitungUmurLengkap(firstItem.p?.TanggalLahir),
                         JenisKelamin = firstItem.p?.JenisKelamin,
                         AsuransiId = firstItem.k.AsuransiId,
-                        NamaPerusahaan = firstItem.a?.NamaAsuransi ?? "Tunai", // NamaAsuransi akan null jika tidak ada asuransi
+                        NamaPerusahaan = firstItem.a?.NamaAsuransi ?? null, // NamaAsuransi akan null jika tidak ada asuransi
                         NoPolis = firstItem.ap?.NoPolis ?? "-",
                         DokterId = firstItem.k.DokterId,
                         NamaDokter = firstItem.d?.NmDokter ?? "-",
