@@ -75,7 +75,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<DetailICD> DetailICDs { get; set; }
         public DbSet<Resep> Reseps { get; set; }
         public DbSet<ResepTemplate> ResepTemplates { get; set; }
-        public DbSet<DetailResep> DetailReseps { get; set; }
+        public DbSet<ResepDetail> DetailReseps { get; set; }
         public DbSet<Kelas> Kelass { get; set; }
         public DbSet<TarifKelas> TarifKelass { get; set; } 
         public DbSet<CoveranTindakanAsuransi> CoveranTindakanAsuransis { get; set; }

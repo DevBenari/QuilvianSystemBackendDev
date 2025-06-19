@@ -4,8 +4,8 @@ using QuilvianSystemBackendDev.Models;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
 {
-    [Table("MstDetailResep", Schema = "public")]
-    public class DetailResep : UserActivity
+    [Table("MstResepDetail", Schema = "public")]
+    public class ResepDetail : UserActivity
     {
         [Key]
         public Guid DetailResepId { get; set; }
@@ -19,6 +19,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? InteraturObat { get; set; }
         public string? JenisObat { get; set; }
         public decimal? HargaObat { get; set; }
+        public decimal? TotalHargaObat { get; set; }
         public bool? StatusCoverObat { get; set; } = false;
     }
 }

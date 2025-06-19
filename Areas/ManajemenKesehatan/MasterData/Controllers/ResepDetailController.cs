@@ -20,20 +20,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class DetailResepController : Controller
+    public class ResepDetailController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<DetailResepController> _logger;
+        private readonly ILogger<ResepDetailController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public DetailResepController(
+        public ResepDetailController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<DetailResepController> logger,
+            ILogger<ResepDetailController> logger,
             IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
@@ -71,6 +71,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              a.InteraturObat,
                              a.JenisObat,
                              a.HargaObat,
+                             a.TotalHargaObat,
                              a.StatusCoverObat
                          }).OrderByDescending(a => a.CreateDateTime);
 
@@ -162,7 +163,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 //}
 
                 // **Buat Data Baru**
-                var data = new DetailResep
+                var data = new ResepDetail
                 {
                     DetailResepId = Guid.NewGuid(),
                     ResepId = vm.ResepId,
@@ -175,6 +176,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     InteraturObat = vm.InteraturObat,
                     JenisObat = vm.JenisObat,
                     HargaObat = vm.HargaObat,
+                    TotalHargaObat = vm.Qty.HasValue && vm.HargaObat.HasValue ? vm.Qty.Value * vm.HargaObat.Value : 0,
                     StatusCoverObat = vm.StatusCoverObat,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
@@ -252,6 +254,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.InteraturObat = vm.InteraturObat;
                 data.JenisObat = vm.JenisObat;
                 data.HargaObat = vm.HargaObat;
+                data.TotalHargaObat = vm.Qty.HasValue && vm.HargaObat.HasValue ? vm.Qty.Value * vm.HargaObat.Value : 0;
                 data.StatusCoverObat = vm.StatusCoverObat;
 
                 data.UpdateBy = userActiveId;

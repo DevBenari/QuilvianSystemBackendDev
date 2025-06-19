@@ -243,7 +243,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     StatusPembuatanResep = vm.StatusPembuatanResep,
                     StatusPengambilan = false, // Jika StatusPengambilan adalah null, gunakan false sebagai default
                     IsCancelled =  false, // Jika IsCanceled adalah null, gunakan false sebagai default
-                    IsLunas = vm.IsLunas,
+                    IsLunas = false,
                     TanggalPembuatanResep = vm.TanggalPembuatanResep ?? DateOnly.FromDateTime(DateTime.UtcNow), // Jika TanggalPembuatanResep adalah null, gunakan tanggal saat ini
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
@@ -253,7 +253,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 if (vm.DaftarObat != null && vm.DaftarObat.Any())
                 {
-                    var daftarobat = vm.DaftarObat.Select(obat => new DetailResep
+                    var daftarobat = vm.DaftarObat.Select(obat => new ResepDetail
                     {
                         DetailResepId = Guid.NewGuid(),
                         ResepId = resep.ResepId,
@@ -262,6 +262,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         Signa = obat.Signa,
                         SignaTambahan = obat.SignaTambahan,
                         HargaObat = obat.HargaObat,
+                        TotalHargaObat = obat.HargaObat * (obat.Qty ?? 0), // Menghitung total harga obat
                         StatusCoverObat = obat.StatusCoverObat,
                         InteraturObat = obat.InteraturObat,
                         CreateBy = userActiveId,
@@ -495,7 +496,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         else
                         {
                             // **Insert new**
-                            var newDetail = new DetailResep
+                            var newDetail = new ResepDetail
                             {
                                 DetailResepId = Guid.NewGuid(),
                                 ResepId = data.ResepId,
@@ -503,6 +504,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 Qty = obat.Qty,
                                 Signa = obat.Signa,
                                 HargaObat = obat.HargaObat,
+                                TotalHargaObat = obat.HargaObat * (obat.Qty ?? 0), // Menghitung total harga obat
                                 StatusCoverObat = obat.StatusCoverObat,
                                 SignaTambahan = obat.SignaTambahan,
                                 InteraturObat = obat.InteraturObat,

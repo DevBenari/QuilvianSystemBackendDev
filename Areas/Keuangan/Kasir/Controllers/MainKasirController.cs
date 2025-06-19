@@ -239,10 +239,8 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
                                 NamaObat = x.o.ObatName,
                                 x.dr.Qty,
                                 HargaObat = x.o.HargaJual,
-                                StatusCoverObat = (x.dr != null && x.o != null && firstItem.a != null)
-                                    ? _applicationDbContext.ObatAsuransis.Any(y => y.ObatId == x.o.ObatId && y.AsuransiId == firstItem.a.AsuransiId)
-                                    : false,
-                                TotalBiayaObat = x.dr.Qty * x.o.HargaJual
+                                StatusCoverObat = x.dr?.StatusCoverObat ?? false,
+                                TotalBiayaObat = x.dr?.TotalHargaObat ?? (x.dr?.Qty * x.o.HargaJual) // Hitung total jika tidak ada TotalHargaObat
                             }).Distinct().ToList(), // Gunakan Distinct untuk menghindari duplikasi dalam daftar obat
 
                         DaftarTindakan = group
