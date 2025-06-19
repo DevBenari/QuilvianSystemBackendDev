@@ -92,7 +92,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     a.Kontraindikasi,
                     a.CaraKerja,
                     a.InteraksiObat,
-                    a.Dosis
+                    a.Dosis,
+                    a.JumlahSatuan,
                 }).OrderByDescending(a => a.CreateDateTime);
 
             var totalRows = await query.CountAsync();
@@ -222,6 +223,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     CaraKerja = vm.CaraKerja,
                     InteraksiObat = vm.InteraksiObat,
                     Dosis = vm.Dosis,
+                    JumlahSatuan = vm.JumlahSatuan,
                     Note = vm.Note
                 };
 
@@ -296,7 +298,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.Stock = vm.Stock;
                 data.IsActive = vm.IsActive;
                 data.Note = vm.Note;
-
+                data.JumlahSatuan = vm.JumlahSatuan;
 
                 data.Minimal = vm.Minimal;  // Tambahkan properti baru
                 data.Maximal = vm.Maximal;
@@ -425,7 +427,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 a.Kontraindikasi,
                                 a.CaraKerja,
                                 a.InteraksiObat,
-                                a.Dosis
+                                a.Dosis,
+                                a.JumlahSatuan,
                             };
 
                 if (!string.IsNullOrWhiteSpace(search))
