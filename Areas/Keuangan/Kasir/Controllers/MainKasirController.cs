@@ -340,13 +340,6 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
-                // cek validasi diskon
-                var datadiskon = await _applicationDbContext.Diskons.FirstOrDefaultAsync(d => d.DiskonId == vm.DiskonId);
-                if (datadiskon == null)
-                {
-                    return NotFound(new { message = "Diskon tidak ditemukan." });
-                }
-
                 // cek validasi kunjungan id
                 var datakunjungan = await _applicationDbContext.Kunjungans
                     .FirstOrDefaultAsync(k => k.KunjunganID == vm.KunjunganId && !k.IsDelete);
