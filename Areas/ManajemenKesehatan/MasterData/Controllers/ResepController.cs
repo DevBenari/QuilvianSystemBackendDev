@@ -241,8 +241,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     AntrianResep = nextAntrian,
                     AntrianRegistrasi = antrian,
                     StatusPembuatanResep = vm.StatusPembuatanResep,
-                    //StatusPengambilan = vm.StatusPengambilan ?? false, // Jika StatusPengambilan adalah null, gunakan false sebagai default
-                    //IsCanceled = vm.IsCanceled ?? false, // Jika IsCanceled adalah null, gunakan false sebagai default
+                    StatusPengambilan = false, // Jika StatusPengambilan adalah null, gunakan false sebagai default
+                    IsCancelled =  false, // Jika IsCanceled adalah null, gunakan false sebagai default
                     IsLunas = vm.IsLunas,
                     TanggalPembuatanResep = vm.TanggalPembuatanResep ?? DateOnly.FromDateTime(DateTime.UtcNow), // Jika TanggalPembuatanResep adalah null, gunakan tanggal saat ini
                     CreateBy = userActiveId,
@@ -261,6 +261,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         Qty = obat.Qty,
                         Signa = obat.Signa,
                         SignaTambahan = obat.SignaTambahan,
+                        HargaObat = obat.HargaObat,
+                        StatusCoverObat = obat.StatusCoverObat,
                         InteraturObat = obat.InteraturObat,
                         CreateBy = userActiveId,
                         CreateDateTime = DateTimeOffset.UtcNow,
@@ -378,6 +380,29 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             return Ok(new { message = "Status isFinished berhasil diperbarui." });
         }
 
+        [HttpPut("{id}/Resep-is-Lunas")]
+        public async Task<IActionResult> UpdateIsLunas(Guid id, [FromBody] IsLunasResepViewModel request)
+        {
+            var data = await _applicationDbContext.Reseps.FindAsync(id);
+            if (data == null)
+                return NotFound(new { message = "Resep tidak ditemukan." });
+
+            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(EmailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var userId = user?.UserActiveId ?? Guid.Empty;
+
+            data.IsLunas = request.IsLunas;
+            data.UpdateDateTime = DateTimeOffset.UtcNow;
+            data.UpdateBy = userId;
+
+            await _applicationDbContext.SaveChangesAsync();
+
+            return Ok(new { message = "Status isFinished berhasil diperbarui." });
+        }
+
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateResep(Guid id, [FromBody] ResepViewModel vm)
         {
@@ -422,8 +447,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.DokterId = vm.DokterId;
                 data.NamaDokter = vm.NamaDokter;
                 data.StatusPembuatanResep = vm.StatusPembuatanResep;
-                //data.StatusPengambilan = vm.StatusPengambilan ?? false; // Jika StatusPengambilan adalah null, gunakan false sebagai default
-                data.IsLunas = vm.IsLunas;
                 data.TanggalPembuatanResep = vm.TanggalPembuatanResep;
 
                 data.UpdateBy = userActiveId;
@@ -479,8 +502,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 ObatId = obat.ObatId,
                                 Qty = obat.Qty,
                                 Signa = obat.Signa,
+                                HargaObat = obat.HargaObat,
+                                StatusCoverObat = obat.StatusCoverObat,
                                 SignaTambahan = obat.SignaTambahan,
                                 InteraturObat = obat.InteraturObat,
+
                                 CreateBy = userActiveId,
                                 CreateDateTime = DateTimeOffset.UtcNow,
                             };
