@@ -159,12 +159,28 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet("pasien/{pasienid}")]
-        public async Task<IActionResult> GetByPasienId(Guid pasienId)
+        public async Task<IActionResult> GetByPasienId(Guid pasienid)
         {
-            var listdata = _applicationDbContext.SOAPs
-                .FirstOrDefault(x => x.KunjunganId == pasienId);
+            var listdata = from s in _applicationDbContext.SOAPs
+                           join k in _applicationDbContext.Kunjungans.DefaultIfEmpty()
+                               on s.KunjunganId equals k.KunjunganID
+                           where k.PasienId == pasienid
+                           select new
+                           {
+                               s.SOAPID,
+                               s.KunjunganId,
+                               s.Subjective,
+                               s.Objective ,
+                               Assesment = s.Assessment != null ? s.Assessment.Split(new[] { ',' }, StringSplitOptions.None).ToList() : new List<string>(),
+                               s.Planning,
+                               s.Profesi,
+                               s.CreateBy,
+                               s.CreateDateTime
+                           };
 
-            if (listdata == null)
+            var result = await listdata.ToListAsync();
+
+            if (!result.Any())
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
             }
@@ -172,19 +188,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             return Ok(new
             {
                 message = "Ditemukan || 200 OK",
-                data = new 
-                {
-                    listdata.SOAPID,
-                    listdata.KunjunganId,
-                    listdata.Subjective,
-                    listdata.Objective,
-                    Assesment  = listdata.Assessment?.Split(',').ToList(),
-                    listdata.Planning,
-                    listdata.Profesi,
-                    listdata.CreateBy,
-                    listdata.CreateDateTime
-
-                }
+                data = result
             });
         }
 
