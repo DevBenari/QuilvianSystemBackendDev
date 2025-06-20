@@ -660,9 +660,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 query = query.Where(u => u.IsScreening == isScreening.Value);
             }
 
+            // ✅ Filter berdasarkan isFinished jika diberikan
             if (TipePasien.HasValue)
             {
                 query = query.Where(u => u.TipePasien == TipePasien.Value.ToString());
+            }
+
+            // ✅ Filter berdasarkan isFinished jika diberikan
+            if (isFinishedKasir.HasValue)
+            {
+                query = query.Where(u => u.IsFinishedKasir == isFinishedKasir.Value);
             }
 
 
