@@ -72,7 +72,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              a.JenisObat,
                              a.HargaObat,
                              a.TotalHargaObat,
-                             a.StatusCoverObat
+                             a.StatusCoverObat,
+                             a.IsRacikan,
+                             a.RacikanId
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -124,7 +126,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] DetailResepViewModel vm)
+        public async Task<IActionResult> Create([FromBody] ResepDetailViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -178,6 +180,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     HargaObat = vm.HargaObat,
                     TotalHargaObat = vm.Qty.HasValue && vm.HargaObat.HasValue ? vm.Qty.Value * vm.HargaObat.Value : 0,
                     StatusCoverObat = vm.StatusCoverObat,
+                    IsRacikan = vm.IsRacikan, // Tambahkan properti IsRacikan jika diperlukan
+                    RacikanId = vm.RacikanId, // Tambahkan properti RacikanId jika diperlukan
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
@@ -206,7 +210,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] DetailResepViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] ResepDetailViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -256,6 +260,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.HargaObat = vm.HargaObat;
                 data.TotalHargaObat = vm.Qty.HasValue && vm.HargaObat.HasValue ? vm.Qty.Value * vm.HargaObat.Value : 0;
                 data.StatusCoverObat = vm.StatusCoverObat;
+                data.IsRacikan = vm.IsRacikan; // Update properti IsRacikan jika diperlukan
+                data.RacikanId = vm.RacikanId; // Update properti RacikanId jika diperlukan
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -377,7 +383,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              a.InteraturObat,
                              a.JenisObat,
                              a.HargaObat,
-                             a.StatusCoverObat
+                             a.StatusCoverObat,
+                             a.TotalHargaObat,
+                             a.IsRacikan,
+                             a.RacikanId
                          });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**

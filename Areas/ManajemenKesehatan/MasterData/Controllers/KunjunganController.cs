@@ -580,10 +580,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? startDate = null,
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? endDate = null,
         [FromQuery] PeriodeFilter? periode = null,
-        [FromQuery] bool? isFinished = null, // ✅ ditambahkan di sini
-        [FromQuery] bool? isScreening = null, // ✅ ditambahkan di sini
+        [FromQuery] bool? isFinished = null, 
+        [FromQuery] bool? isScreening = null, 
         [FromQuery] bool? isPresent = null,
-        [FromQuery] TipePasienFilter? TipePasien = null// ✅ ditambahkan di sini
+        [FromQuery] bool? isFinishedKasir = null,
+        [FromQuery] TipePasienFilter? TipePasien = null
         )
 
         {

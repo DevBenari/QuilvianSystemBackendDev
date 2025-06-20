@@ -1,6 +1,6 @@
 ﻿namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels
 {
-    public class DetailResepViewModel
+    public class ResepDetailViewModel
     {
         public Guid? ResepId { get; set; }
         public Guid? AsuransiId { get; set; }
@@ -13,5 +13,7 @@
         public string? JenisObat { get; set; }
         public decimal? HargaObat { get; set; }
         public bool? StatusCoverObat { get; set; } = false;
+        public Guid? RacikanId { get; set; }
+        public string? IsRacikan { get; set; } // "Ya" or "Tidak"
     }
 }

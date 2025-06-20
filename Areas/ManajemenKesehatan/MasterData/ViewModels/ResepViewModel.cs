@@ -5,7 +5,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
     public class ResepViewModel
     {
         public Guid? KunjunganId { get; set; }
-        public List<DetailResepViewModel>? DaftarObat { get; set; }
+        public List<ResepDetailViewModel>? DaftarObat { get; set; }
         public Guid? AsuransiId { get; set; }
         public string? NamaAsuransi { get; set; }
         public Guid? PasienId { get; set; }
@@ -18,6 +18,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
         public string? AntrianRegistrasi { get; set; }
         public string? StatusPembuatanResep { get; set; }
         public bool? IsLunas { get; set; }
+        public Guid? RacikanId { get; set; }
+        public string? IsRacikan { get; set; } // "Ya" or "Tidak"
         public DateOnly? TanggalPembuatanResep { get; set; }
     }
 }

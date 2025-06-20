@@ -11,6 +11,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public Guid DetailResepId { get; set; }
         public Guid? ResepId { get; set; }
         public Guid? AsuransiId { get; set; }
+        public Guid? RacikanId { get; set; }
+        public string? IsRacikan { get; set; } // "Ya" or "Tidak"
         public string? NamaAsuransi { get; set; }
         public Guid? ObatId { get; set; }
         public int? Qty { get; set; }
