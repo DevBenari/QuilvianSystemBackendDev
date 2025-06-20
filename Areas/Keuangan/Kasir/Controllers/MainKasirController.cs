@@ -195,7 +195,7 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
                  join mp in _applicationDbContext.MetodePembayarans on kasir.MetodePembayaranId equals mp.MetodePembayaranId into metodeGroup
                  from mp in metodeGroup.DefaultIfEmpty() 
 
-                 where k.KunjunganID == kunjunganId && !k.IsDelete
+                 where k.KunjunganID == kunjunganId && !k.IsDelete 
                  select new
                  {
                      k,
@@ -247,6 +247,8 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
                         PaymentMethodName = firstItem.mp?.NamaMetode ?? "-",
                         DiskonId = firstItem.dsk?.DiskonId,
                         NamaDiskon = firstItem.dsk?.NamaDiskon ?? "-",
+                        IsFinishedKasir = firstItem.k?.IsFinishedKasir,
+
                         CreateBy = firstItem.kasir?.CreateBy,
                         CreateDateTime = firstItem.kasir?.CreateDateTime,
 
@@ -433,6 +435,8 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
                         PaymentMethodName = firstItem.mp?.NamaMetode ?? "-",
                         DiskonId = firstItem.dsk?.DiskonId,
                         NamaDiskon = firstItem.dsk?.NamaDiskon ?? "-",
+                        IsFinishedKasir = firstItem.k?.IsFinishedKasir,
+
                         CreateBy = firstItem.kasir?.CreateBy,
                         CreateDateTime = firstItem.kasir?.CreateDateTime,
 
