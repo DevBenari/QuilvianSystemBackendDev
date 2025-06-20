@@ -224,7 +224,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var today = DateTime.UtcNow.Date;
 
                 var lastResep = await _applicationDbContext.Reseps
-                    .Where(r => r.KunjunganId == vm.KunjunganId && r.CreateDateTime.Date == today)
+                    .Where(r => r.CreateDateTime.Date == today)
                     .OrderByDescending(r => r.AntrianResep)
                     .FirstOrDefaultAsync();
 
