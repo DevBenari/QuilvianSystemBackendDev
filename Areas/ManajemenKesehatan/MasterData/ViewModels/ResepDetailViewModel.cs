@@ -9,7 +9,6 @@
         public int? Qty { get; set; }
         public string? Signa { get; set; }
         public string? SignaTambahan { get; set; }
-        public string? InteraturObat { get; set; }
         public string? JenisObat { get; set; }
         public decimal? HargaObat { get; set; }
         public bool? StatusCoverObat { get; set; } = false;

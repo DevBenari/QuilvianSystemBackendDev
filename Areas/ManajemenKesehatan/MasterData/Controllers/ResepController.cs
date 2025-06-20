@@ -76,7 +76,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              r.StatusPengambilan,
                              r.IsCancelled,
                              r.IsLunas,
+                             r.IsExternal,
                              r.TanggalPembuatanResep,
+                             r.InteraturObat,
                              CreateByName = u.FullName,
                              DaftarObat = (from d in _applicationDbContext.DetailReseps
                                            join o in _applicationDbContext.Obats // Asumsi nama tabel obat adalah MasterObat
@@ -91,7 +93,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                                d.Qty,
                                                d.Signa,
                                                d.SignaTambahan,
-                                               d.InteraturObat,
                                                d.CreateBy,
                                                d.CreateDateTime,
                                            }).ToList()
@@ -147,13 +148,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                    d.Qty,
                                    d.Signa,
                                    d.SignaTambahan,
-                                   d.InteraturObat,
                                    d.HargaObat,
                                    d.TotalHargaObat,
                                    d.StatusCoverObat,
                                    d.RacikanId,
                                    d.IsRacikan,
-
                                    d.CreateBy,
                                    d.CreateDateTime,
                                }).ToListAsync();
@@ -175,6 +174,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 resep.StatusPembuatanResep,
                 resep.StatusPengambilan,
                 resep.IsCancelled,
+                resep.IsLunas,
+                resep.IsExternal,
+                resep.InteraturObat,
                 resep.TanggalPembuatanResep,
                 DetailObatResep = obatDetails
             };
@@ -250,6 +252,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     StatusPengambilan = false, // Jika StatusPengambilan adalah null, gunakan false sebagai default
                     IsCancelled =  false, // Jika IsCanceled adalah null, gunakan false sebagai default
                     IsLunas = false,
+                    IsExternal = vm.IsExternal ?? false, // Jika IsExternal adalah null, gunakan false sebagai default
+                    InteraturObat = vm.InteraturObat ?? 0, // Jika InteraturObat adalah null, gunakan 0 sebagai default
                     TanggalPembuatanResep = vm.TanggalPembuatanResep ?? DateOnly.FromDateTime(DateTime.UtcNow), // Jika TanggalPembuatanResep adalah null, gunakan tanggal saat ini
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
@@ -270,7 +274,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         HargaObat = obat.HargaObat,
                         TotalHargaObat = obat.HargaObat * (obat.Qty ?? 0), // Menghitung total harga obat
                         StatusCoverObat = obat.StatusCoverObat,
-                        InteraturObat = obat.InteraturObat,
                         JenisObat = obat.JenisObat,
                         RacikanId = obat.RacikanId,
                         IsRacikan = obat.IsRacikan,
@@ -458,6 +461,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.NamaDokter = vm.NamaDokter;
                 data.StatusPembuatanResep = vm.StatusPembuatanResep;
                 data.TanggalPembuatanResep = vm.TanggalPembuatanResep;
+                data.IsExternal = vm.IsExternal ?? false; // Jika IsExternal adalah null, gunakan false sebagai default
+                data.InteraturObat = vm.InteraturObat;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -496,7 +501,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             existingDetail.Qty = obat.Qty;
                             existingDetail.Signa = obat.Signa;
                             existingDetail.SignaTambahan = obat.SignaTambahan;
-                            existingDetail.InteraturObat = obat.InteraturObat;
                             existingDetail.UpdateBy = userActiveId;
                             existingDetail.UpdateDateTime = DateTimeOffset.UtcNow;
 
@@ -516,7 +520,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 TotalHargaObat = obat.HargaObat * (obat.Qty ?? 0), // Menghitung total harga obat
                                 StatusCoverObat = obat.StatusCoverObat,
                                 SignaTambahan = obat.SignaTambahan,
-                                InteraturObat = obat.InteraturObat,
                                 JenisObat = obat.JenisObat,
                                 RacikanId = obat.RacikanId,
                                 IsRacikan = obat.IsRacikan,
@@ -655,7 +658,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             r.StatusPengambilan,
                             r.IsCancelled,
                             r.IsLunas,
+                            r.IsExternal,
                             r.TanggalPembuatanResep,
+                            r.InteraturObat,
                             DaftarObat = (from d in _applicationDbContext.DetailReseps
                                           join o in _applicationDbContext.Obats // Asumsi nama tabel obat adalah MasterObat
                                               on d.ObatId equals o.ObatId // Asumsi primary key tabel obat adalah ObatId
@@ -669,7 +674,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                               d.Qty,
                                               d.Signa,
                                               d.SignaTambahan,
-                                              d.InteraturObat,
                                               d.JenisObat,
                                               d.HargaObat,
                                               d.TotalHargaObat,

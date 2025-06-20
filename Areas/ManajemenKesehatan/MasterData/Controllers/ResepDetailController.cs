@@ -68,7 +68,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              a.Qty,
                              a.Signa,
                              a.SignaTambahan,
-                             a.InteraturObat,
                              a.JenisObat,
                              a.HargaObat,
                              a.TotalHargaObat,
@@ -175,7 +174,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     Qty = vm.Qty,
                     Signa = vm.Signa,
                     SignaTambahan = vm.SignaTambahan,
-                    InteraturObat = vm.InteraturObat,
                     JenisObat = vm.JenisObat,
                     HargaObat = vm.HargaObat,
                     TotalHargaObat = vm.Qty.HasValue && vm.HargaObat.HasValue ? vm.Qty.Value * vm.HargaObat.Value : 0,
@@ -255,7 +253,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.Qty = vm.Qty;
                 data.Signa = vm.Signa;
                 data.SignaTambahan = vm.SignaTambahan;
-                data.InteraturObat = vm.InteraturObat;
                 data.JenisObat = vm.JenisObat;
                 data.HargaObat = vm.HargaObat;
                 data.TotalHargaObat = vm.Qty.HasValue && vm.HargaObat.HasValue ? vm.Qty.Value * vm.HargaObat.Value : 0;
@@ -380,7 +377,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              a.Qty,
                              a.Signa,
                              a.SignaTambahan,
-                             a.InteraturObat,
                              a.JenisObat,
                              a.HargaObat,
                              a.StatusCoverObat,
