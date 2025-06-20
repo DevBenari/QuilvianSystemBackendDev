@@ -185,6 +185,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.IsFinished,
                             a.IsScreening,
                             a.IsPresent,
+                            a.IsFinishedKasir, 
                             a.Antrian,
                             d.NmDokter,
                             gambardokter = !string.IsNullOrEmpty(d.FotoName)
@@ -291,6 +292,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     IsDelete = false,
                     IsScreening = false,
                     IsPresent = true,
+                    IsFinishedKasir = false, // Default value
                     Antrian = nomorAntrianFormatted   // Format akhir: BU001
                 };
 
@@ -507,6 +509,29 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             return Ok(new { message = "Status IsScreening berhasil diperbarui." });
         }
 
+        [HttpPut("{id}/is-finishedKasir")]
+        public async Task<IActionResult> UpdateIsFinishedKasir(Guid id, [FromBody] UpdateIsFinishedKasirViewModel request)
+        {
+            var kunjungan = await _applicationDbContext.Kunjungans.FindAsync(id);
+            if (kunjungan == null)
+                return NotFound(new { message = "Kunjungan tidak ditemukan." });
+
+            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(EmailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var userId = user?.UserActiveId ?? Guid.Empty;
+
+            kunjungan.IsFinishedKasir = request.IsFinishedKasir;
+            kunjungan.UpdateDateTime = DateTimeOffset.UtcNow;
+            kunjungan.UpdateBy = userId;
+
+            await _applicationDbContext.SaveChangesAsync();
+
+            return Ok(new { message = "Status IsScreening berhasil diperbarui." });
+        }
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
@@ -605,6 +630,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.IsScreening,
                             a.IsPresent,
                             a.Antrian,
+                            a.IsFinishedKasir,
                             d.NmDokter,
                             gambardokter = !string.IsNullOrEmpty(d.FotoName)
                                 ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"

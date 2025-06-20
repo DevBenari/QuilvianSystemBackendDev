@@ -21,6 +21,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? Antrian {  get; set; }
         public bool? IsScreening { get; set; }
         public bool? IsPresent { get; set; }
+        public bool? IsFinishedKasir { get; set; } 
     }
 
 }
