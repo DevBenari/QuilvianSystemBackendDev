@@ -259,6 +259,7 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
                                 x.r.ResepId, // ResepId dari resep utama
                                 x.dr.DetailResepId,
                                 x.dr.ObatId,
+                                InteraturObat = x.r?.InteraturObat,
                                 NamaObat = x.o.ObatName,
                                 x.dr.Qty,
                                 HargaObat = x.o.HargaJual,
@@ -447,6 +448,7 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
                                 x.r.ResepId, // ResepId dari resep utama
                                 x.dr.DetailResepId,
                                 x.dr.ObatId,
+                                InteraturObat = x.r?.InteraturObat,
                                 NamaObat = x.o.ObatName,
                                 x.dr.Qty,
                                 HargaObat = x.o.HargaJual,
