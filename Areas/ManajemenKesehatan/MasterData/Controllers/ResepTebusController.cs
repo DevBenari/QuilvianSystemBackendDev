@@ -1,18 +1,18 @@
-﻿using System.Data;
-using System.Linq;
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers;
+using QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Models;
+using QuilvianSystemBackendDev.Areas.Keuangan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
-using SkiaSharp;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
@@ -20,21 +20,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class ResepController : Controller
+    public class ResepTebusController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<ResepController> _logger;
+        private readonly ILogger<ResepTebusController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-
-        public ResepController(
+        public ResepTebusController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<ResepController> logger,
+            ILogger<ResepTebusController> logger,
             IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
@@ -45,58 +44,51 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAllResep(int page = 1, int perPage = 10)
+        public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
         {
             // Validasi agar page dan perPage minimal bernilai 1
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
             // Query utama
-            var query = (from r in _applicationDbContext.Reseps
+            var query = (from r in _applicationDbContext.ResepTebuss
                          join u in _applicationDbContext.UserActives
                              on r.CreateBy equals u.UserActiveId
                          where r.IsDelete == false // jika ada field IsDelete
                          select new
                          {
-                             ResepId = r.ResepId,
-                             KunjunganId = r.KunjunganId,
+                             ResepTebusId = r.ResepTebusId,
                              CreateDateTime = r.CreateDateTime,
                              CreateBy = r.CreateBy,
-                             r.AntrianRegistrasi,
+                             CreateByName = u.FullName,
                              r.AntrianResep,
-                             r.AsuransiId,
-                             r.NamaAsuransi,
-                             r.PasienId,
-                             r.NamaPasien,
-                             r.PoliklinikId,
-                             r.NamaPoliklinik,
-                             r.DokterId,
-                             r.NamaDokter,
                              r.StatusPembuatanResep,
                              r.StatusPengambilan,
                              r.IsCancelled,
                              r.IsLunas,
-                             r.IsExternal,
                              r.TanggalPembuatanResep,
-                             r.InteraturObat,
-                             CreateByName = u.FullName,
-                             DaftarObat = (from d in _applicationDbContext.DetailReseps
+                             DaftarObat = (from d in _applicationDbContext.ResepTebusDetails
                                            join o in _applicationDbContext.Obats // Asumsi nama tabel obat adalah MasterObat
                                                on d.ObatId equals o.ObatId // Asumsi primary key tabel obat adalah ObatId
-                                           where d.ResepId == r.ResepId
+                                           where d.ResepTebusId == r.ResepTebusId
                                            select new
                                            {
-                                               d.DetailResepId,
-                                               d.ResepId,
+                                               d.ResepTebusDetailId,
+                                               d.ResepTebusId,
                                                d.ObatId,
                                                o.ObatName, // Menambahkan NamaObat dari tabel MasterObat
                                                d.Qty,
                                                d.Signa,
                                                d.SignaTambahan,
+                                               d.HargaObat,
+                                               d.IsRacikan,
                                                d.CreateBy,
                                                d.CreateDateTime,
                                            }).ToList()
                          }).OrderByDescending(a => a.CreateDateTime);
+
+            // Sorting
+            query = query.OrderByDescending(a => a.CreateDateTime); // Fix: Ensure OrderByDescending is applied to IQueryable
 
             // Hitung total data sebelum paginasi
             var totalRows = query.Count();
@@ -131,27 +123,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet("{id}")]
         public async Task<IActionResult> GetResepById(Guid id)
         {
-            var resep = await _applicationDbContext.Reseps.FirstOrDefaultAsync(r => r.ResepId == id);
+            var resep = await _applicationDbContext.ResepTebuss.FirstOrDefaultAsync(r => r.ResepTebusId == id);
             if (resep == null)
                 return NotFound(new { message = "Resep tidak ditemukan!" });
 
-            var obatDetails = (from d in _applicationDbContext.DetailReseps
+            var obatDetails = (from d in _applicationDbContext.ResepTebusDetails
                                join o in _applicationDbContext.Obats // Asumsi nama tabel obat adalah MasterObat
                                    on d.ObatId equals o.ObatId // Asumsi primary key tabel obat adalah ObatId
-                               where d.ResepId == id
+                               where d.ResepTebusId == id
                                select new
                                {
-                                   d.DetailResepId,
-                                   d.ResepId,
+                                   d.ResepTebusDetailId,
+                                   d.ResepTebusId,
                                    d.ObatId,
                                    o.ObatName, // Menambahkan NamaObat dari tabel MasterObat
                                    d.Qty,
                                    d.Signa,
                                    d.SignaTambahan,
                                    d.HargaObat,
-                                   d.TotalHargaObat,
-                                   d.StatusCoverObat,
-                                   d.RacikanId,
                                    d.IsRacikan,
                                    d.CreateBy,
                                    d.CreateDateTime,
@@ -159,24 +148,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
             var result = new
             {
-                ResepId = resep.ResepId,
-                KunjunganId = resep.KunjunganId,
-                resep.AsuransiId,
-                resep.NamaAsuransi,
-                resep.PasienId,
-                resep.NamaPasien,
-                resep.PoliklinikId,
-                resep.NamaPoliklinik,
-                resep.DokterId,
-                resep.NamaDokter,
+                ResepTebusId = resep.ResepTebusId,
                 resep.AntrianResep,
-                resep.AntrianRegistrasi,
                 resep.StatusPembuatanResep,
                 resep.StatusPengambilan,
                 resep.IsCancelled,
                 resep.IsLunas,
-                resep.IsExternal,
-                resep.InteraturObat,
                 resep.TanggalPembuatanResep,
                 DetailObatResep = obatDetails
             };
@@ -185,10 +162,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateResep([FromBody] ResepViewModel vm)
+        public async Task<IActionResult> Create([FromBody] ResepTebusViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
-                return BadRequest(new { message = "Data tidak valid!" });
+            {
+                return BadRequest(new { message = "Data tidak valid." });
+            }
 
             try
             {
@@ -212,74 +191,52 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
-                // get nomor antrian kunjungan
-                var kunjungan = await _applicationDbContext.Kunjungans
-                            .Where(k => k.KunjunganID == vm.KunjunganId)
-                            .FirstOrDefaultAsync();
-                if (kunjungan == null)
-                {
-                    return NotFound(new { message = "Data antrian kunjungan tidak ditemukan." });
-                }
-                string antrian = kunjungan.Antrian;
-
-                // Buat nomor antrean resep
-                var today = DateTime.UtcNow.Date;
+                // buat antrean untuk resep tebusan
+                var today = DateTimeOffset.UtcNow.Date;
 
                 var lastResep = await _applicationDbContext.Reseps
                     .Where(r => r.CreateDateTime.Date == today)
                     .OrderByDescending(r => r.AntrianResep)
                     .FirstOrDefaultAsync();
-
                 int nextAntrian = (lastResep?.AntrianResep ?? 0) + 1;
 
-                var resep = new Resep
+                // **Buat Data Baru**
+                var data = new ResepTebus
                 {
-                    ResepId = Guid.NewGuid(),
-                    KunjunganId = vm.KunjunganId,
-                    AsuransiId = vm.AsuransiId,
-                    NamaAsuransi = vm.NamaAsuransi,
-                    PasienId = vm.PasienId,
-                    NamaPasien = vm.NamaPasien,
-                    PoliklinikId = vm.PoliklinikId,
-                    NamaPoliklinik = vm.NamaPoliklinik,
-                    DokterId = vm.DokterId,
-                    NamaDokter = vm.NamaDokter,
+                    ResepTebusId = Guid.NewGuid(),
                     AntrianResep = nextAntrian,
-                    AntrianRegistrasi = antrian,
                     StatusPembuatanResep = vm.StatusPembuatanResep,
-                    StatusPengambilan = false, // Jika StatusPengambilan adalah null, gunakan false sebagai default
-                    IsCancelled =  false, // Jika IsCanceled adalah null, gunakan false sebagai default
+                    StatusPengambilan = false,
+                    IsCancelled = false,
                     IsLunas = false,
-                    IsExternal = vm.IsExternal ?? false, // Jika IsExternal adalah null, gunakan false sebagai default
-                    InteraturObat = vm.InteraturObat ?? 0, // Jika InteraturObat adalah null, gunakan 0 sebagai default
-                    TanggalPembuatanResep = vm.TanggalPembuatanResep ?? DateOnly.FromDateTime(DateTime.UtcNow), // Jika TanggalPembuatanResep adalah null, gunakan tanggal saat ini
+                    TanggalPembuatanResep = vm.TanggalPembuatanResep ?? DateOnly.FromDateTime(DateTime.UtcNow),
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
 
-                _applicationDbContext.Reseps.Add(resep);
-
+                // **Simpan ke Database**
+                _applicationDbContext.ResepTebuss.Add(data);
                 if (vm.DaftarObat != null && vm.DaftarObat.Any())
                 {
-                    var daftarobat = vm.DaftarObat.Select(obat => new ResepDetail
+                    var daftarobat = vm.DaftarObat.Select(obat => new ResepTebusDetail
                     {
-                        DetailResepId = Guid.NewGuid(),
-                        ResepId = resep.ResepId,
+                        ResepTebusDetailId = Guid.NewGuid(),
+                        ResepTebusId = data.ResepTebusId,
                         ObatId = obat.ObatId,
                         Qty = obat.Qty,
                         Signa = obat.Signa,
                         SignaTambahan = obat.SignaTambahan,
                         HargaObat = obat.HargaObat,
-                        TotalHargaObat = obat.HargaObat * (obat.Qty ?? 0), // Menghitung total harga obat
-                        StatusCoverObat = obat.StatusCoverObat,
-                        JenisObat = obat.JenisObat,
-                        RacikanId = obat.RacikanId,
+                        //TotalHargaObat = obat.HargaObat * (obat.Qty ?? 0), // Menghitung total harga obat
+                        //StatusCoverObat = obat.StatusCoverObat,
+                        //JenisObat = obat.JenisObat,
+                        //RacikanId = obat.RacikanId,
                         IsRacikan = obat.IsRacikan,
                         CreateBy = userActiveId,
                         CreateDateTime = DateTimeOffset.UtcNow,
                     }).ToList();
 
-                    _applicationDbContext.DetailReseps.AddRange(daftarobat);
+                    _applicationDbContext.ResepTebusDetails.AddRange(daftarobat);
                     // **Pengurangan Stok untuk Obat**
                     foreach (var obat in vm.DaftarObat)
                     {
@@ -303,6 +260,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     }
                 }
                 int result = await _applicationDbContext.SaveChangesAsync();
+
                 if (result > 0)
                 {
                     return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
@@ -322,10 +280,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-        [HttpPut("{id}/is-cancelled")]
+        [HttpPut("{id}/ResepTebus-is-cancelled")]
         public async Task<IActionResult> UpdateIsFinished(Guid id, [FromBody] IsCancelledResepViewModel request)
         {
-            var data = await _applicationDbContext.Reseps.FindAsync(id);
+            var data = await _applicationDbContext.ResepTebuss.FindAsync(id);
             if (data == null)
                 return NotFound(new { message = "Resep tidak ditemukan." });
 
@@ -345,10 +303,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             return Ok(new { message = "Status isFinished berhasil diperbarui." });
         }
 
-        [HttpPut("{id}/is-taken")]
+        [HttpPut("{id}/ResepTebus-is-taken")]
         public async Task<IActionResult> UpdateStatusAmbilResep(Guid id, [FromBody] StatusPengambilanViewModel request)
         {
-            var data = await _applicationDbContext.Reseps.FindAsync(id);
+            var data = await _applicationDbContext.ResepTebuss.FindAsync(id);
             if (data == null)
                 return NotFound(new { message = "Resep tidak ditemukan." });
 
@@ -368,10 +326,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             return Ok(new { message = "Status isFinished berhasil diperbarui." });
         }
 
-        [HttpPut("{id}/StatusResep")]
+        [HttpPut("{id}/StatusResepTebus")]
         public async Task<IActionResult> UpdateStatusResep(Guid id, [FromBody] StatusResepViewModel request)
         {
-            var data = await _applicationDbContext.Reseps.FindAsync(id);
+            var data = await _applicationDbContext.ResepTebuss.FindAsync(id);
             if (data == null)
                 return NotFound(new { message = "Resep tidak ditemukan." });
 
@@ -391,10 +349,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             return Ok(new { message = "Status isFinished berhasil diperbarui." });
         }
 
-        [HttpPut("{id}/Resep-is-Lunas")]
+        [HttpPut("{id}/ResepTebus-is-Lunas")]
         public async Task<IActionResult> UpdateIsLunas(Guid id, [FromBody] IsLunasResepViewModel request)
         {
-            var data = await _applicationDbContext.Reseps.FindAsync(id);
+            var data = await _applicationDbContext.ResepTebuss.FindAsync(id);
             if (data == null)
                 return NotFound(new { message = "Resep tidak ditemukan." });
 
@@ -415,60 +373,50 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateResep(Guid id, [FromBody] ResepViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] ResepTebusViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
-                return BadRequest(new { message = "Data tidak valid!" });
+                return BadRequest(new { message = "Data tidak valid." });
             }
 
             try
             {
                 // **Cek koneksi ke database**
-                if (!_applicationDbContext.Database.CanConnect())
+                if (!await _applicationDbContext.Database.CanConnectAsync())
                 {
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
                 }
 
                 // **Ambil User ID dari JWT Claims**
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var getUserActive = _applicationDbContext.UserActives.Where(u => u.Email == emailLogin).FirstOrDefault();
-                var userActiveId = getUserActive.UserActiveId;
-
                 if (string.IsNullOrEmpty(emailLogin))
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                // cari data
-                var data = _applicationDbContext.Reseps.Find(id);
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+                if (getUserActive == null)
+                {
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+                }
+                var userActiveId = getUserActive.UserActiveId;
+
+                // **Cari Data**
+                var data = await _applicationDbContext.ResepTebuss.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
-                // **Update data resep**
-                data.KunjunganId = vm.KunjunganId;
-                data.AsuransiId = vm.AsuransiId;
-                data.NamaAsuransi = vm.NamaAsuransi;
-                data.PasienId = vm.PasienId;
-                data.NamaPasien = vm.NamaPasien;
-                data.PoliklinikId = vm.PoliklinikId;
-                data.NamaPoliklinik = vm.NamaPoliklinik;
-                data.DokterId = vm.DokterId;
-                data.NamaDokter = vm.NamaDokter;
-                data.StatusPembuatanResep = vm.StatusPembuatanResep;
-                data.TanggalPembuatanResep = vm.TanggalPembuatanResep;
-                data.IsExternal = vm.IsExternal ?? false; // Jika IsExternal adalah null, gunakan false sebagai default
-                data.InteraturObat = vm.InteraturObat;
-
+                // **Update Data**
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.Reseps.Update(data);
-                await _applicationDbContext.SaveChangesAsync();
+                _applicationDbContext.ResepTebuss.Update(data);
 
-                var dfObatLama = _applicationDbContext.DetailReseps.Where(d => d.ResepId == id).ToList();
+                var dfObatLama = _applicationDbContext.ResepTebusDetails.Where(d => d.ResepTebusId == id).ToList();
 
                 // **Mengembalikan stok obat yang sebelumnya terpakai**
                 foreach (var detail in dfObatLama)
@@ -485,7 +433,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 if (vm.DaftarObat == null || !vm.DaftarObat.Any())
                 {
-                    _applicationDbContext.DetailReseps.RemoveRange(dfObatLama);
+                    _applicationDbContext.ResepTebusDetails.RemoveRange(dfObatLama);
                 }
                 else
                 {
@@ -502,24 +450,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             existingDetail.UpdateBy = userActiveId;
                             existingDetail.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                            _applicationDbContext.DetailReseps.Update(existingDetail);
+                            _applicationDbContext.ResepTebusDetails.Update(existingDetail);
                         }
                         else
                         {
                             // **Insert new**
-                            var newDetail = new ResepDetail
+                            var newDetail = new ResepTebusDetail
                             {
-                                DetailResepId = Guid.NewGuid(),
-                                ResepId = data.ResepId,
+                                ResepTebusDetailId = Guid.NewGuid(),
+                                ResepTebusId = data.ResepTebusId,
                                 ObatId = obat.ObatId,
                                 Qty = obat.Qty,
                                 Signa = obat.Signa,
                                 HargaObat = obat.HargaObat,
-                                TotalHargaObat = obat.HargaObat * (obat.Qty ?? 0), // Menghitung total harga obat
-                                StatusCoverObat = obat.StatusCoverObat,
+                                //TotalHargaObat = obat.HargaObat * (obat.Qty ?? 0), // Menghitung total harga obat
+                                //StatusCoverObat = obat.StatusCoverObat,
                                 SignaTambahan = obat.SignaTambahan,
-                                JenisObat = obat.JenisObat,
-                                RacikanId = obat.RacikanId,
+                                //JenisObat = obat.JenisObat,
+                                //RacikanId = obat.RacikanId,
                                 IsRacikan = obat.IsRacikan,
 
 
@@ -527,7 +475,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 CreateDateTime = DateTimeOffset.UtcNow,
                             };
 
-                            _applicationDbContext.DetailReseps.Add(newDetail);
+                            _applicationDbContext.ResepTebusDetails.Add(newDetail);
                         }
 
                         // **Kurangi stok obat**
@@ -552,15 +500,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     }
                 }
 
-                // **Simpan perubahan ke database**
                 int result = await _applicationDbContext.SaveChangesAsync();
+
                 if (result > 0)
                 {
-                    return Ok(new { message = "Update Resep Berhasil || 200 OK" });
+                    return Ok(new { message = "Update Data Berhasil || 200 OK" });
                 }
                 else
                 {
-                    return StatusCode(500, new { message = "Data tidak berhasil diupdate ke database." });
+                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
                 }
             }
             catch (DbUpdateException dbEx)
@@ -572,7 +520,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
-
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteResep(Guid id)
@@ -590,21 +537,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // cari data resep
-                var resep = await _applicationDbContext.Reseps.FindAsync(id);
+                var resep = await _applicationDbContext.ResepTebuss.FindAsync(id);
                 if (resep == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
-                // Hapus DetailResep terkait
-                var detailReseps = _applicationDbContext.DetailReseps.Where(dr => dr.ResepId == id).ToList();
+                // Hapus DetailResepTebus terkait
+                var detailReseps = _applicationDbContext.ResepTebusDetails.Where(dr => dr.ResepTebusId == id).ToList();
                 if (detailReseps.Any())
                 {
-                    _applicationDbContext.DetailReseps.RemoveRange(detailReseps);
+                    _applicationDbContext.ResepTebusDetails.RemoveRange(detailReseps);
                 }
 
                 // Hapus Resep
-                _applicationDbContext.Reseps.Remove(resep);
+                _applicationDbContext.ResepTebuss.Remove(resep);
                 await _applicationDbContext.SaveChangesAsync();
                 return Ok(new { message = "Hapus Data Berhasil || 200 OK" });
             }
@@ -614,69 +561,51 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-
         [HttpGet("paged")]
-        public IActionResult PagedResep(
-            int page = 1,
-            int perPage = 10,
-            string? search = null,
-            string? orderBy = "CreateDateTime",
-            string? sortDirection = "desc",
-            [FromQuery] DateTime? startDate = null,
-            [FromQuery] DateTime? endDate = null,
-            [FromQuery] PeriodeFilter? periode = null)
+        public IActionResult PagedResepTebus(
+        int page = 1,
+        int perPage = 10,
+        string? search = null,
+        string? orderBy = "CreateDateTime",
+        string? sortDirection = "desc",
+        [FromQuery] DateTime? startDate = null,
+        [FromQuery] DateTime? endDate = null,
+        [FromQuery] PeriodeFilter? periode = null)
         {
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            // Ambil data dari Dokters yang belum dihapus
             // Query utama
-            var query = from r in _applicationDbContext.Reseps
+            var query = from r in _applicationDbContext.ResepTebuss
                         join u in _applicationDbContext.UserActives
                             on r.CreateBy equals u.UserActiveId
                         where r.IsDelete == false // jika ada field IsDelete
                         select new
                         {
-                            ResepId = r.ResepId,
-                            KunjunganId = r.KunjunganId,
+                            ResepTebusId = r.ResepTebusId,
                             CreateDateTime = r.CreateDateTime,
                             CreateBy = r.CreateBy,
                             CreateByName = u.FullName,
-                            r.AntrianRegistrasi,
                             r.AntrianResep,
-                            r.AsuransiId,
-                            r.NamaAsuransi,
-                            r.PasienId,
-                            r.NamaPasien,
-                            r.PoliklinikId,
-                            r.NamaPoliklinik,
-                            r.DokterId,
-                            r.NamaDokter,
                             r.StatusPembuatanResep,
                             r.StatusPengambilan,
                             r.IsCancelled,
                             r.IsLunas,
-                            r.IsExternal,
                             r.TanggalPembuatanResep,
-                            r.InteraturObat,
-                            DaftarObat = (from d in _applicationDbContext.DetailReseps
+                            DaftarObat = (from d in _applicationDbContext.ResepTebusDetails
                                           join o in _applicationDbContext.Obats // Asumsi nama tabel obat adalah MasterObat
                                               on d.ObatId equals o.ObatId // Asumsi primary key tabel obat adalah ObatId
-                                          where d.ResepId == r.ResepId
+                                          where d.ResepTebusId == r.ResepTebusId
                                           select new
                                           {
-                                              d.DetailResepId,
-                                              d.ResepId,
+                                              d.ResepTebusDetailId,
+                                              d.ResepTebusId,
                                               d.ObatId,
                                               o.ObatName, // Menambahkan NamaObat dari tabel MasterObat
                                               d.Qty,
                                               d.Signa,
                                               d.SignaTambahan,
-                                              d.JenisObat,
                                               d.HargaObat,
-                                              d.TotalHargaObat,
-                                              d.StatusCoverObat,
-                                              d.RacikanId,
                                               d.IsRacikan,
                                               d.CreateBy,
                                               d.CreateDateTime,
