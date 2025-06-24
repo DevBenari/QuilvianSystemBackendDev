@@ -14,5 +14,10 @@
         public bool? StatusCoverObat { get; set; } = false;
         public Guid? RacikanId { get; set; }
         public string? IsRacikan { get; set; } // "Ya" or "Tidak"
+        public bool? IsIteratur { get; set; } = false;
+        public decimal? JumlahIteratur { get; set; }
+        public DateOnly? TglMulaiIteratur { get; set; }
+        public decimal? JarakPenebusan { get; set; }
+        public DateOnly? MasaAktifIteratur { get; set; }
     }
 }

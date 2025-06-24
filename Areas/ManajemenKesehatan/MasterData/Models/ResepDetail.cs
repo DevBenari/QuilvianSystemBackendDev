@@ -22,5 +22,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public decimal? HargaObat { get; set; }
         public decimal? TotalHargaObat { get; set; }
         public bool? StatusCoverObat { get; set; } = false;
+        public bool? IsIteratur { get; set; } = false;
+        public decimal? JumlahIteratur { get; set; }
+        public DateOnly? TglMulaiIteratur { get; set; }
+        public decimal? JarakPenebusan { get; set; }
+        public DateOnly? MasaAktifIteratur { get; set; }
     }
 }

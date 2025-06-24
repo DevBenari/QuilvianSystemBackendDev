@@ -73,7 +73,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              a.TotalHargaObat,
                              a.StatusCoverObat,
                              a.IsRacikan,
-                             a.RacikanId
+                             a.RacikanId,
+                             a.IsIteratur,
+                             a.JumlahIteratur,
+                             a.TglMulaiIteratur,
+                             a.JarakPenebusan,
+                             a.MasaAktifIteratur
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -180,6 +185,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     StatusCoverObat = vm.StatusCoverObat,
                     IsRacikan = vm.IsRacikan, // Tambahkan properti IsRacikan jika diperlukan
                     RacikanId = vm.RacikanId, // Tambahkan properti RacikanId jika diperlukan
+                    IsIteratur = vm.IsIteratur,
+                    JumlahIteratur = vm.JumlahIteratur,
+                    TglMulaiIteratur = vm.TglMulaiIteratur,
+                    JarakPenebusan = vm.JarakPenebusan,
+                    MasaAktifIteratur = vm.MasaAktifIteratur,
+
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
@@ -259,6 +270,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.StatusCoverObat = vm.StatusCoverObat;
                 data.IsRacikan = vm.IsRacikan; // Update properti IsRacikan jika diperlukan
                 data.RacikanId = vm.RacikanId; // Update properti RacikanId jika diperlukan
+                data.IsIteratur = vm.IsIteratur;
+                data.JumlahIteratur = vm.JumlahIteratur;
+                data.TglMulaiIteratur = vm.TglMulaiIteratur;
+                data.JarakPenebusan = vm.JarakPenebusan;
+                data.MasaAktifIteratur = vm.MasaAktifIteratur;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -382,7 +398,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              a.StatusCoverObat,
                              a.TotalHargaObat,
                              a.IsRacikan,
-                             a.RacikanId
+                             a.RacikanId,
+                             a.IsIteratur,
+                             a.JumlahIteratur,
+                             a.TglMulaiIteratur,
+                             a.JarakPenebusan,
+                             a.MasaAktifIteratur
                          });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**

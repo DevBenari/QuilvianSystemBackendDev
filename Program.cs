@@ -27,6 +27,7 @@ builder.Services.Configure<Microsoft.AspNetCore.Mvc.JsonOptions>(options =>
 {
     options.JsonSerializerOptions.Converters.Add(new DateOnlyJsonConverter());
     options.JsonSerializerOptions.Converters.Add(new TimeOnlyJsonConverter());
+    options.JsonSerializerOptions.Converters.Add(new NullableDateOnlyJsonConverter());
 });
 
 // Tambahkan layanan CORS

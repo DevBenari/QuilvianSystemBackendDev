@@ -76,9 +76,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              r.StatusPengambilan,
                              r.IsCancelled,
                              r.IsLunas,
-                             r.IsExternal,
                              r.TanggalPembuatanResep,
-                             r.InteraturObat,
                              CreateByName = u.FullName,
                              DaftarObat = (from d in _applicationDbContext.DetailReseps
                                            join o in _applicationDbContext.Obats // Asumsi nama tabel obat adalah MasterObat
@@ -89,10 +87,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                                d.DetailResepId,
                                                d.ResepId,
                                                d.ObatId,
+                                               d.IsRacikan,
+                                               d.JenisObat,
                                                o.ObatName, // Menambahkan NamaObat dari tabel MasterObat
                                                d.Qty,
+                                               d.HargaObat,
                                                d.Signa,
                                                d.SignaTambahan,
+                                               d.IsIteratur,
+                                               d.JumlahIteratur,
+                                               d.TglMulaiIteratur,
+                                               d.JarakPenebusan,
+                                               d.MasaAktifIteratur,
+                                               d.StatusCoverObat,
                                                d.CreateBy,
                                                d.CreateDateTime,
                                            }).ToList()
@@ -144,15 +151,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                    d.DetailResepId,
                                    d.ResepId,
                                    d.ObatId,
+                                   d.IsRacikan,
+                                   d.JenisObat,
                                    o.ObatName, // Menambahkan NamaObat dari tabel MasterObat
                                    d.Qty,
+                                   d.HargaObat,
                                    d.Signa,
                                    d.SignaTambahan,
-                                   d.HargaObat,
-                                   d.TotalHargaObat,
+                                   d.IsIteratur,
+                                   d.JumlahIteratur,
+                                   d.TglMulaiIteratur,
+                                   d.JarakPenebusan,
+                                   d.MasaAktifIteratur,
                                    d.StatusCoverObat,
-                                   d.RacikanId,
-                                   d.IsRacikan,
                                    d.CreateBy,
                                    d.CreateDateTime,
                                }).ToListAsync();
@@ -175,8 +186,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 resep.StatusPengambilan,
                 resep.IsCancelled,
                 resep.IsLunas,
-                resep.IsExternal,
-                resep.InteraturObat,
                 resep.TanggalPembuatanResep,
                 DetailObatResep = obatDetails
             };
@@ -250,8 +259,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     StatusPengambilan = false, // Jika StatusPengambilan adalah null, gunakan false sebagai default
                     IsCancelled =  false, // Jika IsCanceled adalah null, gunakan false sebagai default
                     IsLunas = false,
-                    IsExternal = vm.IsExternal ?? false, // Jika IsExternal adalah null, gunakan false sebagai default
-                    InteraturObat = vm.InteraturObat ?? 0, // Jika InteraturObat adalah null, gunakan 0 sebagai default
                     TanggalPembuatanResep = vm.TanggalPembuatanResep ?? DateOnly.FromDateTime(DateTime.UtcNow), // Jika TanggalPembuatanResep adalah null, gunakan tanggal saat ini
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
@@ -459,8 +466,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.NamaDokter = vm.NamaDokter;
                 data.StatusPembuatanResep = vm.StatusPembuatanResep;
                 data.TanggalPembuatanResep = vm.TanggalPembuatanResep;
-                data.IsExternal = vm.IsExternal ?? false; // Jika IsExternal adalah null, gunakan false sebagai default
-                data.InteraturObat = vm.InteraturObat;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -633,57 +638,58 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
             // Ambil data dari Dokters yang belum dihapus
             // Query utama
-            var query = from r in _applicationDbContext.Reseps
-                        join u in _applicationDbContext.UserActives
-                            on r.CreateBy equals u.UserActiveId
-                        where r.IsDelete == false // jika ada field IsDelete
-                        select new
-                        {
-                            ResepId = r.ResepId,
-                            KunjunganId = r.KunjunganId,
-                            CreateDateTime = r.CreateDateTime,
-                            CreateBy = r.CreateBy,
-                            CreateByName = u.FullName,
-                            r.AntrianRegistrasi,
-                            r.AntrianResep,
-                            r.AsuransiId,
-                            r.NamaAsuransi,
-                            r.PasienId,
-                            r.NamaPasien,
-                            r.PoliklinikId,
-                            r.NamaPoliklinik,
-                            r.DokterId,
-                            r.NamaDokter,
-                            r.StatusPembuatanResep,
-                            r.StatusPengambilan,
-                            r.IsCancelled,
-                            r.IsLunas,
-                            r.IsExternal,
-                            r.TanggalPembuatanResep,
-                            r.InteraturObat,
-                            DaftarObat = (from d in _applicationDbContext.DetailReseps
-                                          join o in _applicationDbContext.Obats // Asumsi nama tabel obat adalah MasterObat
-                                              on d.ObatId equals o.ObatId // Asumsi primary key tabel obat adalah ObatId
-                                          where d.ResepId == r.ResepId
-                                          select new
-                                          {
-                                              d.DetailResepId,
-                                              d.ResepId,
-                                              d.ObatId,
-                                              o.ObatName, // Menambahkan NamaObat dari tabel MasterObat
-                                              d.Qty,
-                                              d.Signa,
-                                              d.SignaTambahan,
-                                              d.JenisObat,
-                                              d.HargaObat,
-                                              d.TotalHargaObat,
-                                              d.StatusCoverObat,
-                                              d.RacikanId,
-                                              d.IsRacikan,
-                                              d.CreateBy,
-                                              d.CreateDateTime,
-                                          }).ToList()
-                        };
+            var query = (from r in _applicationDbContext.Reseps
+                         join u in _applicationDbContext.UserActives
+                             on r.CreateBy equals u.UserActiveId
+                         where r.IsDelete == false // jika ada field IsDelete
+                         select new
+                         {
+                             ResepId = r.ResepId,
+                             KunjunganId = r.KunjunganId,
+                             CreateDateTime = r.CreateDateTime,
+                             CreateBy = r.CreateBy,
+                             r.AntrianRegistrasi,
+                             r.AntrianResep,
+                             r.AsuransiId,
+                             r.NamaAsuransi,
+                             r.PasienId,
+                             r.NamaPasien,
+                             r.PoliklinikId,
+                             r.NamaPoliklinik,
+                             r.DokterId,
+                             r.NamaDokter,
+                             r.StatusPembuatanResep,
+                             r.StatusPengambilan,
+                             r.IsCancelled,
+                             r.IsLunas,
+                             r.TanggalPembuatanResep,
+                             CreateByName = u.FullName,
+                             DaftarObat = (from d in _applicationDbContext.DetailReseps
+                                           join o in _applicationDbContext.Obats // Asumsi nama tabel obat adalah MasterObat
+                                               on d.ObatId equals o.ObatId // Asumsi primary key tabel obat adalah ObatId
+                                           where d.ResepId == r.ResepId
+                                           select new
+                                           {
+                                               d.DetailResepId,
+                                               d.ResepId,
+                                               d.ObatId,
+                                               d.IsRacikan,
+                                               d.JenisObat,
+                                               o.ObatName, // Menambahkan NamaObat dari tabel MasterObat
+                                               d.Qty,
+                                               d.HargaObat,
+                                               d.Signa,
+                                               d.SignaTambahan,
+                                               d.IsIteratur,
+                                               d.JumlahIteratur,
+                                               d.TglMulaiIteratur,
+                                               d.JarakPenebusan,
+                                               d.MasaAktifIteratur,
+                                               d.StatusCoverObat,
+                                               d.CreateBy,
+                                               d.CreateDateTime,
+                                           }).ToList()
+                         });
 
             // Search
             //if (!string.IsNullOrWhiteSpace(search))
