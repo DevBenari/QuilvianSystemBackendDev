@@ -61,6 +61,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              CreateDateTime = r.CreateDateTime,
                              CreateBy = r.CreateBy,
                              CreateByName = u.FullName,
+                             r.NamaPenebus,
                              r.AntrianResep,
                              r.StatusPembuatanResep,
                              r.StatusPengambilan,
@@ -149,6 +150,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             var result = new
             {
                 ResepTebusId = resep.ResepTebusId,
+                resep.NamaPenebus,
                 resep.AntrianResep,
                 resep.StatusPembuatanResep,
                 resep.StatusPengambilan,
@@ -204,6 +206,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var data = new ResepTebus
                 {
                     ResepTebusId = Guid.NewGuid(),
+                    NamaPenebus = vm.NamaPenebus,
                     AntrianResep = nextAntrian,
                     StatusPembuatanResep = vm.StatusPembuatanResep,
                     StatusPengambilan = false,
@@ -411,6 +414,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // **Update Data**
+                data.NamaPenebus = vm.NamaPenebus;
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
@@ -586,6 +590,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateDateTime = r.CreateDateTime,
                             CreateBy = r.CreateBy,
                             CreateByName = u.FullName,
+                            r.NamaPenebus,
                             r.AntrianResep,
                             r.StatusPembuatanResep,
                             r.StatusPengambilan,

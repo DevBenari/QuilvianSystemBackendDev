@@ -10,6 +10,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         [Key]
         public Guid ResepTebusId { get; set; }
         public int? AntrianResep { get; set; }
+        public string? NamaPenebus { get; set; }
         public string? StatusPembuatanResep { get; set; }
         public bool? StatusPengambilan { get; set; } = false;
         public bool? IsCancelled { get; set; } = false;

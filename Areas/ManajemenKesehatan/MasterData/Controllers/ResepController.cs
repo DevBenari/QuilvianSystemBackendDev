@@ -624,7 +624,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             string? sortDirection = "desc",
             [FromQuery] DateTime? startDate = null,
             [FromQuery] DateTime? endDate = null,
-            [FromQuery] PeriodeFilter? periode = null)
+            [FromQuery] PeriodeFilter? periode = null,
+            [FromQuery] bool? IsLunas = null,
+            [FromQuery] bool? StatusPengambilan = null)
         {
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;

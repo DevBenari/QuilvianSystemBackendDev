@@ -109,6 +109,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<Diskon> Diskons { get; set; }
         public DbSet<BiayaAdministrasi> BiayaAdministrasis { get; set; }
         public DbSet<MainKasir> MainKasirs { get; set; }
+        public DbSet<KasirTebusResep> KasirTebusReseps { get; set; }
         #endregion
 
 

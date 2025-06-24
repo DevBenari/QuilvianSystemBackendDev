@@ -246,6 +246,8 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
                         PaymentMethodName = firstItem.mp?.NamaMetode ?? "-",
                         DiskonId = firstItem.dsk?.DiskonId,
                         NamaDiskon = firstItem.dsk?.NamaDiskon ?? "-",
+                        NilaiDiskon = firstItem.dsk?.NominalDiskon ?? 0,
+                        PersenanDiskon = firstItem.dsk?.PersenDiskon ?? 0,
                         IsFinishedKasir = firstItem.k?.IsFinishedKasir,
 
                         CreateBy = firstItem.kasir?.CreateBy,
@@ -435,6 +437,8 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
                         PaymentMethodName = firstItem.mp?.NamaMetode ?? "-",
                         DiskonId = firstItem.dsk?.DiskonId,
                         NamaDiskon = firstItem.dsk?.NamaDiskon ?? "-",
+                        NilaiDiskon = firstItem.dsk?.NominalDiskon ?? 0,
+                        PersenanDiskon = firstItem.dsk?.PersenDiskon ?? 0,
                         IsFinishedKasir = firstItem.k?.IsFinishedKasir,
 
                         CreateBy = firstItem.kasir?.CreateBy,
