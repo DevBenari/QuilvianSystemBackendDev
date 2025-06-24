@@ -702,6 +702,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 query = query.Where(d => d.CreateDateTime >= startUtc && d.CreateDateTime <= endUtc);
             }
 
+            if (IsLunas.HasValue)
+            {
+                query = query.Where(u => u.IsLunas == IsLunas.Value);
+            }
+
+            if (StatusPengambilan.HasValue)
+            {
+                query = query.Where(u => u.StatusPengambilan == StatusPengambilan.Value);
+            }
+
             // Filter berdasarkan periode waktu
             if (periode.HasValue)
             {
