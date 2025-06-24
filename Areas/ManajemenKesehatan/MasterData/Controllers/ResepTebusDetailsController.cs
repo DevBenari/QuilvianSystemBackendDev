@@ -61,6 +61,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              CreateByName = u.FullName,
                              a.ResepTebusDetailId,
                              a.ResepTebusId,
+                             a.RacikanId,
                              a.ObatId,
                              a.Qty,
                              a.Signa,
@@ -160,6 +161,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     ResepTebusDetailId = Guid.NewGuid(),
                     ResepTebusId = vm.ResepTebusId,
+                    RacikanId = vm.RacikanId, // Tambahkan properti RacikanId jika diperlukan
                     ObatId = vm.ObatId,
                     Qty = vm.Qty,
                     Signa = vm.Signa,
@@ -234,6 +236,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 // **Update Data**
                 data.ObatId = vm.ObatId;
                 data.ResepTebusId = vm.ResepTebusId;
+                data.RacikanId = vm.RacikanId; // Update properti RacikanId jika diperlukan
                 data.Qty = vm.Qty;
                 data.Signa = vm.Signa;
                 data.SignaTambahan = vm.SignaTambahan;
@@ -350,6 +353,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              CreateByName = u.FullName,
                              a.ResepTebusDetailId,
                              a.ResepTebusId,
+                             a.RacikanId,
                              a.ObatId,
                              a.Qty,
                              a.Signa,

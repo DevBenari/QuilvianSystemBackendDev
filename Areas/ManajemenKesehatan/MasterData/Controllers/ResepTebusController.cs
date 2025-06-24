@@ -52,41 +52,52 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
             // Query utama
             var query = (from r in _applicationDbContext.ResepTebuss
-                         join u in _applicationDbContext.UserActives
-                             on r.CreateBy equals u.UserActiveId
-                         where r.IsDelete == false // jika ada field IsDelete
-                         select new
-                         {
-                             ResepTebusId = r.ResepTebusId,
-                             CreateDateTime = r.CreateDateTime,
-                             CreateBy = r.CreateBy,
-                             CreateByName = u.FullName,
-                             r.NamaPenebus,
-                             r.AntrianResep,
-                             r.StatusPembuatanResep,
-                             r.StatusPengambilan,
-                             r.IsCancelled,
-                             r.IsLunas,
-                             r.TanggalPembuatanResep,
-                             DaftarObat = (from d in _applicationDbContext.ResepTebusDetails
-                                           join o in _applicationDbContext.Obats // Asumsi nama tabel obat adalah MasterObat
-                                               on d.ObatId equals o.ObatId // Asumsi primary key tabel obat adalah ObatId
-                                           where d.ResepTebusId == r.ResepTebusId
-                                           select new
-                                           {
-                                               d.ResepTebusDetailId,
-                                               d.ResepTebusId,
-                                               d.ObatId,
-                                               o.ObatName, // Menambahkan NamaObat dari tabel MasterObat
-                                               d.Qty,
-                                               d.Signa,
-                                               d.SignaTambahan,
-                                               d.HargaObat,
-                                               d.IsRacikan,
-                                               d.CreateBy,
-                                               d.CreateDateTime,
-                                           }).ToList()
-                         }).OrderByDescending(a => a.CreateDateTime);
+                        join u in _applicationDbContext.UserActives
+                            on r.CreateBy equals u.UserActiveId
+                        where r.IsDelete == false // jika ada field IsDelete
+                        select new
+                        {
+                            ResepTebusId = r.ResepTebusId,
+                            CreateDateTime = r.CreateDateTime,
+                            CreateBy = r.CreateBy,
+                            CreateByName = u.FullName,
+                            r.NamaPenebus,
+                            r.AntrianResep,
+                            r.StatusPembuatanResep,
+                            r.StatusPengambilan,
+                            r.IsCancelled,
+                            r.IsLunas,
+                            r.TanggalPembuatanResep,
+                            DaftarObat = (from d in _applicationDbContext.ResepTebusDetails
+                                          join o in _applicationDbContext.Obats // Asumsi nama tabel obat adalah MasterObat
+                                              on d.ObatId equals o.ObatId // Asumsi primary key tabel obat adalah ObatId
+                                          where d.ResepTebusId == r.ResepTebusId
+                                          select new
+                                          {
+                                              d.ResepTebusDetailId,
+                                              d.ResepTebusId,
+                                              d.ObatId,
+                                              o.ObatName, // Menambahkan NamaObat dari tabel MasterObat
+                                              d.Qty,
+                                              d.Signa,
+                                              d.SignaTambahan,
+                                              d.HargaObat,
+                                              d.IsRacikan,
+                                              d.CreateBy,
+                                              d.CreateDateTime,
+                                          }).ToList(),
+
+                            DaftarRacikan = (from d in _applicationDbContext.ResepTebusDetails
+                                             join ra in _applicationDbContext.Racikans
+                                             on d.RacikanId equals ra.RacikanId
+                                             where d.ResepTebusId == r.ResepTebusId
+                                             select new
+                                             {
+                                                 ra.RacikanId,
+                                                 ra.NamaRacikan,
+                                                 ra.Keterangan,
+                                             }).ToList(),
+                        }).OrderByDescending(a => a.CreateDateTime);
 
             // Sorting
             query = query.OrderByDescending(a => a.CreateDateTime); // Fix: Ensure OrderByDescending is applied to IQueryable
@@ -137,6 +148,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                    d.ResepTebusDetailId,
                                    d.ResepTebusId,
                                    d.ObatId,
+                                   d.RacikanId,
                                    o.ObatName, // Menambahkan NamaObat dari tabel MasterObat
                                    d.Qty,
                                    d.Signa,
@@ -146,6 +158,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                    d.CreateBy,
                                    d.CreateDateTime,
                                }).ToListAsync();
+            var racikanDetails = (from d in _applicationDbContext.ResepTebusDetails
+                                  join ra in _applicationDbContext.Racikans
+                                  on d.RacikanId equals ra.RacikanId
+                                  where d.ResepTebusId == id
+                                  select new
+                                  {
+                                      ra.RacikanId,
+                                      ra.NamaRacikan,
+                                      ra.Keterangan,
+                                  }).ToListAsync();
 
             var result = new
             {
@@ -157,7 +179,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 resep.IsCancelled,
                 resep.IsLunas,
                 resep.TanggalPembuatanResep,
-                DetailObatResep = obatDetails
+                DetailObatResep = obatDetails,
+                DetailRacikan = racikanDetails,
             };
 
             return Ok(result);
@@ -230,6 +253,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         Signa = obat.Signa,
                         SignaTambahan = obat.SignaTambahan,
                         HargaObat = obat.HargaObat,
+                        RacikanId = obat.RacikanId,
                         //TotalHargaObat = obat.HargaObat * (obat.Qty ?? 0), // Menghitung total harga obat
                         //StatusCoverObat = obat.StatusCoverObat,
                         //JenisObat = obat.JenisObat,
@@ -467,6 +491,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 Qty = obat.Qty,
                                 Signa = obat.Signa,
                                 HargaObat = obat.HargaObat,
+                                RacikanId = obat.RacikanId,
                                 //TotalHargaObat = obat.HargaObat * (obat.Qty ?? 0), // Menghitung total harga obat
                                 //StatusCoverObat = obat.StatusCoverObat,
                                 SignaTambahan = obat.SignaTambahan,
@@ -614,7 +639,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                               d.IsRacikan,
                                               d.CreateBy,
                                               d.CreateDateTime,
-                                          }).ToList()
+                                          }).ToList(),
+
+                            DaftarRacikan = (from d in _applicationDbContext.ResepTebusDetails
+                                            join ra in _applicationDbContext.Racikans 
+                                            on d.RacikanId equals ra.RacikanId 
+                                            where d.ResepTebusId == r.ResepTebusId
+                                            select new
+                                            {
+                                                ra.RacikanId,
+                                                ra.NamaRacikan,
+                                                ra.Keterangan,
+                                            }).ToList(),
                         };
 
             // Search

@@ -102,7 +102,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                                d.StatusCoverObat,
                                                d.CreateBy,
                                                d.CreateDateTime,
-                                           }).ToList()
+                                           }).ToList(),
+
+                             DaftarRacikan = (from d in _applicationDbContext.DetailReseps
+                                              join ra in _applicationDbContext.Racikans // Asumsi nama tabel obat adalah MasterObat
+                                                  on d.RacikanId equals ra.RacikanId // Asumsi primary key tabel obat adalah ObatId
+                                              where d.ResepId == r.ResepId
+                                              select new
+                                              {
+                                                  ra.RacikanId,
+                                                  r.ResepId,
+                                                  ra.NamaRacikan,
+                                                  r.CreateBy,
+                                                  r.CreateDateTime
+                                              }).ToList()
+
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -168,6 +182,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                    d.CreateDateTime,
                                }).ToListAsync();
 
+            var racikanDetails = (from d in _applicationDbContext.DetailReseps
+                                  join ra in _applicationDbContext.Racikans // Asumsi nama tabel obat adalah MasterObat
+                                      on d.RacikanId equals ra.RacikanId // Asumsi primary key tabel obat adalah ObatId
+                                  where d.ResepId == id
+                                  select new
+                                  {
+                                      ra.RacikanId,
+                                      d.ResepId,
+                                      ra.NamaRacikan,
+                                      d.CreateBy,
+                                      d.CreateDateTime
+                                  }).ToListAsync();
+
             var result = new
             {
                 ResepId = resep.ResepId,
@@ -187,7 +214,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 resep.IsCancelled,
                 resep.IsLunas,
                 resep.TanggalPembuatanResep,
-                DetailObatResep = obatDetails
+                DetailObatResep = obatDetails,
+                DetailRacikanResep = racikanDetails,
             };
 
             return Ok(result);
@@ -688,7 +716,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                                d.StatusCoverObat,
                                                d.CreateBy,
                                                d.CreateDateTime,
-                                           }).ToList()
+                                           }).ToList(),
+
+                            DaftarRacikan = (from d in _applicationDbContext.DetailReseps
+                                             join ra in _applicationDbContext.Racikans 
+                                                 on d.RacikanId equals ra.RacikanId 
+                                             where d.ResepId == r.ResepId
+                                             select new
+                                             {
+                                                 ra.RacikanId,
+                                                 r.ResepId,
+                                                 ra.NamaRacikan,
+                                                 r.CreateBy,
+                                                 r.CreateDateTime
+                                             }).ToList()
                          });
 
             // Search
