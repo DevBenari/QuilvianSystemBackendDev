@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
@@ -168,6 +169,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 //    return Conflict(new { message = "Nama benefit ini telah tersedia" });
                 //}
 
+                if (!DateTime.TryParseExact(vm.TglMulaiIteratur, "yyyy-MM-dd",
+                    CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsedTglMulaiIteratur))
+                {
+                    return BadRequest(new { message = "Format TglMulaiIteratur tidak valid. Gunakan format yyyy-MM-dd." });
+                }
+
+                parsedTglMulaiIteratur = DateTime.SpecifyKind(parsedTglMulaiIteratur, DateTimeKind.Utc);
+
+                if (!DateTime.TryParseExact(vm.MasaAktifIteratur, "yyyy-MM-dd",
+                    CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsedMasaAktif))
+                {
+                    return BadRequest(new { message = "Format TglMulaiIteratur tidak valid. Gunakan format yyyy-MM-dd." });
+                }
+
+                parsedMasaAktif = DateTime.SpecifyKind(parsedMasaAktif, DateTimeKind.Utc);
+
                 // **Buat Data Baru**
                 var data = new ResepDetail
                 {
@@ -187,9 +204,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     RacikanId = vm.RacikanId, // Tambahkan properti RacikanId jika diperlukan
                     IsIteratur = vm.IsIteratur,
                     JumlahIteratur = vm.JumlahIteratur,
-                    TglMulaiIteratur = vm.TglMulaiIteratur,
+                    TglMulaiIteratur = parsedTglMulaiIteratur,
                     JarakPenebusan = vm.JarakPenebusan,
-                    MasaAktifIteratur = vm.MasaAktifIteratur,
+                    MasaAktifIteratur = parsedMasaAktif,
 
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
@@ -256,6 +273,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
+                if (!DateTime.TryParseExact(vm.TglMulaiIteratur, "yyyy-MM-dd",
+                    CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsedTglMulaiIteratur))
+                {
+                    return BadRequest(new { message = "Format TglMulaiIteratur tidak valid. Gunakan format yyyy-MM-dd." });
+                }
+
+                parsedTglMulaiIteratur = DateTime.SpecifyKind(parsedTglMulaiIteratur, DateTimeKind.Utc);
+
+                if (!DateTime.TryParseExact(vm.MasaAktifIteratur, "yyyy-MM-dd",
+                    CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsedMasaAktif))
+                {
+                    return BadRequest(new { message = "Format TglMulaiIteratur tidak valid. Gunakan format yyyy-MM-dd." });
+                }
+                parsedMasaAktif = DateTime.SpecifyKind(parsedMasaAktif, DateTimeKind.Utc);
+
+
                 // **Update Data**
                 data.ObatId = vm.ObatId;
                 data.AsuransiId = vm.AsuransiId;
@@ -272,9 +305,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.RacikanId = vm.RacikanId; // Update properti RacikanId jika diperlukan
                 data.IsIteratur = vm.IsIteratur;
                 data.JumlahIteratur = vm.JumlahIteratur;
-                data.TglMulaiIteratur = vm.TglMulaiIteratur;
+                data.TglMulaiIteratur = parsedTglMulaiIteratur;
                 data.JarakPenebusan = vm.JarakPenebusan;
-                data.MasaAktifIteratur = vm.MasaAktifIteratur;
+                data.MasaAktifIteratur = parsedMasaAktif;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;

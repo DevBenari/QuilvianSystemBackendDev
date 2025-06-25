@@ -66,7 +66,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              PasienId = k.PasienId, // Tambahan ini
                              Subjective = a.Subjective,
                              Objective = a.Objective,
-                             Assessment = (a.Assessment ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
+                             DaftarICD10 = (a.DaftarICD10 ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
+                             Assesment = a.Assessment,
                              Planning = a.Planning,
                              Profesi = a.Profesi,
                          }).OrderByDescending(a => a.CreateDateTime).ToList();
@@ -229,7 +230,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     KunjunganId = vm.KunjunganId,
                     Subjective = vm.Subjective,
                     Objective = vm.Objective,
-                    Assessment = vm.Assessment != null ? string.Join(",", vm.Assessment) : null,
+                    DaftarICD10 = vm.DaftarICD10 != null ? string.Join(",", vm.DaftarICD10) : null,
+                    Assessment = vm.Assessment,
                     Planning = vm.Planning,
                     Profesi = vm.Profesi,
 
@@ -301,7 +303,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.KunjunganId = vm.KunjunganId;
                 data.Subjective = vm.Subjective;
                 data.Objective = vm.Objective;
-                data.Assessment = vm.Assessment != null ? string.Join(",", vm.Assessment) : null;
+                data.DaftarICD10 = vm.DaftarICD10 != null ? string.Join(",", vm.DaftarICD10) : null;
+                data.Assessment = vm.Assessment;
                 data.Planning = vm.Planning;
                 data.Profesi = vm.Profesi;
 
@@ -435,7 +438,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             KunjunganId = a.KunjunganId,
                             Subjective = a.Subjective,
                             Objective = a.Objective,
-                            Assessment = (a.Assessment ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
+                            DaftarICD10 = (a.DaftarICD10 ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
+                            Assessment = a.Assessment,
                             Planning = a.Planning,
                             Profesi = a.Profesi,
                             k.PasienId

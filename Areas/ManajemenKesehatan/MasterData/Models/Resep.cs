@@ -24,6 +24,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public bool? StatusPengambilan { get; set; } = false;
         public bool? IsCancelled { get; set; } = false;
         public bool? IsLunas { get; set; }
-        public DateOnly? TanggalPembuatanResep { get; set; }
+        public DateTime? TanggalPembuatanResep { get; set; }
     }
 }

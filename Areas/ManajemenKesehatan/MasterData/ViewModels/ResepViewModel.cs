@@ -17,6 +17,5 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
         public int? AntrianResep { get; set; }
         public string? AntrianRegistrasi { get; set; }
         public string? StatusPembuatanResep { get; set; }
-        public DateOnly? TanggalPembuatanResep { get; set; }
     }
 }

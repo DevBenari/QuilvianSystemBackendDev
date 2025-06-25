@@ -16,8 +16,8 @@
         public string? IsRacikan { get; set; } // "Ya" or "Tidak"
         public bool? IsIteratur { get; set; } = false;
         public decimal? JumlahIteratur { get; set; }
-        public DateOnly? TglMulaiIteratur { get; set; }
+        public string? TglMulaiIteratur { get; set; }
         public decimal? JarakPenebusan { get; set; }
-        public DateOnly? MasaAktifIteratur { get; set; }
+        public string? MasaAktifIteratur { get; set; }
     }
 }

@@ -235,7 +235,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     StatusPengambilan = false,
                     IsCancelled = false,
                     IsLunas = false,
-                    TanggalPembuatanResep = vm.TanggalPembuatanResep ?? DateOnly.FromDateTime(DateTime.UtcNow),
+                    TanggalPembuatanResep = DateTime.UtcNow,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };

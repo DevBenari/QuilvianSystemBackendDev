@@ -256,7 +256,7 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
                 DateOnly today = DateOnly.FromDateTime(DateTime.UtcNow);
 
                 int countToday = _applicationDbContext.KasirTebusReseps
-                    .Count(k => k.TanggalBayar == today);
+                   .Count(k => k.TanggalBayar.HasValue && k.TanggalBayar.Value.Date == today.ToDateTime(TimeOnly.MinValue).Date);
 
                 int nextNumber = countToday + 1;
                 string noRegistrasi = $"TR-{tglHariIni}-{nextNumber:D2}";
@@ -292,7 +292,7 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
                     NamaMetode = vm.NamaMetode,
                     StatusPembayaran = vm.StatusPembayaran,
                     Keterangan = vm.Keterangan,
-                    TanggalBayar = DateOnly.FromDateTime(DateTime.UtcNow),
+                    TanggalBayar = DateTime.UtcNow,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };

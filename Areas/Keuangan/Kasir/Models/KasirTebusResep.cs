@@ -16,7 +16,7 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Models
         public string? NamaMetode { get; set; }
         public bool? StatusPembayaran { get; set; }
         public string? Keterangan { get; set; }
-        public DateOnly? TanggalBayar { get; set; }
+        public DateTime? TanggalBayar { get; set; }
 
     }
 }

@@ -24,8 +24,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public bool? StatusCoverObat { get; set; } = false;
         public bool? IsIteratur { get; set; } = false;
         public decimal? JumlahIteratur { get; set; }
-        public DateOnly? TglMulaiIteratur { get; set; }
+        public DateTime? TglMulaiIteratur { get; set; }
         public decimal? JarakPenebusan { get; set; }
-        public DateOnly? MasaAktifIteratur { get; set; }
+        public DateTime? MasaAktifIteratur { get; set; }
     }
 }
