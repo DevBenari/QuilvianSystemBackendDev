@@ -67,7 +67,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             r.StatusPengambilan,
                             r.IsCancelled,
                             r.IsLunas,
-                            r.TanggalPembuatanResep,
+                            TanggalPembuatanResepFormatted = r.TanggalPembuatanResep.HasValue ? r.TanggalPembuatanResep.Value.ToString("yyyy-MM-dd") : null,
                             DaftarObat = (from d in _applicationDbContext.ResepTebusDetails
                                           join o in _applicationDbContext.Obats // Asumsi nama tabel obat adalah MasterObat
                                               on d.ObatId equals o.ObatId // Asumsi primary key tabel obat adalah ObatId
@@ -178,7 +178,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 resep.StatusPengambilan,
                 resep.IsCancelled,
                 resep.IsLunas,
-                resep.TanggalPembuatanResep,
+                TanggalPembuatanResepFormatted = resep.TanggalPembuatanResep.HasValue ? resep.TanggalPembuatanResep.Value.ToString("yyyy-MM-dd") : null,
                 DetailObatResep = obatDetails,
                 DetailRacikan = racikanDetails,
             };
@@ -621,7 +621,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             r.StatusPengambilan,
                             r.IsCancelled,
                             r.IsLunas,
-                            r.TanggalPembuatanResep,
+                            TanggalPembuatanResepFormatted = r.TanggalPembuatanResep.HasValue ? r.TanggalPembuatanResep.Value.ToString("yyyy-MM-dd") : null,
                             DaftarObat = (from d in _applicationDbContext.ResepTebusDetails
                                           join o in _applicationDbContext.Obats // Asumsi nama tabel obat adalah MasterObat
                                               on d.ObatId equals o.ObatId // Asumsi primary key tabel obat adalah ObatId

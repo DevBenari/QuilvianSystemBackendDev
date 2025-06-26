@@ -101,6 +101,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<RacikanAddon> RacikanAddons { get; set; }
         public DbSet<ResepTebus> ResepTebuss { get; set; }
         public DbSet<ResepTebusDetail> ResepTebusDetails { get; set; }
+        public DbSet<PPN> PPNs { get; set; }
 
         #endregion
 

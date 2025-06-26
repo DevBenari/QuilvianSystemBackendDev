@@ -232,6 +232,7 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
                         NoRM = firstItem.p?.NoRekamMedis ?? "-",
                         NamaPasien = firstItem.p?.NamaLengkap ?? "-",
                         UmurPasien = HitungUmurLengkap(firstItem.p?.TanggalLahir),
+                        NoTelepon1 = firstItem.p?.NoTelepon1 ?? "-",
                         JenisKelamin = firstItem.p?.JenisKelamin,
                         AsuransiId = firstItem.k.AsuransiId,
                         NamaPerusahaan = firstItem.a?.NamaAsuransi ?? null, // NamaAsuransi akan null jika tidak ada asuransi
@@ -265,6 +266,10 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
                                 NamaObat = x.o.ObatName,
                                 x.dr.Qty,
                                 HargaObat = x.o.HargaJual,
+                                x.dr.IsIteratur,
+                                x.dr.JarakPenebusan,
+                                TglMulaiIteratur = x.dr.TglMulaiIteratur.HasValue ? x.dr.TglMulaiIteratur.Value.ToString("yyyy-MM-dd") : null,
+                                MasaAktifIteratur = x.dr.MasaAktifIteratur.HasValue ? x.dr.MasaAktifIteratur.Value.ToString("yyyy-MM-dd") : null,
                                 StatusCoverObat = x.dr?.StatusCoverObat ?? false,
                                 TotalBiayaObat = x.dr?.TotalHargaObat ?? (x.dr?.Qty * x.o.HargaJual) // Hitung total jika tidak ada TotalHargaObat
                             }).Distinct().ToList(), // Gunakan Distinct untuk menghindari duplikasi dalam daftar obat
@@ -423,6 +428,7 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
                         NoRM = firstItem.p?.NoRekamMedis ?? "-",
                         NamaPasien = firstItem.p?.NamaLengkap ?? "-",
                         UmurPasien = HitungUmurLengkap(firstItem.p?.TanggalLahir),
+                        NoTelepon1 = firstItem.p?.NoTelepon1 ?? "-",
                         JenisKelamin = firstItem.p?.JenisKelamin,
                         AsuransiId = firstItem.k.AsuransiId,
                         NamaPerusahaan = firstItem.a?.NamaAsuransi ?? null, // NamaAsuransi akan null jika tidak ada asuransi
@@ -455,7 +461,12 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
                                 JumlahIteratur = x.dr?.JumlahIteratur,
                                 NamaObat = x.o.ObatName,
                                 x.dr.Qty,
+                                x.dr.IsIteratur,
+                                TglMulaiIteratur = x.dr.TglMulaiIteratur.HasValue ? x.dr.TglMulaiIteratur.Value.ToString("yyyy-MM-dd") : null,
+                                MasaAktifIteratur = x.dr.MasaAktifIteratur.HasValue ? x.dr.MasaAktifIteratur.Value.ToString("yyyy-MM-dd") : null,
+                                x.dr.JarakPenebusan,
                                 HargaObat = x.o.HargaJual,
+                                x.o.JumlahSatuan,
                                 StatusCoverObat = x.dr?.StatusCoverObat ?? false,
                                 TotalBiayaObat = x.dr?.TotalHargaObat ?? (x.dr?.Qty * x.o.HargaJual) // Hitung total jika tidak ada TotalHargaObat
                             }).Distinct().ToList(), // Gunakan Distinct untuk menghindari duplikasi dalam daftar obat

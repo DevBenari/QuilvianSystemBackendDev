@@ -260,7 +260,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     k.DokterId == request.DokterId &&
                     k.PasienId == request.PasienId &&
                     k.CreateDateTime.Date == today &&
-                    !k.IsDelete);
+                    !k.IsDelete && k.IsFinished == false);
 
                 if (isAlreadyRegistered)
                 {

@@ -77,7 +77,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              r.StatusPengambilan,
                              r.IsCancelled,
                              r.IsLunas,
-                             r.TanggalPembuatanResep,
+                             TanggalPembuatanResepFormatted = r.TanggalPembuatanResep.HasValue ? r.TanggalPembuatanResep.Value.ToString("yyyy-MM-dd") : null,
                              CreateByName = u.FullName,
                              DaftarObat = (from d in _applicationDbContext.DetailReseps
                                            join o in _applicationDbContext.Obats // Asumsi nama tabel obat adalah MasterObat
@@ -97,9 +97,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                                d.SignaTambahan,
                                                d.IsIteratur,
                                                d.JumlahIteratur,
-                                               d.TglMulaiIteratur,
+                                               TglMulaiIteratur = d.TglMulaiIteratur.HasValue ? d.TglMulaiIteratur.Value.ToString("yyyy-MM-dd") : null,
+                                               MasaAktifIteratur = d.MasaAktifIteratur.HasValue ? d.MasaAktifIteratur.Value.ToString("yyyy-MM-dd") : null,
                                                d.JarakPenebusan,
-                                               d.MasaAktifIteratur,
                                                d.StatusCoverObat,
                                                d.CreateBy,
                                                d.CreateDateTime,
@@ -175,9 +175,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                    d.SignaTambahan,
                                    d.IsIteratur,
                                    d.JumlahIteratur,
-                                   d.TglMulaiIteratur,
+                                   TglMulaiIteratur = d.TglMulaiIteratur.HasValue ? d.TglMulaiIteratur.Value.ToString("yyyy-MM-dd") : null,
+                                   MasaAktifIteratur = d.MasaAktifIteratur.HasValue ? d.MasaAktifIteratur.Value.ToString("yyyy-MM-dd") : null,
                                    d.JarakPenebusan,
-                                   d.MasaAktifIteratur,
                                    d.StatusCoverObat,
                                    d.CreateBy,
                                    d.CreateDateTime,
@@ -214,7 +214,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 resep.StatusPengambilan,
                 resep.IsCancelled,
                 resep.IsLunas,
-                resep.TanggalPembuatanResep,
+                TanggalPembuatanResepFormatted = resep.TanggalPembuatanResep.HasValue ? resep.TanggalPembuatanResep.Value.ToString("yyyy-MM-dd") : null,
                 DetailObatResep = obatDetails,
                 DetailRacikanResep = racikanDetails,
             };
@@ -731,7 +731,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              r.StatusPengambilan,
                              r.IsCancelled,
                              r.IsLunas,
-                             r.TanggalPembuatanResep,
+                             TanggalPembuatanResepFormatted = r.TanggalPembuatanResep.HasValue ? r.TanggalPembuatanResep.Value.ToString("yyyy-MM-dd") : null,
                              CreateByName = u.FullName,
                              DaftarObat = (from d in _applicationDbContext.DetailReseps
                                            join o in _applicationDbContext.Obats // Asumsi nama tabel obat adalah MasterObat
@@ -751,9 +751,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                                d.SignaTambahan,
                                                d.IsIteratur,
                                                d.JumlahIteratur,
-                                               d.TglMulaiIteratur,
                                                d.JarakPenebusan,
-                                               d.MasaAktifIteratur,
+                                               TglMulaiIteratur = d.TglMulaiIteratur.HasValue ? d.TglMulaiIteratur.Value.ToString("yyyy-MM-dd") : null,
+                                               MasaAktifIteratur = d.MasaAktifIteratur.HasValue ? d.MasaAktifIteratur.Value.ToString("yyyy-MM-dd") : null,
                                                d.StatusCoverObat,
                                                d.CreateBy,
                                                d.CreateDateTime,
@@ -852,6 +852,191 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     "createdatetime" => query.OrderBy(d => d.CreateDateTime),
                     "createbyname" => query.OrderBy(d => d.CreateByName),
+                    _ => query.OrderBy(d => d.CreateDateTime)
+                };
+
+            // pagination
+            var totalRows = query.Count();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
+
+            if (rows.Count == 0 && page > totalPages)
+            {
+                return NotFound(new { message = "Page not found." });
+            }
+            return Ok(new
+            {
+                status = "success",
+                message = "Data retrieved successfully",
+                data = new
+                {
+                    Rows = rows,
+                    TotalRows = totalRows,
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalPages = totalPages
+                }
+            });
+        }
+
+        [HttpGet("paged")]
+        public IActionResult PagedResepNotLunas(
+            int page = 1,
+            int perPage = 10,
+            string? search = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery] DateTime? startDate = null,
+            [FromQuery] DateTime? endDate = null,
+            [FromQuery] PeriodeFilter? periode = null,
+            [FromQuery] bool? StatusPengambilan = null)
+        {
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
+
+            // Ambil data dari Dokters yang belum dihapus
+            // Query utama
+            var query = (from r in _applicationDbContext.Reseps
+                         join u in _applicationDbContext.UserActives
+                             on r.CreateBy equals u.UserActiveId
+                         where r.IsDelete == false && r.IsLunas==false // jika ada field IsDelete
+                         select new
+                         {
+                             ResepId = r.ResepId,
+                             KunjunganId = r.KunjunganId,
+                             CreateDateTime = r.CreateDateTime,
+                             CreateBy = r.CreateBy,
+                             r.AntrianRegistrasi,
+                             r.AntrianResep,
+                             r.AsuransiId,
+                             r.NamaAsuransi,
+                             r.PasienId,
+                             r.NamaPasien,
+                             r.PoliklinikId,
+                             r.NamaPoliklinik,
+                             r.DokterId,
+                             r.NamaDokter,
+                             r.StatusPembuatanResep,
+                             r.StatusPengambilan,
+                             r.IsCancelled,
+                             r.IsLunas,
+                             TanggalPembuatanResepFormatted = r.TanggalPembuatanResep.HasValue ? r.TanggalPembuatanResep.Value.ToString("yyyy-MM-dd") : null,
+                             CreateByName = u.FullName,
+                             DaftarObat = (from d in _applicationDbContext.DetailReseps
+                                           join o in _applicationDbContext.Obats // Asumsi nama tabel obat adalah MasterObat
+                                               on d.ObatId equals o.ObatId // Asumsi primary key tabel obat adalah ObatId
+                                           where d.ResepId == r.ResepId
+                                           select new
+                                           {
+                                               d.DetailResepId,
+                                               d.ResepId,
+                                               d.ObatId,
+                                               d.IsRacikan,
+                                               d.JenisObat,
+                                               o.ObatName, // Menambahkan NamaObat dari tabel MasterObat
+                                               d.Qty,
+                                               d.HargaObat,
+                                               d.Signa,
+                                               d.SignaTambahan,
+                                               d.IsIteratur,
+                                               d.JumlahIteratur,
+                                               d.TglMulaiIteratur,
+                                               d.JarakPenebusan,
+                                               d.MasaAktifIteratur,
+                                               d.StatusCoverObat,
+                                               d.CreateBy,
+                                               d.CreateDateTime,
+                                           }).ToList(),
+
+                             DaftarRacikan = (from d in _applicationDbContext.DetailReseps
+                                              join ra in _applicationDbContext.Racikans
+                                                  on d.RacikanId equals ra.RacikanId
+                                              where d.ResepId == r.ResepId
+                                              select new
+                                              {
+                                                  ra.RacikanId,
+                                                  r.ResepId,
+                                                  ra.NamaRacikan,
+                                                  r.CreateBy,
+                                                  r.CreateDateTime
+                                              }).ToList()
+                         });
+
+            //Search
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                string searchLower = search.ToLower();
+                query = query.Where(d =>
+                    EF.Functions.ILike(d.NamaPasien, $"%{searchLower}%"));
+            }
+
+            // Filter tanggal
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
+                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+                query = query.Where(d => d.CreateDateTime >= startUtc && d.CreateDateTime <= endUtc);
+            }
+
+            if (StatusPengambilan.HasValue)
+            {
+                query = query.Where(u => u.StatusPengambilan == StatusPengambilan.Value);
+            }
+
+            // Filter berdasarkan periode waktu
+            if (periode.HasValue)
+            {
+                DateTime today = DateTime.UtcNow.Date;
+                switch (periode)
+                {
+                    case PeriodeFilter.Today:
+                        query = query.Where(d => d.CreateDateTime.Date == today);
+                        break;
+                    case PeriodeFilter.ThisWeek:
+                        var weekStart = today.AddDays(-(int)today.DayOfWeek);
+                        query = query.Where(d => d.CreateDateTime.Date >= weekStart && d.CreateDateTime.Date <= today);
+                        break;
+                    case PeriodeFilter.LastWeek:
+                        var lastWeekStart = today.AddDays(-7 - (int)today.DayOfWeek);
+                        var lastWeekEnd = lastWeekStart.AddDays(6);
+                        query = query.Where(d => d.CreateDateTime.Date >= lastWeekStart && d.CreateDateTime.Date <= lastWeekEnd);
+                        break;
+                    case PeriodeFilter.ThisMonth:
+                        query = query.Where(d => d.CreateDateTime.Month == today.Month && d.CreateDateTime.Year == today.Year);
+                        break;
+                    case PeriodeFilter.LastMonth:
+                        var lastMonth = today.AddMonths(-1);
+                        query = query.Where(d => d.CreateDateTime.Month == lastMonth.Month && d.CreateDateTime.Year == lastMonth.Year);
+                        break;
+                    case PeriodeFilter.ThisYear:
+                        query = query.Where(d => d.CreateDateTime.Year == today.Year);
+                        break;
+                    case PeriodeFilter.LastYear:
+                        query = query.Where(d => d.CreateDateTime.Year == today.Year - 1);
+                        break;
+                    case PeriodeFilter.Last3Months:
+                        query = query.Where(d => d.CreateDateTime >= today.AddMonths(-3));
+                        break;
+                    case PeriodeFilter.Last6Months:
+                        query = query.Where(d => d.CreateDateTime >= today.AddMonths(-6));
+                        break;
+                }
+            }
+
+            // Sorting
+            query = sortDirection?.ToLower() == "desc"
+                ? orderBy?.ToLower() switch
+                {
+                    "createdatetime" => query.OrderByDescending(d => d.CreateDateTime),
+                    "createbyname" => query.OrderByDescending(d => d.CreateByName),
+                    "NamaPasien" => query.OrderByDescending(d => d.NamaPasien),
+                    _ => query.OrderByDescending(d => d.CreateDateTime)
+                }
+                : orderBy?.ToLower() switch
+                {
+                    "createdatetime" => query.OrderBy(d => d.CreateDateTime),
+                    "createbyname" => query.OrderBy(d => d.CreateByName),
+                    "NamaPasien" => query.OrderBy(d => d.NamaPasien),
                     _ => query.OrderBy(d => d.CreateDateTime)
                 };
 
