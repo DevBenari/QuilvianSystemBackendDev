@@ -879,7 +879,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             });
         }
 
-        [HttpGet("paged")]
+        [HttpGet("pagedResepNotLunas")]
         public IActionResult PagedResepNotLunas(
             int page = 1,
             int perPage = 10,
