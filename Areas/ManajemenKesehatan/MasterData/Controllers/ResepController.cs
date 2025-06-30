@@ -390,6 +390,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             ItemId = obat.ObatId,
                             NamaItem = obatDb.ObatName,
                             HargaItem = obat.HargaObat,
+                            QtyItem = qty,
                             SubTotalItem = obat.HargaObat * qty,
                             Keterangan = obat.SignaTambahan, // atau sesuaikan tipe dan nilainya
                         };
@@ -677,6 +678,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 ItemId = obat.ObatId,
                                 NamaItem = obatDbUpdate.ObatName,
                                 HargaItem = obat.HargaObat,
+                                QtyItem = obat.Qty,
                                 SubTotalItem = obat.HargaObat * obat.Qty,
                                 Keterangan = obat.SignaTambahan, // belum fux
                                 CreateBy = userActiveId, // Add these if your Billing has them
@@ -688,6 +690,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         {
                             // Update existing Billing
                             existingBilling.HargaItem = obat.HargaObat;
+                            existingBilling.QtyItem = obat.Qty;
                             existingBilling.SubTotalItem = obat.HargaObat * obat.Qty;
                             existingBilling.UpdateBy = userActiveId;
                             existingBilling.DiskonId = vm.DiskonId;

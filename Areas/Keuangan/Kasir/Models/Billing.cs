@@ -16,6 +16,7 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Models
         public Guid? ItemId { get; set; }
         public string? NamaItem { get; set; }
         public decimal? HargaItem { get; set; }
+        public int? QtyItem { get; set; }
         public decimal? SubTotalItem { get; set; }
         public string? Keterangan { get; set; }
     }

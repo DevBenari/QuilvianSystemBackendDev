@@ -231,6 +231,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         DiskonId = vm.DiskonId,
                         ItemId = vm.TindakanId,
                         NamaItem = tindakan.NamaTindakan,
+                        QtyItem = vm.Quantity,
                         HargaItem = tarifKelas.TarifTotal,
                         SubTotalItem = totalqty,
                         Keterangan = vm.Disposition,
@@ -372,6 +373,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         ItemId = vm.TindakanId,
                         NamaItem = tindakan.NamaTindakan,
                         HargaItem = tarifKelas.TarifTotal,
+                        QtyItem = vm.Quantity,
                         SubTotalItem = totalqty,
                         Keterangan = vm.Disposition,
                         CreateBy = userActiveId,
@@ -384,6 +386,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     existingBilling.HargaItem = tarifKelas.TarifTotal;
                     existingBilling.SubTotalItem = totalqty;
+                    existingBilling.QtyItem = vm.Quantity;
                     existingBilling.Keterangan = vm.Disposition;
                     existingBilling.DiskonId = vm.DiskonId;
                     existingBilling.UpdateBy = userActiveId;
