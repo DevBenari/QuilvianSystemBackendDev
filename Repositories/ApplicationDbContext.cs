@@ -103,6 +103,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<ResepTebusDetail> ResepTebusDetails { get; set; }
         public DbSet<PPN> PPNs { get; set; }
 
+
         #endregion
 
         #region Areas Keuangan
@@ -111,6 +112,8 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<BiayaAdministrasi> BiayaAdministrasis { get; set; }
         public DbSet<MainKasir> MainKasirs { get; set; }
         public DbSet<KasirTebusResep> KasirTebusReseps { get; set; }
+        public DbSet<MainKasirDetail> MainKasirDetails { get; set; }
+        public DbSet<Billing> Billings { get; set; }
         #endregion
 
 

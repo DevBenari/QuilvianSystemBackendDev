@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using OpenCvSharp;
+using QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
@@ -200,6 +202,43 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // **Simpan ke Database**
                 _applicationDbContext.TindakanKunjungans.Add(data);
+
+                // cari data tentang tindakan Id
+                var tindakan = await _applicationDbContext.Tindakans
+                    .FirstOrDefaultAsync(t => t.TindakanId == vm.TindakanId);
+
+                if (tindakan == null)
+                {
+                    return NotFound(new { message = "Data tindakan tidak ditemukan." });
+                }
+
+                // Hitung jumlah billing sebelumnya untuk kunjungan ini
+                int billingStart = await _applicationDbContext.Billings
+                    .Where(b => b.KunjunganId == vm.KunjunganId )
+                    .CountAsync();
+                int billingIndex = billingStart + 1;
+
+                // buat BillingKode untuk setiap obat
+                string billingKode = $"TD{billingIndex.ToString("D3")}";
+                billingIndex++;
+
+                    var billing = new Billing
+                    {
+                        BillingId = Guid.NewGuid(),
+                        KunjunganId = vm.KunjunganId,
+                        BillingDate = DateTime.UtcNow,
+                        BillingKode = billingKode,
+                        DiskonId = vm.DiskonId,
+                        ItemId = vm.TindakanId,
+                        NamaItem = tindakan.NamaTindakan,
+                        HargaItem = tarifKelas.TarifTotal,
+                        SubTotalItem = totalqty,
+                        Keterangan = vm.Disposition,
+                    };
+
+                    _applicationDbContext.Billings.Add(billing);
+              
+
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -220,6 +259,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
 
 
         [HttpPut("{id}")]
@@ -260,16 +300,97 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
+                // **Ambil Kunjungan berdasarkan KunjunganId dari ViewModel**
+                var kunjungan = await _applicationDbContext.Kunjungans
+                    .FirstOrDefaultAsync(k => k.KunjunganID == vm.KunjunganId);
+
+                if (kunjungan == null)
+                {
+                    return NotFound(new { message = "Kunjungan tidak ditemukan." });
+                }
+
+                // Cari kelas berdasarkan kode kelas
+                var kelas = await _applicationDbContext.Kelass
+                    .FirstOrDefaultAsync(k => k.KodeKelas == kunjungan.JenisKunjungan);
+
+                if (kelas == null)
+                {
+                    return NotFound(new { message = "Kelas untuk jenis kunjungan ini tidak ditemukan." });
+                }
+
+                // **Ambil Tarif berdasarkan TindakanId dan KelasId**
+                var tarifKelas = await _applicationDbContext.TarifKelass
+                    .FirstOrDefaultAsync(t => t.TindakanId == vm.TindakanId && t.KelasId == kelas.KelasId);
+
+                if (tarifKelas == null)
+                {
+                    return NotFound(new { message = "Tarif untuk tindakan dan kelas ini tidak ditemukan." });
+                }
+
+                // **Hitung Total berdasarkan TarifTotal dari TarifKelas dan Quantity**
+                var totalqty = tarifKelas.TarifTotal.HasValue
+                    ? tarifKelas.TarifTotal.Value * vm.Quantity  // Mengalikan tarif total dengan jumlah Quantity
+                    : 0; // Jika TarifTotal tidak ada, set total menjadi 0
+
+
                 // **Update Data**
                 data.KunjunganId = vm.KunjunganId;
                 data.TindakanId = vm.TindakanId;
                 data.Quantity = vm.Quantity;
-                data.Total = vm.Total;
+                data.Total = totalqty;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
                 _applicationDbContext.TindakanKunjungans.Update(data);
+
+                // Cek tindakan sebagai item billing
+                var tindakan = await _applicationDbContext.Tindakans
+                    .FirstOrDefaultAsync(t => t.TindakanId == vm.TindakanId);
+                if (tindakan == null)
+                    return NotFound(new { message = "Data tindakan tidak ditemukan." });
+
+                var existingBilling = await _applicationDbContext.Billings
+                    .FirstOrDefaultAsync(b => b.KunjunganId == vm.KunjunganId && b.ItemId == vm.TindakanId );
+
+                if (existingBilling == null)
+                {
+                    int billingStart = await _applicationDbContext.Billings
+                        .Where(b => b.KunjunganId == vm.KunjunganId )
+                        .CountAsync();
+
+                    int billingIndex = billingStart + 1;
+                    string billingKode = $"TD{billingIndex:D3}";
+
+                    var newBilling = new Billing
+                    {
+                        BillingId = Guid.NewGuid(),
+                        KunjunganId = vm.KunjunganId,
+                        BillingDate = DateTime.UtcNow,
+                        BillingKode = billingKode,
+                        DiskonId = vm.DiskonId,
+                        ItemId = vm.TindakanId,
+                        NamaItem = tindakan.NamaTindakan,
+                        HargaItem = tarifKelas.TarifTotal,
+                        SubTotalItem = totalqty,
+                        Keterangan = vm.Disposition,
+                        CreateBy = userActiveId,
+                        CreateDateTime = DateTimeOffset.UtcNow,
+                    };
+
+                    _applicationDbContext.Billings.Add(newBilling);
+                }
+                else
+                {
+                    existingBilling.HargaItem = tarifKelas.TarifTotal;
+                    existingBilling.SubTotalItem = totalqty;
+                    existingBilling.Keterangan = vm.Disposition;
+                    existingBilling.DiskonId = vm.DiskonId;
+                    existingBilling.UpdateBy = userActiveId;
+                    existingBilling.UpdateDateTime = DateTimeOffset.UtcNow;
+
+                    _applicationDbContext.Billings.Update(existingBilling);
+                }
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -296,13 +417,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         {
             try
             {
-                // **Cek koneksi ke database**
-                if (!await _applicationDbContext.Database.CanConnectAsync())
-                {
-                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
-                }
-
-                // **Ambil User ID dari JWT Claims**
+                // Autentikasi user dari JWT
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
                 {
@@ -315,40 +430,44 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
                 }
+
                 var userActiveId = getUserActive.UserActiveId;
 
-                // **Cari Data**
-                var data = await _applicationDbContext.TarifKelass.FindAsync(id);
-                if (data == null)
+                // Ambil tindakan kunjungan
+                var tindakan = await _applicationDbContext.TindakanKunjungans
+                    .FirstOrDefaultAsync(tk => tk.TindakanKunjunganId == id && tk.IsDelete == false);
+
+                if (tindakan == null)
                 {
-                    return NotFound(new { message = "Data tidak ditemukan." });
+                    return NotFound(new { message = "Tindakan kunjungan tidak ditemukan atau sudah dihapus." });
                 }
 
-                // **Soft Delete (Tandai Data sebagai Terhapus)**
-                data.DeleteBy = userActiveId;
-                data.DeleteDateTime = DateTimeOffset.UtcNow;
+                // Soft delete tindakan kunjungan
+                tindakan.IsDelete = true;
+                tindakan.DeleteBy = userActiveId;
+                tindakan.DeleteDateTime = DateTimeOffset.UtcNow;
 
-                data.IsDelete = true;
+                // Soft delete billing yang terkait (jika ada)
+                var billing = await _applicationDbContext.Billings
+                    .FirstOrDefaultAsync(b =>
+                        b.KunjunganId == tindakan.KunjunganId &&
+                        b.ItemId == tindakan.TindakanId &&
+                        b.IsDelete == false );
 
-                _applicationDbContext.TarifKelass.Update(data);
-                int result = await _applicationDbContext.SaveChangesAsync();
-
-                if (result > 0)
+                if (billing != null)
                 {
-                    return Ok(new { message = "Data berhasil dihapus (soft delete) || 200 OK" });
+                    billing.IsDelete = true;
+                    billing.DeleteBy = userActiveId;
+                    billing.DeleteDateTime = DateTimeOffset.UtcNow;
                 }
-                else
-                {
-                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
-                }
-            }
-            catch (DbUpdateException dbEx)
-            {
-                return StatusCode(500, new { message = $"Gagal menghapus data: {dbEx.InnerException?.Message}" });
+
+                await _applicationDbContext.SaveChangesAsync();
+
+                return Ok(new { message = "Tindakan kunjungan dan billing berhasil dihapus (soft delete)." });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+                return StatusCode(500, new { message = $"Terjadi kesalahan: {ex.Message}" });
             }
         }
 

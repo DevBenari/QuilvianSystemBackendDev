@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
@@ -347,6 +348,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
 
                     _applicationDbContext.DetailReseps.AddRange(daftarobat);
+
+                    // Hitung jumlah billing sebelumnya untuk kunjungan ini
+                    int billingStart = await _applicationDbContext.Billings
+                        .Where(b => b.KunjunganId == vm.KunjunganId )
+                        .CountAsync();
+                    int billingIndex = billingStart + 1;
+
                     // **Pengurangan Stok untuk Obat**
                     foreach (var obat in vm.DaftarObat)
                     {
@@ -367,6 +375,25 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                         // Update stok obat di database
                         _applicationDbContext.Obats.Update(obatDb);
+
+                        // buat BillingKode untuk setiap obat
+                        string billingKode = $"OB{billingIndex.ToString("D3")}";
+                        billingIndex++;
+
+                        // Tambahkan satu Billing per ObatId
+                        var billing = new Billing
+                        {
+                            KunjunganId = vm.KunjunganId,
+                            DiskonId = vm.DiskonId,
+                            BillingDate = DateTime.UtcNow,
+                            BillingKode = billingKode,
+                            ItemId = obat.ObatId,
+                            NamaItem = obatDb.ObatName,
+                            HargaItem = obat.HargaObat,
+                            SubTotalItem = obat.HargaObat * qty,
+                            Keterangan = obat.SignaTambahan, // atau sesuaikan tipe dan nilainya
+                        };
+                        _applicationDbContext.Billings.Add(billing);
                     }
                 }
                 int result = await _applicationDbContext.SaveChangesAsync();
@@ -546,6 +573,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
                 else
                 {
+                    int billingStart = await _applicationDbContext.Billings
+                        .Where(b => b.KunjunganId == vm.KunjunganId )
+                        .CountAsync();
+                    int billingIndex = billingStart + 1; // Start from the next available billing index
+
                     foreach (var obat in vm.DaftarObat)
                     {
                         var existingDetail = dfObatLama.FirstOrDefault(x => x.ObatId == obat.ObatId);
@@ -625,6 +657,44 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                         obatDbUpdate.Stock -= obat.Qty.GetValueOrDefault();
                         _applicationDbContext.Obats.Update(obatDbUpdate);
+
+                        // cari data billing
+                        string billingKode = $"OB{billingIndex.ToString("D3")}";
+                        billingIndex++;
+
+                        var existingBilling = await _applicationDbContext.Billings
+                            .FirstOrDefaultAsync(b => b.KunjunganId == vm.KunjunganId && b.ItemId == obat.ObatId);
+
+                        if (existingBilling == null)
+                        {
+                            // Add new Billing if it doesn't exist for this item in this kunjungan
+                            var billing = new Billing
+                            {
+                                KunjunganId = vm.KunjunganId,
+                                DiskonId = vm.DiskonId,
+                                BillingDate = DateTime.UtcNow,
+                                BillingKode = billingKode,
+                                ItemId = obat.ObatId,
+                                NamaItem = obatDbUpdate.ObatName,
+                                HargaItem = obat.HargaObat,
+                                SubTotalItem = obat.HargaObat * obat.Qty,
+                                Keterangan = obat.SignaTambahan, // belum fux
+                                CreateBy = userActiveId, // Add these if your Billing has them
+                                CreateDateTime = DateTimeOffset.UtcNow,
+                            };
+                            _applicationDbContext.Billings.Add(billing);
+                        }
+                        else
+                        {
+                            // Update existing Billing
+                            existingBilling.HargaItem = obat.HargaObat;
+                            existingBilling.SubTotalItem = obat.HargaObat * obat.Qty;
+                            existingBilling.UpdateBy = userActiveId;
+                            existingBilling.DiskonId = vm.DiskonId;
+                            existingBilling.UpdateDateTime = DateTimeOffset.UtcNow; // Assuming UpdateDateTime exists in Billing
+                            _applicationDbContext.Billings.Update(existingBilling);
+                        }
+
                     }
                 }
 
@@ -653,34 +723,56 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         {
             try
             {
-                // ambill data user
-                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
-                var UserActiveId = GetUserActive.UserActiveId;
-
-                if (string.IsNullOrEmpty(EmailLogin))
-                {
+                // Autentikasi user
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin))
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
-                }
 
-                // cari data resep
-                var resep = await _applicationDbContext.Reseps.FindAsync(id);
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+                if (getUserActive == null)
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+
+                var userActiveId = getUserActive.UserActiveId;
+
+                // Cari data resep
+                var resep = await _applicationDbContext.Reseps
+                    .FirstOrDefaultAsync(r => r.ResepId == id && r.IsDelete == false);
                 if (resep == null)
+                    return NotFound(new { message = "Data resep tidak ditemukan atau sudah dihapus." });
+
+                // Soft delete DetailResep
+                var detailReseps = await _applicationDbContext.DetailReseps
+                    .Where(dr => dr.ResepId == id && dr.IsDelete == false)
+                    .ToListAsync();
+
+                foreach (var detail in detailReseps)
                 {
-                    return NotFound(new { message = "Data tidak ditemukan." });
+                    detail.IsDelete = true;
+                    detail.DeleteBy = userActiveId;
+                    detail.DeleteDateTime = DateTimeOffset.UtcNow;
                 }
 
-                // Hapus DetailResep terkait
-                var detailReseps = _applicationDbContext.DetailReseps.Where(dr => dr.ResepId == id).ToList();
-                if (detailReseps.Any())
+                // Soft delete Billing terkait kunjungan
+                var billings = await _applicationDbContext.Billings
+                    .Where(b => b.KunjunganId == resep.KunjunganId && b.IsDelete == false)
+                    .ToListAsync();
+
+                foreach (var billing in billings)
                 {
-                    _applicationDbContext.DetailReseps.RemoveRange(detailReseps);
+                    billing.IsDelete = true;
+                    billing.DeleteBy = userActiveId;
+                    billing.DeleteDateTime = DateTimeOffset.UtcNow;
                 }
 
-                // Hapus Resep
-                _applicationDbContext.Reseps.Remove(resep);
+                // Soft delete Resep
+                resep.IsDelete = true;
+                resep.DeleteBy = userActiveId;
+                resep.DeleteDateTime = DateTimeOffset.UtcNow;
+
                 await _applicationDbContext.SaveChangesAsync();
-                return Ok(new { message = "Hapus Data Berhasil || 200 OK" });
+
+                return Ok(new { message = "Data berhasil dihapus secara soft delete || 200 OK" });
             }
             catch (Exception ex)
             {

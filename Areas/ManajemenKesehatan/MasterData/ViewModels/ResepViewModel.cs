@@ -1,10 +1,12 @@
-﻿using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
+﻿using QuilvianSystemBackendDev.Areas.Keuangan.Kasir.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels
 {
     public class ResepViewModel
     {
         public Guid? KunjunganId { get; set; }
+        public List<BillingViewModel>? Billing { get; set; }
         public List<ResepDetailViewModel>? DaftarObat { get; set; }
         public Guid? AsuransiId { get; set; }
         public string? NamaAsuransi { get; set; }
@@ -17,5 +19,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
         public int? AntrianResep { get; set; }
         public string? AntrianRegistrasi { get; set; }
         public string? StatusPembuatanResep { get; set; }
+        public Guid? DiskonId { get; set; }
     }
 }

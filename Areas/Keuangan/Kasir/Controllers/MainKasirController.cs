@@ -9,6 +9,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using OpenCvSharp;
 using QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.Keuangan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.Keuangan.Models.Kasir;
@@ -94,14 +95,10 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
                              CreateByName = u.FullName,
                              KasirId = a.KasirId,
                              KunjunganId = a.KunjunganId,
-                             BiayaAdministrasiKode = a.BiayaAdministrasiKode,
-                             MetodePembayaranId = a.MetodePembayaranId,
                              DiskonId = a.DiskonId,
-                             NominalPembayaran = a.NominalPembayaran,
-                             StatusPembayaran = a.StatusPembayaran,
+                             GrandTotalPembayaran = a.GrandTotalPembayaran,
                              Keterangan = a.Keterangan,
                              TglPembayaran = a.TglPembayaran,
-                             ReferenceId = a.ReferenceId
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -186,12 +183,14 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
                  join kasir in _applicationDbContext.MainKasirs on k.KunjunganID equals kasir.KunjunganId into kasirGroup
                  from kasir in kasirGroup.DefaultIfEmpty() 
 
-                     // LEFT JOIN ke tabel Diskon
-                 join dsk in _applicationDbContext.Diskons on kasir.DiskonId equals dsk.DiskonId into diskonGroup
-                 from dsk in diskonGroup.DefaultIfEmpty() 
+                 join dk in _applicationDbContext.MainKasirDetails on kasir.KasirId equals dk.MainKasirId into MainKasirDetailsGroup
+                 from dk in MainKasirDetailsGroup.DefaultIfEmpty() 
+                 //                                                                // LEFT JOIN ke tabel Diskon
+                 //join dsk in _applicationDbContext.Diskons on MainKasirDetails. equals dsk.DiskonId into diskonGroup
+                 //from dsk in diskonGroup.DefaultIfEmpty() 
 
                      // LEFT JOIN ke tabel Metode Pembayaran
-                 join mp in _applicationDbContext.MetodePembayarans on kasir.MetodePembayaranId equals mp.MetodePembayaranId into metodeGroup
+                 join mp in _applicationDbContext.MetodePembayarans on dk.MetodePembayaranId equals mp.MetodePembayaranId into metodeGroup
                  from mp in metodeGroup.DefaultIfEmpty() 
 
                  where k.KunjunganID == kunjunganId && !k.IsDelete 
@@ -210,7 +209,8 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
                      t,
                      adm,
                      kasir,
-                     dsk,
+                     //dsk,
+                     dk,
                      mp
                  });
 
@@ -245,10 +245,10 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
                         NominalBiayaAdministrasi = firstItem.adm?.NominalBiayaAdministrasi,
                         PaymentMethodId = firstItem.mp?.MetodePembayaranId,
                         PaymentMethodName = firstItem.mp?.NamaMetode ?? "-",
-                        DiskonId = firstItem.dsk?.DiskonId,
-                        NamaDiskon = firstItem.dsk?.NamaDiskon ?? "-",
-                        NilaiDiskon = firstItem.dsk?.NominalDiskon ?? 0,
-                        PersenanDiskon = firstItem.dsk?.PersenDiskon ?? 0,
+                        //DiskonId = firstItem.dsk?.DiskonId,
+                        //NamaDiskon = firstItem.dsk?.NamaDiskon ?? "-",
+                        //NilaiDiskon = firstItem.dsk?.NominalDiskon ?? 0,
+                        //PersenanDiskon = firstItem.dsk?.PersenDiskon ?? 0,
                         IsFinishedKasir = firstItem.k?.IsFinishedKasir,
 
                         CreateBy = firstItem.kasir?.CreateBy,
@@ -383,11 +383,15 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
                              from kasir in kasirGroup.DefaultIfEmpty()
 
                                  // LEFT JOIN ke tabel Diskon
-                             join dsk in _applicationDbContext.Diskons on kasir.DiskonId equals dsk.DiskonId into diskonGroup
-                             from dsk in diskonGroup.DefaultIfEmpty()
+                                 //join dsk in _applicationDbContext.Diskons on kasir.DiskonId equals dsk.DiskonId into diskonGroup
+                                 //from dsk in diskonGroup.DefaultIfEmpty()
+
+                                 // left join MainKasirDetails
+                             join dk in _applicationDbContext.MainKasirDetails on kasir.KasirId equals dk.MainKasirId into MainKasirDetailsGroup
+                             from dk in MainKasirDetailsGroup.DefaultIfEmpty()
 
                                  // LEFT JOIN ke tabel Metode Pembayaran
-                             join mp in _applicationDbContext.MetodePembayarans on kasir.MetodePembayaranId equals mp.MetodePembayaranId into metodeGroup
+                             join mp in _applicationDbContext.MetodePembayarans on dk.MetodePembayaranId equals mp.MetodePembayaranId into metodeGroup
                              from mp in metodeGroup.DefaultIfEmpty()
 
                              where kasir.KasirId== id && !k.IsDelete
@@ -406,7 +410,8 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
                                  t,
                                  adm,
                                  kasir,
-                                 dsk,
+                                 //dsk,
+                                 dk,
                                  mp
                              });
 
@@ -441,10 +446,10 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
                         NominalBiayaAdministrasi = firstItem.adm?.NominalBiayaAdministrasi,
                         PaymentMethodId = firstItem.mp?.MetodePembayaranId,
                         PaymentMethodName = firstItem.mp?.NamaMetode ?? "-",
-                        DiskonId = firstItem.dsk?.DiskonId,
-                        NamaDiskon = firstItem.dsk?.NamaDiskon ?? "-",
-                        NilaiDiskon = firstItem.dsk?.NominalDiskon ?? 0,
-                        PersenanDiskon = firstItem.dsk?.PersenDiskon ?? 0,
+                        //DiskonId = firstItem.dsk?.DiskonId,
+                        //NamaDiskon = firstItem.dsk?.NamaDiskon ?? "-",
+                        //NilaiDiskon = firstItem.dsk?.NominalDiskon ?? 0,
+                        //PersenanDiskon = firstItem.dsk?.PersenDiskon ?? 0,
                         IsFinishedKasir = firstItem.k?.IsFinishedKasir,
 
                         CreateBy = firstItem.kasir?.CreateBy,
@@ -564,15 +569,11 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
                 {
                     KasirId = Guid.NewGuid(),
                     KunjunganId = vm.KunjunganId,
-                    BiayaAdministrasiKode = vm.BiayaAdministrasiKode,
-                    MetodePembayaranId = vm.MetodePembayaranId,
                     DiskonId = vm.DiskonId,
-                    NominalPembayaran = vm.NominalPembayaran,
-                    StatusPembayaran = vm.StatusPembayaran,
+                    GrandTotalPembayaran = vm.GrandTotalPembayaran,
                     TotalBiayaObat = vm.TotalBiayaObat,
                     Keterangan = vm.Keterangan,
                     TglPembayaran = DateTimeOffset.UtcNow, // Atau sesuai kebutuhan
-                    ReferenceId = Guid.NewGuid(), // Atau sesuai kebutuhan
                     IsDelete = false,
 
 
@@ -586,7 +587,25 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
 
                 if (resultkasir > 0)
                 {
-                    return Created("", new { message = "Tambah Data Berhasil || 201 Created", });
+                    if (vm.Details != null && vm.Details.Any())
+                    {
+                        var detailEntities = vm.Details.Select(detail => new MainKasirDetail
+                        {
+                            MainKasirDetailId = Guid.NewGuid(),
+                            MainKasirId = data.KasirId,
+                            MetodePembayaranId = detail.MetodePembayaranId,
+                            ReferenceId = detail.ReferenceId,
+                            NamaMetode = detail.NamaMetode,
+                            NominalPembayaran = detail.NominalPembayaran,
+                            Keterangan = detail.Keterangan,
+                            StatusPembayaran = detail.StatusPembayaran,
+                            TglPembayaran = DateTime.UtcNow
+                        }).ToList();
+
+                        _applicationDbContext.MainKasirDetails.AddRange(detailEntities);
+                        await _applicationDbContext.SaveChangesAsync();
+                    }
+                    return Ok(new { message = "Data berhasil disimpan || 200 OK" });
                 }
                 else
                 {
@@ -613,64 +632,81 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
 
             try
             {
-                // **Cek koneksi ke database**
-                if (!await _applicationDbContext.Database.CanConnectAsync())
+                if (!_applicationDbContext.Database.CanConnect())
                 {
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
                 }
 
-                // **Ambil User ID dari JWT Claims**
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var getUserActive = await _applicationDbContext.UserActives
-                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+                var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
                 if (getUserActive == null)
                 {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
-                // **Cari Data**
-                var data = await _applicationDbContext.MainKasirs.FindAsync(id);
-                if (data == null)
+                // Cek data MainKasir
+                var existingKasir = await _applicationDbContext.MainKasirs
+                    .FirstOrDefaultAsync(k => k.KasirId == id && !k.IsDelete);
+
+                if (existingKasir == null)
                 {
-                    return NotFound(new { message = "Data tidak ditemukan." });
+                    return NotFound(new { message = "Data kasir tidak ditemukan." });
                 }
 
-                // **Update Data**
-                data.KunjunganId = vm.KunjunganId;
-                data.BiayaAdministrasiKode = vm.BiayaAdministrasiKode;
-                data.MetodePembayaranId = vm.MetodePembayaranId;
-                data.DiskonId = vm.DiskonId;
-                data.StatusPembayaran = vm.StatusPembayaran;
-                data.Keterangan = vm.Keterangan;
-                data.NominalPembayaran = vm.NominalPembayaran;
-                data.TotalBiayaTindakan = vm.TotalBiayaTindakan; // Pastikan ini ada di MainKasirViewModel
-                data.TotalBiayaObat = vm.TotalBiayaObat; // Pastikan ini ada di MainKasirViewModel
-                //data.ReferenceId = vm.ReferenceId; // Atau sesuai kebutuhan
-
-                data.UpdateBy = userActiveId;
-                data.UpdateDateTime = DateTimeOffset.UtcNow;
-
-                _applicationDbContext.MainKasirs.Update(data);
-                int result = await _applicationDbContext.SaveChangesAsync();
-
-                if (result > 0)
+                // Cek kunjungan masih valid
+                var datakunjungan = await _applicationDbContext.Kunjungans
+                    .FirstOrDefaultAsync(k => k.KunjunganID == vm.KunjunganId && !k.IsDelete);
+                if (datakunjungan == null)
                 {
-                    return Ok(new { message = "Update Data Berhasil || 200 OK" });
+                    return NotFound(new { message = "Kunjungan tidak ditemukan atau sudah dihapus." });
                 }
-                else
+
+                // Update data MainKasir
+                existingKasir.KunjunganId = vm.KunjunganId;
+                existingKasir.DiskonId = vm.DiskonId;
+                existingKasir.GrandTotalPembayaran = vm.GrandTotalPembayaran;
+                existingKasir.TotalBiayaObat = vm.TotalBiayaObat;
+                existingKasir.Keterangan = vm.Keterangan;
+                existingKasir.TglPembayaran = DateTimeOffset.UtcNow;
+                existingKasir.UpdateBy = userActiveId;
+                existingKasir.UpdateDateTime = DateTimeOffset.UtcNow;
+
+                // Hapus detail lama
+                var existingDetails = _applicationDbContext.MainKasirDetails
+                    .Where(d => d.MainKasirId == id);
+                _applicationDbContext.MainKasirDetails.RemoveRange(existingDetails);
+
+                // Tambahkan detail baru jika ada
+                if (vm.Details != null && vm.Details.Any())
                 {
-                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
+                    var newDetails = vm.Details.Select(detail => new MainKasirDetail
+                    {
+                        MainKasirDetailId = Guid.NewGuid(),
+                        MainKasirId = id,
+                        MetodePembayaranId = detail.MetodePembayaranId,
+                        ReferenceId = detail.ReferenceId,
+                        NamaMetode = detail.NamaMetode,
+                        NominalPembayaran = detail.NominalPembayaran,
+                        Keterangan = detail.Keterangan,
+                        StatusPembayaran = detail.StatusPembayaran,
+                    }).ToList();
+
+                    _applicationDbContext.MainKasirDetails.AddRange(newDetails);
                 }
+
+                await _applicationDbContext.SaveChangesAsync();
+
+                return Ok(new { message = "Update Data Berhasil || 200 OK" });
             }
             catch (DbUpdateException dbEx)
             {
-                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+                return StatusCode(500, new { message = $"Gagal memperbarui data: {dbEx.InnerException?.Message}" });
             }
             catch (Exception ex)
             {
@@ -678,64 +714,44 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
             }
         }
 
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
             try
             {
-                // **Cek koneksi ke database**
-                if (!await _applicationDbContext.Database.CanConnectAsync())
-                {
-                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
-                }
+                // ambill data user
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
 
-                // **Ambil User ID dari JWT Claims**
-                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(emailLogin))
+                if (string.IsNullOrEmpty(EmailLogin))
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var getUserActive = await _applicationDbContext.UserActives
-                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
-                if (getUserActive == null)
-                {
-                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-                }
-                var userActiveId = getUserActive.UserActiveId;
-
-                // **Cari Data**
-                var data = await _applicationDbContext.MainKasirs.FindAsync(id);
-                if (data == null)
+                // cari data resep
+                var resep = await _applicationDbContext.MainKasirs.FindAsync(id);
+                if (resep == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
-                // **Soft Delete (Tandai Data sebagai Terhapus)**
-                data.DeleteBy = userActiveId;
-                data.DeleteDateTime = DateTimeOffset.UtcNow;
-
-                data.IsDelete = true;
-
-                _applicationDbContext.MainKasirs.Update(data);
-                int result = await _applicationDbContext.SaveChangesAsync();
-
-                if (result > 0)
+                // Hapus DetailResep terkait
+                var detailReseps = _applicationDbContext.MainKasirDetails.Where(dk => dk.MainKasirId == id).ToList();
+                if (detailReseps.Any())
                 {
-                    return Ok(new { message = "Data berhasil dihapus (soft delete) || 200 OK" });
+                    _applicationDbContext.MainKasirDetails.RemoveRange(detailReseps);
                 }
-                else
-                {
-                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
-                }
-            }
-            catch (DbUpdateException dbEx)
-            {
-                return StatusCode(500, new { message = $"Gagal menghapus data: {dbEx.InnerException?.Message}" });
+
+                // Hapus Resep
+                _applicationDbContext.MainKasirs.Remove(resep);
+                await _applicationDbContext.SaveChangesAsync();
+                return Ok(new { message = "Hapus Data Berhasil || 200 OK" });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+                return StatusCode(500, new { message = $"Terjadi kesalahan: {ex.Message}" });
             }
         }
 
@@ -765,14 +781,10 @@ namespace QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Controllers
                              CreateByName = u.FullName,
                              KasirId = a.KasirId,
                              KunjunganId = a.KunjunganId,
-                             BiayaAdministrasiKode = a.BiayaAdministrasiKode,
-                             MetodePembayaranId = a.MetodePembayaranId,
                              DiskonId = a.DiskonId,
-                             NominalPembayaran = a.NominalPembayaran,
-                             StatusPembayaran = a.StatusPembayaran,
+                             GrandTotalPembayaran = a.GrandTotalPembayaran,
                              Keterangan = a.Keterangan,
                              TglPembayaran = a.TglPembayaran,
-                             ReferenceId = a.ReferenceId
                          });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
