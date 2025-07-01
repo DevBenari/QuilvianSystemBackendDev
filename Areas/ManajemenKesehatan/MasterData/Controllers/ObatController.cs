@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Repositories;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using Microsoft.AspNetCore.Cors;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
@@ -13,6 +12,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System.Globalization;
 using Microsoft.IdentityModel.Tokens;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
@@ -411,14 +411,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             where a.IsDelete == false
                             select new
                             {
-                                CreateDateTime = a.CreateDateTime,
-                                CreateBy = a.CreateBy,
+                                a.CreateDateTime,
+                                a.CreateBy,
                                 CreateByName = u.FullName,
-                                ObatId = a.ObatId,
-                                ObatCode = a.ObatCode,
-                                ObatName = a.ObatName,
-                                IsActive = a.IsActive,
-                                Note = a.Note,
+                                a.ObatId,
+                                a.ObatCode,
+                                a.ObatName,
+                                a.IsActive,
+                                a.Note,
                                 a.Minimal,
                                 a.Maximal,
                                 a.Farmakologi,

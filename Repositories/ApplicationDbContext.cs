@@ -1,11 +1,11 @@
 ﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using QuilvianSystemBackendDev.Areas.Keuangan.Kasir.Models;
-using QuilvianSystemBackendDev.Areas.Keuangan.Models.Kasir;
-using QuilvianSystemBackendDev.Areas.Keuangan;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
 using QuilvianSystemBackendDev.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
 
 namespace QuilvianSystemBackendDev.Repositories
 {

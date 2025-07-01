@@ -6,9 +6,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
@@ -16,26 +16,26 @@ using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class PPNController : Controller
+    public class MetodePembayaranController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<PPNController> _logger;
+        private readonly ILogger<MetodePembayaranController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public PPNController(
-            ApplicationDbContext applicationDbContext,
+        public MetodePembayaranController
+            (ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<PPNController> logger,
+            ILogger<MetodePembayaranController> logger,
             IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
@@ -53,20 +53,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = (from a in _applicationDbContext.PPNs
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
+            var query = (from a in _applicationDbContext.MetodePembayarans
+                         join u in _applicationDbContext.UserActives
                          on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false || a.IsDelete == null
+                         where a.IsDelete == false
                          select new
                          {
-                             CreateDateTime = a.CreateDateTime,
-                             CreateBy = a.CreateBy,
+                             a.CreateDateTime,
+                             a.CreateBy,
                              CreateByName = u.FullName,
-                             PPNId = a.PpnId,
-                             PPN = a.Persentase,
-                             Keterangan = a.Keterangan,
-                             IsAktif = a.IsAktif,
-                             IsDelete = a.IsDelete,
+                             a.MetodePembayaranId,
+                             a.NamaMetode,
+                             a.Keterangan,
+                             a.IsDelete,
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -103,7 +102,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.PPNs.Find(id);
+            var listdata = _applicationDbContext.MetodePembayarans.Find(id);
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -117,7 +116,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] PPNViewModel vm)
+        public async Task<IActionResult> Create([FromBody] MetodePembayaranViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -147,27 +146,27 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 //// **Cek Duplikasi**
-                bool isDuplicate = _applicationDbContext.PPNs
-                                    .Any(c => c.Persentase == vm.Persentase);
+                bool isDuplicate = _applicationDbContext.MetodePembayarans
+                                    .Any(c => c.NamaMetode == vm.NamaMetode);
 
                 if (isDuplicate)
                 {
-                    return Conflict(new { message = "Persentase untuk PPN ini telah ada" });
+                    return Conflict(new { message = "Nama benefit ini telah tersedia" });
                 }
 
                 // **Buat Data Baru**
-                var data = new PPN
+                var data = new MetodePembayaran
                 {
-                    PpnId = Guid.NewGuid(),
-                    Persentase = vm.Persentase,
+                    MetodePembayaranId = Guid.NewGuid(),
+                    NamaMetode = vm.NamaMetode,
                     Keterangan = vm.Keterangan,
-                    IsAktif = vm.IsAktif,
+                    IsDelete = false,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
 
                 // **Simpan ke Database**
-                _applicationDbContext.PPNs.Add(data);
+                _applicationDbContext.MetodePembayarans.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -190,7 +189,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] PPNViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] MetodePembayaranViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -221,21 +220,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.PPNs.FindAsync(id);
+                var data = await _applicationDbContext.MetodePembayarans.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
                 // **Update Data**
-                data.Persentase = vm.Persentase;
-                data.IsAktif = vm.IsAktif;
+                data.NamaMetode = vm.NamaMetode;
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.PPNs.Update(data);
+                _applicationDbContext.MetodePembayarans.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -284,19 +282,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.PPNs.FindAsync(id);
+                var data = await _applicationDbContext.MetodePembayarans.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
                 // **Soft Delete (Tandai Data sebagai Terhapus)**
+                data.IsDelete = true;
                 data.DeleteBy = userActiveId;
                 data.DeleteDateTime = DateTimeOffset.UtcNow;
 
                 data.IsDelete = true;
 
-                _applicationDbContext.PPNs.Update(data);
+                _applicationDbContext.MetodePembayarans.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -319,7 +318,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet("paged")]
-        public IActionResult Paged(
+        public IActionResult PagedBenefits(
         int page = 1,
         int perPage = 10,
         string? search = null,
@@ -333,28 +332,27 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         {
 
             // Query data
-            var query = (from a in _applicationDbContext.PPNs
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false || a.IsDelete == null
-                         select new
-                         {
-                             CreateDateTime = a.CreateDateTime,
-                             CreateBy = a.CreateBy,
-                             CreateByName = u.FullName,
-                             PPNId = a.PpnId,
-                             PPN = a.Persentase,
-                             Keterangan = a.Keterangan,
-                             IsAktif = a.IsAktif,
-                             IsDelete = a.IsDelete,
-                         });
+            var query = from a in _applicationDbContext.MetodePembayarans
+                        join u in _applicationDbContext.UserActives
+                        on a.CreateBy equals u.UserActiveId
+                        where a.IsDelete == false
+                        select new
+                        {
+                            a.CreateDateTime,
+                            a.CreateBy,
+                            CreateByName = u.FullName,
+                            a.MetodePembayaranId,
+                            a.NamaMetode,
+                            a.Keterangan,
+                            a.IsDelete,
+                        };
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             if (!string.IsNullOrWhiteSpace(search))
             {
                 search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
-                    EF.Functions.ILike(u.PPN.ToString(), search)
+                    EF.Functions.ILike(u.NamaMetode, search)
                 );
             }
 
@@ -381,14 +379,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         break;
                     case PeriodeFilter.ThisWeek:
                         query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
+                            u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
                             u.CreateDateTime.Date <= today
                         );
                         break;
                     case PeriodeFilter.LastWeek:
                         query = query.Where(u =>
                             u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek))
+                            u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)
                         );
                         break;
                     case PeriodeFilter.ThisMonth:
@@ -424,14 +422,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "PPN" => query.OrderByDescending(u => u.PPN),
+                    "NamaMetode" => query.OrderByDescending(u => u.NamaMetode),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
                     "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
                     "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    "PPN" => query.OrderBy(u => u.PPN),
+                    "NamaMetode" => query.OrderBy(u => u.NamaMetode),
                     _ => query.OrderBy(u => u.CreateDateTime)
                 };
 

@@ -13,8 +13,8 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using Swashbuckle.AspNetCore.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using System.Data;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
@@ -40,17 +40,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (perPage < 1) perPage = 10;
 
             var query = (from ok in _applicationDbContext.ObatKandungans
-                        join o in _applicationDbContext.Obats on ok.ObatId equals o.ObatId
-                        join k in _applicationDbContext.Kandungans on ok.KandunganId equals k.KandunganId
-                        select new
-                        {
-                            CreateDateTime = ok.CreateDateTime,
-                            ObatKandunganId = ok.ObatKandunganId,
-                            ObatId = ok.ObatId,
-                            ObatName = o.ObatName,
-                            KandunganId = ok.KandunganId,
-                            KandunganName = k.NamaKandungan
-                        }).OrderByDescending(a => a.CreateDateTime);
+                         join o in _applicationDbContext.Obats on ok.ObatId equals o.ObatId
+                         join k in _applicationDbContext.Kandungans on ok.KandunganId equals k.KandunganId
+                         select new
+                         {
+                             ok.CreateDateTime,
+                             ok.ObatKandunganId,
+                             ok.ObatId,
+                             o.ObatName,
+                             ok.KandunganId,
+                             KandunganName = k.NamaKandungan
+                         }).OrderByDescending(a => a.CreateDateTime);
 
             var totalRows = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
@@ -267,10 +267,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         join k in _applicationDbContext.Kandungans on ok.KandunganId equals k.KandunganId
                         select new
                         {
-                            ObatKandunganId = ok.ObatKandunganId,
-                            ObatId = ok.ObatId,
-                            ObatName = o.ObatName,
-                            KandunganId = ok.KandunganId,
+                            ok.ObatKandunganId,
+                            ok.ObatId,
+                            o.ObatName,
+                            ok.KandunganId,
                             KandunganName = k.NamaKandungan,
                             o.CreateDateTime
                         };
@@ -308,14 +308,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         break;
                     case PeriodeFilter.ThisWeek:
                         query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
+                            u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
                             u.CreateDateTime.Date <= today
                         );
                         break;
                     case PeriodeFilter.LastWeek:
                         query = query.Where(u =>
                             u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek))
+                            u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)
                         );
                         break;
                     case PeriodeFilter.ThisMonth:

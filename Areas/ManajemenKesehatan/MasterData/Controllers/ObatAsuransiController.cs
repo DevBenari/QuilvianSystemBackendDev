@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using System.Security.Claims;
 using QuilvianSystemBackendDev.Models;
 using Microsoft.AspNetCore.Identity;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
@@ -35,17 +35,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (perPage < 1) perPage = 10;
 
             var query = (from oa in _applicationDbContext.ObatAsuransis
-                        join o in _applicationDbContext.Obats on oa.ObatId equals o.ObatId
-                        join a in _applicationDbContext.Asuransis on oa.AsuransiId equals a.AsuransiId
-                        select new
-                        {
-                            CreateDateTime = oa.CreateDateTime,
-                            ObatAsuransiId = oa.ObatAsuransiId,
-                            ObatId = oa.ObatId,
-                            ObatName = o.ObatName,
-                            AsuransiId = oa.AsuransiId,
-                            AsuransiName = a.NamaAsuransi
-                        }).OrderByDescending(a => a.CreateDateTime);
+                         join o in _applicationDbContext.Obats on oa.ObatId equals o.ObatId
+                         join a in _applicationDbContext.Asuransis on oa.AsuransiId equals a.AsuransiId
+                         select new
+                         {
+                             oa.CreateDateTime,
+                             oa.ObatAsuransiId,
+                             oa.ObatId,
+                             o.ObatName,
+                             oa.AsuransiId,
+                             AsuransiName = a.NamaAsuransi
+                         }).OrderByDescending(a => a.CreateDateTime);
 
             var totalRows = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);

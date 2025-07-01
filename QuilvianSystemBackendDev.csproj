@@ -43,6 +43,7 @@
  
   <ItemGroup>
     <Folder Include=".github\workflows\" />
+    <Folder Include="Areas\Keuangan\" />
     <Folder Include="Areas\ManajemenKesehatan\RawatInap\Controllers\" />
     <Folder Include="Areas\ManajemenKesehatan\RawatInap\Models\" />
     <Folder Include="Areas\ManajemenKesehatan\RawatInap\ViewModels\" />
@@ -61,9 +62,6 @@
     <Folder Include="Areas\ManajemenKesehatan\Resep\Controllers\" />
     <Folder Include="Areas\ManajemenKesehatan\Resep\Models\" />
     <Folder Include="Areas\ManajemenKesehatan\Resep\ViewModels\" />
-    <Folder Include="Areas\ManajemenKesehatan\Farmasi\Controllers\" />
-    <Folder Include="Areas\ManajemenKesehatan\Farmasi\Models\" />
-    <Folder Include="Areas\ManajemenKesehatan\Farmasi\ViewModels\" />
     <Folder Include="Areas\ManajemenKesehatan\Tindakan\ViewModels\" />
     <Folder Include="wwwroot\scanktp\tessdata\" />
   </ItemGroup>

@@ -6,36 +6,34 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class PPNController : Controller
+    public class MainKasirDetailController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<PPNController> _logger;
+        private readonly ILogger<MainKasirDetailController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public PPNController(
+        public MainKasirDetailController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<PPNController> logger,
+            ILogger<MainKasirDetailController> logger,
             IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
@@ -53,20 +51,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = (from a in _applicationDbContext.PPNs
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
+            var query = (from a in _applicationDbContext.MainKasirDetails
+                         join u in _applicationDbContext.UserActives
                          on a.CreateBy equals u.UserActiveId
                          where a.IsDelete == false || a.IsDelete == null
                          select new
                          {
-                             CreateDateTime = a.CreateDateTime,
-                             CreateBy = a.CreateBy,
+                             a.CreateDateTime,
+                             a.CreateBy,
                              CreateByName = u.FullName,
-                             PPNId = a.PpnId,
-                             PPN = a.Persentase,
-                             Keterangan = a.Keterangan,
-                             IsAktif = a.IsAktif,
-                             IsDelete = a.IsDelete,
+                             a.MainKasirDetailId,
+                             a.MainKasirId,
+                             a.MetodePembayaranId,
+                             a.ReferenceId,
+                             a.NamaMetode,
+                             a.NominalPembayaran,
+                             a.StatusPembayaran,
+                             a.Keterangan,
+                             a.TglPembayaran,
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -97,13 +99,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     TotalPages = totalPages
                 }
             });
-
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.PPNs.Find(id);
+            var listdata = _applicationDbContext.MainKasirDetails.Find(id);
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -117,7 +118,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] PPNViewModel vm)
+        public async Task<IActionResult> Create([FromBody] MainKasirDetailViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -146,28 +147,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
-                //// **Cek Duplikasi**
-                bool isDuplicate = _applicationDbContext.PPNs
-                                    .Any(c => c.Persentase == vm.Persentase);
-
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Persentase untuk PPN ini telah ada" });
-                }
-
                 // **Buat Data Baru**
-                var data = new PPN
+                var data = new MainKasirDetail
                 {
-                    PpnId = Guid.NewGuid(),
-                    Persentase = vm.Persentase,
+                    MainKasirDetailId = Guid.NewGuid(),
+                    MainKasirId = vm.MainKasirId,
+                    MetodePembayaranId = vm.MetodePembayaranId,
+                    ReferenceId = vm.ReferenceId,
+                    NamaMetode = vm.NamaMetode,
+                    NominalPembayaran = vm.NominalPembayaran,
                     Keterangan = vm.Keterangan,
-                    IsAktif = vm.IsAktif,
+                    StatusPembayaran = vm.StatusPembayaran,
+                    TglPembayaran = DateTime.UtcNow,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
 
                 // **Simpan ke Database**
-                _applicationDbContext.PPNs.Add(data);
+                _applicationDbContext.MainKasirDetails.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -189,8 +186,30 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
+        [HttpPut("{id}/DetailKasir-Status")]
+        public async Task<IActionResult> UpdateIsLunas(Guid id, [FromBody] StatusBayarDetailKasurViewModel request)
+        {
+            var data = await _applicationDbContext.MainKasirDetails.FindAsync(id);
+            if (data == null)
+                return NotFound(new { message = "Detail pembayaran tidak ditemukan." });
+
+            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(EmailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var userId = user?.UserActiveId ?? Guid.Empty;
+
+            data.StatusPembayaran = request.StatusPembayaran;
+            data.UpdateDateTime = DateTimeOffset.UtcNow;
+            data.UpdateBy = userId;
+
+            await _applicationDbContext.SaveChangesAsync();
+            return Ok(new { message = "Status isFinished berhasil diperbarui." });
+        }
+
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] PPNViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] MainKasirDetailViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -221,21 +240,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.PPNs.FindAsync(id);
+                var data = await _applicationDbContext.MainKasirDetails.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
                 // **Update Data**
-                data.Persentase = vm.Persentase;
-                data.IsAktif = vm.IsAktif;
+                data.MainKasirId = vm.MainKasirId;
+                data.MetodePembayaranId = vm.MetodePembayaranId;
+                data.ReferenceId = vm.ReferenceId;
+                data.NamaMetode = vm.NamaMetode;
+                data.NominalPembayaran = vm.NominalPembayaran;
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.PPNs.Update(data);
+                _applicationDbContext.MainKasirDetails.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -284,7 +306,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.PPNs.FindAsync(id);
+                var data = await _applicationDbContext.MainKasirDetails.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -296,7 +318,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 data.IsDelete = true;
 
-                _applicationDbContext.PPNs.Update(data);
+                _applicationDbContext.MainKasirDetails.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -333,30 +355,34 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         {
 
             // Query data
-            var query = (from a in _applicationDbContext.PPNs
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false || a.IsDelete == null
-                         select new
-                         {
-                             CreateDateTime = a.CreateDateTime,
-                             CreateBy = a.CreateBy,
-                             CreateByName = u.FullName,
-                             PPNId = a.PpnId,
-                             PPN = a.Persentase,
-                             Keterangan = a.Keterangan,
-                             IsAktif = a.IsAktif,
-                             IsDelete = a.IsDelete,
-                         });
+            var query = from a in _applicationDbContext.MainKasirDetails
+                        join u in _applicationDbContext.UserActives
+                        on a.CreateBy equals u.UserActiveId
+                        where a.IsDelete == false || a.IsDelete == null
+                        select new
+                        {
+                            a.CreateDateTime,
+                            a.CreateBy,
+                            CreateByName = u.FullName,
+                            a.MainKasirDetailId,
+                            a.MainKasirId,
+                            a.MetodePembayaranId,
+                            a.ReferenceId,
+                            a.NamaMetode,
+                            a.NominalPembayaran,
+                            a.StatusPembayaran,
+                            a.Keterangan,
+                            a.TglPembayaran,
+                        };
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-                query = query.Where(u =>
-                    EF.Functions.ILike(u.PPN.ToString(), search)
-                );
-            }
+            //if (!string.IsNullOrWhiteSpace(search))
+            //{
+            //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+            //    query = query.Where(u =>
+            //        EF.Functions.ILike(u.NamaDiskon, search)
+            //    );
+            //}
 
             //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
@@ -381,14 +407,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         break;
                     case PeriodeFilter.ThisWeek:
                         query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
+                            u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
                             u.CreateDateTime.Date <= today
                         );
                         break;
                     case PeriodeFilter.LastWeek:
                         query = query.Where(u =>
                             u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek))
+                            u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)
                         );
                         break;
                     case PeriodeFilter.ThisMonth:
@@ -424,14 +450,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "PPN" => query.OrderByDescending(u => u.PPN),
+                    //"NamaDiskon" => query.OrderByDescending(u => u.NamaDiskon),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
                     "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
                     "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    "PPN" => query.OrderBy(u => u.PPN),
+                    //"NamaDiskon" => query.OrderBy(u => u.NamaDiskon),
                     _ => query.OrderBy(u => u.CreateDateTime)
                 };
 

@@ -1,4 +1,6 @@
-﻿using System.Security.Claims;
+﻿using System;
+using System.Globalization;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
@@ -6,36 +8,34 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class PPNController : Controller
+    public class ResepDetailController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<PPNController> _logger;
+        private readonly ILogger<ResepDetailController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public PPNController(
+        public ResepDetailController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<PPNController> logger,
+            ILogger<ResepDetailController> logger,
             IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
@@ -53,20 +53,34 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = (from a in _applicationDbContext.PPNs
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
+            var query = (from a in _applicationDbContext.DetailReseps
+                         join u in _applicationDbContext.UserActives
                          on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false || a.IsDelete == null
+                         where a.IsDelete == false
                          select new
                          {
-                             CreateDateTime = a.CreateDateTime,
-                             CreateBy = a.CreateBy,
+                             a.CreateDateTime,
+                             a.CreateBy,
                              CreateByName = u.FullName,
-                             PPNId = a.PpnId,
-                             PPN = a.Persentase,
-                             Keterangan = a.Keterangan,
-                             IsAktif = a.IsAktif,
-                             IsDelete = a.IsDelete,
+                             a.DetailResepId,
+                             a.ResepId,
+                             a.AsuransiId,
+                             a.NamaAsuransi,
+                             a.ObatId,
+                             a.Qty,
+                             a.Signa,
+                             a.SignaTambahan,
+                             a.JenisObat,
+                             a.HargaObat,
+                             a.TotalHargaObat,
+                             a.StatusCoverObat,
+                             a.IsRacikan,
+                             a.RacikanId,
+                             a.IsIteratur,
+                             a.JumlahIteratur,
+                             a.TglMulaiIteratur,
+                             a.JarakPenebusan,
+                             a.MasaAktifIteratur
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -103,7 +117,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.PPNs.Find(id);
+            var listdata = _applicationDbContext.DetailReseps.Find(id);
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -116,8 +130,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             });
         }
 
+
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] PPNViewModel vm)
+        public async Task<IActionResult> Create([FromBody] ResepDetailViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -147,27 +162,59 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 //// **Cek Duplikasi**
-                bool isDuplicate = _applicationDbContext.PPNs
-                                    .Any(c => c.Persentase == vm.Persentase);
+                //bool isDuplicate = _applicationDbContext.Benefits
+                //                    .Any(c => c.NamaBenefit == vm.NamaBenefit);
 
-                if (isDuplicate)
+                //if (isDuplicate)
+                //{
+                //    return Conflict(new { message = "Nama benefit ini telah tersedia" });
+                //}
+
+                if (!DateTime.TryParseExact(vm.TglMulaiIteratur, "yyyy-MM-dd",
+                    CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsedTglMulaiIteratur))
                 {
-                    return Conflict(new { message = "Persentase untuk PPN ini telah ada" });
+                    return BadRequest(new { message = "Format TglMulaiIteratur tidak valid. Gunakan format yyyy-MM-dd." });
                 }
 
-                // **Buat Data Baru**
-                var data = new PPN
+                parsedTglMulaiIteratur = DateTime.SpecifyKind(parsedTglMulaiIteratur, DateTimeKind.Utc);
+
+                if (!DateTime.TryParseExact(vm.MasaAktifIteratur, "yyyy-MM-dd",
+                    CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsedMasaAktif))
                 {
-                    PpnId = Guid.NewGuid(),
-                    Persentase = vm.Persentase,
-                    Keterangan = vm.Keterangan,
-                    IsAktif = vm.IsAktif,
+                    return BadRequest(new { message = "Format TglMulaiIteratur tidak valid. Gunakan format yyyy-MM-dd." });
+                }
+
+                parsedMasaAktif = DateTime.SpecifyKind(parsedMasaAktif, DateTimeKind.Utc);
+
+                // **Buat Data Baru**
+                var data = new ResepDetail
+                {
+                    DetailResepId = Guid.NewGuid(),
+                    ResepId = vm.ResepId,
+                    AsuransiId = vm.AsuransiId,
+                    NamaAsuransi = vm.NamaAsuransi,
+                    ObatId = vm.ObatId,
+                    Qty = vm.Qty,
+                    Signa = vm.Signa,
+                    SignaTambahan = vm.SignaTambahan,
+                    JenisObat = vm.JenisObat,
+                    HargaObat = vm.HargaObat,
+                    TotalHargaObat = vm.Qty.HasValue && vm.HargaObat.HasValue ? vm.Qty.Value * vm.HargaObat.Value : 0,
+                    StatusCoverObat = vm.StatusCoverObat,
+                    IsRacikan = vm.IsRacikan, // Tambahkan properti IsRacikan jika diperlukan
+                    RacikanId = vm.RacikanId, // Tambahkan properti RacikanId jika diperlukan
+                    IsIteratur = vm.IsIteratur,
+                    JumlahIteratur = vm.JumlahIteratur,
+                    TglMulaiIteratur = parsedTglMulaiIteratur,
+                    JarakPenebusan = vm.JarakPenebusan,
+                    MasaAktifIteratur = parsedMasaAktif,
+
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
 
                 // **Simpan ke Database**
-                _applicationDbContext.PPNs.Add(data);
+                _applicationDbContext.DetailReseps.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -190,7 +237,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] PPNViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] ResepDetailViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -221,21 +268,52 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.PPNs.FindAsync(id);
+                var data = await _applicationDbContext.DetailReseps.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
+                if (!DateTime.TryParseExact(vm.TglMulaiIteratur, "yyyy-MM-dd",
+                    CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsedTglMulaiIteratur))
+                {
+                    return BadRequest(new { message = "Format TglMulaiIteratur tidak valid. Gunakan format yyyy-MM-dd." });
+                }
+
+                parsedTglMulaiIteratur = DateTime.SpecifyKind(parsedTglMulaiIteratur, DateTimeKind.Utc);
+
+                if (!DateTime.TryParseExact(vm.MasaAktifIteratur, "yyyy-MM-dd",
+                    CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsedMasaAktif))
+                {
+                    return BadRequest(new { message = "Format TglMulaiIteratur tidak valid. Gunakan format yyyy-MM-dd." });
+                }
+                parsedMasaAktif = DateTime.SpecifyKind(parsedMasaAktif, DateTimeKind.Utc);
+
+
                 // **Update Data**
-                data.Persentase = vm.Persentase;
-                data.IsAktif = vm.IsAktif;
-                data.Keterangan = vm.Keterangan;
+                data.ObatId = vm.ObatId;
+                data.AsuransiId = vm.AsuransiId;
+                data.NamaAsuransi = vm.NamaAsuransi;
+                data.ResepId = vm.ResepId;
+                data.Qty = vm.Qty;
+                data.Signa = vm.Signa;
+                data.SignaTambahan = vm.SignaTambahan;
+                data.JenisObat = vm.JenisObat;
+                data.HargaObat = vm.HargaObat;
+                data.TotalHargaObat = vm.Qty.HasValue && vm.HargaObat.HasValue ? vm.Qty.Value * vm.HargaObat.Value : 0;
+                data.StatusCoverObat = vm.StatusCoverObat;
+                data.IsRacikan = vm.IsRacikan; // Update properti IsRacikan jika diperlukan
+                data.RacikanId = vm.RacikanId; // Update properti RacikanId jika diperlukan
+                data.IsIteratur = vm.IsIteratur;
+                data.JumlahIteratur = vm.JumlahIteratur;
+                data.TglMulaiIteratur = parsedTglMulaiIteratur;
+                data.JarakPenebusan = vm.JarakPenebusan;
+                data.MasaAktifIteratur = parsedMasaAktif;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.PPNs.Update(data);
+                _applicationDbContext.DetailReseps.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -284,7 +362,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.PPNs.FindAsync(id);
+                var data = await _applicationDbContext.DetailReseps.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -296,7 +374,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 data.IsDelete = true;
 
-                _applicationDbContext.PPNs.Update(data);
+                _applicationDbContext.DetailReseps.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -319,7 +397,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet("paged")]
-        public IActionResult Paged(
+        public IActionResult PagedDetailResep(
         int page = 1,
         int perPage = 10,
         string? search = null,
@@ -331,32 +409,45 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 DateTime? endDate = null,
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
-
-            // Query data
-            var query = (from a in _applicationDbContext.PPNs
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
+            // query
+            var query = from a in _applicationDbContext.DetailReseps
+                         join u in _applicationDbContext.UserActives
                          on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false || a.IsDelete == null
+                         where a.IsDelete == false
                          select new
                          {
-                             CreateDateTime = a.CreateDateTime,
-                             CreateBy = a.CreateBy,
+                             a.CreateDateTime,
+                             a.CreateBy,
                              CreateByName = u.FullName,
-                             PPNId = a.PpnId,
-                             PPN = a.Persentase,
-                             Keterangan = a.Keterangan,
-                             IsAktif = a.IsAktif,
-                             IsDelete = a.IsDelete,
-                         });
+                             a.DetailResepId,
+                             a.ResepId,
+                             a.AsuransiId,
+                             a.NamaAsuransi,
+                             a.ObatId,
+                             a.Qty,
+                             a.Signa,
+                             a.SignaTambahan,
+                             a.JenisObat,
+                             a.HargaObat,
+                             a.StatusCoverObat,
+                             a.TotalHargaObat,
+                             a.IsRacikan,
+                             a.RacikanId,
+                             a.IsIteratur,
+                             a.JumlahIteratur,
+                             a.TglMulaiIteratur,
+                             a.JarakPenebusan,
+                             a.MasaAktifIteratur
+                         };
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-                query = query.Where(u =>
-                    EF.Functions.ILike(u.PPN.ToString(), search)
-                );
-            }
+            //if (!string.IsNullOrWhiteSpace(search))
+            //{
+            //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+            //    query = query.Where(u =>
+            //        EF.Functions.ILike(u.NamaBenefit, search)
+            //    );
+            //}
 
             //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
@@ -381,14 +472,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         break;
                     case PeriodeFilter.ThisWeek:
                         query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
+                            u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
                             u.CreateDateTime.Date <= today
                         );
                         break;
                     case PeriodeFilter.LastWeek:
                         query = query.Where(u =>
                             u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek))
+                            u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)
                         );
                         break;
                     case PeriodeFilter.ThisMonth:
@@ -419,21 +510,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
 
             // Sorting Data dengan cara yang lebih aman
-            query = sortDirection?.ToLower() == "desc"
-                ? orderBy switch
-                {
-                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "PPN" => query.OrderByDescending(u => u.PPN),
-                    _ => query.OrderByDescending(u => u.CreateDateTime)
-                }
-                : orderBy switch
-                {
-                    "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    "PPN" => query.OrderBy(u => u.PPN),
-                    _ => query.OrderBy(u => u.CreateDateTime)
-                };
+            //query = sortDirection?.ToLower() == "desc"
+            //    ? orderBy switch
+            //    {
+            //        "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
+            //        "CreateByName" => query.OrderByDescending(u => u.CreateByName),
+            //        "NamaBenefit" => query.OrderByDescending(u => u.NamaBenefit),
+            //        _ => query.OrderByDescending(u => u.CreateDateTime)
+            //    }
+            //    : orderBy switch
+            //    {
+            //        "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
+            //        "CreateByName" => query.OrderBy(u => u.CreateByName),
+            //        "NamaBenefit" => query.OrderBy(u => u.NamaBenefit),
+            //        _ => query.OrderBy(u => u.CreateDateTime)
+            //    };
 
             // Pagination
             var totalRows = query.Count();
