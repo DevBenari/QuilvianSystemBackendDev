@@ -153,6 +153,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 }
 
                 // Update billing
+                billing.QtyItem = vm.QtyItem;
                 billing.HargaItem = harga;
                 billing.SubTotalItem = harga * (vm.QtyItem ?? 1); // default 1 jika null
                 billing.UpdateDateTime = DateTimeOffset.UtcNow;
