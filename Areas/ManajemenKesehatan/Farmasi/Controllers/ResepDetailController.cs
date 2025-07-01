@@ -68,6 +68,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.NamaAsuransi,
                              a.ObatId,
                              a.Qty,
+                             a.Dosis,
+                             a.JenisRacikan,
                              a.Signa,
                              a.SignaTambahan,
                              a.JenisObat,
@@ -83,8 +85,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.MasaAktifIteratur
                          }).OrderByDescending(a => a.CreateDateTime);
 
-            // Hitung total data sebelum paginasi
-            var totalRows = query.Count();
+        // Hitung total data sebelum paginasi
+        var totalRows = query.Count();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
 
             // Ambil data sesuai paging
@@ -195,6 +197,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     NamaAsuransi = vm.NamaAsuransi,
                     ObatId = vm.ObatId,
                     Qty = vm.Qty,
+                    Dosis = vm.Dosis,
+                    JenisRacikan = vm.JenisRacikan,
                     Signa = vm.Signa,
                     SignaTambahan = vm.SignaTambahan,
                     JenisObat = vm.JenisObat,
@@ -309,6 +313,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 data.TglMulaiIteratur = parsedTglMulaiIteratur;
                 data.JarakPenebusan = vm.JarakPenebusan;
                 data.MasaAktifIteratur = parsedMasaAktif;
+                data.Dosis = vm.Dosis;
+                data.JenisRacikan = vm.JenisRacikan;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -425,6 +431,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.NamaAsuransi,
                              a.ObatId,
                              a.Qty,
+                             a.Dosis,
+                             a.JenisRacikan,
                              a.Signa,
                              a.SignaTambahan,
                              a.JenisObat,
