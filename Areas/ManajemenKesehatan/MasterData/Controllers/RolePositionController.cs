@@ -189,56 +189,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-        //[HttpGet("bygroup/{idposition}")]
-        //public async Task<IActionResult> GetRolePositionByGroup(Guid idposition)
-        //{
-        //    try
-        //    {
-        //        var roleData = await (
-        //            from rp in _applicationDbContext.RolePositions
-        //            join r in _applicationDbContext.Roles on rp.RoleId equals r.Id
-        //            where rp.PositionId == idposition.ToString()
-        //            select new
-        //            {
-        //                r.Id,
-        //                r.Name,
-        //                r.NormalizedName,
-        //                r.ConcurrencyStamp
-        //            }).ToListAsync();
-
-        //        if (!roleData.Any())
-        //        {
-        //            return NotFound(new { success = false, message = "RolePosition tidak ditemukan." });
-        //        }
-
-        //        var groupedData = roleData
-        //            .GroupBy(r => r.ConcurrencyStamp)
-        //            .Select(g => new
-        //            {
-        //                concurrencyStamp = g.Key,
-        //                roles = g.Select(r => new
-        //                {
-        //                    id = r.Id,
-        //                    name = r.Name,
-        //                    normalizedName = r.NormalizedName
-        //                }).ToList()
-        //            }).ToList();
-
-        //        return Ok(new
-        //        {
-        //            success = true,
-        //            totalGroups = groupedData.Count,
-        //            data = groupedData
-        //        });
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return StatusCode(500, new { success = false, error = "❌ Server error: " + ex.Message });
-        //    }
-        //}
 
         // Menghapus role position berdasarkan ID
-        [HttpDelete("{id}")]
+        [HttpDelete("roleposition{id}")]
         public async Task<IActionResult> DeleteRolePosition(Guid id)
         {
             try
@@ -261,31 +214,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 return StatusCode(500, new { error = "❌ Server error: " + ex.Message });
             }
         }
-        // Menghapus role position berdasarkan ID
-        [HttpDelete("delete/{idrole}/{idposition}")]
-        public async Task<IActionResult> DeleteRolePosition(string idrole, string idposition)
-        {
-            try
-            {
-                var rolePosition = await _applicationDbContext.RolePositions
-                    .FirstOrDefaultAsync(r => r.RoleId == idrole && r.PositionId == idposition);
-
-                if (rolePosition == null)
-                {
-                    return NotFound(new { success = false, message = "Role tidak ditemukan." });
-                }
-
-                _applicationDbContext.RolePositions.Remove(rolePosition);
-                await _applicationDbContext.SaveChangesAsync();
-
-                return Ok(new { success = true, message = "Role berhasil dihapus." });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { error = "❌ Server error: " + ex.Message });
-            }
-        }
-
     }
 
     // DTO untuk menerima data RolePosition

@@ -497,10 +497,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     await transaction.CommitAsync();
 
                     // ROLE USER
-                    // Memastikan PositionId tidak kosong
-                    if (vm.PositionId.HasValue)  // Memastikan PositionId memiliki nilai
+                    var idnetuser = await _applicationDbContext.Users
+                    .FirstOrDefaultAsync(u => u.Email == vm.Email);
+
+                    if (idnetuser != null) // ← ini yang benar
                     {
-                        var createRoleResponse = CreateRole(vm.PositionId.Value, id);
+                        // Memastikan PositionId tidak kosong
+                        if (vm.PositionId.HasValue)
+                        {
+                            var createRoleResponse = CreateRole(vm.PositionId.Value, idnetuser.Id);
+                            // Jika CreateRole mengembalikan Task/IActionResult, jangan lupa pakai await
+                        }
                     }
                     // END ROLE USER
 
@@ -696,9 +703,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // ROLE USER
                 // Memastikan PositionId tidak kosong
-                if (vm.PositionId.HasValue)  // Memastikan PositionId memiliki nilai
+                // ROLE USER
+                var idnetuser = await _applicationDbContext.Users
+                .FirstOrDefaultAsync(u => u.Email == vm.Email);
+
+                if (idnetuser != null) // ← ini yang benar
                 {
-                    var createRoleResponse = CreateRole(vm.PositionId.Value, id);
+                    // Memastikan PositionId tidak kosong
+                    if (vm.PositionId.HasValue)
+                    {
+                        var createRoleResponse = CreateRole(vm.PositionId.Value, idnetuser.Id);
+                        // Jika CreateRole mengembalikan Task/IActionResult, jangan lupa pakai await
+                    }
                 }
                 // END ROLE USER
                 return Created("", new
@@ -1142,7 +1158,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPost("CreateRole")]
-        public async Task<IActionResult> CreateRole(Guid positionId, Guid pendaftaranPasienBaruId)
+        public async Task<IActionResult> CreateRole(Guid positionId, string pendaftaranPasienBaruId)
         {
             var newRolePositions = new List<IdentityUserRole<string>>();
 

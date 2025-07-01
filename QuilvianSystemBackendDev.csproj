@@ -43,6 +43,27 @@
  
   <ItemGroup>
     <Folder Include=".github\workflows\" />
+    <Folder Include="Areas\ManajemenKesehatan\RawatInap\Controllers\" />
+    <Folder Include="Areas\ManajemenKesehatan\RawatInap\Models\" />
+    <Folder Include="Areas\ManajemenKesehatan\RawatInap\ViewModels\" />
+    <Folder Include="Areas\ManajemenKesehatan\RawatJalan\Controllers\" />
+    <Folder Include="Areas\ManajemenKesehatan\RawatJalan\Models\" />
+    <Folder Include="Areas\ManajemenKesehatan\RawatJalan\ViewModels\" />
+    <Folder Include="Areas\ManajemenKesehatan\RekamMedisElektronik\Controllers\" />
+    <Folder Include="Areas\ManajemenKesehatan\RekamMedisElektronik\Models\" />
+    <Folder Include="Areas\ManajemenKesehatan\RekamMedisElektronik\ViewModels\" />
+    <Folder Include="Areas\ManajemenKesehatan\Radiologi\Controllers\" />
+    <Folder Include="Areas\ManajemenKesehatan\Radiologi\Models\" />
+    <Folder Include="Areas\ManajemenKesehatan\Radiologi\ViewModels\" />
+    <Folder Include="Areas\ManajemenKesehatan\Laboratorium\Controllers\" />
+    <Folder Include="Areas\ManajemenKesehatan\Laboratorium\Models\" />
+    <Folder Include="Areas\ManajemenKesehatan\Laboratorium\ViewModels\" />
+    <Folder Include="Areas\ManajemenKesehatan\Resep\Controllers\" />
+    <Folder Include="Areas\ManajemenKesehatan\Resep\Models\" />
+    <Folder Include="Areas\ManajemenKesehatan\Resep\ViewModels\" />
+    <Folder Include="Areas\ManajemenKesehatan\Farmasi\Controllers\" />
+    <Folder Include="Areas\ManajemenKesehatan\Farmasi\Models\" />
+    <Folder Include="Areas\ManajemenKesehatan\Farmasi\ViewModels\" />
     <Folder Include="Areas\ManajemenKesehatan\Tindakan\ViewModels\" />
     <Folder Include="wwwroot\scanktp\tessdata\" />
   </ItemGroup>
