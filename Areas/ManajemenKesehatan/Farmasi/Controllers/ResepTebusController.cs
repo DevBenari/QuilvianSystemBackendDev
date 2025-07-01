@@ -333,7 +333,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         }
 
         [HttpPut("{id}/ResepTebus-is-taken")]
-        public async Task<IActionResult> UpdateStatusAmbilResep(Guid id, [FromBody] StatusPengambilanViewModel request)
+        public async Task<IActionResult> UpdateStatusAmbilResep(Guid id, [FromBody] StatusPengambilanResepTebusViewModel request)
         {
             var data = await _applicationDbContext.ResepTebuss.FindAsync(id);
             if (data == null)
@@ -346,7 +346,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
             var userId = user?.UserActiveId ?? Guid.Empty;
 
-            data.StatusPengambilan = request.StatusPengambilan;
+            data.StatusPengambilan = request.Status;
             data.UpdateDateTime = DateTimeOffset.UtcNow;
             data.UpdateBy = userId;
 

@@ -1,4 +1,4 @@
-﻿using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+﻿using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Enum;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels
 {

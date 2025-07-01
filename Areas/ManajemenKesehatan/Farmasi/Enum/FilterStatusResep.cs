@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Enum
 {
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum StatusResepFilter

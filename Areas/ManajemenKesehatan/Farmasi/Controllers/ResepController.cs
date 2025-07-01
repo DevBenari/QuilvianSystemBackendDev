@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
@@ -77,7 +78,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              r.DokterId,
                              r.NamaDokter,
                              r.StatusPembuatanResep,
-                             r.StatusPengambilan,
+                             r.StatusPengambilanResep,
                              r.IsCancelled,
                              r.IsLunas,
                              TanggalPembuatanResepFormatted = r.TanggalPembuatanResep.HasValue ? r.TanggalPembuatanResep.Value.ToString("yyyy-MM-dd") : null,
@@ -104,6 +105,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                                MasaAktifIteratur = d.MasaAktifIteratur.HasValue ? d.MasaAktifIteratur.Value.ToString("yyyy-MM-dd") : null,
                                                d.JarakPenebusan,
                                                d.StatusCoverObat,
+                                               d.StatusPengambilanObat,
                                                d.CreateBy,
                                                d.CreateDateTime,
                                            }).ToList(),
@@ -214,7 +216,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 resep.AntrianResep,
                 resep.AntrianRegistrasi,
                 resep.StatusPembuatanResep,
-                resep.StatusPengambilan,
+                resep.StatusPengambilanResep,
                 resep.IsCancelled,
                 resep.IsLunas,
                 TanggalPembuatanResepFormatted = resep.TanggalPembuatanResep.HasValue ? resep.TanggalPembuatanResep.Value.ToString("yyyy-MM-dd") : null,
@@ -288,7 +290,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     AntrianResep = nextAntrian,
                     AntrianRegistrasi = antrian,
                     StatusPembuatanResep = vm.StatusPembuatanResep,
-                    StatusPengambilan = false, // Jika StatusPengambilan adalah null, gunakan false sebagai default
+                    StatusPengambilanResep = StatusPengambilanResepFilter.Belum.ToString(),
                     IsCancelled = false, // Jika IsCanceled adalah null, gunakan false sebagai default
                     IsLunas = false,
                     TanggalPembuatanResep = DateTime.UtcNow, // Jika TanggalPembuatanResep adalah null, gunakan tanggal saat ini
@@ -343,6 +345,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             TglMulaiIteratur = tglIteratur,
                             JarakPenebusan = obat.JarakPenebusan,
                             MasaAktifIteratur = masaAktifIteratur,
+                            StatusPengambilanObat = false, // Default value
                             CreateBy = userActiveId,
                             CreateDateTime = DateTimeOffset.UtcNow,
                         };
@@ -443,7 +446,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         }
 
         [HttpPut("{id}/is-taken")]
-        public async Task<IActionResult> UpdateStatusAmbilResep(Guid id, [FromBody] StatusPengambilanViewModel request)
+        public async Task<IActionResult> UpdateStatusAmbilResep(Guid id, [FromBody] StatusPengambilanResepViewModel request)
         {
             var data = await _applicationDbContext.Reseps.FindAsync(id);
             if (data == null)
@@ -456,7 +459,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
             var userId = user?.UserActiveId ?? Guid.Empty;
 
-            data.StatusPengambilan = request.StatusPengambilan;
+            data.StatusPengambilanResep = request.StatusPengambilan.ToString();
             data.UpdateDateTime = DateTimeOffset.UtcNow;
             data.UpdateBy = userId;
 
@@ -639,6 +642,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                 JumlahIteratur = obat.JumlahIteratur,
                                 TglMulaiIteratur = tglIteratur,
                                 MasaAktifIteratur = masaAktifIteratur,
+                                StatusPengambilanObat = false, // Default value
                                 JarakPenebusan = obat.JarakPenebusan,
                                 CreateBy = userActiveId,
                                 CreateDateTime = DateTimeOffset.UtcNow,
@@ -797,7 +801,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         [FromQuery] DateTime? endDate = null,
         [FromQuery] PeriodeFilter? periode = null,
         [FromQuery] bool? IsLunas = null,
-        [FromQuery] bool? StatusPengambilan = null)
+        [FromQuery] StatusPengambilanResepFilter? StatusPengambilanResep = null)
         {
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
@@ -822,8 +826,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             if (IsLunas.HasValue)
                 query = query.Where(q => q.Resep.IsLunas == IsLunas.Value);
 
-            if (StatusPengambilan.HasValue)
-                query = query.Where(q => q.Resep.StatusPengambilan == StatusPengambilan.Value);
+            // Filter StatusPengambilan (optional)
+            if (StatusPengambilanResep.HasValue)
+                query = query.Where
+                    (q => q.Resep.StatusPengambilanResep != null &&
+                    q.Resep.StatusPengambilanResep.ToString() == StatusPengambilanResep.Value.ToString());
 
             if (periode.HasValue)
             {
@@ -927,7 +934,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     q.Resep.DokterId,
                     q.Resep.NamaDokter,
                     q.Resep.StatusPembuatanResep,
-                    q.Resep.StatusPengambilan,
+                    q.Resep.StatusPengambilanResep,
                     q.Resep.IsCancelled,
                     q.Resep.IsLunas,
                     TanggalPembuatanResep = q.Resep.TanggalPembuatanResep?.ToString("yyyy-MM-dd"),
@@ -956,6 +963,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                   TglMulaiIteratur = d.TglMulaiIteratur,
                                   MasaAktifIteratur = d.MasaAktifIteratur,
                                   d.StatusCoverObat,
+                                  d.StatusPengambilanObat,
                                   d.CreateBy,
                                   d.CreateDateTime
                               })
@@ -1003,7 +1011,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         [FromQuery] DateTime? startDate = null,
         [FromQuery] DateTime? endDate = null,
         [FromQuery] PeriodeFilter? periode = null,
-        [FromQuery] bool? StatusPengambilan = null)
+        [FromQuery] StatusPengambilanResepFilter? StatusPengambilanResep = null)
         {
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
@@ -1025,8 +1033,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             }
 
             // Filter StatusPengambilan (optional)
-            if (StatusPengambilan.HasValue)
-                query = query.Where(q => q.Resep.StatusPengambilan == StatusPengambilan.Value);
+            if (StatusPengambilanResep.HasValue)
+                query = query.Where
+                    (q => q.Resep.StatusPengambilanResep != null && 
+                    q.Resep.StatusPengambilanResep.ToString() == StatusPengambilanResep.Value.ToString());
 
             // Filter periode
             if (periode.HasValue)
@@ -1131,7 +1141,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     q.Resep.DokterId,
                     q.Resep.NamaDokter,
                     q.Resep.StatusPembuatanResep,
-                    q.Resep.StatusPengambilan,
+                    q.Resep.StatusPengambilanResep,
                     q.Resep.IsCancelled,
                     q.Resep.IsLunas,
                     TanggalPembuatanResepFormatted = q.Resep.TanggalPembuatanResep?.ToString("yyyy-MM-dd"),
@@ -1160,6 +1170,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                   TglMulaiIteratur = d.TglMulaiIteratur,
                                   MasaAktifIteratur = d.MasaAktifIteratur,
                                   d.StatusCoverObat,
+                                  d.StatusPengambilanObat,
                                   d.CreateBy,
                                   d.CreateDateTime
                               })

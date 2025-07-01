@@ -262,6 +262,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         DateTime? endDate = null,
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
+
             var query = from ok in _applicationDbContext.ObatKandungans
                         join o in _applicationDbContext.Obats on ok.ObatId equals o.ObatId
                         join k in _applicationDbContext.Kandungans on ok.KandunganId equals k.KandunganId

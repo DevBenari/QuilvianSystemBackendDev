@@ -82,7 +82,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.JumlahIteratur,
                              a.TglMulaiIteratur,
                              a.JarakPenebusan,
-                             a.MasaAktifIteratur
+                             a.MasaAktifIteratur,
+                             a.StatusPengambilanObat
                          }).OrderByDescending(a => a.CreateDateTime);
 
         // Hitung total data sebelum paginasi
@@ -132,6 +133,28 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             });
         }
 
+        [HttpPut("{id}/StatusObat")]
+        public async Task<IActionResult> UpdateIsLunas(Guid id, [FromBody] StatusPengambilanObatViewModel request)
+        {
+            var data = await _applicationDbContext.DetailReseps.FindAsync(id);
+            if (data == null)
+                return NotFound(new { message = "Resep tidak ditemukan." });
+
+            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(EmailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var userId = user?.UserActiveId ?? Guid.Empty;
+
+            data.StatusPengambilanObat = request.Status;
+            data.UpdateDateTime = DateTimeOffset.UtcNow;
+            data.UpdateBy = userId;
+
+            await _applicationDbContext.SaveChangesAsync();
+
+            return Ok(new { message = "Status isFinished berhasil diperbarui." });
+        }
 
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] ResepDetailViewModel vm)
@@ -212,6 +235,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     TglMulaiIteratur = parsedTglMulaiIteratur,
                     JarakPenebusan = vm.JarakPenebusan,
                     MasaAktifIteratur = parsedMasaAktif,
+                    StatusPengambilanObat = false, // Default nilai StatusPengambilanObat
 
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
@@ -445,7 +469,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.JumlahIteratur,
                              a.TglMulaiIteratur,
                              a.JarakPenebusan,
-                             a.MasaAktifIteratur
+                             a.MasaAktifIteratur,
+                             a.StatusPengambilanObat
                          };
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**

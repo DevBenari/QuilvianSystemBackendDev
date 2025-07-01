@@ -24,6 +24,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
         public decimal? HargaObat { get; set; }
         public decimal? TotalHargaObat { get; set; }
         public bool? StatusCoverObat { get; set; } = false;
+        public bool? StatusPengambilanObat { get; set; } = false;
         public bool? IsIteratur { get; set; } = false;
         public decimal? JumlahIteratur { get; set; }
         public DateTime? TglMulaiIteratur { get; set; }
