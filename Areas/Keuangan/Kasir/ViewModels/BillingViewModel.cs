@@ -4,7 +4,6 @@
     {
         public Guid? DiskonId { get; set; }
         public int? QtyItem { get; set; }
-        public decimal? SubTotalItem { get; set; }
-        public decimal? Keterangan { get; set; }
+        public string? Keterangan { get; set; }
     }
 }
