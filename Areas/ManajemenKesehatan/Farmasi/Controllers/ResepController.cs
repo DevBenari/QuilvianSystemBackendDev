@@ -290,7 +290,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     AntrianResep = nextAntrian,
                     AntrianRegistrasi = antrian,
                     StatusPembuatanResep = vm.StatusPembuatanResep,
-                    StatusPengambilanResep = StatusPengambilanResepFilter.Belum.ToString(),
+                    StatusPengambilanResep = false,
                     IsCancelled = false, // Jika IsCanceled adalah null, gunakan false sebagai default
                     IsLunas = false,
                     TanggalPembuatanResep = DateTime.UtcNow, // Jika TanggalPembuatanResep adalah null, gunakan tanggal saat ini
@@ -456,7 +456,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
             var userId = user?.UserActiveId ?? Guid.Empty;
 
-            data.StatusPengambilanResep = request.StatusPengambilan.ToString();
+            data.StatusPengambilanResep = request.StatusPengambilan;
             data.UpdateDateTime = DateTimeOffset.UtcNow;
             data.UpdateBy = userId;
 
@@ -796,7 +796,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         [FromQuery] DateTime? endDate = null,
         [FromQuery] PeriodeFilter? periode = null,
         [FromQuery] bool? IsLunas = null,
-        [FromQuery] StatusPengambilanResepFilter? StatusPengambilanResep = null)
+        [FromQuery] bool? StatusPengambilanResep = null)
         {
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
@@ -1006,7 +1006,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         [FromQuery] DateTime? startDate = null,
         [FromQuery] DateTime? endDate = null,
         [FromQuery] PeriodeFilter? periode = null,
-        [FromQuery] StatusPengambilanResepFilter? StatusPengambilanResep = null)
+        [FromQuery] bool? StatusPengambilanResep = null)
         {
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;

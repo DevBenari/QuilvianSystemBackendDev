@@ -4,6 +4,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
 {
     public class StatusPengambilanResepViewModel
     {
-        public StatusPengambilanResepFilter? StatusPengambilan { get; set; }
+        public bool? StatusPengambilan { get; set; }
     }
 }

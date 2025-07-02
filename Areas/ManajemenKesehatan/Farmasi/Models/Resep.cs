@@ -21,7 +21,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
         public int? AntrianResep { get; set; }
         public string? AntrianRegistrasi { get; set; }
         public string? StatusPembuatanResep { get; set; }
-        public string? StatusPengambilanResep { get; set; }
+        public bool? StatusPengambilanResep { get; set; } = false;
         public bool? IsCancelled { get; set; } = false;
         public bool? IsLunas { get; set; }
         public DateTime? TanggalPembuatanResep { get; set; }
