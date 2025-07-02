@@ -358,6 +358,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     int billingObatCount = await _applicationDbContext.Billings
                         .Where(b => b.KunjunganId == vm.KunjunganId && b.BillingKode.StartsWith("OB"))
                         .CountAsync();
+                    int billingIndex = billingObatCount;
 
                     // **Pengurangan Stok untuk Obat**
                     foreach (var obat in vm.DaftarObat)
@@ -380,8 +381,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                         // Update stok obat di database
                         _applicationDbContext.Obats.Update(obatDb);
 
-                        string billingKode = $"OB{(billingObatCount + 1).ToString("D3")}";
-                      
+                        // increment billoing kode untuk setiap obat
+                        billingIndex++;
+                        string billingKode = $"OB{billingIndex.ToString("D3")}";
+
                         // Tambahkan satu Billing per ObatId
                         var billing = new Billing
                         {
@@ -579,6 +582,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     int billingObatCount = await _applicationDbContext.Billings
                         .Where(b => b.KunjunganId == vm.KunjunganId && b.BillingKode.StartsWith("OB"))
                         .CountAsync();
+                    int billingIndex = billingObatCount;
 
                     foreach (var obat in vm.DaftarObat)
                     {
@@ -661,8 +665,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                         obatDbUpdate.Stock -= obat.Qty.GetValueOrDefault();
                         _applicationDbContext.Obats.Update(obatDbUpdate);
 
-                        // cari data billing
-                        string billingKode = $"OB{(billingObatCount + 1).ToString("D3")}";
+                        // increment kode billing utk setiap obat
+                        billingIndex++;
+                        string billingKode = $"OB{billingIndex.ToString("D3")}";
 
                         var existingBilling = await _applicationDbContext.Billings
                             .FirstOrDefaultAsync(b => b.KunjunganId == vm.KunjunganId && b.ItemId == obat.ObatId);

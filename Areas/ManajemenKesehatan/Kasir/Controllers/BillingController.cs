@@ -67,6 +67,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             });
         }
 
+        [HttpGet("BillingObat/{kunjunganId}")]
+        public async Task<IActionResult> GetBillingObat(Guid kunjunganId)
+        {
+            var kunjungan = await _applicationDbContext.Billings
+                .Where(b => b.KunjunganId == kunjunganId && !b.IsDelete && b.BillingKode != null && b.BillingKode.StartsWith("OB"))
+                .ToListAsync();
+
+            if (kunjungan == null || !kunjungan.Any())
+                return NotFound(new { message = "Data kunjungan tidak ditemukan!" });
+
+            return Ok(new
+            {
+                message = "Ditemukan || 200 OK",
+                data = kunjungan
+            });
+        }
+
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateBilling(Guid id, [FromBody] BillingViewModel vm)
         {

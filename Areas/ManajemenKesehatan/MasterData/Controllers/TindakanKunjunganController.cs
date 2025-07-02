@@ -216,9 +216,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 int billingTindakanCount = await _applicationDbContext.Billings
                     .Where(b => b.KunjunganId == vm.KunjunganId && b.BillingKode.StartsWith("TD"))
                     .CountAsync();
+                int billingIndex = billingTindakanCount;
 
                 // buat BillingKode untuk setiap tindakan
-                string billingKode = $"TD{(billingTindakanCount + 1).ToString("D3")}";
+                billingIndex++;
+                string billingKode = $"TD{billingIndex.ToString("D3")}";
 
                 var billing = new Billing
                     {
@@ -358,9 +360,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     int billingTindakanCount = await _applicationDbContext.Billings
                         .Where(b => b.KunjunganId == vm.KunjunganId && b.BillingKode.StartsWith("TD"))
                         .CountAsync();
+                    int billingIndex = billingTindakanCount;
 
                     // buat BillingKode untuk setiap tindakan
-                    string billingKode = $"TD{(billingTindakanCount + 1).ToString("D3")}";
+                    billingIndex++;
+                    string billingKode = $"TD{billingIndex.ToString("D3")}";
 
                     var newBilling = new Billing
                     {

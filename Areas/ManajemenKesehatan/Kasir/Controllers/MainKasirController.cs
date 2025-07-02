@@ -288,7 +288,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                             }).Distinct().ToList(), // Gunakan Distinct untuk menghindari duplikasi dalam daftar tindakan
 
 
-                        // 👉 TOTAL TAGIHAN (Obat + Tindakan)
+                        //TOTAL TAGIHAN (Obat + Tindakan)
                         TotalObat = group
                             .Where(x => x.dr != null && x.o != null)
                             .DistinctBy(x => x.dr.DetailResepId)
