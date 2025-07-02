@@ -1,14 +1,17 @@
-﻿using System.Security.Claims;
+﻿using System.Linq;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
+using SkiaSharp;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 {
@@ -67,22 +70,102 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             });
         }
 
+
         [HttpGet("BillingObat/{kunjunganId}")]
-        public async Task<IActionResult> GetBillingObat(Guid kunjunganId)
+        public async Task<IActionResult> GetResepDetailsByKunjunganIdEntity(Guid kunjunganId)
         {
-            var kunjungan = await _applicationDbContext.Billings
-                .Where(b => b.KunjunganId == kunjunganId && !b.IsDelete && b.BillingKode != null && b.BillingKode.StartsWith("OB"))
-                .ToListAsync();
-
-            if (kunjungan == null || !kunjungan.Any())
-                return NotFound(new { message = "Data kunjungan tidak ditemukan!" });
-
-            return Ok(new
+            try
             {
-                message = "Ditemukan || 200 OK",
-                data = kunjungan
-            });
+                if (!_applicationDbContext.Database.CanConnect())
+                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+
+                var resepQuery = await (
+                    from r in _applicationDbContext.Reseps
+                    join dr in _applicationDbContext.DetailReseps on r.ResepId equals dr.ResepId
+                    where r.KunjunganId == kunjunganId
+                    select new
+                    {
+                        r.KunjunganId,
+                        r.AsuransiId,
+                        dr.ObatId,
+                        dr.IsRacikan,
+                        dr.RacikanId,
+                        dr.Signa,
+                        dr.SignaTambahan
+                    }
+                ).ToListAsync();
+
+                var result = new List<object>();
+
+                foreach (var item in resepQuery)
+                {
+                    // Nama Obat
+                    var obat = await _applicationDbContext.Obats
+                        .Where(o => o.ObatId == item.ObatId)
+                        .Select(o => o.ObatName)
+                        .FirstOrDefaultAsync();
+
+                    // Status cover asuransi (false jika tidak ditemukan)
+                    bool isCovered = await _applicationDbContext.ObatAsuransis
+                        .AnyAsync(oa => oa.AsuransiId == item.AsuransiId && oa.ObatId == item.ObatId && !oa.IsDelete);
+
+                    // Tentukan ItemId (obat atau racikan)
+                    var itemId = (item.IsRacikan == true && item.RacikanId.HasValue)
+                        ? item.RacikanId.Value
+                        : item.ObatId;
+
+                    var billing = await _applicationDbContext.Billings
+                        .Where(b => b.KunjunganId == item.KunjunganId && b.ItemId == itemId)
+                        .FirstOrDefaultAsync();
+
+                    var racikan = item.RacikanId.HasValue
+                        ? await _applicationDbContext.Racikans
+                            .Where(mr => mr.RacikanId == item.RacikanId)
+                            .Select(mr => mr.NamaRacikan)
+                            .FirstOrDefaultAsync()
+                        : null;
+
+                    result.Add(new
+                    {
+                        item.KunjunganId,
+                        item.ObatId,
+                        NamaObat = obat,
+                        item.IsRacikan,
+                        item.RacikanId,
+                        NamaRacikan = racikan,
+                        item.Signa,
+                        item.SignaTambahan,
+                        IsCoveredByAsuransi = isCovered,
+                        BilledQty = billing?.QtyItem,
+                        billing?.BillingKode
+                    });
+                }
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan: {ex.Message}" });
+            }
         }
+
+
+        //[HttpGet("BillingObat/{kunjunganId}")]
+        //public async Task<IActionResult> GetBillingObat(Guid kunjunganId)
+        //{
+        //    var kunjungan = await _applicationDbContext.Billings
+        //        .Where(b => b.KunjunganId == kunjunganId && !b.IsDelete && b.BillingKode != null && b.BillingKode.StartsWith("OB"))
+        //        .ToListAsync();
+
+        //    if (kunjungan == null || !kunjungan.Any())
+        //        return NotFound(new { message = "Data kunjungan tidak ditemukan!" });
+
+        //    return Ok(new
+        //    {
+        //        message = "Ditemukan || 200 OK",
+        //        data = kunjungan
+        //    });
+        //}
 
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateBilling(Guid id, [FromBody] BillingViewModel vm)

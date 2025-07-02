@@ -363,6 +363,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     // **Pengurangan Stok untuk Obat**
                     foreach (var obat in vm.DaftarObat)
                     {
+                        // Validasi ID wajib
+                        if (obat.IsRacikan ==  true && obat.RacikanId == null)
+                            return BadRequest(new { message = "RacikanId tidak boleh kosong untuk racikan." });
+
+                        if (obat.IsRacikan == false && obat.ObatId == null)
+                            return BadRequest(new { message = "ObatId tidak boleh kosong untuk non-racikan." });
+
                         var obatDb = await _applicationDbContext.Obats.FindAsync(obat.ObatId);
 
                         if (obatDb == null)
@@ -392,7 +399,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             DiskonId = vm.DiskonId,
                             BillingDate = DateTime.UtcNow,
                             BillingKode = billingKode,
-                            ItemId = obat.ObatId,
+                            ItemId = obat.IsRacikan == true ? obat.RacikanId : obat.ObatId,
                             NamaItem = obatDb.ObatName,
                             HargaItem = obat.HargaObat,
                             QtyItem = qty,
@@ -681,7 +688,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                 DiskonId = vm.DiskonId,
                                 BillingDate = DateTime.UtcNow,
                                 BillingKode = billingKode,
-                                ItemId = obat.ObatId,
+                                ItemId = obat.IsRacikan == true ? obat.RacikanId : obat.ObatId,
                                 NamaItem = obatDbUpdate.ObatName,
                                 HargaItem = obat.HargaObat,
                                 QtyItem = obat.Qty,
