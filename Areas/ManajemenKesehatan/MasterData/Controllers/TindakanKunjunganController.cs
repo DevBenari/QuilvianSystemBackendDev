@@ -213,16 +213,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // Hitung jumlah billing sebelumnya untuk kunjungan ini
-                int billingStart = await _applicationDbContext.Billings
-                    .Where(b => b.KunjunganId == vm.KunjunganId )
+                int billingTindakanCount = await _applicationDbContext.Billings
+                    .Where(b => b.KunjunganId == vm.KunjunganId && b.BillingKode.StartsWith("TD"))
                     .CountAsync();
-                int billingIndex = billingStart + 1;
 
-                // buat BillingKode untuk setiap obat
-                string billingKode = $"TD{billingIndex.ToString("D3")}";
-                billingIndex++;
+                // buat BillingKode untuk setiap tindakan
+                string billingKode = $"TD{(billingTindakanCount + 1).ToString("D3")}";
 
-                    var billing = new Billing
+                var billing = new Billing
                     {
                         BillingId = Guid.NewGuid(),
                         KunjunganId = vm.KunjunganId,
@@ -356,12 +354,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 if (existingBilling == null)
                 {
-                    int billingStart = await _applicationDbContext.Billings
-                        .Where(b => b.KunjunganId == vm.KunjunganId )
+                    // Hitung jumlah billing sebelumnya untuk kunjungan ini
+                    int billingTindakanCount = await _applicationDbContext.Billings
+                        .Where(b => b.KunjunganId == vm.KunjunganId && b.BillingKode.StartsWith("TD"))
                         .CountAsync();
 
-                    int billingIndex = billingStart + 1;
-                    string billingKode = $"TD{billingIndex:D3}";
+                    // buat BillingKode untuk setiap tindakan
+                    string billingKode = $"TD{(billingTindakanCount + 1).ToString("D3")}";
 
                     var newBilling = new Billing
                     {

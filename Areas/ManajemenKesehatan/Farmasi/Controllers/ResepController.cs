@@ -354,11 +354,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
                     _applicationDbContext.DetailReseps.AddRange(daftarobat);
 
-                    // Hitung jumlah billing sebelumnya untuk kunjungan ini
-                    int billingStart = await _applicationDbContext.Billings
-                        .Where(b => b.KunjunganId == vm.KunjunganId)
+                    // Hitung jumlah billing OBAT sebelumnya
+                    int billingObatCount = await _applicationDbContext.Billings
+                        .Where(b => b.KunjunganId == vm.KunjunganId && b.BillingKode.StartsWith("OB"))
                         .CountAsync();
-                    int billingIndex = billingStart + 1;
 
                     // **Pengurangan Stok untuk Obat**
                     foreach (var obat in vm.DaftarObat)
@@ -381,10 +380,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                         // Update stok obat di database
                         _applicationDbContext.Obats.Update(obatDb);
 
-                        // buat BillingKode untuk setiap obat
-                        string billingKode = $"OB{billingIndex.ToString("D3")}";
-                        billingIndex++;
-
+                        string billingKode = $"OB{(billingObatCount + 1).ToString("D3")}";
+                      
                         // Tambahkan satu Billing per ObatId
                         var billing = new Billing
                         {
@@ -579,10 +576,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 }
                 else
                 {
-                    int billingStart = await _applicationDbContext.Billings
-                        .Where(b => b.KunjunganId == vm.KunjunganId)
+                    int billingObatCount = await _applicationDbContext.Billings
+                        .Where(b => b.KunjunganId == vm.KunjunganId && b.BillingKode.StartsWith("OB"))
                         .CountAsync();
-                    int billingIndex = billingStart + 1; // Start from the next available billing index
 
                     foreach (var obat in vm.DaftarObat)
                     {
@@ -666,8 +662,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                         _applicationDbContext.Obats.Update(obatDbUpdate);
 
                         // cari data billing
-                        string billingKode = $"OB{billingIndex.ToString("D3")}";
-                        billingIndex++;
+                        string billingKode = $"OB{(billingObatCount + 1).ToString("D3")}";
 
                         var existingBilling = await _applicationDbContext.Billings
                             .FirstOrDefaultAsync(b => b.KunjunganId == vm.KunjunganId && b.ItemId == obat.ObatId);
