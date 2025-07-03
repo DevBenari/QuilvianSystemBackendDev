@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion.Internal;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json.Converters;
 using OpenCvSharp;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
@@ -297,8 +298,30 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 };
 
                 _applicationDbContext.Kunjungans.Add(newKunjungan);
-                await _applicationDbContext.SaveChangesAsync();
 
+                // cari data biaya admin berdasarkan jenis kunjungan
+                var biayaAdmin = await _applicationDbContext.BiayaAdministrasis
+                    .Where(b => b.BiayaAdministrasiKode == kodeJenis)
+                    .FirstOrDefaultAsync();
+
+                var bill = new Billing
+                {
+                    BillingId = Guid.NewGuid(),
+                    KunjunganId = newKunjungan.KunjunganID,
+                    DiskonId = null, // Atur sesuai kebutuhan
+                    ItemId = biayaAdmin?.BiayaAdministrasiId ?? Guid.Empty,
+                    NamaItem = biayaAdmin?.NamaBiayaAdministrasi ?? "Biaya Administrasi",
+                    HargaItem = biayaAdmin?.NominalBiayaAdministrasi ?? 0,
+                    QtyItem = 1,
+                    SubTotalItem = biayaAdmin?.NominalBiayaAdministrasi ?? 0,
+                    BillingKode = "Biaya Admin",
+                    BillingDate = DateTime.UtcNow,
+                    CreateDateTime = DateTimeOffset.UtcNow,
+                    CreateBy = UserActiveId
+                };
+                _applicationDbContext.Billings.Add(bill);
+
+                await _applicationDbContext.SaveChangesAsync();
                 return Ok(new
                 {
                     message = "Kunjungan baru berhasil ditambahkan.",
@@ -416,8 +439,29 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 existingKunjungan.UpdateDateTime = DateTimeOffset.UtcNow;
                 existingKunjungan.UpdateBy = userActiveId;
 
-                //existingKunjungan.IsFinished = request.IsFinished;
-                //existingKunjungan.IsScreening = request.IsScreening;
+                // Simpan nilai jenis kunjungan lama untuk deteksi perubahan
+                var jenisKunjunganLama = existingKunjungan.JenisKunjungan;
+                // Update billing "Biaya Admin" jika ada dan jenis kunjungan berubah
+                if (!string.Equals(jenisKunjunganLama, kodeJenis, StringComparison.OrdinalIgnoreCase))
+                {
+                    var existingBilling = await _applicationDbContext.Billings
+                        .FirstOrDefaultAsync(b => b.KunjunganId == existingKunjungan.KunjunganID && b.BillingKode == "Biaya Admin");
+
+                    if (existingBilling != null)
+                    {
+                        var biayaAdmin = await _applicationDbContext.BiayaAdministrasis
+                            .FirstOrDefaultAsync(b => b.BiayaAdministrasiKode == kodeJenis);
+
+                        if (biayaAdmin != null)
+                        {
+                            existingBilling.ItemId = biayaAdmin.BiayaAdministrasiId;
+                            existingBilling.NamaItem = biayaAdmin.NamaBiayaAdministrasi;
+                            existingBilling.HargaItem = biayaAdmin.NominalBiayaAdministrasi;
+                            existingBilling.SubTotalItem = biayaAdmin.NominalBiayaAdministrasi;
+                            existingBilling.BillingDate = DateTime.UtcNow;
+                        }
+                    }
+                }
 
                 await _applicationDbContext.SaveChangesAsync();
 
@@ -560,6 +604,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.IsDelete = true;
 
                 _applicationDbContext.Kunjungans.Update(data);
+
+                // Soft Delete Semua Billing Terkait
+                var billings = _applicationDbContext.Billings
+                    .Where(b => b.KunjunganId == id && !b.IsDelete)
+                    .ToList();
+
+                foreach (var billing in billings)
+                {
+                    billing.IsDelete = true;
+                    billing.DeleteBy = UserActiveId;
+                    billing.DeleteDateTime = DateTimeOffset.UtcNow;
+                    _applicationDbContext.Billings.Update(billing);
+                }
                 _applicationDbContext.SaveChanges();
 
                 return Ok(new { message = "Data berhasil dihapus..." });

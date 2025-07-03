@@ -188,22 +188,46 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             }
         }
 
-        //[HttpGet("BillingObat/{kunjunganId}")]
-        //public async Task<IActionResult> GetBillingObat(Guid kunjunganId)
-        //{
-        //    var kunjungan = await _applicationDbContext.Billings
-        //        .Where(b => b.KunjunganId == kunjunganId && !b.IsDelete && b.BillingKode != null && b.BillingKode.StartsWith("OB"))
-        //        .ToListAsync();
+        [HttpGet("BillingAdmin/{kunjunganId}")]
+        public async Task<IActionResult> GetBiayaAdministrasiByKunjunganId(Guid kunjunganId)
+        {
+            try
+            {
+                if (!_applicationDbContext.Database.CanConnect())
+                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
 
-        //    if (kunjungan == null || !kunjungan.Any())
-        //        return NotFound(new { message = "Data kunjungan tidak ditemukan!" });
+                var billing = await _applicationDbContext.Billings
+                    .Where(b => b.KunjunganId == kunjunganId && b.BillingKode == "Biaya Admin" && !b.IsDelete)
+                    .Select(b => new
+                    {
+                        b.BillingId,
+                        b.KunjunganId,
+                        b.ItemId,
+                        b.NamaItem,
+                        b.HargaItem,
+                        b.QtyItem,
+                        b.SubTotalItem,
+                        b.BillingKode,
+                        b.BillingDate
+                    })
+                    .FirstOrDefaultAsync();
 
-        //    return Ok(new
-        //    {
-        //        message = "Ditemukan || 200 OK",
-        //        data = kunjungan
-        //    });
-        //}
+                if (billing == null)
+                {
+                    return NotFound(new { message = "Data billing administrasi tidak ditemukan untuk kunjungan ini." });
+                }
+
+                return Ok(new
+                {
+                    message = "Data billing administrasi ditemukan.",
+                    data = billing
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan: {ex.Message}" });
+            }
+        }
 
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateBilling(Guid id, [FromBody] BillingViewModel vm)
