@@ -103,7 +103,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     // Nama Obat
                     var obat = await _applicationDbContext.Obats
                         .Where(o => o.ObatId == item.ObatId)
-                        .Select(o => o.ObatName)
                         .FirstOrDefaultAsync();
 
                     // Status cover asuransi (false jika tidak ditemukan)
@@ -130,7 +129,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     {
                         item.KunjunganId,
                         item.ObatId,
-                        NamaObat = obat,
+                        NamaObat = obat.ObatName,
+                        HargaSatuanObat = obat.HargaJual,
+                        SubTotalObat = obat.HargaJual * (billing?.QtyItem ?? 1),
                         item.IsRacikan,
                         item.RacikanId,
                         NamaRacikan = racikan,
