@@ -164,23 +164,39 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     from tk in _applicationDbContext.TindakanKunjungans
                     join k in _applicationDbContext.Kunjungans
                         on tk.KunjunganId equals k.KunjunganID
-                    where k.AsuransiId != null // Tambahkan ini agar aman saat .Value
+                    where k.AsuransiId != null // agar aman saat .Value  
+
                     join mt in _applicationDbContext.Tindakans
                         on tk.TindakanId equals mt.TindakanId
+
                     join tda in _applicationDbContext.TindakanAsuransis
-                        on new { tk.TindakanId, AsuransiId = k.AsuransiId.Value } equals new { tda.TindakanId, tda.AsuransiId } into tdaGroup
+                        on new { TindakanId = tk.TindakanId, AsuransiId = k.AsuransiId.Value }
+                        equals new { TindakanId = tda.TindakanId, AsuransiId = tda.AsuransiId } into tdaGroup
                     from mta in tdaGroup.DefaultIfEmpty()
+
+                    join b in _applicationDbContext.Billings
+                        on new { KunjunganId = tk.KunjunganId, ItemId = tk.TindakanId }
+                        equals new { KunjunganId = b.KunjunganId.Value, ItemId = b.ItemId.Value } into billingGroup
+                    from billing in billingGroup.DefaultIfEmpty()
+
                     where tk.KunjunganId == kunjunganId && (mta == null || !mta.IsDelete)
+
                     select new
                     {
                         tk.KunjunganId,
-                        //k.AsuransiId,
                         tk.TindakanId,
                         NamaTindakan = mt.NamaTindakan,
-                        tk.Quantity,
-                        tk.Total,
-                        IsCoveredByAsuransi = mta != null
-                    }).ToListAsync();
+                        IsCoveredByAsuransi = mta != null,
+
+                        // Info Billing  
+                        BillingId = billing != null ? billing.BillingId : (Guid?)null,
+                        BillingKode = billing.BillingKode,
+                        HargaItem = billing.HargaItem,
+                        QtyItem = billing.QtyItem,
+                        SubTotalItem = billing.SubTotalItem,
+                        BillingDate = billing.BillingDate
+                    }
+                ).ToListAsync();
 
                 return Ok(tindakanQuery);
             }
