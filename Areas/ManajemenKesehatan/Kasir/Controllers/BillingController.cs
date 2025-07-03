@@ -79,21 +79,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 if (!_applicationDbContext.Database.CanConnect())
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
 
+                // LEFT JOIN Reseps x DetailReseps
                 var resepQuery = await (
                     from r in _applicationDbContext.Reseps
-                    join dr in _applicationDbContext.DetailReseps on r.ResepId equals dr.ResepId
                     where r.KunjunganId == kunjunganId
+                    join dr in _applicationDbContext.DetailReseps
+                        on r.ResepId equals dr.ResepId into drGroup
+                    from dr in drGroup.DefaultIfEmpty() // LEFT JOIN
                     select new
                     {
                         r.KunjunganId,
                         r.AsuransiId,
-                        dr.ObatId,
-                        dr.IsRacikan,
-                        dr.RacikanId,
-                        dr.Signa,
-                        dr.SignaTambahan
-                    }
-                ).ToListAsync();
+                        ObatId = dr != null ? dr.ObatId : (Guid?)null,
+                        IsRacikan = dr != null ? dr.IsRacikan : (bool?)null,
+                        RacikanId = dr != null ? dr.RacikanId : (Guid?)null,
+                        Signa = dr != null ? dr.Signa : null,
+                        SignaTambahan = dr != null ? dr.SignaTambahan : null
+                    }).ToListAsync();
 
                 var result = new List<object>();
 
@@ -137,7 +139,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         item.SignaTambahan,
                         IsCoveredByAsuransi = isCovered,
                         BilledQty = billing?.QtyItem,
-                        billing?.BillingKode
+                        billing?.BillingKode,
+                        billing?.JenisBilling,
                     });
                 }
 

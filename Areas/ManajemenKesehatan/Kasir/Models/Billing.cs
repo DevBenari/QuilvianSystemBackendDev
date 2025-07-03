@@ -19,5 +19,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models
         public int? QtyItem { get; set; }
         public decimal? SubTotalItem { get; set; }
         public string? Keterangan { get; set; }
+        public string? JenisBilling { get; set; }
     }
 }

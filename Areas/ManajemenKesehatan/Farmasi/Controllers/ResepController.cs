@@ -356,7 +356,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
                     // Hitung jumlah billing OBAT sebelumnya
                     int billingObatCount = await _applicationDbContext.Billings
-                        .Where(b => b.KunjunganId == vm.KunjunganId && b.BillingKode.StartsWith("OB"))
+                        .Where(b => b.KunjunganId == vm.KunjunganId && b.BillingKode.ToLower()=="obat")
                         .CountAsync();
                     int billingIndex = billingObatCount;
 
@@ -390,7 +390,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
                         // increment billoing kode untuk setiap obat
                         billingIndex++;
-                        string billingKode = $"OB{billingIndex.ToString("D3")}";
+                        string billingKode = $"{billingIndex.ToString("D3")}";
 
                         // Tambahkan satu Billing per ObatId
                         var billing = new Billing
@@ -405,6 +405,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             QtyItem = qty,
                             SubTotalItem = obat.HargaObat * qty,
                             Keterangan = obat.SignaTambahan, // atau sesuaikan tipe dan nilainya
+                            JenisBilling = "Obat",
                         };
                         _applicationDbContext.Billings.Add(billing);
                     }
@@ -587,7 +588,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 else
                 {
                     int billingObatCount = await _applicationDbContext.Billings
-                        .Where(b => b.KunjunganId == vm.KunjunganId && b.BillingKode.StartsWith("OB"))
+                        .Where(b => b.KunjunganId == vm.KunjunganId && b.JenisBilling.ToLower() == "obat")
                         .CountAsync();
                     int billingIndex = billingObatCount;
 
@@ -674,7 +675,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
                         // increment kode billing utk setiap obat
                         billingIndex++;
-                        string billingKode = $"OB{billingIndex.ToString("D3")}";
+                        string billingKode = $"{billingIndex.ToString("D3")}";
 
                         var existingBilling = await _applicationDbContext.Billings
                             .FirstOrDefaultAsync(b => b.KunjunganId == vm.KunjunganId && b.ItemId == obat.ObatId);
@@ -694,6 +695,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                 QtyItem = obat.Qty,
                                 SubTotalItem = obat.HargaObat * obat.Qty,
                                 Keterangan = obat.SignaTambahan, // belum fux
+                                JenisBilling = "Obat",
                                 CreateBy = userActiveId, // Add these if your Billing has them
                                 CreateDateTime = DateTimeOffset.UtcNow,
                             };

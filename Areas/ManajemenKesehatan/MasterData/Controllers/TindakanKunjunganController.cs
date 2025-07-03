@@ -214,28 +214,31 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Hitung jumlah billing sebelumnya untuk kunjungan ini
                 int billingTindakanCount = await _applicationDbContext.Billings
-                    .Where(b => b.KunjunganId == vm.KunjunganId && b.BillingKode.StartsWith("TD"))
+                    .Where(b => b.KunjunganId == vm.KunjunganId && b.JenisBilling.ToLower()=="tindakan")
                     .CountAsync();
                 int billingIndex = billingTindakanCount;
 
                 // buat BillingKode untuk setiap tindakan
                 billingIndex++;
-                string billingKode = $"TD{billingIndex.ToString("D3")}";
+                string billingKode = $"{billingIndex.ToString("D3")}";
 
                 var billing = new Billing
-                    {
-                        BillingId = Guid.NewGuid(),
-                        KunjunganId = vm.KunjunganId,
-                        BillingDate = DateTime.UtcNow,
-                        BillingKode = billingKode,
-                        DiskonId = vm.DiskonId,
-                        ItemId = vm.TindakanId,
-                        NamaItem = tindakan.NamaTindakan,
-                        QtyItem = vm.Quantity,
-                        HargaItem = tarifKelas.TarifTotal,
-                        SubTotalItem = totalqty,
-                        Keterangan = vm.Disposition,
-                    };
+                {
+                    BillingId = Guid.NewGuid(),
+                    KunjunganId = vm.KunjunganId,
+                    BillingDate = DateTime.UtcNow,
+                    BillingKode = billingKode,
+                    DiskonId = vm.DiskonId,
+                    ItemId = vm.TindakanId,
+                    NamaItem = tindakan.NamaTindakan,
+                    QtyItem = vm.Quantity,
+                    HargaItem = tarifKelas.TarifTotal,
+                    SubTotalItem = totalqty,
+                    JenisBilling = "Tindakan", // Menandakan ini adalah billing untuk tindakan
+                    CreateBy = userActiveId,
+                    CreateDateTime = DateTimeOffset.UtcNow,
+                    Keterangan = vm.Disposition,
+                };
 
                     _applicationDbContext.Billings.Add(billing);
               
@@ -358,13 +361,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     // Hitung jumlah billing sebelumnya untuk kunjungan ini
                     int billingTindakanCount = await _applicationDbContext.Billings
-                        .Where(b => b.KunjunganId == vm.KunjunganId && b.BillingKode.StartsWith("TD"))
+                        .Where(b => b.KunjunganId == vm.KunjunganId && b.BillingKode.ToLower()=="tindakan")
                         .CountAsync();
                     int billingIndex = billingTindakanCount;
 
                     // buat BillingKode untuk setiap tindakan
                     billingIndex++;
-                    string billingKode = $"TD{billingIndex.ToString("D3")}";
+                    string billingKode = $"{billingIndex.ToString("D3")}";
 
                     var newBilling = new Billing
                     {
@@ -379,6 +382,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         QtyItem = vm.Quantity,
                         SubTotalItem = totalqty,
                         Keterangan = vm.Disposition,
+                        JenisBilling = "Tindakan", 
                         CreateBy = userActiveId,
                         CreateDateTime = DateTimeOffset.UtcNow,
                     };
