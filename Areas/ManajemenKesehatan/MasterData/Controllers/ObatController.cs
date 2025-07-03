@@ -68,9 +68,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     a.Stock,
                     a.IsActive,
                     a.Note,
+                    a.BentukObatId,
                     BentukObatName = _applicationDbContext.BentukObats
                         .Where(bo => bo.BentukObatId == a.BentukObatId)
                         .Select(bo => bo.NamaBentukObat)
+                        .FirstOrDefault(),
+                    a.SatuanId,
+                    SatuanName = _applicationDbContext.Satuans
+                        .Where(s => s.SatuanId == a.SatuanId)
+                        .Select(s => s.NamaSatuan)
                         .FirstOrDefault(),
 
                     KandunganNames = (from ok in _applicationDbContext.ObatKandungans
@@ -127,16 +133,68 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet("{id}")]
         public async Task<IActionResult> GetObatById(Guid id)
         {
-            var obat = await _applicationDbContext.Obats.FindAsync(id);
-            if (obat == null)
+            var data = await _applicationDbContext.Obats
+                .Where(a => a.ObatId == id && !a.IsDelete)
+                .Select(a => new
+                {
+                    a.CreateDateTime,
+                    a.CreateBy,
+                    CreateByName = _applicationDbContext.UserActives
+                        .Where(u => u.UserActiveId == a.CreateBy)
+                        .Select(u => u.FullName)
+                        .FirstOrDefault(),
+                    a.ObatId,
+                    a.ObatCode,
+                    a.ObatName,
+                    a.HargaAwal,
+                    a.HargaJual,
+                    a.Stock,
+                    a.IsActive,
+                    a.Note,
+                    a.BentukObatId,
+                    BentukObatName = _applicationDbContext.BentukObats
+                        .Where(bo => bo.BentukObatId == a.BentukObatId)
+                        .Select(bo => bo.NamaBentukObat)
+                        .FirstOrDefault(),
+                    a.SatuanId,
+                    SatuanName = _applicationDbContext.Satuans
+                        .Where(s => s.SatuanId == a.SatuanId)
+                        .Select(s => s.NamaSatuan)
+                        .FirstOrDefault(),
+
+                    KandunganNames = (from ok in _applicationDbContext.ObatKandungans
+                                      join k in _applicationDbContext.Kandungans on ok.KandunganId equals k.KandunganId
+                                      where ok.ObatId == a.ObatId
+                                      select k.NamaKandungan).Distinct().ToList(),
+
+                    AsuransiNames = (from oa in _applicationDbContext.ObatAsuransis
+                                     join asu in _applicationDbContext.Asuransis on oa.AsuransiId equals asu.AsuransiId
+                                     where oa.ObatId == a.ObatId
+                                     select asu.NamaAsuransi).Distinct().ToList(),
+
+                    // Info tambahan
+                    a.Minimal,
+                    a.Maximal,
+                    a.Farmakologi,
+                    a.Peringatan,
+                    a.Indikasi,
+                    a.Kontraindikasi,
+                    a.CaraKerja,
+                    a.InteraksiObat,
+                    a.Dosis,
+                    a.JumlahSatuan,
+                })
+                .FirstOrDefaultAsync();
+
+            if (data == null)
             {
-                return NotFound(new { message = "Data tidak ditemukan." });
+                return NotFound(new { message = "Obat tidak ditemukan || 404 Not Found" });
             }
 
             return Ok(new
             {
-                message = "Ditemukan || 200 OK",
-                data = obat
+                message = "Berhasil mengambil data obat || 200 OK",
+                data
             });
         }
 
@@ -405,31 +463,57 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
                 }
 
-                var query = from a in _applicationDbContext.Obats
-                            join u in _applicationDbContext.UserActives
-                            on a.CreateBy equals u.UserActiveId
-                            where a.IsDelete == false
-                            select new
-                            {
-                                a.CreateDateTime,
-                                a.CreateBy,
-                                CreateByName = u.FullName,
-                                a.ObatId,
-                                a.ObatCode,
-                                a.ObatName,
-                                a.IsActive,
-                                a.Note,
-                                a.Minimal,
-                                a.Maximal,
-                                a.Farmakologi,
-                                a.Peringatan,
-                                a.Indikasi,
-                                a.Kontraindikasi,
-                                a.CaraKerja,
-                                a.InteraksiObat,
-                                a.Dosis,
-                                a.JumlahSatuan,
-                            };
+                var query = _applicationDbContext.Obats
+                    .Where(a => !a.IsDelete)
+                    .Select(a => new
+                    {
+                        a.CreateDateTime,
+                        a.CreateBy,
+                        CreateByName = _applicationDbContext.UserActives
+                            .Where(u => u.UserActiveId == a.CreateBy)
+                            .Select(u => u.FullName)
+                            .FirstOrDefault(),
+                        a.ObatId,
+                        a.ObatCode,
+                        a.ObatName,
+                        a.HargaAwal,
+                        a.HargaJual,
+                        a.Stock,
+                        a.IsActive,
+                        a.Note,
+                        a.BentukObatId,
+                        BentukObatName = _applicationDbContext.BentukObats
+                            .Where(bo => bo.BentukObatId == a.BentukObatId)
+                            .Select(bo => bo.NamaBentukObat)
+                            .FirstOrDefault(),
+                        a.SatuanId,
+                        SatuanName = _applicationDbContext.Satuans
+                            .Where(s => s.SatuanId == a.SatuanId)
+                            .Select(s => s.NamaSatuan)
+                            .FirstOrDefault(),
+
+                        KandunganNames = (from ok in _applicationDbContext.ObatKandungans
+                                          join k in _applicationDbContext.Kandungans on ok.KandunganId equals k.KandunganId
+                                          where ok.ObatId == a.ObatId
+                                          select k.NamaKandungan).Distinct().ToList(),
+
+                        AsuransiNames = (from oa in _applicationDbContext.ObatAsuransis
+                                         join asu in _applicationDbContext.Asuransis on oa.AsuransiId equals asu.AsuransiId
+                                         where oa.ObatId == a.ObatId
+                                         select asu.NamaAsuransi).Distinct().ToList(),
+
+                        // New fields added
+                        a.Minimal,
+                        a.Maximal,
+                        a.Farmakologi,
+                        a.Peringatan,
+                        a.Indikasi,
+                        a.Kontraindikasi,
+                        a.CaraKerja,
+                        a.InteraksiObat,
+                        a.Dosis,
+                        a.JumlahSatuan,
+                    });
 
                 if (!string.IsNullOrWhiteSpace(search))
                 {
