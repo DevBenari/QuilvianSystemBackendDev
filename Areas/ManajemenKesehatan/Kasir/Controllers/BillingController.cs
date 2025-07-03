@@ -70,7 +70,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             });
         }
 
-
         [HttpGet("BillingObat/{kunjunganId}")]
         public async Task<IActionResult> GetResepDetailsByKunjunganIdEntity(Guid kunjunganId)
         {
@@ -143,7 +142,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         billing?.JenisBilling,
                     });
                 }
-
                 return Ok(result);
             }
             catch (Exception ex)
@@ -152,6 +150,43 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             }
         }
 
+        [HttpGet("BillingTindakan/{kunjunganId}")]
+        public async Task<IActionResult> GetBillingTindakanByKunjunganId(Guid kunjunganId)
+        {
+            try
+            {
+                if (!_applicationDbContext.Database.CanConnect())
+                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+
+                var tindakanQuery = await (
+                    from tk in _applicationDbContext.TindakanKunjungans
+                    join k in _applicationDbContext.Kunjungans
+                        on tk.KunjunganId equals k.KunjunganID
+                    where k.AsuransiId != null // Tambahkan ini agar aman saat .Value
+                    join mt in _applicationDbContext.Tindakans
+                        on tk.TindakanId equals mt.TindakanId
+                    join tda in _applicationDbContext.TindakanAsuransis
+                        on new { tk.TindakanId, AsuransiId = k.AsuransiId.Value } equals new { tda.TindakanId, tda.AsuransiId } into tdaGroup
+                    from mta in tdaGroup.DefaultIfEmpty()
+                    where tk.KunjunganId == kunjunganId && (mta == null || !mta.IsDelete)
+                    select new
+                    {
+                        tk.KunjunganId,
+                        //k.AsuransiId,
+                        tk.TindakanId,
+                        NamaTindakan = mt.NamaTindakan,
+                        tk.Quantity,
+                        tk.Total,
+                        IsCoveredByAsuransi = mta != null
+                    }).ToListAsync();
+
+                return Ok(tindakanQuery);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan: {ex.Message}" });
+            }
+        }
 
         //[HttpGet("BillingObat/{kunjunganId}")]
         //public async Task<IActionResult> GetBillingObat(Guid kunjunganId)
@@ -277,6 +312,5 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
-
     }
 }
