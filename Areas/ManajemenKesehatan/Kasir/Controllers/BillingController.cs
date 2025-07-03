@@ -127,6 +127,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
                     result.Add(new
                     {
+                        billing?.BillingId,
                         item.KunjunganId,
                         item.ObatId,
                         NamaObat = obat.ObatName,
