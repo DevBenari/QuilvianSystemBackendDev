@@ -68,7 +68,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.NamaAsuransi,
                              a.ObatId,
                              a.Qty,
-                             a.Dosis,
                              a.JenisRacikan,
                              a.Signa,
                              a.SignaTambahan,
@@ -84,7 +83,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.JarakPenebusan,
                              a.MasaAktifIteratur,
                              a.StatusPengambilanObat,
-                             a.KeteranganRacikan
+                             a.KeteranganRacikan,
+                             a.DosisRacikan,
+                             a.TakaranDosis,
                          }).OrderByDescending(a => a.CreateDateTime);
 
         // Hitung total data sebelum paginasi
@@ -221,7 +222,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     NamaAsuransi = vm.NamaAsuransi,
                     ObatId = vm.ObatId,
                     Qty = vm.Qty,
-                    Dosis = vm.Dosis,
+                    TakaranDosis = vm.TakaranDosis,
                     JenisRacikan = vm.JenisRacikan,
                     Signa = vm.Signa,
                     SignaTambahan = vm.SignaTambahan,
@@ -340,7 +341,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 data.JarakPenebusan = vm.JarakPenebusan;
                 data.KeteranganRacikan = vm.KeteranganRacikan;
                 data.MasaAktifIteratur = parsedMasaAktif;
-                data.Dosis = vm.Dosis;
+                data.TakaranDosis = vm.TakaranDosis;
                 data.JenisRacikan = vm.JenisRacikan;
 
                 data.UpdateBy = userActiveId;
@@ -458,7 +459,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.NamaAsuransi,
                              a.ObatId,
                              a.Qty,
-                             a.Dosis,
                              a.JenisRacikan,
                              a.Signa,
                              a.SignaTambahan,
@@ -474,7 +474,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.JarakPenebusan,
                              a.MasaAktifIteratur,
                              a.StatusPengambilanObat,
-                             a.KeteranganRacikan
+                             a.KeteranganRacikan,
+                             a.DosisRacikan,
+                             a.TakaranDosis,
                          };
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**

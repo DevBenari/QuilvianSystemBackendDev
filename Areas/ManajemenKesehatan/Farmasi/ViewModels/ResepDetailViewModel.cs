@@ -7,7 +7,7 @@
         public string? NamaAsuransi { get; set; }
         public Guid? ObatId { get; set; }
         public int? Qty { get; set; }
-        public string? Dosis { get; set; }
+        public decimal? DosisRacikan { get; set; }
         public decimal? TakaranDosis { get; set; }
         public string? JenisRacikan { get; set; }
         public string? Signa { get; set; }

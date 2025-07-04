@@ -16,7 +16,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
         public string? NamaAsuransi { get; set; }
         public Guid? ObatId { get; set; }
         public int? Qty { get; set; }
-        public string? Dosis { get; set; }
+        public decimal? TakaranDosis { get; set; }
+        public decimal? DosisRacikan { get; set; }
         public string? JenisRacikan { get; set; }
         public string? Signa { get; set; }
         public string? SignaTambahan { get; set; }
