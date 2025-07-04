@@ -70,7 +70,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             });
         }
 
-        [HttpGet("BillingObat/{kunjunganId}")]
+        [HttpGet("GetBillingObatByKunjunganId/{kunjunganId}")]
         public async Task<IActionResult> GetResepDetailsByKunjunganIdEntity(Guid kunjunganId)
         {
             try
@@ -78,59 +78,59 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 if (!_applicationDbContext.Database.CanConnect())
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
 
-                // LEFT JOIN Reseps x DetailReseps
-                var resepQuery = await (
-                    from r in _applicationDbContext.Reseps
-                    where r.KunjunganId == kunjunganId
-                    join dr in _applicationDbContext.DetailReseps
-                        on r.ResepId equals dr.ResepId into drGroup
-                    from dr in drGroup.DefaultIfEmpty() // LEFT JOIN
+                // Ambil data resep utama
+                var resep = await _applicationDbContext.Reseps
+                    .Where(r => r.KunjunganId == kunjunganId)
+                    .OrderByDescending(r => r.CreateDateTime)
+                    .FirstOrDefaultAsync();
+
+                if (resep == null)
+                    return NotFound(new { message = "Resep tidak ditemukan untuk kunjungan ini." });
+
+                // Ambil detail resep terkait
+                var detailList = await (
+                    from dr in _applicationDbContext.DetailReseps
+                    where dr.ResepId == resep.ResepId
                     select new
                     {
-                        r.KunjunganId,
-                        r.AsuransiId,
-                        ObatId = dr != null ? dr.ObatId : (Guid?)null,
-                        IsRacikan = dr != null ? dr.IsRacikan : (bool?)null,
-                        RacikanId = dr != null ? dr.RacikanId : (Guid?)null,
-                        Signa = dr != null ? dr.Signa : null,
-                        SignaTambahan = dr != null ? dr.SignaTambahan : null
-                    }).ToListAsync();
+                        dr.ObatId,
+                        dr.IsRacikan,
+                        dr.RacikanId,
+                        dr.Signa,
+                        dr.SignaTambahan,
+                        dr.StatusPengambilanObat
+                    }
+                ).ToListAsync();
 
-                var result = new List<object>();
+                var daftarObat = new List<object>();
 
-                foreach (var item in resepQuery)
+                foreach (var item in detailList)
                 {
-                    // Nama Obat
+                    // Ambil data obat
                     var obat = await _applicationDbContext.Obats
-                        .Where(o => o.ObatId == item.ObatId)
-                        .FirstOrDefaultAsync();
+                        .FirstOrDefaultAsync(o => o.ObatId == item.ObatId);
 
-                    // Status cover asuransi (false jika tidak ditemukan)
+                    // Cek status asuransi
                     bool isCovered = await _applicationDbContext.ObatAsuransis
-                        .AnyAsync(oa => oa.AsuransiId == item.AsuransiId && oa.ObatId == item.ObatId && !oa.IsDelete);
+                        .AnyAsync(oa => oa.AsuransiId == resep.AsuransiId && oa.ObatId == item.ObatId && !oa.IsDelete);
 
-                    // Tentukan ItemId (obat atau racikan)
-                    var itemId = (item.IsRacikan == true && item.RacikanId.HasValue)
-                        ? item.RacikanId.Value
-                        : item.ObatId;
+                    var itemId = item.IsRacikan == true ? item.RacikanId : item.ObatId;
 
                     var billing = await _applicationDbContext.Billings
-                        .Where(b => b.KunjunganId == item.KunjunganId && b.ItemId == itemId)
-                        .FirstOrDefaultAsync();
+                        .FirstOrDefaultAsync(b => b.KunjunganId == resep.KunjunganId && b.ItemId == itemId);
 
-                    var racikan = item.RacikanId.HasValue
+                    var namaRacikan = item.IsRacikan == true
                         ? await _applicationDbContext.Racikans
-                            .Where(mr => mr.RacikanId == item.RacikanId)
-                            .Select(mr => mr.NamaRacikan)
+                            .Where(r => r.RacikanId == item.RacikanId)
+                            .Select(r => r.NamaRacikan)
                             .FirstOrDefaultAsync()
                         : null;
 
-                    result.Add(new
+                    daftarObat.Add(new
                     {
                         billing?.BillingId,
-                        item.KunjunganId,
                         item.ObatId,
-                        NamaObat = item.IsRacikan == true ? racikan : obat?.ObatName,
+                        NamaObat = item.IsRacikan == true ? namaRacikan : obat?.ObatName,
                         HargaSatuanObat = billing?.HargaItem,
                         SubTotalObat = item.IsRacikan == true ? billing?.HargaItem : billing?.HargaItem * billing?.QtyItem,
                         item.IsRacikan,
@@ -141,9 +141,27 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         BilledQty = billing?.QtyItem,
                         billing?.BillingKode,
                         billing?.JenisBilling,
+                        item.StatusPengambilanObat
                     });
                 }
-                return Ok(result);
+
+                // Return resep + daftar obat
+                return Ok(new
+                {
+                    resep.ResepId,
+                    resep.KunjunganId,
+                    resep.PasienId,
+                    resep.NamaPasien,
+                    resep.DokterId,
+                    resep.NamaDokter,
+                    resep.PoliklinikId,
+                    resep.NamaPoliklinik,
+                    resep.StatusPembuatanResep,
+                    resep.StatusPengambilanResep,
+                    resep.IsLunas,
+                    resep.IsCancelled,
+                    DaftarObat = daftarObat
+                });
             }
             catch (Exception ex)
             {
