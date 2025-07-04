@@ -70,8 +70,89 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             });
         }
 
-        [HttpGet("GetBillingObatByKunjunganId/{kunjunganId}")]
+        [HttpGet("BillingObat/{kunjunganId}")]
         public async Task<IActionResult> GetResepDetailsByKunjunganIdEntity(Guid kunjunganId)
+        {
+            try
+            {
+                if (!_applicationDbContext.Database.CanConnect())
+                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+
+                // LEFT JOIN Reseps x DetailReseps
+                var resepQuery = await (
+                    from r in _applicationDbContext.Reseps
+                    where r.KunjunganId == kunjunganId
+                    join dr in _applicationDbContext.DetailReseps
+                        on r.ResepId equals dr.ResepId into drGroup
+                    from dr in drGroup.DefaultIfEmpty() // LEFT JOIN
+                    select new
+                    {
+                        r.KunjunganId,
+                        r.AsuransiId,
+                        ObatId = dr != null ? dr.ObatId : (Guid?)null,
+                        IsRacikan = dr != null ? dr.IsRacikan : (bool?)null,
+                        RacikanId = dr != null ? dr.RacikanId : (Guid?)null,
+                        Signa = dr != null ? dr.Signa : null,
+                        SignaTambahan = dr != null ? dr.SignaTambahan : null
+                    }).ToListAsync();
+
+                var result = new List<object>();
+
+                foreach (var item in resepQuery)
+                {
+                    // Nama Obat
+                    var obat = await _applicationDbContext.Obats
+                        .Where(o => o.ObatId == item.ObatId)
+                        .FirstOrDefaultAsync();
+
+                    // Status cover asuransi (false jika tidak ditemukan)
+                    bool isCovered = await _applicationDbContext.ObatAsuransis
+                        .AnyAsync(oa => oa.AsuransiId == item.AsuransiId && oa.ObatId == item.ObatId && !oa.IsDelete);
+
+                    // Tentukan ItemId (obat atau racikan)
+                    var itemId = (item.IsRacikan == true && item.RacikanId.HasValue)
+                        ? item.RacikanId.Value
+                        : item.ObatId;
+
+                    var billing = await _applicationDbContext.Billings
+                        .Where(b => b.KunjunganId == item.KunjunganId && b.ItemId == itemId)
+                        .FirstOrDefaultAsync();
+
+                    var racikan = item.RacikanId.HasValue
+                        ? await _applicationDbContext.Racikans
+                            .Where(mr => mr.RacikanId == item.RacikanId)
+                            .Select(mr => mr.NamaRacikan)
+                            .FirstOrDefaultAsync()
+                        : null;
+
+                    result.Add(new
+                    {
+                        billing?.BillingId,
+                        item.KunjunganId,
+                        item.ObatId,
+                        NamaObat = item.IsRacikan == true ? racikan : obat?.ObatName,
+                        HargaSatuanObat = billing?.HargaItem,
+                        SubTotalObat = item.IsRacikan == true ? billing?.HargaItem : billing?.HargaItem * billing?.QtyItem,
+                        item.IsRacikan,
+                        item.RacikanId,
+                        item.Signa,
+                        item.SignaTambahan,
+                        IsCoveredByAsuransi = isCovered,
+                        BilledQty = billing?.QtyItem,
+                        billing?.BillingKode,
+                        billing?.JenisBilling,
+                    });
+                }
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan: {ex.Message}" });
+            }
+        }
+
+        [HttpGet("ObatFarmasiByKunjunganId/{kunjunganId}")]
+        public async Task<IActionResult> GetObatFarmasiByKunjunganId(Guid kunjunganId)
         {
             try
             {
