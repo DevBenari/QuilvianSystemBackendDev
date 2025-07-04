@@ -338,12 +338,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             Signa = obat.Signa,
                             SignaTambahan = obat.SignaTambahan,
                             HargaObat = obat.HargaObat,
-                            
                             TotalHargaObat = obat.HargaObat * (obat.Qty ?? 0),
                             StatusCoverObat = obat.StatusCoverObat,
                             JenisObat = obat.JenisObat,
                             RacikanId = obat.RacikanId,
                             IsRacikan = obat.IsRacikan,
+                            //TakaranDosis = obatDb.TakaranDosis,
                             DosisRacikan = obat.DosisRacikan,
                             IsIteratur = obat.IsIteratur,
                             JumlahIteratur = obat.JumlahIteratur,
