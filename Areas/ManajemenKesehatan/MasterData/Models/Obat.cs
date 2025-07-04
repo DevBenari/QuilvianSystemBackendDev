@@ -27,6 +27,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? Kontraindikasi { get; set; }
         public string? CaraKerja { get; set; }
         public string? InteraksiObat { get; set; }
+        public decimal? TakaranDosis { get; set; }
         public string? Dosis { get; set; }
         public string? Note { get; set; }
 

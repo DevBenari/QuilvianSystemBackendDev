@@ -304,6 +304,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     .Where(b => b.BiayaAdministrasiKode == kodeJenis)
                     .FirstOrDefaultAsync();
 
+                // Hitung jumlah billing kunjungan sebelumnya
+                int billingKunjunganCount = await _applicationDbContext.Billings
+                    .Where(b => b.KunjunganId == newKunjungan.KunjunganID && b.BillingKode.ToLower() == "Biaya Admin")
+                    .CountAsync();
+                int billingIndex = billingKunjunganCount;
+                // increment billoing kode untuk setiap kunjunga
+                billingIndex++;
+                string billingKode = $"{billingIndex.ToString("D3")}";
+
                 var bill = new Billing
                 {
                     BillingId = Guid.NewGuid(),
@@ -314,7 +323,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     HargaItem = biayaAdmin?.NominalBiayaAdministrasi ?? 0,
                     QtyItem = 1,
                     SubTotalItem = biayaAdmin?.NominalBiayaAdministrasi ?? 0,
-                    BillingKode = "Biaya Admin",
+                    BillingKode = billingKode,
+                    JenisBilling = "Biaya Admin",
                     BillingDate = DateTime.UtcNow,
                     CreateDateTime = DateTimeOffset.UtcNow,
                     CreateBy = UserActiveId

@@ -26,6 +26,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
         public bool? StatusCoverObat { get; set; } = false;
         public bool? StatusPengambilanObat { get; set; } = false;
         public bool? IsIteratur { get; set; } = false;
+        public string? KeteranganRacikan { get; set; }
         public decimal? JumlahIteratur { get; set; }
         public DateTime? TglMulaiIteratur { get; set; }
         public decimal? JarakPenebusan { get; set; }

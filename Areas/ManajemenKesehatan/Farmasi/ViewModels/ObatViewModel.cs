@@ -19,6 +19,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels
         public string? Indikasi { get; set; }
         public string? Kontraindikasi { get; set; }
         public string? CaraKerja { get; set; }
+        public decimal? TakaranDosis { get; set; }
         public string? Dosis { get; set; }
         public string? InteraksiObat { get; set; }
         public string? Note { get; set; }

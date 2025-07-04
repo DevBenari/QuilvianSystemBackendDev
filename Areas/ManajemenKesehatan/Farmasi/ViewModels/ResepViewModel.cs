@@ -20,5 +20,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels
         public string? AntrianRegistrasi { get; set; }
         public string? StatusPembuatanResep { get; set; }
         public Guid? DiskonId { get; set; }
+        public int? Dosis { get; set; }
     }
 }

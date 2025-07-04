@@ -130,12 +130,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         billing?.BillingId,
                         item.KunjunganId,
                         item.ObatId,
-                        NamaObat = obat.ObatName,
-                        HargaSatuanObat = obat.HargaJual,
-                        SubTotalObat = obat.HargaJual * (billing?.QtyItem ?? 1),
+                        NamaObat = item.IsRacikan == true ? racikan : obat?.ObatName,
+                        HargaSatuanObat = billing?.HargaItem,
+                        SubTotalObat = item.IsRacikan == true ? billing?.HargaItem : billing?.HargaItem * billing?.QtyItem,
                         item.IsRacikan,
                         item.RacikanId,
-                        NamaRacikan = racikan,
                         item.Signa,
                         item.SignaTambahan,
                         IsCoveredByAsuransi = isCovered,
@@ -285,13 +284,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 if (billing == null)
                     return NotFound(new { message = "Data billing tidak ditemukan." });
 
-                var kodePrefix = billing.BillingKode?.Substring(0, 2).ToUpperInvariant();
+                var kodePrefix = billing.JenisBilling.Trim().ToLower();
 
                 decimal harga = 0;
 
                 switch (kodePrefix)
                 {
-                    case "OB":
+                    case "obat":
                         var obat = await _applicationDbContext.Obats
                             .FirstOrDefaultAsync(o => o.ObatId == billing.ItemId && !o.IsDelete);
                         if (obat == null)
@@ -300,33 +299,33 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         harga = obat.HargaJual;
                         break;
 
-                    case "TD":
-                        // Ambil Tindakan
-                        var tindakan = await _applicationDbContext.Tindakans
-                            .FirstOrDefaultAsync(t => t.TindakanId == billing.ItemId && !t.IsDelete);
-                        if (tindakan == null)
-                            return NotFound(new { message = "Data tindakan tidak ditemukan." });
+                    case "tindakan":
+                        //// Ambil Tindakan
+                        //var tindakan = await _applicationDbContext.Tindakans
+                        //    .FirstOrDefaultAsync(t => t.TindakanId == billing.ItemId && !t.IsDelete);
+                        //if (tindakan == null)
+                        //    return NotFound(new { message = "Data tindakan tidak ditemukan." });
 
-                        // Ambil kunjungan
-                        var kunjungan = await _applicationDbContext.Kunjungans
-                            .FirstOrDefaultAsync(k => k.KunjunganID == billing.KunjunganId);
-                        if (kunjungan == null)
-                            return NotFound(new { message = "Data kunjungan tidak ditemukan." });
+                        //// Ambil kunjungan
+                        //var kunjungan = await _applicationDbContext.Kunjungans
+                        //    .FirstOrDefaultAsync(k => k.KunjunganID == billing.KunjunganId);
+                        //if (kunjungan == null)
+                        //    return NotFound(new { message = "Data kunjungan tidak ditemukan." });
 
-                        // Ambil kelas berdasarkan jenis kunjungan
-                        var kelas = await _applicationDbContext.Kelass
-                            .FirstOrDefaultAsync(k => k.KodeKelas == kunjungan.JenisKunjungan);
-                        if (kelas == null)
-                            return NotFound(new { message = "Kelas untuk jenis kunjungan ini tidak ditemukan." });
+                        //// Ambil kelas berdasarkan jenis kunjungan
+                        //var kelas = await _applicationDbContext.Kelass
+                        //    .FirstOrDefaultAsync(k => k.KodeKelas == kunjungan.JenisKunjungan);
+                        //if (kelas == null)
+                        //    return NotFound(new { message = "Kelas untuk jenis kunjungan ini tidak ditemukan." });
 
-                        // Ambil tarif kelas untuk tindakan dan kelas
-                        var tarifKelas = await _applicationDbContext.TarifKelass
-                            .FirstOrDefaultAsync(t => t.TindakanId == tindakan.TindakanId && t.KelasId == kelas.KelasId);
-                        if (tarifKelas == null)
-                            return NotFound(new { message = "Tarif untuk tindakan dan kelas ini tidak ditemukan." });
+                        //// Ambil tarif kelas untuk tindakan dan kelas
+                        //var tarifKelas = await _applicationDbContext.TarifKelass
+                        //    .FirstOrDefaultAsync(t => t.TindakanId == tindakan.TindakanId && t.KelasId == kelas.KelasId);
+                        //if (tarifKelas == null)
+                        //    return NotFound(new { message = "Tarif untuk tindakan dan kelas ini tidak ditemukan." });
 
-                        harga = tarifKelas.TarifTotal ?? 0;
-                        break;
+                        //harga = tarifKelas.TarifTotal ?? 0;
+                        return Forbid("Tidak bisa mengedit Tindakan.");
 
                     default:
                         return BadRequest(new { message = "BillingKode tidak dikenali (harus OB atau TD)." });

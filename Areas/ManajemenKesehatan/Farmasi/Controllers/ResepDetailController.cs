@@ -83,7 +83,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.TglMulaiIteratur,
                              a.JarakPenebusan,
                              a.MasaAktifIteratur,
-                             a.StatusPengambilanObat
+                             a.StatusPengambilanObat,
+                             a.KeteranganRacikan
                          }).OrderByDescending(a => a.CreateDateTime);
 
         // Hitung total data sebelum paginasi
@@ -234,6 +235,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     JumlahIteratur = vm.JumlahIteratur,
                     TglMulaiIteratur = parsedTglMulaiIteratur,
                     JarakPenebusan = vm.JarakPenebusan,
+                    KeteranganRacikan = vm.KeteranganRacikan,
                     MasaAktifIteratur = parsedMasaAktif,
                     StatusPengambilanObat = false, // Default nilai StatusPengambilanObat
 
@@ -336,6 +338,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 data.JumlahIteratur = vm.JumlahIteratur;
                 data.TglMulaiIteratur = parsedTglMulaiIteratur;
                 data.JarakPenebusan = vm.JarakPenebusan;
+                data.KeteranganRacikan = vm.KeteranganRacikan;
                 data.MasaAktifIteratur = parsedMasaAktif;
                 data.Dosis = vm.Dosis;
                 data.JenisRacikan = vm.JenisRacikan;
@@ -470,7 +473,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.TglMulaiIteratur,
                              a.JarakPenebusan,
                              a.MasaAktifIteratur,
-                             a.StatusPengambilanObat
+                             a.StatusPengambilanObat,
+                             a.KeteranganRacikan
                          };
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
