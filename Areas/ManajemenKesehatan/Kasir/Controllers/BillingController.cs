@@ -85,6 +85,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         [HttpGet("GetBillingByKunjunganId/{kunjunganId}")]
         public async Task<IActionResult> GetBillingByKunjunganId(Guid kunjunganId)
         {
+            // Ambil semua billing berdasarkan KunjunganId
+            var billings = await _applicationDbContext.Billings
+                .Where(b => b.KunjunganId == kunjunganId)
+                .ToListAsync();
+
             var query =
                 from k in _applicationDbContext.Kunjungans
                 join p in _applicationDbContext.PendaftaranPasienBarus on k.PasienId equals p.PendaftaranPasienBaruId
@@ -112,6 +117,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 from dk in MainKasirDetailsGroup.DefaultIfEmpty()
                 join mp in _applicationDbContext.MetodePembayarans on dk.MetodePembayaranId equals mp.MetodePembayaranId into metodeGroup
                 from mp in metodeGroup.DefaultIfEmpty()
+                join rc in _applicationDbContext.Racikans on dr.RacikanId equals rc.RacikanId into racikanGroup
+                from rc in racikanGroup.DefaultIfEmpty()
                 where k.KunjunganID == kunjunganId && !k.IsDelete
                 select new
                 {
@@ -129,7 +136,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     adm,
                     kasir,
                     dk,
-                    mp
+                    mp,
+                    rc
                 };
 
             var result = await query.ToListAsync();
@@ -167,53 +175,98 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         firstItem.k?.IsFinishedKasir,
                         firstItem.kasir?.CreateBy,
                         firstItem.kasir?.CreateDateTime,
+
                         DaftarResepObat = group
                             .Where(x => x.dr != null && x.o != null)
-                            .Select(x => new
+                            .GroupBy(x => x.dr.DetailResepId)
+                            .Select(g =>
                             {
-                                x.r.ResepId,
-                                x.dr.DetailResepId,
-                                x.dr.ObatId,
-                                x.dr?.JumlahIteratur,
-                                NamaObat = x.o.ObatName,
-                                x.dr.Qty,
-                                HargaObat = x.o.HargaJual,
-                                x.dr.IsIteratur,
-                                x.dr.JarakPenebusan,
-                                TglMulaiIteratur = x.dr.TglMulaiIteratur.HasValue ? x.dr.TglMulaiIteratur.Value.ToString("yyyy-MM-dd") : null,
-                                MasaAktifIteratur = x.dr.MasaAktifIteratur.HasValue ? x.dr.MasaAktifIteratur.Value.ToString("yyyy-MM-dd") : null,
-                                StatusCoverObat = x.dr?.StatusCoverObat ?? false,
-                                TotalBiayaObat = x.dr?.TotalHargaObat ?? x.dr?.Qty * x.o.HargaJual
-                            }).Distinct().ToList(),
+                                var item = g.First();
+                                var billing = billings.FirstOrDefault(b =>
+                                    b.JenisBilling == "Obat" &&
+                                    (b.ItemId == item.dr.ObatId || b.ItemId == item.dr.RacikanId));
+
+                                return new
+                                {
+                                    item.r.ResepId,
+                                    item.dr.DetailResepId,
+                                    BillingId = billing?.BillingId,
+                                    billing?.JenisBilling,
+                                    billing?.BillingKode,
+                                    item.dr.ObatId,
+                                    item.dr?.JumlahIteratur,
+                                    NamaObat = item.o.ObatName,
+                                    item.dr?.Qty,
+                                    HargaObat = item.o.HargaJual,
+                                    item.dr?.RacikanId,
+                                    item.dr?.KeteranganRacikan,
+                                    item.rc?.NamaRacikan,
+                                    item.dr?.IsIteratur,
+                                    item.dr?.JarakPenebusan,
+                                    TglMulaiIteratur = item.dr.TglMulaiIteratur?.ToString("yyyy-MM-dd"),
+                                    MasaAktifIteratur = item.dr.MasaAktifIteratur?.ToString("yyyy-MM-dd"),
+                                    StatusCoverObat = item.dr?.StatusCoverObat ?? false,
+                                    TotalBiayaObat = item.dr?.TotalHargaObat ?? item.dr?.Qty * item.o.HargaJual
+                                };
+                            }).ToList(),
+
                         DaftarTindakan = group
                             .Where(x => x.to != null && x.t != null)
-                            .Select(x => new
+                            .GroupBy(x => x.to.TindakanKunjunganId)
+                            .Select(g =>
                             {
-                                x.to.TindakanId,
-                                x.t.NamaTindakan,
-                                QtyTindakan = x.to.Quantity,
-                                HargaTindakan = x.to.Total,
-                                StatusCoverTindakan = x.to != null && x.t != null && firstItem.a != null
-                                    ? _applicationDbContext.TindakanAsuransis.Any(y => y.TindakanId == x.to.TindakanId && y.AsuransiId == firstItem.a.AsuransiId)
-                                    : false
-                            }).Distinct().ToList(),
+                                var item = g.First();
+                                var billing = billings.FirstOrDefault(b =>
+                                    b.JenisBilling == "Tindakan" && b.ItemId == item.to.TindakanId);
+
+                                return new
+                                {
+                                    item.to.TindakanId,
+                                    BillingId = billing?.BillingId,
+                                    billing?.JenisBilling,
+                                    billing?.BillingKode,
+                                    item.t.NamaTindakan,
+                                    QtyTindakan = item.to.Quantity,
+                                    HargaTindakan = item.to.Total,
+                                    StatusCoverTindakan = firstItem.a != null &&
+                                        _applicationDbContext.TindakanAsuransis.Any(y =>
+                                            y.TindakanId == item.to.TindakanId && y.AsuransiId == firstItem.a.AsuransiId)
+                                };
+                            }).ToList(),
+
+                        DaftarBiayaAdmin = billings
+                            .Where(b => b.JenisBilling == "Biaya Admin")
+                            .Select(b => new
+                            {
+                                b.BillingId,
+                                b.JenisBilling,
+                                b.BillingKode,
+                                b.NamaItem,
+                                b.HargaItem,
+                                b.QtyItem,
+                                b.SubTotalItem,
+                                b.Keterangan
+                            }).ToList(),
+
                         TotalObat = group
                             .Where(x => x.dr != null && x.o != null)
                             .DistinctBy(x => x.dr.DetailResepId)
                             .Sum(x => x.dr.Qty * x.o.HargaJual),
+
                         TotalTindakan = group
                             .Where(x => x.to != null && x.t != null)
                             .DistinctBy(x => x.to.TindakanKunjunganId)
                             .Sum(x => x.to.Quantity * (x.to.Total ?? 0)),
-                        TotalTagihan = group
-                            .Where(x => x.dr != null && x.o != null)
-                            .DistinctBy(x => x.dr.DetailResepId)
-                            .Sum(x => x.dr.Qty * x.o.HargaJual)
-                            + group
-                            .Where(x => x.to != null && x.t != null)
-                            .DistinctBy(x => x.to.TindakanKunjunganId)
-                            .Sum(x => x.to.Quantity * (x.to.Total ?? 0))
-                            + (firstItem.adm?.NominalBiayaAdministrasi ?? 0)
+
+                        TotalTagihan =
+                            group.Where(x => x.dr != null && x.o != null)
+                                .DistinctBy(x => x.dr.DetailResepId)
+                                .Sum(x => x.dr.Qty * x.o.HargaJual)
+                            + group.Where(x => x.to != null && x.t != null)
+                                .DistinctBy(x => x.to.TindakanKunjunganId)
+                                .Sum(x => x.to.Quantity * (x.to.Total ?? 0))
+                            + billings.Where(b => b.JenisBilling == "Biaya Admin")
+                                .Sum(b => b.SubTotalItem ?? 0)
                     };
                 }).ToList();
 
@@ -370,10 +423,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     var billing = await _applicationDbContext.Billings
                         .FirstOrDefaultAsync(b => b.KunjunganId == resep.KunjunganId && b.ItemId == itemId);
 
-                    var namaRacikan = item.IsRacikan == true
+                    var Racikan = item.IsRacikan == true
                         ? await _applicationDbContext.Racikans
                             .Where(r => r.RacikanId == item.RacikanId)
-                            .Select(r => r.NamaRacikan)
                             .FirstOrDefaultAsync()
                         : null;
 
@@ -381,11 +433,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     {
                         billing?.BillingId,
                         itemId,
-                        NamaObat = item.IsRacikan == true ? namaRacikan : obat?.ObatName,
+                        NamaObat = obat?.ObatName,
                         HargaSatuanObat = billing?.HargaItem,
                         SubTotalObat = item.IsRacikan == true ? billing?.HargaItem : billing?.HargaItem * billing?.QtyItem,
                         item.IsRacikan,
                         item.RacikanId,
+                        NamaRacikan = item.IsRacikan == true ? Racikan?.NamaRacikan : null,
                         item.KeteranganRacikan,
                         item.DosisRacikan,
                         item.TakaranDosis,
