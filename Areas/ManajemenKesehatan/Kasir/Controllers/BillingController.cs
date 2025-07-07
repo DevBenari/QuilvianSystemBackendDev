@@ -196,7 +196,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                                     item.dr.ObatId,
                                     item.dr?.JumlahIteratur,
                                     NamaObat = item.o.ObatName,
-                                    item.dr?.Qty,
+                                    billing?.QtyItem,
                                     HargaObat = item.o.HargaJual,
                                     item.dr?.RacikanId,
                                     item.dr?.KeteranganRacikan,
@@ -226,7 +226,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                                     billing?.JenisBilling,
                                     billing?.BillingKode,
                                     item.t.NamaTindakan,
-                                    QtyTindakan = item.to.Quantity,
+                                    QtyTindakan = billing?.QtyItem,
                                     HargaTindakan = item.to.Total,
                                     StatusCoverTindakan = firstItem.a != null &&
                                         _applicationDbContext.TindakanAsuransis.Any(y =>
