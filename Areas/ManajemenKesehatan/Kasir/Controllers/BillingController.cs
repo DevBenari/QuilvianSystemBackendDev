@@ -176,7 +176,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         firstItem.kasir?.CreateBy,
                         firstItem.kasir?.CreateDateTime,
 
-                        DaftarResepObat = group
+                        DaftarObat = group
                             .Where(x => x.dr != null && x.o != null)
                             .GroupBy(x => x.dr.DetailResepId)
                             .Select(g =>
