@@ -191,6 +191,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                                 var item = g.First();
                                 var billing = billings.FirstOrDefault(b =>
                                     b.JenisBilling == "Obat" && b.ItemId == item.dr.ObatId);
+                                var satuan = _applicationDbContext.Satuans
+                                    .Where(s => s.SatuanId == item.o.SatuanId)
+                                    .Select(s => s.NamaSatuan);
 
                                 return new
                                 {
@@ -202,6 +205,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                                     billing?.BillingId,
                                     billing?.BillingKode,
                                     Harga = billing?.HargaItem ,
+                                    Satuan = satuan,
                                     Subtotal = billing?.SubTotalItem,
                                     StatusCoverObat = item.dr.StatusCoverObat,
                                     Signa = item.dr.Signa,
