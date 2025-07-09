@@ -291,12 +291,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                                 b.Keterangan
                             }).ToList(),
 
-                        TotalObat = group
+                        TotalObat = Math.Round((decimal)group
                             .Where(x => x.dr != null && x.o != null)
                             .DistinctBy(x => x.dr.DetailResepId)
-                            .Sum(x => x.dr.Qty * x.o.HargaJual),
+                            .Sum(x => x.dr.Qty * x.o.HargaJual), 0),
 
-                        TotalTindakan = group
+                    TotalTindakan = group
                             .Where(x => x.to != null && x.t != null)
                             .DistinctBy(x => x.to.TindakanKunjunganId)
                             .Sum(x => x.to.Quantity * (x.to.Total ?? 0)),
