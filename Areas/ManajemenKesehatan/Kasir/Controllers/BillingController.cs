@@ -222,9 +222,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                                     {
                                         x.rd.ObatId,
                                         NamaObat = x.o.ObatName,
-                                        Qty = x.rd.QtyRacikan,
+                                        Qty = x.rd.QtyUsed,
                                         KomposisiDosis = x.rd.KomposisiDosis,
-                                        //Subtotal = x.rd.QtyRacikan * x.o.HargaJual
+                                        //Subtotal = x.rd.QtyUsed * x.o.HargaJual
                                     }).ToList();
 
                                 return new
@@ -453,10 +453,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                             {
                                 rd.ObatId,
                                 o.ObatName,
-                                rd.QtyRacikan,
+                                rd.QtyUsed,
                                 rd.KomposisiDosis,
                                 o.HargaJual,
-                                Subtotal = rd.QtyRacikan * o.HargaJual
+                                Subtotal = rd.QtyUsed * o.HargaJual
                             }
                         ).ToListAsync();
 

@@ -134,7 +134,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                                                              rd.DetailRacikanId,
                                                                              rd.ObatId,
                                                                              ob.ObatName,
-                                                                             rd.QtyRacikan,
+                                                                             rd.QtyUsed,
                                                                              rd.KomposisiDosis,
                                                                              rd.CreateBy,
                                                                              rd.CreateDateTime
@@ -236,7 +236,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                         rd.DetailRacikanId,
                                         rd.ObatId,
                                         ob.ObatName,
-                                        rd.QtyRacikan,
+                                        rd.QtyUsed,
                                         rd.KomposisiDosis,
                                         rd.CreateBy,
                                         rd.CreateDateTime
@@ -364,8 +364,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             JenisObat = obat.JenisObat,
                             IsRacikan = obat.IsRacikan,
                             TakaranDosis = obatDb?.TakaranDosis ?? 0,
-                            DosisRacikan = obat.DosisRacikan,
-                            KeteranganRacikan = obat.KeteranganRacikan,
+                            //DosisRacikan = obat.DosisRacikan,
+                            //KeteranganRacikan = obat.KeteranganRacikan,
                             StatusPengambilanObat = true,
                             CreateBy = userActiveId,
                             CreateDateTime = DateTimeOffset.UtcNow,
@@ -376,6 +376,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                         Guid? itemId = null;
                         string namaItem = "";
                         decimal hargaItem = 0;
+                        decimal hargaOb = 0;
                         int qtyItem = obat.Qty ?? 0;
                         decimal subTotalItem = 0;
 
@@ -390,6 +391,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                     Keterangan = racikan.Keterangan,
                                     Signa = racikan.Signa,
                                     SignaTambahan = racikan.SignaTambahan,
+                                    QtyRacikan = racikan.QtyRacikan,
                                     CreateBy = userActiveId,
                                     CreateDateTime = DateTimeOffset.UtcNow
                                 };
@@ -400,11 +402,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                 foreach (var detailRacikan in racikan.DaftarRacikan)
                                 {
                                     var obatDbRacikan = await _applicationDbContext.Obats.FindAsync(detailRacikan.ObatId);
-                                    if (obatDbRacikan == null || obatDbRacikan.Stock < detailRacikan.QtyRacikan)
+                                    if (obatDbRacikan == null || obatDbRacikan.Stock < detailRacikan.QtyUsed)
                                         return BadRequest(new { message = $"Stok tidak cukup untuk obat racikan: {obatDbRacikan?.ObatName}" });
 
-                                    totalHargaRacikan += (decimal)((detailRacikan.KomposisiDosis / obatDbRacikan.TakaranDosis) * obatDbRacikan.HargaJual);
-                                    obatDbRacikan.Stock -= (int)detailRacikan.QtyRacikan;
+                                    // menghitung harga racikan
+                                    var obatPakai = Math.Round((decimal)((detailRacikan.KomposisiDosis * racikanEntity.QtyRacikan) * obatDb.TakaranDosis));
+                                    hargaOb = obatPakai * obatDb.HargaJual;
+                                    totalHargaRacikan += hargaOb;
+
+                                    // mengurangi stok obat racikan
+                                    obatDbRacikan.Stock -= (int)obatPakai;
                                     _applicationDbContext.Obats.Update(obatDbRacikan);
 
                                     var racikanDetail = new RacikanDetail
@@ -412,7 +419,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                         DetailRacikanId = Guid.NewGuid(),
                                         RacikanId = racikanEntity.RacikanId,
                                         ObatId = detailRacikan.ObatId,
-                                        QtyRacikan = detailRacikan.QtyRacikan,
+                                        QtyUsed = (int?)obatPakai,
                                         KomposisiDosis = detailRacikan.KomposisiDosis,
                                         CreateBy = userActiveId,
                                         CreateDateTime = DateTimeOffset.UtcNow
@@ -422,8 +429,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
                                 itemId = racikanEntity.RacikanId;
                                 namaItem = racikanEntity.NamaRacikan;
-                                hargaItem = totalHargaRacikan;
-                                subTotalItem = totalHargaRacikan * qtyItem;
+                                hargaItem = hargaOb;
+                                subTotalItem = totalHargaRacikan;
                             }
                         }
                         else if (obatDb != null)
@@ -871,11 +878,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             foreach (var detail in racikan.DaftarRacikan)
                             {
                                 var obatRacik = await _applicationDbContext.Obats.FindAsync(detail.ObatId);
-                                if (obatRacik == null || obatRacik.Stock < detail.QtyRacikan)
+                                if (obatRacik == null || obatRacik.Stock < detail.QtyUsed)
                                     return BadRequest(new { message = $"Stok tidak cukup untuk obat racikan: {obatRacik?.ObatName}" });
-
-                                totalHargaRacikan += (decimal)((detail.KomposisiDosis / obatRacik.TakaranDosis) * obatRacik.HargaJual);
-                                obatRacik.Stock -= (int)detail.QtyRacikan;
                                 _applicationDbContext.Obats.Update(obatRacik);
 
                                 var racikanDetail = new RacikanDetail
@@ -883,7 +887,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                     DetailRacikanId = Guid.NewGuid(),
                                     RacikanId = racikanEntity.RacikanId,
                                     ObatId = detail.ObatId,
-                                    QtyRacikan = detail.QtyRacikan,
+                                    QtyUsed = detail.QtyUsed,
                                     KomposisiDosis = detail.KomposisiDosis,
                                     CreateBy = userActiveId,
                                     CreateDateTime = DateTimeOffset.UtcNow
@@ -1414,7 +1418,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                                 rd.DetailRacikanId,
                                                 rd.ObatId,
                                                 ob.ObatName,
-                                                rd.QtyRacikan,
+                                                rd.QtyUsed,
                                                 rd.KomposisiDosis,
                                                 rd.CreateBy,
                                                 rd.CreateDateTime
@@ -1631,7 +1635,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                                 rd.DetailRacikanId,
                                                 rd.ObatId,
                                                 ob.ObatName,
-                                                rd.QtyRacikan,
+                                                rd.QtyUsed,
                                                 rd.KomposisiDosis,
                                                 rd.CreateBy,
                                                 rd.CreateDateTime
