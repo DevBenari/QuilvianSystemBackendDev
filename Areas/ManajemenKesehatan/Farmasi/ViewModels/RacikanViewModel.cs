@@ -4,5 +4,8 @@
     {
         public string? NamaRacikan { get; set; }
         public string? Keterangan { get; set; }
+        public string? Signa { get; set; }
+        public string? SignaTambahan { get; set; }
+        public List<RacikanDetailViewModel>? DaftarRacikan { get; set; }
     }
 }

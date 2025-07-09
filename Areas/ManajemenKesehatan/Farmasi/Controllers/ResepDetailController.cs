@@ -197,21 +197,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 //    return Conflict(new { message = "Nama benefit ini telah tersedia" });
                 //}
 
-                if (!DateTime.TryParseExact(vm.TglMulaiIteratur, "yyyy-MM-dd",
-                    CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsedTglMulaiIteratur))
-                {
-                    return BadRequest(new { message = "Format TglMulaiIteratur tidak valid. Gunakan format yyyy-MM-dd." });
-                }
+                //if (!DateTime.TryParseExact(vm.TglMulaiIteratur, "yyyy-MM-dd",
+                //    CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsedTglMulaiIteratur))
+                //{
+                //    return BadRequest(new { message = "Format TglMulaiIteratur tidak valid. Gunakan format yyyy-MM-dd." });
+                //}
 
-                parsedTglMulaiIteratur = DateTime.SpecifyKind(parsedTglMulaiIteratur, DateTimeKind.Utc);
+                //parsedTglMulaiIteratur = DateTime.SpecifyKind(parsedTglMulaiIteratur, DateTimeKind.Utc);
 
-                if (!DateTime.TryParseExact(vm.MasaAktifIteratur, "yyyy-MM-dd",
-                    CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsedMasaAktif))
-                {
-                    return BadRequest(new { message = "Format TglMulaiIteratur tidak valid. Gunakan format yyyy-MM-dd." });
-                }
+                //if (!DateTime.TryParseExact(vm.MasaAktifIteratur, "yyyy-MM-dd",
+                //    CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsedMasaAktif))
+                //{
+                //    return BadRequest(new { message = "Format TglMulaiIteratur tidak valid. Gunakan format yyyy-MM-dd." });
+                //}
 
-                parsedMasaAktif = DateTime.SpecifyKind(parsedMasaAktif, DateTimeKind.Utc);
+                //parsedMasaAktif = DateTime.SpecifyKind(parsedMasaAktif, DateTimeKind.Utc);
 
                 // **Buat Data Baru**
                 var data = new ResepDetail
@@ -231,13 +231,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     TotalHargaObat = vm.Qty.HasValue && vm.HargaObat.HasValue ? vm.Qty.Value * vm.HargaObat.Value : 0,
                     StatusCoverObat = vm.StatusCoverObat,
                     IsRacikan = vm.IsRacikan, // Tambahkan properti IsRacikan jika diperlukan
-                    RacikanId = vm.RacikanId, // Tambahkan properti RacikanId jika diperlukan
-                    IsIteratur = vm.IsIteratur,
-                    JumlahIteratur = vm.JumlahIteratur,
-                    TglMulaiIteratur = parsedTglMulaiIteratur,
-                    JarakPenebusan = vm.JarakPenebusan,
+                    //IsIteratur = vm.IsIteratur,
+                    //JumlahIteratur = vm.JumlahIteratur,
+                    //TglMulaiIteratur = parsedTglMulaiIteratur,
+                    //JarakPenebusan = vm.JarakPenebusan,
                     KeteranganRacikan = vm.KeteranganRacikan,
-                    MasaAktifIteratur = parsedMasaAktif,
+                    //MasaAktifIteratur = parsedMasaAktif,
                     StatusPengambilanObat = false, // Default nilai StatusPengambilanObat
 
                     CreateBy = userActiveId,
@@ -305,20 +304,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
-                if (!DateTime.TryParseExact(vm.TglMulaiIteratur, "yyyy-MM-dd",
-                    CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsedTglMulaiIteratur))
-                {
-                    return BadRequest(new { message = "Format TglMulaiIteratur tidak valid. Gunakan format yyyy-MM-dd." });
-                }
+                //if (!DateTime.TryParseExact(vm.TglMulaiIteratur, "yyyy-MM-dd",
+                //    CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsedTglMulaiIteratur))
+                //{
+                //    return BadRequest(new { message = "Format TglMulaiIteratur tidak valid. Gunakan format yyyy-MM-dd." });
+                //}
 
-                parsedTglMulaiIteratur = DateTime.SpecifyKind(parsedTglMulaiIteratur, DateTimeKind.Utc);
+                //parsedTglMulaiIteratur = DateTime.SpecifyKind(parsedTglMulaiIteratur, DateTimeKind.Utc);
 
-                if (!DateTime.TryParseExact(vm.MasaAktifIteratur, "yyyy-MM-dd",
-                    CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsedMasaAktif))
-                {
-                    return BadRequest(new { message = "Format TglMulaiIteratur tidak valid. Gunakan format yyyy-MM-dd." });
-                }
-                parsedMasaAktif = DateTime.SpecifyKind(parsedMasaAktif, DateTimeKind.Utc);
+                //if (!DateTime.TryParseExact(vm.MasaAktifIteratur, "yyyy-MM-dd",
+                //    CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsedMasaAktif))
+                //{
+                //    return BadRequest(new { message = "Format TglMulaiIteratur tidak valid. Gunakan format yyyy-MM-dd." });
+                //}
+                //parsedMasaAktif = DateTime.SpecifyKind(parsedMasaAktif, DateTimeKind.Utc);
 
 
                 // **Update Data**
@@ -334,13 +333,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 data.TotalHargaObat = vm.Qty.HasValue && vm.HargaObat.HasValue ? vm.Qty.Value * vm.HargaObat.Value : 0;
                 data.StatusCoverObat = vm.StatusCoverObat;
                 data.IsRacikan = vm.IsRacikan; // Update properti IsRacikan jika diperlukan
-                data.RacikanId = vm.RacikanId; // Update properti RacikanId jika diperlukan
-                data.IsIteratur = vm.IsIteratur;
-                data.JumlahIteratur = vm.JumlahIteratur;
-                data.TglMulaiIteratur = parsedTglMulaiIteratur;
-                data.JarakPenebusan = vm.JarakPenebusan;
+                //data.IsIteratur = vm.IsIteratur;
+                //data.JumlahIteratur = vm.JumlahIteratur;
+                //data.TglMulaiIteratur = parsedTglMulaiIteratur;
+                //data.JarakPenebusan = vm.JarakPenebusan;
                 data.KeteranganRacikan = vm.KeteranganRacikan;
-                data.MasaAktifIteratur = parsedMasaAktif;
+                //data.MasaAktifIteratur = parsedMasaAktif;
                 data.TakaranDosis = vm.TakaranDosis;
                 data.JenisRacikan = vm.JenisRacikan;
 

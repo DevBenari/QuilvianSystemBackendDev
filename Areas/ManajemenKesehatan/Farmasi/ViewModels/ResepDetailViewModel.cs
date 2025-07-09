@@ -15,13 +15,13 @@
         public string? JenisObat { get; set; }
         public decimal? HargaObat { get; set; }
         public bool? StatusCoverObat { get; set; } = false;
-        public Guid? RacikanId { get; set; }
         public bool? IsRacikan { get; set; } // "Ya" or "Tidak"
-        public bool? IsIteratur { get; set; } = false;
+        public List<RacikanViewModel>? Racikan { get; set; }
+        //public bool? IsIteratur { get; set; } = false;
         public string? KeteranganRacikan { get; set; }
-        public decimal? JumlahIteratur { get; set; }
-        public string? TglMulaiIteratur { get; set; }
-        public decimal? JarakPenebusan { get; set; }
-        public string? MasaAktifIteratur { get; set; }
+        //public decimal? JumlahIteratur { get; set; }
+        //public string? TglMulaiIteratur { get; set; }
+        //public decimal? JarakPenebusan { get; set; }
+        //public string? MasaAktifIteratur { get; set; }
     }
 }

@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers;
@@ -80,6 +81,29 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 message = "Ditemukan || 200 OK",
                 data = billing
             });
+        }
+
+        [HttpPut("{id}/Status-PengambilanObat")]
+        public async Task<IActionResult> UpdateStatusObatBilling(Guid id, [FromBody] StatusItemBillingViewModel request)
+        {
+            var data = await _applicationDbContext.Billings.FindAsync(id);
+            if (data == null)
+                return NotFound(new { message = "Resep tidak ditemukan." });
+
+            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(EmailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var userId = user?.UserActiveId ?? Guid.Empty;
+
+            data.StatusPengambilan = request.Status;
+            data.UpdateDateTime = DateTimeOffset.UtcNow;
+            data.UpdateBy = userId;
+
+            await _applicationDbContext.SaveChangesAsync();
+
+            return Ok(new { message = "Status isFinished berhasil diperbarui." });
         }
 
         [HttpGet("GetBillingByKunjunganId/{kunjunganId}")]
@@ -203,8 +227,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                                     item.rc?.NamaRacikan,
                                     item.dr?.IsIteratur,
                                     item.dr?.JarakPenebusan,
-                                    TglMulaiIteratur = item.dr.TglMulaiIteratur?.ToString("yyyy-MM-dd"),
-                                    MasaAktifIteratur = item.dr.MasaAktifIteratur?.ToString("yyyy-MM-dd"),
+                                    TglMulaiIteratur = item.dr?.TglMulaiIteratur?.ToString("yyyy-MM-dd"),
+                                    MasaAktifIteratur = item.dr?.MasaAktifIteratur?.ToString("yyyy-MM-dd"),
                                     StatusCoverObat = item.dr?.StatusCoverObat ?? false,
                                     TotalBiayaObat = item.dr?.TotalHargaObat ?? item.dr?.Qty * item.o.HargaJual
                                 };

@@ -66,7 +66,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.RacikanId,
                              a.NamaRacikan,
                              a.Keterangan,
-
+                             a.Signa,
+                             a.SignaTambahan
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -144,21 +145,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
-                //// **Cek Duplikasi**
-                bool isDuplicate = _applicationDbContext.Racikans
-                                    .Any(c => c.NamaRacikan == vm.NamaRacikan);
-
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Nama benefit ini telah tersedia" });
-                }
-
                 // **Buat Data Baru**
                 var data = new Racikan
                 {
                     RacikanId = Guid.NewGuid(),
                     NamaRacikan = vm.NamaRacikan?.Trim(),
                     Keterangan = vm.Keterangan,
+                    Signa = vm.Signa,
+                    SignaTambahan = vm.SignaTambahan,
 
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
@@ -228,6 +222,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 // **Update Data**
                 data.NamaRacikan = vm.NamaRacikan;
                 data.Keterangan = vm.Keterangan;
+                data.Signa = vm.Signa;
+                data.SignaTambahan = vm.SignaTambahan;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -342,7 +338,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.RacikanId,
                              a.NamaRacikan,
                              a.Keterangan,
-
+                             a.Signa,
+                             a.SignaTambahan
                          };
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**

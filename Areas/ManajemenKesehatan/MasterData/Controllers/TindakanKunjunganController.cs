@@ -382,7 +382,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         QtyItem = vm.Quantity,
                         SubTotalItem = totalqty,
                         Keterangan = vm.Disposition,
-                        JenisBilling = "Tindakan", 
+                        JenisBilling = "Tindakan",
+                        StatusPengambilan = true,
                         CreateBy = userActiveId,
                         CreateDateTime = DateTimeOffset.UtcNow,
                     };

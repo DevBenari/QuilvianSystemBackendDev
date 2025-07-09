@@ -11,5 +11,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
         public Guid RacikanId { get; set; }
         public string? NamaRacikan { get; set; }
         public string? Keterangan { get; set; }
+        public string? Signa { get; set; }
+        public string? SignaTambahan { get; set; } 
     }
 }
