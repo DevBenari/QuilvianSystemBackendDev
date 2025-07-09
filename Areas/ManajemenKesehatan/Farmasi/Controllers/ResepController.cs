@@ -786,197 +786,225 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid!" });
 
-            try
+            var resep = await _applicationDbContext.Reseps.FirstOrDefaultAsync(r => r.ResepId == id);
+            if (resep == null)
+                return NotFound(new { message = "Resep tidak ditemukan!" });
+
+            var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var getUserActive = await _applicationDbContext.UserActives.FirstOrDefaultAsync(u => u.Email == emailLogin);
+            if (getUserActive == null)
+                return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+
+            var userActiveId = getUserActive.UserActiveId;
+
+            resep.StatusPembuatanResep = vm.StatusPembuatanResep;
+            resep.UpdateBy = userActiveId;
+            resep.UpdateDateTime = DateTimeOffset.UtcNow;
+
+            // === Rollback stok dari detail resep lama ===
+            var oldDetails = await _applicationDbContext.DetailReseps
+                .Where(d => d.ResepId == id).ToListAsync();
+
+            foreach (var old in oldDetails)
             {
-                if (!_applicationDbContext.Database.CanConnect())
-                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
-
-                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(emailLogin))
-                    return Unauthorized(new { message = "User tidak terautentikasi!" });
-
-                var getUserActive = await _applicationDbContext.UserActives
-                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
-                if (getUserActive == null)
-                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-
-                var userActiveId = getUserActive.UserActiveId;
-
-                var resep = await _applicationDbContext.Reseps
-                    .FirstOrDefaultAsync(r => r.ResepId == id);
-                if (resep == null)
-                    return NotFound(new { message = "Data resep tidak ditemukan." });
-
-                // Hapus data lama
-                var detailReseps = await _applicationDbContext.DetailReseps.Where(d => d.ResepId == id).ToListAsync();
-                var racikanIds = detailReseps.Where(d => d.IsRacikan == true && d.RacikanId != null)
-                                             .Select(d => d.RacikanId.Value).ToList();
-
-                var racikanDetails = await _applicationDbContext.RacikanDetails
-                    .Where(rd => racikanIds.Contains((Guid)rd.RacikanId)).ToListAsync();
-                var racikans = await _applicationDbContext.Racikans
-                    .Where(r => racikanIds.Contains(r.RacikanId)).ToListAsync();
-                var billings = await _applicationDbContext.Billings
-                    .Where(b => b.KunjunganId == resep.KunjunganId && b.JenisBilling.ToLower() == "obat").ToListAsync();
-
-                _applicationDbContext.RacikanDetails.RemoveRange(racikanDetails);
-                _applicationDbContext.Racikans.RemoveRange(racikans);
-                _applicationDbContext.DetailReseps.RemoveRange(detailReseps);
-                _applicationDbContext.Billings.RemoveRange(billings);
-
-                // Update master resep
-                resep.AsuransiId = vm.AsuransiId;
-                resep.NamaAsuransi = vm.NamaAsuransi;
-                resep.PoliklinikId = vm.PoliklinikId;
-                resep.NamaPoliklinik = vm.NamaPoliklinik;
-                resep.DokterId = vm.DokterId;
-                resep.NamaDokter = vm.NamaDokter;
-                resep.StatusPembuatanResep = vm.StatusPembuatanResep;
-                resep.UpdateBy = userActiveId;
-                resep.UpdateDateTime = DateTimeOffset.UtcNow;
-
-                // Siapkan stok obat
-                var obatIds = vm.DaftarObat.Where(o => o.ObatId != null).Select(o => o.ObatId).Distinct().ToList();
-                var obatDbList = await _applicationDbContext.Obats
-                    .Where(o => obatIds.Contains(o.ObatId))
-                    .ToDictionaryAsync(o => o.ObatId);
-
-                int billingIndex = 0;
-
-                foreach (var obat in vm.DaftarObat)
+                if (old.IsRacikan == true)
                 {
-                    var obatDb = obat.ObatId.HasValue && obatDbList.ContainsKey(obat.ObatId.Value)
-                        ? obatDbList[obat.ObatId.Value]
-                        : null;
+                    var racikanDetails = await _applicationDbContext.RacikanDetails
+                        .Where(rd => rd.RacikanId == old.RacikanId).ToListAsync();
 
-                    Guid? racikanId = null;
-                    decimal hargaItem = 0;
-                    int qtyItem = obat.Qty ?? 0;
-                    string namaItem = "";
-                    decimal subTotalItem = 0;
-
-                    // Proses racikan
-                    if (obat.IsRacikan == true && obat.Racikan != null)
+                    foreach (var rd in racikanDetails)
                     {
-                        foreach (var racikan in obat.Racikan)
+                        var obat = await _applicationDbContext.Obats.FindAsync(rd.ObatId);
+                        if (obat != null)
                         {
-                            var racikanEntity = new Racikan
-                            {
-                                RacikanId = Guid.NewGuid(),
-                                NamaRacikan = racikan.NamaRacikan,
-                                Keterangan = racikan.Keterangan,
-                                Signa = racikan.Signa,
-                                SignaTambahan = racikan.SignaTambahan,
-                                CreateBy = userActiveId,
-                                CreateDateTime = DateTimeOffset.UtcNow
-                            };
-                            _applicationDbContext.Racikans.Add(racikanEntity);
-                            racikanId = racikanEntity.RacikanId;
-
-                            decimal totalHargaRacikan = 0;
-
-                            foreach (var detail in racikan.DaftarRacikan)
-                            {
-                                var obatRacik = await _applicationDbContext.Obats.FindAsync(detail.ObatId);
-                                if (obatRacik == null || obatRacik.Stock < detail.QtyUsed)
-                                    return BadRequest(new { message = $"Stok tidak cukup untuk obat racikan: {obatRacik?.ObatName}" });
-                                _applicationDbContext.Obats.Update(obatRacik);
-
-                                var racikanDetail = new RacikanDetail
-                                {
-                                    DetailRacikanId = Guid.NewGuid(),
-                                    RacikanId = racikanEntity.RacikanId,
-                                    ObatId = detail.ObatId,
-                                    QtyUsed = detail.QtyUsed,
-                                    KomposisiDosis = detail.KomposisiDosis,
-                                    CreateBy = userActiveId,
-                                    CreateDateTime = DateTimeOffset.UtcNow
-                                };
-                                _applicationDbContext.RacikanDetails.Add(racikanDetail);
-                            }
-
-                            hargaItem = totalHargaRacikan;
-                            namaItem = racikan.NamaRacikan;
-                            subTotalItem = hargaItem * qtyItem;
+                            obat.Stock += rd.QtyUsed ?? 0;
+                            _applicationDbContext.Obats.Update(obat);
                         }
                     }
-
-                    // Detail resep
-                    var detailResep = new ResepDetail
+                }
+                else
+                {
+                    var obat = await _applicationDbContext.Obats.FindAsync(old.ObatId);
+                    if (obat != null)
                     {
-                        DetailResepId = Guid.NewGuid(),
-                        ResepId = resep.ResepId,
-                        ObatId = obat.IsRacikan == true ? null : obat.ObatId,
-                        Qty = obat.Qty,
-                        Signa = obat.Signa,
-                        SignaTambahan = obat.SignaTambahan,
-                        HargaObat = obat.HargaObat,
-                        TotalHargaObat = obat.HargaObat * (obat.Qty ?? 0),
-                        StatusCoverObat = obat.StatusCoverObat,
-                        JenisObat = obat.JenisObat,
-                        IsRacikan = obat.IsRacikan,
-                        TakaranDosis = obatDb?.TakaranDosis ?? 0,
-                        DosisRacikan = obat.DosisRacikan,
-                        KeteranganRacikan = obat.KeteranganRacikan,
-                        StatusPengambilanObat = true,
-                        CreateBy = userActiveId,
-                        CreateDateTime = DateTimeOffset.UtcNow
-                    };
-                    _applicationDbContext.DetailReseps.Add(detailResep);
-
-                    // Non racikan stok dan harga
-                    if (obat.IsRacikan == false && obatDb != null)
-                    {
-                        if (obatDb.Stock < qtyItem)
-                            return BadRequest(new { message = $"Stok obat {obatDb.ObatName} tidak cukup." });
-
-                        obatDb.Stock -= qtyItem;
-                        _applicationDbContext.Obats.Update(obatDb);
-
-                        hargaItem = obatDb.HargaJual;
-                        namaItem = obatDb.ObatName;
-                        subTotalItem = hargaItem * qtyItem;
+                        obat.Stock += old.Qty ?? 0;
+                        _applicationDbContext.Obats.Update(obat);
                     }
+                }
+            }
 
-                    // Simpan billing
+            // Hapus resep detail & racikan lama
+            // Ambil semua racikanId dari detail resep lama
+            var racikanIds = oldDetails
+                .Where(x => x.IsRacikan == true && x.RacikanId != null)
+                .Select(x => x.RacikanId.Value)
+                .ToList();
+
+            // Hapus racikan details
+            var oldRacikanDetails = await _applicationDbContext.RacikanDetails
+                .Where(rd => racikanIds.Contains((Guid)rd.RacikanId))
+                .ToListAsync();
+            _applicationDbContext.RacikanDetails.RemoveRange(oldRacikanDetails);
+
+            // Hapus racikan
+            var oldRacikans = await _applicationDbContext.Racikans
+                .Where(r => racikanIds.Contains(r.RacikanId))
+                .ToListAsync();
+            _applicationDbContext.Racikans.RemoveRange(oldRacikans);
+
+            // Hapus resep detail
+            _applicationDbContext.DetailReseps.RemoveRange(oldDetails);
+
+            // === Prepare data baru ===
+            var obatIds = vm.DaftarObat?.Where(o => o.ObatId != null).Select(o => o.ObatId).Distinct().ToList();
+            var obatDbList = await _applicationDbContext.Obats
+                .Where(o => obatIds.Contains(o.ObatId)).ToDictionaryAsync(o => o.ObatId);
+
+            var existingBillings = await _applicationDbContext.Billings
+                .Where(b => b.KunjunganId == resep.KunjunganId && b.JenisBilling == "Obat").ToListAsync();
+
+            int billingIndex = existingBillings.Count;
+
+            foreach (var obat in vm.DaftarObat)
+            {
+                var obatDb = obat.ObatId.HasValue && obatDbList.ContainsKey(obat.ObatId.Value)
+                    ? obatDbList[obat.ObatId.Value]
+                    : null;
+
+                var detailResep = new ResepDetail
+                {
+                    DetailResepId = Guid.NewGuid(),
+                    ResepId = resep.ResepId,
+                    ObatId = obat.IsRacikan == true ? null : obat.ObatId,
+                    Qty = obat.Qty,
+                    Signa = obat.Signa,
+                    SignaTambahan = obat.SignaTambahan,
+                    HargaObat = obat.HargaObat,
+                    TotalHargaObat = obat.HargaObat * (obat.Qty ?? 0),
+                    StatusCoverObat = obat.StatusCoverObat,
+                    JenisObat = obat.JenisObat,
+                    IsRacikan = obat.IsRacikan,
+                    TakaranDosis = obatDb?.TakaranDosis ?? 0,
+                    StatusPengambilanObat = true,
+                    CreateBy = userActiveId,
+                    CreateDateTime = DateTimeOffset.UtcNow
+                };
+
+                _applicationDbContext.DetailReseps.Add(detailResep);
+
+                Guid? itemId = null;
+                decimal totalHargaRacikan = 0;
+                decimal hargaOb = 0;
+                string namaItem = "";
+                decimal hargaItem = 0;
+                decimal subTotalItem = 0;
+
+                if (obat.IsRacikan == true && obat.Racikan != null)
+                {
+                    foreach (var racikan in obat.Racikan)
+                    {
+                        var racikanEntity = new Racikan
+                        {
+                            RacikanId = Guid.NewGuid(),
+                            NamaRacikan = racikan.NamaRacikan,
+                            Keterangan = racikan.Keterangan,
+                            Signa = racikan.Signa,
+                            SignaTambahan = racikan.SignaTambahan,
+                            QtyRacikan = racikan.QtyRacikan,
+                            CreateBy = userActiveId,
+                            CreateDateTime = DateTimeOffset.UtcNow
+                        };
+
+                        _applicationDbContext.Racikans.Add(racikanEntity);
+
+                        
+                        foreach (var racikanDetail in racikan.DaftarRacikan)
+                        {
+                            var obatRacik = await _applicationDbContext.Obats.FindAsync(racikanDetail.ObatId);
+                            if (obatRacik == null || obatRacik.Stock < racikanDetail.QtyUsed)
+                                return BadRequest(new { message = $"Stok tidak cukup untuk obat racikan: {obatRacik?.ObatName}" });
+
+                            var obatPakai = Math.Round((decimal)((racikanDetail.KomposisiDosis * racikanEntity.QtyRacikan) * obatDb.TakaranDosis));
+                            hargaOb = obatPakai * obatDb.HargaJual;
+                            totalHargaRacikan += hargaOb;
+
+                            // kurangi stok
+                            obatRacik.Stock -= (int)obatPakai;
+                            _applicationDbContext.Obats.Update(obatRacik);
+
+                            _applicationDbContext.RacikanDetails.Add(new RacikanDetail
+                            {
+                                DetailRacikanId = Guid.NewGuid(),
+                                RacikanId = racikanEntity.RacikanId,
+                                ObatId = racikanDetail.ObatId,
+                                QtyUsed = (int?)obatPakai,
+                                KomposisiDosis = racikanDetail.KomposisiDosis,
+                                CreateBy = userActiveId,
+                                CreateDateTime = DateTimeOffset.UtcNow
+                            });
+                        }
+
+                        itemId = racikanEntity.RacikanId;
+                        namaItem = racikanEntity.NamaRacikan;
+                        hargaItem = hargaOb;
+                        subTotalItem = totalHargaRacikan;
+                    }
+                }
+                else if (obatDb != null)
+                {
+                    if (obatDb.Stock < (obat.Qty ?? 0))
+                        return BadRequest(new { message = $"Stok obat {obatDb.ObatName} tidak cukup." });
+
+                    obatDb.Stock -= obat.Qty ?? 0;
+                    _applicationDbContext.Obats.Update(obatDb);
+
+                    itemId = obat.ObatId;
+                    namaItem = obatDb.ObatName;
+                    hargaItem = obatDb.HargaJual;
+                    subTotalItem = hargaItem * (obat.Qty ?? 0);
+                }
+
+                // Update atau tambah billing
+                var billing = existingBillings.FirstOrDefault(b => b.ItemId == itemId);
+                if (billing != null)
+                {
+                    billing.HargaItem = hargaItem;
+                    billing.QtyItem = obat.Qty ?? 0;
+                    billing.SubTotalItem = subTotalItem;
+                    billing.UpdateBy = userActiveId;
+                    billing.UpdateDateTime = DateTimeOffset.UtcNow;
+                    _applicationDbContext.Billings.Update(billing);
+                }
+                else
+                {
                     billingIndex++;
-                    string billingKode = $"{billingIndex:D3}";
-
-                    var billing = new Billing
+                    string billingkode = $"{billingIndex:D3}";
+                    _applicationDbContext.Billings.Add(new Billing
                     {
                         KunjunganId = resep.KunjunganId,
                         DiskonId = vm.DiskonId,
                         BillingDate = DateTime.UtcNow,
-                        BillingKode = billingKode,
-                        ItemId = obat.IsRacikan == true ? racikanId : obat.ObatId,
+                        BillingKode = billingkode,
+                        ItemId = itemId,
                         NamaItem = namaItem,
                         HargaItem = hargaItem,
-                        QtyItem = qtyItem,
+                        QtyItem = obat.Qty ?? 0,
                         SubTotalItem = subTotalItem,
                         JenisBilling = "Obat",
                         StatusPengambilan = false,
                         CreateBy = userActiveId,
                         CreateDateTime = DateTimeOffset.UtcNow
-                    };
-
-                    _applicationDbContext.Billings.Add(billing);
+                    });
                 }
+            }
 
-                int result = await _applicationDbContext.SaveChangesAsync();
-                if (result > 0)
-                    return Ok(new { message = "Update Resep Berhasil || 200 OK" });
+            int result = await _applicationDbContext.SaveChangesAsync();
+            if (result > 0)
+                return Ok(new { message = "Update resep berhasil!" });
 
-                return StatusCode(500, new { message = "Update gagal disimpan ke database." });
-            }
-            catch (DbUpdateException dbEx)
-            {
-                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
-            }
+            return StatusCode(500, new { message = "Update resep gagal disimpan." });
         }
+
         //[HttpPut("{id}")]
         //public async Task<IActionResult> UpdateResep(Guid id, [FromBody] ResepViewModel vm)
         //{
