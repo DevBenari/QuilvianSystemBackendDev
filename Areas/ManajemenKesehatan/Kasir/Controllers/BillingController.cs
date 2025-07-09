@@ -203,6 +203,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                                     billing?.BillingKode,
                                     Harga = billing?.HargaItem ,
                                     Subtotal = billing?.SubTotalItem,
+                                    StatusCoverObat = item.dr.StatusCoverObat,
                                     Signa = item.dr.Signa,
                                     SignaTambahan = item.dr.SignaTambahan,
                                 };
