@@ -1453,9 +1453,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                             })
                                       .ToList()
                               })
-                        .Distinct()
-                        .ToList()
-                })
+                        .AsEnumerable() // pindahkan ke memori
+                        .GroupBy(r => r.RacikanId)
+                        .Select(g => g.First()) // ambil racikan unik
+                        .ToList()})
                 .ToList();
 
             return Ok(new
@@ -1670,9 +1671,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                             })
                                       .ToList()
                               })
-                        .Distinct()
-                        .ToList()
-                })
+                        .AsEnumerable() // pindahkan ke memori
+                        .GroupBy(r => r.RacikanId)
+                        .Select(g => g.First()) // ambil racikan unik
+                        .ToList()})
                 .ToList();
 
             return Ok(new
