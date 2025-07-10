@@ -301,6 +301,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
                 string antrian = kunjungan.Antrian;
                 var today = DateTime.UtcNow.Date;
+                var todayString = today.ToString("yyyyMMdd");
 
                 var lastResep = await _applicationDbContext.Reseps
                     .Where(r => r.CreateDateTime.Date == today)
@@ -363,7 +364,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             StatusCoverObat = obat.StatusCoverObat,
                             JenisObat = obat.JenisObat,
                             IsRacikan = obat.IsRacikan,
-                            TakaranDosis = obatDb?.TakaranDosis ?? 0,
+                            TakaranDosis = obat.IsRacikan == true ? null : obatDb?.TakaranDosis,
                             //DosisRacikan = obat.DosisRacikan,
                             //KeteranganRacikan = obat.KeteranganRacikan,
                             StatusPengambilanObat = true,
@@ -377,13 +378,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                         string namaItem = "";
                         decimal hargaItem = 0;
                         decimal hargaOb = 0;
-                        int qtyItem = obat.Qty ?? 0;
                         decimal subTotalItem = 0;
+                        int qtyitem = 0;
 
                         if (obat.IsRacikan == true && obat.Racikan != null)
                         {
                             foreach (var racikan in obat.Racikan)
                             {
+                                // Hitung jumlah racikan yang dibuat hari ini
+                                int racikanCountToday = await _applicationDbContext.DetailReseps
+                                    .CountAsync(r => r.CreateDateTime.Date == today && r.ResepId == resep.ResepId && r.IsRacikan==true);
+
+                                // Buat nomor urutan (incremental, dimulai dari 001)
+                                int nextNumber = racikanCountToday + 1;
+                                string kodeUrut = nextNumber.ToString("D3"); // e.g., 001, 002, etc.
+
+                                // Bentuk final kode racikan
+                                string kodeRacikan = $"RCK-{kodeUrut}{todayString}";
+
                                 var racikanEntity = new Racikan
                                 {
                                     RacikanId = Guid.NewGuid(),
@@ -392,6 +404,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                     Signa = racikan.Signa,
                                     SignaTambahan = racikan.SignaTambahan,
                                     QtyRacikan = racikan.QtyRacikan,
+                                    KodeRacikan = kodeRacikan,
                                     CreateBy = userActiveId,
                                     CreateDateTime = DateTimeOffset.UtcNow
                                 };
@@ -431,20 +444,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                 namaItem = racikanEntity.NamaRacikan;
                                 hargaItem = hargaOb;
                                 subTotalItem = totalHargaRacikan;
+                                qtyitem = (int)racikan.QtyRacikan;
+
                             }
                         }
                         else if (obatDb != null)
                         {
-                            if (obatDb.Stock < qtyItem)
+                            if (obatDb.Stock < obat.Qty)
                                 return BadRequest(new { message = $"Stok obat {obatDb.ObatName} tidak cukup." });
 
-                            obatDb.Stock -= qtyItem;
+                            obatDb.Stock -= (int)obat.Qty;
                             _applicationDbContext.Obats.Update(obatDb);
 
                             itemId = obat.ObatId;
                             namaItem = obatDb.ObatName;
                             hargaItem = obatDb.HargaJual;
-                            subTotalItem = hargaItem * qtyItem;
+                            qtyitem = (int)obat.Qty;
+                            subTotalItem = (int)(hargaItem * obat.Qty);
                         }
 
                         billingIndex++;
@@ -459,7 +475,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             ItemId = itemId,
                             NamaItem = namaItem,
                             HargaItem = hargaItem,
-                            QtyItem = qtyItem,
+                            QtyItem = qtyitem,
                             SubTotalItem = subTotalItem,
                             JenisBilling = "Obat",
                             StatusPengambilan = false,
@@ -797,7 +813,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
             var userActiveId = getUserActive.UserActiveId;
 
-            resep.StatusPembuatanResep = vm.StatusPembuatanResep;
+            resep.KunjunganId = vm.KunjunganId;
+            resep.AsuransiId = vm.AsuransiId;
+            resep.NamaAsuransi = vm.NamaAsuransi;
+            resep.PasienId = vm.PasienId;
+            resep.NamaPasien = vm.NamaPasien;
+            resep.PoliklinikId = vm.PoliklinikId;
+            resep.NamaPoliklinik = vm.NamaPoliklinik;
+            resep.DokterId = vm.DokterId;
+            resep.NamaDokter = vm.NamaDokter;
+
+
             resep.UpdateBy = userActiveId;
             resep.UpdateDateTime = DateTimeOffset.UtcNow;
 
@@ -865,6 +891,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
             int billingIndex = existingBillings.Count;
 
+            var today = DateTime.UtcNow.Date;
+            var todayString = today.ToString("yyyyMMdd");
+
             foreach (var obat in vm.DaftarObat)
             {
                 var obatDb = obat.ObatId.HasValue && obatDbList.ContainsKey(obat.ObatId.Value)
@@ -884,7 +913,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     StatusCoverObat = obat.StatusCoverObat,
                     JenisObat = obat.JenisObat,
                     IsRacikan = obat.IsRacikan,
-                    TakaranDosis = obatDb?.TakaranDosis ?? 0,
+                    TakaranDosis = obat.IsRacikan == true ? null : obatDb?.TakaranDosis,
                     StatusPengambilanObat = true,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow
@@ -898,11 +927,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 string namaItem = "";
                 decimal hargaItem = 0;
                 decimal subTotalItem = 0;
+                int qtyitem = 0;
 
                 if (obat.IsRacikan == true && obat.Racikan != null)
                 {
                     foreach (var racikan in obat.Racikan)
                     {
+                        // Hitung jumlah racikan yang dibuat hari ini
+                        int racikanCountToday = await _applicationDbContext.DetailReseps
+                            .CountAsync(r => r.CreateDateTime.Date == today && r.ResepId == resep.ResepId && r.IsRacikan == true);
+
+                        // Buat nomor urutan (incremental, dimulai dari 001)
+                        int nextNumber = racikanCountToday + 1;
+                        string kodeUrut = nextNumber.ToString("D3"); // e.g., 001, 002, etc.
+
+                        // Bentuk final kode racikan
+                        string kodeRacikan = $"RCK-{kodeUrut}{todayString}";
+
                         var racikanEntity = new Racikan
                         {
                             RacikanId = Guid.NewGuid(),
@@ -911,6 +952,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             Signa = racikan.Signa,
                             SignaTambahan = racikan.SignaTambahan,
                             QtyRacikan = racikan.QtyRacikan,
+                            KodeRacikan = kodeRacikan,
                             CreateBy = userActiveId,
                             CreateDateTime = DateTimeOffset.UtcNow
                         };
@@ -948,6 +990,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                         namaItem = racikanEntity.NamaRacikan;
                         hargaItem = hargaOb;
                         subTotalItem = totalHargaRacikan;
+                        qtyitem = (int)racikan.QtyRacikan;
                     }
                 }
                 else if (obatDb != null)
@@ -962,6 +1005,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     namaItem = obatDb.ObatName;
                     hargaItem = obatDb.HargaJual;
                     subTotalItem = hargaItem * (obat.Qty ?? 0);
+                    qtyitem = (int)(obat.Qty ?? 0);
                 }
 
                 // Update atau tambah billing
@@ -988,7 +1032,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                         ItemId = itemId,
                         NamaItem = namaItem,
                         HargaItem = hargaItem,
-                        QtyItem = obat.Qty ?? 0,
+                        QtyItem = qtyitem,
                         SubTotalItem = subTotalItem,
                         JenisBilling = "Obat",
                         StatusPengambilan = false,

@@ -6,6 +6,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
 
 namespace QuilvianSystemBackendDev.Repositories
 {
@@ -142,6 +143,10 @@ namespace QuilvianSystemBackendDev.Repositories
         //public DbSet<TindakanPasienOptik> TindakanPasienOptiks { get; set; }
         //public DbSet<TindakanPasienRadiologi> TindakanPasienRadiologis { get; set; }
         //public DbSet<TindakanPasienRehabilitas> TindakanPasienRehabilitass { get; set; }
+        #endregion
+
+        #region Areas Rawat Inap
+        public DbSet<SuratPengantarRawatInap> SuratPengantarRawatInaps { get; set; }
         #endregion
     }
 }

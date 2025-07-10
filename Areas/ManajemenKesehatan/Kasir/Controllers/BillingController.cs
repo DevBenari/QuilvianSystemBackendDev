@@ -239,6 +239,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                                     item.r.ResepId,
                                     item.dr.RacikanId,
                                     NamaRacikan = item.rc.NamaRacikan,
+                                    item.rc.KodeRacikan,
                                     item.dr.KeteranganRacikan,
                                     item.dr.DosisRacikan,
                                     Qty = billing?.QtyItem,
@@ -478,11 +479,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                             item.DosisRacikan,
                             item.Signa,
                             item.SignaTambahan,
+                            racikan?.KodeRacikan,
                             HargaSatuanObat = billing?.HargaItem,
                             SubTotalObat = billing?.SubTotalItem,
                             BilledQty = billing?.QtyItem,
                             billing?.BillingKode,
                             billing?.JenisBilling,
+
                             item.StatusPengambilanObat,
                             Komposisi = racikanDetails
                         });
