@@ -160,7 +160,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     DetailRacikanId = Guid.NewGuid(),
                     RacikanId = vm.RacikanId,
                     ObatId = vm.ObatId,
-                    QtyUsed = vm.QtyUsed,
+                    //QtyUsed = vm.QtyUsed,
                     KomposisiDosis = vm.KomposisiDosis,
 
                     CreateBy = userActiveId,
@@ -231,7 +231,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 // **Update Data**
                 data.RacikanId = vm.RacikanId;
                 data.ObatId = vm.ObatId;
-                data.QtyUsed = vm.QtyUsed;
+                //data.QtyUsed = vm.QtyUsed;
                 data.KomposisiDosis = vm.KomposisiDosis;
 
                 data.UpdateBy = userActiveId;

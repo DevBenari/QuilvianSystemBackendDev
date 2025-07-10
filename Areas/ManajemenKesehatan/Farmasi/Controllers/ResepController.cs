@@ -414,14 +414,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
                                 foreach (var detailRacikan in racikan.DaftarRacikan)
                                 {
-                                    var obatDbRacikan = await _applicationDbContext.Obats.FindAsync(detailRacikan.ObatId);
-                                    if (obatDbRacikan == null || obatDbRacikan.Stock < detailRacikan.QtyUsed)
-                                        return BadRequest(new { message = $"Stok tidak cukup untuk obat racikan: {obatDbRacikan?.ObatName}" });
 
                                     // menghitung harga racikan
                                     var obatPakai = Math.Round((decimal)((detailRacikan.KomposisiDosis * racikanEntity.QtyRacikan) * obatDb.TakaranDosis));
                                     hargaOb = obatPakai * obatDb.HargaJual;
+
                                     totalHargaRacikan += hargaOb;
+                                    var obatDbRacikan = await _applicationDbContext.Obats.FindAsync(detailRacikan.ObatId);
+                                    if (obatDbRacikan == null || obatDbRacikan.Stock < obatPakai)
+                                        return BadRequest(new { message = $"Stok tidak cukup untuk obat racikan: {obatDbRacikan?.ObatName}" });
 
                                     // mengurangi stok obat racikan
                                     obatDbRacikan.Stock -= (int)obatPakai;
@@ -962,13 +963,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                         
                         foreach (var racikanDetail in racikan.DaftarRacikan)
                         {
-                            var obatRacik = await _applicationDbContext.Obats.FindAsync(racikanDetail.ObatId);
-                            if (obatRacik == null || obatRacik.Stock < racikanDetail.QtyUsed)
-                                return BadRequest(new { message = $"Stok tidak cukup untuk obat racikan: {obatRacik?.ObatName}" });
-
                             var obatPakai = Math.Round((decimal)((racikanDetail.KomposisiDosis * racikanEntity.QtyRacikan) * obatDb.TakaranDosis));
                             hargaOb = obatPakai * obatDb.HargaJual;
                             totalHargaRacikan += hargaOb;
+
+                            var obatRacik = await _applicationDbContext.Obats.FindAsync(racikanDetail.ObatId);
+                            if (obatRacik == null || obatRacik.Stock < obatPakai)
+                                return BadRequest(new { message = $"Stok tidak cukup untuk obat racikan: {obatRacik?.ObatName}" });
 
                             // kurangi stok
                             obatRacik.Stock -= (int)obatPakai;
