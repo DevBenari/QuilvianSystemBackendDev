@@ -122,6 +122,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                                   d.Qty,
                                                   d.Signa,
                                                   d.SignaTambahan,
+                                                  d.HargaObat,
+                                                  d.TotalHargaObat,
                                                   ra.CreateBy,
                                                   ra.CreateDateTime,
 
@@ -399,7 +401,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                     if (obatDbRacikan == null)
                                         return BadRequest(new { message = $"Obat tidak ditemukan: {detailRacikan.ObatId}" });
 
-                                    var qtyPakai = Math.Round((decimal)(detailRacikan.KomposisiDosis * racikan.QtyRacikan * obatDbRacikan.TakaranDosis));
+                                    var qtyPakai = Math.Round((decimal)((detailRacikan.KomposisiDosis * racikan.QtyRacikan) / obatDbRacikan.TakaranDosis));
                                     var hargaOb = qtyPakai * obatDbRacikan.HargaJual;
 
                                     totalHargaRacikan += hargaOb;
@@ -957,7 +959,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                         foreach (var rd in racikan.DaftarRacikan)
                         {
                             var obatRacik = await _applicationDbContext.Obats.FindAsync(rd.ObatId);
-                            var qtyUsed = Math.Round((decimal)((rd.KomposisiDosis * racikan.QtyRacikan) * obatRacik.TakaranDosis));
+                            var qtyUsed = Math.Round((decimal)((rd.KomposisiDosis * racikan.QtyRacikan) / obatRacik.TakaranDosis));
                             hargaOb = qtyUsed * obatRacik.HargaJual;
                             totalHargaRacikan += hargaOb;
 
