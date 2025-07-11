@@ -481,7 +481,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             QtyItem = qtyitem,
                             SubTotalItem = subTotalItem,
                             JenisBilling = "Obat",
-                            StatusPengambilan = false,
+                            StatusPengambilan = true,
                             CreateBy = userActiveId,
                             CreateDateTime = DateTimeOffset.UtcNow
                         };
@@ -1040,7 +1040,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                         QtyItem = qtyitem,
                         SubTotalItem = subTotalItem,
                         JenisBilling = "Obat",
-                        StatusPengambilan = false,
+                        StatusPengambilan = true,
                         CreateBy = userActiveId,
                         CreateDateTime = DateTimeOffset.UtcNow
                     });
