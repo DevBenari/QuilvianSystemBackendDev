@@ -336,6 +336,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
                 if (vm.DaftarObat != null && vm.DaftarObat.Any())
                 {
+                    
                     var obatIds = vm.DaftarObat.Where(o => o.ObatId != null).Select(o => o.ObatId).Distinct().ToList();
                     var obatDbList = await _applicationDbContext.Obats
                         .Where(o => obatIds.Contains(o.ObatId))
@@ -364,6 +365,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             StatusCoverObat = obat.StatusCoverObat,
                             JenisObat = obat.JenisObat,
                             IsRacikan = obat.IsRacikan,
+                            RacikanId = obat.IsRacikan == true ? Guid.NewGuid() : null, // Assign RacikanId only if IsRacikan is true
                             TakaranDosis = obat.IsRacikan == true ? null : obatDb?.TakaranDosis,
                             //DosisRacikan = obat.DosisRacikan,
                             //KeteranganRacikan = obat.KeteranganRacikan,
@@ -380,7 +382,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                         decimal hargaOb = 0;
                         decimal subTotalItem = 0;
                         int qtyitem = 0;
-
+                        Guid idracikan = (Guid)resepDetail.RacikanId;
                         if (obat.IsRacikan == true && obat.Racikan != null)
                         {
                             foreach (var racikan in obat.Racikan)
@@ -398,7 +400,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
                                 var racikanEntity = new Racikan
                                 {
-                                    RacikanId = Guid.NewGuid(),
+                                    RacikanId = idracikan,
                                     NamaRacikan = racikan.NamaRacikan,
                                     Keterangan = racikan.Keterangan,
                                     Signa = racikan.Signa,
@@ -914,6 +916,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     StatusCoverObat = obat.StatusCoverObat,
                     JenisObat = obat.JenisObat,
                     IsRacikan = obat.IsRacikan,
+                    RacikanId = obat.IsRacikan == true ? Guid.NewGuid() : null, // Assign RacikanId only if IsRacikan is true
                     TakaranDosis = obat.IsRacikan == true ? null : obatDb?.TakaranDosis,
                     StatusPengambilanObat = true,
                     CreateBy = userActiveId,
@@ -929,6 +932,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 decimal hargaItem = 0;
                 decimal subTotalItem = 0;
                 int qtyitem = 0;
+                Guid idracikan = (Guid)detailResep.RacikanId;
 
                 if (obat.IsRacikan == true && obat.Racikan != null)
                 {
@@ -947,7 +951,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
                         var racikanEntity = new Racikan
                         {
-                            RacikanId = Guid.NewGuid(),
+                            RacikanId = idracikan,
                             NamaRacikan = racikan.NamaRacikan,
                             Keterangan = racikan.Keterangan,
                             Signa = racikan.Signa,

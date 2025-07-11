@@ -15,11 +15,11 @@
         public bool? StatusCoverObat { get; set; } = false;
         public bool? IsRacikan { get; set; } // "Ya" or "Tidak"
         public List<RacikanViewModel>? Racikan { get; set; }
-        //public bool? IsIteratur { get; set; } = false;
         public string? KeteranganRacikan { get; set; }
         //public decimal? JumlahIteratur { get; set; }
         //public string? TglMulaiIteratur { get; set; }
         //public decimal? JarakPenebusan { get; set; }
         //public string? MasaAktifIteratur { get; set; }
+        //public bool? IsIteratur { get; set; } = false;
     }
 }

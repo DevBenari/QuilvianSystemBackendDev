@@ -9,6 +9,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
     {
         [Key]
         public Guid RacikanId { get; set; }
+        public Guid? ResepId { get; set; }
         public string? NamaRacikan { get; set; }
         public string? Keterangan { get; set; }
         public string? Signa { get; set; }
