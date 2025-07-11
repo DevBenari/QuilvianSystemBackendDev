@@ -444,8 +444,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                 itemId = racikanEntity.RacikanId;
                                 namaItem = racikanEntity.NamaRacikan;
                                 hargaItem = hargaOb;
-                                subTotalItem = totalHargaRacikan;
                                 qtyitem = (int)racikan.QtyRacikan;
+                                subTotalItem = totalHargaRacikan * qtyitem ;
 
                             }
                         }

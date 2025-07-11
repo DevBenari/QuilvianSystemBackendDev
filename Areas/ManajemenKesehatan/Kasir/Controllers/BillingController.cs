@@ -101,7 +101,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             data.UpdateDateTime = DateTimeOffset.UtcNow;
             data.UpdateBy = userId;
 
-            await _applicationDbContext.SaveChangesAsync();
+            _applicationDbContext.Billings.Update(data);
+            _applicationDbContext.SaveChanges();
 
             return Ok(new { message = "Status isFinished berhasil diperbarui." });
         }
