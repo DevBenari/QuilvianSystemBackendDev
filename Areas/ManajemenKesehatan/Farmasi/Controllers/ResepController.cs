@@ -117,8 +117,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                               {
                                                   ra.RacikanId,
                                                   ra.NamaRacikan,
-                                                  d.KeteranganRacikan,
-                                                  d.DosisRacikan,
                                                   d.Qty,
                                                   d.Signa,
                                                   d.SignaTambahan,
@@ -221,8 +219,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                       {
                           ra.RacikanId,
                           ra.NamaRacikan,
-                          d.KeteranganRacikan,
-                          d.DosisRacikan,
                           d.Qty,
                           d.Signa,
                           d.SignaTambahan,
@@ -1541,8 +1537,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                               {
                                   ra.RacikanId,
                                   ra.NamaRacikan,
-                                  d.KeteranganRacikan,
-                                  d.DosisRacikan,
                                   d.Qty,
                                   d.Signa,
                                   d.SignaTambahan,
@@ -1759,8 +1753,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                               {
                                   ra.RacikanId,
                                   ra.NamaRacikan,
-                                  d.KeteranganRacikan,
-                                  d.DosisRacikan,
                                   d.Qty,
                                   d.Signa,
                                   d.SignaTambahan,

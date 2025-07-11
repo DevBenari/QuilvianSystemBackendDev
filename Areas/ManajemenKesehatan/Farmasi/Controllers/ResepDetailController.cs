@@ -83,8 +83,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.JarakPenebusan,
                              a.MasaAktifIteratur,
                              a.StatusPengambilanObat,
-                             a.KeteranganRacikan,
-                             a.DosisRacikan,
                              a.TakaranDosis,
                          }).OrderByDescending(a => a.CreateDateTime);
 
@@ -234,7 +232,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     //JumlahIteratur = vm.JumlahIteratur,
                     //TglMulaiIteratur = parsedTglMulaiIteratur,
                     //JarakPenebusan = vm.JarakPenebusan,
-                    KeteranganRacikan = vm.KeteranganRacikan,
                     //MasaAktifIteratur = parsedMasaAktif,
                     StatusPengambilanObat = false, // Default nilai StatusPengambilanObat
 
@@ -336,7 +333,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 //data.JumlahIteratur = vm.JumlahIteratur;
                 //data.TglMulaiIteratur = parsedTglMulaiIteratur;
                 //data.JarakPenebusan = vm.JarakPenebusan;
-                data.KeteranganRacikan = vm.KeteranganRacikan;
                 //data.MasaAktifIteratur = parsedMasaAktif;
                 data.TakaranDosis = vm.TakaranDosis;
 
@@ -470,8 +466,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.JarakPenebusan,
                              a.MasaAktifIteratur,
                              a.StatusPengambilanObat,
-                             a.KeteranganRacikan,
-                             a.DosisRacikan,
                              a.TakaranDosis,
                          };
 
