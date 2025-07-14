@@ -356,18 +356,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             SignaTambahan = obat.SignaTambahan,
                             HargaObat = obat.HargaObat,
                             TotalHargaObat = obat.HargaObat * (obat.Qty ?? 0),
-                            StatusCoverObat = obat.StatusCoverObat,
-                            JenisObat = obat.JenisObat,
-                            IsRacikan = obat.IsRacikan,
+                            StatusCoverObat = obat.IsRacikan == true ? false : obat?.StatusCoverObat,
+                            JenisObat = obat?.JenisObat,
+                            IsRacikan = obat?.IsRacikan,
                             RacikanId = racikanId,
-                            TakaranDosis = obat.IsRacikan == true ? null : obatDb?.TakaranDosis,
+                            TakaranDosis = obat?.IsRacikan == true ? null : obatDb?.TakaranDosis,
                             StatusPengambilanObat = true,
                             CreateBy = getUserActive.UserActiveId,
                             CreateDateTime = DateTimeOffset.UtcNow
                         };
                         _applicationDbContext.DetailReseps.Add(resepDetail);
 
-                        if (obat.IsRacikan == true && racikanId.HasValue)
+                        if (obat?.IsRacikan == true && racikanId.HasValue)
                         {
                             foreach (var racikan in obat.Racikan)
                             {
@@ -486,6 +486,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
         //public async Task<IActionResult> CreateResep([FromBody] ResepViewModel vm)
         //{
         //    if (vm == null || !ModelState.IsValid)
