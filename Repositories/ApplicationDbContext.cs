@@ -106,7 +106,8 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<ObatReturn> ObatReturns { get; set; }
         public DbSet<ObatReturnDetail> ObatReturnDetails { get; set; }
         public DbSet<RacikanDetail> RacikanDetails { get; set; }
-
+        public DbSet<Kamar> Kamars { get; set; }
+        public DbSet<Bed> Beds { get; set; }
 
         #endregion
 

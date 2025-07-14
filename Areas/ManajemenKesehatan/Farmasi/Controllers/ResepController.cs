@@ -267,7 +267,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 DaftarObat = daftarObat,
                 DaftarRacikan = daftarRacikan,
             };
-
             return Ok(result);
         }
 
