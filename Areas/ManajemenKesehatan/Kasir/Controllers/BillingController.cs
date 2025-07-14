@@ -213,6 +213,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                                     Satuan = satuan,
                                     Subtotal = billing?.SubTotalItem,
                                     StatusCoverObat = item.dr.StatusCoverObat,
+                                    StatusPengambilanObat = item.dr.StatusPengambilanObat,
                                     Signa = item.dr.Signa,
                                     SignaTambahan = item.dr.SignaTambahan,
                                 };
@@ -236,7 +237,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                                         NamaObat = x.oRacikan.ObatName ?? "-",
                                         Qty = x.rd.QtyUsed ?? 0,
                                         KomposisiDosis = x.rd.KomposisiDosis ?? 0
-                                    });
+                                    }).Distinct();
 
                                 return new
                                 {
@@ -251,6 +252,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                                     Subtotal = billing?.SubTotalItem ,
                                     Signa = item.dr.Signa,
                                     SignaTambahan = item.dr.SignaTambahan,
+                                    StatusPengambilanObat = item.dr.StatusPengambilanObat,
                                     Komposisi = komposisi
                                 };
                             }).ToList(),
@@ -476,6 +478,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         equals new { b.KunjunganId, b.ItemId } into billingJoin
                     from billing in billingJoin.DefaultIfEmpty()
 
+                    join satuan in _applicationDbContext.Satuans on obat.SatuanId equals satuan.SatuanId into satuanJoin
+                    from satuan in satuanJoin.DefaultIfEmpty()
+
+                    join bentuk in _applicationDbContext.BentukObats on obat.BentukObatId equals bentuk.BentukObatId into bentukJoin
+                    from bentuk in bentukJoin.DefaultIfEmpty()
+
                     select new
                     {
                         DetailResep = dr,
@@ -576,6 +584,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                             billing?.BillingKode,
                             billing?.JenisBilling,
                             dr.StatusPengambilanObat,
+                            dr.StatusCoverObat,
                             IsIteratur = dr.IsIteratur.GetValueOrDefault(false),
                             dr.JumlahIteratur,
                             TglMulaiIteratur = dr.TglMulaiIteratur?.ToString("yyyy-MM-dd"),
