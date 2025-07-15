@@ -365,6 +365,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         join dp in _applicationDbContext.DokterPolis
                             on a.DokterPoliId equals dp.DokterPoliId
 
+                        join p in _applicationDbContext.Polikliniks
+                            on dp.PoliId equals p.PoliklinikId
+
                         join d in _applicationDbContext.Dokters
                             on dp.DokterId equals d.DokterId
 
@@ -377,6 +380,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             UpdateDateTime = a.UpdateDateTime,
                             UpdateBy = a.UpdateBy,
                             DokterPoliId = a.DokterPoliId,
+                            NamaPoliklinik = p.NamaPoliklinik,
                             WaktuPraktek = a.WaktuPraktek,
                             HariPraktek = a.HariPraktek,
                             JamMulai = a.JamMulai,
