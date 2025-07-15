@@ -297,27 +297,32 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                             }).ToList(),
 
 
-                        TotalObat = Math.Round((decimal)group
-                            .Where(x => x.dr != null && x.o != null)
-                            .DistinctBy(x => x.dr.DetailResepId)
-                            .Sum(x => x.dr.Qty * x.o.HargaJual), 0),
+                        TotalObat = (decimal)Math.Ceiling(
+                            (decimal)group
+                                .Where(x => x.dr != null && x.o != null)
+                                .DistinctBy(x => x.dr.DetailResepId)
+                                .Sum(x => x.dr.Qty * x.o.HargaJual)
+                        ),
 
-                        TotalObatRacikan = Math.Round(group
-                            .Where(x => x.dr != null && x.dr.IsRacikan == true && x.rc != null)
-                            .GroupBy(x => x.dr.RacikanId)
-                            .Select(g =>
-                            {
-                                var billing = billings.FirstOrDefault(b =>
-                                    b.JenisBilling == "Obat" && b.ItemId == g.Key);
-                                return billing?.SubTotalItem ?? 0;
-                            })
-                            .Sum(),0),
+                        TotalObatRacikan = (decimal)Math.Ceiling(
+                            group
+                                .Where(x => x.dr != null && x.dr.IsRacikan == true && x.rc != null)
+                                .GroupBy(x => x.dr.RacikanId)
+                                .Select(g =>
+                                {
+                                    var billing = billings.FirstOrDefault(b =>
+                                        b.JenisBilling == "Obat" && b.ItemId == g.Key);
+                                    return billing?.SubTotalItem ?? 0;
+                                })
+                                .Sum()
+                        ),
 
-
-                        TotalTindakan = Math.Round(group
-                                                   .Where(x => x.to != null && x.t != null)
-                                                   .DistinctBy(x => x.to.TindakanKunjunganId)
-                                                   .Sum(x => (x.to.Quantity ?? 0) * (x.to.Total ?? 0)), 0),
+                        TotalTindakan = (decimal)Math.Ceiling(
+                            group
+                                .Where(x => x.to != null && x.t != null)
+                                .DistinctBy(x => x.to.TindakanKunjunganId)
+                                .Sum(x => (x.to.Quantity ?? 0) * (x.to.Total ?? 0))
+                        ),
 
                         TotalBiayaAdmin = billings
                             .Where(b => b.JenisBilling == "Biaya Admin")
