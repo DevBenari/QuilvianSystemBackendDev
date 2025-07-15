@@ -380,6 +380,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             UpdateDateTime = a.UpdateDateTime,
                             UpdateBy = a.UpdateBy,
                             DokterPoliId = a.DokterPoliId,
+                            PoliId = dp.PoliId,
                             NamaPoliklinik = p.NamaPoliklinik,
                             WaktuPraktek = a.WaktuPraktek,
                             HariPraktek = a.HariPraktek,
@@ -397,7 +398,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
                     EF.Functions.ILike(u.KodeJadwalPraktek, search) ||
-                    EF.Functions.ILike(u.HariPraktek, search)
+                    EF.Functions.ILike(u.HariPraktek, search) ||
+                    EF.Functions.ILike(u.NamaPoliklinik, search)
                 );
             }
 
