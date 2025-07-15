@@ -232,7 +232,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         //                NoRM = firstItem.p?.NoRekamMedis ?? "-",
         //                NamaPasien = firstItem.p?.NamaLengkap ?? "-",
         //                UmurPasien = HitungUmurLengkap(firstItem.p?.TanggalLahir),
-        //                NoTelepon1 = firstItem.p?.NoTelepon1 ?? "-",
+        //                NoPasien = firstItem.p?.NoPasien ?? "-",
         //                firstItem.p?.JenisKelamin,
         //                firstItem.k.AsuransiId,
         //                NamaPerusahaan = firstItem.a?.NamaAsuransi ?? null, // NamaAsuransi akan null jika tidak ada asuransi
@@ -399,7 +399,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         NoRM = first.p?.NoRekamMedis ?? "-",
                         NamaPasien = first.p?.NamaLengkap ?? "-",
                         UmurPasien = HitungUmurLengkap(first.p?.TanggalLahir),
-                        NoTelepon1 = first.p?.NoTelepon1 ?? "-",
+                        NoPasien = first.p?.NoPasien ?? "-",
                         first.p?.JenisKelamin,
                         first.k.AsuransiId,
                         NamaPerusahaan = first.a?.NamaAsuransi ?? null,
@@ -633,7 +633,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         //                NoRM = firstItem.p?.NoRekamMedis ?? "-",
         //                NamaPasien = firstItem.p?.NamaLengkap ?? "-",
         //                UmurPasien = HitungUmurLengkap(firstItem.p?.TanggalLahir),
-        //                NoTelepon1 = firstItem.p?.NoTelepon1 ?? "-",
+        //                NoPasien = firstItem.p?.NoPasien ?? "-",
         //                firstItem.p?.JenisKelamin,
         //                firstItem.k.AsuransiId,
         //                NamaPerusahaan = firstItem.a?.NamaAsuransi ?? null, // NamaAsuransi akan null jika tidak ada asuransi

@@ -12,8 +12,8 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250709020806_editdetailracikan")]
-    partial class editdetailracikan
+    [Migration("20250715071439_tabelkamarasuransidaneditpdfbaru")]
+    partial class tabelkamarasuransidaneditpdfbaru
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -336,8 +336,17 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("Keterangan")
                         .HasColumnType("text");
 
+                    b.Property<string>("KodeRacikan")
+                        .HasColumnType("text");
+
                     b.Property<string>("NamaRacikan")
                         .HasColumnType("text");
+
+                    b.Property<int?>("QtyRacikan")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("ResepId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Signa")
                         .HasColumnType("text");
@@ -430,7 +439,7 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<Guid?>("ObatId")
                         .HasColumnType("uuid");
 
-                    b.Property<int?>("Qty")
+                    b.Property<int?>("QtyUsed")
                         .HasColumnType("integer");
 
                     b.Property<Guid?>("RacikanId")
@@ -548,9 +557,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<DateTimeOffset>("DeleteDateTime")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<decimal?>("DosisRacikan")
-                        .HasColumnType("numeric");
-
                     b.Property<decimal?>("HargaObat")
                         .HasColumnType("numeric");
 
@@ -574,9 +580,6 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.Property<decimal?>("JumlahIteratur")
                         .HasColumnType("numeric");
-
-                    b.Property<string>("KeteranganRacikan")
-                        .HasColumnType("text");
 
                     b.Property<DateTime?>("MasaAktifIteratur")
                         .HasColumnType("timestamp with time zone");
@@ -1327,6 +1330,53 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.HasKey("AsuransiPasienId");
 
                     b.ToTable("MstAsuransiPasien", "public");
+                });
+
+            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Bed", b =>
+                {
+                    b.Property<Guid>("BedId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CreateBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreateDateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DeleteBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("DeleteDateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Deskripsi")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("KamarId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("NomorBed")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PosisiBed")
+                        .HasColumnType("text");
+
+                    b.Property<bool?>("Status")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("UpdateBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdateDateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("BedId");
+
+                    b.ToTable("Beds");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Benefit", b =>
@@ -2372,6 +2422,100 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.HasIndex("ProvinsiId");
 
                     b.ToTable("MstKabupatenKota", "public");
+                });
+
+            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Kamar", b =>
+                {
+                    b.Property<Guid>("KamarId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CreateBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreateDateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DeleteBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("DeleteDateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Deskripsi")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("KelasId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("KodeKamar")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Lantai")
+                        .HasColumnType("text");
+
+                    b.Property<string>("NamaKamar")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PosisiRuangan")
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("TarifHarian")
+                        .HasColumnType("numeric");
+
+                    b.Property<Guid>("UpdateBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdateDateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("KamarId");
+
+                    b.ToTable("Kamars");
+                });
+
+            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.KamarAsuransi", b =>
+                {
+                    b.Property<Guid>("KamarAsuransiId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AsuransiId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CreateBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreateDateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DeleteBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("DeleteDateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("KamarId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Keterangan")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("UpdateBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdateDateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("KamarAsuransiId");
+
+                    b.ToTable("KamarAsuransi", "public");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Kandungan", b =>
@@ -5125,9 +5269,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<Guid?>("MembershipId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("NamaKontakDarurat")
-                        .HasColumnType("text");
-
                     b.Property<string>("NamaLengkap")
                         .IsRequired()
                         .HasColumnType("text");
@@ -5136,6 +5277,12 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("NamaPerusahaan")
+                        .HasColumnType("text");
+
+                    b.Property<string>("NamaWali2")
+                        .HasColumnType("text");
+
+                    b.Property<string>("NamaWali3")
                         .HasColumnType("text");
 
                     b.Property<Guid?>("NegaraId")
@@ -5148,22 +5295,22 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("NoIdentitasDarurat")
                         .HasColumnType("text");
 
-                    b.Property<string>("NoRekamMedis")
-                        .HasColumnType("text");
-
                     b.Property<string>("NoPasien")
                         .HasColumnType("text");
 
-                    b.Property<string>("NoWali2")
-                        .HasColumnType("text");
-
-                    b.Property<string>("NoWali3")
+                    b.Property<string>("NoRekamMedis")
                         .HasColumnType("text");
 
                     b.Property<string>("NoTeleponDarurat")
                         .HasColumnType("text");
 
                     b.Property<string>("NoTeleponPerusahaan")
+                        .HasColumnType("text");
+
+                    b.Property<string>("NoWali2")
+                        .HasColumnType("text");
+
+                    b.Property<string>("NoWali3")
                         .HasColumnType("text");
 
                     b.Property<Guid?>("PekerjaanId")
@@ -5736,6 +5883,59 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.HasKey("RegistFasilitasPasienId");
 
                     b.ToTable("RgsFasilitasPasien", "public");
+                });
+
+            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.SuratPengantarRawatInap", b =>
+                {
+                    b.Property<Guid>("SuratPengantarRawatInapId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AlasanRanap")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AsalUnit")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("CreateBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreateDateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DeleteBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("DeleteDateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Diagnosa")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("ICDId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("KunjunganId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("NomorSuratPengantar")
+                        .HasColumnType("text");
+
+                    b.Property<string>("RencanaTindakLanjut")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("UpdateBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdateDateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("SuratPengantarRawatInapId");
+
+                    b.ToTable("SuratPengantarRawatInaps");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Models.ApplicationUser", b =>

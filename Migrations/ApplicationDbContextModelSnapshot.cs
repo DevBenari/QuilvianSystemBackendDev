@@ -2475,6 +2475,47 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.ToTable("Kamars");
                 });
 
+            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.KamarAsuransi", b =>
+                {
+                    b.Property<Guid>("KamarAsuransiId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AsuransiId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CreateBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreateDateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DeleteBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("DeleteDateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("KamarId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Keterangan")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("UpdateBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdateDateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("KamarAsuransiId");
+
+                    b.ToTable("KamarAsuransi", "public");
+                });
+
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Kandungan", b =>
                 {
                     b.Property<Guid>("KandunganId")
@@ -5226,9 +5267,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<Guid?>("MembershipId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("NamaKontakDarurat")
-                        .HasColumnType("text");
-
                     b.Property<string>("NamaLengkap")
                         .IsRequired()
                         .HasColumnType("text");
@@ -5237,6 +5275,12 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("NamaPerusahaan")
+                        .HasColumnType("text");
+
+                    b.Property<string>("NamaWali2")
+                        .HasColumnType("text");
+
+                    b.Property<string>("NamaWali3")
                         .HasColumnType("text");
 
                     b.Property<Guid?>("NegaraId")
@@ -5249,22 +5293,22 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("NoIdentitasDarurat")
                         .HasColumnType("text");
 
+                    b.Property<string>("NoPasien")
+                        .HasColumnType("text");
+
                     b.Property<string>("NoRekamMedis")
-                        .HasColumnType("text");
-
-                    b.Property<string>("NoTelepon1")
-                        .HasColumnType("text");
-
-                    b.Property<string>("NoTelepon2")
-                        .HasColumnType("text");
-
-                    b.Property<string>("NoTelepon3")
                         .HasColumnType("text");
 
                     b.Property<string>("NoTeleponDarurat")
                         .HasColumnType("text");
 
                     b.Property<string>("NoTeleponPerusahaan")
+                        .HasColumnType("text");
+
+                    b.Property<string>("NoWali2")
+                        .HasColumnType("text");
+
+                    b.Property<string>("NoWali3")
                         .HasColumnType("text");
 
                     b.Property<Guid?>("PekerjaanId")

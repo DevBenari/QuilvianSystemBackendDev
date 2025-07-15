@@ -122,9 +122,11 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                             KelurahanId = a.KelurahanId,
                             KodePos = a.KodePos,
                             Email = a.Email,
-                            NoTelepon1 = a.NoTelepon1,
-                            NoTelepon2 = a.NoTelepon2,
-                            NoTelepon3 = a.NoTelepon3,
+                            NoPasien = a.NoPasien,
+                            NoWali2 = a.NoWali2,
+                            NoWali3 = a.NoWali3,
+                            NamaWali2 = a.NamaWali2,
+                            NamaWali3 = a.NamaWali3,
                             Kewarganegaraan = a.Kewarganegaraan,
                             Suku = a.Suku,
                             StatusKewarganegaraan = a.StatusKewarganegaraan,
@@ -137,7 +139,6 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                             RiwayatPenyakit = a.RiwayatPenyakit,
                             RiwayatOperasi = a.RiwayatOperasi,
                             RiwayatPenyakitKeluarga = a.RiwayatPenyakitKeluarga,
-                            NamaKontakDarurat = a.NamaKontakDarurat,
                             HubunganKeluarga1 = a.HubunganKeluarga1,
                             NoIdentitasDarurat = a.NoIdentitasDarurat,
                             AlamatDarurat = a.AlamatDarurat,
@@ -225,9 +226,11 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     listdata.KelurahanId,
                     listdata.KodePos,
                     listdata.Email,
-                    listdata.NoTelepon1,
-                    listdata.NoTelepon2,
-                    listdata.NoTelepon3,
+                    listdata.NoPasien,
+                    listdata.NoWali2,
+                    listdata.NoWali3,
+                    listdata.NamaWali2,
+                    listdata.NamaWali3,
                     listdata.Kewarganegaraan,
                     listdata.Suku,
                     listdata.StatusKewarganegaraan,
@@ -240,7 +243,6 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     listdata.RiwayatPenyakit,
                     listdata.RiwayatOperasi,
                     listdata.RiwayatPenyakitKeluarga,
-                    listdata.NamaKontakDarurat,
                     listdata.HubunganKeluarga1,
                     listdata.NoIdentitasDarurat,
                     listdata.AlamatDarurat,
@@ -306,9 +308,11 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     listdata.KelurahanId,
                     listdata.KodePos,
                     listdata.Email,
-                    listdata.NoTelepon1,
-                    listdata.NoTelepon2,
-                    listdata.NoTelepon3,
+                    listdata.NoPasien,
+                    listdata.NoWali2,
+                    listdata.NoWali3,
+                    listdata.NamaWali2,
+                    listdata.NamaWali3,
                     listdata.Kewarganegaraan,
                     listdata.Suku,
                     listdata.StatusKewarganegaraan,
@@ -321,7 +325,6 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     listdata.RiwayatPenyakit,
                     listdata.RiwayatOperasi,
                     listdata.RiwayatPenyakitKeluarga,
-                    listdata.NamaKontakDarurat,
                     listdata.HubunganKeluarga1,
                     listdata.NoIdentitasDarurat,
                     listdata.AlamatDarurat,
@@ -619,9 +622,11 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                         KelurahanId = vm.KelurahanId,
                         KodePos = vm.KodePos,
                         Email = vm.Email,
-                        NoTelepon1 = vm.NoTelepon1,
-                        NoTelepon2 = vm.NoTelepon2,
-                        NoTelepon3 = vm.NoTelepon3,
+                        NoPasien = vm.NoPasien,
+                        NoWali2 = vm.NoWali2,
+                        NoWali3 = vm.NoWali3,
+                        NamaWali2 = vm.NamaWali2,
+                        NamaWali3 = vm.NamaWali3,
                         Kewarganegaraan = vm.Kewarganegaraan,
                         Suku = vm.Suku,
                         StatusKewarganegaraan = vm.StatusKewarganegaraan,
@@ -634,7 +639,6 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                         RiwayatPenyakit = vm.RiwayatPenyakit,
                         RiwayatOperasi = vm.RiwayatOperasi,
                         RiwayatPenyakitKeluarga = vm.RiwayatPenyakitKeluarga,
-                        NamaKontakDarurat = vm.NamaKontakDarurat,
                         HubunganKeluarga1 = vm.HubunganKeluarga1,
                         NoIdentitasDarurat = vm.NoIdentitasDarurat,
                         AlamatDarurat = vm.AlamatDarurat,
@@ -733,9 +737,11 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 pasien.KelurahanId = vm.KelurahanId ?? pasien.KelurahanId;
                 pasien.KodePos = vm.KodePos ?? pasien.KodePos;
                 pasien.Email = vm.Email ?? pasien.Email;
-                pasien.NoTelepon1 = vm.NoTelepon1 ?? pasien.NoTelepon1;
-                pasien.NoTelepon2 = vm.NoTelepon2 ?? pasien.NoTelepon2;
-                pasien.NoTelepon3 = vm.NoTelepon3 ?? pasien.NoTelepon3;
+                pasien.NoPasien = vm.NoPasien ?? pasien.NoPasien;
+                pasien.NoWali2 = vm.NoWali2 ?? pasien.NoWali2;
+                pasien.NoWali3 = vm.NoWali3 ?? pasien.NoWali3;
+                pasien.NamaWali2 = vm.NamaWali2 ?? pasien.NamaWali2;
+                pasien.NamaWali3 = vm.NamaWali3 ?? pasien.NamaWali3;
                 pasien.Kewarganegaraan = vm.Kewarganegaraan ?? pasien.Kewarganegaraan;
                 pasien.Suku = vm.Suku ?? pasien.Suku;
                 pasien.StatusKewarganegaraan = vm.StatusKewarganegaraan ?? pasien.StatusKewarganegaraan;
@@ -748,7 +754,6 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 pasien.RiwayatPenyakit = vm.RiwayatPenyakit ?? pasien.RiwayatPenyakit;
                 pasien.RiwayatOperasi = vm.RiwayatOperasi ?? pasien.RiwayatOperasi;
                 pasien.RiwayatPenyakitKeluarga = vm.RiwayatPenyakitKeluarga ?? pasien.RiwayatPenyakitKeluarga;
-                pasien.NamaKontakDarurat = vm.NamaKontakDarurat ?? pasien.NamaKontakDarurat;
                 pasien.HubunganKeluarga1 = vm.HubunganKeluarga1 ?? pasien.HubunganKeluarga1;
                 pasien.NoIdentitasDarurat = vm.NoIdentitasDarurat ?? pasien.NoIdentitasDarurat;
                 pasien.AlamatDarurat = vm.AlamatDarurat ?? pasien.AlamatDarurat;
@@ -915,9 +920,11 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                             KelurahanId = a.KelurahanId,
                             KodePos = a.KodePos,
                             Email = a.Email,
-                            NoTelepon1 = a.NoTelepon1,
-                            NoTelepon2 = a.NoTelepon2,
-                            NoTelepon3 = a.NoTelepon3,
+                            NoPasien = a.NoPasien,
+                            NoWali2 = a.NoWali2,
+                            NoWali3 = a.NoWali3,
+                            NamaWali2 = a.NamaWali2,
+                            NamaWali3 = a.NamaWali3,
                             Kewarganegaraan = a.Kewarganegaraan,
                             Suku = a.Suku,
                             StatusKewarganegaraan = a.StatusKewarganegaraan,
@@ -930,7 +937,6 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                             RiwayatPenyakit = a.RiwayatPenyakit,
                             RiwayatOperasi = a.RiwayatOperasi,
                             RiwayatPenyakitKeluarga = a.RiwayatPenyakitKeluarga,
-                            NamaKontakDarurat = a.NamaKontakDarurat,
                             HubunganKeluarga1 = a.HubunganKeluarga1,
                             NoIdentitasDarurat = a.NoIdentitasDarurat,
                             AlamatDarurat = a.AlamatDarurat,

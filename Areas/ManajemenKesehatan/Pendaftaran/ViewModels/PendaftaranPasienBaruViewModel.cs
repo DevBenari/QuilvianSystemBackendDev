@@ -29,9 +29,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewMode
         public Guid? KelurahanId { get; set; }
         public string? KodePos { get; set; }
         public string? Email { get; set; }
-        public string? NoTelepon1 { get; set; }
-        public string? NoTelepon2 { get; set; }
-        public string? NoTelepon3 { get; set; }
+        public string? NoPasien { get; set; }
+        public string? NoWali2 { get; set; }
+        public string? NoWali3 { get; set; }
 
         // Informasi Grafis
         public string? Kewarganegaraan { get; set; }
@@ -52,7 +52,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewMode
         public string? RiwayatPenyakitKeluarga { get; set; }
 
         // Informasi Darurat
-        public string? NamaKontakDarurat { get; set; } // Data karyawan rumah sakit yang input
+        public string? NamaWali2 { get; set; }
+        public string? NamaWali3 { get; set; }
         public string? HubunganKeluarga1 { get; set; }
         public string? NoIdentitasDarurat { get; set; }
         public string? AlamatDarurat { get; set; }

@@ -4184,13 +4184,13 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("NoRekamMedis")
                         .HasColumnType("text");
 
-                    b.Property<string>("NoTelepon1")
+                    b.Property<string>("NoPasien")
                         .HasColumnType("text");
 
-                    b.Property<string>("NoTelepon2")
+                    b.Property<string>("NoWali2")
                         .HasColumnType("text");
 
-                    b.Property<string>("NoTelepon3")
+                    b.Property<string>("NoWali3")
                         .HasColumnType("text");
 
                     b.Property<string>("NoTeleponDarurat")

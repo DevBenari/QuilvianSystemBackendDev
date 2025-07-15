@@ -102,9 +102,41 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             data.UpdateBy = userId;
 
             _applicationDbContext.Billings.Update(data);
+            
+            // update status pengambilan obat pada DetailResep
+            var resep = await _applicationDbContext.Reseps
+            .FirstOrDefaultAsync(r => r.KunjunganId == data.KunjunganId && !r.IsDelete);
+
+            if (resep == null)
+            {
+                return NotFound(new { message = "Resep tidak ditemukan untuk kunjungan ini." });
+            }
+
+            // Langkah 2: Ambil detail resep yang aktif (tidak dihapus) berdasarkan ResepId
+            var detailResepList = await _applicationDbContext.DetailReseps
+                .Where(dr => dr.ResepId == resep.ResepId && !dr.IsDelete)
+                .ToListAsync();
+
+            // Langkah 3: Cek apakah ada detail resep yang cocok dengan ObatId dari Billing.ItemId
+            var detailResep = detailResepList
+                .FirstOrDefault(dr => dr.ObatId == data.ItemId);
+
+            if (detailResep == null)
+            {
+                return NotFound(new { message = "Obat dengan ItemId tidak ditemukan di resep untuk kunjungan ini." });
+            }
+            // Langkah 4: Update status pengambilan obat pada DetailResep
+            detailResep.StatusPengambilanObat = request.Status;
+            detailResep.UpdateDateTime = DateTimeOffset.UtcNow;
+            detailResep.UpdateBy = userId;
+
+            _applicationDbContext.DetailReseps.Update(detailResep);
+            
+
+            
             _applicationDbContext.SaveChanges();
 
-            return Ok(new { message = "Status isFinished berhasil diperbarui." });
+            return Ok(new { message = "Status pengambilan obat berhasil diperbarui." });
         }
 
         [HttpGet("GetBillingByKunjunganId/{kunjunganId}")]
@@ -171,7 +203,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         NoRM = firstItem.p?.NoRekamMedis ?? "-",
                         NamaPasien = firstItem.p?.NamaLengkap ?? "-",
                         UmurPasien = HitungUmurLengkap(firstItem.p?.TanggalLahir),
-                        NoTelepon1 = firstItem.p?.NoTelepon1 ?? "-",
+                        NoPasien = firstItem.p?.NoPasien ?? "-",
                         firstItem.p?.JenisKelamin,
                         firstItem.k.AsuransiId,
                         NamaPerusahaan = firstItem.a?.NamaAsuransi ?? null,
