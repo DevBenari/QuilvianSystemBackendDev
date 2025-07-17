@@ -80,25 +80,67 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            // Query data
-            var query = (from a in _applicationDbContext.SuratPengantarRawatInaps
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false || a.IsDelete == null
-                         select new
-                         {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = u.FullName,
-                             a.SuratPengantarRawatInapId,
-                             a.KunjunganId,
-                             a.NomorSuratPengantar,
-                             a.Diagnosa,
-                             a.ICDId,
-                             a.AlasanRanap,
-                             a.RencanaTindakLanjut,
-                             a.AsalUnit,
-                         }).OrderByDescending(a => a.CreateDateTime);
+            var query = from a in _applicationDbContext.SuratPengantarRawatInaps
+                        join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId into userJoin
+                        from u in userJoin.DefaultIfEmpty()
+
+                        join k in _applicationDbContext.Kunjungans on a.KunjunganId equals k.KunjunganID
+                        join p in _applicationDbContext.PendaftaranPasienBarus on k.PasienId equals p.PendaftaranPasienBaruId
+                        join d in _applicationDbContext.Dokters on k.DokterId equals d.DokterId
+                        join poli in _applicationDbContext.Polikliniks on k.PoliklinikId equals poli.PoliklinikId
+                        join ar in _applicationDbContext.Asuransis on k.AsuransiId equals ar.AsuransiId into asuransiGroup
+                        from ar in asuransiGroup.DefaultIfEmpty()
+                        join ap in _applicationDbContext.AsuransiPasiens on p.PendaftaranPasienBaruId.ToString() equals ap.PasienId into asuransiPasienGroup
+                        from ap in asuransiPasienGroup.DefaultIfEmpty()
+
+                        where (a.IsDelete == false || a.IsDelete == null)
+                              && (k.IsDelete == false || k.IsDelete == null)
+
+                        orderby a.CreateDateTime descending
+
+                        select new
+                        {
+                            // Data Surat Pengantar
+                            a.SuratPengantarRawatInapId,
+                            a.KunjunganId,
+                            a.NomorSuratPengantar,
+                            a.Diagnosa,
+                            a.ICDId,
+                            a.AlasanRanap,
+                            a.RencanaTindakLanjut,
+                            a.AsalUnit,
+                            a.CreateDateTime,
+                            a.CreateBy,
+                            CreateByName = u.FullName,
+
+                            // Data Kunjungan
+                            k.NoRekamMedis,
+                            k.TipePasien,
+                            k.TipePembayaran,
+                            k.JenisKunjungan,
+                            k.IsFinished,
+                            k.TglMasukRanap,
+                            k.TglKeluarRanap,
+
+                            // Data Dokter
+                            DokterId = d.DokterId,
+                            DokterName = d.NmDokter,
+
+                            // Data Poli
+                            PoliklinikId = poli.PoliklinikId,
+                            PoliklinikName = poli.NamaPoliklinik,
+
+                            // Data Pasien
+                            PasienId = p.PendaftaranPasienBaruId,
+                            PasienName = p.NamaLengkap,
+                            JenisKelamin = p.JenisKelamin,
+                            Umur = HitungUmurLengkap(p.TanggalLahir),
+                            p.NoPasien,
+
+                            //data Asuransi
+                            ar.NamaAsuransi,
+                            ap.NoPolis
+                        };
 
             // Hitung total data sebelum paginasi
             var totalRows = query.Count();
@@ -134,38 +176,40 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.SuratPengantarRawatInaps.Find(id);
-            if (listdata == null)
-            {
-                return NotFound(new { message = "Data tidak ditemukan." });
-            }
+            var result = (
+                from a in _applicationDbContext.SuratPengantarRawatInaps
+                join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId into userJoin
+                from u in userJoin.DefaultIfEmpty()
 
-            return Ok(new
-            {
-                message = "Ditemukan || 200 OK",
-                data = listdata
-            });
-        }
-
-        [HttpGet("DataPasien/{kunjunganId}")]
-        public async Task<IActionResult> GetDataPasienByKunjunganId(Guid kunjunganId)
-        {
-            // Cek apakah KunjunganId valid  
-            if (kunjunganId == Guid.Empty)
-            {
-                return BadRequest(new { message = "KunjunganId tidak valid." });
-            }
-
-            // Ambil data Kunjungan berdasarkan KunjunganId  
-            var query =
-                from k in _applicationDbContext.Kunjungans
+                join k in _applicationDbContext.Kunjungans on a.KunjunganId equals k.KunjunganID
                 join p in _applicationDbContext.PendaftaranPasienBarus on k.PasienId equals p.PendaftaranPasienBaruId
                 join d in _applicationDbContext.Dokters on k.DokterId equals d.DokterId
                 join poli in _applicationDbContext.Polikliniks on k.PoliklinikId equals poli.PoliklinikId
-                where k.KunjunganID == kunjunganId && (k.IsDelete == false || k.IsDelete == null)
+                join ar in _applicationDbContext.Asuransis on k.AsuransiId equals ar.AsuransiId into asuransiGroup
+                from ar in asuransiGroup.DefaultIfEmpty()
+                join ap in _applicationDbContext.AsuransiPasiens on p.PendaftaranPasienBaruId.ToString() equals ap.PasienId into asuransiPasienGroup
+                from ap in asuransiPasienGroup.DefaultIfEmpty()
+
+                where a.SuratPengantarRawatInapId == id
+                      && (a.IsDelete == false || a.IsDelete == null)
+                      && (k.IsDelete == false || k.IsDelete == null)
+
                 select new
                 {
-                    k.KunjunganID,
+                    // Data Surat Pengantar
+                    a.SuratPengantarRawatInapId,
+                    a.KunjunganId,
+                    a.NomorSuratPengantar,
+                    a.Diagnosa,
+                    a.ICDId,
+                    a.AlasanRanap,
+                    a.RencanaTindakLanjut,
+                    a.AsalUnit,
+                    a.CreateDateTime,
+                    a.CreateBy,
+                    CreateByName = u.FullName,
+
+                    // Data Kunjungan
                     k.NoRekamMedis,
                     k.TipePasien,
                     k.TipePembayaran,
@@ -173,29 +217,86 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     k.IsFinished,
                     k.TglMasukRanap,
                     k.TglKeluarRanap,
+
+                    // Data Dokter
                     DokterId = d.DokterId,
                     DokterName = d.NmDokter,
+
+                    // Data Poli
                     PoliklinikId = poli.PoliklinikId,
                     PoliklinikName = poli.NamaPoliklinik,
+
+                    // Data Pasien
                     PasienId = p.PendaftaranPasienBaruId,
                     PasienName = p.NamaLengkap,
+                    JenisKelamin = p.JenisKelamin,
                     Umur = HitungUmurLengkap(p.TanggalLahir),
-                    p.JenisKelamin,
-                };
+                    p.NoPasien,
 
-            var result = await query.FirstOrDefaultAsync();
+                    // Data Asuransi
+                    ar.NamaAsuransi,
+                    ap.NoPolis
+
+                }
+            ).FirstOrDefault();
 
             if (result == null)
             {
-                return NotFound(new { message = "Data pasien tidak ditemukan." });
+                return NotFound(new { message = "Surat pengantar tidak ditemukan." });
             }
 
-            return Ok(new
-            {
-                message = "Data pasien ditemukan || 200 OK",
-                data = result
-            });
+            return Ok(result);
         }
+
+        //[HttpGet("DataPasien/{kunjunganId}")]
+        //public async Task<IActionResult> GetDataPasienByKunjunganId(Guid kunjunganId)
+        //{
+        //    // Cek apakah KunjunganId valid  
+        //    if (kunjunganId == Guid.Empty)
+        //    {
+        //        return BadRequest(new { message = "KunjunganId tidak valid." });
+        //    }
+
+        //    // Ambil data Kunjungan berdasarkan KunjunganId  
+        //    var query =
+        //        from k in _applicationDbContext.Kunjungans
+        //        join p in _applicationDbContext.PendaftaranPasienBarus on k.PasienId equals p.PendaftaranPasienBaruId
+        //        join d in _applicationDbContext.Dokters on k.DokterId equals d.DokterId
+        //        join poli in _applicationDbContext.Polikliniks on k.PoliklinikId equals poli.PoliklinikId
+        //        where k.KunjunganID == kunjunganId && (k.IsDelete == false || k.IsDelete == null)
+        //        select new
+        //        {
+        //            k.KunjunganID,
+        //            k.NoRekamMedis,
+        //            k.TipePasien,
+        //            k.TipePembayaran,
+        //            k.JenisKunjungan,
+        //            k.IsFinished,
+        //            k.TglMasukRanap,
+        //            k.TglKeluarRanap,
+        //            DokterId = d.DokterId,
+        //            DokterName = d.NmDokter,
+        //            PoliklinikId = poli.PoliklinikId,
+        //            PoliklinikName = poli.NamaPoliklinik,
+        //            PasienId = p.PendaftaranPasienBaruId,
+        //            PasienName = p.NamaLengkap,
+        //            Umur = HitungUmurLengkap(p.TanggalLahir),
+        //            p.JenisKelamin,
+        //        };
+
+        //    var result = await query.FirstOrDefaultAsync();
+
+        //    if (result == null)
+        //    {
+        //        return NotFound(new { message = "Data pasien tidak ditemukan." });
+        //    }
+
+        //    return Ok(new
+        //    {
+        //        message = "Data pasien ditemukan || 200 OK",
+        //        data = result
+        //    });
+        //}
 
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] SuratPengantarRawatInapViewModel vm)
@@ -453,25 +554,67 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         {
 
             // Query data
-            // Query data
-            var query = (from a in _applicationDbContext.SuratPengantarRawatInaps
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false || a.IsDelete == null
-                         select new
-                         {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = u.FullName,
-                             a.SuratPengantarRawatInapId,
-                             a.KunjunganId,
-                             a.NomorSuratPengantar,
-                             a.Diagnosa,
-                             a.ICDId,
-                             a.AlasanRanap,
-                             a.RencanaTindakLanjut,
-                             a.AsalUnit,
-                         });
+            var query = from a in _applicationDbContext.SuratPengantarRawatInaps
+                        join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId into userJoin
+                        from u in userJoin.DefaultIfEmpty()
+
+                        join k in _applicationDbContext.Kunjungans on a.KunjunganId equals k.KunjunganID
+                        join p in _applicationDbContext.PendaftaranPasienBarus on k.PasienId equals p.PendaftaranPasienBaruId
+                        join d in _applicationDbContext.Dokters on k.DokterId equals d.DokterId
+                        join poli in _applicationDbContext.Polikliniks on k.PoliklinikId equals poli.PoliklinikId
+                        join ar in _applicationDbContext.Asuransis on k.AsuransiId equals ar.AsuransiId into asuransiGroup
+                        from ar in asuransiGroup.DefaultIfEmpty()
+                        join ap in _applicationDbContext.AsuransiPasiens on p.PendaftaranPasienBaruId.ToString() equals ap.PasienId into asuransiPasienGroup
+                        from ap in asuransiPasienGroup.DefaultIfEmpty()
+
+                        where (a.IsDelete == false || a.IsDelete == null)
+                              && (k.IsDelete == false || k.IsDelete == null)
+
+                        orderby a.CreateDateTime descending
+
+                        select new
+                        {
+                            // Data Surat Pengantar
+                            a.SuratPengantarRawatInapId,
+                            a.KunjunganId,
+                            a.NomorSuratPengantar,
+                            a.Diagnosa,
+                            a.ICDId,
+                            a.AlasanRanap,
+                            a.RencanaTindakLanjut,
+                            a.AsalUnit,
+                            a.CreateDateTime,
+                            a.CreateBy,
+                            CreateByName = u.FullName,
+
+                            // Data Kunjungan
+                            k.NoRekamMedis,
+                            k.TipePasien,
+                            k.TipePembayaran,
+                            k.JenisKunjungan,
+                            k.IsFinished,
+                            k.TglMasukRanap,
+                            k.TglKeluarRanap,
+
+                            // Data Dokter
+                            DokterId = d.DokterId,
+                            DokterName = d.NmDokter,
+
+                            // Data Poli
+                            PoliklinikId = poli.PoliklinikId,
+                            PoliklinikName = poli.NamaPoliklinik,
+
+                            // Data Pasien
+                            PasienId = p.PendaftaranPasienBaruId,
+                            PasienName = p.NamaLengkap,
+                            JenisKelamin = p.JenisKelamin,
+                            Umur = HitungUmurLengkap(p.TanggalLahir),
+                            p.NoPasien,
+
+                            //data Asuransi
+                            ar.NamaAsuransi,
+                            ap.NoPolis
+                        };
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             //if (!string.IsNullOrWhiteSpace(search))
