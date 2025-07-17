@@ -17,6 +17,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.ViewModels;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controllers
 {
@@ -47,6 +48,30 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             _webHostEnvironment = webHostEnvironment;
         }
 
+        private static string HitungUmurLengkap(DateTime? tanggalLahir)
+        {
+            if (!tanggalLahir.HasValue) return "-";
+
+            var today = DateTime.Today;
+            int tahun = today.Year - tanggalLahir.Value.Year;
+            int bulan = today.Month - tanggalLahir.Value.Month;
+            int hari = today.Day - tanggalLahir.Value.Day;
+
+            if (hari < 0)
+            {
+                bulan--;
+                var prevMonth = today.AddMonths(-1);
+                hari += DateTime.DaysInMonth(prevMonth.Year, prevMonth.Month);
+            }
+
+            if (bulan < 0)
+            {
+                tahun--;
+                bulan += 12;
+            }
+
+            return $"{tahun} tahun {bulan} bulan {hari} hari";
+        }
 
         [HttpGet]
         public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
@@ -119,6 +144,56 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             {
                 message = "Ditemukan || 200 OK",
                 data = listdata
+            });
+        }
+
+        [HttpGet("DataPasien/{kunjunganId}")]
+        public async Task<IActionResult> GetDataPasienByKunjunganId(Guid kunjunganId)
+        {
+            // Cek apakah KunjunganId valid  
+            if (kunjunganId == Guid.Empty)
+            {
+                return BadRequest(new { message = "KunjunganId tidak valid." });
+            }
+
+            // Ambil data Kunjungan berdasarkan KunjunganId  
+            var query =
+                from k in _applicationDbContext.Kunjungans
+                join p in _applicationDbContext.PendaftaranPasienBarus on k.PasienId equals p.PendaftaranPasienBaruId
+                join d in _applicationDbContext.Dokters on k.DokterId equals d.DokterId
+                join poli in _applicationDbContext.Polikliniks on k.PoliklinikId equals poli.PoliklinikId
+                where k.KunjunganID == kunjunganId && (k.IsDelete == false || k.IsDelete == null)
+                select new
+                {
+                    k.KunjunganID,
+                    k.NoRekamMedis,
+                    k.TipePasien,
+                    k.TipePembayaran,
+                    k.JenisKunjungan,
+                    k.IsFinished,
+                    k.TglMasukRanap,
+                    k.TglKeluarRanap,
+                    DokterId = d.DokterId,
+                    DokterName = d.NmDokter,
+                    PoliklinikId = poli.PoliklinikId,
+                    PoliklinikName = poli.NamaPoliklinik,
+                    PasienId = p.PendaftaranPasienBaruId,
+                    PasienName = p.NamaLengkap,
+                    Umur = HitungUmurLengkap(p.TanggalLahir),
+                    p.JenisKelamin,
+                };
+
+            var result = await query.FirstOrDefaultAsync();
+
+            if (result == null)
+            {
+                return NotFound(new { message = "Data pasien tidak ditemukan." });
+            }
+
+            return Ok(new
+            {
+                message = "Data pasien ditemukan || 200 OK",
+                data = result
             });
         }
 
