@@ -14,5 +14,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models
         public string? AlasanRanap { get; set; }
         public string? RencanaTindakLanjut { get; set; }
         public string? AsalUnit { get; set; }
+        public string? Status { get; set; }
     }
 }

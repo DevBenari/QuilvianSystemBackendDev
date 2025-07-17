@@ -21,7 +21,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? Antrian {  get; set; }
         public bool? IsScreening { get; set; }
         public bool? IsPresent { get; set; }
-        public bool? IsFinishedKasir { get; set; } 
+        public bool? IsFinishedKasir { get; set; }
+
+        // ttg rawat inap
+        public DateTime? TglMasukRanap { get; set; }
+        public DateTime? TglKeluarRanap { get; set; }
+        public Guid? DokterDPJId { get; set; }
+        public Guid? KamarId { get; set; }
+        public Guid? BedId { get; set; }
+        public bool? StatusRanap { get; set; }
+        public string? AlasanKeluar { get; set; }
+        public Guid? ReferensiKunjunganId { get; set; }
     }
 
 }

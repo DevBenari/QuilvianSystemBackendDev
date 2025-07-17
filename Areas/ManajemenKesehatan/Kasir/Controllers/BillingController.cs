@@ -206,6 +206,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         NoPasien = firstItem.p?.NoPasien ?? "-",
                         firstItem.p?.JenisKelamin,
                         firstItem.k.AsuransiId,
+                        Email = firstItem.p?.Email ?? "-",
                         NamaPerusahaan = firstItem.a?.NamaAsuransi ?? null,
                         NoPolis = firstItem.ap?.NoPolis ?? "-",
                         firstItem.k.DokterId,
