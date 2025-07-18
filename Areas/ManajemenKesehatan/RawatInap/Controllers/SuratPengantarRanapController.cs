@@ -109,6 +109,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                             a.AlasanRanap,
                             a.RencanaTindakLanjut,
                             a.AsalUnit,
+                            a.Status,
                             a.CreateDateTime,
                             a.CreateBy,
                             CreateByName = u.FullName,
@@ -119,8 +120,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                             k.TipePembayaran,
                             k.JenisKunjungan,
                             k.IsFinished,
-                            k.TglMasukRanap,
-                            k.TglKeluarRanap,
+                            //k.TglMasukRanap,
+                            //k.TglKeluarRanap,
 
                             // Data Dokter
                             DokterId = d.DokterId,
@@ -205,6 +206,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     a.AlasanRanap,
                     a.RencanaTindakLanjut,
                     a.AsalUnit,
+                    a.Status,
                     a.CreateDateTime,
                     a.CreateBy,
                     CreateByName = u.FullName,
@@ -215,8 +217,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     k.TipePembayaran,
                     k.JenisKunjungan,
                     k.IsFinished,
-                    k.TglMasukRanap,
-                    k.TglKeluarRanap,
+                    //k.TglMasukRanap,
+                    //k.TglKeluarRanap,
 
                     // Data Dokter
                     DokterId = d.DokterId,
@@ -581,6 +583,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                             a.AlasanRanap,
                             a.RencanaTindakLanjut,
                             a.AsalUnit,
+                            a.Status,
                             a.CreateDateTime,
                             a.CreateBy,
                             CreateByName = u.FullName,
@@ -591,8 +594,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                             k.TipePembayaran,
                             k.JenisKunjungan,
                             k.IsFinished,
-                            k.TglMasukRanap,
-                            k.TglKeluarRanap,
+                            //k.TglMasukRanap,
+                            //k.TglKeluarRanap,
 
                             // Data Dokter
                             DokterId = d.DokterId,

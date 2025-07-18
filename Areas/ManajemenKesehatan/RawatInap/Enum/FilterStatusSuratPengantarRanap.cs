@@ -6,9 +6,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Enum
     public enum FilterStatusSuratPengantarRanap
     {
         Menunggu = 0,
-        Proses = 1,
-        Selesai = 2,
-        Dibatalkan = 3,
-        Kadaluarsa = 4,
+        Selesai = 1,
+        Dibatalkan = 2,
+        Kadaluarsa = 3,
     }
 }
