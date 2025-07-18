@@ -210,39 +210,44 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                       })
                 .ToListAsync();
 
-            var daftarRacikan = await _applicationDbContext.DetailReseps
+            var daftarRacikanRaw = await _applicationDbContext.DetailReseps
                 .Where(d => d.ResepId == resep.ResepId && d.RacikanId != null)
                 .Join(_applicationDbContext.Racikans,
-                      d => d.RacikanId,
-                      ra => ra.RacikanId,
-                      (d, ra) => new
-                      {
-                          ra.RacikanId,
-                          ra.NamaRacikan,
-                          d.Qty,
-                          d.Signa,
-                          d.SignaTambahan,
-                          ra.CreateBy,
-                          ra.CreateDateTime,
-                          DaftarRacikanDetail = _applicationDbContext.RacikanDetails
-                              .Where(rd => rd.RacikanId == ra.RacikanId)
-                              .Join(_applicationDbContext.Obats,
-                                    rd => rd.ObatId,
-                                    ob => ob.ObatId,
-                                    (rd, ob) => new
-                                    {
-                                        rd.DetailRacikanId,
-                                        rd.ObatId,
-                                        ob.ObatName,
-                                        rd.QtyUsed,
-                                        rd.KomposisiDosis,
-                                        rd.CreateBy,
-                                        rd.CreateDateTime
-                                    })
-                              .ToList()
-                      })
-                .Distinct()
-                .ToListAsync();
+                    d => d.RacikanId,
+                    ra => ra.RacikanId,
+                    (d, ra) => new
+                    {
+                        ra.RacikanId,
+                        ra.NamaRacikan,
+                        d.Qty,
+                        d.Signa,
+                        d.SignaTambahan,
+                        ra.CreateBy,
+                        ra.CreateDateTime,
+                        DaftarRacikanDetail = _applicationDbContext.RacikanDetails
+                            .Where(rd => rd.RacikanId == ra.RacikanId)
+                            .Join(_applicationDbContext.Obats,
+                                  rd => rd.ObatId,
+                                  ob => ob.ObatId,
+                                  (rd, ob) => new
+                                  {
+                                      rd.DetailRacikanId,
+                                      rd.ObatId,
+                                      ob.ObatName,
+                                      rd.QtyUsed,
+                                      rd.KomposisiDosis,
+                                      rd.CreateBy,
+                                      rd.CreateDateTime
+                                  })
+                            .ToList()
+                    })
+                .ToListAsync(); // materialize dulu
+
+            // Ambil unik racikan per RacikanId
+            var daftarRacikan = daftarRacikanRaw
+                .GroupBy(r => r.RacikanId)
+                .Select(g => g.First())
+                .ToList();
 
             var result = new
             {
