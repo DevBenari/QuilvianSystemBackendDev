@@ -416,37 +416,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     // Racikan tetap ditangani seperti biasa
                     foreach (var obat in vm.DaftarObat.Where(o => o.IsRacikan == true))
                     {
-                        if (obat.ObatId == null || obat.Racikan == null || !obat.Racikan.Any())
+                        if (obat.Racikan == null || !obat.Racikan.Any())
                             continue;
-
-                        Guid racikanId = Guid.NewGuid();
-
-                        var resepDetail = new ResepDetail
-                        {
-                            DetailResepId = Guid.NewGuid(),
-                            ResepId = resep.ResepId,
-                            ObatId = null,
-                            Qty = obat.Qty,
-                            Signa = obat.Signa,
-                            SignaTambahan = obat.SignaTambahan,
-                            HargaObat = obat.HargaObat,
-                            TotalHargaObat = obat.HargaObat * (obat.Qty ?? 0),
-                            StatusCoverObat = false,
-                            JenisObat = obat.JenisObat,
-                            IsRacikan = true,
-                            RacikanId = racikanId,
-                            TakaranDosis = null,
-                            StatusPengambilanObat = true,
-                            CreateBy = getUserActive.UserActiveId,
-                            CreateDateTime = DateTimeOffset.UtcNow
-                        };
-                        _applicationDbContext.DetailReseps.Add(resepDetail);
 
                         foreach (var racikan in obat.Racikan)
                         {
+                            var racikanId = Guid.NewGuid();
                             int racikanCountToday = await _applicationDbContext.Racikans.CountAsync(r => r.CreateDateTime.Date == today);
                             string kodeRacikan = $"RCK-{(racikanCountToday + 1):D3}{todayString}";
 
+                            // Buat entitas racikan
                             var racikanEntity = new Racikan
                             {
                                 RacikanId = racikanId,
@@ -454,7 +433,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                 Keterangan = racikan.Keterangan,
                                 Signa = racikan.Signa,
                                 SignaTambahan = racikan.SignaTambahan,
-                                QtyRacikan = obat.Qty,
+                                QtyRacikan = obat.Qty ?? 1, // default jika null
                                 KodeRacikan = kodeRacikan,
                                 CreateBy = getUserActive.UserActiveId,
                                 CreateDateTime = DateTimeOffset.UtcNow
@@ -463,16 +442,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
                             decimal totalHargaRacikan = 0;
 
-                            // jika obat racikan
+                            // Detail racikan (komposisi)
                             foreach (var detailRacikan in racikan.DaftarRacikan)
                             {
                                 var obatDbRacikan = await _applicationDbContext.Obats.FindAsync(detailRacikan.ObatId);
                                 if (obatDbRacikan == null)
                                     return BadRequest(new { message = $"Obat tidak ditemukan: {detailRacikan.ObatId}" });
 
-                                var qtyPakai = Math.Ceiling((decimal)((detailRacikan.KomposisiDosis * racikan.QtyRacikan) / obatDbRacikan.TakaranDosis));
+                                // Perhitungan jumlah pakai
+                                var qtyPakai = Math.Ceiling((decimal)((detailRacikan.KomposisiDosis * racikanEntity.QtyRacikan) / obatDbRacikan.TakaranDosis));
                                 var hargaOb = qtyPakai * obatDbRacikan.HargaJual;
-
                                 totalHargaRacikan += hargaOb;
 
                                 if (obatDbRacikan.Stock < qtyPakai)
@@ -481,6 +460,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                 obatDbRacikan.Stock -= (int)qtyPakai;
                                 _applicationDbContext.Obats.Update(obatDbRacikan);
 
+                                // Tambahkan detail racikan
                                 var racikanDetail = new RacikanDetail
                                 {
                                     DetailRacikanId = Guid.NewGuid(),
@@ -494,6 +474,29 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                 _applicationDbContext.RacikanDetails.Add(racikanDetail);
                             }
 
+                            // Tambahkan ke tabel DetailResep
+                            var resepDetail = new ResepDetail
+                            {
+                                DetailResepId = Guid.NewGuid(),
+                                ResepId = resep.ResepId,
+                                ObatId = null,
+                                Qty = racikanEntity.QtyRacikan,
+                                Signa = racikanEntity.Signa,
+                                SignaTambahan = racikanEntity.SignaTambahan,
+                                HargaObat = totalHargaRacikan,
+                                TotalHargaObat = totalHargaRacikan * racikanEntity.QtyRacikan,
+                                StatusCoverObat = false,
+                                JenisObat = obat.JenisObat,
+                                IsRacikan = true,
+                                RacikanId = racikanId,
+                                TakaranDosis = null,
+                                StatusPengambilanObat = true,
+                                CreateBy = getUserActive.UserActiveId,
+                                CreateDateTime = DateTimeOffset.UtcNow
+                            };
+                            _applicationDbContext.DetailReseps.Add(resepDetail);
+
+                            // Tambahkan ke billing
                             billingIndex++;
                             var billing = new Billing
                             {
@@ -501,11 +504,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                 DiskonId = vm.DiskonId,
                                 BillingDate = DateTime.UtcNow,
                                 BillingKode = $"{billingIndex:D3}",
-                                ItemId = racikanEntity.RacikanId,
+                                ItemId = racikanId,
                                 NamaItem = racikanEntity.NamaRacikan,
                                 HargaItem = totalHargaRacikan,
-                                QtyItem = (int)racikan.QtyRacikan,
-                                SubTotalItem = totalHargaRacikan * (int)racikan.QtyRacikan,
+                                QtyItem = racikanEntity.QtyRacikan ?? 1,
+                                SubTotalItem = totalHargaRacikan * (racikanEntity.QtyRacikan ?? 1),
                                 JenisBilling = "Obat",
                                 StatusPengambilan = true,
                                 CreateBy = getUserActive.UserActiveId,
