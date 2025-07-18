@@ -11,6 +11,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         [Key]
         public Guid PainAssessmentId { get; set; }
         public Guid? KunjunganId { get; set; }
+        public Guid? RanapId { get; set; }
         public string? KeluhanUtama { get; set; }
 
         [DefaultValue(false)]

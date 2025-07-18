@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -11,9 +12,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250718045058_addtabelkunjunganranap")]
+    partial class addtabelkunjunganranap
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -512,9 +514,6 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<Guid?>("PoliklinikId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("RanapId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("StatusPembuatanResep")
@@ -3525,9 +3524,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("Pemicu")
                         .HasColumnType("text");
 
-                    b.Property<Guid?>("RanapId")
-                        .HasColumnType("uuid");
-
                     b.Property<Guid?>("SkalaPainId")
                         .HasColumnType("uuid");
 
@@ -4303,9 +4299,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("Profesi")
                         .HasColumnType("text");
 
-                    b.Property<Guid?>("RanapId")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("Subjective")
                         .HasColumnType("text");
 
@@ -4727,9 +4720,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<int?>("Quantity")
                         .HasColumnType("integer");
 
-                    b.Property<Guid?>("RanapId")
-                        .HasColumnType("uuid");
-
                     b.Property<Guid>("TindakanId")
                         .HasColumnType("uuid");
 
@@ -4988,9 +4978,6 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.Property<int?>("RR")
                         .HasColumnType("integer");
-
-                    b.Property<Guid?>("RanapId")
-                        .HasColumnType("uuid");
 
                     b.Property<decimal?>("SaturasiOksigen")
                         .HasColumnType("numeric");

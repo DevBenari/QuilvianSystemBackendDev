@@ -25,5 +25,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
         public bool? IsCancelled { get; set; } = false;
         public bool? IsLunas { get; set; }
         public DateTime? TanggalPembuatanResep { get; set; }
+        public Guid? RanapId { get; set; }
     }
 }

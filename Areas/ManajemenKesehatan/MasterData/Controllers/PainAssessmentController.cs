@@ -90,7 +90,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             HasilResikoJatuh = a.HasilResikoJatuh,
                             IsMotorikAktif = a.IsMotorikAktif,
                             IsResponsAuditori = a.IsResponsAuditori,
-                            IsInteraksiSosial = a.IsInteraksiSosial
+                            IsInteraksiSosial = a.IsInteraksiSosial,
+                            RanapId = a.RanapId
 
                         }).OrderByDescending(a => a.CreateDateTime); ;
 
@@ -211,6 +212,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     IsMotorikAktif = vm.IsMotorikAktif,
                     IsResponsAuditori = vm.IsResponsAuditori,
                     IsInteraksiSosial = vm.IsInteraksiSosial,
+                    RanapId = vm.RanapId,
                 };
 
                 // **Simpan ke Database**
@@ -307,7 +309,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.IsMotorikAktif = vm.IsMotorikAktif;
                 data.IsResponsAuditori = vm.IsResponsAuditori;
                 data.IsInteraksiSosial = vm.IsInteraksiSosial;
-
+                data.RanapId = vm.RanapId;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -459,7 +461,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 HasilResikoJatuh = a.HasilResikoJatuh,
                                 IsMotorikAktif = a.IsMotorikAktif,
                                 IsResponsAuditori = a.IsResponsAuditori,
-                                IsInteraksiSosial = a.IsInteraksiSosial
+                                IsInteraksiSosial = a.IsInteraksiSosial,
+                                RanapId = a.RanapId
                             };
 
                 // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**

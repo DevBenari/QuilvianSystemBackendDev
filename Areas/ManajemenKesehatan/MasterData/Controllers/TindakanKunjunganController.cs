@@ -66,7 +66,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.KunjunganId,
                             a.TindakanId,
                             a.Quantity,
-                            a.Total
+                            a.Total,
+                            a.Disposition,
+                            a.RanapId,
                         }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -196,6 +198,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     TindakanId = vm.TindakanId,
                     Quantity = vm.Quantity,
                     Total = totalqty, // Masukkan nilai Total yang telah dihitung
+                    RanapId = vm.RanapId,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow
                 };
@@ -342,6 +345,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.TindakanId = vm.TindakanId;
                 data.Quantity = vm.Quantity;
                 data.Total = totalqty;
+                data.RanapId = vm.RanapId;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;

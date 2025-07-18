@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Globalization;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
@@ -6,33 +7,37 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.ViewModels;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class SOAPController : Controller
+    public class BookingBedRanapController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<SOAPController> _logger;
+        private readonly ILogger<BookingBedRanapController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public SOAPController(
+
+        public BookingBedRanapController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<SOAPController> logger,
+            ILogger<BookingBedRanapController> logger,
             IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
@@ -41,37 +46,48 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
         }
+        private DateTime? TryParseTanggalToUtc(string tanggal)
+        {
+            if (DateTime.TryParseExact(
+                tanggal,
+                "yyyy-MM-dd",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.None,
+                out var result))
+            {
+                return DateTime.SpecifyKind(result, DateTimeKind.Utc);
+            }
+
+            return null;
+        }
 
         [HttpGet]
-        public async Task<IActionResult> GetAlLSOAP(int page = 1, int perPage = 10)
+        public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
         {
             // Validasi agar page dan perPage minimal bernilai 1
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = (from a in _applicationDbContext.SOAPs
-                         join u in _applicationDbContext.UserActives
-                             on a.CreateBy equals u.UserActiveId
-                         join k in _applicationDbContext.Kunjungans
-                             on a.KunjunganId equals k.KunjunganID
-                         where a.IsDelete == false
+            var query = (from a in _applicationDbContext.BookingBedRanaps
+                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
+                         on a.CreateBy equals u.UserActiveId
+                         where a.IsDelete == false || a.IsDelete == null
                          select new
                          {
-                             CreateDateTime = a.CreateDateTime,
-                             CreateBy = a.CreateBy,
+                             a.CreateDateTime,
+                             a.CreateBy,
                              CreateByName = u.FullName,
-                             SOAPID = a.SOAPID,
-                             KunjunganId = a.KunjunganId,
-                             PasienId = k.PasienId, // Tambahan ini
-                             Subjective = a.Subjective,
-                             Objective = a.Objective,
-                             DaftarICD10 = (a.DaftarICD10 ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
-                             Assesment = a.Assessment,
-                             Planning = a.Planning,
-                             Profesi = a.Profesi,
-                             RanapId = a.RanapId
-                         }).OrderByDescending(a => a.CreateDateTime).ToList();
+                             a.BookingBedRanapId,
+                             a.RanapId,
+                             a.KamarId,
+                             a.BedId,
+                             a.TglMasuk,
+                             a.TglKeluar,
+                             a.StatusBed,
+                             a.Keterangan,
+
+                         }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
             var totalRows = query.Count();
@@ -80,7 +96,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             // Ambil data sesuai paging
             var listdata = query
                 .Skip((page - 1) * perPage)
-                .Take(perPage).ToList();
+                .Take(perPage)
+                .ToList();
 
             if (!listdata.Any())
             {
@@ -105,7 +122,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.SOAPs.Find(id);
+            var listdata = _applicationDbContext.BookingBedRanaps.Find(id);
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -114,91 +131,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             return Ok(new
             {
                 message = "Ditemukan || 200 OK",
-                data = new 
-                {
-                    listdata.SOAPID,
-                    listdata.KunjunganId,
-                    listdata.Subjective,
-                    listdata.Objective,
-                    Assesment  = listdata.Assessment?.Split(',').ToList(),
-                    listdata.Planning,
-                    listdata.Profesi,
-                    listdata.RanapId,
-                    listdata.CreateBy,
-                    listdata.CreateDateTime
-
-                }
-            });
-        }
-
-        [HttpGet("kunjungan/{kunjunganid}")]
-        public async Task<IActionResult> GetByKunjunganId(Guid kunjunganid)
-        {
-            var listdata = _applicationDbContext.SOAPs
-                .FirstOrDefault(x => x.KunjunganId == kunjunganid);
-
-            if (listdata == null)
-            {
-                return NotFound(new { message = "Data tidak ditemukan." });
-            }
-
-            return Ok(new
-            {
-                message = "Ditemukan || 200 OK",
-                data = new
-                {
-                    listdata.SOAPID,
-                    listdata.KunjunganId,
-                    listdata.Subjective,
-                    listdata.Objective,
-                    Assesment = listdata.Assessment?.Split(',').ToList(),
-                    listdata.Planning,
-                    listdata.Profesi,
-                    listdata.RanapId,
-                    listdata.CreateBy,
-                    listdata.CreateDateTime
-
-                }
-            });
-        }
-
-        [HttpGet("pasien/{pasienid}")]
-        public async Task<IActionResult> GetByPasienId(Guid pasienid)
-        {
-            var listdata = from s in _applicationDbContext.SOAPs
-                           join k in _applicationDbContext.Kunjungans.DefaultIfEmpty()
-                               on s.KunjunganId equals k.KunjunganID
-                           where k.PasienId == pasienid
-                           select new
-                           {
-                               s.SOAPID,
-                               s.KunjunganId,
-                               s.Subjective,
-                               s.Objective ,
-                               Assesment = s.Assessment != null ? s.Assessment.Split(new[] { ',' }, StringSplitOptions.None).ToList() : new List<string>(),
-                               s.Planning,
-                               s.Profesi,
-                               s.RanapId,
-                               s.CreateBy,
-                               s.CreateDateTime
-                           };
-
-            var result = await listdata.ToListAsync();
-
-            if (!result.Any())
-            {
-                return NotFound(new { message = "Data tidak ditemukan." });
-            }
-
-            return Ok(new
-            {
-                message = "Ditemukan || 200 OK",
-                data = result
+                data = listdata
             });
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateSOAP([FromBody] SOAPViewModel vm)
+        public async Task<IActionResult> Create([FromBody] BookingBedRanapViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -227,23 +165,50 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
-                // **Buat Data Baru**
-                var data = new SOAP
+                // Validasi tanggal masuk ranap
+                var parsedTglMasukRanap = TryParseTanggalToUtc(vm.TglMasuk);
+                if (parsedTglMasukRanap == null)
                 {
-                    SOAPID = Guid.NewGuid(),
-                    KunjunganId = vm.KunjunganId,
-                    Subjective = vm.Subjective,
-                    Objective = vm.Objective,
-                    DaftarICD10 = vm.DaftarICD10 != null ? string.Join(",", vm.DaftarICD10) : null,
-                    Assessment = vm.Assessment,
-                    Planning = vm.Planning,
-                    Profesi = vm.Profesi,
+                    return BadRequest(new
+                    {
+                        message = "Format tanngal masuk ranap tidak valid! Gunakan format yyyy-MM-dd."
+                    });
+                }
+
+                var parsedTglKeluarRanap = TryParseTanggalToUtc(vm.TglKeluar);
+                if (parsedTglKeluarRanap == null)
+                {
+                    return BadRequest(new
+                    {
+                        message = "Format tanngal masuk ranap tidak valid! Gunakan format yyyy-MM-dd."
+                    });
+                }
+                // **Cek Duplikasi**
+                //bool isDuplicate = _applicationDbContext.BookingBedRanaps
+                //                    .Any(c => c.RanapId == vm.RanapId);
+
+                //if (isDuplicate)
+                //{
+                //    return Conflict(new { message = "Nama benefit ini telah tersedia" });
+                //}
+
+                // **Buat Data Baru**
+                var data = new BookingBedRanap
+                {
+                    BookingBedRanapId = Guid.NewGuid(),
                     RanapId = vm.RanapId,
+                    KamarId = vm.KamarId,
+                    BedId = vm.BedId,
+                    TglMasuk = parsedTglMasukRanap,
+                    TglKeluar = parsedTglKeluarRanap,
+                    StatusBed = vm.StatusBed,
+                    Keterangan = vm.Keterangan,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
+
                 // **Simpan ke Database**
-                _applicationDbContext.SOAPs.Add(data);
+                _applicationDbContext.BookingBedRanaps.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -266,7 +231,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateSOAP(Guid id, [FromBody] SOAPViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] BookingBedRanapViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -297,25 +262,43 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.SOAPs.FindAsync(id);
+                var data = await _applicationDbContext.BookingBedRanaps.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
+                var parsedTglMasukRanap = TryParseTanggalToUtc(vm.TglMasuk);
+                if (parsedTglMasukRanap == null)
+                {
+                    return BadRequest(new
+                    {
+                        message = "Format tanngal masuk ranap tidak valid! Gunakan format yyyy-MM-dd."
+                    });
+                }
+
+                var parsedTglKeluarRanap = TryParseTanggalToUtc(vm.TglKeluar);
+                if (parsedTglKeluarRanap == null)
+                {
+                    return BadRequest(new
+                    {
+                        message = "Format tanngal masuk ranap tidak valid! Gunakan format yyyy-MM-dd."
+                    });
+                }
+
                 // **Update Data**
-                data.KunjunganId = vm.KunjunganId;
-                data.Subjective = vm.Subjective;
-                data.Objective = vm.Objective;
-                data.DaftarICD10 = vm.DaftarICD10 != null ? string.Join(",", vm.DaftarICD10) : null;
-                data.Assessment = vm.Assessment;
-                data.Planning = vm.Planning;
-                data.Profesi = vm.Profesi;
                 data.RanapId = vm.RanapId;
+                data.KamarId = vm.KamarId;
+                data.BedId = vm.BedId;
+                data.TglMasuk = parsedTglMasukRanap;
+                data.TglKeluar = parsedTglKeluarRanap;
+                data.StatusBed = vm.StatusBed;
+                data.Keterangan = vm.Keterangan;
+
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.SOAPs.Update(data);
+                _applicationDbContext.BookingBedRanaps.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -338,7 +321,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteSOAP(Guid id)
+        public async Task<IActionResult> Delete(Guid id)
         {
             try
             {
@@ -364,7 +347,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.SOAPs.FindAsync(id);
+                var data = await _applicationDbContext.BookingBedRanaps.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -376,7 +359,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 data.IsDelete = true;
 
-                _applicationDbContext.SOAPs.Update(data);
+                _applicationDbContext.BookingBedRanaps.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -399,58 +382,50 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet("paged")]
-        public async Task<IActionResult> PagedSOAP(
-            int page = 1,
-            int perPage = 10,
-            Guid? search = null,
-            string? orderBy = "CreateDateTime",
-            string? sortDirection = "desc",
-            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-            DateTime? startDate = null,
-            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-            DateTime? endDate = null,
-            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null
-        )
+        public IActionResult Paged(
+        int page = 1,
+        int perPage = 10,
+        string? search = null,
+        string? orderBy = "CreateDateTime",
+        string? sortDirection = "desc",
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+                DateTime? startDate = null,
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+                DateTime? endDate = null,
+        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
-            if (!search.HasValue)
-            {
-                return BadRequest(new { message = "PasienId (search) is required." });
-            }
 
-            // Cari Kunjungan berdasarkan PasienId
-            var kunjungan = await _applicationDbContext.Kunjungans
-                .FirstOrDefaultAsync(k => k.PasienId == search);
+            // Query data
+            var query = (from a in _applicationDbContext.BookingBedRanaps
+                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
+                         on a.CreateBy equals u.UserActiveId
+                         where a.IsDelete == false || a.IsDelete == null
+                         select new
+                         {
+                             a.CreateDateTime,
+                             a.CreateBy,
+                             CreateByName = u.FullName,
+                             a.BookingBedRanapId,
+                             a.RanapId,
+                             a.KamarId,
+                             a.BedId,
+                             a.TglMasuk,
+                             a.TglKeluar,
+                             a.StatusBed,
+                             a.Keterangan,
 
-            if (kunjungan == null)
-            {
-                return NotFound(new { message = "Kunjungan untuk pasien ini tidak ditemukan." });
-            }
+                         });
 
-            // Query data SOAP berdasarkan KunjunganId yang ditemukan
-            var query = from a in _applicationDbContext.SOAPs
-                        join u in _applicationDbContext.UserActives
-                            on a.CreateBy equals u.UserActiveId
-                        join k in _applicationDbContext.Kunjungans
-                            on a.KunjunganId equals k.KunjunganID
-                        where a.KunjunganId == kunjungan.KunjunganID && a.IsDelete == false
-                        select new
-                        {
-                            CreateDateTime = a.CreateDateTime,
-                            CreateBy = a.CreateBy,
-                            CreateByName = u.FullName,
-                            SOAPID = a.SOAPID,
-                            KunjunganId = a.KunjunganId,
-                            Subjective = a.Subjective,
-                            Objective = a.Objective,
-                            DaftarICD10 = (a.DaftarICD10 ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
-                            Assessment = a.Assessment,
-                            Planning = a.Planning,
-                            Profesi = a.Profesi,
-                            k.PasienId,
-                            RanapId = a.RanapId
-                        };
+            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
+            //if (!string.IsNullOrWhiteSpace(search))
+            //{
+            //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+            //    query = query.Where(u =>
+            //        EF.Functions.ILike(u.NamaDiskon, search)
+            //    );
+            //}
 
-            // **Filter berdasarkan tanggal**
+            //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
             {
                 DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
@@ -461,7 +436,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     u.CreateDateTime <= endUtc);
             }
 
-            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll)
+            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
             if (periode.HasValue)
             {
                 DateTime today = DateTime.UtcNow.Date;
@@ -473,14 +448,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         break;
                     case PeriodeFilter.ThisWeek:
                         query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
+                            u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
                             u.CreateDateTime.Date <= today
                         );
                         break;
                     case PeriodeFilter.LastWeek:
                         query = query.Where(u =>
                             u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek))
+                            u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)
                         );
                         break;
                     case PeriodeFilter.ThisMonth:
@@ -510,33 +485,25 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
             }
 
-            // Sorting Data
+            // Sorting Data dengan cara yang lebih aman
             query = sortDirection?.ToLower() == "desc"
                 ? orderBy switch
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "Subjective" => query.OrderByDescending(u => u.Subjective),
-                    "Objective" => query.OrderByDescending(u => u.Objective),
-                    "Assessment" => query.OrderByDescending(u => u.Assessment),
-                    "Planning" => query.OrderByDescending(u => u.Planning),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
                     "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
                     "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    "Subjective" => query.OrderBy(u => u.Subjective),
-                    "Objective" => query.OrderBy(u => u.Objective),
-                    "Assessment" => query.OrderBy(u => u.Assessment),
-                    "Planning" => query.OrderBy(u => u.Planning),
                     _ => query.OrderBy(u => u.CreateDateTime)
                 };
 
             // Pagination
-            var totalRows = await query.CountAsync();
+            var totalRows = query.Count();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-            var rows = await query.Skip((page - 1) * perPage).Take(perPage).ToListAsync();
+            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
 
             if (rows.Count == 0 && page > totalPages)
             {
@@ -557,8 +524,5 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
             });
         }
-
-
-
     }
 }

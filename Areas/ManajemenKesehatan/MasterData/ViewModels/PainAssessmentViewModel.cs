@@ -50,5 +50,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
         public bool? IsMotorikAktif { get; set; }
         public bool? IsResponsAuditori { get; set; }
         public bool? IsInteraksiSosial { get; set; }
+        public Guid? RanapId { get; set; }
     }
 }

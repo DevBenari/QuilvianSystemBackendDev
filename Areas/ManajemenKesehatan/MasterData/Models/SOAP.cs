@@ -16,5 +16,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? Assessment { get; set; }
         public string? Planning { get; set; }
         public string? Profesi { get; set; }
+        public Guid? RanapId { get; set; }
     }
 }

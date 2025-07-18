@@ -79,6 +79,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              r.StatusPengambilanResep,
                              r.IsCancelled,
                              r.IsLunas,
+                             r.RanapId,
                              TanggalPembuatanResepFormatted = r.TanggalPembuatanResep.HasValue ? r.TanggalPembuatanResep.Value.ToString("yyyy-MM-dd") : null,
                              CreateByName = u.FullName,
 
@@ -267,6 +268,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 resep.StatusPengambilanResep,
                 resep.IsCancelled,
                 resep.IsLunas,
+                resep.RanapId,
                 resep.CreateBy,
                 TanggalPembuatanResep = resep.TanggalPembuatanResep?.ToString("yyyy-MM-dd"),
                 DaftarObat = daftarObat,
@@ -324,6 +326,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     IsCancelled = false,
                     IsLunas = false,
                     TanggalPembuatanResep = DateTime.UtcNow,
+                    RanapId = vm.RanapId,
+
                     CreateBy = getUserActive.UserActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow
                 };
@@ -817,6 +821,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 resep.NamaPoliklinik = vm.NamaPoliklinik;
                 resep.DokterId = vm.DokterId;
                 resep.NamaDokter = vm.NamaDokter;
+                resep.RanapId = vm.RanapId;
                 resep.UpdateBy = userId;
                 resep.UpdateDateTime = DateTimeOffset.UtcNow;
 
@@ -1404,6 +1409,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             [FromQuery] DateTime? endDate = null,
             [FromQuery] PeriodeFilter? periode = null,
             [FromQuery] bool? IsLunas = null,
+            [FromQuery] bool? IsCancelled = null,
             [FromQuery] bool? StatusPengambilanResep = null)
         {
             if (page < 1) page = 1;
@@ -1429,6 +1435,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 query = query.Where(q => q.Resep.IsLunas == IsLunas.Value);
             if (StatusPengambilanResep.HasValue)
                 query = query.Where(q => q.Resep.StatusPengambilanResep == StatusPengambilanResep.Value);
+            if (IsCancelled.HasValue)
+                query = query.Where(q => q.Resep.IsCancelled == IsCancelled.Value);
+
 
             // Periode filter
             if (periode.HasValue)
@@ -1529,6 +1538,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     q.Resep.StatusPengambilanResep,
                     q.Resep.IsCancelled,
                     q.Resep.IsLunas,
+                    q.Resep.RanapId,
                     TanggalPembuatanResep = q.Resep.TanggalPembuatanResep?.ToString("yyyy-MM-dd"),
                     CreateByName = q.User.FullName,
 
@@ -1622,6 +1632,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         [FromQuery] DateTime? startDate = null,
         [FromQuery] DateTime? endDate = null,
         [FromQuery] PeriodeFilter? periode = null,
+        [FromQuery] bool? IsCancelled = null,
         [FromQuery] bool? StatusPengambilanResep = null)
         {
             if (page < 1) page = 1;
@@ -1645,6 +1656,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             // Boolean filters
             if (StatusPengambilanResep.HasValue)
                 query = query.Where(q => q.Resep.StatusPengambilanResep == StatusPengambilanResep.Value);
+
+            // IsCancelled filters
+            if (IsCancelled.HasValue)
+                query = query.Where(q => q.Resep.IsCancelled == IsCancelled.Value);
 
             // Periode filter
             if (periode.HasValue)
