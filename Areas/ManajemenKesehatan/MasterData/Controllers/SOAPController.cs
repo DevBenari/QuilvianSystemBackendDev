@@ -55,6 +55,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              on a.CreateBy equals u.UserActiveId
                          join k in _applicationDbContext.Kunjungans
                              on a.KunjunganId equals k.KunjunganID
+                        join d in _applicationDbContext.Dokters
+                             on k.DokterId equals d.DokterId 
                          where a.IsDelete == false
                          select new
                          {
@@ -67,10 +69,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              Subjective = a.Subjective,
                              Objective = a.Objective,
                              DaftarICD10 = (a.DaftarICD10 ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
-                             Assesment = a.Assessment,
+                             Assessment = a.Assessment,
                              Planning = a.Planning,
                              Profesi = a.Profesi,
-                             RanapId = a.RanapId
+                             RanapId = a.RanapId,
+                             NamaDokter = d.NmDokter,
                          }).OrderByDescending(a => a.CreateDateTime).ToList();
 
             // Hitung total data sebelum paginasi
@@ -103,63 +106,111 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(Guid id)
+        public async Task<IActionResult> GetSOAPById(Guid id)
         {
-            var listdata = _applicationDbContext.SOAPs.Find(id);
-            if (listdata == null)
+            var data = (from a in _applicationDbContext.SOAPs
+                        join u in _applicationDbContext.UserActives
+                            on a.CreateBy equals u.UserActiveId
+                        join k in _applicationDbContext.Kunjungans
+                            on a.KunjunganId equals k.KunjunganID
+                        join d in _applicationDbContext.Dokters
+                            on k.DokterId equals d.DokterId
+                        where a.IsDelete == false && a.SOAPID == id
+                        select new
+                        {
+                            CreateDateTime = a.CreateDateTime,
+                            CreateBy = a.CreateBy,
+                            CreateByName = u.FullName,
+                            SOAPID = a.SOAPID,
+                            KunjunganId = a.KunjunganId,
+                            PasienId = k.PasienId,
+                            Subjective = a.Subjective,
+                            Objective = a.Objective,
+                            DaftarICD10 = (a.DaftarICD10 ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
+                            Assessment = a.Assessment,
+                            Planning = a.Planning,
+                            Profesi = a.Profesi,
+                            RanapId = a.RanapId,
+                            NamaDokter = d.NmDokter,
+                        }).FirstOrDefault();
+
+            if (data == null)
             {
-                return NotFound(new { message = "Data tidak ditemukan." });
+                return NotFound(new { message = "Data tidak ditemukan || 404 Not Found" });
             }
 
             return Ok(new
             {
-                message = "Ditemukan || 200 OK",
-                data = new 
-                {
-                    listdata.SOAPID,
-                    listdata.KunjunganId,
-                    listdata.Subjective,
-                    listdata.Objective,
-                    Assesment  = listdata.Assessment?.Split(',').ToList(),
-                    listdata.Planning,
-                    listdata.Profesi,
-                    listdata.RanapId,
-                    listdata.CreateBy,
-                    listdata.CreateDateTime
-
-                }
+                message = "Berhasil mengambil data || 200 OK",
+                data = data
             });
         }
 
         [HttpGet("kunjungan/{kunjunganid}")]
         public async Task<IActionResult> GetByKunjunganId(Guid kunjunganid)
         {
-            var listdata = _applicationDbContext.SOAPs
-                .FirstOrDefault(x => x.KunjunganId == kunjunganid);
+            var data = (from a in _applicationDbContext.SOAPs
+                        join u in _applicationDbContext.UserActives
+                            on a.CreateBy equals u.UserActiveId
+                        join k in _applicationDbContext.Kunjungans
+                            on a.KunjunganId equals k.KunjunganID
+                        join d in _applicationDbContext.Dokters
+                            on k.DokterId equals d.DokterId
+                        where a.IsDelete == false && k.KunjunganID == kunjunganid
+                        select new
+                        {
+                            CreateDateTime = a.CreateDateTime,
+                            CreateBy = a.CreateBy,
+                            CreateByName = u.FullName,
+                            SOAPID = a.SOAPID,
+                            KunjunganId = a.KunjunganId,
+                            PasienId = k.PasienId,
+                            Subjective = a.Subjective,
+                            Objective = a.Objective,
+                            DaftarICD10 = (a.DaftarICD10 ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
+                            Assessment = a.Assessment,
+                            Planning = a.Planning,
+                            Profesi = a.Profesi,
+                            RanapId = a.RanapId,
+                            NamaDokter = d.NmDokter,
+                        }).FirstOrDefault();
 
-            if (listdata == null)
+            if (data == null)
             {
-                return NotFound(new { message = "Data tidak ditemukan." });
+                return NotFound(new { message = "Data tidak ditemukan || 404 Not Found" });
             }
 
             return Ok(new
             {
-                message = "Ditemukan || 200 OK",
-                data = new
-                {
-                    listdata.SOAPID,
-                    listdata.KunjunganId,
-                    listdata.Subjective,
-                    listdata.Objective,
-                    Assesment = listdata.Assessment?.Split(',').ToList(),
-                    listdata.Planning,
-                    listdata.Profesi,
-                    listdata.RanapId,
-                    listdata.CreateBy,
-                    listdata.CreateDateTime
-
-                }
+                message = "Berhasil mengambil data || 200 OK",
+                data = data
             });
+            //var listdata = _applicationDbContext.SOAPs
+            //    .FirstOrDefault(x => x.KunjunganId == kunjunganid);
+
+            //if (listdata == null)
+            //{
+            //    return NotFound(new { message = "Data tidak ditemukan." });
+            //}
+
+            //return Ok(new
+            //{
+            //    message = "Ditemukan || 200 OK",
+            //    data = new
+            //    {
+            //        listdata.SOAPID,
+            //        listdata.KunjunganId,
+            //        listdata.Subjective,
+            //        listdata.Objective,
+            //        Assesment = listdata.Assessment?.Split(',').ToList(),
+            //        listdata.Planning,
+            //        listdata.Profesi,
+            //        listdata.RanapId,
+            //        listdata.CreateBy,
+            //        listdata.CreateDateTime
+
+            //    }
+            //});
         }
 
         [HttpGet("pasien/{pasienid}")]
@@ -427,28 +478,31 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
 
             // Query data SOAP berdasarkan KunjunganId yang ditemukan
-            var query = from a in _applicationDbContext.SOAPs
-                        join u in _applicationDbContext.UserActives
-                            on a.CreateBy equals u.UserActiveId
-                        join k in _applicationDbContext.Kunjungans
-                            on a.KunjunganId equals k.KunjunganID
-                        where a.KunjunganId == kunjungan.KunjunganID && a.IsDelete == false
-                        select new
-                        {
-                            CreateDateTime = a.CreateDateTime,
-                            CreateBy = a.CreateBy,
-                            CreateByName = u.FullName,
-                            SOAPID = a.SOAPID,
-                            KunjunganId = a.KunjunganId,
-                            Subjective = a.Subjective,
-                            Objective = a.Objective,
-                            DaftarICD10 = (a.DaftarICD10 ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
-                            Assessment = a.Assessment,
-                            Planning = a.Planning,
-                            Profesi = a.Profesi,
-                            k.PasienId,
-                            RanapId = a.RanapId
-                        };
+            var query = (from a in _applicationDbContext.SOAPs
+                         join u in _applicationDbContext.UserActives
+                             on a.CreateBy equals u.UserActiveId
+                         join k in _applicationDbContext.Kunjungans
+                             on a.KunjunganId equals k.KunjunganID
+                        join d in _applicationDbContext.Dokters
+                             on k.DokterId equals d.DokterId 
+                         where a.IsDelete == false
+                         select new
+                         {
+                             CreateDateTime = a.CreateDateTime,
+                             CreateBy = a.CreateBy,
+                             CreateByName = u.FullName,
+                             SOAPID = a.SOAPID,
+                             KunjunganId = a.KunjunganId,
+                             PasienId = k.PasienId, // Tambahan ini
+                             Subjective = a.Subjective,
+                             Objective = a.Objective,
+                             DaftarICD10 = (a.DaftarICD10 ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
+                             Assessment = a.Assessment,
+                             Planning = a.Planning,
+                             Profesi = a.Profesi,
+                             RanapId = a.RanapId,
+                             NamaDokter = d.NmDokter,
+                        });
 
             // **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
