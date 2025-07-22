@@ -477,6 +477,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                     ObatId = detailRacikan.ObatId,
                                     QtyUsed = (int)qtyPakai,
                                     KomposisiDosis = detailRacikan.KomposisiDosis,
+                                    HargaKomposisi = hargaOb,
                                     CreateBy = getUserActive.UserActiveId,
                                     CreateDateTime = DateTimeOffset.UtcNow
                                 };
@@ -517,7 +518,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                 NamaItem = racikanEntity.NamaRacikan,
                                 HargaItem = totalHargaRacikan,
                                 QtyItem = racikanEntity.QtyRacikan ?? 1,
-                                SubTotalItem = totalHargaRacikan * (racikanEntity.QtyRacikan ?? 1),
+                                SubTotalItem = totalHargaRacikan ,
                                 JenisBilling = "Obat",
                                 StatusPengambilan = true,
                                 CreateBy = getUserActive.UserActiveId,
@@ -973,6 +974,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             RacikanId = racikanId,
                             ObatId = rDetail.ObatId,
                             KomposisiDosis = rDetail.KomposisiDosis,
+                            HargaKomposisi = qtyPakai * obatDb.HargaJual,
                             QtyUsed = (int)qtyPakai,
                             CreateBy = userId,
                             CreateDateTime = DateTimeOffset.UtcNow
@@ -990,7 +992,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                         NamaItem = racikanEntity.NamaRacikan,
                         HargaItem = totalHarga,
                         QtyItem = totalQty,
-                        SubTotalItem = totalHarga * totalQty,
+                        SubTotalItem = totalHarga,
                         JenisBilling = "Obat",
                         StatusPengambilan = true,
                         CreateBy = userId,

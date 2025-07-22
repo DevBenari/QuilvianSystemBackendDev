@@ -13,6 +13,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
         public Guid? ObatId { get; set; }
         public int? QtyUsed { get; set; }
         public decimal? KomposisiDosis { get; set; }
-        //public decimal? HargaKomposisi { get; set; }
+        public decimal? HargaKomposisi { get; set; }
     }
 }
