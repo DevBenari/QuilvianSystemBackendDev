@@ -56,7 +56,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                          join k in _applicationDbContext.Kunjungans
                              on a.KunjunganId equals k.KunjunganID
                         join d in _applicationDbContext.Dokters
-                             on k.DokterId equals d.DokterId 
+                             on k.DokterId equals d.DokterId
+                         join p in _applicationDbContext.PendaftaranPasienBarus
+                             on k.PasienId equals p.PendaftaranPasienBaruId
                          where a.IsDelete == false
                          select new
                          {
@@ -74,6 +76,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              Profesi = a.Profesi,
                              RanapId = a.RanapId,
                              NamaDokter = d.NmDokter,
+                             DokterId = d.DokterId, // Tambahan ini untuk mendapatkan DokterId
+                             NamaPasien = p.NamaLengkap, // Tambahan ini untuk mendapatkan Nama Pasien
                          }).OrderByDescending(a => a.CreateDateTime).ToList();
 
             // Hitung total data sebelum paginasi
@@ -115,6 +119,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             on a.KunjunganId equals k.KunjunganID
                         join d in _applicationDbContext.Dokters
                             on k.DokterId equals d.DokterId
+                        join p in _applicationDbContext.PendaftaranPasienBarus
+                             on k.PasienId equals p.PendaftaranPasienBaruId
                         where a.IsDelete == false && a.SOAPID == id
                         select new
                         {
@@ -132,6 +138,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             Profesi = a.Profesi,
                             RanapId = a.RanapId,
                             NamaDokter = d.NmDokter,
+                            DokterId = d.DokterId, // Tambahan ini untuk mendapatkan DokterId
+                            NamaPasien = p.NamaLengkap, // Tambahan ini untuk mendapatkan Nama Pasien
                         }).FirstOrDefault();
 
             if (data == null)
@@ -156,6 +164,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             on a.KunjunganId equals k.KunjunganID
                         join d in _applicationDbContext.Dokters
                             on k.DokterId equals d.DokterId
+                        join p in _applicationDbContext.PendaftaranPasienBarus
+                            on k.PasienId equals p.PendaftaranPasienBaruId
                         where a.IsDelete == false && k.KunjunganID == kunjunganid
                         select new
                         {
@@ -173,6 +183,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             Profesi = a.Profesi,
                             RanapId = a.RanapId,
                             NamaDokter = d.NmDokter,
+                            DokterId = d.DokterId, // Tambahan ini untuk mendapatkan DokterId
+                            NamaPasien = p.NamaLengkap, // Tambahan ini untuk mendapatkan Nama Pasien
                         }).FirstOrDefault();
 
             if (data == null)
@@ -216,25 +228,37 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet("pasien/{pasienid}")]
         public async Task<IActionResult> GetByPasienId(Guid pasienid)
         {
-            var listdata = from s in _applicationDbContext.SOAPs
-                           join k in _applicationDbContext.Kunjungans.DefaultIfEmpty()
-                               on s.KunjunganId equals k.KunjunganID
-                           where k.PasienId == pasienid
-                           select new
-                           {
-                               s.SOAPID,
-                               s.KunjunganId,
-                               s.Subjective,
-                               s.Objective ,
-                               Assesment = s.Assessment != null ? s.Assessment.Split(new[] { ',' }, StringSplitOptions.None).ToList() : new List<string>(),
-                               s.Planning,
-                               s.Profesi,
-                               s.RanapId,
-                               s.CreateBy,
-                               s.CreateDateTime
-                           };
+            var data = (from a in _applicationDbContext.SOAPs
+                        join u in _applicationDbContext.UserActives
+                            on a.CreateBy equals u.UserActiveId
+                        join k in _applicationDbContext.Kunjungans
+                            on a.KunjunganId equals k.KunjunganID
+                        join d in _applicationDbContext.Dokters
+                            on k.DokterId equals d.DokterId
+                        join p in _applicationDbContext.PendaftaranPasienBarus
+                            on k.PasienId equals p.PendaftaranPasienBaruId
+                        where a.IsDelete == false && k.PasienId == pasienid
+                        select new
+                        {
+                            CreateDateTime = a.CreateDateTime,
+                            CreateBy = a.CreateBy,
+                            CreateByName = u.FullName,
+                            SOAPID = a.SOAPID,
+                            KunjunganId = a.KunjunganId,
+                            PasienId = k.PasienId,
+                            Subjective = a.Subjective,
+                            Objective = a.Objective,
+                            DaftarICD10 = (a.DaftarICD10 ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
+                            Assessment = a.Assessment,
+                            Planning = a.Planning,
+                            Profesi = a.Profesi,
+                            RanapId = a.RanapId,
+                            NamaDokter = d.NmDokter,
+                            DokterId = d.DokterId, // Tambahan ini untuk mendapatkan DokterId
+                            NamaPasien = p.NamaLengkap, // Tambahan ini untuk mendapatkan Nama Pasien
+                        }).ToListAsync(); // Fix: Use ToListAsync() on IQueryable, not on the anonymous type.  
 
-            var result = await listdata.ToListAsync();
+            var result = await data; // Await the ToListAsync() result.  
 
             if (!result.Any())
             {
@@ -247,6 +271,49 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data = result
             });
         }
+
+        //[HttpGet("SOAPDokter/{dokterid}")]
+        //public async Task<IActionResult> GetByDokterId(Guid dokterid)
+        //{
+        //    var data = (from a in _applicationDbContext.SOAPs
+        //                join u in _applicationDbContext.UserActives
+        //                    on a.CreateBy equals u.UserActiveId
+        //                join k in _applicationDbContext.Kunjungans
+        //                    on a.KunjunganId equals k.KunjunganID
+        //                join d in _applicationDbContext.Dokters
+        //                    on k.DokterId equals d.DokterId
+        //                where a.IsDelete == false && k.DokterId == dokterid
+        //                select new
+        //                {
+        //                    CreateDateTime = a.CreateDateTime,
+        //                    CreateBy = a.CreateBy,
+        //                    CreateByName = u.FullName,
+        //                    SOAPID = a.SOAPID,
+        //                    KunjunganId = a.KunjunganId,
+        //                    PasienId = k.PasienId,
+        //                    Subjective = a.Subjective,
+        //                    Objective = a.Objective,
+        //                    DaftarICD10 = (a.DaftarICD10 ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
+        //                    Assessment = a.Assessment,
+        //                    Planning = a.Planning,
+        //                    Profesi = a.Profesi,
+        //                    RanapId = a.RanapId,
+        //                    NamaDokter = d.NmDokter,
+        //                }).ToListAsync(); // Fix: Use ToListAsync() on IQueryable, not on the anonymous type.  
+
+        //    var result = await data; // Await the ToListAsync() result.  
+
+        //    if (!result.Any())
+        //    {
+        //        return NotFound(new { message = "Data tidak ditemukan." });
+        //    }
+
+        //    return Ok(new
+        //    {
+        //        message = "Ditemukan || 200 OK",
+        //        data = result
+        //    });
+        //}
 
         [HttpPost]
         public async Task<IActionResult> CreateSOAP([FromBody] SOAPViewModel vm)
@@ -484,7 +551,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                          join k in _applicationDbContext.Kunjungans
                              on a.KunjunganId equals k.KunjunganID
                         join d in _applicationDbContext.Dokters
-                             on k.DokterId equals d.DokterId 
+                             on k.DokterId equals d.DokterId
+                         join p in _applicationDbContext.PendaftaranPasienBarus
+                                on k.PasienId equals p.PendaftaranPasienBaruId
                          where a.IsDelete == false
                          select new
                          {
@@ -502,7 +571,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              Profesi = a.Profesi,
                              RanapId = a.RanapId,
                              NamaDokter = d.NmDokter,
-                        });
+                             DokterId = d.DokterId, // Tambahan ini untuk mendapatkan DokterId
+                             NamaPasien = p.NamaLengkap, // Tambahan ini untuk mendapatkan Nama Pasien
+                         });
 
             // **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)

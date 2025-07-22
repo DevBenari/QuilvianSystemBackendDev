@@ -269,7 +269,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                                         x.rd.ObatId,
                                         NamaObat = x.oRacikan.ObatName ?? "-",
                                         Qty = x.rd.QtyUsed ?? 0,
-                                        KomposisiDosis = x.rd.KomposisiDosis ?? 0
+                                        KomposisiDosis = x.rd.KomposisiDosis ?? 0,
                                     }).Distinct();
 
                                 return new
@@ -386,7 +386,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             {
                 return NotFound(new { message = "Data billing untuk kunjungan ini tidak ditemukan. || 404 Not Found" });
             }
-
             return Ok(new { status = "success", data = kasirData.FirstOrDefault() });
         }
 
