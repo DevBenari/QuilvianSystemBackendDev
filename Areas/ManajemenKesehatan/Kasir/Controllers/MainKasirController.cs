@@ -424,7 +424,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                                 x.dr.DetailResepId,
                                 x.dr.ObatId,
                                 NamaObat = x.o.ObatName,
-                                Harga = x.o.HargaJual,
+                                Harga = x.o.HTEPrice,
                                 x.dr.Qty,
                                 x.dr.Signa,
                                 x.dr.SignaTambahan,
@@ -494,7 +494,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                             (decimal)group
                                 .Where(x => x.dr != null && x.o != null)
                                 .DistinctBy(x => x.dr.DetailResepId)
-                                .Sum(x => x.dr.Qty * x.o.HargaJual)
+                                .Sum(x => x.dr.Qty * x.o.HTEPrice)
                         ),
 
                         TotalObatRacikan = (decimal)Math.Ceiling(

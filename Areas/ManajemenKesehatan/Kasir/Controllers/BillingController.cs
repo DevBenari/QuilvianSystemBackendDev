@@ -334,7 +334,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                             (decimal)group
                                 .Where(x => x.dr != null && x.o != null)
                                 .DistinctBy(x => x.dr.DetailResepId)
-                                .Sum(x => x.dr.Qty * x.o.HargaJual)
+                                .Sum(x => x.dr.Qty * x.o.HTEPrice)
                         ),
 
                         TotalObatRacikan = (decimal)Math.Ceiling(
@@ -548,7 +548,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         ObatName = o.ObatName,
                         rd.QtyUsed,
                         rd.KomposisiDosis,
-                        o.HargaJual
+                        o.HTEPrice
                     }
                 ).ToListAsync();
 
@@ -578,7 +578,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                                 rd.ObatName,
                                 rd.QtyUsed,
                                 rd.KomposisiDosis,
-                                rd.HargaJual
+                                rd.HTEPrice
                             }).ToList<object>();
                         }
 
@@ -921,7 +921,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         if (obat == null)
                             return NotFound(new { message = "Data obat tidak ditemukan." });
 
-                        harga = obat.HargaJual;
+                        harga = obat.HTEPrice;
                         break;
 
                     case "tindakan":

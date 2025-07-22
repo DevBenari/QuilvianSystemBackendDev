@@ -15,8 +15,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? JumlahSatuan { get; set; }
         public Guid? SatuanId { get; set; }
         public Guid? BentukObatId { get; set; }
-        public decimal HargaJual { get; set; }
-        public decimal? HargaAwal { get; set; }
+        public decimal HTEPrice { get; set; }
+        public decimal? HNAPrice { get; set; }
         public bool? IsActive { get; set; }
         public int Stock { get; set; }
         public int? Minimal { get; set; }
@@ -30,6 +30,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public decimal? TakaranDosis { get; set; }
         public string? Dosis { get; set; }
         public string? Note { get; set; }
+        public decimal? Cogs { get; set; }
 
         //public string KategoriObat { get; set; }
         //public string Asuransi { get; set; }

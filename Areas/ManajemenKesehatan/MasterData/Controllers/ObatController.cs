@@ -63,8 +63,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     a.ObatId,
                     a.ObatCode,
                     a.ObatName,
-                    a.HargaAwal,
-                    a.HargaJual,
+                    a.HNAPrice,
+                    a.HTEPrice,
                     a.Stock,
                     a.IsActive,
                     a.Note,
@@ -147,8 +147,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     a.ObatId,
                     a.ObatCode,
                     a.ObatName,
-                    a.HargaAwal,
-                    a.HargaJual,
+                    a.HNAPrice,
+                    a.HTEPrice,
                     a.Stock,
                     a.IsActive,
                     a.Note,
@@ -271,7 +271,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     ObatCode = kode,
                     ObatName = vm.ObatName,
                     BentukObatId = vm.BentukObatId,
-                    HargaJual = vm.HargaJual,
+                    HTEPrice = vm.HTEPrice,
                     Stock = vm.Stock,
                     IsActive = vm.IsActive,
                     Minimal = vm.Minimal,  // Tambahkan properti baru
@@ -355,7 +355,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 data.ObatName = vm.ObatName;
                 data.BentukObatId = vm.BentukObatId;
-                data.HargaJual = vm.HargaJual;
+                data.HTEPrice = vm.HTEPrice;
                 data.Stock = vm.Stock;
                 data.IsActive = vm.IsActive;
                 data.Note = vm.Note;
@@ -479,8 +479,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.ObatId,
                         a.ObatCode,
                         a.ObatName,
-                        a.HargaAwal,
-                        a.HargaJual,
+                        a.HNAPrice,
+                        a.HTEPrice,
                         a.Stock,
                         a.IsActive,
                         a.Note,

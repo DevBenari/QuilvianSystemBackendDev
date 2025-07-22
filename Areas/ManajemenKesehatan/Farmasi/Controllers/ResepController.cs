@@ -367,8 +367,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                 Qty = qtyInput,
                                 Signa = obat.Signa,
                                 SignaTambahan = obat.SignaTambahan,
-                                HargaObat = obatDb.HargaJual,
-                                TotalHargaObat = obatDb.HargaJual * qtyInput,
+                                HargaObat = obatDb.HTEPrice,
+                                TotalHargaObat = obatDb.HTEPrice * qtyInput,
                                 StatusCoverObat = obat.StatusCoverObat,
                                 JenisObat = obat.JenisObat,
                                 IsRacikan = false,
@@ -398,9 +398,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                 BillingKode = $"{billingIndex:D3}",
                                 ItemId = obatId,
                                 NamaItem = obatDb.ObatName,
-                                HargaItem = obatDb.HargaJual,
+                                HargaItem = obatDb.HTEPrice,
                                 QtyItem = qtyInput,
-                                SubTotalItem = obatDb.HargaJual * qtyInput,
+                                SubTotalItem = obatDb.HTEPrice * qtyInput,
                                 JenisBilling = "Obat",
                                 StatusPengambilan = true,
                                 CreateBy = getUserActive.UserActiveId,
@@ -460,7 +460,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
                                 // Perhitungan jumlah pakai
                                 var qtyPakai = Math.Ceiling((decimal)((detailRacikan.KomposisiDosis * racikanEntity.QtyRacikan) / obatDbRacikan.TakaranDosis));
-                                var hargaOb = qtyPakai * obatDbRacikan.HargaJual;
+                                var hargaOb = qtyPakai * obatDbRacikan.HTEPrice;
                                 totalHargaRacikan += hargaOb;
 
                                 if (obatDbRacikan.Stock < qtyPakai)
@@ -852,8 +852,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             Qty = qty,
                             Signa = obat.Signa,
                             SignaTambahan = obat.SignaTambahan,
-                            HargaObat = obatDb.HargaJual,
-                            TotalHargaObat = obatDb.HargaJual * qty,
+                            HargaObat = obatDb.HTEPrice,
+                            TotalHargaObat = obatDb.HTEPrice * qty,
                             StatusCoverObat = obat.StatusCoverObat,
                             JenisObat = obat.JenisObat,
                             IsRacikan = false,
@@ -883,9 +883,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             BillingKode = $"{billingIndex:D3}",
                             ItemId = obatId,
                             NamaItem = obatDb.ObatName,
-                            HargaItem = obatDb.HargaJual,
+                            HargaItem = obatDb.HTEPrice,
                             QtyItem = qty,
-                            SubTotalItem = obatDb.HargaJual * qty,
+                            SubTotalItem = obatDb.HTEPrice * qty,
                             JenisBilling = "Obat",
                             StatusPengambilan = true,
                             CreateBy = userId,
@@ -960,7 +960,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             return BadRequest(new { message = $"Obat racikan tidak ditemukan: {rDetail.ObatId}" });
 
                         var qtyPakai = Math.Ceiling((decimal)(rDetail.KomposisiDosis * totalQty / obatDb.TakaranDosis));
-                        totalHarga += qtyPakai * obatDb.HargaJual;
+                        totalHarga += qtyPakai * obatDb.HTEPrice;
 
                         if (obatDb.Stock < qtyPakai)
                             return BadRequest(new { message = $"Stok racikan tidak cukup: {obatDb.ObatName}" });
@@ -974,7 +974,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             RacikanId = racikanId,
                             ObatId = rDetail.ObatId,
                             KomposisiDosis = rDetail.KomposisiDosis,
-                            HargaKomposisi = qtyPakai * obatDb.HargaJual,
+                            HargaKomposisi = qtyPakai * obatDb.HTEPrice,
                             QtyUsed = (int)qtyPakai,
                             CreateBy = userId,
                             CreateDateTime = DateTimeOffset.UtcNow

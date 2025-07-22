@@ -8,8 +8,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels
         public string? JumlahSatuan { get; set; }
         public Guid? SatuanId { get; set; }
         public Guid BentukObatId { get; set; }
-        public decimal HargaJual { get; set; }
-        public decimal? HargaAwal { get; set; }
+        public decimal HTEPrice { get; set; }
+        public decimal? HNAPrice { get; set; }
         public bool? IsActive { get; set; }
         public int Stock { get; set; }
         public int? Minimal { get; set; }
