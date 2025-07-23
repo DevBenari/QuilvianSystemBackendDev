@@ -9,7 +9,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models
     {
         [Key]
         public Guid BookingBedRanapId { get; set; }
-        public Guid? RanapId { get; set; }
+        public Guid? KunjunganId { get; set; }
         public Guid? KamarId { get; set; }
         public Guid? BedId { get; set; }
         public DateTime? TglMasuk { get; set; }

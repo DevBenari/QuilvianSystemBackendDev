@@ -79,7 +79,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.CreateBy,
                              CreateByName = u.FullName,
                              a.BookingBedRanapId,
-                             a.RanapId,
+                             a.KunjunganId,
                              a.KamarId,
                              a.BedId,
                              a.TglMasuk,
@@ -196,7 +196,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 var data = new BookingBedRanap
                 {
                     BookingBedRanapId = Guid.NewGuid(),
-                    RanapId = vm.RanapId,
+                    KunjunganId = vm.KunjunganId,
                     KamarId = vm.KamarId,
                     BedId = vm.BedId,
                     TglMasuk = parsedTglMasukRanap,
@@ -287,7 +287,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 }
 
                 // **Update Data**
-                data.RanapId = vm.RanapId;
+                data.KunjunganId = vm.KunjunganId;
                 data.KamarId = vm.KamarId;
                 data.BedId = vm.BedId;
                 data.TglMasuk = parsedTglMasukRanap;
@@ -406,7 +406,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.CreateBy,
                              CreateByName = u.FullName,
                              a.BookingBedRanapId,
-                             a.RanapId,
+                             a.KunjunganId,
                              a.KamarId,
                              a.BedId,
                              a.TglMasuk,
