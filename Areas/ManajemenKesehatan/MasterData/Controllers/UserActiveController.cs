@@ -53,6 +53,37 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
         }
+        private string GeneratePinPegawai(DateTime? tanggalLahir)
+        {
+            if (tanggalLahir.HasValue)
+            {
+                // Mengambil dua digit tanggal dan dua digit bulan dari tanggal lahir  
+                string hari = tanggalLahir.Value.Day.ToString("D2");   // Format 2 digit  
+                string bulan = tanggalLahir.Value.Month.ToString("D2"); // Format 2 digit  
+
+                // Menggabungkan menjadi PIN 4 digit  
+                string pinPegawai = hari + bulan;
+
+                return pinPegawai;
+            }
+
+            return string.Empty; // Return empty string if tanggalLahir is null  
+        }
+
+        private DateTime? TryParseTanggalToUtc(string tanggal)
+        {
+            if (DateTime.TryParseExact(
+                tanggal,
+                "yyyy-MM-dd",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.None,
+                out var result))
+            {
+                return DateTime.SpecifyKind(result, DateTimeKind.Utc);
+            }
+
+            return null;
+        }
 
         [HttpGet]
         public async Task<IActionResult> GetAllUserActive(int page = 1, int perPage = 10)
@@ -99,6 +130,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             NamaPosisi = pos != null ? pos.PositionName : "-",
                             a.IdentityNumber,
                             a.PlaceOfBirth,
+                            a.AgamaId,
+                            a.IsPerawat,
+                            a.JenisPegawai,
+                            a.ProvinsiId,
+                            a.KabupatenKotaId,
+                            a.KecamatanId,
+                            a.KelurahanId,
+                            a.StatusPegawai,
+                            a.Kewarganegaraan,
+                            a.NoSTR,
+                            a.TglAkhirKontrak,
+                            a.TglAwalKontrak,
+                            a.TglKeluar,
+                            a.TglMasuk,
                             a.FotoName,
                             a.FotoPath,
                         }).OrderByDescending(a=>a.CreateDateTime);
@@ -174,6 +219,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     NamaPosisi = posisi?.PositionName ?? null,
                     user.TipeUserId,
                     NamaTipeUser = tipeUser?.NamaTipeUser ?? null,
+                    user.ProvinsiId,
+                    user.KabupatenKotaId,
+                    user.KecamatanId,
+                    user.KelurahanId,
+                    user.Kewarganegaraan,
+                    user.AgamaId,
+                    user.IsPerawat,
+                    user.NoSTR,
+                    user.StatusPegawai,
+                    user.JenisPegawai,
+                    user.TglMasuk,
+                    user.TglKeluar,
+                    user.TglAwalKontrak,
+                    user.TglAkhirKontrak,
                     user.FotoName,
                     user.FotoPath,
                     user.CreateDateTime,
@@ -440,9 +499,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         UserActiveId = id,
                         UserActiveCode = kode,
                         FullName = vm.FullName,
+                        PinPegawai = GeneratePinPegawai(TryParseTanggalToUtc(vm.DateOfBirth)),
                         IdentityNumber = vm.IdentityNumber,
                         PlaceOfBirth = vm.PlaceOfBirth,
-                        DateOfBirth = parsedDate,
+                        DateOfBirth = (DateTime)TryParseTanggalToUtc(vm.DateOfBirth),
                         Gender = vm.Gender,
                         Address = vm.Address,
                         Handphone = vm.Handphone,
@@ -451,6 +511,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         DepartemenId = vm.DepartemenId,
                         PositionId = vm.PositionId,
                         TipeUserId = vm.TipeUserId,
+                        ProvinsiId = vm.ProvinsiId,
+                        KabupatenKotaId = vm.KabupatenKotaId,
+                        KecamatanId = vm.KecamatanId,
+                        KelurahanId = vm.KelurahanId,
+                        Kewarganegaraan = vm.Kewarganegaraan,
+                        AgamaId = vm.AgamaId,
+                        IsPerawat = vm.IsPerawat,
+                        NoSTR = vm.NoSTR,
+                        StatusPegawai = vm.StatusPegawai,
+                        JenisPegawai = vm.JenisPegawai,
+                        TglMasuk = TryParseTanggalToUtc(vm.TglMasuk),
+                        TglKeluar = TryParseTanggalToUtc(vm.TglKeluar),
+                        TglAwalKontrak = TryParseTanggalToUtc(vm.TglAwalKontrak),
+                        TglAkhirKontrak = TryParseTanggalToUtc(vm.TglAkhirKontrak),
+
                         FotoName = fotoFileName,
                         FotoPath = fotoPath
                     };
@@ -524,7 +599,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
             }
         }
-
 
         [HttpPut("UserActive/{id}")]
         public async Task<IActionResult> UpdateUser(Guid id, [FromForm] UserActiveViewModel vm)
@@ -1031,11 +1105,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             NamaDepartemen = dept != null ? dept.NamaDepartement : "-",
                             a.PositionId,
                             NamaPosisi = pos != null ? pos.PositionName : "-",
-                            a.IsActive,
-                            a.FotoName,
-                            a.FotoPath,
                             a.IdentityNumber,
                             a.PlaceOfBirth,
+                            a.AgamaId,
+                            a.IsPerawat,
+                            a.JenisPegawai,
+                            a.ProvinsiId,
+                            a.KabupatenKotaId,
+                            a.KecamatanId,
+                            a.KelurahanId,
+                            a.StatusPegawai,
+                            a.Kewarganegaraan,
+                            a.NoSTR,
+                            a.TglAkhirKontrak,
+                            a.TglAwalKontrak,
+                            a.TglKeluar,
+                            a.TglMasuk,
+                            a.FotoName,
+                            a.FotoPath,
                         };
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**

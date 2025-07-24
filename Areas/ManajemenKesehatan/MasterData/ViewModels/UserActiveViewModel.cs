@@ -28,5 +28,19 @@
         //public string? Spesialis { get; set; }
         //public bool? IsAsuransi { get; set; }
 
+        public string? TglMasuk { get; set; }
+        public string? TglKeluar { get; set; }
+        public string? TglAwalKontrak { get; set; }
+        public string? TglAkhirKontrak { get; set; }
+        public Guid? ProvinsiId { get; set; }
+        public Guid? KabupatenKotaId { get; set; }
+        public Guid? KecamatanId { get; set; }
+        public Guid? KelurahanId { get; set; }
+        public string? Kewarganegaraan { get; set; }
+        public Guid? AgamaId { get; set; }
+        public bool? IsPerawat { get; set; }
+        public string? NoSTR { get; set; }
+        public string? StatusPegawai { get; set; }
+        public string? JenisPegawai { get; set; }
     }
 }
