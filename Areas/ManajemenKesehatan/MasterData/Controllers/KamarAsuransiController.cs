@@ -53,20 +53,28 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = (from a in _applicationDbContext.KamarAsuransis
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false || a.IsDelete == null
+            var query = (from ka in _applicationDbContext.KamarAsuransis
+                         join ua in _applicationDbContext.UserActives.DefaultIfEmpty()
+                         on ka.CreateBy equals ua.UserActiveId
+                         join k in _applicationDbContext.Kamars.DefaultIfEmpty()
+                         on ka.KamarId equals k.KamarId
+                         where ka.IsDelete == false || ka.IsDelete == null
                          select new
                          {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = u.FullName,
-                             a.KamarAsuransiId,
-                             a.KamarId,
-                             a.AsuransiId,
-                             a.Keterangan,
-
+                             ka.CreateDateTime,
+                             ka.CreateBy,
+                             CreateByName = ua.FullName,
+                             ka.KamarAsuransiId,
+                             ka.KamarId,
+                             k.KelasId,
+                             k.KodeKamar,
+                             k.NamaKamar,
+                             k.TarifHarian,
+                             k.Lantai,
+                             k.PosisiRuangan,
+                             k.Deskripsi,
+                             ka.AsuransiId,
+                             ka.Keterangan,
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -103,16 +111,40 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.KamarAsuransis.Find(id);
-            if (listdata == null)
+            var data = (from ka in _applicationDbContext.KamarAsuransis
+                        join ua in _applicationDbContext.UserActives.DefaultIfEmpty()
+                            on ka.CreateBy equals ua.UserActiveId
+                        join k in _applicationDbContext.Kamars.DefaultIfEmpty()
+                            on ka.KamarId equals k.KamarId
+                        where ka.KamarAsuransiId == id && (ka.IsDelete == false || ka.IsDelete == null)
+                        select new
+                        {
+                            ka.CreateDateTime,
+                            ka.CreateBy,
+                            CreateByName = ua.FullName,
+                            ka.KamarAsuransiId,
+                            ka.KamarId,
+                            k.KelasId,
+                            k.KodeKamar,
+                            k.NamaKamar,
+                            k.TarifHarian,
+                            k.Lantai,
+                            k.PosisiRuangan,
+                            k.Deskripsi,
+                            ka.AsuransiId,
+                            ka.Keterangan,
+                        }).FirstOrDefault();
+
+            if (data == null)
             {
-                return NotFound(new { message = "Data tidak ditemukan." });
+                return NotFound(new { message = "Data tidak ditemukan || 404 Not Found" });
             }
 
             return Ok(new
             {
-                message = "Ditemukan || 200 OK",
-                data = listdata
+                status = "success",
+                message = "Data retrieved successfully",
+                data
             });
         }
 
@@ -346,6 +378,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              ka.KamarAsuransiId,
                              ka.KamarId,
                              k.KelasId,
+                             k.KodeKamar,
+                             k.NamaKamar,
+                             k.TarifHarian,
+                             k.Lantai,
+                             k.PosisiRuangan,
+                             k.Deskripsi,
                              ka.AsuransiId,
                              ka.Keterangan,
                          });
