@@ -320,45 +320,47 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
         [HttpGet("paged")]
         public IActionResult Paged(
-        int page = 1,
-        int perPage = 10,
-        string? search = null,
-        string? orderBy = "CreateDateTime",
-        string? sortDirection = "desc",
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                DateTime? startDate = null,
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                DateTime? endDate = null,
-        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+           int page = 1,
+           int perPage = 10,
+           string? search = null,
+           string? orderBy = "CreateDateTime",
+           string? sortDirection = "desc",
+           [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+           DateTime? startDate = null,
+           [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+           DateTime? endDate = null,
+           [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
-
-            // Query data
-            var query = (from a in _applicationDbContext.KamarAsuransis
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false || a.IsDelete == null
+            // Query data  
+            var query = (from ka in _applicationDbContext.KamarAsuransis
+                         join ua in _applicationDbContext.UserActives.DefaultIfEmpty()
+                         on ka.CreateBy equals ua.UserActiveId
+                         join k in _applicationDbContext.Kamars.DefaultIfEmpty()
+                         on ka.KamarId equals k.KamarId
+                         where ka.IsDelete == false || ka.IsDelete == null
                          select new
                          {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = u.FullName,
-                             a.KamarAsuransiId,
-                             a.KamarId,
-                             a.AsuransiId,
-                             a.Keterangan,
-
+                             ka.CreateDateTime,
+                             ka.CreateBy,
+                             CreateByName = ua.FullName,
+                             ka.KamarAsuransiId,
+                             ka.KamarId,
+                             k.KelasId,
+                             ka.AsuransiId,
+                             ka.Keterangan,
                          });
 
-            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-            //if (!string.IsNullOrWhiteSpace(search))
-            //{
-            //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-            //    query = query.Where(u =>
-            //        EF.Functions.ILike(u.NamaDiskon, search)
-            //    );
-            //}
+            // filter search kelasid
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+                query = query.Where(u =>
+                    EF.Functions.ILike(u.KelasId.ToString(), search)
+                );
+            }
 
-            //// **Filter berdasarkan tanggal**
+
+            // **Filter berdasarkan tanggal**  
             if (startDate.HasValue && endDate.HasValue)
             {
                 DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
@@ -369,7 +371,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     u.CreateDateTime <= endUtc);
             }
 
-            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
+            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai  
             if (periode.HasValue)
             {
                 DateTime today = DateTime.UtcNow.Date;
@@ -418,7 +420,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
             }
 
-            // Sorting Data dengan cara yang lebih aman
+            // Sorting Data dengan cara yang lebih aman  
             query = sortDirection?.ToLower() == "desc"
                 ? orderBy switch
                 {
@@ -433,7 +435,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     _ => query.OrderBy(u => u.CreateDateTime)
                 };
 
-            // Pagination
+            // Pagination  
             var totalRows = query.Count();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
             var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
