@@ -120,6 +120,48 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             });
         }
 
+        [HttpGet("VitalSign-ByPasien/{pasienId}")]
+        public async Task<IActionResult> GetVitalSignByPasienId(Guid pasienId)
+        {
+            var data = (from a in _applicationDbContext.VitalSigns
+                        join k in _applicationDbContext.Kunjungans
+                            on a.KunjunganId equals k.KunjunganID
+                        join u in _applicationDbContext.UserActives
+                            on a.CreateBy equals u.UserActiveId
+                        where a.IsDelete == false && k.PasienId == pasienId
+                        orderby a.CreateDateTime descending
+                        select new
+                        {
+                            CreateDateTime = a.CreateDateTime,
+                            CreateBy = a.CreateBy,
+                            CreateByName = u.FullName,
+                            VitalSignId = a.VitalSignId,
+                            KunjunganId = a.KunjunganId,
+                            Suhu = a.Suhu,
+                            HR = a.HR,
+                            RR = a.RR,
+                            TekananDarahSystolic = a.TekananDarahSystolic,
+                            TekananDarahDiastolic = a.TekananDarahDiastolic,
+                            SaturasiOksigen = a.SaturasiOksigen,
+                            Height = a.Height,
+                            Weight = a.Weight,
+                            BMI = a.BMI,
+                            LingkarKepalaBayi = a.LingkarKepalaBayi,
+                            RanapId = a.RanapId
+                        }).ToList();
+
+            if (!data.Any())
+            {
+                return NotFound(new { message = "Data tidak ditemukan untuk pasien ini. || 404 Not Found" });
+            }
+
+            return Ok(new
+            {
+                message = "Berhasil || 200 OK",
+                data
+            });
+        }
+
         [HttpPost]
         public async Task<IActionResult> CreateVitalSign([FromBody] VitalSignViewModel vm)
         {

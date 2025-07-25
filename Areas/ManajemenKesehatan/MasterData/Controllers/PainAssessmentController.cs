@@ -141,6 +141,68 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             });
         }
 
+        [HttpGet("PainAssessment-ByPasien/{pasienId}")]
+        public async Task<IActionResult> GetPainAssessmentByPasienId(Guid pasienId)
+        {
+            var data = (from a in _applicationDbContext.PainAssessments
+                        join k in _applicationDbContext.Kunjungans
+                            on a.KunjunganId equals k.KunjunganID
+                        join u in _applicationDbContext.UserActives
+                            on a.CreateBy equals u.UserActiveId
+                        where a.IsDelete == false && k.PasienId == pasienId
+                        orderby a.CreateDateTime descending
+                        select new
+                        {
+                            CreateDateTime = a.CreateDateTime,
+                            CreateBy = a.CreateBy,
+                            CreateByName = u.FullName,
+                            PainAssessmentId = a.PainAssessmentId,
+                            KunjunganId = a.KunjunganId,
+                            KeluhanUtama = a.KeluhanUtama,
+                            IsPain = a.IsPain,
+                            Pemicu = a.Pemicu,
+                            Kualitas = a.Kualitas,
+                            Lokasi = a.Lokasi,
+                            SkalaPainId = a.SkalaPainId,
+                            Frekuensi = a.Frekuensi,
+                            PainManagement = a.PainManagement,
+                            IsInheritedDisease = a.IsInheritedDisease,
+                            InheritedDisease = a.InheritedDisease,
+                            IsAlergic = a.IsAlergic,
+                            Alergic = a.Alergic,
+                            NafsuMakan = a.NafsuMakan,
+                            IsMual = a.IsMual,
+                            IsMuntah = a.IsMuntah,
+                            IsFallRisk = a.IsFallRisk,
+                            FallRisk = a.FallRisk,
+                            IsBCGimunisasi = a.IsBCGimunisasi,
+                            IsHepatitisBImunisasi = a.IsHepatitisBImunisasi,
+                            IsPolioImunisasi = a.IsPolioImunisasi,
+                            IsDPTImunisasi = a.IsDPTImunisasi,
+                            IsCampakImunisasi = a.IsCampakImunisasi,
+                            IsAsiEksklusif = a.IsAsiEksklusif,
+                            StatusMpasi = a.StatusMpasi,
+                            IsAtaksia = a.IsAtaksia,
+                            IsPosturalInstability = a.IsPosturalInstability,
+                            HasilResikoJatuh = a.HasilResikoJatuh,
+                            IsMotorikAktif = a.IsMotorikAktif,
+                            IsResponsAuditori = a.IsResponsAuditori,
+                            IsInteraksiSosial = a.IsInteraksiSosial,
+                            RanapId = a.RanapId
+                        }).ToList();
+
+            if (!data.Any())
+            {
+                return NotFound(new { message = "Data tidak ditemukan untuk pasien ini. || 404 Not Found" });
+            }
+
+            return Ok(new
+            {
+                message = "Berhasil || 200 OK",
+                data
+            });
+        }
+
         [HttpPost]
         public async Task<IActionResult> CreatePainAssessment([FromBody] PainAssessmentViewModel vm)
         {
