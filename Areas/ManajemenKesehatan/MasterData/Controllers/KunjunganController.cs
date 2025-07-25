@@ -381,6 +381,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     {
                         request.PasienId,
                         request.DokterId,
+                        newKunjungan.KunjunganID,
                         JenisKunjungan = inputJenis,
                         NomorAntrian = nomorAntrianFormatted
                     }
@@ -536,6 +537,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         request.PasienId,
                         request.DokterId,
                         request.PoliklinikId,
+                        existingKunjungan.KunjunganID,
                         JenisKunjungan = inputJenis,
                         NomorAntrian = nomorAntrianFormatted
                     }
