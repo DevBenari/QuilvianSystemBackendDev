@@ -470,8 +470,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     .Where(a => !a.IsDelete)
                     .Select(a => new
                     {
-                        a.CreateDateTime,
-                        a.CreateBy,
+                        CreateDateTime = a.CreateDateTime != null ? (DateTimeOffset?)a.CreateDateTime : null,
                         CreateByName = _applicationDbContext.UserActives
                             .Where(u => u.UserActiveId == a.CreateBy)
                             .Select(u => u.FullName)
