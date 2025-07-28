@@ -6,36 +6,36 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.ViewModels;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class DiskonController : Controller
+    public class SDKIEdukasiController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<DiskonController> _logger;
+        private readonly ILogger<SDKIEdukasiController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public DiskonController(
+        public SDKIEdukasiController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<DiskonController> logger,
+            ILogger<SDKIEdukasiController> logger,
             IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
@@ -53,7 +53,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = (from a in _applicationDbContext.Diskons
+            var query = (from a in _applicationDbContext.SDKIEdukasis
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
                          where a.IsDelete == false || a.IsDelete == null
@@ -62,14 +62,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
-                             a.DiskonId,
-                             a.NamaDiskon,
-                             a.TglBerlaku,
-                             a.TglBerakhir,
-                             a.IsAsuransi,
-                             a.AsuransiId,
-                             a.PersenDiskon,
-                             a.NominalDiskon,
+                             a.SDKIEdukasiId,
+                             a.SDKIEtiologiId,
+                             a.NamaEdukasi,
                              a.Keterangan,
 
                          }).OrderByDescending(a => a.CreateDateTime);
@@ -102,12 +97,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     TotalPages = totalPages
                 }
             });
+
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.Diskons.Find(id);
+            var listdata = _applicationDbContext.SDKIEdukasis.Find(id);
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -121,7 +117,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] DiskonViewModel vm)
+        public async Task<IActionResult> Create([FromBody] SDKIEdukasiViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -151,32 +147,28 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 var userActiveId = getUserActive.UserActiveId;
 
                 //// **Cek Duplikasi**
-                bool isDuplicate = _applicationDbContext.Diskons
-                                    .Any(c => c.NamaDiskon == vm.NamaDiskon);
+                //bool isDuplicate = _applicationDbContext.Diskons
+                //                    .Any(c => c.NamaDiskon == vm.NamaDiskon);
 
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Nama benefit ini telah tersedia" });
-                }
+                //if (isDuplicate)
+                //{
+                //    return Conflict(new { message = "Nama benefit ini telah tersedia" });
+                //}
 
                 // **Buat Data Baru**
-                var data = new Diskon
+                var data = new SDKIEdukasi
                 {
-                    DiskonId = Guid.NewGuid(),
-                    NamaDiskon = vm.NamaDiskon,
-                    TglBerlaku = vm.TglBerlaku,
-                    TglBerakhir = vm.TglBerakhir,
-                    IsAsuransi = vm.IsAsuransi,
-                    AsuransiId = vm.AsuransiId,
-                    PersenDiskon = vm.PersenDiskon,
-                    NominalDiskon = vm.NominalDiskon,
+                    SDKIEdukasiId = Guid.NewGuid(),
+                    SDKIEtiologiId = vm.SDKIEtiologiId,
+                    NamaEdukasi = vm.NamaEdukasi,
                     Keterangan = vm.Keterangan,
+
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
 
                 // **Simpan ke Database**
-                _applicationDbContext.Diskons.Add(data);
+                _applicationDbContext.SDKIEdukasis.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -199,7 +191,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] DiskonViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] SDKIEdukasiViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -230,26 +222,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.Diskons.FindAsync(id);
+                var data = await _applicationDbContext.SDKIEdukasis.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
                 // **Update Data**
-                data.NamaDiskon = vm.NamaDiskon;
-                data.TglBerlaku = vm.TglBerlaku;
-                data.TglBerakhir = vm.TglBerakhir;
-                data.IsAsuransi = vm.IsAsuransi;
-                data.AsuransiId = vm.AsuransiId;
-                data.PersenDiskon = vm.PersenDiskon;
-                data.NominalDiskon = vm.NominalDiskon;
+                data.SDKIEtiologiId = vm.SDKIEtiologiId;
+                data.NamaEdukasi = vm.NamaEdukasi;
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.Diskons.Update(data);
+                _applicationDbContext.SDKIEdukasis.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -298,7 +285,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.Diskons.FindAsync(id);
+                var data = await _applicationDbContext.SDKIEdukasis.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -310,7 +297,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
                 data.IsDelete = true;
 
-                _applicationDbContext.Diskons.Update(data);
+                _applicationDbContext.SDKIEdukasis.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -345,34 +332,28 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 DateTime? endDate = null,
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
+            var query = (from a in _applicationDbContext.SDKIEdukasis
+                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
+                         on a.CreateBy equals u.UserActiveId
+                         where a.IsDelete == false || a.IsDelete == null
+                         select new
+                         {
+                             a.CreateDateTime,
+                             a.CreateBy,
+                             CreateByName = u.FullName,
+                             a.SDKIEdukasiId,
+                             a.SDKIEtiologiId,
+                             a.NamaEdukasi,
+                             a.Keterangan,
 
-            // Query data
-            var query = from a in _applicationDbContext.Diskons
-                        join u in _applicationDbContext.UserActives
-                        on a.CreateBy equals u.UserActiveId
-                        where a.IsDelete == false || a.IsDelete == null
-                        select new
-                        {
-                            a.CreateDateTime,
-                            a.CreateBy,
-                            CreateByName = u.FullName,
-                            a.DiskonId,
-                            a.NamaDiskon,
-                            a.TglBerlaku,
-                            a.TglBerakhir,
-                            a.IsAsuransi,
-                            a.AsuransiId,
-                            a.PersenDiskon,
-                            a.NominalDiskon,
-                            a.Keterangan,
-                        };
+                         });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             if (!string.IsNullOrWhiteSpace(search))
             {
                 search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
-                    EF.Functions.ILike(u.NamaDiskon, search)
+                    EF.Functions.ILike(u.NamaEdukasi, search)
                 );
             }
 
@@ -442,14 +423,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "NamaDiskon" => query.OrderByDescending(u => u.NamaDiskon),
+                    "NamaEdukasi" => query.OrderByDescending(u => u.NamaEdukasi),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
                     "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
                     "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    "NamaDiskon" => query.OrderBy(u => u.NamaDiskon),
+                    "NamaEdukasi" => query.OrderBy(u => u.NamaEdukasi),
                     _ => query.OrderBy(u => u.CreateDateTime)
                 };
 

@@ -119,14 +119,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.IsScreening,
                             a.IsPresent,
                             a.Antrian,
-                            a.TglMasukRanap,
-                            a.TglKeluarRanap,
-                            a.DokterDPJId,
-                            a.KamarId,
-                            a.BedId,
-                            a.StatusRanap,
-                            a.AlasanKeluar,
-                            a.ReferensiKunjunganId,
+                            //a.TglMasukRanap,
+                            //a.TglKeluarRanap,
+                            //a.DokterDPJId,
+                            //a.KamarId,
+                            //a.BedId,
+                            //a.StatusRanap,
+                            //a.AlasanKeluar,
+                            //a.ReferensiKunjunganId,
                             d.NmDokter,
                             gambardokter = !string.IsNullOrEmpty(d.FotoName)
                                 ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
@@ -328,14 +328,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     IsScreening = false,
                     IsPresent = true,
                     IsFinishedKasir = false, // Default value
-                    TglMasukRanap = request.TglMasukRanapParsed,
-                    TglKeluarRanap = request.TglKeluarRanapParsed,
-                    DokterDPJId = request.DokterDPJId,
-                    KamarId = request.KamarId,
-                    BedId = request.BedId,
-                    StatusRanap = request.StatusRanap,
-                    AlasanKeluar = request.AlasanKeluar,
-                    ReferensiKunjunganId = request.ReferensiKunjunganId,
+                    //TglMasukRanap = request.TglMasukRanapParsed,
+                    //TglKeluarRanap = request.TglKeluarRanapParsed,
+                    //DokterDPJId = request.DokterDPJId,
+                    //KamarId = request.KamarId,
+                    //BedId = request.BedId,
+                    //StatusRanap = request.StatusRanap,
+                    //AlasanKeluar = request.AlasanKeluar,
+                    //ReferensiKunjunganId = request.ReferensiKunjunganId,
                     Antrian = nomorAntrianFormatted   // Format akhir: BU001
                 };
 
@@ -491,14 +491,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 existingKunjungan.Antrian = nomorAntrianFormatted;
 
                 // ttg rawat inap
-                existingKunjungan.TglMasukRanap = request.TglMasukRanapParsed;
-                existingKunjungan.TglKeluarRanap = request.TglKeluarRanapParsed;
-                existingKunjungan.DokterDPJId = request.DokterDPJId;
-                existingKunjungan.KamarId = request.KamarId;
-                existingKunjungan.BedId = request.BedId;
-                existingKunjungan.StatusRanap = request.StatusRanap;
-                existingKunjungan.AlasanKeluar = request.AlasanKeluar;
-                existingKunjungan.ReferensiKunjunganId = request.ReferensiKunjunganId;
+                //existingKunjungan.TglMasukRanap = request.TglMasukRanapParsed;
+                //existingKunjungan.TglKeluarRanap = request.TglKeluarRanapParsed;
+                //existingKunjungan.DokterDPJId = request.DokterDPJId;
+                //existingKunjungan.KamarId = request.KamarId;
+                //existingKunjungan.BedId = request.BedId;
+                //existingKunjungan.StatusRanap = request.StatusRanap;
+                //existingKunjungan.AlasanKeluar = request.AlasanKeluar;
+                //existingKunjungan.ReferensiKunjunganId = request.ReferensiKunjunganId;
 
                 existingKunjungan.UpdateDateTime = DateTimeOffset.UtcNow;
                 existingKunjungan.UpdateBy = userActiveId;
@@ -760,14 +760,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.IsPresent,
                             a.Antrian,
                             a.IsFinishedKasir,
-                            a.TglMasukRanap,
-                            a.TglKeluarRanap,
-                            a.DokterDPJId,
-                            a.KamarId,
-                            a.BedId,
-                            a.StatusRanap,
-                            a.AlasanKeluar,
-                            a.ReferensiKunjunganId,
+                            //a.TglMasukRanap,
+                            //a.TglKeluarRanap,
+                            //a.DokterDPJId,
+                            //a.KamarId,
+                            //a.BedId,
+                            //a.StatusRanap,
+                            //a.AlasanKeluar,
+                            //a.ReferensiKunjunganId,
                             d.NmDokter,
                             gambardokter = !string.IsNullOrEmpty(d.FotoName)
                                 ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
