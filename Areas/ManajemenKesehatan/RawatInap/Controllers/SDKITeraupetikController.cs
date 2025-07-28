@@ -22,20 +22,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class SDKIEtiologiController : Controller
+    public class SDKITeraupetikController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<SDKIEtiologiController> _logger;
+        private readonly ILogger<SDKITeraupetikController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public SDKIEtiologiController(
+        public SDKITeraupetikController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<SDKIEtiologiController> logger,
+            ILogger<SDKITeraupetikController> logger,
             IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
@@ -53,7 +53,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = (from a in _applicationDbContext.SDKIEtiologis
+            var query = (from a in _applicationDbContext.SDKITeraupetiks
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
                          where a.IsDelete == false || a.IsDelete == null
@@ -62,11 +62,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
+                             a.SDKITeraupetikId,
                              a.SDKIEtiologiId,
-                             a.SDKIDiagnosaId,
-                             a.NamaEtiologi,
+                             a.NamaTeraupetik,
                              a.Keterangan,
-
 
                          }).OrderByDescending(a => a.CreateDateTime);
 
@@ -103,7 +102,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.SDKIEtiologis.Find(id);
+            var listdata = _applicationDbContext.SDKITeraupetiks.Find(id);
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -117,7 +116,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] SDKIEtiologiViewModel vm)
+        public async Task<IActionResult> Create([FromBody] SDKITeraupetikViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -156,19 +155,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 //}
 
                 // **Buat Data Baru**
-                var data = new SDKIEtiologi
+                var data = new SDKITeraupetik
                 {
-                    SDKIEtiologiId = Guid.NewGuid(),
-                    SDKIDiagnosaId = vm.SDKIDiagnosaId,
-                    NamaEtiologi = vm.NamaEtiologi,
+                    SDKITeraupetikId = Guid.NewGuid(),
+                    SDKIEtiologiId = vm.SDKIEtiologiId,
+                    NamaTeraupetik = vm.NamaTeraupetik,
                     Keterangan = vm.Keterangan,
-
+                    
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
 
                 // **Simpan ke Database**
-                _applicationDbContext.SDKIEtiologis.Add(data);
+                _applicationDbContext.SDKITeraupetiks.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -191,7 +190,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] SDKIEtiologiViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] SDKITeraupetikViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -222,21 +221,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.SDKIEtiologis.FindAsync(id);
+                var data = await _applicationDbContext.SDKITeraupetiks.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
                 // **Update Data**
-                data.SDKIDiagnosaId = vm.SDKIDiagnosaId;
-                data.NamaEtiologi = vm.NamaEtiologi;
+                data.SDKIEtiologiId = vm.SDKIEtiologiId;
+                data.NamaTeraupetik = vm.NamaTeraupetik;
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.SDKIEtiologis.Update(data);
+                _applicationDbContext.SDKITeraupetiks.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -285,7 +284,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.SDKIEtiologis.FindAsync(id);
+                var data = await _applicationDbContext.SDKITeraupetiks.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -297,7 +296,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                 data.IsDelete = true;
 
-                _applicationDbContext.SDKIEtiologis.Update(data);
+                _applicationDbContext.SDKITeraupetiks.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -327,14 +326,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                DateTime? startDate = null,
+                        DateTime? startDate = null,
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                DateTime? endDate = null,
+                        DateTime? endDate = null,
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
 
             // Query data
-            var query = (from a in _applicationDbContext.SDKIEtiologis
+            var query = (from a in _applicationDbContext.SDKITeraupetiks
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
                          where a.IsDelete == false || a.IsDelete == null
@@ -343,11 +342,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
+                             a.SDKITeraupetikId,
                              a.SDKIEtiologiId,
-                             a.SDKIDiagnosaId,
-                             a.NamaEtiologi,
+                             a.NamaTeraupetik,
                              a.Keterangan,
-
 
                          });
 
@@ -356,7 +354,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             {
                 search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
-                    EF.Functions.ILike(u.NamaEtiologi, search)
+                    EF.Functions.ILike(u.NamaTeraupetik, search)
                 );
             }
 
@@ -426,14 +424,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "NamaEtiologi" => query.OrderByDescending(u => u.NamaEtiologi),
+                    "NamaTeraupetik" => query.OrderByDescending(u => u.NamaTeraupetik),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
                     "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
                     "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    "NamaEtiologi" => query.OrderBy(u => u.NamaEtiologi),
+                    "NamaTeraupetik" => query.OrderBy(u => u.NamaTeraupetik),
                     _ => query.OrderBy(u => u.CreateDateTime)
                 };
 
