@@ -149,7 +149,6 @@ namespace QuilvianSystemBackendDev.Repositories
 
         #region Areas Rawat Inap
         public DbSet<SuratPengantarRawatInap> SuratPengantarRawatInaps { get; set; }
-        public DbSet<KunjunganRanap> KunjunganRanaps { get; set; }
         public DbSet<BookingBedRanap> BookingBedRanaps { get; set; }
         public DbSet<PerawatObjective> PerawatObjectives { get; set; }
         public DbSet<PerawatSubjective> PerawatSubjectives { get; set; }
