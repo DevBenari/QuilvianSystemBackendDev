@@ -64,7 +64,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewMode
         public string? IdentitasOrangTua { get; set; }
         public string? PekerjaanOrangTua { get; set; }
         public string? HubunganKeluarga2 { get; set; }
-        public string? InformasiSekolah { get; set; }
         public string? HubunganKeluarga3 { get; set; } // Hubungan dengan pasien, misal: Ayah, Ibu, Kakek, Nenek, dll.
 
         //// Informasi Membership

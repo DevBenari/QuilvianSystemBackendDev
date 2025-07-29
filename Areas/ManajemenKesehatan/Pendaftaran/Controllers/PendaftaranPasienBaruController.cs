@@ -148,7 +148,6 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                             PekerjaanOrangTua = a.PekerjaanOrangTua,
                             HubunganKeluarga2 = a.HubunganKeluarga2,
                             HubunganKeluarga3 = a.HubunganKeluarga3,
-                            InformasiSekolah = a.InformasiSekolah,
                             MembershipId = a.MembershipId,
                             imageUrl = !string.IsNullOrEmpty(a.FotoName)
                                         ? $"{Request.Scheme}://{Request.Host}/FotoPasienBaru/{a.FotoName}"
@@ -254,7 +253,6 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     listdata.PekerjaanOrangTua,
                     listdata.HubunganKeluarga2,
                     listdata.HubunganKeluarga3,
-                    listdata.InformasiSekolah,
                     listdata.FotoName,
                     listdata.FotoPath,
                     listdata.MembershipId,
@@ -336,7 +334,6 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     listdata.PekerjaanOrangTua,
                     listdata.HubunganKeluarga2,
                     listdata.HubunganKeluarga3,
-                    listdata.InformasiSekolah,
                     listdata.FotoName,
                     listdata.FotoPath,
                     listdata.MembershipId,
@@ -650,7 +647,6 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                         PekerjaanOrangTua = vm.PekerjaanOrangTua,
                         HubunganKeluarga2 = vm.HubunganKeluarga2,
                         HubunganKeluarga3 = vm.HubunganKeluarga3,
-                        InformasiSekolah = vm.InformasiSekolah,
                         MembershipId = vm.MembershipId,
                         FotoName = fotoFileName,
                         QrCode = QRPath, // Simpan hanya path QR Code
@@ -765,7 +761,6 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 pasien.PekerjaanOrangTua = vm.PekerjaanOrangTua ?? pasien.PekerjaanOrangTua;
                 pasien.HubunganKeluarga2 = vm.HubunganKeluarga2 ?? pasien.HubunganKeluarga2;
                 pasien.HubunganKeluarga3 = vm.HubunganKeluarga3 ?? pasien.HubunganKeluarga3;
-                pasien.InformasiSekolah = vm.InformasiSekolah ?? pasien.InformasiSekolah;
                 pasien.MembershipId = vm.MembershipId ?? pasien.MembershipId;
 
                 // **Update Foto Profil Jika Ada**
@@ -948,7 +943,6 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                             PekerjaanOrangTua = a.PekerjaanOrangTua,
                             HubunganKeluarga2 = a.HubunganKeluarga2,
                             HubunganKeluarga3 = a.HubunganKeluarga3,
-                            InformasiSekolah = a.InformasiSekolah,
                             MembershipId = a.MembershipId,
                             imageUrl = !string.IsNullOrEmpty(a.FotoName)
                                         ? $"{Request.Scheme}://{Request.Host}/FotoPasienBaru/{a.FotoName}"
