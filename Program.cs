@@ -147,10 +147,12 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 
+// add services untuk SignalR
+builder.Services.AddSignalR();
+
 var app = builder.Build();
 
 // Konfigurasi SignalR
-builder.Services.AddSignalR();
 app.MapHub<KunjunganHub>("/hubs/kunjungan");
 app.MapHub<ResepHub>("/hubs/resep");
 
