@@ -384,7 +384,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     action = "create",
                     kunjunganId = newKunjungan.KunjunganID,
                     pasienId = request.PasienId,
-                    dokterId = request.DokterId
+                    dokterId = request.DokterId,
+                    NomorAntrian = nomorAntrianFormatted
                 });
 
 
@@ -561,7 +562,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     action = "update",
                     kunjunganId = existingKunjungan.KunjunganID,
                     pasienId = request.PasienId,
-                    dokterId = request.DokterId
+                    dokterId = request.DokterId,
+                    NomorAntrian = nomorAntrianFormatted
                 });
 
                 return Ok(new

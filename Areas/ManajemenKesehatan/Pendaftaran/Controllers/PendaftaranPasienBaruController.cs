@@ -189,7 +189,9 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
         [HttpGet("{id}")]
         public IActionResult GetPendaftraanPasienBaruById(Guid id)
         {
-            var listdata = _applicationDbContext.PendaftaranPasienBarus.Find(id);
+            var listdata = _applicationDbContext.PendaftaranPasienBarus
+            .FirstOrDefault(p => p.PendaftaranPasienBaruId == id && !p.IsDelete);
+
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -268,7 +270,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
         public IActionResult GetPendaftraanPasienBaruByNik(string nik)
         {
             var listdata = _applicationDbContext.PendaftaranPasienBarus
-                .Where(p => p.NoIdentitas == nik)
+                .Where(p => p.NoIdentitas == nik && !p.IsDelete)
                 .FirstOrDefault();
 
             if (listdata == null)
