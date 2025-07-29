@@ -6,12 +6,14 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion.Internal;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json.Converters;
 using OpenCvSharp;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
@@ -34,6 +36,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
         private readonly ILogger<KunjunganController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly IHubContext<KunjunganHub> _hubContext;
 
         public KunjunganController
         (
@@ -42,7 +45,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             SignInManager<ApplicationUser> signInManager,
 
             ILogger<KunjunganController> logger,
-            IWebHostEnvironment webHostEnvironment
+            IWebHostEnvironment webHostEnvironment,
+            IHubContext<KunjunganHub> hubContext
         )
         {
             _applicationDbContext = context;
@@ -50,6 +54,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+            _hubContext = hubContext;
         }
         private DateTime? TryParseTanggalLahir(string dateString)
         {
@@ -374,6 +379,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 _applicationDbContext.Billings.Add(bill);
 
                 await _applicationDbContext.SaveChangesAsync();
+                await _hubContext.Clients.All.SendAsync("Kunjungan ditambah", new
+                {
+                    action = "create",
+                    kunjunganId = newKunjungan.KunjunganID,
+                    pasienId = request.PasienId,
+                    dokterId = request.DokterId
+                });
+
                 return Ok(new
                 {
                     message = "Kunjungan baru berhasil ditambahkan.",
@@ -528,6 +541,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 await _applicationDbContext.SaveChangesAsync();
+                await _hubContext.Clients.All.SendAsync("KunjunganChanged", new
+                {
+                    action = "update",
+                    kunjunganId = existingKunjungan.KunjunganID,
+                    pasienId = request.PasienId,
+                    dokterId = request.DokterId
+                });
 
                 return Ok(new
                 {
@@ -683,6 +703,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     _applicationDbContext.Billings.Update(billing);
                 }
                 _applicationDbContext.SaveChanges();
+                await _hubContext.Clients.All.SendAsync("Kunjungan dihapus", new
+                {
+                    action = "delete",
+                    kunjunganId = id
+                });
 
                 return Ok(new { message = "Data berhasil dihapus..." });
             }

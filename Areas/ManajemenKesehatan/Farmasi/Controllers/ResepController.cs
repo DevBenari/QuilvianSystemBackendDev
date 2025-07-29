@@ -7,8 +7,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
@@ -33,6 +35,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
         private readonly ILogger<ResepController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly IHubContext<ResepHub> _hubContext;
 
 
         public ResepController(
@@ -40,13 +43,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ILogger<ResepController> logger,
-            IWebHostEnvironment webHostEnvironment)
+            IWebHostEnvironment webHostEnvironment,
+            IHubContext<ResepHub> hubContext
+            )
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+            _hubContext = hubContext;
         }
 
         [HttpGet]
@@ -528,8 +534,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                         }
                     }
                 }
-
                 int result = await _applicationDbContext.SaveChangesAsync();
+                await _hubContext.Clients.All.SendAsync("ResepChanged", new
+                {
+                    Action = "create",
+                    ResepId = resep.ResepId
+                });
+
                 if (result > 0)
                     return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
 
@@ -1001,6 +1012,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 }
 
                 await _applicationDbContext.SaveChangesAsync();
+                await _hubContext.Clients.All.SendAsync("ResepChanged", new
+                {
+                    Action = "update",
+                    ResepId = id
+                });
+
                 return Ok(new { message = "Update resep berhasil!" });
             }
             catch (DbUpdateException dbEx)
@@ -1390,6 +1407,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 resep.DeleteDateTime = DateTimeOffset.UtcNow;
 
                 await _applicationDbContext.SaveChangesAsync();
+                await _hubContext.Clients.All.SendAsync("ResepChanged", new
+                {
+                    Action = "delete",
+                    ResepId = id
+                });
 
                 return Ok(new { message = "Data berhasil dihapus secara soft delete || 200 OK" });
             }
