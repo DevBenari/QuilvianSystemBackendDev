@@ -49,13 +49,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         private DateTime? TryParseTanggalToUtc(string tanggal)
         {
             if (DateTime.TryParseExact(
-                tanggal,
-                "yyyy-MM-dd",
-                CultureInfo.InvariantCulture,
-                DateTimeStyles.None,
-                out var result))
+                    tanggal,
+                    "yyyy-MM-dd",
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out var parsedDate))
             {
-                return DateTime.SpecifyKind(result, DateTimeKind.Utc);
+                var now = DateTime.Now; // atau DateTime.UtcNow jika kamu mau jam UTC
+                var finalDateTime = new DateTime(
+                    parsedDate.Year,
+                    parsedDate.Month,
+                    parsedDate.Day,
+                    now.Hour,
+                    now.Minute,
+                    now.Second,
+                    DateTimeKind.Local); // atau Utc jika perlu
+
+                return finalDateTime.ToUniversalTime(); // simpan dalam UTC
             }
 
             return null;
@@ -175,14 +185,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     });
                 }
 
-                var parsedTglKeluarRanap = TryParseTanggalToUtc(vm.TglKeluar);
-                if (parsedTglKeluarRanap == null)
-                {
-                    return BadRequest(new
-                    {
-                        message = "Format tanngal masuk ranap tidak valid! Gunakan format yyyy-MM-dd."
-                    });
-                }
                 // **Cek Duplikasi**
                 //bool isDuplicate = _applicationDbContext.BookingBedRanaps
                 //                    .Any(c => c.RanapId == vm.RanapId);
@@ -200,7 +202,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     KamarId = vm.KamarId,
                     BedId = vm.BedId,
                     TglMasuk = parsedTglMasukRanap,
-                    TglKeluar = parsedTglKeluarRanap,
+                    //TglKeluar = parsedTglKeluarRanap,
                     StatusBed = vm.StatusBed,
                     Keterangan = vm.Keterangan,
                     CreateBy = userActiveId,
@@ -218,6 +220,67 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 else
                 {
                     return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
+                }
+            }
+            catch (DbUpdateException dbEx)
+            {
+                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
+        [HttpPut("KeluarRawatInap/{id}")]
+        public async Task<IActionResult> Keluar(Guid id, [FromBody] KeluarRanapViewModel vm)
+        {
+            if (vm == null || !ModelState.IsValid)
+            {
+                return BadRequest(new { message = "Data tidak valid." });
+            }
+
+            try
+            {
+                // **Cek koneksi ke database**
+                if (!await _applicationDbContext.Database.CanConnectAsync())
+                {
+                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+                }
+
+                // **Ambil User ID dari JWT Claims**
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+                if (getUserActive == null)
+                {
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+                }
+                var userActiveId = getUserActive.UserActiveId;
+
+                // **Cari Data**
+                var data = await _applicationDbContext.BookingBedRanaps.FindAsync(id);
+                if (data == null)
+                {
+                    return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                data.TglKeluar = TryParseTanggalToUtc(vm.TglKeluar);
+                _applicationDbContext.BookingBedRanaps.Update(data);
+                int result = await _applicationDbContext.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    return Ok(new { message = "Update Data Berhasil || 200 OK" });
+                }
+                else
+                {
+                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
                 }
             }
             catch (DbUpdateException dbEx)
@@ -277,21 +340,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     });
                 }
 
-                var parsedTglKeluarRanap = TryParseTanggalToUtc(vm.TglKeluar);
-                if (parsedTglKeluarRanap == null)
-                {
-                    return BadRequest(new
-                    {
-                        message = "Format tanngal masuk ranap tidak valid! Gunakan format yyyy-MM-dd."
-                    });
-                }
+                //var parsedTglKeluarRanap = TryParseTanggalToUtc(vm.TglKeluar);
+                //if (parsedTglKeluarRanap == null)
+                //{
+                //    return BadRequest(new
+                //    {
+                //        message = "Format tanngal masuk ranap tidak valid! Gunakan format yyyy-MM-dd."
+                //    });
+                //}
 
                 // **Update Data**
                 data.KunjunganId = vm.KunjunganId;
                 data.KamarId = vm.KamarId;
                 data.BedId = vm.BedId;
                 data.TglMasuk = parsedTglMasukRanap;
-                data.TglKeluar = parsedTglKeluarRanap;
+                //data.TglKeluar = parsedTglKeluarRanap;
                 data.StatusBed = vm.StatusBed;
                 data.Keterangan = vm.Keterangan;
 
