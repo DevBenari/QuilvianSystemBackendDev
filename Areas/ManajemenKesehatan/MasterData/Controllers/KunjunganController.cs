@@ -406,6 +406,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 return StatusCode(500, new { message = $"Terjadi kesalahan: {ex.Message}" });
             }
         }
+        //test
+        [HttpPost("broadcast-default")]
+        public async Task<IActionResult> BroadcastDefault()
+        {
+            await _hubContext.Clients.All.SendAsync("Kunjungan ditambah", new
+            {
+                action = "create",
+                kunjunganId = 999,
+                pasienId = 1001,
+                dokterId = 2002
+            });
+
+            return Ok(new { message = "✅ Broadcast default berhasil." });
+        }
 
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateKunjunganPasien(Guid id, [FromBody] KunjunganViewModel request)

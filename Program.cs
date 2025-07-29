@@ -36,11 +36,24 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowSpecific", policy =>
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
+        policy
+            .SetIsOriginAllowed(origin => true) // <- ✅ allow semua origin
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials(); // <- ✅ wajib untuk SignalR WebSocket
     });
 });
+
+//builder.Services.AddCors(options =>
+//{
+//    options.AddPolicy("AllowSpecific", policy =>
+//    {
+//        policy.AllowAnyOrigin()
+//              .AllowAnyMethod()
+//              .AllowAnyHeader()
+//              .AllowCredentials();
+//    });
+//});
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
@@ -129,15 +142,6 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowSpecific", policy =>
-    {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
-    });
-});
 
 // add services untuk menampilkan data role
 builder.Services.AddScoped<serviceMasterData>();
@@ -147,10 +151,13 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 
+// Konfigurasi SignalR
+// Tambahkan sebelum var app = builder.Build();
+builder.Services.AddSignalR();
+
 var app = builder.Build();
 
 // Konfigurasi SignalR
-builder.Services.AddSignalR();
 app.MapHub<KunjunganHub>("/hubs/kunjungan");
 app.MapHub<ResepHub>("/hubs/resep");
 
