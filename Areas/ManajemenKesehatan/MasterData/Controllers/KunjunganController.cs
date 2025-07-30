@@ -95,8 +95,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         from o in asuransiGroup.DefaultIfEmpty() // Left Join Asuransi
                         join ps in _applicationDbContext.PendaftaranPasienBarus on a.PasienId equals ps.PendaftaranPasienBaruId
                         join d in _applicationDbContext.Dokters on a.DokterId equals d.DokterId
-                        join j in jumlahPerJenis on new { a.PasienId, a.JenisKunjungan } equals new { j.PasienId, j.JenisKunjungan }
-                        where a.IsDelete == false 
+                        join j in jumlahPerJenis on new { a.PasienId, a.JenisKunjungan } equals new { j.PasienId, j.JenisKunjungan}
+                        join bb in _applicationDbContext.BookingBedRanaps on a.KunjunganID equals bb.KunjunganId into bookingGroup
+                         from bb in bookingGroup.DefaultIfEmpty() // Left Join Booking Bed Ranap
+                         where a.IsDelete == false 
                         select new
                         {
                             a.KunjunganID,
@@ -124,14 +126,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.IsScreening,
                             a.IsPresent,
                             a.Antrian,
-                            //a.TglMasukRanap,
-                            //a.TglKeluarRanap,
-                            //a.DokterDPJId,
-                            //a.KamarId,
-                            //a.BedId,
-                            //a.StatusRanap,
-                            //a.AlasanKeluar,
-                            //a.ReferensiKunjunganId,
+
                             d.NmDokter,
                             gambardokter = !string.IsNullOrEmpty(d.FotoName)
                                 ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
@@ -140,7 +135,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateByName = u.FullName,
 
                             // ⬅️ Tambahan jumlah jenis kunjungan
-                            JumlahJenisKunjungan = j.JumlahJenis
+                            JumlahJenisKunjungan = j.JumlahJenis,
+
+                            // informasi booking bed ranap
+                            bb.BookingBedRanapId,
+                            bb.KamarId,
+                            bb.BedId,
+                            bb.TglMasuk,
+                            bb.TglKeluar,
+                            bb.StatusBed,
+                            bb.Keterangan
                         }).OrderByDescending(a => a.CreateDateTime);
 
             var totalRows = query.Count();
@@ -198,6 +202,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         join ps in _applicationDbContext.PendaftaranPasienBarus on a.PasienId equals ps.PendaftaranPasienBaruId
                         join d in _applicationDbContext.Dokters on a.DokterId equals d.DokterId
                         join j in jumlahPerJenis on new { a.PasienId, a.JenisKunjungan } equals new { j.PasienId, j.JenisKunjungan }
+                        join bb in _applicationDbContext.BookingBedRanaps on a.KunjunganID equals bb.KunjunganId into bookingGroup
+                        from bb in bookingGroup.DefaultIfEmpty() // Left Join Booking Bed Ranap
                         where a.IsDelete == false && a.KunjunganID == id
                         select new
                         {
@@ -235,7 +241,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateByName = u.FullName,
 
                             // ⬅️ Tambahan jumlah jenis kunjungan
-                            JumlahJenisKunjungan = j.JumlahJenis
+                            JumlahJenisKunjungan = j.JumlahJenis,
+
+                            // informasi booking bed ranap
+                            bb.BookingBedRanapId,
+                            bb.KamarId,
+                            bb.BedId,
+                            bb.TglMasuk,
+                            bb.TglKeluar,
+                            bb.StatusBed,
+                            bb.Keterangan
                         };
 
             return Ok(new
@@ -773,6 +788,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         join ps in _applicationDbContext.PendaftaranPasienBarus on a.PasienId equals ps.PendaftaranPasienBaruId
                         join d in _applicationDbContext.Dokters on a.DokterId equals d.DokterId
                         join j in jumlahPerJenis on new { a.PasienId, a.JenisKunjungan } equals new { j.PasienId, j.JenisKunjungan }
+                        join bb in _applicationDbContext.BookingBedRanaps on a.KunjunganID equals bb.KunjunganId into bookingGroup
+                        from bb in bookingGroup.DefaultIfEmpty() // Left Join Booking Bed Ranap
                         where a.IsDelete == false
                         select new
                         {
@@ -802,14 +819,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.IsPresent,
                             a.Antrian,
                             a.IsFinishedKasir,
-                            //a.TglMasukRanap,
-                            //a.TglKeluarRanap,
-                            //a.DokterDPJId,
-                            //a.KamarId,
-                            //a.BedId,
-                            //a.StatusRanap,
-                            //a.AlasanKeluar,
-                            //a.ReferensiKunjunganId,
                             d.NmDokter,
                             gambardokter = !string.IsNullOrEmpty(d.FotoName)
                                 ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
@@ -818,7 +827,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateByName = u.FullName,
 
                             // ⬅️ Tambahan jumlah jenis kunjungan
-                            JumlahJenisKunjungan = j.JumlahJenis
+                            JumlahJenisKunjungan = j.JumlahJenis,
+
+                            // informasi booking bed ranap
+                            bb.BookingBedRanapId,
+                            bb.KamarId,
+                            bb.BedId,
+                            bb.TglMasuk,
+                            bb.TglKeluar,
+                            bb.StatusBed,
+                            bb.Keterangan
                         };
             // ✅ Filter berdasarkan isFinished jika diberikan
             if (isFinished.HasValue)
