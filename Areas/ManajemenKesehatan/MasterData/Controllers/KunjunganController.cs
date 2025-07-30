@@ -831,12 +831,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                             // informasi booking bed ranap
                             bb.BookingBedRanapId,
-                            bb.KamarId,
-                            bb.BedId,
-                            bb.TglMasuk,
-                            bb.TglKeluar,
-                            bb.StatusBed,
-                            bb.Keterangan
+                            KamarId = bb != null ? bb.KamarId : null,
+                            BedId = bb != null ? bb.BedId : null,
+                            StatusBed = bb != null ? bb.StatusBed : null,
+                            Keterangan = bb != null ? bb.Keterangan : null,
+                            TglKeluar = bb != null ? bb.TglKeluar : null,
+                            Tglmasuk = bb != null ? bb.TglMasuk : null,
                         };
             // ✅ Filter berdasarkan isFinished jika diberikan
             if (isFinished.HasValue)
