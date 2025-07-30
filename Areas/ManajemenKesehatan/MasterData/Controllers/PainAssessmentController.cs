@@ -283,7 +283,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 if (result > 0)
                 {
-                    return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
+                    return Created("", new { message = "Tambah Data Berhasil || 201 Created" , data = new { CreateBy = userActiveId, CreateByName = getUserActive.FullName } });
                 }
                 else
                 {
