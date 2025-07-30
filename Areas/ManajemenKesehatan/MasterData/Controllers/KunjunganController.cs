@@ -138,13 +138,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             JumlahJenisKunjungan = j.JumlahJenis,
 
                             // informasi booking bed ranap
-                            bb.BookingBedRanapId,
-                            bb.KamarId,
-                            bb.BedId,
-                            bb.TglMasuk,
-                            bb.TglKeluar,
-                            bb.StatusBed,
-                            bb.Keterangan
+                            BookingBedRanapId = bb != null ? (Guid?)bb.BookingBedRanapId : null,
+                            KamarId = bb != null ? bb.KamarId : null,
+                            BedId = bb != null ? bb.BedId : null,
+                            StatusBed = bb != null ? bb.StatusBed : null,
+                            Keterangan = bb != null ? bb.Keterangan : null,
+                            TglKeluar = bb != null ? bb.TglKeluar : null,
+                            Tglmasuk = bb != null ? bb.TglMasuk : null,
                         }).OrderByDescending(a => a.CreateDateTime);
 
             var totalRows = query.Count();
@@ -244,13 +244,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             JumlahJenisKunjungan = j.JumlahJenis,
 
                             // informasi booking bed ranap
-                            bb.BookingBedRanapId,
-                            bb.KamarId,
-                            bb.BedId,
-                            bb.TglMasuk,
-                            bb.TglKeluar,
-                            bb.StatusBed,
-                            bb.Keterangan
+                            BookingBedRanapId = bb != null ? (Guid?)bb.BookingBedRanapId : null,
+                            KamarId = bb != null ? bb.KamarId : null,
+                            BedId = bb != null ? bb.BedId : null,
+                            StatusBed = bb != null ? bb.StatusBed : null,
+                            Keterangan = bb != null ? bb.Keterangan : null,
+                            TglKeluar = bb != null ? bb.TglKeluar : null,
+                            Tglmasuk = bb != null ? bb.TglMasuk : null,
                         };
 
             return Ok(new
@@ -829,8 +829,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             // ⬅️ Tambahan jumlah jenis kunjungan
                             JumlahJenisKunjungan = j.JumlahJenis,
 
-                            // informasi booking bed ranap
-                            bb.BookingBedRanapId,
+
+                            BookingBedRanapId = bb != null ? (Guid?)bb.BookingBedRanapId : null,
                             KamarId = bb != null ? bb.KamarId : null,
                             BedId = bb != null ? bb.BedId : null,
                             StatusBed = bb != null ? bb.StatusBed : null,
