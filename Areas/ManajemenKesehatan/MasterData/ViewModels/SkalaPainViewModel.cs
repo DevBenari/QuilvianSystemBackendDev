@@ -6,7 +6,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
 {
     public class SkalaPainViewModel
     {
-        public Guid? KunjunganId { get; set; }
         public string? ScoreSkalaPain { get; set; }
         public string? Deskripsi { get; set; }
         

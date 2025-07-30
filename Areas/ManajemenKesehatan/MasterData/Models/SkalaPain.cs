@@ -9,7 +9,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
     {
         [Key]   
         public Guid SkalaPainId { get; set; }
-        public Guid? KunjunganId { get; set; }
         public string KodeSkalaPain { get; set; }
         public string? ScoreSkalaPain { get; set; }
         public string? Deskripsi { get; set; }

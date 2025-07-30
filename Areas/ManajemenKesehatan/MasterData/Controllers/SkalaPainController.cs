@@ -60,7 +60,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateBy = a.CreateBy,
                             CreateByName = u.FullName,
                             SkalaPainId = a.SkalaPainId,
-                            KunjunganId = a.KunjunganId,
                             KodeSkalaPain = a.KodeSkalaPain,
                             ScoreSkalaPain = a.ScoreSkalaPain,
                             Deskripsi = a.Deskripsi,
@@ -189,7 +188,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     CreateDateTime = DateTimeOffset.UtcNow,// Konversi ke UTC,
                     CreateBy = userActiveId,
                     KodeSkalaPain = kode,
-                    KunjunganId = vm.KunjunganId,
                     ScoreSkalaPain = vm.ScoreSkalaPain,
                     Deskripsi = vm.Deskripsi,
                     KategoriSkalaEnum = vm.KategoriSkalaEnum,
@@ -257,7 +255,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // **Update Data
-                data.KunjunganId = vm.KunjunganId;
                 data.KategoriSkalaEnum = vm.KategoriSkalaEnum;
                 data.ScoreSkalaPain = vm.ScoreSkalaPain;
                 data.Deskripsi = vm.Deskripsi;
@@ -381,7 +378,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 CreateBy = a.CreateBy,
                                 CreateByName = u.FullName,
                                 SkalaPainId = a.SkalaPainId,
-                                KunjunganId = a.KunjunganId,
                                 KodeSkalaPain = a.KodeSkalaPain,
                                 ScoreSkalaPain = a.ScoreSkalaPain,
                                 Deskripsi = a.Deskripsi,
