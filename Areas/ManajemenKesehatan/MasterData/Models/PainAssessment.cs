@@ -81,5 +81,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
 
         [DefaultValue(false)]
         public bool? IsInteraksiSosial { get; set; }
+        public string? RPS { get; set; }
+        public string? RPD { get; set; }
+        public string? CurrentMedication { get; set; }
     }
 }

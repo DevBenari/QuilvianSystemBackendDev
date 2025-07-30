@@ -91,7 +91,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             IsMotorikAktif = a.IsMotorikAktif,
                             IsResponsAuditori = a.IsResponsAuditori,
                             IsInteraksiSosial = a.IsInteraksiSosial,
-                            RanapId = a.RanapId
+                            RanapId = a.RanapId,
+                            RPD = a.RPD,
+                            RPS = a.RPS,
+                            CurrentMedication = a.CurrentMedication
 
                         }).OrderByDescending(a => a.CreateDateTime); ;
 
@@ -188,7 +191,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             IsMotorikAktif = a.IsMotorikAktif,
                             IsResponsAuditori = a.IsResponsAuditori,
                             IsInteraksiSosial = a.IsInteraksiSosial,
-                            RanapId = a.RanapId
+                            RanapId = a.RanapId,
+                            RPD = a.RPD,
+                            RPS = a.RPS,
+                            CurrentMedication = a.CurrentMedication
                         }).ToList();
 
             if (!data.Any())
@@ -275,6 +281,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     IsResponsAuditori = vm.IsResponsAuditori,
                     IsInteraksiSosial = vm.IsInteraksiSosial,
                     RanapId = vm.RanapId,
+                    RPD = vm.RPD,
+                    RPS = vm.RPS,
+                    CurrentMedication = vm.CurrentMedication,
                 };
 
                 // **Simpan ke Database**
@@ -372,6 +381,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.IsResponsAuditori = vm.IsResponsAuditori;
                 data.IsInteraksiSosial = vm.IsInteraksiSosial;
                 data.RanapId = vm.RanapId;
+                data.RPD = vm.RPD;
+                data.RPS = vm.RPS;
+                data.CurrentMedication = vm.CurrentMedication;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -524,7 +536,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 IsMotorikAktif = a.IsMotorikAktif,
                                 IsResponsAuditori = a.IsResponsAuditori,
                                 IsInteraksiSosial = a.IsInteraksiSosial,
-                                RanapId = a.RanapId
+                                RanapId = a.RanapId,
+                                RPD = a.RPD,
+                                RPS = a.RPS,
+                                CurrentMedication = a.CurrentMedication
                             };
 
                 // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
