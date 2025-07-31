@@ -3,6 +3,7 @@
     public class VitalSignViewModel
     {
         public Guid? KunjunganId { get; set; }
+        public Guid? UserActiveId { get; set; }
         public decimal? Suhu { get; set; }
         public int? HR { get; set; }
         public int? RR { get; set; }

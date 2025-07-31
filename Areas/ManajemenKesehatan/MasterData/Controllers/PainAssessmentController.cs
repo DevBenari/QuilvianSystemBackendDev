@@ -248,7 +248,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     PainAssessmentId = Guid.NewGuid(),
                     CreateDateTime = DateTimeOffset.UtcNow,
-                    CreateBy = userActiveId,
+                    CreateBy = (Guid)vm.UserActiveId,
                     KunjunganId = vm.KunjunganId,
                     KeluhanUtama = vm.KeluhanUtama,
                     IsPain = vm.IsPain,
@@ -292,7 +292,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 if (result > 0)
                 {
-                    return Created("", new { message = "Tambah Data Berhasil || 201 Created" , data = new { CreateBy = userActiveId, CreateByName = getUserActive.FullName } });
+                    return Created("", new { message = "Tambah Data Berhasil || 201 Created"  });
                 }
                 else
                 {

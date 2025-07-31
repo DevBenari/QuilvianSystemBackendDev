@@ -348,14 +348,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     IsScreening = false,
                     IsPresent = true,
                     IsFinishedKasir = false, // Default value
-                    //TglMasukRanap = request.TglMasukRanapParsed,
-                    //TglKeluarRanap = request.TglKeluarRanapParsed,
-                    //DokterDPJId = request.DokterDPJId,
-                    //KamarId = request.KamarId,
-                    //BedId = request.BedId,
-                    //StatusRanap = request.StatusRanap,
-                    //AlasanKeluar = request.AlasanKeluar,
-                    //ReferensiKunjunganId = request.ReferensiKunjunganId,
                     Antrian = nomorAntrianFormatted   // Format akhir: BU001
                 };
 

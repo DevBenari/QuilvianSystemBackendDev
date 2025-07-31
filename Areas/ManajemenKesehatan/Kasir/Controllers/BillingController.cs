@@ -131,9 +131,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             detailResep.UpdateBy = userId;
 
             _applicationDbContext.DetailReseps.Update(detailResep);
-            
-
-            
             _applicationDbContext.SaveChanges();
 
             return Ok(new { message = "Status pengambilan obat berhasil diperbarui." });
@@ -146,8 +143,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 .Where(b => b.KunjunganId == kunjunganId)
                 .ToListAsync();
             // Initialize the variable with a default value to fix CS0818
-
-
             var query =
                 from k in _applicationDbContext.Kunjungans
                 join p in _applicationDbContext.PendaftaranPasienBarus on k.PasienId equals p.PendaftaranPasienBaruId

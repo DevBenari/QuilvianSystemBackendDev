@@ -5,6 +5,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
     public class PainAssessmentViewModel
     {
         public Guid? KunjunganId { get; set; }
+        public Guid? UserActiveId { get; set; }
         public string? KeluhanUtama { get; set; }
         [DefaultValue(false)]
         public bool? IsPain { get; set; }
