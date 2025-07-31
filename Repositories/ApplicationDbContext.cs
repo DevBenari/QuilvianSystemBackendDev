@@ -109,6 +109,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<Kamar> Kamars { get; set; }
         public DbSet<Bed> Beds { get; set; }
         public DbSet<KamarAsuransi> KamarAsuransis { get; set; }
+        public DbSet<Delegasi> Delegasis { get; set; }
 
         #endregion
 

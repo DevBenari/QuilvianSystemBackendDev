@@ -219,36 +219,59 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
             try
             {
-                // **Cek koneksi ke database**
                 if (!_applicationDbContext.Database.CanConnect())
                 {
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
                 }
 
-                // **Ambil User ID dari JWT Claims**
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
+                var getUserActive = _applicationDbContext.UserActives
+                    .FirstOrDefault(u => u.Email == emailLogin);
+
                 if (getUserActive == null)
                 {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
                 }
+
                 var userActiveId = getUserActive.UserActiveId;
+                Guid createBy;
 
-                // **Ambil Tanggal Sekarang**
-                var dateNow = DateTime.UtcNow;
-                var setDateNow = dateNow.ToString("yyMMdd"); // Format: YYMMDD
+                // 🔁 Cek apakah ini dari delegasi
+                if (vm.DelegasiId.HasValue)
+                {
+                    var delegasi = await _applicationDbContext.Delegasis
+                        .FirstOrDefaultAsync(d =>
+                            d.DelegasiId == vm.DelegasiId.Value &&
+                            d.IsDelegated == true);
 
-                // **Buat Data Baru**
+                    if (delegasi == null)
+                    {
+                        return BadRequest(new { message = "Delegasi tidak ditemukan atau sudah tidak aktif." });
+                    }
+
+                    if (delegasi.UserDelegasiId != userActiveId)
+                    {
+                        return Unauthorized(new { message = "Delegasi ini bukan milik Anda." });
+                    }
+
+                    createBy = delegasi.UserDelegasiId.Value;
+                    delegasi.IsDelegated = false;
+                }
+                else
+                {
+                    createBy = userActiveId;
+                }
+
                 var data = new PainAssessment
                 {
                     PainAssessmentId = Guid.NewGuid(),
                     CreateDateTime = DateTimeOffset.UtcNow,
-                    CreateBy = (Guid)vm.UserActiveId,
+                    CreateBy = createBy,
                     KunjunganId = vm.KunjunganId,
                     KeluhanUtama = vm.KeluhanUtama,
                     IsPain = vm.IsPain,
@@ -283,16 +306,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     RanapId = vm.RanapId,
                     RPD = vm.RPD,
                     RPS = vm.RPS,
-                    CurrentMedication = vm.CurrentMedication,
+                    CurrentMedication = vm.CurrentMedication
                 };
 
-                // **Simpan ke Database**
                 _applicationDbContext.PainAssessments.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
                 {
-                    return Created("", new { message = "Tambah Data Berhasil || 201 Created"  });
+                    return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
                 }
                 else
                 {
@@ -310,7 +332,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdatePainAssessment(Guid id, [FromBody] PainAssessmentViewModel vm)
+        public async Task<IActionResult> EditPainAssessment(Guid id, [FromBody] PainAssessmentViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -319,37 +341,61 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
             try
             {
-                // **Cek koneksi ke database**
-                if (!await _applicationDbContext.Database.CanConnectAsync())
+                if (!_applicationDbContext.Database.CanConnect())
                 {
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
                 }
 
-                // **Ambil User ID dari JWT Claims**
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var getUserActive = await _applicationDbContext.UserActives
-                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
-                if (getUserActive == null)
+                var user = _applicationDbContext.UserActives
+                    .FirstOrDefault(u => u.Email == emailLogin);
+
+                if (user == null)
                 {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
                 }
-                var userActiveId = getUserActive.UserActiveId;
 
-                // **Cari Data**
-                var data = await _applicationDbContext.PainAssessments.FindAsync(id);
+                var userActiveId = user.UserActiveId;
+
+                // 🔍 Ambil data yang akan diupdate
+                var data = await _applicationDbContext.PainAssessments
+                    .FirstOrDefaultAsync(p => p.PainAssessmentId == id);
+
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
+                Guid modifyBy;
 
-                // **Update Data**
-                data.KunjunganId = vm.KunjunganId;
+                // 🔁 Cek apakah delegasi digunakan
+                if (vm.DelegasiId.HasValue)
+                {
+                    var delegasi = await _applicationDbContext.Delegasis
+                        .FirstOrDefaultAsync(d =>
+                            d.DelegasiId == vm.DelegasiId.Value &&
+                            d.IsDelegated == true);
+
+                    if (delegasi == null)
+                        return BadRequest(new { message = "Delegasi tidak valid atau sudah tidak aktif." });
+
+                    if (delegasi.UserDelegasiId != userActiveId)
+                        return Unauthorized(new { message = "Delegasi ini bukan milik Anda." });
+
+                    modifyBy = delegasi.UserDelegasiId.Value;
+                    delegasi.IsDelegated = false;
+                }
+                else
+                {
+                    modifyBy = userActiveId;
+                }
+
+                // 📝 Update data
                 data.KeluhanUtama = vm.KeluhanUtama;
                 data.IsPain = vm.IsPain;
                 data.Pemicu = vm.Pemicu;
@@ -380,35 +426,236 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.IsMotorikAktif = vm.IsMotorikAktif;
                 data.IsResponsAuditori = vm.IsResponsAuditori;
                 data.IsInteraksiSosial = vm.IsInteraksiSosial;
-                data.RanapId = vm.RanapId;
                 data.RPD = vm.RPD;
                 data.RPS = vm.RPS;
                 data.CurrentMedication = vm.CurrentMedication;
+                data.RanapId = vm.RanapId;
+                data.KunjunganId = vm.KunjunganId;
 
-                data.UpdateBy = userActiveId;
+                data.UpdateBy = modifyBy;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.PainAssessments.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
                 {
-                    return Ok(new { message = "Update Data Berhasil || 200 OK" });
+                    return Ok(new { message = "Update berhasil." });
                 }
                 else
                 {
-                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
+                    return StatusCode(500, new { message = "Tidak ada data yang berubah." });
                 }
             }
             catch (DbUpdateException dbEx)
             {
-                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+                return StatusCode(500, new { message = $"Gagal mengupdate data: {dbEx.InnerException?.Message}" });
             }
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
+        //[HttpPost]
+        //public async Task<IActionResult> CreatePainAssessment([FromBody] PainAssessmentViewModel vm)
+        //{
+        //    if (vm == null || !ModelState.IsValid)
+        //    {
+        //        return BadRequest(new { message = "Data tidak valid." });
+        //    }
+
+        //    try
+        //    {
+        //        // **Cek koneksi ke database**
+        //        if (!_applicationDbContext.Database.CanConnect())
+        //        {
+        //            return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+        //        }
+
+        //        // **Ambil User ID dari JWT Claims**
+        //        var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        //        if (string.IsNullOrEmpty(emailLogin))
+        //        {
+        //            return Unauthorized(new { message = "User tidak terautentikasi!" });
+        //        }
+
+        //        var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
+        //        if (getUserActive == null)
+        //        {
+        //            return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+        //        }
+        //        var userActiveId = getUserActive.UserActiveId;
+
+        //        // **Ambil Tanggal Sekarang**
+        //        var dateNow = DateTime.UtcNow;
+        //        var setDateNow = dateNow.ToString("yyMMdd"); // Format: YYMMDD
+
+        //        // **Buat Data Baru**
+        //        var data = new PainAssessment
+        //        {
+        //            PainAssessmentId = Guid.NewGuid(),
+        //            CreateDateTime = DateTimeOffset.UtcNow,
+        //            CreateBy = (Guid)vm.UserActiveId,
+        //            KunjunganId = vm.KunjunganId,
+        //            KeluhanUtama = vm.KeluhanUtama,
+        //            IsPain = vm.IsPain,
+        //            Pemicu = vm.Pemicu,
+        //            Kualitas = vm.Kualitas,
+        //            Lokasi = vm.Lokasi,
+        //            SkalaPainId = vm.SkalaPainId,
+        //            Frekuensi = vm.Frekuensi,
+        //            PainManagement = vm.PainManagement,
+        //            IsInheritedDisease = vm.IsInheritedDisease,
+        //            InheritedDisease = vm.InheritedDisease,
+        //            IsAlergic = vm.IsAlergic,
+        //            Alergic = vm.Alergic,
+        //            NafsuMakan = vm.NafsuMakan,
+        //            IsMual = vm.IsMual,
+        //            IsMuntah = vm.IsMuntah,
+        //            IsFallRisk = vm.IsFallRisk,
+        //            FallRisk = vm.FallRisk,
+        //            IsBCGimunisasi = vm.IsBCGimunisasi,
+        //            IsHepatitisBImunisasi = vm.IsHepatitisBImunisasi,
+        //            IsPolioImunisasi = vm.IsPolioImunisasi,
+        //            IsDPTImunisasi = vm.IsDPTImunisasi,
+        //            IsCampakImunisasi = vm.IsCampakImunisasi,
+        //            IsAsiEksklusif = vm.IsAsiEksklusif,
+        //            StatusMpasi = vm.StatusMpasi,
+        //            IsAtaksia = vm.IsAtaksia,
+        //            IsPosturalInstability = vm.IsPosturalInstability,
+        //            HasilResikoJatuh = vm.HasilResikoJatuh,
+        //            IsMotorikAktif = vm.IsMotorikAktif,
+        //            IsResponsAuditori = vm.IsResponsAuditori,
+        //            IsInteraksiSosial = vm.IsInteraksiSosial,
+        //            RanapId = vm.RanapId,
+        //            RPD = vm.RPD,
+        //            RPS = vm.RPS,
+        //            CurrentMedication = vm.CurrentMedication,
+        //        };
+
+        //        // **Simpan ke Database**
+        //        _applicationDbContext.PainAssessments.Add(data);
+        //        int result = await _applicationDbContext.SaveChangesAsync();
+
+        //        if (result > 0)
+        //        {
+        //            return Created("", new { message = "Tambah Data Berhasil || 201 Created"  });
+        //        }
+        //        else
+        //        {
+        //            return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
+        //        }
+        //    }
+        //    catch (DbUpdateException dbEx)
+        //    {
+        //        return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+        //    }
+        //}
+
+        //[HttpPut("{id}")]
+        //public async Task<IActionResult> UpdatePainAssessment(Guid id, [FromBody] PainAssessmentViewModel vm)
+        //{
+        //    if (vm == null || !ModelState.IsValid)
+        //    {
+        //        return BadRequest(new { message = "Data tidak valid." });
+        //    }
+
+        //    try
+        //    {
+        //        // **Cek koneksi ke database**
+        //        if (!await _applicationDbContext.Database.CanConnectAsync())
+        //        {
+        //            return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+        //        }
+
+        //        // **Ambil User ID dari JWT Claims**
+        //        var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        //        if (string.IsNullOrEmpty(emailLogin))
+        //        {
+        //            return Unauthorized(new { message = "User tidak terautentikasi!" });
+        //        }
+
+        //        var getUserActive = await _applicationDbContext.UserActives
+        //            .FirstOrDefaultAsync(u => u.Email == emailLogin);
+        //        if (getUserActive == null)
+        //        {
+        //            return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+        //        }
+        //        var userActiveId = getUserActive.UserActiveId;
+
+        //        // **Cari Data**
+        //        var data = await _applicationDbContext.PainAssessments.FindAsync(id);
+        //        if (data == null)
+        //        {
+        //            return NotFound(new { message = "Data tidak ditemukan." });
+        //        }
+
+
+        //        // **Update Data**
+        //        data.KunjunganId = vm.KunjunganId;
+        //        data.KeluhanUtama = vm.KeluhanUtama;
+        //        data.IsPain = vm.IsPain;
+        //        data.Pemicu = vm.Pemicu;
+        //        data.Kualitas = vm.Kualitas;
+        //        data.Lokasi = vm.Lokasi;
+        //        data.SkalaPainId = vm.SkalaPainId;
+        //        data.Frekuensi = vm.Frekuensi;
+        //        data.PainManagement = vm.PainManagement;
+        //        data.IsInheritedDisease = vm.IsInheritedDisease;
+        //        data.InheritedDisease = vm.InheritedDisease;
+        //        data.IsAlergic = vm.IsAlergic;
+        //        data.Alergic = vm.Alergic;
+        //        data.NafsuMakan = vm.NafsuMakan;
+        //        data.IsMual = vm.IsMual;
+        //        data.IsMuntah = vm.IsMuntah;
+        //        data.IsFallRisk = vm.IsFallRisk;
+        //        data.FallRisk = vm.FallRisk;
+        //        data.IsBCGimunisasi = vm.IsBCGimunisasi;
+        //        data.IsHepatitisBImunisasi = vm.IsHepatitisBImunisasi;
+        //        data.IsPolioImunisasi = vm.IsPolioImunisasi;
+        //        data.IsDPTImunisasi = vm.IsDPTImunisasi;
+        //        data.IsCampakImunisasi = vm.IsCampakImunisasi;
+        //        data.IsAsiEksklusif = vm.IsAsiEksklusif;
+        //        data.StatusMpasi = vm.StatusMpasi;
+        //        data.IsAtaksia = vm.IsAtaksia;
+        //        data.IsPosturalInstability = vm.IsPosturalInstability;
+        //        data.HasilResikoJatuh = vm.HasilResikoJatuh;
+        //        data.IsMotorikAktif = vm.IsMotorikAktif;
+        //        data.IsResponsAuditori = vm.IsResponsAuditori;
+        //        data.IsInteraksiSosial = vm.IsInteraksiSosial;
+        //        data.RanapId = vm.RanapId;
+        //        data.RPD = vm.RPD;
+        //        data.RPS = vm.RPS;
+        //        data.CurrentMedication = vm.CurrentMedication;
+
+        //        data.UpdateBy = userActiveId;
+        //        data.UpdateDateTime = DateTimeOffset.UtcNow;
+
+        //        _applicationDbContext.PainAssessments.Update(data);
+        //        int result = await _applicationDbContext.SaveChangesAsync();
+
+        //        if (result > 0)
+        //        {
+        //            return Ok(new { message = "Update Data Berhasil || 200 OK" });
+        //        }
+        //        else
+        //        {
+        //            return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
+        //        }
+        //    }
+        //    catch (DbUpdateException dbEx)
+        //    {
+        //        return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+        //    }
+        //}
 
 
         [HttpDelete("{id}")]

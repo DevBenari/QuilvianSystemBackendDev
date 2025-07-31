@@ -14,6 +14,6 @@
         public decimal? Weight { get; set; }
         public decimal? BMI { get; set; }
         public decimal? LingkarKepalaBayi { get; set; }
-        public Guid? RanapId { get; set; }
+        public Guid? DelegasiId { get; set; }
     }
 }

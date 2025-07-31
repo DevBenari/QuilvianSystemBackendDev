@@ -6,6 +6,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
     {
         public Guid? KunjunganId { get; set; }
         public Guid? UserActiveId { get; set; }
+        public Guid? DelegasiId { get; set; }
         public string? KeluhanUtama { get; set; }
         [DefaultValue(false)]
         public bool? IsPain { get; set; }
@@ -55,5 +56,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
         public string? RPS { get; set; }
         public string? RPD { get; set; }
         public string? CurrentMedication { get; set; }
+
     }
 }

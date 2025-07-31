@@ -13,11 +13,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? ScoreSkalaPain { get; set; }
         public string? Deskripsi { get; set; }
         public string? KategoriSkala { get; set; }
-        [NotMapped]
-        public KategoriSkalaPainEnum? KategoriSkalaEnum
-        {
-            get => Enum.TryParse<KategoriSkalaPainEnum>(KategoriSkala, out var result) ? result : null;
-            set => KategoriSkala = value?.ToString();
-        }
+        //[NotMapped]
+        //public KategoriSkalaPainEnum? KategoriSkalaEnum
+        //{
+        //    get => Enum.TryParse<KategoriSkalaPainEnum>(KategoriSkala, out var result) ? result : null;
+        //    set => KategoriSkala = value?.ToString();
+        //}
     }
 }

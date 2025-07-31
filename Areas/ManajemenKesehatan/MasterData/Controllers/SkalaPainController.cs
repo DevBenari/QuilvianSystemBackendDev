@@ -147,7 +147,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var setDateNow = dateNow.ToString("yyMMdd"); // Format: YYMMDD
 
 
-                // Ambil data terakhir untuk hari ini (tanpa ToString di query)
+                // Fix: Remove the 'await' keyword since 'FirstOrDefault' is not an asynchronous method.
                 var lastCode = _applicationDbContext.SkalaPains
                     .Where(d => d.CreateDateTime.Date == dateNow.Date)
                     .OrderByDescending(k => k.KodeSkalaPain)
@@ -190,7 +190,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     KodeSkalaPain = kode,
                     ScoreSkalaPain = vm.ScoreSkalaPain,
                     Deskripsi = vm.Deskripsi,
-                    KategoriSkalaEnum = vm.KategoriSkalaEnum,
+                    KategoriSkala = vm.KategoriSkalaPainEnum.ToString(),
                 };
 
                 // **Simpan ke Database**
@@ -255,7 +255,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // **Update Data
-                data.KategoriSkalaEnum = vm.KategoriSkalaEnum;
+                data.KategoriSkala = vm.KategoriSkalaPainEnum.ToString();
                 data.ScoreSkalaPain = vm.ScoreSkalaPain;
                 data.Deskripsi = vm.Deskripsi;
 

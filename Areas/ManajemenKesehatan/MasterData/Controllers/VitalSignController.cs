@@ -172,40 +172,60 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
             try
             {
-                // **Cek koneksi ke database**
                 if (!_applicationDbContext.Database.CanConnect())
                 {
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
                 }
 
-                // **Ambil User ID dari JWT Claims**
+                // 🔐 Ambil user login dari JWT
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
+                var getUserActive = _applicationDbContext.UserActives
+                    .FirstOrDefault(u => u.Email == emailLogin);
+
                 if (getUserActive == null)
                 {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
                 }
+
                 var userActiveId = getUserActive.UserActiveId;
+                Guid createBy;
 
-                // **Ambil Tanggal Sekarang**
-                var dateNow = DateTime.UtcNow;
-                var setDateNow = dateNow.ToString("yyMMdd"); // Format: YYMMDD
+                // Cek jika berasal dari delegasi
+                if (vm.DelegasiId.HasValue)
+                {
+                    var delegasi = await _applicationDbContext.Delegasis
+                        .FirstOrDefaultAsync(d =>
+                            d.DelegasiId == vm.DelegasiId.Value &&
+                            d.IsDelegated == true);
 
-                ////// **Cek Duplikasi**
-                //bool isDuplicate = _applicationDbContext.VitalSigns
-                //                    .Any(c => c.KunjunganId == vm.KunjunganId);
+                    if (delegasi == null)
+                    {
+                        return BadRequest(new { message = "Delegasi tidak ditemukan atau sudah tidak aktif." });
+                    }
 
-                //if (isDuplicate)
-                //{
-                //    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
-                //}
+                    if (delegasi.UserDelegasiId != userActiveId)
+                    {
+                        return Unauthorized(new { message = "Delegasi ini bukan milik Anda." });
+                    }
 
-                // **Buat Data Baru**
+                    //  Gunakan user delegasi sebagai pencatat
+                    createBy = delegasi.UserDelegasiId.Value;
+
+                    // Tandai delegasi selesai
+                    delegasi.IsDelegated = false;
+                }
+                else
+                {
+                    //  Bukan delegasi, gunakan user login
+                    createBy = userActiveId;
+                }
+
+                // 📝 Buat entitas VitalSign baru
                 var data = new VitalSign
                 {
                     VitalSignId = Guid.NewGuid(),
@@ -220,18 +240,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     Weight = vm.Weight,
                     BMI = vm.BMI,
                     LingkarKepalaBayi = vm.LingkarKepalaBayi,
-                    RanapId = vm.RanapId,
-                    CreateBy = (Guid)vm.UserActiveId,
+                    //RanapId = vm.RanapId,
+                    CreateBy = createBy,
                     CreateDateTime = DateTimeOffset.UtcNow
                 };
 
-                // **Simpan ke Database**
                 _applicationDbContext.VitalSigns.Add(data);
+
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
                 {
-                    return Created("", new { message = "Tambah Data Berhasil || 201 Created"});
+                    return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
                 }
                 else
                 {
@@ -249,7 +269,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateVitalSign(Guid id, [FromBody] VitalSignViewModel vm)
+        public async Task<IActionResult> EditVitalSign(Guid id, [FromBody] VitalSignViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -258,35 +278,67 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
             try
             {
-                // **Cek koneksi ke database**
-                if (!await _applicationDbContext.Database.CanConnectAsync())
+                if (!_applicationDbContext.Database.CanConnect())
                 {
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
                 }
 
-                // **Ambil User ID dari JWT Claims**
+                // 🔐 Ambil user login dari JWT
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var getUserActive = await _applicationDbContext.UserActives
-                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+                var getUserActive = _applicationDbContext.UserActives
+                    .FirstOrDefault(u => u.Email == emailLogin);
+
                 if (getUserActive == null)
                 {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
                 }
-                var userActiveId = getUserActive.UserActiveId;
 
-                // **Cari Data**
-                var data = await _applicationDbContext.VitalSigns.FindAsync(id);
+                var userActiveId = getUserActive.UserActiveId;
+                Guid modifyBy;
+
+                // 🔍 Ambil data vital sign
+                var data = await _applicationDbContext.VitalSigns
+                    .FirstOrDefaultAsync(v => v.VitalSignId == id);
+
                 if (data == null)
                 {
-                    return NotFound(new { message = "Data tidak ditemukan." });
+                    return NotFound(new { message = "Data vital sign tidak ditemukan." });
                 }
 
-                // **Update Data**
+                // 🔁 Cek apakah ini update dari delegasi
+                if (vm.DelegasiId.HasValue)
+                {
+                    var delegasi = await _applicationDbContext.Delegasis
+                        .FirstOrDefaultAsync(d =>
+                            d.DelegasiId == vm.DelegasiId.Value &&
+                            d.IsDelegated == true);
+
+                    if (delegasi == null)
+                    {
+                        return BadRequest(new { message = "Delegasi tidak ditemukan atau sudah tidak aktif." });
+                    }
+
+                    if (delegasi.UserDelegasiId != userActiveId)
+                    {
+                        return Unauthorized(new { message = "Delegasi ini bukan milik Anda." });
+                    }
+
+                    modifyBy = delegasi.UserDelegasiId.Value;
+
+                    // Tandai delegasi sudah selesai
+                    delegasi.IsDelegated = false;
+                }
+                else
+                {
+                    modifyBy = userActiveId;
+                }
+
+                // 📝 Update data vital sign
                 data.KunjunganId = vm.KunjunganId;
                 data.Suhu = vm.Suhu;
                 data.HR = vm.HR;
@@ -298,12 +350,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.Weight = vm.Weight;
                 data.BMI = vm.BMI;
                 data.LingkarKepalaBayi = vm.LingkarKepalaBayi;
-                data.RanapId = vm.RanapId;
-
-                data.UpdateBy = userActiveId;
+                data.UpdateBy = modifyBy;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.VitalSigns.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -312,18 +361,182 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
                 else
                 {
-                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
+                    return StatusCode(500, new { message = "Tidak ada perubahan yang disimpan." });
                 }
             }
             catch (DbUpdateException dbEx)
             {
-                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+                return StatusCode(500, new { message = $"Gagal mengupdate data: {dbEx.InnerException?.Message}" });
             }
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
+
+        //[HttpPost]
+        //public async Task<IActionResult> CreateVitalSign([FromBody] VitalSignViewModel vm)
+        //{
+        //    if (vm == null || !ModelState.IsValid)
+        //    {
+        //        return BadRequest(new { message = "Data tidak valid." });
+        //    }
+
+        //    try
+        //    {
+        //        // **Cek koneksi ke database**
+        //        if (!_applicationDbContext.Database.CanConnect())
+        //        {
+        //            return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+        //        }
+
+        //        // **Ambil User ID dari JWT Claims**
+        //        var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        //        if (string.IsNullOrEmpty(emailLogin))
+        //        {
+        //            return Unauthorized(new { message = "User tidak terautentikasi!" });
+        //        }
+
+        //        var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
+        //        if (getUserActive == null)
+        //        {
+        //            return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+        //        }
+        //        var userActiveId = getUserActive.UserActiveId;
+
+        //        // **Ambil Tanggal Sekarang**
+        //        var dateNow = DateTime.UtcNow;
+        //        var setDateNow = dateNow.ToString("yyMMdd"); // Format: YYMMDD
+
+        //        ////// **Cek Duplikasi**
+        //        //bool isDuplicate = _applicationDbContext.VitalSigns
+        //        //                    .Any(c => c.KunjunganId == vm.KunjunganId);
+
+        //        //if (isDuplicate)
+        //        //{
+        //        //    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
+        //        //}
+
+        //        // **Buat Data Baru**
+        //        var data = new VitalSign
+        //        {
+        //            VitalSignId = Guid.NewGuid(),
+        //            KunjunganId = vm.KunjunganId,
+        //            Suhu = vm.Suhu,
+        //            HR = vm.HR,
+        //            RR = vm.RR,
+        //            TekananDarahSystolic = vm.TekananDarahSystolic,
+        //            TekananDarahDiastolic = vm.TekananDarahDiastolic,
+        //            SaturasiOksigen = vm.SaturasiOksigen,
+        //            Height = vm.Height,
+        //            Weight = vm.Weight,
+        //            BMI = vm.BMI,
+        //            LingkarKepalaBayi = vm.LingkarKepalaBayi,
+        //            RanapId = vm.RanapId,
+        //            CreateBy = (Guid)vm.UserActiveId,
+        //            CreateDateTime = DateTimeOffset.UtcNow
+        //        };
+
+        //        // **Simpan ke Database**
+        //        _applicationDbContext.VitalSigns.Add(data);
+        //        int result = await _applicationDbContext.SaveChangesAsync();
+
+        //        if (result > 0)
+        //        {
+        //            return Created("", new { message = "Tambah Data Berhasil || 201 Created"});
+        //        }
+        //        else
+        //        {
+        //            return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
+        //        }
+        //    }
+        //    catch (DbUpdateException dbEx)
+        //    {
+        //        return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+        //    }
+        //}
+
+        //[HttpPut("{id}")]
+        //public async Task<IActionResult> UpdateVitalSign(Guid id, [FromBody] VitalSignViewModel vm)
+        //{
+        //    if (vm == null || !ModelState.IsValid)
+        //    {
+        //        return BadRequest(new { message = "Data tidak valid." });
+        //    }
+
+        //    try
+        //    {
+        //        // **Cek koneksi ke database**
+        //        if (!await _applicationDbContext.Database.CanConnectAsync())
+        //        {
+        //            return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+        //        }
+
+        //        // **Ambil User ID dari JWT Claims**
+        //        var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        //        if (string.IsNullOrEmpty(emailLogin))
+        //        {
+        //            return Unauthorized(new { message = "User tidak terautentikasi!" });
+        //        }
+
+        //        var getUserActive = await _applicationDbContext.UserActives
+        //            .FirstOrDefaultAsync(u => u.Email == emailLogin);
+        //        if (getUserActive == null)
+        //        {
+        //            return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+        //        }
+        //        var userActiveId = getUserActive.UserActiveId;
+
+        //        // **Cari Data**
+        //        var data = await _applicationDbContext.VitalSigns.FindAsync(id);
+        //        if (data == null)
+        //        {
+        //            return NotFound(new { message = "Data tidak ditemukan." });
+        //        }
+
+        //        // **Update Data**
+        //        data.KunjunganId = vm.KunjunganId;
+        //        data.Suhu = vm.Suhu;
+        //        data.HR = vm.HR;
+        //        data.RR = vm.RR;
+        //        data.TekananDarahSystolic = vm.TekananDarahSystolic;
+        //        data.TekananDarahDiastolic = vm.TekananDarahDiastolic;
+        //        data.SaturasiOksigen = vm.SaturasiOksigen;
+        //        data.Height = vm.Height;
+        //        data.Weight = vm.Weight;
+        //        data.BMI = vm.BMI;
+        //        data.LingkarKepalaBayi = vm.LingkarKepalaBayi;
+        //        //data.RanapId = vm.RanapId;
+
+        //        data.UpdateBy = userActiveId;
+        //        data.UpdateDateTime = DateTimeOffset.UtcNow;
+
+        //        _applicationDbContext.VitalSigns.Update(data);
+        //        int result = await _applicationDbContext.SaveChangesAsync();
+
+        //        if (result > 0)
+        //        {
+        //            return Ok(new { message = "Update Data Berhasil || 200 OK" });
+        //        }
+        //        else
+        //        {
+        //            return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
+        //        }
+        //    }
+        //    catch (DbUpdateException dbEx)
+        //    {
+        //        return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+        //    }
+        //}
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteVitalSign(Guid id)
