@@ -98,6 +98,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         join j in jumlahPerJenis on new { a.PasienId, a.JenisKunjungan } equals new { j.PasienId, j.JenisKunjungan}
                         join bb in _applicationDbContext.BookingBedRanaps on a.KunjunganID equals bb.KunjunganId into bookingGroup
                          from bb in bookingGroup.DefaultIfEmpty() // Left Join Booking Bed Ranap
+                        join k in _applicationDbContext.Kamars on bb.KamarId equals k.KamarId into kamarGroup
+                         from k in kamarGroup.DefaultIfEmpty() // Left Join Kamar
+                         join kl in _applicationDbContext.Kelass on k.KelasId equals kl.KelasId into kelasGroup
+                         from kl in kelasGroup.DefaultIfEmpty() // Left Join Kelas
                          where a.IsDelete == false 
                         select new
                         {
@@ -140,6 +144,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             // informasi booking bed ranap
                             BookingBedRanapId = bb != null ? (Guid?)bb.BookingBedRanapId : null,
                             KamarId = bb != null ? bb.KamarId : null,
+                            KamarNama = k != null ? k.NamaKamar : null,
+                            KelasNama = kl != null ? kl.NamaKelas : null,
                             BedId = bb != null ? bb.BedId : null,
                             StatusBed = bb != null ? bb.StatusBed : null,
                             Keterangan = bb != null ? bb.Keterangan : null,
@@ -204,6 +210,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         join j in jumlahPerJenis on new { a.PasienId, a.JenisKunjungan } equals new { j.PasienId, j.JenisKunjungan }
                         join bb in _applicationDbContext.BookingBedRanaps on a.KunjunganID equals bb.KunjunganId into bookingGroup
                         from bb in bookingGroup.DefaultIfEmpty() // Left Join Booking Bed Ranap
+                        join k in _applicationDbContext.Kamars on bb.KamarId equals k.KamarId into kamarGroup
+                        from k in kamarGroup.DefaultIfEmpty() // Left Join Kamar
+                        join kl in _applicationDbContext.Kelass on k.KelasId equals kl.KelasId into kelasGroup
+                        from kl in kelasGroup.DefaultIfEmpty() // Left Join Kelas
                         where a.IsDelete == false && a.KunjunganID == id
                         select new
                         {
@@ -246,6 +256,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             // informasi booking bed ranap
                             BookingBedRanapId = bb != null ? (Guid?)bb.BookingBedRanapId : null,
                             KamarId = bb != null ? bb.KamarId : null,
+                            KamarNama = k != null ? k.NamaKamar : null,
+                            KelasNama = kl != null ? kl.NamaKelas : null,
                             BedId = bb != null ? bb.BedId : null,
                             StatusBed = bb != null ? bb.StatusBed : null,
                             Keterangan = bb != null ? bb.Keterangan : null,
@@ -770,66 +782,72 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     g.Key.JenisKunjungan,
                     JumlahJenis = g.Count()
                 });
-            
-
-            var query = from a in _applicationDbContext.Kunjungans
-                        join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId
-                        join p in _applicationDbContext.Polikliniks on a.PoliklinikId equals p.PoliklinikId
-                        join o in _applicationDbContext.Asuransis on a.AsuransiId equals o.AsuransiId into asuransiGroup
-                        from o in asuransiGroup.DefaultIfEmpty() // Left Join Asuransi
-                        join ps in _applicationDbContext.PendaftaranPasienBarus on a.PasienId equals ps.PendaftaranPasienBaruId
-                        join d in _applicationDbContext.Dokters on a.DokterId equals d.DokterId
-                        join j in jumlahPerJenis on new { a.PasienId, a.JenisKunjungan } equals new { j.PasienId, j.JenisKunjungan }
-                        join bb in _applicationDbContext.BookingBedRanaps on a.KunjunganID equals bb.KunjunganId into bookingGroup
-                        from bb in bookingGroup.DefaultIfEmpty() // Left Join Booking Bed Ranap
-                        where a.IsDelete == false
-                        select new
-                        {
-                            a.KunjunganID,
-                            a.AsuransiId,
-                            NamaAsuransi = o != null && o.NamaAsuransi != null ? o.NamaAsuransi : "Tunai", // Cek apakah ada asuransi
-                            a.PoliklinikId,
-                            p.NamaPoliklinik,
-                            a.DokterId,
-                            a.PasienId,
-                            ps.NamaLengkap,
-                            ps.TanggalLahir,
-                            ps.NoPasien,
-                            ps.NoWali2,
-                            ps.NoWali3,
-                            ps.NamaWali2,
-                            ps.NamaWali3,
-                            ps.Email,
-                            a.NoRekamMedis,
-                            a.TipePasien,
-                            a.TipePembayaran,
-                            a.JenisKunjungan,
-                            a.CreateDateTime,
-                            a.CreateBy,
-                            a.IsFinished,
-                            a.IsScreening,
-                            a.IsPresent,
-                            a.Antrian,
-                            a.IsFinishedKasir,
-                            d.NmDokter,
-                            gambardokter = !string.IsNullOrEmpty(d.FotoName)
-                                ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
-                                : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg",
-
-                            CreateByName = u.FullName,
-
-                            // ⬅️ Tambahan jumlah jenis kunjungan
-                            JumlahJenisKunjungan = j.JumlahJenis,
 
 
-                            BookingBedRanapId = bb != null ? (Guid?)bb.BookingBedRanapId : null,
-                            KamarId = bb != null ? bb.KamarId : null,
-                            BedId = bb != null ? bb.BedId : null,
-                            StatusBed = bb != null ? bb.StatusBed : null,
-                            Keterangan = bb != null ? bb.Keterangan : null,
-                            TglKeluar = bb != null ? bb.TglKeluar : null,
-                            Tglmasuk = bb != null ? bb.TglMasuk : null,
-                        };
+            var query = (from a in _applicationDbContext.Kunjungans
+                         join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId
+                         join p in _applicationDbContext.Polikliniks on a.PoliklinikId equals p.PoliklinikId
+                         join o in _applicationDbContext.Asuransis on a.AsuransiId equals o.AsuransiId into asuransiGroup
+                         from o in asuransiGroup.DefaultIfEmpty() // Left Join Asuransi
+                         join ps in _applicationDbContext.PendaftaranPasienBarus on a.PasienId equals ps.PendaftaranPasienBaruId
+                         join d in _applicationDbContext.Dokters on a.DokterId equals d.DokterId
+                         join j in jumlahPerJenis on new { a.PasienId, a.JenisKunjungan } equals new { j.PasienId, j.JenisKunjungan }
+                         join bb in _applicationDbContext.BookingBedRanaps on a.KunjunganID equals bb.KunjunganId into bookingGroup
+                         from bb in bookingGroup.DefaultIfEmpty() // Left Join Booking Bed Ranap
+                         join k in _applicationDbContext.Kamars on bb.KamarId equals k.KamarId into kamarGroup
+                         from k in kamarGroup.DefaultIfEmpty() // Left Join Kamar
+                         join kl in _applicationDbContext.Kelass on k.KelasId equals kl.KelasId into kelasGroup
+                         from kl in kelasGroup.DefaultIfEmpty() // Left Join Kelas
+                         where a.IsDelete == false
+                         select new
+                         {
+                             a.KunjunganID,
+                             a.AsuransiId,
+                             NamaAsuransi = o != null && o.NamaAsuransi != null ? o.NamaAsuransi : "Tunai", // Cek apakah ada asuransi
+                             a.PoliklinikId,
+                             p.NamaPoliklinik,
+                             a.DokterId,
+                             a.PasienId,
+                             ps.NamaLengkap,
+                             ps.TanggalLahir,
+                             ps.NoPasien,
+                             ps.NoWali2,
+                             ps.NoWali3,
+                             ps.NamaWali2,
+                             ps.NamaWali3,
+                             ps.Email,
+                             a.NoRekamMedis,
+                             a.TipePasien,
+                             a.TipePembayaran,
+                             a.JenisKunjungan,
+                             a.CreateDateTime,
+                             a.CreateBy,
+                             a.IsFinished,
+                             a.IsScreening,
+                             a.IsPresent,
+                             a.Antrian,
+                             a.IsFinishedKasir,
+                             d.NmDokter,
+                             gambardokter = !string.IsNullOrEmpty(d.FotoName)
+                                 ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
+                                 : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg",
+
+                             CreateByName = u.FullName,
+
+                             // ⬅️ Tambahan jumlah jenis kunjungan
+                             JumlahJenisKunjungan = j.JumlahJenis,
+
+                             // informasi booking bed ranap
+                             BookingBedRanapId = bb != null ? (Guid?)bb.BookingBedRanapId : null,
+                             KamarId = bb != null ? bb.KamarId : null,
+                             KamarNama = k != null ? k.NamaKamar : null,
+                             KelasNama = kl != null ? kl.NamaKelas : null,
+                             BedId = bb != null ? bb.BedId : null,
+                             StatusBed = bb != null ? bb.StatusBed : null,
+                             Keterangan = bb != null ? bb.Keterangan : null,
+                             TglKeluar = bb != null ? bb.TglKeluar : null,
+                             Tglmasuk = bb != null ? bb.TglMasuk : null,
+                         });
             // ✅ Filter berdasarkan isFinished jika diberikan
             if (isFinished.HasValue)
             {

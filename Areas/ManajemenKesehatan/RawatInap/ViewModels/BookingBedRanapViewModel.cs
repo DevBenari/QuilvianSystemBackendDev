@@ -9,6 +9,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.ViewModels
         public Guid? BedId { get; set; }
         public string? TglMasuk { get; set; }
         //public string? TglKeluar { get; set; }
+        public string? NoKamar { get; set; }
         public bool? StatusBed { get; set; }
         public string? Keterangan { get; set; }
     }

@@ -14,6 +14,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models
         public Guid? BedId { get; set; }
         public DateTime? TglMasuk { get; set; }
         public DateTime? TglKeluar { get; set; }
+        public string? NoKamar { get; set; }
         public bool? StatusBed { get; set; }
         public string? Keterangan { get; set; }
     }

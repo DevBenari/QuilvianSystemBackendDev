@@ -95,6 +95,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.TglMasuk,
                              a.TglKeluar,
                              a.StatusBed,
+                             a.NoKamar,
                              a.Keterangan,
 
                          }).OrderByDescending(a => a.CreateDateTime);
@@ -203,6 +204,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     BedId = vm.BedId,
                     TglMasuk = parsedTglMasukRanap,
                     //TglKeluar = parsedTglKeluarRanap,
+                    NoKamar = vm.NoKamar,
                     StatusBed = vm.StatusBed,
                     Keterangan = vm.Keterangan,
                     CreateBy = userActiveId,
@@ -340,21 +342,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     });
                 }
 
-                //var parsedTglKeluarRanap = TryParseTanggalToUtc(vm.TglKeluar);
-                //if (parsedTglKeluarRanap == null)
-                //{
-                //    return BadRequest(new
-                //    {
-                //        message = "Format tanngal masuk ranap tidak valid! Gunakan format yyyy-MM-dd."
-                //    });
-                //}
-
                 // **Update Data**
                 data.KunjunganId = vm.KunjunganId;
                 data.KamarId = vm.KamarId;
                 data.BedId = vm.BedId;
                 data.TglMasuk = parsedTglMasukRanap;
                 //data.TglKeluar = parsedTglKeluarRanap;
+                data.NoKamar = vm.NoKamar;
                 data.StatusBed = vm.StatusBed;
                 data.Keterangan = vm.Keterangan;
 
@@ -475,6 +469,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.TglMasuk,
                              a.TglKeluar,
                              a.StatusBed,
+                             a.NoKamar,
                              a.Keterangan,
 
                          });
