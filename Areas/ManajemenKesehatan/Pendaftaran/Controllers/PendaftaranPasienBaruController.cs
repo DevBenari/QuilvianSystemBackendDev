@@ -140,14 +140,15 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                             RiwayatOperasi = a.RiwayatOperasi,
                             RiwayatPenyakitKeluarga = a.RiwayatPenyakitKeluarga,
                             HubunganKeluarga1 = a.HubunganKeluarga1,
-                            NoIdentitasDarurat = a.NoIdentitasDarurat,
+                            HubunganPasien = a.HubunganPasien,
                             AlamatDarurat = a.AlamatDarurat,
                             NoTeleponDarurat = a.NoTeleponDarurat,
                             NamaOrangTua = a.NamaOrangTua,
                             IdentitasOrangTua = a.IdentitasOrangTua,
-                            PekerjaanOrangTua = a.PekerjaanOrangTua,
+                            PekerjaanWali = a.PekerjaanWali,
                             HubunganKeluarga2 = a.HubunganKeluarga2,
                             HubunganKeluarga3 = a.HubunganKeluarga3,
+                            NamaKontakDarurat = a.NamaKontakDarurat,
                             MembershipId = a.MembershipId,
                             imageUrl = !string.IsNullOrEmpty(a.FotoName)
                                         ? $"{Request.Scheme}://{Request.Host}/FotoPasienBaru/{a.FotoName}"
@@ -245,12 +246,13 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     listdata.RiwayatOperasi,
                     listdata.RiwayatPenyakitKeluarga,
                     listdata.HubunganKeluarga1,
-                    listdata.NoIdentitasDarurat,
+                    listdata.HubunganPasien,
                     listdata.AlamatDarurat,
                     listdata.NoTeleponDarurat,
                     listdata.NamaOrangTua,
                     listdata.IdentitasOrangTua,
-                    listdata.PekerjaanOrangTua,
+                    listdata.PekerjaanWali,
+                    listdata.NamaKontakDarurat,
                     listdata.HubunganKeluarga2,
                     listdata.HubunganKeluarga3,
                     listdata.FotoName,
@@ -326,12 +328,13 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     listdata.RiwayatOperasi,
                     listdata.RiwayatPenyakitKeluarga,
                     listdata.HubunganKeluarga1,
-                    listdata.NoIdentitasDarurat,
+                    listdata.HubunganPasien,
                     listdata.AlamatDarurat,
                     listdata.NoTeleponDarurat,
+                    listdata.NamaKontakDarurat,
                     listdata.NamaOrangTua,
                     listdata.IdentitasOrangTua,
-                    listdata.PekerjaanOrangTua,
+                    listdata.PekerjaanWali,
                     listdata.HubunganKeluarga2,
                     listdata.HubunganKeluarga3,
                     listdata.FotoName,
@@ -639,12 +642,13 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                         RiwayatOperasi = vm.RiwayatOperasi,
                         RiwayatPenyakitKeluarga = vm.RiwayatPenyakitKeluarga,
                         HubunganKeluarga1 = vm.HubunganKeluarga1,
-                        NoIdentitasDarurat = vm.NoIdentitasDarurat,
+                        HubunganPasien = vm.HubunganPasien,
+                        NamaKontakDarurat = vm.NamaKontakDarurat,
                         AlamatDarurat = vm.AlamatDarurat,
                         NoTeleponDarurat = vm.NoTeleponDarurat,
                         NamaOrangTua = vm.NamaOrangTua,
                         IdentitasOrangTua = vm.IdentitasOrangTua,
-                        PekerjaanOrangTua = vm.PekerjaanOrangTua,
+                        PekerjaanWali = vm.PekerjaanWali,
                         HubunganKeluarga2 = vm.HubunganKeluarga2,
                         HubunganKeluarga3 = vm.HubunganKeluarga3,
                         MembershipId = vm.MembershipId,
@@ -753,12 +757,13 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 pasien.RiwayatOperasi = vm.RiwayatOperasi ?? pasien.RiwayatOperasi;
                 pasien.RiwayatPenyakitKeluarga = vm.RiwayatPenyakitKeluarga ?? pasien.RiwayatPenyakitKeluarga;
                 pasien.HubunganKeluarga1 = vm.HubunganKeluarga1 ?? pasien.HubunganKeluarga1;
-                pasien.NoIdentitasDarurat = vm.NoIdentitasDarurat ?? pasien.NoIdentitasDarurat;
+                pasien.HubunganPasien = vm.HubunganPasien ?? pasien.HubunganPasien;
                 pasien.AlamatDarurat = vm.AlamatDarurat ?? pasien.AlamatDarurat;
                 pasien.NoTeleponDarurat = vm.NoTeleponDarurat ?? pasien.NoTeleponDarurat;
+                pasien.NamaKontakDarurat = vm.NamaKontakDarurat ?? pasien.NamaKontakDarurat;
                 pasien.NamaOrangTua = vm.NamaOrangTua ?? pasien.NamaOrangTua;
                 pasien.IdentitasOrangTua = vm.IdentitasOrangTua ?? pasien.IdentitasOrangTua;
-                pasien.PekerjaanOrangTua = vm.PekerjaanOrangTua ?? pasien.PekerjaanOrangTua;
+                pasien.PekerjaanWali = vm.PekerjaanWali ?? pasien.PekerjaanWali;
                 pasien.HubunganKeluarga2 = vm.HubunganKeluarga2 ?? pasien.HubunganKeluarga2;
                 pasien.HubunganKeluarga3 = vm.HubunganKeluarga3 ?? pasien.HubunganKeluarga3;
                 pasien.MembershipId = vm.MembershipId ?? pasien.MembershipId;
@@ -935,12 +940,13 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                             RiwayatOperasi = a.RiwayatOperasi,
                             RiwayatPenyakitKeluarga = a.RiwayatPenyakitKeluarga,
                             HubunganKeluarga1 = a.HubunganKeluarga1,
-                            NoIdentitasDarurat = a.NoIdentitasDarurat,
+                            HubunganPasien = a.HubunganPasien,
                             AlamatDarurat = a.AlamatDarurat,
                             NoTeleponDarurat = a.NoTeleponDarurat,
+                            NamaKontakDarurat = a.NamaKontakDarurat,
                             NamaOrangTua = a.NamaOrangTua,
                             IdentitasOrangTua = a.IdentitasOrangTua,
-                            PekerjaanOrangTua = a.PekerjaanOrangTua,
+                            PekerjaanWali = a.PekerjaanWali,
                             HubunganKeluarga2 = a.HubunganKeluarga2,
                             HubunganKeluarga3 = a.HubunganKeluarga3,
                             MembershipId = a.MembershipId,

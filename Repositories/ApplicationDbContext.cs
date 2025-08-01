@@ -158,6 +158,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<SDKITeraupetik> SDKITeraupetiks { get; set; }
         public DbSet<SDKIEtiologi> SDKIEtiologis { get; set; }
         public DbSet<SDKIDiagnosa> SDKIDiagnosas { get; set; }
+        public DbSet<KajianPasien> KajianPasiens { get; set; }
 
         #endregion
     }

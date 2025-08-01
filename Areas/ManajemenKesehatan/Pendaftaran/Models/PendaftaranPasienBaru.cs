@@ -67,16 +67,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
         public string? NamaWali2 { get; set; }
         public string? NamaWali3 { get; set; }
         public string? HubunganKeluarga1 { get; set; }
-        public string? NoIdentitasDarurat { get; set; }
+        public string? HubunganPasien { get; set; }
         public string? AlamatDarurat { get; set; }
         public string? NoTeleponDarurat { get; set; }
 
         // Informasi Pasien Anak
         public string? NamaOrangTua { get; set; } // Data karyawan rumah sakit yang input
         public string? IdentitasOrangTua { get; set; }
-        public string? PekerjaanOrangTua { get; set; }
+        public string? PekerjaanWali { get; set; }
         public string? HubunganKeluarga2 { get; set; }
         public string? HubunganKeluarga3 { get; set; } // Data karyawan rumah sakit yang input
+        public string? NamaKontakDarurat { get; set; } // Nama kontak darurat yang bisa dihubungi
 
         // Informasi Membership
         public Guid? MembershipId { get; set; }
