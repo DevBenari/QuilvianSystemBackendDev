@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Helper;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Models;
@@ -35,6 +36,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+        }
+        private bool ValidatePin(string inputPin, string storedHashedPin)
+        {
+            string inputHashed = DelegasiVerifikasi.ComputeSha256Hash(inputPin);
+            return inputHashed == storedHashedPin;
         }
 
         [HttpGet]
@@ -109,6 +115,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 if (string.IsNullOrEmpty(EmailLogin))
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                // **Cek User Delegasi **
+                var pinDelegasi = _applicationDbContext.UserActives
+                    .Where(d => d.UserActiveId == vm.UserDelegasiId)
+                    .Select(d => d.PinPegawai)
+                    .FirstOrDefault();
+                if (string.IsNullOrEmpty(pinDelegasi))
+                {
+                    return BadRequest(new { message = "User Delegasi tidak ditemukan atau belum memiliki PIN." });
+                }
+
+                // **Validasi PIN**
+                if (!ValidatePin(vm.Pin, pinDelegasi))
+                {
+                    return BadRequest(new { message = "PIN yang dimasukkan tidak valid." });
                 }
 
                 // Validate ModelState

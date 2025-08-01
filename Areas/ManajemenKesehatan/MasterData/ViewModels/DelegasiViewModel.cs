@@ -7,5 +7,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
         public Guid? UserDelegasiId { get; set; } // ID pengguna yang didelegasikan
         public Guid? UserActiveId { get; set; } // ID pengguna yang aktif
         public DelegasiTugas? Tugas { get; set; } // Deskripsi tugas yang didelegasikan
+        public string? Pin { get; set; } // Pin untuk verifikasi delegasi
     }
 }

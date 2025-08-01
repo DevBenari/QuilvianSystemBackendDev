@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using OpenCvSharp;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Helper;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
@@ -22,6 +23,7 @@ using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using static QRCoder.PayloadGenerator;
 
@@ -499,7 +501,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         UserActiveId = id,
                         UserActiveCode = kode,
                         FullName = vm.FullName,
-                        PinPegawai = GeneratePinPegawai(TryParseTanggalToUtc(vm.DateOfBirth)),
+                        PinPegawai = DelegasiVerifikasi.ComputeSha256Hash(GeneratePinPegawai(TryParseTanggalToUtc(vm.DateOfBirth))),
                         IdentityNumber = vm.IdentityNumber,
                         PlaceOfBirth = vm.PlaceOfBirth,
                         DateOfBirth = (DateTime)TryParseTanggalToUtc(vm.DateOfBirth),

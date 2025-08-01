@@ -14,12 +14,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string FullName { get; set; }
         public string IdentityNumber { get; set; }
         public string PlaceOfBirth { get; set; }
-       
         public DateTime DateOfBirth { get; set; }
         public string Gender { get; set; }
         public string Address { get; set; }
         public string Handphone { get; set; }
         public string Email { get; set; }
+        [MaxLength(64)]
         public string? PinPegawai { get; set; }
         public Guid? ProvinsiId { get; set; }
         public Guid? KabupatenKotaId { get; set; }
