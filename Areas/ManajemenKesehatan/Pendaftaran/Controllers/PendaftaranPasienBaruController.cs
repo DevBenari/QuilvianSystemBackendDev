@@ -437,31 +437,29 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                 }
 
                 // Generate Nomor Rekam Medis
-                var kodeTahun = dateNow.ToString("yy");
-                var kodeHari = dateNow.ToString("dd");
-                var tipePasien = "10"; // Kode untuk Pasien Baru
-
-                // Ambil semua NoRekamMedis yang dibuat hari ini
-                var rekamMedisHariIni = _applicationDbContext.PendaftaranPasienBarus
-                    .Where(p => p.CreateDateTime.Date == dateNow.Date)
-                    .OrderByDescending(p => p.NoRekamMedis)
-                    .ToList();
-
+                string noRekamMedis = null;
                 int nextNumber = 1;
+                string kodeTahun = dateNow.ToString("yy");
+                string kodeHari = dateNow.ToString("dd");
+                string tipePasien = "10"; // Kode untuk Pasien Baru
+                bool nomorUnik = false;
 
-                if (rekamMedisHariIni.Any())
+                while (!nomorUnik)
                 {
-                    var lastRekamMedis = rekamMedisHariIni.FirstOrDefault();
-                    var lastNomorStr = lastRekamMedis.NoRekamMedis?.Split('-').LastOrDefault();
+                    noRekamMedis = $"{kodeTahun}-{kodeHari}-{tipePasien}-{nextNumber:D2}";
 
-                    if (int.TryParse(lastNomorStr, out int lastNumber))
+                    var exists = _applicationDbContext.PendaftaranPasienBarus
+                        .Any(p => p.NoRekamMedis == noRekamMedis && p.CreateDateTime.Date == dateNow.Date);
+
+                    if (!exists)
                     {
-                        nextNumber = lastNumber + 1;
+                        nomorUnik = true;
+                    }
+                    else
+                    {
+                        nextNumber++;
                     }
                 }
-
-                // Buat nomor rekam medis baru
-                string noRekamMedis = $"{kodeTahun}-{kodeHari}-{tipePasien}-{nextNumber:D2}";
 
                 // Inisialisasi variabel untuk path dan filename QR code
                 string QRPath = null;
