@@ -192,7 +192,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
                 }
 
-                var userActiveId = getUserActive.UserActiveId;
                 Guid createBy;
 
                 // Cek jika berasal dari delegasi
@@ -208,21 +207,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         return BadRequest(new { message = "Delegasi tidak ditemukan atau sudah tidak aktif." });
                     }
 
-                    if (delegasi.UserDelegasiId != userActiveId)
-                    {
-                        return Unauthorized(new { message = "Delegasi ini bukan milik Anda." });
-                    }
-
                     //  Gunakan user delegasi sebagai pencatat
                     createBy = delegasi.UserDelegasiId.Value;
 
                     // Tandai delegasi selesai
-                    delegasi.IsDelegated = false;
+                    //delegasi.IsDelegated = false;
                 }
                 else
                 {
                     //  Bukan delegasi, gunakan user login
-                    createBy = userActiveId;
+                    createBy = getUserActive.UserActiveId;
                 }
 
                 // 📝 Buat entitas VitalSign baru

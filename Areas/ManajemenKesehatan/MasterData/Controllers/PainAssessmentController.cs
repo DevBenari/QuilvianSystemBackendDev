@@ -238,7 +238,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
                 }
 
-                var userActiveId = getUserActive.UserActiveId;
                 Guid createBy;
 
                 // 🔁 Cek apakah ini dari delegasi
@@ -254,17 +253,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         return BadRequest(new { message = "Delegasi tidak ditemukan atau sudah tidak aktif." });
                     }
 
-                    if (delegasi.UserDelegasiId != userActiveId)
-                    {
-                        return Unauthorized(new { message = "Delegasi ini bukan milik Anda." });
-                    }
-
+                    //  Gunakan user delegasi sebagai pencatat
                     createBy = delegasi.UserDelegasiId.Value;
-                    delegasi.IsDelegated = false;
+
+                    // Tandai delegasi selesai
+                    //delegasi.IsDelegated = false;
                 }
                 else
                 {
-                    createBy = userActiveId;
+                    //  Bukan delegasi, gunakan user login
+                    createBy = getUserActive.UserActiveId;
                 }
 
                 var data = new PainAssessment
