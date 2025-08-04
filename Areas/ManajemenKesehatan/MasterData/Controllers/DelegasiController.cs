@@ -154,6 +154,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Created("", new
                     {
                         message = "Tambah Data Berhasil || 201 Created",
+                        data = new
+                        {
+                            DelegasiId = data.DelegasiId,
+                            IsDelegated = data.IsDelegated,
+                            UserDelegasiId = data.UserDelegasiId,
+                            UserActiveId = data.UserActiveId,
+                            Tugas = data.Tugas
+                        }
                     });
                 }
                 else
