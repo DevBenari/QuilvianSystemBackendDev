@@ -53,6 +53,83 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
             _webHostEnvironment = webHostEnvironment;
         }
 
+        private async Task<string> GenerateNoRekamMedisAsync()
+        {
+            // Ambil NoRekamMedis terakhir
+            var lastNoRekamMedis = await _applicationDbContext.PendaftaranPasienBarus
+                .OrderByDescending(p => p.NoRekamMedis)
+                .Select(p => p.NoRekamMedis)
+                .FirstOrDefaultAsync();
+
+            int s1 = 0, s2 = 0, s3 = 0, s4 = 0;
+
+            if (!string.IsNullOrEmpty(lastNoRekamMedis))
+            {
+                var parts = lastNoRekamMedis.Split('-');
+                if (parts.Length == 4 &&
+                    int.TryParse(parts[0], out int ps1) &&
+                    int.TryParse(parts[1], out int ps2) &&
+                    int.TryParse(parts[2], out int ps3) &&
+                    int.TryParse(parts[3], out int ps4))
+                {
+                    s1 = ps1;
+                    s2 = ps2;
+                    s3 = ps3;
+                    s4 = ps4;
+                }
+            }
+
+            // Increment logic
+            s4++;
+            if (s4 > 99)
+            {
+                s4 = 0;
+                s3++;
+                if (s3 > 99)
+                {
+                    s3 = 0;
+                    s2++;
+                    if (s2 > 99)
+                    {
+                        s2 = 0;
+                        s1++;
+                    }
+                }
+            }
+
+            // Internal function: format segment sesuai batas 99
+            string format(int val) => val <= 99 ? val.ToString("D2") : val.ToString();
+
+            // Format awal
+            string noRM = $"{format(s1)}-{format(s2)}-{format(s3)}-{format(s4)}";
+
+            // Cek duplikat dan iterasi jika sudah ada
+            while (await _applicationDbContext.PendaftaranPasienBarus.AnyAsync(p => p.NoRekamMedis == noRM))
+            {
+                s4++;
+                if (s4 > 99)
+                {
+                    s4 = 0;
+                    s3++;
+                    if (s3 > 99)
+                    {
+                        s3 = 0;
+                        s2++;
+                        if (s2 > 99)
+                        {
+                            s2 = 0;
+                            s1++;
+                        }
+                    }
+                }
+
+                noRM = $"{format(s1)}-{format(s2)}-{format(s3)}-{format(s4)}";
+            }
+
+            return noRM;
+        }
+
+
         public static string HitungUmurLengkap(DateTime? tanggalLahir)
         {
             if (!tanggalLahir.HasValue) return "-";
@@ -436,70 +513,7 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     }
                 }
 
-                // Generate Nomor Rekam Medis
-                string noRekamMedis = null;
-                int nextNumber = 1;
-                string kodeTahun = dateNow.ToString("yy");
-                string kodeHari = dateNow.ToString("dd");
-                string tipePasien = "10"; // Kode untuk Pasien Baru
-                bool nomorUnik = false;
-
-                while (!nomorUnik)
-                {
-                    noRekamMedis = $"{kodeTahun}-{kodeHari}-{tipePasien}-{nextNumber:D2}";
-
-                    var exists = _applicationDbContext.PendaftaranPasienBarus
-                        .Any(p => p.NoRekamMedis == noRekamMedis && p.CreateDateTime.Date == dateNow.Date);
-
-                    if (!exists)
-                    {
-                        nomorUnik = true;
-                    }
-                    else
-                    {
-                        nextNumber++;
-                    }
-                }
-
-                //string kodeTahun = dateNow.ToString("yy");
-                //string kodeBulan = dateNow.ToString("MM");
-
-                //// Ambil NoRekamMedis terakhir bulan ini
-                //var lastNoRekamMedis = _applicationDbContext.PendaftaranPasienBarus
-                //    .Where(p => p.CreateDateTime.Year == dateNow.Year &&
-                //                p.CreateDateTime.Month == dateNow.Month &&
-                //                p.NoRekamMedis.StartsWith($"{kodeTahun}-{kodeBulan}"))
-                //    .OrderByDescending(p => p.NoRekamMedis)
-                //    .Select(p => p.NoRekamMedis)
-                //    .FirstOrDefault();
-
-                //int bagianDepan = 0;
-                //int bagianBelakang = 1;
-
-                //if (!string.IsNullOrEmpty(lastNoRekamMedis))
-                //{
-                //    // Contoh: "25-08-01-15"
-                //    var parts = lastNoRekamMedis.Split('-');
-                //    if (parts.Length == 4 &&
-                //        int.TryParse(parts[2], out int lastDepan) &&
-                //        int.TryParse(parts[3], out int lastBelakang))
-                //    {
-                //        if (lastBelakang < 99)
-                //        {
-                //            bagianDepan = lastDepan;
-                //            bagianBelakang = lastBelakang + 1;
-                //        }
-                //        else
-                //        {
-                //            bagianDepan = lastDepan + 1;
-                //            bagianBelakang = 1;
-                //        }
-                //    }
-                //}
-
-                //// Format final
-                //string noRekamMedis = $"{kodeTahun}-{kodeBulan}-{bagianDepan:D2}-{bagianBelakang:D2}";
-
+                var noRekamMedis = await GenerateNoRekamMedisAsync();
                 // Inisialisasi variabel untuk path dan filename QR code
                 string QRPath = null;
                 string qrCodeFileName = null;
