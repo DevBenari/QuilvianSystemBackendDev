@@ -111,6 +111,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<KamarAsuransi> KamarAsuransis { get; set; }
         public DbSet<Delegasi> Delegasis { get; set; }
 
+
         #endregion
 
         #region Areas Keuangan
@@ -159,6 +160,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<SDKIEtiologi> SDKIEtiologis { get; set; }
         public DbSet<SDKIDiagnosa> SDKIDiagnosas { get; set; }
         public DbSet<KajianPasien> KajianPasiens { get; set; }
+        public DbSet<SDKIGroup> SDKIGroups { get; set; }
 
         #endregion
     }

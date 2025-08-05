@@ -22,21 +22,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class SDKIDiagnosaController : Controller
+    public class SDKIGroupController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<DiskonController> _logger;
+        private readonly ILogger<SDKIGroupController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-
-        public SDKIDiagnosaController(
-            ApplicationDbContext applicationDbContext, 
-            UserManager<ApplicationUser> userManager, 
-            SignInManager<ApplicationUser> signInManager, 
-            ILogger<DiskonController> logger, 
+        public SDKIGroupController(
+            ApplicationDbContext applicationDbContext,
+            UserManager<ApplicationUser> userManager,
+            SignInManager<ApplicationUser> signInManager,
+            ILogger<SDKIGroupController> logger,
             IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
@@ -54,7 +53,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = (from a in _applicationDbContext.SDKIDiagnosas
+            var query = (from a in _applicationDbContext.SDKIGroups
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
                          where a.IsDelete == false || a.IsDelete == null
@@ -63,11 +62,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
-                             a.SDKIDiagnosaId,
-                             a.SDKIDiagnosaGroupId,
-                             a.SDKIKodeDiagnosa,
-                             a.NamaDiagnosa,
-                             a.Keterangan,
+                             a.SDKIGroupId,
+                             a.NamaGroupSDKI,
+                             a.Keterangan
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -103,7 +100,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.Diskons.Find(id);
+            var listdata = _applicationDbContext.SDKIGroups.Find(id);
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -117,7 +114,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] SDKIDiagnosaViewModel vm)
+        public async Task<IActionResult> Create([FromBody] SDKIGroupViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -156,19 +153,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 //}
 
                 // **Buat Data Baru**
-                var data = new SDKIDiagnosa
+                var data = new SDKIGroup
                 {
-                    SDKIDiagnosaId = Guid.NewGuid(),
-                    SDKIDiagnosaGroupId = vm.SDKIDiagnosaGroupId,
-                    SDKIKodeDiagnosa = vm.SDKIKodeDiagnosa,
-                    NamaDiagnosa = vm.NamaDiagnosa,
+                    SDKIGroupId = Guid.NewGuid(),
+                    NamaGroupSDKI = vm.NamaGroupSDKI,
                     Keterangan = vm.Keterangan,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
 
                 // **Simpan ke Database**
-                _applicationDbContext.SDKIDiagnosas.Add(data);
+                _applicationDbContext.SDKIGroups.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -191,7 +186,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] SDKIDiagnosaViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] SDKIGroupViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -222,22 +217,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.SDKIDiagnosas.FindAsync(id);
+                var data = await _applicationDbContext.SDKIGroups.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
                 // **Update Data**
-                data.SDKIDiagnosaGroupId = vm.SDKIDiagnosaGroupId;
-                data.SDKIKodeDiagnosa = vm.SDKIKodeDiagnosa;
-                data.NamaDiagnosa = vm.NamaDiagnosa;
+                data.NamaGroupSDKI = vm.NamaGroupSDKI;
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.SDKIDiagnosas.Update(data);
+                _applicationDbContext.SDKIGroups.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -286,7 +279,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.SDKIDiagnosas.FindAsync(id);
+                var data = await _applicationDbContext.SDKIGroups.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -298,7 +291,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                 data.IsDelete = true;
 
-                _applicationDbContext.SDKIDiagnosas.Update(data);
+                _applicationDbContext.SDKIGroups.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -335,7 +328,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         {
 
             // Query data
-            var query = (from a in _applicationDbContext.SDKIDiagnosas
+            var query = (from a in _applicationDbContext.SDKIGroups
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
                          where a.IsDelete == false || a.IsDelete == null
@@ -344,11 +337,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
-                             a.SDKIDiagnosaId,
-                             a.SDKIDiagnosaGroupId,
-                             a.SDKIKodeDiagnosa,
-                             a.NamaDiagnosa,
-                             a.Keterangan,
+                             a.SDKIGroupId,
+                             a.NamaGroupSDKI,
+                             a.Keterangan
                          });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
@@ -356,7 +347,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             {
                 search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
-                    EF.Functions.ILike(u.NamaDiagnosa, search)
+                    EF.Functions.ILike(u.NamaGroupSDKI, search)
                 );
             }
 
@@ -426,14 +417,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "NamaDiagnosa" => query.OrderByDescending(u => u.NamaDiagnosa),
+                    "NamaGroupSDKI" => query.OrderByDescending(u => u.NamaGroupSDKI),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
                     "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
                     "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    "NamaDiagnosa" => query.OrderBy(u => u.NamaDiagnosa),
+                    "NamaGroupSDKI" => query.OrderBy(u => u.NamaGroupSDKI),
                     _ => query.OrderBy(u => u.CreateDateTime)
                 };
 

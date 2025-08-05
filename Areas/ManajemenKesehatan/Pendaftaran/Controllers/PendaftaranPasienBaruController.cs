@@ -461,6 +461,45 @@ namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
                     }
                 }
 
+                //string kodeTahun = dateNow.ToString("yy");
+                //string kodeBulan = dateNow.ToString("MM");
+
+                //// Ambil NoRekamMedis terakhir bulan ini
+                //var lastNoRekamMedis = _applicationDbContext.PendaftaranPasienBarus
+                //    .Where(p => p.CreateDateTime.Year == dateNow.Year &&
+                //                p.CreateDateTime.Month == dateNow.Month &&
+                //                p.NoRekamMedis.StartsWith($"{kodeTahun}-{kodeBulan}"))
+                //    .OrderByDescending(p => p.NoRekamMedis)
+                //    .Select(p => p.NoRekamMedis)
+                //    .FirstOrDefault();
+
+                //int bagianDepan = 0;
+                //int bagianBelakang = 1;
+
+                //if (!string.IsNullOrEmpty(lastNoRekamMedis))
+                //{
+                //    // Contoh: "25-08-01-15"
+                //    var parts = lastNoRekamMedis.Split('-');
+                //    if (parts.Length == 4 &&
+                //        int.TryParse(parts[2], out int lastDepan) &&
+                //        int.TryParse(parts[3], out int lastBelakang))
+                //    {
+                //        if (lastBelakang < 99)
+                //        {
+                //            bagianDepan = lastDepan;
+                //            bagianBelakang = lastBelakang + 1;
+                //        }
+                //        else
+                //        {
+                //            bagianDepan = lastDepan + 1;
+                //            bagianBelakang = 1;
+                //        }
+                //    }
+                //}
+
+                //// Format final
+                //string noRekamMedis = $"{kodeTahun}-{kodeBulan}-{bagianDepan:D2}-{bagianBelakang:D2}";
+
                 // Inisialisasi variabel untuk path dan filename QR code
                 string QRPath = null;
                 string qrCodeFileName = null;

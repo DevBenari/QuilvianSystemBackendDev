@@ -1,4 +1,5 @@
-﻿using QuilvianSystemBackendDev.Models;
+﻿using Microsoft.EntityFrameworkCore;
+using QuilvianSystemBackendDev.Models;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
@@ -6,26 +7,23 @@ using System.Text.Json.Serialization;
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
 {
     [Table("PdfPasienBaru", Schema = "public")]
+    //[Index(nameof(NoRekamMedis))]
     public class PendaftaranPasienBaru : UserActivity
     {
         [Key]
         public Guid PendaftaranPasienBaruId { get; set; }
-
         // Informasi Utama
-        public string? KodePasien { get; set; }        
+        public string? KodePasien { get; set; }
         public string? NoRekamMedis { get; set; }
         public string? TipePasien { get; set; }
         public string? TipePendaftaran { get; set; } // Rawat Jalan, Rawat Inap, Darurat, dll.
-
         // Informasi Pasien
         public Guid? TitleId { get; set; }
         public string NamaLengkap { get; set; }
         public Guid IdentitasId { get; set; }
         public string NoIdentitas { get; set; } // KTP atau Passport
         public string? TempatLahir { get; set; }
-
         public DateTime? TanggalLahir { get; set; }
-
         public string? JenisKelamin { get; set; }
         public string? StatusPerkawinan { get; set; }
         public Guid? AgamaId { get; set; }
