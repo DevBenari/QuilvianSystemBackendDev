@@ -1,17 +1,15 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 using QuilvianSystemBackendDev.Models;
-using Swashbuckle.AspNetCore.Annotations;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models
 {
-    [Table("PerawatObejctive", Schema = "public")]
-    public class PerawatObjective : UserActivity
+    public class PerawatIntervensi : UserActivity
     {
         [Key]
-        public Guid ObjNurseId { get; set; }
+        public Guid IntervensiId { get; set; }
         public Guid? DiagnosaSDKIId { get; set; }
-        public string? NamaObjective { get; set; }
+        public string? NamaIntervensi { get; set; }
+        public string? TipeIntervensi { get; set; } // e.g., Hasil, Observasi, Terapeutik, Edukasi, Kolaborasi
         public string? Keterangan { get; set; }
     }
 }

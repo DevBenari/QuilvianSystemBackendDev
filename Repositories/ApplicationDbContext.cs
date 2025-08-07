@@ -154,6 +154,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<BookingBedRanap> BookingBedRanaps { get; set; }
         public DbSet<PerawatObjective> PerawatObjectives { get; set; }
         public DbSet<PerawatSubjective> PerawatSubjectives { get; set; }
+        public DbSet<PerawatIntervensi> PerawatIntervensis { get; set; }
         public DbSet<SDKIKolaborasi> SDKIKolaborasis { get; set; }
         public DbSet<SDKIEdukasi> SDKIEdukasis { get; set; }
         public DbSet<SDKITeraupetik> SDKITeraupetiks { get; set; }

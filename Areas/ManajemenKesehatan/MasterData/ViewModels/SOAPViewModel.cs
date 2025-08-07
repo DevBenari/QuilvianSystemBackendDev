@@ -10,5 +10,8 @@
         public string? Assessment { get; set; }
         public string? Planning { get; set; }
         public string? Profesi { get; set; }
+        public string? Evaluasi { get; set; }
+        public string? Intervensi { get; set; }
+        public string? Reevaluasi { get; set; }
     }
 }

@@ -62,6 +62,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
+                             a.DiagnosaSDKIId,
                              a.ObjNurseId,
                              a.NamaObjective,
                              a.Keterangan,
@@ -157,6 +158,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 var data = new PerawatObjective
                 {
                     ObjNurseId = Guid.NewGuid(),
+                    DiagnosaSDKIId = vm.DiagnosaSDKIId,
                     NamaObjective = vm.NamaObjective,
                     Keterangan = vm.Keterangan,
                     CreateBy = userActiveId,
@@ -218,20 +220,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.Diskons.FindAsync(id);
+                var data = await _applicationDbContext.PerawatObjectives.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
                 // **Update Data**
-                data.NamaDiskon = vm.NamaObjective;
+                data.DiagnosaSDKIId = vm.DiagnosaSDKIId;
+                data.NamaObjective = vm.NamaObjective;
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.Diskons.Update(data);
+                _applicationDbContext.PerawatObjectives.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -339,6 +342,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.CreateBy,
                              CreateByName = u.FullName,
                              a.ObjNurseId,
+                             a.DiagnosaSDKIId,
                              a.NamaObjective,
                              a.Keterangan,
 

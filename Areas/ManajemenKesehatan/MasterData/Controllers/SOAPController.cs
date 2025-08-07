@@ -73,8 +73,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              DaftarICD10 = (a.DaftarICD10 ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
                              Assessment = a.Assessment,
                              Planning = a.Planning,
+                             Evaluasi = a.Evaluasi,
+                             Intervensi = a.Intervensi,
+                             Reevaluasi = a.Reevaluasi,
                              Profesi = a.Profesi,
-                             RanapId = a.RanapId,
                              NamaDokter = d.NmDokter,
                              DokterId = d.DokterId, // Tambahan ini untuk mendapatkan DokterId
                              NamaPasien = p.NamaLengkap, // Tambahan ini untuk mendapatkan Nama Pasien
@@ -135,8 +137,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             DaftarICD10 = (a.DaftarICD10 ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
                             Assessment = a.Assessment,
                             Planning = a.Planning,
+                            Evaluasi = a.Evaluasi,
+                            Intervensi = a.Intervensi,
+                            Reevaluasi = a.Reevaluasi,
                             Profesi = a.Profesi,
-                            RanapId = a.RanapId,
                             NamaDokter = d.NmDokter,
                             DokterId = d.DokterId, // Tambahan ini untuk mendapatkan DokterId
                             NamaPasien = p.NamaLengkap, // Tambahan ini untuk mendapatkan Nama Pasien
@@ -180,8 +184,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             DaftarICD10 = (a.DaftarICD10 ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
                             Assessment = a.Assessment,
                             Planning = a.Planning,
+                            Evaluasi = a.Evaluasi,
+                            Intervensi = a.Intervensi,
+                            Reevaluasi = a.Reevaluasi,
                             Profesi = a.Profesi,
-                            RanapId = a.RanapId,
                             NamaDokter = d.NmDokter,
                             DokterId = d.DokterId, // Tambahan ini untuk mendapatkan DokterId
                             NamaPasien = p.NamaLengkap, // Tambahan ini untuk mendapatkan Nama Pasien
@@ -251,8 +257,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             DaftarICD10 = (a.DaftarICD10 ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
                             Assessment = a.Assessment,
                             Planning = a.Planning,
+                            Evaluasi = a.Evaluasi,
+                            Intervensi = a.Intervensi,
+                            Reevaluasi = a.Reevaluasi,
                             Profesi = a.Profesi,
-                            RanapId = a.RanapId,
                             NamaDokter = d.NmDokter,
                             DokterId = d.DokterId, // Tambahan ini untuk mendapatkan DokterId
                             NamaPasien = p.NamaLengkap, // Tambahan ini untuk mendapatkan Nama Pasien
@@ -355,8 +363,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     DaftarICD10 = vm.DaftarICD10 != null ? string.Join(",", vm.DaftarICD10) : null,
                     Assessment = vm.Assessment,
                     Planning = vm.Planning,
+                    Evaluasi = vm.Evaluasi,
+                    Intervensi = vm.Intervensi,
+                    Reevaluasi = vm.Reevaluasi,
                     Profesi = vm.Profesi,
-                    RanapId = vm.RanapId,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
@@ -428,8 +438,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.DaftarICD10 = vm.DaftarICD10 != null ? string.Join(",", vm.DaftarICD10) : null;
                 data.Assessment = vm.Assessment;
                 data.Planning = vm.Planning;
+                data.Evaluasi = vm.Evaluasi;
+                data.Intervensi = vm.Intervensi;
+                data.Reevaluasi = vm.Reevaluasi;
                 data.Profesi = vm.Profesi;
-                data.RanapId = vm.RanapId;
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
@@ -568,8 +580,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              DaftarICD10 = (a.DaftarICD10 ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
                              Assessment = a.Assessment,
                              Planning = a.Planning,
+                             Evaluasi = a.Evaluasi,
+                             Intervensi = a.Intervensi,
+                             Reevaluasi = a.Reevaluasi,
                              Profesi = a.Profesi,
-                             RanapId = a.RanapId,
                              NamaDokter = d.NmDokter,
                              DokterId = d.DokterId, // Tambahan ini untuk mendapatkan DokterId
                              NamaPasien = p.NamaLengkap, // Tambahan ini untuk mendapatkan Nama Pasien

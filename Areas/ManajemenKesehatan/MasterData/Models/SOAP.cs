@@ -15,7 +15,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? DaftarICD10 { get; set; } // dengan ICD-10
         public string? Assessment { get; set; }
         public string? Planning { get; set; }
+        public string? Evaluasi { get; set; }
+        public string? Intervensi { get; set; }
+        public string? Reevaluasi { get; set; }
         public string? Profesi { get; set; }
-        public Guid? RanapId { get; set; }
     }
 }

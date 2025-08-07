@@ -6,9 +6,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.ViewModels;
@@ -22,20 +19,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class PerawatSubjectiveController : Controller
+    public class PerawatIntervensiController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<PerawatSubjectiveController> _logger;
+        private readonly ILogger<PerawatIntervensiController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public PerawatSubjectiveController(
+        public PerawatIntervensiController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<PerawatSubjectiveController> logger,
+            ILogger<PerawatIntervensiController> logger,
             IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
@@ -53,7 +50,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = (from a in _applicationDbContext.PerawatSubjectives
+            var query = (from a in _applicationDbContext.PerawatIntervensis
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
                          where a.IsDelete == false || a.IsDelete == null
@@ -63,8 +60,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.CreateBy,
                              CreateByName = u.FullName,
                              a.DiagnosaSDKIId,
-                             a.SubNurseId,
-                             a.NamaSubjective,
+                             a.IntervensiId,
+                             a.NamaIntervensi,
+                             a.TipeIntervensi, // e.g., Hasil, Observasi, Terapeutik, Edukasi, Kolaborasi
                              a.Keterangan,
 
                          }).OrderByDescending(a => a.CreateDateTime);
@@ -102,7 +100,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.PerawatSubjectives.Find(id);
+            var listdata = _applicationDbContext.PerawatObjectives.Find(id);
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -116,7 +114,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] PerawatSubjectiveViewModel vm)
+        public async Task<IActionResult> Create([FromBody] PerawatIntervensiViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -155,18 +153,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 //}
 
                 // **Buat Data Baru**
-                var data = new PerawatSubjective
+                var data = new PerawatIntervensi
                 {
-                    SubNurseId = Guid.NewGuid(),
+                    IntervensiId = Guid.NewGuid(),
                     DiagnosaSDKIId = vm.DiagnosaSDKIId,
-                    NamaSubjective = vm.NamaSubjective,
+                    NamaIntervensi = vm.NamaIntervensi,
+                    TipeIntervensi = vm.TipeIntervensi, // e.g., Hasil, Observasi, Terapeutik, Edukasi, Kolaborasi
                     Keterangan = vm.Keterangan,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
 
+
                 // **Simpan ke Database**
-                _applicationDbContext.PerawatSubjectives.Add(data);
+                _applicationDbContext.PerawatIntervensis.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -189,7 +189,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] PerawatSubjectiveViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] PerawatIntervensiViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -220,7 +220,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.PerawatSubjectives.FindAsync(id);
+                var data = await _applicationDbContext.PerawatIntervensis.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -228,13 +228,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                 // **Update Data**
                 data.DiagnosaSDKIId = vm.DiagnosaSDKIId;
-                data.NamaSubjective = vm.NamaSubjective;
+                data.NamaIntervensi = vm.NamaIntervensi;
+                data.TipeIntervensi = vm.TipeIntervensi; // e.g., Hasil, Observasi, Terapeutik, Edukasi, Kolaborasi
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.PerawatSubjectives.Update(data);
+                _applicationDbContext.PerawatIntervensis.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -283,7 +284,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.PerawatSubjectives.FindAsync(id);
+                var data = await _applicationDbContext.PerawatIntervensis.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -295,7 +296,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                 data.IsDelete = true;
 
-                _applicationDbContext.PerawatSubjectives.Update(data);
+                _applicationDbContext.PerawatIntervensis.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -325,13 +326,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                        DateTime? startDate = null,
+                DateTime? startDate = null,
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                        DateTime? endDate = null,
+                DateTime? endDate = null,
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
-            // Query data
-            var query = (from a in _applicationDbContext.PerawatSubjectives
+
+            var query = (from a in _applicationDbContext.PerawatIntervensis
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
                          where a.IsDelete == false || a.IsDelete == null
@@ -341,8 +342,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.CreateBy,
                              CreateByName = u.FullName,
                              a.DiagnosaSDKIId,
-                             a.SubNurseId,
-                             a.NamaSubjective,
+                             a.IntervensiId,
+                             a.NamaIntervensi,
+                             a.TipeIntervensi, // e.g., Hasil, Observasi, Terapeutik, Edukasi, Kolaborasi
                              a.Keterangan,
 
                          });
@@ -352,7 +354,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             {
                 search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
-                    EF.Functions.ILike(u.NamaSubjective, search)
+                    EF.Functions.ILike(u.NamaIntervensi, search)
                 );
             }
 
@@ -422,14 +424,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "NamaSubjective" => query.OrderByDescending(u => u.NamaSubjective),
+                    "NamaIntervensi" => query.OrderByDescending(u => u.NamaIntervensi),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
                     "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
                     "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    "NamaSubjective" => query.OrderBy(u => u.NamaSubjective),
+                    "NamaIntervensi" => query.OrderBy(u => u.NamaIntervensi),
                     _ => query.OrderBy(u => u.CreateDateTime)
                 };
 
