@@ -1,4 +1,4 @@
-﻿namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels
+﻿namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.ViewModels
 {
     public class UserActiveViewModel
     {

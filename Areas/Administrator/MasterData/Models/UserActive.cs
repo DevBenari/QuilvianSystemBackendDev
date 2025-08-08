@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
+namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models
 {
     [Table("MstUserActive", Schema = "public")]
     public class UserActive : UserActivity

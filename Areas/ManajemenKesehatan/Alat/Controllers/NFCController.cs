@@ -3,7 +3,7 @@ using PCSC;
 using PCSC.Utils;
 using System;
 
-namespace QuilvianSystemBackendDev.Controllers
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alat.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]

@@ -6,6 +6,7 @@ using QuilvianSystemBackendDev.Repositories;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Services;
+using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using System.IdentityModel.Tokens.Jwt;

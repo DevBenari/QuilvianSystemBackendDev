@@ -21,7 +21,7 @@ using System.IO;
 using SixLabors.ImageSharp.PixelFormats;
 using System.Net.Http.Headers;
 
-namespace QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]

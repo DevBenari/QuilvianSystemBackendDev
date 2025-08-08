@@ -11,7 +11,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using System.Text;
-
+using QuilvianSystemBackendDev.Helpers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -43,17 +43,6 @@ builder.Services.AddCors(options =>
             .AllowCredentials(); // <- ✅ wajib untuk SignalR WebSocket
     });
 });
-
-//builder.Services.AddCors(options =>
-//{
-//    options.AddPolicy("AllowSpecific", policy =>
-//    {
-//        policy.AllowAnyOrigin()
-//              .AllowAnyMethod()
-//              .AllowAnyHeader()
-//              .AllowCredentials();
-//    });
-//});
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
@@ -96,7 +85,7 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.EnableAnnotations();
 
-    // Konversi Enum ke String di Swagger
+    // Konversi Enum ke String
     c.MapType<PeriodeFilter>(() => new OpenApiSchema
     {
         Type = "string",
@@ -106,48 +95,106 @@ builder.Services.AddSwaggerGen(c =>
             .ToList<IOpenApiAny>()
     });
 
-    // Menampilkan Date Picker untuk startDate dan endDate
+    // DateTime format
     c.MapType<DateTime>(() => new OpenApiSchema
     {
         Type = "string",
         Format = "date-time"
     });
 
-    c.SwaggerDoc("v1", new() { Title = "My API", Version = "v1" });
+    // Semua group
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "My API", Version = "v1" });
+    c.SwaggerDoc("manajemen_kesehatan", new OpenApiInfo { Title = "Manajemen Kesehatan API", Version = "v1" });
+    c.SwaggerDoc("administrator", new OpenApiInfo { Title = "Administrator API", Version = "v1" });
 
-    // Konfigurasi JWT Authentication
-    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    // JWT Auth
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
-        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+        Type = SecuritySchemeType.ApiKey,
         Scheme = "Bearer",
         BearerFormat = "JWT",
-        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        In = ParameterLocation.Header,
         Description = "Masukkan JWT dengan format: Bearer [token]"
     });
 
-    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
-            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            new OpenApiSecurityScheme
             {
-                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                Reference = new OpenApiReference
                 {
-                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Type = ReferenceType.SecurityScheme,
                     Id = "Bearer"
                 }
             },
-            new string[] {}
+            Array.Empty<string>()
         }
     });
 });
+
+//builder.Services.AddSwaggerGen(c =>
+//{
+//    c.EnableAnnotations();
+
+//    // Konversi Enum ke String di Swagger
+//    c.MapType<PeriodeFilter>(() => new OpenApiSchema
+//    {
+//        Type = "string",
+//        Enum = Enum.GetValues(typeof(PeriodeFilter))
+//            .Cast<PeriodeFilter>()
+//            .Select(e => new OpenApiString(e.ToString()))
+//            .ToList<IOpenApiAny>()
+//    });
+
+//    // Menampilkan Date Picker untuk startDate dan endDate
+//    c.MapType<DateTime>(() => new OpenApiSchema
+//    {
+//        Type = "string",
+//        Format = "date-time"
+//    });
+
+//    c.SwaggerDoc("v1", new() { Title = "My API", Version = "v1" });
+//    c.SwaggerDoc("manajemen_kesehatan", new OpenApiInfo { Title = "Manajemen Kesehatan API", Version = "v1" });
+//    c.SwaggerDoc("hrd", new OpenApiInfo { Title = "Administrator API", Version = "v1" });
+
+//    // Konfigurasi JWT Authentication
+//    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+//    {
+//        Name = "Authorization",
+//        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+//        Scheme = "Bearer",
+//        BearerFormat = "JWT",
+//        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+//        Description = "Masukkan JWT dengan format: Bearer [token]"
+//    });
+
+//    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+//    {
+//        {
+//            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+//            {
+//                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+//                {
+//                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+//                    Id = "Bearer"
+//                }
+//            },
+//            new string[] {}
+//        }
+//    });
+//});
 
 
 // add services untuk menampilkan data role
 builder.Services.AddScoped<serviceMasterData>();
 
 // Add services to the container.
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+{
+    options.Conventions.Add(new GroupArea());
+});
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 
@@ -166,11 +213,26 @@ app.MapHub<ResepHub>("/hubs/resep");
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Home");
+        c.SwaggerEndpoint("/swagger/manajemen_kesehatan/swagger.json", "Manajemen Kesehatan API");
+        c.SwaggerEndpoint("/swagger/administrator/swagger.json", "Administrator API");
+
+        c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None);
+    });
 }
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 app.UseSwagger();
-app.UseSwaggerUI();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Home");
+    c.SwaggerEndpoint("/swagger/manajemen_kesehatan/swagger.json", "Manajemen Kesehatan API");
+    c.SwaggerEndpoint("/swagger/administrator/swagger.json", "Administrator API");
+
+    c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None);
+});
+
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
