@@ -114,6 +114,25 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             });
         }
 
+        [HttpGet("AsuransiByPasien/{pasienId}")]
+        public async Task<IActionResult> GetAsuransiPasienByPasienId(string pasienId)
+        {
+            var listdata = await _applicationDbContext.AsuransiPasiens
+                .Where(ap => ap.PasienId == pasienId)
+                .ToListAsync();
+
+            if (listdata == null || !listdata.Any())
+            {
+                return NotFound(new { message = "Data tidak ditemukan." });
+            }
+
+            return Ok(new
+            {
+                message = "Ditemukan || 200 OK",
+                data = listdata
+            });
+        }
+
         [HttpPost]
         public async Task<IActionResult> CreateAsuransiPasien([FromBody] AsuransiPasienViewModel request)
         {
