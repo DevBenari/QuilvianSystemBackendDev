@@ -234,7 +234,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         from sp in suratPengantarGroup.DefaultIfEmpty() // Left Join Surat Pengantar Rawat Inap  
                         join pain in _applicationDbContext.PainAssessments on a.KunjunganID equals pain.KunjunganId into painGroup
                         from pain in painGroup.DefaultIfEmpty() // Left Join Pain Assessment
-                        where a.IsDelete == false
+                        where a.IsDelete == false && a.KunjunganID == id
                         select new
                         {
                             a.KunjunganID,
