@@ -16,6 +16,10 @@ namespace QuilvianSystemBackendDev.Helpers
             {
                 controller.ApiExplorer.GroupName = "administrator";
             }
+            else if (ns.Contains(".Areas.HRD"))
+            {
+                controller.ApiExplorer.GroupName = "hrd";
+            }
             else
             {
                 controller.ApiExplorer.GroupName = "v1";

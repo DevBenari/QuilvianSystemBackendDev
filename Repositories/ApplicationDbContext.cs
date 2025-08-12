@@ -9,6 +9,7 @@ using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
+using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
 
 namespace QuilvianSystemBackendDev.Repositories
 {
@@ -126,6 +127,11 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<Billing> Billings { get; set; }
         #endregion
 
+
+        #region Areas Hrd
+        public DbSet<JenisCuti> JenisCutis { get; set; }
+        public DbSet<PengajuanCuti> PengajuanCutis { get; set; }
+        #endregion
 
         #region Areas Pendaftaran
         public DbSet<PendaftaranPasienBaru> PendaftaranPasienBarus { get; set; }
