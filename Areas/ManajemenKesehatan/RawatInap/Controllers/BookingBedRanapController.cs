@@ -186,14 +186,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     });
                 }
 
-                // **Cek Duplikasi**
-                //bool isDuplicate = _applicationDbContext.BookingBedRanaps
-                //                    .Any(c => c.RanapId == vm.RanapId);
+                // cek data bed yang tersedia
+                var dataBed = _applicationDbContext.Beds
+                    .FirstOrDefault(b => b.BedId == vm.BedId);
+                if (dataBed == null)
+                {
+                    return NotFound(new { message = "Data bed tidak ditemukan." });
+                }
+                else
+                {
+                    dataBed.Status = true; // Tandai bed sebagai tidak tersedia
+                }
 
-                //if (isDuplicate)
-                //{
-                //    return Conflict(new { message = "Nama benefit ini telah tersedia" });
-                //}
+
 
                 // **Buat Data Baru**
                 var data = new BookingBedRanap
@@ -265,7 +270,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
-                // **Cari Data**
+                // **Cari Data Booking Bed**
                 var data = await _applicationDbContext.BookingBedRanaps.FindAsync(id);
                 if (data == null)
                 {
@@ -275,6 +280,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 data.TglKeluar = TryParseTanggalToUtc(vm.TglKeluar);
                 data.StatusBed = false; // Tandai bed sebagai tersedia
                 _applicationDbContext.BookingBedRanaps.Update(data);
+
+                // cari data bed dalam tabel beds
+                var dataBed = await _applicationDbContext.Beds
+                    .FirstOrDefaultAsync(b => b.BedId == data.BedId);
+                if (dataBed == null)
+                {
+                    return NotFound(new { message = "Data bed tidak ditemukan." });
+                }
+                else
+                {
+                    dataBed.Status = false; // Tandai bed sebagai tersedia
+                    _applicationDbContext.Beds.Update(dataBed);
+                }
+
+                // **Update Data**
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -411,10 +431,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
+                // cari data bed dalam tabel beds
+                var dataBed = await _applicationDbContext.Beds
+                    .FirstOrDefaultAsync(b => b.BedId == data.BedId);
+                if (dataBed == null)
+                {
+                    return NotFound(new { message = "Data bed tidak ditemukan." });
+                }
+                else
+                {
+                    dataBed.Status = false; // Tandai bed sebagai tidak tersedia
+                    _applicationDbContext.Beds.Update(dataBed);
+                }
+
                 // **Soft Delete (Tandai Data sebagai Terhapus)**
                 data.DeleteBy = userActiveId;
                 data.DeleteDateTime = DateTimeOffset.UtcNow;
-
                 data.IsDelete = true;
 
                 _applicationDbContext.BookingBedRanaps.Update(data);

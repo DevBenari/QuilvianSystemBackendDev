@@ -117,9 +117,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet("AsuransiByPasien/{pasienId}")]
         public async Task<IActionResult> GetAsuransiPasienByPasienId(string pasienId)
         {
-            var listdata = await _applicationDbContext.AsuransiPasiens
-                .Where(ap => ap.PasienId == pasienId)
-                .ToListAsync();
+            var listdata = (from ap in _applicationDbContext.AsuransiPasiens
+                            join p in _applicationDbContext.PendaftaranPasienBarus on ap.PasienId equals p.PendaftaranPasienBaruId.ToString()
+                            join a in _applicationDbContext.Asuransis on ap.AsuransiId equals a.AsuransiId.ToString()
+                            where ap.PasienId == pasienId
+                            select new
+                            {
+                                ap.AsuransiPasienId,
+                                ap.PasienId,
+                                ap.AsuransiId,
+                                ap.CreateDateTime,
+                                NamaPasien = p.NamaLengkap,
+                                NamaAsuransi = a.NamaAsuransi,
+                                a.IsPKS,
+                                ap.NoPolis,
+                                ap.Umur
+                            }).OrderByDescending(ap => ap.CreateDateTime);
 
             if (listdata == null || !listdata.Any())
             {
