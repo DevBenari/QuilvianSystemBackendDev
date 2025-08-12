@@ -114,6 +114,65 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             });
         }
 
+        [HttpGet("AsuransiByPasien/{pasienId}")]
+        public async Task<IActionResult> GetAsuransiPasienByPasienId(string pasienId)
+        {
+            var listdata = (from ap in _applicationDbContext.AsuransiPasiens
+                            join p in _applicationDbContext.PendaftaranPasienBarus on ap.PasienId equals p.PendaftaranPasienBaruId.ToString()
+                            join a in _applicationDbContext.Asuransis on ap.AsuransiId equals a.AsuransiId.ToString()
+                            where ap.PasienId == pasienId
+                            select new
+                            {
+                                ap.AsuransiPasienId,
+                                ap.PasienId,
+                                ap.AsuransiId,
+                                ap.CreateDateTime,
+                                NamaPasien = p.NamaLengkap,
+                                NamaAsuransi = a.NamaAsuransi,
+                                a.IsPKS,
+                                ap.NoPolis,
+                                ap.Umur
+                            }).OrderByDescending(ap => ap.CreateDateTime);
+
+            if (listdata == null || !listdata.Any())
+            {
+                return NotFound(new { message = "Data tidak ditemukan." });
+            }
+
+            return Ok(new
+            {
+                message = "Ditemukan || 200 OK",
+                data = listdata
+            });
+        }
+
+        //public async Task<IActionResult> GetAsuransiPasienByPasienId(Guid pasienId)
+        //{
+        //    var listdata = await
+        //        (from ap in _applicationDbContext.AsuransiPasiens
+        //         join p in _applicationDbContext.PendaftaranPasienBarus on ap.PasienId equals p.Id
+        //         join a in _applicationDbContext.Asuransis on ap.AsuransiId equals a.Id
+        //         where ap.PasienId == pasienId
+        //         select new
+        //         {
+        //             ap.Id,
+        //             ap.PasienId,
+        //             NamaPasien = p.NamaLengkap,  // sesuaikan
+        //             ap.AsuransiId,
+        //             NamaAsuransi = a.Nama,       // sesuaikan
+        //             ap.NoPolis,
+        //             ap.TanggalMulai,
+        //             ap.TanggalAkhir,
+        //             ap.IsAktif
+        //         })
+        //        .ToListAsync();
+
+        //    if (listdata.Count == 0)
+        //        return NotFound(new { message = "Data tidak ditemukan." });
+
+        //    return Ok(new { message = "Ditemukan || 200 OK", data = listdata });
+        //}
+
         [HttpPost]
         public async Task<IActionResult> CreateAsuransiPasien([FromBody] AsuransiPasienViewModel request)
         {

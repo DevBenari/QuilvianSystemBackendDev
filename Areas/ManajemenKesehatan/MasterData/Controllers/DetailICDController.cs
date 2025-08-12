@@ -62,6 +62,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateByName = u.FullName,
                             DetailICDId = a.DetailICDId,
                             KunjunganId = a.KunjunganId,
+                            SoapId = a.SoapId,
                             ICDId = a.ICDId,
                             isUtama = a.isUtama,
                         }).OrderByDescending(a => a.CreateDateTime);
@@ -148,6 +149,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     DetailICDId = Guid.NewGuid(),
                     KunjunganId = vm.KunjunganId,
                     ICDId = vm.ICDId,
+                    SoapId = vm.SoapId, 
                     isUtama = vm.isUtama,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
@@ -216,6 +218,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // **Update Data**
                 data.KunjunganId = vm.KunjunganId;
+                data.SoapId = vm.SoapId; 
                 data.ICDId = vm.ICDId;
                 data.isUtama = vm.isUtama;
 
@@ -339,6 +342,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 CreateByName = u.FullName,
                                 DetailICDId = a.DetailICDId,
                                 KunjunganId = a.KunjunganId,
+                                SoapId = a.SoapId,
                                 ICDId = a.ICDId,
                                 isUtama = a.isUtama,
                             };
