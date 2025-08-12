@@ -101,6 +101,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                          from bb in bookingGroup.DefaultIfEmpty() // Left Join Booking Bed Ranap
                         join k in _applicationDbContext.Kamars on bb.KamarId equals k.KamarId into kamarGroup
                          from k in kamarGroup.DefaultIfEmpty() // Left Join Kamar
+                         join b in _applicationDbContext.Beds on bb.BedId equals b.BedId into bedGroup
+                         from b in bedGroup.DefaultIfEmpty() // Left Join Bed
                          join kl in _applicationDbContext.Kelass on k.KelasId equals kl.KelasId into kelasGroup
                          from kl in kelasGroup.DefaultIfEmpty() // Left Join Kelas
                          join sp in _applicationDbContext.SuratPengantarRawatInaps on a.KunjunganID equals sp.KunjunganId into suratPengantarGroup
@@ -153,8 +155,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             BookingBedRanapId = bb != null ? (Guid?)bb.BookingBedRanapId : null,
                             KamarId = bb != null ? bb.KamarId : null,
                             KamarNama = k != null ? k.NamaKamar : null,
+                            LantaiKamar = k != null ? k.Lantai : null,
                             KelasNama = kl != null ? kl.NamaKelas : null,
                             BedId = bb != null ? bb.BedId : null,
+                            NomorKamar = bb != null ? bb.NoKamar : null,
+                            NomorBed = b != null ? b.NomorBed : null,
                             StatusBed = bb != null ? bb.StatusBed : null,
                             Keterangan = bb != null ? bb.Keterangan : null,
                             TglKeluar = bb != null ? bb.TglKeluar : null,
@@ -226,6 +231,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         join j in jumlahPerJenis on new { a.PasienId, a.JenisKunjungan } equals new { j.PasienId, j.JenisKunjungan }
                         join bb in _applicationDbContext.BookingBedRanaps on a.KunjunganID equals bb.KunjunganId into bookingGroup
                         from bb in bookingGroup.DefaultIfEmpty() // Left Join Booking Bed Ranap  
+                        join b in _applicationDbContext.Beds on bb.BedId equals b.BedId into bedGroup
+                        from b in bedGroup.DefaultIfEmpty() // Left Join Bed
                         join k in _applicationDbContext.Kamars on bb.KamarId equals k.KamarId into kamarGroup
                         from k in kamarGroup.DefaultIfEmpty() // Left Join Kamar  
                         join kl in _applicationDbContext.Kelass on k.KelasId equals kl.KelasId into kelasGroup
@@ -263,16 +270,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg",
                             CreateByName = u.FullName,
                             JumlahJenisKunjungan = j.JumlahJenis,
+
+                            // ttg ranap
                             BookingBedRanapId = bb != null ? (Guid?)bb.BookingBedRanapId : null,
                             KamarId = bb != null ? bb.KamarId : null,
                             KamarNama = k != null ? k.NamaKamar : null,
+                            LantaiKamar = k != null ? k.Lantai : null,
                             KelasNama = kl != null ? kl.NamaKelas : null,
                             BedId = bb != null ? bb.BedId : null,
+                            NomorKamar = bb != null ? bb.NoKamar : null,
+                            NomorBed = b != null ? b.NomorBed : null,
                             StatusBed = bb != null ? bb.StatusBed : null,
                             Keterangan = bb != null ? bb.Keterangan : null,
                             TglKeluar = bb != null ? bb.TglKeluar : null,
                             Tglmasuk = bb != null ? bb.TglMasuk : null,
-                            NomorSuratPengantar = sp!= null ? sp.NomorSuratPengantar:null,
+                            NomorSuratPengantar = sp != null ? sp.NomorSuratPengantar : null,
                             Diagnosa = sp != null ? sp.Diagnosa : null,
 
                             // pain
@@ -810,6 +822,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                          join j in jumlahPerJenis on new { a.PasienId, a.JenisKunjungan } equals new { j.PasienId, j.JenisKunjungan }
                          join bb in _applicationDbContext.BookingBedRanaps on a.KunjunganID equals bb.KunjunganId into bookingGroup
                          from bb in bookingGroup.DefaultIfEmpty() // Left Join Booking Bed Ranap
+                         join b in _applicationDbContext.Beds on bb.BedId equals b.BedId into bedGroup
+                         from b in bedGroup.DefaultIfEmpty() // Left Join Bed
                          join k in _applicationDbContext.Kamars on bb.KamarId equals k.KamarId into kamarGroup
                          from k in kamarGroup.DefaultIfEmpty() // Left Join Kamar
                          join kl in _applicationDbContext.Kelass on k.KelasId equals kl.KelasId into kelasGroup
@@ -863,8 +877,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              BookingBedRanapId = bb != null ? (Guid?)bb.BookingBedRanapId : null,
                              KamarId = bb != null ? bb.KamarId : null,
                              KamarNama = k != null ? k.NamaKamar : null,
+                             LantaiKamar = k != null ? k.Lantai : null,
                              KelasNama = kl != null ? kl.NamaKelas : null,
                              BedId = bb != null ? bb.BedId : null,
+                             NomorKamar = bb != null ? bb.NoKamar : null,
+                             NomorBed = b != null ? b.NomorBed : null,
                              StatusBed = bb != null ? bb.StatusBed : null,
                              Keterangan = bb != null ? bb.Keterangan : null,
                              TglKeluar = bb != null ? bb.TglKeluar : null,
