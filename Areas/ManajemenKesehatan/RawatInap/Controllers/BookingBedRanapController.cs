@@ -205,7 +205,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     TglMasuk = parsedTglMasukRanap,
                     //TglKeluar = parsedTglKeluarRanap,
                     NoKamar = vm.NoKamar,
-                    StatusBed = vm.StatusBed,
+                    StatusBed = true,
                     Keterangan = vm.Keterangan,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
@@ -273,6 +273,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 }
 
                 data.TglKeluar = TryParseTanggalToUtc(vm.TglKeluar);
+                data.StatusBed = false; // Tandai bed sebagai tersedia
                 _applicationDbContext.BookingBedRanaps.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
