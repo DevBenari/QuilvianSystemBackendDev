@@ -42,6 +42,125 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             _webHostEnvironment = webHostEnvironment;
         }
 
+        //[HttpGet]
+        //public async Task<IActionResult> GetAlLSOAP(int page = 1, int perPage = 10)
+        //{
+        //    // Normalisasi parameter
+        //    if (page < 1) page = 1;
+        //    if (perPage < 1) perPage = 10;
+
+        //    // 1) Ambil kamus ICD (Kode -> Nama) sekali saja
+        //    var icdDict = await _applicationDbContext.ICD10s
+        //        .AsNoTracking()
+        //        .Select(x => new { x.ICDCode, x.NamaDtd })
+        //        .ToDictionaryAsync(x => x.ICDCode, x => x.NamaDtd);
+
+        //    // 2) Ambil data utama (tanpa Split di server, supaya tetap bisa dieksekusi oleh EF/SQL)
+        //    var raw = await (from a in _applicationDbContext.SOAPs
+        //                     join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId
+        //                     join k in _applicationDbContext.Kunjungans on a.KunjunganId equals k.KunjunganID
+        //                     join d in _applicationDbContext.Dokters on k.DokterId equals d.DokterId
+        //                     join p in _applicationDbContext.PendaftaranPasienBarus on k.PasienId equals p.PendaftaranPasienBaruId
+        //                     where a.IsDelete == false
+        //                     select new
+        //                     {
+        //                         a.CreateDateTime,
+        //                         a.CreateBy,
+        //                         CreateByName = u.FullName,
+        //                         a.SOAPID,
+        //                         a.KunjunganId,
+        //                         PasienId = k.PasienId,
+        //                         a.Subjective,
+        //                         a.Objective,
+        //                         a.DaftarICD10, // simpan apa adanya dulu (CSV)
+        //                         a.Assessment,
+        //                         a.Planning,
+        //                         a.Evaluasi,
+        //                         a.Intervensi,
+        //                         a.Reevaluasi,
+        //                         a.Profesi,
+        //                         NamaDokter = d.NmDokter,
+        //                         DokterId = d.DokterId,
+        //                         NamaPasien = p.NamaLengkap
+        //                     })
+        //                    .AsNoTracking()
+        //                    .ToListAsync();
+
+        //    // 3) Proyeksikan ke bentuk final:
+        //    //    - Parse CSV DaftarICD10 -> List<string> kode
+        //    //    - Map ke NamaICD menggunakan kamus icdDict
+        //    var projected = raw
+        //        .Select(a =>
+        //        {
+        //            var codes = (a.DaftarICD10 ?? "")
+        //                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+        //                .Select(s => s.Trim())
+        //                .Where(s => !string.IsNullOrWhiteSpace(s))
+        //                .Distinct(StringComparer.OrdinalIgnoreCase)
+        //                .ToList();
+
+        //            var namaIcd = codes
+        //                .Select(code =>
+        //                    icdDict.TryGetValue(code, out var nama)
+        //                        ? nama
+        //                        : $"(Kode tidak ditemukan: {code})")
+        //                .ToList();
+
+        //            return new
+        //            {
+        //                a.CreateDateTime,
+        //                a.CreateBy,
+        //                a.CreateByName,
+        //                a.SOAPID,
+        //                a.KunjunganId,
+        //                a.PasienId,
+        //                a.Subjective,
+        //                a.Objective,
+        //                DaftarICD10 = codes,   // list kode ICD
+        //                NamaICD = namaIcd,     // list nama ICD hasil "join"
+        //                a.Assessment,
+        //                a.Planning,
+        //                a.Evaluasi,
+        //                a.Intervensi,
+        //                a.Reevaluasi,
+        //                a.Profesi,
+        //                a.NamaDokter,
+        //                a.DokterId,
+        //                a.NamaPasien
+        //            };
+        //        })
+        //        .OrderByDescending(a => a.CreateDateTime)
+        //        .ToList();
+
+        //    // 4) Paging di sisi memory (karena sudah perlu materialize untuk parsing ICD)
+        //    var totalRows = projected.Count;
+        //    var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+        //    var listdata = projected
+        //        .Skip((page - 1) * perPage)
+        //        .Take(perPage)
+        //        .ToList();
+
+        //    if (!listdata.Any())
+        //    {
+        //        return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
+        //    }
+
+        //    // 5) Return hasil
+        //    return Ok(new
+        //    {
+        //        message = "Berhasil || 200 OK",
+        //        data = listdata,
+        //        pagination = new
+        //        {
+        //            CurrentPage = page,
+        //            PerPage = perPage,
+        //            TotalRows = totalRows,
+        //            TotalPages = totalPages
+        //        }
+        //    });
+        //}
+
         [HttpGet]
         public async Task<IActionResult> GetAlLSOAP(int page = 1, int perPage = 10)
         {
@@ -55,8 +174,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              on a.CreateBy equals u.UserActiveId
                          join k in _applicationDbContext.Kunjungans
                              on a.KunjunganId equals k.KunjunganID
-                        join d in _applicationDbContext.Dokters
-                             on k.DokterId equals d.DokterId
+                         join d in _applicationDbContext.Dokters
+                              on k.DokterId equals d.DokterId
                          join p in _applicationDbContext.PendaftaranPasienBarus
                              on k.PasienId equals p.PendaftaranPasienBaruId
                          where a.IsDelete == false

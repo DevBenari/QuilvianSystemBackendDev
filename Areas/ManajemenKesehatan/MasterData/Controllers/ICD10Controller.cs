@@ -64,7 +64,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             ICDCode = a.ICDCode,
                             ICDName = a.ICDName,
                             DTDCode = a.DTDCode,
-                            NamaDiagnosa = a.NamaDiagnosa,
+                            NamaDtd = a.NamaDtd,
                         }).OrderByDescending(a => a.ICDCode);
 
             // Hitung total data sebelum paginasi
@@ -159,7 +159,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     ICDCode = vm.ICDCode,
                     ICDName = vm.ICDName,
                     DTDCode = vm.DTDCode,
-                    NamaDiagnosa = vm.NamaDiagnosa,
+                    NamaDtd = vm.NamaDtd,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow
                 };
@@ -229,7 +229,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.ICDCode = vm.ICDCode;
                 data.ICDName = vm.ICDName;
                 data.DTDCode = vm.DTDCode;
-                data.NamaDiagnosa = vm.NamaDiagnosa;
+                data.NamaDtd = vm.NamaDtd;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -343,7 +343,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             ICDCode = a.ICDCode,
                             ICDName = a.ICDName,
                             DTDCode = a.DTDCode,
-                            NamaDiagnosa = a.NamaDiagnosa,
+                            NamaDtd = a.NamaDtd,
                         };
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
@@ -354,7 +354,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     EF.Functions.ILike(u.ICDCode, search) ||
                     EF.Functions.ILike(u.ICDName, search) ||
                     EF.Functions.ILike(u.DTDCode, search) ||
-                    EF.Functions.ILike(u.NamaDiagnosa, search)
+                    EF.Functions.ILike(u.NamaDtd, search)
                 );
             }
 
@@ -427,7 +427,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     "ICDCode" => query.OrderByDescending(u => u.ICDCode),
                     "ICDName" => query.OrderByDescending(u => u.ICDName),
                     "DTDCode" => query.OrderByDescending(u => u.DTDCode),
-                    "NamaDiagnosa" => query.OrderByDescending(u => u.NamaDiagnosa),
+                    "NamaDtd" => query.OrderByDescending(u => u.NamaDtd),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
@@ -437,7 +437,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     "ICDCode" => query.OrderByDescending(u => u.ICDCode),
                     "ICDName" => query.OrderByDescending(u => u.ICDName),
                     "DTDCode" => query.OrderByDescending(u => u.DTDCode),
-                    "NamaDiagnosa" => query.OrderByDescending(u => u.NamaDiagnosa),
+                    "NamaDtd" => query.OrderByDescending(u => u.NamaDtd),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 };
 

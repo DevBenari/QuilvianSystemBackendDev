@@ -5,6 +5,6 @@
         public string? ICDCode { get; set; }
         public string? ICDName { get; set; }
         public string? DTDCode { get; set; }
-        public string? NamaDiagnosa { get; set; }
+        public string? NamaDtd { get; set; }
     }
 }
