@@ -73,6 +73,39 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             return $"{tahun} tahun {bulan} bulan {hari} hari";
         }
 
+        private async Task<bool> CanCreateSuratForKunjunganAsync(Guid kunjunganId)
+        {
+            // 1) Ambil NoRM dari Kunjungan
+            var pasien = await (from k in _applicationDbContext.Kunjungans.AsNoTracking()
+                                join p in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking()
+                                    on k.PasienId equals p.PendaftaranPasienBaruId
+                                where k.KunjunganID == kunjunganId
+                                select new { p.NoRekamMedis })
+                               .FirstOrDefaultAsync();
+
+            // Kalau kunjungan/pasien/NoRM tidak ada → tidak boleh buat
+            if (pasien == null || string.IsNullOrWhiteSpace(pasien.NoRekamMedis))
+            {
+                return false;
+            }
+
+            // 2) Cek apakah NoRM ini sudah punya Surat Pengantar Ranap aktif
+            var sudahAda = await (from s in _applicationDbContext.SuratPengantarRawatInaps.AsNoTracking()
+                                  join k in _applicationDbContext.Kunjungans.AsNoTracking()
+                                      on s.KunjunganId equals k.KunjunganID
+                                  join p in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking()
+                                      on k.PasienId equals p.PendaftaranPasienBaruId
+                                  join bb in _applicationDbContext.BookingBedRanaps.AsNoTracking()
+                                      on k.KunjunganID equals bb.KunjunganId 
+                                  where p.NoRekamMedis == pasien.NoRekamMedis && bb.TglKeluar == null
+                                  select 1)
+                                 .AnyAsync();
+
+
+            // Return true jika belum ada (negasi dari sudahAda), false jika sudah ada
+            return !sudahAda;
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
         {
@@ -347,34 +380,40 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 int nomorUrut = jumlahSuratTahunIni + 1;
                 string nomorSurat = $"{nomorUrut:D3}/SP-RI/MMC/{tahunSekarang}";
 
+                // **Cek apakah KunjunganId valid dan belum ada Surat Pengantar Ranap aktif**
+                var canCreate = await CanCreateSuratForKunjunganAsync(vm.KunjunganId.Value);
+                if (!canCreate)
+                    return StatusCode(StatusCodes.Status409Conflict,
+                        new { message = "Kunjungan ini sudah dalam proses rawat inap aktif" });
+
                 // **Buat Data Baru**
                 var data = new SuratPengantarRawatInap
                 {
-                    SuratPengantarRawatInapId = Guid.NewGuid(),
-                    KunjunganId = vm.KunjunganId,
-                    Diagnosa = vm.Diagnosa,
-                    ICDId = vm.ICDId,
-                    AlasanRanap = vm.AlasanRanap,
-                    RencanaTindakLanjut = vm.RencanaTindakLanjut,
-                    AsalUnit = vm.AsalUnit,
-                    NomorSuratPengantar = nomorSurat,
-                    Status = FilterStatusSuratPengantarRanap.Menunggu.ToString(),
-                    CreateBy = userActiveId,
-                    CreateDateTime = DateTimeOffset.UtcNow,
+                   SuratPengantarRawatInapId = Guid.NewGuid(),
+                   KunjunganId = vm.KunjunganId,
+                   Diagnosa = vm.Diagnosa,
+                   ICDId = vm.ICDId,
+                   AlasanRanap = vm.AlasanRanap,
+                   RencanaTindakLanjut = vm.RencanaTindakLanjut,
+                   AsalUnit = vm.AsalUnit,
+                   NomorSuratPengantar = nomorSurat,
+                   Status = FilterStatusSuratPengantarRanap.Menunggu.ToString(),
+                   CreateBy = userActiveId,
+                   CreateDateTime = DateTimeOffset.UtcNow,
                 };
 
-                // **Simpan ke Database**
-                _applicationDbContext.SuratPengantarRawatInaps.Add(data);
-                int result = await _applicationDbContext.SaveChangesAsync();
+                 // **Simpan ke Database**
+                 _applicationDbContext.SuratPengantarRawatInaps.Add(data);
+                 int result = await _applicationDbContext.SaveChangesAsync();
 
-                if (result > 0)
-                {
-                    return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
-                }
-                else
-                {
+                 if (result > 0)
+                 {
+                     return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
+                 }
+                 else
+                 {
                     return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
-                }
+                 }
             }
             catch (DbUpdateException dbEx)
             {
