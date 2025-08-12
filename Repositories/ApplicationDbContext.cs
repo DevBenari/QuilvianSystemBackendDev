@@ -134,6 +134,8 @@ namespace QuilvianSystemBackendDev.Repositories
         #region Areas Hrd
         public DbSet<JenisCuti> JenisCutis { get; set; }
         public DbSet<PengajuanCuti> PengajuanCutis { get; set; }
+        public DbSet<Level> Levels { get; set; }
+        public DbSet<GradePay> GradePays { get; set; }
         #endregion
 
         #region Areas Pendaftaran

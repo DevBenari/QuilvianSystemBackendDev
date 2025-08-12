@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -11,9 +12,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250812071454_hrd")]
+    partial class hrd
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -285,31 +287,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.ToTable("MstUserActive", "public");
                 });
 
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.HRD.MasterData.Models.GradePay", b =>
-                {
-                    b.Property<Guid>("GradePayId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Keterangan")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("KodeGrade")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<decimal>("MaxSalary")
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<decimal>("MinSalary")
-                        .HasColumnType("numeric(18,2)");
-
-                    b.HasKey("GradePayId");
-
-                    b.ToTable("Hrd_MstGradePay", "public");
-                });
-
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.HRD.MasterData.Models.JenisCuti", b =>
                 {
                     b.Property<Guid>("JenisCutiId")
@@ -349,31 +326,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.HasKey("JenisCutiId");
 
                     b.ToTable("Hrd_MstJenisCuti", "public");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.HRD.MasterData.Models.Level", b =>
-                {
-                    b.Property<Guid>("LevelId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Keterangan")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("KodeLevel")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<decimal>("MaxSalary")
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<decimal>("MinSalary")
-                        .HasColumnType("numeric(18,2)");
-
-                    b.HasKey("LevelId");
-
-                    b.ToTable("Hrd_MstLevel", "public");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.HRD.MasterData.Models.PengajuanCuti", b =>

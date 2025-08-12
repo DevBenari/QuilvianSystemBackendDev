@@ -2,10 +2,10 @@
 
 namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.ViewModels
 {
-    public class LevelViewModel
+    public class GradePayViewModel
     {
-        public Guid LevelId { get; set; }
-        public string KodeLevel { get; set; }
+        public Guid GradePayId { get; set; }
+        public string KodeGrade { get; set; }
 
         [Column(TypeName = "decimal(18,2)")]
         public decimal MinSalary { get; set; }

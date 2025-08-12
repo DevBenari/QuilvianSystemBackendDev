@@ -1,9 +1,12 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations;
 
-namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.ViewModels
+namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Models
 {
-    public class LevelViewModel
+    [Table("Hrd_MstLevel", Schema = "public")]
+    public class Level
     {
+        [Key]
         public Guid LevelId { get; set; }
         public string KodeLevel { get; set; }
 

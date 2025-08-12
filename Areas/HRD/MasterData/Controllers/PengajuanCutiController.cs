@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
 using QuilvianSystemBackendDev.Repositories;
@@ -9,9 +11,10 @@ using System.Threading.Tasks;
 
 namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
 {
-    [Area("HRD")]
-    [Route("api/[area]/[controller]")]
     [ApiController]
+    [Route("api/[controller]")]
+    //[Authorize]
+    //[EnableCors("AllowSpecific")]
     public class PengajuanCutiController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
