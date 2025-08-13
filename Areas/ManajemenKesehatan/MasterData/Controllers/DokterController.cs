@@ -835,140 +835,158 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-
         [HttpGet("paged")]
         public IActionResult PagedDokter(
-            int page = 1,
-            int perPage = 10,
-            string? search = null,
-            string? orderBy = "CreateDateTime",
-            string? sortDirection = "desc",
-            [FromQuery] DateTime? startDate = null,
-            [FromQuery] DateTime? endDate = null,
-            [FromQuery] PeriodeFilter? periode = null)
+        int page = 1,
+        int perPage = 10,
+        string? search = null,
+        Guid? AsuransiId = null,
+        Guid? PoliId = null,
+        string? orderBy = "CreateDateTime",
+        string? sortDirection = "desc",
+        [FromQuery] DateTime? startDate = null,
+        [FromQuery] DateTime? endDate = null,
+        [FromQuery] PeriodeFilter? periode = null)
         {
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            // Ambil data dari Dokters yang belum dihapus
-            var query = _context.Dokters
-                .Where(d => !d.IsDelete)
-                .Select(d => new
-                {
-                    d.CreateDateTime,
-                    d.CreateBy,
-                    CreateByName = _context.UserActives
-                        .Where(u => u.UserActiveId == d.CreateBy)
-                        .Select(u => u.FullName)
-                        .FirstOrDefault(),
-                    d.DokterId,
-                    d.KdDokter,
-                    d.NmDokter,
-                    d.Sip,
-                    d.Str,
-                    d.TglSip,
-                    d.TglStr,
-                    d.Spesialis,
-                    d.Nik,
-                    d.Nohp,
-                    d.Alamat,
-                    d.Email,
-                    d.UserActiveId,
-                    d.IsAsuransi,
-                    d.IsActive,
-                    d.FotoName,
-                    d.FotoPath,
-                    imageUrl = !string.IsNullOrEmpty(d.FotoName)
-                        ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
-                        : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg",
+            // 1) Base query ke Dokter (belum projection)
+            var baseQuery = _context.Dokters
+                .Where(d => !d.IsDelete);
 
-                    AsuransiIds = _context.DokterAsuransis
-                        .Where(da => da.DokterId == d.DokterId)
-                        .Select(da => da.AsuransiId)
-                        .Distinct()
-                        .ToList(),
-
-                    NamaAsuransi = _context.DokterAsuransis
-                        .Where(da => da.DokterId == d.DokterId)
-                        .Join(_context.Asuransis, da => da.AsuransiId, a => a.AsuransiId, (da, a) => a.NamaAsuransi)
-                        .Distinct()
-                        .ToList(),
-
-                    PoliIds = _context.DokterPolis
-                        .Where(dp => dp.DokterId == d.DokterId)
-                        .Select(dp => dp.PoliId)
-                        .Distinct()
-                        .ToList(),
-
-                    NamaPoli = _context.DokterPolis
-                        .Where(dp => dp.DokterId == d.DokterId)
-                        .Join(_context.Polikliniks, dp => dp.PoliId, p => p.PoliklinikId, (dp, p) => p.NamaPoliklinik)
-                        .Distinct()
-                        .ToList()
-                });
-
-            // Search
-            if (!string.IsNullOrWhiteSpace(search))
+            // 2) FILTER: by AsuransiId (GUID)
+            if (AsuransiId.HasValue)
             {
-                string searchLower = search.ToLower();
-                query = query.Where(d =>
-                    EF.Functions.ILike(d.KdDokter, $"%{searchLower}%") ||
-                    EF.Functions.ILike(d.NmDokter, $"%{searchLower}%") ||
-                    EF.Functions.ILike(d.Email, $"%{searchLower}%") 
-                    );
+                var asu = AsuransiId.Value;
+                baseQuery = baseQuery.Where(d =>
+                    _context.DokterAsuransis.Any(da => da.DokterId == d.DokterId && da.AsuransiId == asu));
             }
 
-            // Filter tanggal
+            // 3) FILTER: by PoliId (GUID)
+            if (PoliId.HasValue)
+            {
+                var poli = PoliId.Value;
+                baseQuery = baseQuery.Where(d =>
+                    _context.DokterPolis.Any(dp => dp.DokterId == d.DokterId && dp.PoliId == poli));
+            }
+
+            // 4) SEARCH: kode/nama/email (seperti semula) + (opsional) nama asuransi/poli
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                string q = $"%{search.ToLower()}%";
+
+                baseQuery = baseQuery.Where(d =>
+                    EF.Functions.ILike(d.KdDokter, q) ||
+                    EF.Functions.ILike(d.NmDokter, q) ||
+                    EF.Functions.ILike(d.Email, q) ||
+                    // cari di NAMA ASURANSI (join via DokterAsuransis -> Asuransis)
+                    _context.DokterAsuransis
+                        .Join(_context.Asuransis, da => da.AsuransiId, a => a.AsuransiId, (da, a) => new { da.DokterId, a.NamaAsuransi })
+                        .Any(x => x.DokterId == d.DokterId && EF.Functions.ILike(x.NamaAsuransi, q)) ||
+                    // cari di NAMA POLI (join via DokterPolis -> Polikliniks)
+                    _context.DokterPolis
+                        .Join(_context.Polikliniks, dp => dp.PoliId, p => p.PoliklinikId, (dp, p) => new { dp.DokterId, p.NamaPoliklinik })
+                        .Any(x => x.DokterId == d.DokterId && EF.Functions.ILike(x.NamaPoliklinik, q))
+                );
+            }
+
+            // 5) FILTER tanggal & periode (tetap)
             if (startDate.HasValue && endDate.HasValue)
             {
                 DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
                 DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
-                query = query.Where(d => d.CreateDateTime >= startUtc && d.CreateDateTime <= endUtc);
+                baseQuery = baseQuery.Where(d => d.CreateDateTime >= startUtc && d.CreateDateTime <= endUtc);
             }
 
-            // Filter berdasarkan periode waktu
             if (periode.HasValue)
             {
                 DateTime today = DateTime.UtcNow.Date;
                 switch (periode)
                 {
                     case PeriodeFilter.Today:
-                        query = query.Where(d => d.CreateDateTime.Date == today);
-                        break;
+                        baseQuery = baseQuery.Where(d => d.CreateDateTime.Date == today); break;
                     case PeriodeFilter.ThisWeek:
                         var weekStart = today.AddDays(-(int)today.DayOfWeek);
-                        query = query.Where(d => d.CreateDateTime.Date >= weekStart && d.CreateDateTime.Date <= today);
-                        break;
+                        baseQuery = baseQuery.Where(d => d.CreateDateTime.Date >= weekStart && d.CreateDateTime.Date <= today); break;
                     case PeriodeFilter.LastWeek:
                         var lastWeekStart = today.AddDays(-7 - (int)today.DayOfWeek);
                         var lastWeekEnd = lastWeekStart.AddDays(6);
-                        query = query.Where(d => d.CreateDateTime.Date >= lastWeekStart && d.CreateDateTime.Date <= lastWeekEnd);
-                        break;
+                        baseQuery = baseQuery.Where(d => d.CreateDateTime.Date >= lastWeekStart && d.CreateDateTime.Date <= lastWeekEnd); break;
                     case PeriodeFilter.ThisMonth:
-                        query = query.Where(d => d.CreateDateTime.Month == today.Month && d.CreateDateTime.Year == today.Year);
-                        break;
+                        baseQuery = baseQuery.Where(d => d.CreateDateTime.Month == today.Month && d.CreateDateTime.Year == today.Year); break;
                     case PeriodeFilter.LastMonth:
                         var lastMonth = today.AddMonths(-1);
-                        query = query.Where(d => d.CreateDateTime.Month == lastMonth.Month && d.CreateDateTime.Year == lastMonth.Year);
-                        break;
+                        baseQuery = baseQuery.Where(d => d.CreateDateTime.Month == lastMonth.Month && d.CreateDateTime.Year == lastMonth.Year); break;
                     case PeriodeFilter.ThisYear:
-                        query = query.Where(d => d.CreateDateTime.Year == today.Year);
-                        break;
+                        baseQuery = baseQuery.Where(d => d.CreateDateTime.Year == today.Year); break;
                     case PeriodeFilter.LastYear:
-                        query = query.Where(d => d.CreateDateTime.Year == today.Year - 1);
-                        break;
+                        baseQuery = baseQuery.Where(d => d.CreateDateTime.Year == today.Year - 1); break;
                     case PeriodeFilter.Last3Months:
-                        query = query.Where(d => d.CreateDateTime >= today.AddMonths(-3));
-                        break;
+                        baseQuery = baseQuery.Where(d => d.CreateDateTime >= today.AddMonths(-3)); break;
                     case PeriodeFilter.Last6Months:
-                        query = query.Where(d => d.CreateDateTime >= today.AddMonths(-6));
-                        break;
+                        baseQuery = baseQuery.Where(d => d.CreateDateTime >= today.AddMonths(-6)); break;
                 }
             }
 
-            // Sorting
+            // 6) PROJECTION akhir (baru setelah semua filter)
+            var query = baseQuery.Select(d => new
+            {
+                d.CreateDateTime,
+                d.CreateBy,
+                CreateByName = _context.UserActives
+                    .Where(u => u.UserActiveId == d.CreateBy)
+                    .Select(u => u.FullName)
+                    .FirstOrDefault(),
+                d.DokterId,
+                d.KdDokter,
+                d.NmDokter,
+                d.Sip,
+                d.Str,
+                d.TglSip,
+                d.TglStr,
+                d.Spesialis,
+                d.Nik,
+                d.Nohp,
+                d.Alamat,
+                d.Email,
+                d.UserActiveId,
+                d.IsAsuransi,
+                d.IsActive,
+                d.FotoName,
+                d.FotoPath,
+                imageUrl = !string.IsNullOrEmpty(d.FotoName)
+                    ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
+                    : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg",
+
+                AsuransiIds = _context.DokterAsuransis
+                    .Where(da => da.DokterId == d.DokterId)
+                    .Select(da => da.AsuransiId)
+                    .Distinct()
+                    .ToList(),
+
+                NamaAsuransi = _context.DokterAsuransis
+                    .Where(da => da.DokterId == d.DokterId)
+                    .Join(_context.Asuransis, da => da.AsuransiId, a => a.AsuransiId, (da, a) => a.NamaAsuransi)
+                    .Distinct()
+                    .ToList(),
+
+                PoliIds = _context.DokterPolis
+                    .Where(dp => dp.DokterId == d.DokterId)
+                    .Select(dp => dp.PoliId)
+                    .Distinct()
+                    .ToList(),
+
+                NamaPoli = _context.DokterPolis
+                    .Where(dp => dp.DokterId == d.DokterId)
+                    .Join(_context.Polikliniks, dp => dp.PoliId, p => p.PoliklinikId, (dp, p) => p.NamaPoliklinik)
+                    .Distinct()
+                    .ToList()
+            });
+
+            // 7) SORTING (tetap; kecil catatan: pakai key lowercase biar konsisten)
             query = sortDirection?.ToLower() == "desc"
-                ? orderBy?.ToLower() switch
+                ? (orderBy?.ToLower() switch
                 {
                     "createdatetime" => query.OrderByDescending(d => d.CreateDateTime),
                     "createbyname" => query.OrderByDescending(d => d.CreateByName),
@@ -976,8 +994,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     "Nama Dokter" => query.OrderByDescending(d => d.NmDokter),
                     "Email" => query.OrderByDescending(d => d.Email),
                     _ => query.OrderByDescending(d => d.CreateDateTime)
-                }
-                : orderBy?.ToLower() switch
+                })
+                : (orderBy?.ToLower() switch
                 {
                     "createdatetime" => query.OrderBy(d => d.CreateDateTime),
                     "createbyname" => query.OrderBy(d => d.CreateByName),
@@ -985,17 +1003,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     "Nama Dokter" => query.OrderBy(d => d.NmDokter),
                     "Email" => query.OrderBy(d => d.Email),
                     _ => query.OrderBy(d => d.CreateDateTime)
-                };
+                });
 
-            // pagination
+            // 8) Pagination
             var totalRows = query.Count();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
             var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
 
             if (rows.Count == 0 && page > totalPages)
-            {
                 return NotFound(new { message = "Page not found." });
-            }
+
             return Ok(new
             {
                 status = "success",
@@ -1010,5 +1027,182 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
             });
         }
+
+        //[HttpGet("paged")]
+        //public IActionResult PagedDokter(
+        //    int page = 1,
+        //    int perPage = 10,
+        //    string? search = null,
+        //    Guid? AsuransiId = null,
+        //    Guid? PoliId = null,
+        //    string? orderBy = "CreateDateTime",
+        //    string? sortDirection = "desc",
+        //    [FromQuery] DateTime? startDate = null,
+        //    [FromQuery] DateTime? endDate = null,
+        //    [FromQuery] PeriodeFilter? periode = null)
+        //{
+        //    if (page < 1) page = 1;
+        //    if (perPage < 1) perPage = 10;
+
+        //    // Ambil data dari Dokters yang belum dihapus
+        //    var query = _context.Dokters
+        //        .Where(d => !d.IsDelete)
+        //        .Select(d => new
+        //        {
+        //            d.CreateDateTime,
+        //            d.CreateBy,
+        //            CreateByName = _context.UserActives
+        //                .Where(u => u.UserActiveId == d.CreateBy)
+        //                .Select(u => u.FullName)
+        //                .FirstOrDefault(),
+        //            d.DokterId,
+        //            d.KdDokter,
+        //            d.NmDokter,
+        //            d.Sip,
+        //            d.Str,
+        //            d.TglSip,
+        //            d.TglStr,
+        //            d.Spesialis,
+        //            d.Nik,
+        //            d.Nohp,
+        //            d.Alamat,
+        //            d.Email,
+        //            d.UserActiveId,
+        //            d.IsAsuransi,
+        //            d.IsActive,
+        //            d.FotoName,
+        //            d.FotoPath,
+        //            imageUrl = !string.IsNullOrEmpty(d.FotoName)
+        //                ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
+        //                : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg",
+
+        //            AsuransiIds = _context.DokterAsuransis
+        //                .Where(da => da.DokterId == d.DokterId)
+        //                .Select(da => da.AsuransiId)
+        //                .Distinct()
+        //                .ToList(),
+
+        //            NamaAsuransi = _context.DokterAsuransis
+        //                .Where(da => da.DokterId == d.DokterId)
+        //                .Join(_context.Asuransis, da => da.AsuransiId, a => a.AsuransiId, (da, a) => a.NamaAsuransi)
+        //                .Distinct()
+        //                .ToList(),
+
+        //            PoliIds = _context.DokterPolis
+        //                .Where(dp => dp.DokterId == d.DokterId)
+        //                .Select(dp => dp.PoliId)
+        //                .Distinct()
+        //                .ToList(),
+
+        //            NamaPoli = _context.DokterPolis
+        //                .Where(dp => dp.DokterId == d.DokterId)
+        //                .Join(_context.Polikliniks, dp => dp.PoliId, p => p.PoliklinikId, (dp, p) => p.NamaPoliklinik)
+        //                .Distinct()
+        //                .ToList()
+        //        });
+
+        //    // Search
+        //    if (!string.IsNullOrWhiteSpace(search))
+        //    {
+        //        string searchLower = search.ToLower();
+        //        query = query.Where(d =>
+        //            EF.Functions.ILike(d.KdDokter, $"%{searchLower}%") ||
+        //            EF.Functions.ILike(d.NmDokter, $"%{searchLower}%") ||
+        //            EF.Functions.ILike(d.Email, $"%{searchLower}%") 
+        //            );
+        //    }
+
+        //    // Filter tanggal
+        //    if (startDate.HasValue && endDate.HasValue)
+        //    {
+        //        DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
+        //        DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+        //        query = query.Where(d => d.CreateDateTime >= startUtc && d.CreateDateTime <= endUtc);
+        //    }
+
+        //    // Filter berdasarkan periode waktu
+        //    if (periode.HasValue)
+        //    {
+        //        DateTime today = DateTime.UtcNow.Date;
+        //        switch (periode)
+        //        {
+        //            case PeriodeFilter.Today:
+        //                query = query.Where(d => d.CreateDateTime.Date == today);
+        //                break;
+        //            case PeriodeFilter.ThisWeek:
+        //                var weekStart = today.AddDays(-(int)today.DayOfWeek);
+        //                query = query.Where(d => d.CreateDateTime.Date >= weekStart && d.CreateDateTime.Date <= today);
+        //                break;
+        //            case PeriodeFilter.LastWeek:
+        //                var lastWeekStart = today.AddDays(-7 - (int)today.DayOfWeek);
+        //                var lastWeekEnd = lastWeekStart.AddDays(6);
+        //                query = query.Where(d => d.CreateDateTime.Date >= lastWeekStart && d.CreateDateTime.Date <= lastWeekEnd);
+        //                break;
+        //            case PeriodeFilter.ThisMonth:
+        //                query = query.Where(d => d.CreateDateTime.Month == today.Month && d.CreateDateTime.Year == today.Year);
+        //                break;
+        //            case PeriodeFilter.LastMonth:
+        //                var lastMonth = today.AddMonths(-1);
+        //                query = query.Where(d => d.CreateDateTime.Month == lastMonth.Month && d.CreateDateTime.Year == lastMonth.Year);
+        //                break;
+        //            case PeriodeFilter.ThisYear:
+        //                query = query.Where(d => d.CreateDateTime.Year == today.Year);
+        //                break;
+        //            case PeriodeFilter.LastYear:
+        //                query = query.Where(d => d.CreateDateTime.Year == today.Year - 1);
+        //                break;
+        //            case PeriodeFilter.Last3Months:
+        //                query = query.Where(d => d.CreateDateTime >= today.AddMonths(-3));
+        //                break;
+        //            case PeriodeFilter.Last6Months:
+        //                query = query.Where(d => d.CreateDateTime >= today.AddMonths(-6));
+        //                break;
+        //        }
+        //    }
+
+        //    // Sorting
+        //    query = sortDirection?.ToLower() == "desc"
+        //        ? orderBy?.ToLower() switch
+        //        {
+        //            "createdatetime" => query.OrderByDescending(d => d.CreateDateTime),
+        //            "createbyname" => query.OrderByDescending(d => d.CreateByName),
+        //            "Kode Dokter" => query.OrderByDescending(d => d.KdDokter),
+        //            "Nama Dokter" => query.OrderByDescending(d => d.NmDokter),
+        //            "Email" => query.OrderByDescending(d => d.Email),
+        //            _ => query.OrderByDescending(d => d.CreateDateTime)
+        //        }
+        //        : orderBy?.ToLower() switch
+        //        {
+        //            "createdatetime" => query.OrderBy(d => d.CreateDateTime),
+        //            "createbyname" => query.OrderBy(d => d.CreateByName),
+        //            "Kode Dokter" => query.OrderBy(d => d.KdDokter),
+        //            "Nama Dokter" => query.OrderBy(d => d.NmDokter),
+        //            "Email" => query.OrderBy(d => d.Email),
+        //            _ => query.OrderBy(d => d.CreateDateTime)
+        //        };
+
+        //    // pagination
+        //    var totalRows = query.Count();
+        //    var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+        //    var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
+
+        //    if (rows.Count == 0 && page > totalPages)
+        //    {
+        //        return NotFound(new { message = "Page not found." });
+        //    }
+        //    return Ok(new
+        //    {
+        //        status = "success",
+        //        message = "Data retrieved successfully",
+        //        data = new
+        //        {
+        //            Rows = rows,
+        //            TotalRows = totalRows,
+        //            CurrentPage = page,
+        //            PerPage = perPage,
+        //            TotalPages = totalPages
+        //        }
+        //    });
+        //}
     }
 }
