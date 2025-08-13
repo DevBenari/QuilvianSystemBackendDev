@@ -29,6 +29,8 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using static QRCoder.PayloadGenerator;
+using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Enum;
+using System.ComponentModel.DataAnnotations;
 
 namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
 {
@@ -1072,7 +1074,8 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
         DateTime? startDate = null,
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
         DateTime? endDate = null,
-        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null,
+        [FromQuery] EnumJenisUser? tipeUser = null)
         {
             // query
             var query = from a in _applicationDbContext.UserActives
@@ -1140,6 +1143,25 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                     EF.Functions.ILike(u.Email, search) ||
                     EF.Functions.ILike(u.NamaTipeUser, search)
                 );
+            }
+
+            // === Filter Tipe User (enum -> Display(Name)) ===
+            if (tipeUser.HasValue)
+            {
+                var memberInfo = typeof(EnumJenisUser)
+                    .GetMember(tipeUser.Value.ToString())
+                    .FirstOrDefault();
+
+                var displayAttr = memberInfo?
+                    .GetCustomAttributes(typeof(DisplayAttribute), false)
+                    .Cast<DisplayAttribute>()
+                    .FirstOrDefault();
+
+                // Jika tidak ada Display, fallback ke nama enum
+                string displayName = displayAttr?.Name ?? tipeUser.Value.ToString();
+
+                // bandingkan ke kolom string di DB (terjemahan ke SQL aman)
+                query = query.Where(u => u.NamaTipeUser == displayName);
             }
 
             //// **Filter berdasarkan tanggal**
