@@ -10,10 +10,14 @@
         public string Address { get; set; }
         public string Handphone { get; set; }
         public string Email { get; set; }
+        public string? NoPolisAsuransi { get; set; }
+        public string? NomorRekening { get; set; }
+        public string? NamaBank { get; set; }
         public bool IsActive { get; set; }
         public Guid? DepartemenId { get; set; }
         public Guid? PositionId { get; set; }
         public Guid? TipeUserId { get; set; }
+        public Guid? GolonganDarahId { get; set; }
 
         // untuk foto
         public IFormFile? Foto { get; set; }

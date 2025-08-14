@@ -118,7 +118,15 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                             on a.CreateBy equals creator.UserActiveId into creatorJoin
                         from creator in creatorJoin.DefaultIfEmpty()
 
-                        where a.IsDelete == false
+                        join ag in _applicationDbContext.Agamas
+                            on a.AgamaId equals ag.AgamaId into agamaJoin
+                        from ag in agamaJoin.DefaultIfEmpty()
+
+                        join gd in _applicationDbContext.GolonganDarahs
+                            on a.GolonganDarahId equals gd.GolonganDarahId into golonganJoin
+                         from gd in golonganJoin.DefaultIfEmpty()
+
+                         where a.IsDelete == false
 
                         select new
                         {
@@ -128,6 +136,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                             a.UserActiveId,
                             a.UserActiveCode,
                             a.FullName,
+                            a.Gender,
                             a.Email,
                             a.TipeUserId,
                             NamaTipeUser = tipe != null ? tipe.NamaTipeUser : "-",
@@ -138,12 +147,20 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                             a.IdentityNumber,
                             a.PlaceOfBirth,
                             a.AgamaId,
+                            NamaAgama = ag != null ? ag.NamaAgama : "-",
                             a.IsPerawat,
                             a.JenisPegawai,
                             a.ProvinsiId,
                             a.KabupatenKotaId,
                             a.KecamatanId,
                             a.KelurahanId,
+                            a.GolonganDarahId,
+                            NamaGolonganDarah = gd != null ? gd.NamaGolonganDarah : "-",
+                            a.Address,
+                            a.Handphone,
+                            a.NamaBank,
+                            a.NomorRekening,
+                            a.NoPolisAsuransi,
                             a.StatusPegawai,
                             a.Kewarganegaraan,
                             a.NoSTR,
@@ -204,6 +221,12 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
             var tipeUser = _applicationDbContext.TipeUsers
                 .FirstOrDefault(t => t.TipeUserId == user.TipeUserId);
 
+            var agama = _applicationDbContext.Agamas
+                .FirstOrDefault(a => a.AgamaId == user.AgamaId);
+
+            var golonganDarah = _applicationDbContext.GolonganDarahs
+                .FirstOrDefault(g => g.GolonganDarahId == user.GolonganDarahId);
+
             return Ok(new
             {
                 message = "Ditemukan || 200 OK",
@@ -219,6 +242,9 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                     user.Address,
                     user.Handphone,
                     user.Email,
+                    user.NoPolisAsuransi,
+                    user.NomorRekening,
+                    user.NamaBank,
                     user.IsActive,
                     user.DepartemenId,
                     NamaDepartemen = departemen?.NamaDepartement ?? null,
@@ -230,8 +256,11 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                     user.KabupatenKotaId,
                     user.KecamatanId,
                     user.KelurahanId,
+                    user.GolonganDarahId,
+                    NamaGolonganDarah = golonganDarah?.NamaGolonganDarah ?? null,
                     user.Kewarganegaraan,
                     user.AgamaId,
+                    NamaAgama = agama?.NamaAgama ?? null,
                     user.IsPerawat,
                     user.NoSTR,
                     user.StatusPegawai,
@@ -1078,60 +1107,77 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
         [FromQuery] EnumJenisUser? tipeUser = null)
         {
             // query
-            var query = from a in _applicationDbContext.UserActives
+            var query = (from a in _applicationDbContext.UserActives
 
-                        join t in _applicationDbContext.TipeUsers
-                            on a.TipeUserId equals t.TipeUserId into tipeJoin
-                        from tipe in tipeJoin.DefaultIfEmpty()
+                         join t in _applicationDbContext.TipeUsers
+                             on a.TipeUserId equals t.TipeUserId into tipeJoin
+                         from tipe in tipeJoin.DefaultIfEmpty()
 
-                        join dept in _applicationDbContext.Departements
-                            on a.DepartemenId equals dept.DepartementId into deptJoin
-                        from dept in deptJoin.DefaultIfEmpty()
+                         join dept in _applicationDbContext.Departements
+                             on a.DepartemenId equals dept.DepartementId into deptJoin
+                         from dept in deptJoin.DefaultIfEmpty()
 
-                        join pos in _applicationDbContext.Positions
-                            on a.PositionId equals pos.PositionId into posJoin
-                        from pos in posJoin.DefaultIfEmpty()
+                         join pos in _applicationDbContext.Positions
+                             on a.PositionId equals pos.PositionId into posJoin
+                         from pos in posJoin.DefaultIfEmpty()
 
-                        join creator in _applicationDbContext.UserActives
-                            on a.CreateBy equals creator.UserActiveId into creatorJoin
-                        from creator in creatorJoin.DefaultIfEmpty()
+                         join creator in _applicationDbContext.UserActives
+                             on a.CreateBy equals creator.UserActiveId into creatorJoin
+                         from creator in creatorJoin.DefaultIfEmpty()
 
-                        where a.IsDelete == false
+                         join ag in _applicationDbContext.Agamas
+                             on a.AgamaId equals ag.AgamaId into agamaJoin
+                         from ag in agamaJoin.DefaultIfEmpty()
 
-                        select new
-                        {
-                            a.CreateDateTime,
-                            a.CreateBy,
-                            CreateByName = creator != null ? creator.FullName : "-",
-                            a.UserActiveId,
-                            a.UserActiveCode,
-                            a.FullName,
-                            a.Email,
-                            a.TipeUserId,
-                            NamaTipeUser = tipe != null ? tipe.NamaTipeUser : "-",
-                            a.DepartemenId,
-                            NamaDepartemen = dept != null ? dept.NamaDepartement : "-",
-                            a.PositionId,
-                            NamaPosisi = pos != null ? pos.PositionName : "-",
-                            a.IdentityNumber,
-                            a.PlaceOfBirth,
-                            a.AgamaId,
-                            a.IsPerawat,
-                            a.JenisPegawai,
-                            a.ProvinsiId,
-                            a.KabupatenKotaId,
-                            a.KecamatanId,
-                            a.KelurahanId,
-                            a.StatusPegawai,
-                            a.Kewarganegaraan,
-                            a.NoSTR,
-                            a.TglAkhirKontrak,
-                            a.TglAwalKontrak,
-                            a.TglKeluar,
-                            a.TglMasuk,
-                            a.FotoName,
-                            a.FotoPath,
-                        };
+                         join gd in _applicationDbContext.GolonganDarahs
+                             on a.GolonganDarahId equals gd.GolonganDarahId into golonganJoin
+                         from gd in golonganJoin.DefaultIfEmpty()
+
+                         where a.IsDelete == false
+
+                         select new
+                         {
+                             a.CreateDateTime,
+                             a.CreateBy,
+                             CreateByName = creator != null ? creator.FullName : "-",
+                             a.UserActiveId,
+                             a.UserActiveCode,
+                             a.FullName,
+                             a.Gender,
+                             a.Email,
+                             a.TipeUserId,
+                             NamaTipeUser = tipe != null ? tipe.NamaTipeUser : "-",
+                             a.DepartemenId,
+                             NamaDepartemen = dept != null ? dept.NamaDepartement : "-",
+                             a.PositionId,
+                             NamaPosisi = pos != null ? pos.PositionName : "-",
+                             a.IdentityNumber,
+                             a.PlaceOfBirth,
+                             a.AgamaId,
+                             NamaAgama = ag != null ? ag.NamaAgama : "-",
+                             a.IsPerawat,
+                             a.JenisPegawai,
+                             a.ProvinsiId,
+                             a.KabupatenKotaId,
+                             a.KecamatanId,
+                             a.KelurahanId,
+                             a.GolonganDarahId,
+                             NamaGolonganDarah = gd != null ? gd.NamaGolonganDarah : "-",
+                             a.Address,
+                             a.Handphone,
+                             a.NamaBank,
+                             a.NomorRekening,
+                             a.NoPolisAsuransi,
+                             a.StatusPegawai,
+                             a.Kewarganegaraan,
+                             a.NoSTR,
+                             a.TglAkhirKontrak,
+                             a.TglAwalKontrak,
+                             a.TglKeluar,
+                             a.TglMasuk,
+                             a.FotoName,
+                             a.FotoPath,
+                         });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             if (!string.IsNullOrWhiteSpace(search))
