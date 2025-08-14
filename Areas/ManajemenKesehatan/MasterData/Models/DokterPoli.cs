@@ -11,5 +11,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public Guid DokterPoliId { get; set; }
         public Guid DokterId { get; set; }
         public Guid PoliId { get; set; }
+
+        // Navigation properties
+        //public virtual Poliklinik? Poliklinik { get; set; }
     }
 }

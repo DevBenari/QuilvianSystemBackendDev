@@ -11,5 +11,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public Guid DokterAsuransiId { get; set; }
         public Guid DokterId { get; set; }
         public Guid AsuransiId { get; set; }
+
+        // Navigation properties
+        //public virtual Asuransi? Asuransi { get; set; }
     }
 }
