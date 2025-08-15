@@ -324,9 +324,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return BadRequest(new { message = "Tipe pasien tidak valid. Gunakan hanya 'Rujukan' atau 'Umum'." });
                 }
 
-                // Validasi jenis kunjungan
-                // jika tidak diisi automatis "Rawat Jalan"
-                var inputJenis = string.IsNullOrWhiteSpace(request.JenisKunjungan) || request.JenisKunjungan.Equals("string", StringComparison.OrdinalIgnoreCase)
+                // Validasi jenis kunjungan (default "Rawat Jalan" jika kosong/"string")
+                var inputJenis = string.IsNullOrWhiteSpace(request.JenisKunjungan) ||
+                                 request.JenisKunjungan.Equals("string", StringComparison.OrdinalIgnoreCase)
                     ? "Rawat Jalan"
                     : request.JenisKunjungan;
 
@@ -337,7 +337,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 string kodeJenis = inputJenis == "Rawat Inap" ? "IP" : "OP";
 
-
                 // Ambil kode antrean dari tabel Poliklinik
                 var kodePoli = _applicationDbContext.Polikliniks
                     .Where(p => p.PoliklinikId == request.PoliklinikId)
@@ -347,19 +346,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 if (string.IsNullOrEmpty(kodePoli))
                     return BadRequest(new { message = "Kode antrean poli tidak ditemukan untuk poliklinik ini!" });
 
-                // Hitung nomor antrian hari ini berdasarkan Poliklinik
+                // Cek apakah pasien sudah terdaftar (belum selesai) di hari ini
                 var today = DateTime.UtcNow.Date;
                 var isAlreadyRegistered = _applicationDbContext.Kunjungans.Any(k =>
-                    k.PoliklinikId == request.PoliklinikId &&
-                    k.DokterId == request.DokterId &&
                     k.PasienId == request.PasienId &&
-                    k.CreateDateTime.Date == today &&
                     !k.IsDelete && k.IsFinished == false);
-
                 if (isAlreadyRegistered)
                 {
-                    return BadRequest(new { message = "Pasien sudah terdaftar untuk kunjungan dengan poli dan dokter yang sama pada hari ini." });
+                    return BadRequest(new { message = "Pasien sudah terdaftar untuk kunjungan yang belum selesai." });
                 }
+
+                // Hitung nomor antrian hari ini berdasarkan Poliklinik
                 var jumlahAntrianHariIni = _applicationDbContext.Kunjungans
                     .Count(k => k.PoliklinikId == request.PoliklinikId
                                 && k.CreateDateTime.Date == today
@@ -368,14 +365,36 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 int nomorAntrian = jumlahAntrianHariIni + 1;
                 string nomorAntrianFormatted = $"{kodePoli}{nomorAntrian:000}"; // Contoh: BU001
 
+                // ==============================
+                // VALIDASI ANTI-DUPLIKAT KunjunganID
+                // ==============================
+                Guid newKunjunganId;
+                int maxRetry = 5; // batas wajar, secara praktik harusnya 1x cukup
+                int attempt = 0;
+                do
+                {
+                    newKunjunganId = Guid.NewGuid();
+                    attempt++;
+                    // cek ke DB apakah GUID ini sudah pernah dipakai
+                    if (!await _applicationDbContext.Kunjungans.AnyAsync(k => k.KunjunganID == newKunjunganId))
+                    {
+                        break; // aman, tidak duplikat
+                    }
+                } while (attempt < maxRetry);
+
+                if (await _applicationDbContext.Kunjungans.AnyAsync(k => k.KunjunganID == newKunjunganId))
+                {
+                    // fallback jika (sangat kecil kemungkinan) tetap duplikat setelah retry
+                    return StatusCode(500, new { message = "Gagal membuat KunjunganID unik. Silakan coba lagi." });
+                }
+
                 var newKunjungan = new Kunjungan
                 {
-                    KunjunganID = Guid.NewGuid(),
+                    KunjunganID = newKunjunganId,
                     PasienId = request.PasienId,
                     DokterId = request.DokterId,
                     PoliklinikId = request.PoliklinikId,
                     AsuransiId = request.AsuransiId,
-                    //JumlahKunjungan = JsonSerializer.Serialize(jumlahKunjungan),
                     JenisKunjungan = kodeJenis,
                     CreateDateTime = DateTimeOffset.UtcNow,
                     CreateBy = UserActiveId,
@@ -392,25 +411,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 _applicationDbContext.Kunjungans.Add(newKunjungan);
 
-                // cari data biaya admin berdasarkan jenis kunjungan
+                // Cari data biaya admin berdasarkan jenis kunjungan
                 var biayaAdmin = await _applicationDbContext.BiayaAdministrasis
                     .Where(b => b.BiayaAdministrasiKode == kodeJenis)
                     .FirstOrDefaultAsync();
 
-                // Hitung jumlah billing kunjungan sebelumnya
+                // Hitung jumlah billing kunjungan sebelumnya (berdasarkan jenis "Biaya Admin")
                 int billingKunjunganCount = await _applicationDbContext.Billings
-                    .Where(b => b.KunjunganId == newKunjungan.KunjunganID && b.BillingKode.ToLower() == "Biaya Admin")
+                    .Where(b => b.KunjunganId == newKunjungan.KunjunganID && b.JenisBilling == "Biaya Admin")
                     .CountAsync();
-                int billingIndex = billingKunjunganCount;
-                // increment billoing kode untuk setiap kunjunga
-                billingIndex++;
-                string billingKode = $"{billingIndex.ToString("D3")}";
+                int billingIndex = billingKunjunganCount + 1;
+                string billingKode = $"{billingIndex:D3}";
 
                 var bill = new Billing
                 {
                     BillingId = Guid.NewGuid(),
                     KunjunganId = newKunjungan.KunjunganID,
-                    DiskonId = null, // Atur sesuai kebutuhan
+                    DiskonId = null,
                     ItemId = biayaAdmin?.BiayaAdministrasiId ?? Guid.Empty,
                     NamaItem = biayaAdmin?.NamaBiayaAdministrasi ?? "Biaya Administrasi",
                     HargaItem = biayaAdmin?.NominalBiayaAdministrasi ?? 0,
@@ -425,6 +442,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 _applicationDbContext.Billings.Add(bill);
 
                 await _applicationDbContext.SaveChangesAsync();
+
+                // Notifikasi SignalR
                 await _hubContext.Clients.All.SendAsync("Kunjungan ditambah", new
                 {
                     action = "create",
@@ -433,7 +452,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     dokterId = request.DokterId,
                     NomorAntrian = nomorAntrianFormatted
                 });
-
 
                 return Ok(new
                 {
@@ -453,6 +471,164 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 return StatusCode(500, new { message = $"Terjadi kesalahan: {ex.Message}" });
             }
         }
+
+
+        //[HttpPost]
+        //public async Task<IActionResult> CreateKunjunganPasien([FromBody] KunjunganViewModel request)
+        //{
+        //    if (request == null || !request.PasienId.HasValue || request.PasienId == Guid.Empty)
+        //    {
+        //        return BadRequest(new { message = "Data tidak boleh kosong!" });
+        //    }
+
+        //    try
+        //    {
+        //        var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        //        if (string.IsNullOrEmpty(EmailLogin))
+        //        {
+        //            return Unauthorized(new { message = "User tidak terautentikasi!" });
+        //        }
+
+        //        var GetUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+        //        var UserActiveId = GetUserActive?.UserActiveId ?? Guid.Empty;
+
+        //        // Validasi tipe pasien
+        //        if (!new[] { "Rujukan", "Umum" }.Contains(request.TipePasien, StringComparer.OrdinalIgnoreCase))
+        //        {
+        //            return BadRequest(new { message = "Tipe pasien tidak valid. Gunakan hanya 'Rujukan' atau 'Umum'." });
+        //        }
+
+        //        // Validasi jenis kunjungan
+        //        // jika tidak diisi automatis "Rawat Jalan"
+        //        var inputJenis = string.IsNullOrWhiteSpace(request.JenisKunjungan) || request.JenisKunjungan.Equals("string", StringComparison.OrdinalIgnoreCase)
+        //            ? "Rawat Jalan"
+        //            : request.JenisKunjungan;
+
+        //        if (!new[] { "Rawat Inap", "Rawat Jalan" }.Contains(inputJenis, StringComparer.OrdinalIgnoreCase))
+        //        {
+        //            return BadRequest(new { message = "Jenis kunjungan tidak valid. Gunakan hanya 'Rawat Inap' atau 'Rawat Jalan'." });
+        //        }
+
+        //        string kodeJenis = inputJenis == "Rawat Inap" ? "IP" : "OP";
+
+
+        //        // Ambil kode antrean dari tabel Poliklinik
+        //        var kodePoli = _applicationDbContext.Polikliniks
+        //            .Where(p => p.PoliklinikId == request.PoliklinikId)
+        //            .Select(p => p.KodeAntreanPoli)
+        //            .FirstOrDefault();
+
+        //        if (string.IsNullOrEmpty(kodePoli))
+        //            return BadRequest(new { message = "Kode antrean poli tidak ditemukan untuk poliklinik ini!" });
+
+        //        // Hitung nomor antrian hari ini berdasarkan Poliklinik
+        //        var today = DateTime.UtcNow.Date;
+        //        var isAlreadyRegistered = _applicationDbContext.Kunjungans.Any(k =>
+        //            //k.PoliklinikId == request.PoliklinikId &&
+        //            //k.DokterId == request.DokterId &&
+        //            k.PasienId == request.PasienId &&
+        //            //k.CreateDateTime.Date == today &&
+        //            !k.IsDelete && k.IsFinished == false);
+
+        //        if (isAlreadyRegistered)
+        //        {
+        //            return BadRequest(new { message = "Pasien sudah terdaftar untuk kunjungan dengan poli dan dokter yang sama pada hari ini." });
+        //        }
+
+        //        var jumlahAntrianHariIni = _applicationDbContext.Kunjungans
+        //            .Count(k => k.PoliklinikId == request.PoliklinikId
+        //                        && k.CreateDateTime.Date == today
+        //                        && !k.IsDelete);
+
+        //        int nomorAntrian = jumlahAntrianHariIni + 1;
+        //        string nomorAntrianFormatted = $"{kodePoli}{nomorAntrian:000}"; // Contoh: BU001
+
+        //        var newKunjungan = new Kunjungan
+        //        {
+        //            KunjunganID = Guid.NewGuid(),
+        //            PasienId = request.PasienId,
+        //            DokterId = request.DokterId,
+        //            PoliklinikId = request.PoliklinikId,
+        //            AsuransiId = request.AsuransiId,
+        //            //JumlahKunjungan = JsonSerializer.Serialize(jumlahKunjungan),
+        //            JenisKunjungan = kodeJenis,
+        //            CreateDateTime = DateTimeOffset.UtcNow,
+        //            CreateBy = UserActiveId,
+        //            NoRekamMedis = request.NoRekamMedis,
+        //            TipePasien = request.TipePasien,
+        //            TipePembayaran = request.TipePembayaran,
+        //            IsFinished = false,
+        //            IsDelete = false,
+        //            IsScreening = false,
+        //            IsPresent = true,
+        //            IsFinishedKasir = false, // Default value
+        //            Antrian = nomorAntrianFormatted   // Format akhir: BU001
+        //        };
+
+        //        // validasi supaya ga ada kunjunganId yang sama
+        //        _applicationDbContext.Kunjungans.Add(newKunjungan);
+
+        //        // cari data biaya admin berdasarkan jenis kunjungan
+        //        var biayaAdmin = await _applicationDbContext.BiayaAdministrasis
+        //            .Where(b => b.BiayaAdministrasiKode == kodeJenis)
+        //            .FirstOrDefaultAsync();
+
+        //        // Hitung jumlah billing kunjungan sebelumnya
+        //        int billingKunjunganCount = await _applicationDbContext.Billings
+        //            .Where(b => b.KunjunganId == newKunjungan.KunjunganID && b.BillingKode.ToLower() == "Biaya Admin")
+        //            .CountAsync();
+        //        int billingIndex = billingKunjunganCount;
+        //        // increment billoing kode untuk setiap kunjunga
+        //        billingIndex++;
+        //        string billingKode = $"{billingIndex.ToString("D3")}";
+
+        //        var bill = new Billing
+        //        {
+        //            BillingId = Guid.NewGuid(),
+        //            KunjunganId = newKunjungan.KunjunganID,
+        //            DiskonId = null, // Atur sesuai kebutuhan
+        //            ItemId = biayaAdmin?.BiayaAdministrasiId ?? Guid.Empty,
+        //            NamaItem = biayaAdmin?.NamaBiayaAdministrasi ?? "Biaya Administrasi",
+        //            HargaItem = biayaAdmin?.NominalBiayaAdministrasi ?? 0,
+        //            QtyItem = 1,
+        //            SubTotalItem = biayaAdmin?.NominalBiayaAdministrasi ?? 0,
+        //            BillingKode = billingKode,
+        //            JenisBilling = "Biaya Admin",
+        //            BillingDate = DateTime.UtcNow,
+        //            CreateDateTime = DateTimeOffset.UtcNow,
+        //            CreateBy = UserActiveId
+        //        };
+        //        _applicationDbContext.Billings.Add(bill);
+
+        //        await _applicationDbContext.SaveChangesAsync();
+        //        await _hubContext.Clients.All.SendAsync("Kunjungan ditambah", new
+        //        {
+        //            action = "create",
+        //            kunjunganId = newKunjungan.KunjunganID,
+        //            pasienId = request.PasienId,
+        //            dokterId = request.DokterId,
+        //            NomorAntrian = nomorAntrianFormatted
+        //        });
+
+
+        //        return Ok(new
+        //        {
+        //            message = "Kunjungan baru berhasil ditambahkan.",
+        //            data = new
+        //            {
+        //                request.PasienId,
+        //                request.DokterId,
+        //                newKunjungan.KunjunganID,
+        //                JenisKunjungan = inputJenis,
+        //                NomorAntrian = nomorAntrianFormatted
+        //            }
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, new { message = $"Terjadi kesalahan: {ex.Message}" });
+        //    }
+        //}
         //test
         [HttpPost("broadcast-default")]
         public async Task<IActionResult> BroadcastDefault()
