@@ -418,19 +418,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet("pasien/{pasienid}")]
         public async Task<IActionResult> GetByPasienId(Guid pasienid)
         {
-            // 1) Ambil kamus ICD(Kode->Nama) sekali saja
+            // 1) Ambil kamus ICD(Kode->Nama) sekali saja  
             var icdDict = await _applicationDbContext.ICD10s
                 .AsNoTracking()
                 .Select(x => new { x.ICDCode, x.ICDName })
                 .ToDictionaryAsync(x => x.ICDCode, x => x.ICDName);
 
-            // 2) Ambil data utama berdasarkan SOAPID
+            // 2) Ambil data utama berdasarkan PasienId  
             var raw = await (from a in _applicationDbContext.SOAPs
                              join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId
                              join k in _applicationDbContext.Kunjungans on a.KunjunganId equals k.KunjunganID
                              join d in _applicationDbContext.Dokters on k.DokterId equals d.DokterId
                              join p in _applicationDbContext.PendaftaranPasienBarus on k.PasienId equals p.PendaftaranPasienBaruId
-                             where k.PasienId == pasienid && a.IsDelete == false // Filter berdasarkan SOAPID
+                             where k.PasienId == pasienid && a.IsDelete == false
                              select new
                              {
                                  a.CreateDateTime,
@@ -441,7 +441,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                  PasienId = k.PasienId,
                                  a.Subjective,
                                  a.Objective,
-                                 a.DaftarICD10, // simpan apa adanya dulu (CSV)
+                                 a.DaftarICD10,
                                  a.Assessment,
                                  a.Planning,
                                  a.Evaluasi,
@@ -452,56 +452,58 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                  DokterId = d.DokterId,
                                  NamaPasien = p.NamaLengkap
                              })
-                             .AsNoTracking()
-                             .FirstOrDefaultAsync(); // Mengambil satu data
+                           .AsNoTracking()
+                           .ToListAsync();
 
-            // 3) Jika data tidak ditemukan, kembalikan 404 Not Found
-            if (raw == null)
+            // 3) Jika data tidak ditemukan, kembalikan 404 Not Found  
+            if (raw == null || !raw.Any())
             {
                 return NotFound(new { message = "Data tidak ditemukan" });
             }
 
-            // 4) Proses ICD (parsing dan lookup)
-            var codes = (raw.DaftarICD10 ?? "")
-                .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                .Select(s => s.Trim())
-                .Where(s => !string.IsNullOrWhiteSpace(s))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
-
-            var namaIcd = codes
-                .Select(code =>
-                {
-                    icdDict.TryGetValue(code, out var nama);
-                    return nama ?? $"(Kode tidak ditemukan: {code})";
-                })
-                .ToList();
-
-            // 5) Proyeksi hasil akhir
-            var resultData = new
+            // 4) Proses ICD (parsing dan lookup)  
+            var resultData = raw.Select(data =>
             {
-                raw.CreateDateTime,
-                raw.CreateBy,
-                raw.CreateByName,
-                raw.SOAPID,
-                raw.KunjunganId,
-                raw.PasienId,
-                raw.Subjective,
-                raw.Objective,
-                DaftarICD10 = codes,    // list kode ICD
-                NamaICD = namaIcd,      // list nama ICD hasil "join"
-                raw.Assessment,
-                raw.Planning,
-                raw.Evaluasi,
-                raw.Intervensi,
-                raw.Reevaluasi,
-                raw.Profesi,
-                raw.NamaDokter,
-                raw.DokterId,
-                raw.NamaPasien
-            };
+                var codes = (data.DaftarICD10 ?? "")
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s => s.Trim())
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
 
-            // 6) Return hasil
+                var namaIcd = codes
+                    .Select(code =>
+                    {
+                        icdDict.TryGetValue(code, out var nama);
+                        return nama ?? $"(Kode tidak ditemukan: {code})";
+                    })
+                    .ToList();
+
+                return new
+                {
+                    data.CreateDateTime,
+                    data.CreateBy,
+                    data.CreateByName,
+                    data.SOAPID,
+                    data.KunjunganId,
+                    data.PasienId,
+                    data.Subjective,
+                    data.Objective,
+                    DaftarICD10 = codes,    // list kode ICD  
+                    NamaICD = namaIcd,      // list nama ICD hasil "join"  
+                    data.Assessment,
+                    data.Planning,
+                    data.Evaluasi,
+                    data.Intervensi,
+                    data.Reevaluasi,
+                    data.Profesi,
+                    data.NamaDokter,
+                    data.DokterId,
+                    data.NamaPasien
+                };
+            }).ToList();
+
+            // 5) Return hasil  
             return Ok(new
             {
                 message = "Berhasil || 200 OK",
