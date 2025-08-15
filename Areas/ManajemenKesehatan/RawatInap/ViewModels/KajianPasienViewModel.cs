@@ -25,5 +25,7 @@
         public string? EdukasiKepada { get; set; }
         public string? Keterangan { get; set; }
         public DateTime? TglKajian { get; set; }
+        public string? KajianUtamaPengkajian { get; set; }
+        public Guid? CurrentMedicationId { get; set; }
     }
 }

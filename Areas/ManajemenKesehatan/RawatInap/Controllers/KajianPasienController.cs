@@ -52,10 +52,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            // Query data
+
             var query = (from a in _applicationDbContext.KajianPasiens
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
+                         join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId into userGroup
+                         from u in userGroup.DefaultIfEmpty()
+
+                         join k in _applicationDbContext.Kunjungans on a.KunjunganId equals k.KunjunganID into kunjunganGroup
+                         from k in kunjunganGroup.DefaultIfEmpty()
+
+                         join pa in _applicationDbContext.PainAssessments on a.KunjunganId equals pa.KunjunganId into painGroup
+                         from pa in painGroup.DefaultIfEmpty()
+
+                         join sp in _applicationDbContext.SuratPengantarRawatInaps on a.KunjunganId equals sp.KunjunganId into suratGroup
+                         from sp in suratGroup.DefaultIfEmpty()
+
                          where a.IsDelete == false || a.IsDelete == null
                          select new
                          {
@@ -64,6 +74,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              CreateByName = u.FullName,
                              a.KajianPasienId,
                              a.KunjunganId,
+                             k.NoRekamMedis,
                              a.DokterId,
                              a.UserActiveId,
                              a.KeadaanUmum,
@@ -86,7 +97,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.Edukasi,
                              a.EdukasiKepada,
                              a.Keterangan,
-                             a.TglKajian
+                             a.TglKajian,
+                             a.KajianUtamaPengkajian,
+                             a.CurrentMedicationId,
+
+                             // info pain assessment
+                             pa.InheritedDisease,
+
+                             // info surat pengantar
+                             sp.AsalUnit,
+
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -397,8 +417,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
             // Query data
             var query = (from a in _applicationDbContext.KajianPasiens
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
+                         join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId into userGroup
+                         from u in userGroup.DefaultIfEmpty()
+
+                         join k in _applicationDbContext.Kunjungans on a.KunjunganId equals k.KunjunganID into kunjunganGroup
+                         from k in kunjunganGroup.DefaultIfEmpty()
+
+                         join pa in _applicationDbContext.PainAssessments on a.KunjunganId equals pa.KunjunganId into painGroup
+                         from pa in painGroup.DefaultIfEmpty()
+
+                         join sp in _applicationDbContext.SuratPengantarRawatInaps on a.KunjunganId equals sp.KunjunganId into suratGroup
+                         from sp in suratGroup.DefaultIfEmpty()
+
                          where a.IsDelete == false || a.IsDelete == null
                          select new
                          {
@@ -407,6 +437,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              CreateByName = u.FullName,
                              a.KajianPasienId,
                              a.KunjunganId,
+                             k.NoRekamMedis,
                              a.DokterId,
                              a.UserActiveId,
                              a.KeadaanUmum,
@@ -429,7 +460,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.Edukasi,
                              a.EdukasiKepada,
                              a.Keterangan,
-                             a.TglKajian
+                             a.TglKajian,
+                             a.KajianUtamaPengkajian,
+                             a.CurrentMedicationId,
+
+                             // info pain assessment
+                             pa.InheritedDisease,
+
+                             // info surat pengantar
+                             sp.AsalUnit,
+
                          });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
