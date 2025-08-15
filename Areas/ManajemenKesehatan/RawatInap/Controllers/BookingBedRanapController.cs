@@ -199,7 +199,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     dataBed.Status = true; // Tandai bed sebagai tidak tersedia
                 }
 
-
+                // validasi kunjunganId yang sama tidak boleh membuat booking bed lagi
+                var existingBooking = _applicationDbContext.BookingBedRanaps
+                    .FirstOrDefault(b => b.KunjunganId == vm.KunjunganId && b.IsDelete == false);
+                if (existingBooking != null)
+                {
+                    return BadRequest(new
+                    {
+                        message = "Kunjungan ini sudah memiliki booking bed."
+                    });
+                }
 
                 // **Buat Data Baru**
                 var data = new BookingBedRanap
