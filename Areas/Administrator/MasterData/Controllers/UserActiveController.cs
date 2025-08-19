@@ -36,8 +36,8 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
-    [EnableCors("AllowSpecific")]
+    //[Authorize]
+    //[EnableCors("AllowSpecific")]
     public class UserActiveController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
@@ -635,6 +635,61 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
 
             }
         }
+        // GET: api/Administrator/UserActive/ByDepartemen/{departemenId}
+        [HttpGet("ByDepartemen/{departemenId}")]
+        public async Task<IActionResult> GetUsersByDepartemen(Guid departemenId)
+        {
+            var users = await (from u in _applicationDbContext.UserActives
+                               where u.DepartemenId == departemenId && u.IsDelete == false
+                               select new UserActiveViewModel
+                               {
+                                   FullName = u.FullName,
+                                   IdentityNumber = u.IdentityNumber,
+                                   PlaceOfBirth = u.PlaceOfBirth,
+                                   DateOfBirth = u.DateOfBirth.ToString("yyyy-MM-dd"),
+                                   Gender = u.Gender,
+                                   Address = u.Address,
+                                   Handphone = u.Handphone,
+                                   Email = u.Email,
+                                   NoPolisAsuransi = u.NoPolisAsuransi,
+                                   NomorRekening = u.NomorRekening,
+                                   NamaBank = u.NamaBank,
+                                   IsActive = u.IsActive,
+                                   DepartemenId = u.DepartemenId,
+                                   PositionId = u.PositionId,
+                                   TipeUserId = u.TipeUserId,
+                                   GolonganDarahId = u.GolonganDarahId,
+                                   // foto bisa dihandle terpisah (misalnya return url, bukan IFormFile)
+                                   //FotoName = u.FotoName,
+                                   //FotoPath = u.FotoPath,
+                                   TglMasuk = u.TglMasuk != null ? u.TglMasuk.Value.ToString("yyyy-MM-dd") : null,
+                                   TglKeluar = u.TglKeluar != null ? u.TglKeluar.Value.ToString("yyyy-MM-dd") : null,
+                                   TglAwalKontrak = u.TglAwalKontrak != null ? u.TglAwalKontrak.Value.ToString("yyyy-MM-dd") : null,
+                                   TglAkhirKontrak = u.TglAkhirKontrak != null ? u.TglAkhirKontrak.Value.ToString("yyyy-MM-dd") : null,
+                                   ProvinsiId = u.ProvinsiId,
+                                   KabupatenKotaId = u.KabupatenKotaId,
+                                   KecamatanId = u.KecamatanId,
+                                   KelurahanId = u.KelurahanId,
+                                   Kewarganegaraan = u.Kewarganegaraan,
+                                   AgamaId = u.AgamaId,
+                                   IsPerawat = u.IsPerawat,
+                                   NoSTR = u.NoSTR,
+                                   StatusPegawai = u.StatusPegawai,
+                                   JenisPegawai = u.JenisPegawai
+                               }).ToListAsync();
+
+            if (users == null || !users.Any())
+            {
+                return NotFound(new { message = "Data user dengan DepartemenId tersebut tidak ditemukan. || 404 Not Found" });
+            }
+
+            return Ok(new
+            {
+                message = "Berhasil || 200 OK",
+                data = users
+            });
+        }
+
 
         [HttpPut("UserActive/{id}")]
         public async Task<IActionResult> UpdateUser(Guid id, [FromForm] UserActiveViewModel vm)

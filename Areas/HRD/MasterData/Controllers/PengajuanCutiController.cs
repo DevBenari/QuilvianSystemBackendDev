@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
+using QuilvianSystemBackendDev.Areas.HRD.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Repositories;
 using System;
 using System.Collections.Generic;
@@ -24,11 +25,80 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
             _context = context;
         }
 
-        // GET: api/HRD/PengajuanCuti
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<PengajuanCuti>>> GetPengajuanCuti()
+        public async Task<IActionResult> GetPengajuanCuti(int page = 1, int perPage = 10)
         {
-            return await _context.PengajuanCutis.ToListAsync();
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
+
+            var query = from c in _context.PengajuanCutis
+                        join u1 in _context.UserActives on c.ApprovedBy equals u1.UserActiveId into approvedByJoin
+                        from u1 in approvedByJoin.DefaultIfEmpty()
+                        join u2 in _context.UserActives on c.Approved2By equals u2.UserActiveId into approved2ByJoin
+                        from u2 in approved2ByJoin.DefaultIfEmpty()
+                        join u3 in _context.UserActives on c.CreateBy equals u3.UserActiveId into createdByJoin
+                        from u3 in createdByJoin.DefaultIfEmpty()
+                        where c.IsDelete == false
+                        orderby c.CreateDateTime descending
+                        select new
+                        {
+                            c.PengajuanCutiId,
+                            c.UserActiveId,
+                            c.JenisCutiId,
+                            c.MulaiCuti,
+                            c.SelesaiCuti,
+                            c.JumlahCutiDiambil,
+                            c.SisaKuotaCuti,
+                            c.AlasanCuti,
+                            c.PICPengganti,
+
+                            c.ApprovedBy,
+                            ApprovedByName = u1 != null ? u1.FullName : null,
+                            c.TglPersetujuan,
+                            c.CatatanApprovedBy,
+
+                            c.Approved2By,
+                            Approved2ByName = u2 != null ? u2.FullName : null,
+                            c.TglPersetujuan2,
+                            c.CatatanApproved2By,
+
+                            c.LampiranPendukung,
+
+                            c.CreateDateTime,
+                            c.CreateBy,
+                            CreateByName = u3 != null ? u3.FullName : null,
+                            c.UpdateDateTime,
+                            c.UpdateBy,
+                            c.DeleteDateTime,
+                            c.DeleteBy,
+                            c.IsDelete
+                        };
+
+            var totalRows = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            var listdata = await query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToListAsync();
+
+            if (!listdata.Any())
+            {
+                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
+            }
+
+            return Ok(new
+            {
+                message = "Berhasil || 200 OK",
+                data = listdata,
+                pagination = new
+                {
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalRows = totalRows,
+                    TotalPages = totalPages
+                }
+            });
         }
 
         // GET: api/HRD/PengajuanCuti/{id}
