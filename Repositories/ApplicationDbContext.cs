@@ -175,6 +175,9 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<SDKIDiagnosa> SDKIDiagnosas { get; set; }
         public DbSet<KajianPasien> KajianPasiens { get; set; }
         public DbSet<SDKIGroup> SDKIGroups { get; set; }
+        public DbSet<Indikator> Indikators { get; set; }
+        public DbSet<IndikatorScore> IndikatorScores { get; set; }
+        public DbSet<IndikatorPengkajian> IndikatorPengkajians { get; set; }
 
         #endregion
     }
