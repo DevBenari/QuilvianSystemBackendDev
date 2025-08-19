@@ -13,6 +13,7 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Models
         public Guid PengajuanCutiId { get; set; }
         public Guid UserActiveId { get; set; }
         public Guid JenisCutiId { get; set; }
+        public Guid? DepartemenId { get; set; }
 
         [Column(TypeName = "date")]
         public DateTime MulaiCuti { get; set; }

@@ -63,6 +63,7 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
                             c.CatatanApproved2By,
 
                             c.LampiranPendukung,
+                            c.DepartemenId,
 
                             c.CreateDateTime,
                             c.CreateBy,
