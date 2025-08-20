@@ -64,6 +64,7 @@ namespace QuilvianSystemBackendDev.Areas.HRD.Pengajuan.Controllers
 
                             c.LampiranPendukung,
                             c.DepartemenId,
+                            c.Status,
 
                             c.CreateDateTime,
                             c.CreateBy,

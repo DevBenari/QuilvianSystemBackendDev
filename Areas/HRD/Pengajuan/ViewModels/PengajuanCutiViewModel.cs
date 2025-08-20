@@ -28,6 +28,7 @@ namespace QuilvianSystemBackendDev.Areas.HRD.Pengajuan.ViewModels
         public DateTime? TglPersetujuan2 { get; set; }
         public string CatatanApproved2By { get; set; }
         public string LampiranPendukung { get; set; }
+        public string Status { get; set; }
 
         [ForeignKey("ApprovedBy")]
         public UserActive ApprovedByUser { get; set; }

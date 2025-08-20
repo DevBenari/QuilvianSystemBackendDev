@@ -31,5 +31,6 @@ namespace QuilvianSystemBackendDev.Areas.HRD.Pengajuan.Models
         public DateTime? TglPersetujuan2 { get; set; }
         public string CatatanApproved2By { get; set; }
         public string LampiranPendukung { get; set; }
+        public string Status { get; set; }
     }
 }
