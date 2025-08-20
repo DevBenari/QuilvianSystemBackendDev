@@ -1,10 +1,15 @@
 ﻿using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models;
+using QuilvianSystemBackendDev.Models;
+using System;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.ViewModels
+namespace QuilvianSystemBackendDev.Areas.HRD.Pengajuan.Models
 {
-    public class PengajuanCutiViewModel
+    [Table("Hrd_PengajuanCuti", Schema = "public")]
+    public class PengajuanCuti : UserActivity
     {
+        [Key]
         public Guid PengajuanCutiId { get; set; }
         public Guid UserActiveId { get; set; }
         public Guid JenisCutiId { get; set; }
@@ -20,19 +25,11 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.ViewModels
         public string AlasanCuti { get; set; }
         public string PICPengganti { get; set; }
         public Guid? ApprovedBy { get; set; }
-        public string ApprovedByName { get; set; }
         public DateTime? TglPersetujuan { get; set; }
         public string CatatanApprovedBy { get; set; }
         public Guid? Approved2By { get; set; }
-        public string Approved2ByName { get; set; }
         public DateTime? TglPersetujuan2 { get; set; }
         public string CatatanApproved2By { get; set; }
         public string LampiranPendukung { get; set; }
-
-        [ForeignKey("ApprovedBy")]
-        public UserActive ApprovedByUser { get; set; }
-
-        [ForeignKey("Approved2By")]
-        public UserActive Approved2ByUser { get; set; }
     }
 }

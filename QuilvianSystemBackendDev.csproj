@@ -7,9 +7,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Areas\Keuangan\**" />
     <Compile Remove="Areas\ManajemenKesehatan\Kunjungan\**" />
+    <Content Remove="Areas\Keuangan\**" />
     <Content Remove="Areas\ManajemenKesehatan\Kunjungan\**" />
+    <EmbeddedResource Remove="Areas\Keuangan\**" />
     <EmbeddedResource Remove="Areas\ManajemenKesehatan\Kunjungan\**" />
+    <None Remove="Areas\Keuangan\**" />
     <None Remove="Areas\ManajemenKesehatan\Kunjungan\**" />
   </ItemGroup>
  
@@ -46,7 +50,6 @@
  
   <ItemGroup>
     <Folder Include=".github\workflows\" />
-    <Folder Include="Areas\Keuangan\" />
     <Folder Include="Areas\ManajemenKesehatan\RawatJalan\Controllers\" />
     <Folder Include="Areas\ManajemenKesehatan\RawatJalan\Models\" />
     <Folder Include="Areas\ManajemenKesehatan\RawatJalan\ViewModels\" />

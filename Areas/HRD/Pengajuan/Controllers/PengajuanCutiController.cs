@@ -2,15 +2,15 @@
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
-using QuilvianSystemBackendDev.Areas.HRD.MasterData.ViewModels;
+using QuilvianSystemBackendDev.Areas.HRD.Pengajuan.Models;
+using QuilvianSystemBackendDev.Areas.HRD.Pengajuan.ViewModels;
 using QuilvianSystemBackendDev.Repositories;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
+namespace QuilvianSystemBackendDev.Areas.HRD.Pengajuan.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
