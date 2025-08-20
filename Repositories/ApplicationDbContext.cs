@@ -178,6 +178,13 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<Indikator> Indikators { get; set; }
         public DbSet<IndikatorScore> IndikatorScores { get; set; }
         public DbSet<IndikatorPengkajian> IndikatorPengkajians { get; set; }
+        public DbSet<SkriningNutrisi> SkriningNutrisis { get; set; }
+        public DbSet<PengkajianEliminasi> PengkajianEliminasis { get; set; }
+        public DbSet<PengkajianKetergantungan> PengkajianKetergantungans { get; set; }
+        public DbSet<PengkajianKulit> PengkajianKulits { get; set; }
+        public DbSet<PengkajianPernapasan> PengkajianPernapasans { get; set; }
+        public DbSet<PengkajianPerawat> PengkajianPerawats { get; set; }
+        public DbSet<DetailKetergantungan> DetailKetergantungans { get; set; }
 
         #endregion
     }
