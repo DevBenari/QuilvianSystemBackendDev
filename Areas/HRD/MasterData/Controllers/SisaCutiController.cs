@@ -22,7 +22,7 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
         }
 
         [HttpGet()]
-        // ✅ Index tampilkan semua sisa cuti user per jenis cuti
+        // ✅ Ambil semua user + sisa cuti per jenis cuti
         public async Task<IActionResult> Index()
         {
             var data = await (from pengajuan in _context.PengajuanCutis
@@ -31,15 +31,33 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
                               group new { pengajuan, jenis } by new { pengajuan.UserActiveId, pengajuan.JenisCutiId, jenis.NamaCuti, jenis.KuotaTahunan } into g
                               select new
                               {
-                                  g.Key.UserActiveId,
-                                  g.Key.JenisCutiId,
+                                  UserActiveId = g.Key.UserActiveId,
+                                  JenisCutiId = g.Key.JenisCutiId,
                                   NamaCuti = g.Key.NamaCuti,
                                   KuotaTahunan = string.IsNullOrEmpty(g.Key.KuotaTahunan) ? 0 : int.Parse(g.Key.KuotaTahunan),
-                                  TotalCutiDiambil = g.Sum(x => x.pengajuan.JumlahCutiDiambil),
+
+                                  // ✅ hitung status
+                                  TotalCutiDisetujui = g.Where(x => x.pengajuan.Status == "Disetujui")
+                                                        .Sum(x => x.pengajuan.JumlahCutiDiambil),
+
+                                  TotalCutiPending = g.Where(x => string.IsNullOrEmpty(x.pengajuan.Status)
+                                                               || x.pengajuan.Status == "Kosong")
+                                                      .Sum(x => x.pengajuan.JumlahCutiDiambil),
+
+                                  TotalCutiDitolak = g.Where(x => x.pengajuan.Status == "Ditolak")
+                                                      .Sum(x => x.pengajuan.JumlahCutiDiambil),
+
+                                  // ✅ Sisa cuti = kuota - cuti disetujui
                                   SisaCuti = (string.IsNullOrEmpty(g.Key.KuotaTahunan) ? 0 : int.Parse(g.Key.KuotaTahunan))
-                                             - g.Sum(x => x.pengajuan.JumlahCutiDiambil)
+                                             - g.Where(x => x.pengajuan.Status == "Disetujui")
+                                                .Sum(x => x.pengajuan.JumlahCutiDiambil)
                               })
                               .ToListAsync();
+
+            if (data == null || !data.Any())
+            {
+                return NotFound(new { Message = "Belum ada pengajuan cuti" });
+            }
 
             return Ok(data);
         }
@@ -59,9 +77,22 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
                                   JenisCutiId = g.Key.JenisCutiId,
                                   NamaCuti = g.Key.NamaCuti,
                                   KuotaTahunan = string.IsNullOrEmpty(g.Key.KuotaTahunan) ? 0 : int.Parse(g.Key.KuotaTahunan),
-                                  TotalCutiDiambil = g.Sum(x => x.pengajuan.JumlahCutiDiambil),
+
+                                  // Hanya hitung cuti dengan status "Disetujui"
+                                  TotalCutiDisetujui = g.Where(x => x.pengajuan.Status == "Disetujui")
+                                                        .Sum(x => x.pengajuan.JumlahCutiDiambil),
+
+                                  // Hitung juga pending & ditolak
+                                  TotalCutiPending = g.Where(x => string.IsNullOrEmpty(x.pengajuan.Status) || x.pengajuan.Status == "Kosong")
+                                                      .Sum(x => x.pengajuan.JumlahCutiDiambil),
+
+                                  TotalCutiDitolak = g.Where(x => x.pengajuan.Status == "Ditolak")
+                                                      .Sum(x => x.pengajuan.JumlahCutiDiambil),
+
+                                  // Sisa cuti hanya dikurangi cuti yang disetujui
                                   SisaCuti = (string.IsNullOrEmpty(g.Key.KuotaTahunan) ? 0 : int.Parse(g.Key.KuotaTahunan))
-                                             - g.Sum(x => x.pengajuan.JumlahCutiDiambil)
+                                             - g.Where(x => x.pengajuan.Status == "Disetujui")
+                                                .Sum(x => x.pengajuan.JumlahCutiDiambil)
                               })
                               .ToListAsync();
 
@@ -72,5 +103,6 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
 
             return Ok(data);
         }
+
     }
 }

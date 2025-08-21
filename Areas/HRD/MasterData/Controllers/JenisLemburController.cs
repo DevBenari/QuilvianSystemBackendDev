@@ -30,7 +30,7 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
             var query = from j in _context.JenisLemburs
                         join uc in _context.UserActives on j.CreateBy equals uc.UserActiveId into createdByJoin
                         from uc in createdByJoin.DefaultIfEmpty()
-                        where j.IsDelete == false
+                        //where j.IsDelete == false
                         orderby j.CreateDateTime descending
                         select new
                         {
