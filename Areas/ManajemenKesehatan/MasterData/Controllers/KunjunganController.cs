@@ -825,8 +825,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             kunjungan.IsFinished = request.IsFinished;
             kunjungan.UpdateDateTime = DateTimeOffset.UtcNow;
             kunjungan.UpdateBy = userId;
-
             await _applicationDbContext.SaveChangesAsync();
+
+            // Notifikasi SignalR
+            await _hubContext.Clients.All.SendAsync("IsFinishedChanged", new
+            {
+                action = "updateIsFinished",
+                kunjunganId = kunjungan.KunjunganID,
+                isFinished = request.IsFinished
+            });
 
             return Ok(new { message = "Status isFinished berhasil diperbarui." });
         }
@@ -848,8 +855,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             kunjungan.IsScreening = request.IsScreening;
             kunjungan.UpdateDateTime = DateTimeOffset.UtcNow;
             kunjungan.UpdateBy = userId;
-
             await _applicationDbContext.SaveChangesAsync();
+
+            // Notifikasi SignalR
+            await _hubContext.Clients.All.SendAsync("IsScreeningChanged", new
+            {
+                action = "updateIsScreening",
+                kunjunganId = kunjungan.KunjunganID,
+                isScreening = request.IsScreening
+            });
 
             return Ok(new { message = "Status IsScreening berhasil diperbarui." });
         }
@@ -871,8 +885,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             kunjungan.IsPresent = request.IsPresent;
             kunjungan.UpdateDateTime = DateTimeOffset.UtcNow;
             kunjungan.UpdateBy = userId;
-
             await _applicationDbContext.SaveChangesAsync();
+
+            // Notifikasi SignalR
+            await _hubContext.Clients.All.SendAsync("IsPresentChanged", new
+            {
+                action = "updateIsPresent",
+                kunjunganId = kunjungan.KunjunganID,
+                isPresent = request.IsPresent
+            });
 
             return Ok(new { message = "Status IsScreening berhasil diperbarui." });
         }
@@ -894,9 +915,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             kunjungan.IsFinishedKasir = request.IsFinishedKasir;
             kunjungan.UpdateDateTime = DateTimeOffset.UtcNow;
             kunjungan.UpdateBy = userId;
-
             await _applicationDbContext.SaveChangesAsync();
 
+            // Notifikasi SignalR
+            await _hubContext.Clients.All.SendAsync("IsFinishedKasirChanged", new
+            {
+                action = "updateIsFinishedKasir",
+                kunjunganId = kunjungan.KunjunganID,
+                isFinishedKasir = request.IsFinishedKasir
+            });
             return Ok(new { message = "Status IsScreening berhasil diperbarui." });
         }
 

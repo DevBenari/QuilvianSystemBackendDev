@@ -1048,8 +1048,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             data.IsCancelled = request.IsCancelled;
             data.UpdateDateTime = DateTimeOffset.UtcNow;
             data.UpdateBy = userId;
-
             await _applicationDbContext.SaveChangesAsync();
+
+            // Notifikasi signalR
+            await _hubContext.Clients.All.SendAsync("isCancelledChanged", new
+            {
+                Action = "updateIsCancelled",
+                ResepId = id,
+                IsCancelled = request.IsCancelled
+            });
 
             return Ok(new { message = "Status isFinished berhasil diperbarui." });
         }
@@ -1071,8 +1078,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             data.StatusPengambilanResep = request.StatusPengambilan;
             data.UpdateDateTime = DateTimeOffset.UtcNow;
             data.UpdateBy = userId;
-
             await _applicationDbContext.SaveChangesAsync();
+
+            // Notifikasi signalR
+            await _hubContext.Clients.All.SendAsync("statusAmbilChanged", new
+            {
+                Action = "updateStatusAmbil",
+                ResepId = id,
+                StatusPengambilan = request.StatusPengambilan
+            });
 
             return Ok(new { message = "Status isFinished berhasil diperbarui." });
         }
@@ -1094,8 +1108,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             data.StatusPembuatanResep = request.Status.ToString();
             data.UpdateDateTime = DateTimeOffset.UtcNow;
             data.UpdateBy = userId;
-
             await _applicationDbContext.SaveChangesAsync();
+
+            // Notifikasi signalR
+            await _hubContext.Clients.All.SendAsync("statusResepChanged", new
+            {
+                Action = "updateStatusResep",
+                ResepId = id,
+                Status = request.Status.ToString()
+            });
 
             return Ok(new { message = "Status isFinished berhasil diperbarui." });
         }
@@ -1117,8 +1138,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             data.IsLunas = request.IsLunas;
             data.UpdateDateTime = DateTimeOffset.UtcNow;
             data.UpdateBy = userId;
-
             await _applicationDbContext.SaveChangesAsync();
+
+            // Notifikasi signalR
+            await _hubContext.Clients.All.SendAsync("isLunasChanged", new
+            {
+                Action = "updateIsLunas",
+                ResepId = id,
+                IsLunas = request.IsLunas
+            });
 
             return Ok(new { message = "Status isFinished berhasil diperbarui." });
         }
