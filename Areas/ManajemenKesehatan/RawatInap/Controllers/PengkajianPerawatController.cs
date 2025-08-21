@@ -208,9 +208,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                 if (result > 0)
                 {
-                    return Created("", 
-                        new {message = "Tambah Data Berhasil || 201 Created",
-                        PengkajianPerawatId = data.PengkajianPerawatId });
+                    return Created("",
+                        new
+                        {
+                            message = "Tambah Data Berhasil || 201 Created",
+                            PengkajianPerawatId = data.PengkajianPerawatId
+                        });
                 }
                 else
                 {
