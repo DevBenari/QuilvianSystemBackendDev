@@ -605,6 +605,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 _applicationDbContext.SOAPs.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
+
                 if (result > 0)
                 {
                     return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
