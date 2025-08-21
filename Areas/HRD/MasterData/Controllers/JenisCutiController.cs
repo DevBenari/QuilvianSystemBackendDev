@@ -181,37 +181,58 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteJenisCuti(Guid id)
+        public async Task<IActionResult> HardDeleteJenisCuti(Guid id)
         {
+            // ✅ cek koneksi DB
             if (!await _applicationDbContext.Database.CanConnectAsync())
                 return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
 
-            var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(emailLogin))
-                return Unauthorized(new { message = "User tidak terautentikasi!" });
-
-            var getUserActive = await _applicationDbContext.UserActives
-                .FirstOrDefaultAsync(u => u.Email == emailLogin);
-            if (getUserActive == null)
-                return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-
-            var userActiveId = getUserActive.UserActiveId;
+            // ✅ cari data berdasarkan ID
             var data = await _applicationDbContext.JenisCutis.FindAsync(id);
-
             if (data == null)
                 return NotFound(new { message = "Data tidak ditemukan." });
 
-            data.DeleteBy = userActiveId;
-            data.DeleteDateTime = DateTime.UtcNow;
-            data.IsDelete = true;
-
-            _applicationDbContext.JenisCutis.Update(data);
+            // ✅ langsung hard delete
+            _applicationDbContext.JenisCutis.Remove(data);
             int result = await _applicationDbContext.SaveChangesAsync();
 
             if (result > 0)
-                return Ok(new { message = "Data berhasil dihapus (soft delete) || 200 OK" });
+                return Ok(new { message = "Data berhasil dihapus permanen (hard delete) || 200 OK" });
 
-            return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
+            return StatusCode(500, new { message = "Data tidak berhasil dihapus." });
         }
+
+        //public async Task<IActionResult> DeleteJenisCuti(Guid id)
+        //{
+        //    if (!await _applicationDbContext.Database.CanConnectAsync())
+        //        return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+
+        //    var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        //    if (string.IsNullOrEmpty(emailLogin))
+        //        return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+        //    var getUserActive = await _applicationDbContext.UserActives
+        //        .FirstOrDefaultAsync(u => u.Email == emailLogin);
+        //    if (getUserActive == null)
+        //        return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+
+        //    var userActiveId = getUserActive.UserActiveId;
+        //    var data = await _applicationDbContext.JenisCutis.FindAsync(id);
+
+        //    if (data == null)
+        //        return NotFound(new { message = "Data tidak ditemukan." });
+
+        //    data.DeleteBy = userActiveId;
+        //    data.DeleteDateTime = DateTime.UtcNow;
+        //    data.IsDelete = true;
+
+        //    _applicationDbContext.JenisCutis.Update(data);
+        //    int result = await _applicationDbContext.SaveChangesAsync();
+
+        //    if (result > 0)
+        //        return Ok(new { message = "Data berhasil dihapus (soft delete) || 200 OK" });
+
+        //    return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
+        //}
     }
 }
