@@ -5,6 +5,7 @@ using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using System;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
@@ -123,21 +124,26 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
             return NoContent();
         }
 
-        // ✅ DELETE (soft delete): api/HRD/JenisLembur/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteJenisLembur(Guid id)
         {
-            var jenis = await _context.JenisLemburs.FindAsync(id);
-            if (jenis == null)
-                return NotFound();
+            // ✅ cek koneksi DB
+            if (!await _context.Database.CanConnectAsync())
+                return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
 
-            jenis.IsDelete = true;
-            jenis.DeleteDateTime = DateTimeOffset.UtcNow;
+            // ✅ cari data berdasarkan id
+            var data = await _context.JenisLemburs.FindAsync(id);
+            if (data == null)
+                return NotFound(new { message = "Data tidak ditemukan." });
 
-            _context.JenisLemburs.Update(jenis);
-            await _context.SaveChangesAsync();
+            // ✅ lakukan hard delete
+            _context.JenisLemburs.Remove(data);
+            int result = await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Data berhasil dihapus (soft delete)" });
+            if (result > 0)
+                return Ok(new { message = "Data berhasil dihapus (hard delete) || 200 OK" });
+
+            return StatusCode(500, new { message = "Data tidak berhasil dihapus." });
         }
     }
 }
