@@ -34,7 +34,6 @@ namespace QuilvianSystemBackendDev.Areas.HRD.Pengajuan.Controllers
                         from u2 in approvedBy2Join.DefaultIfEmpty()
                         join uc in _context.UserActives on l.CreateBy equals uc.UserActiveId into createdByJoin
                         from uc in createdByJoin.DefaultIfEmpty()
-                        where l.IsDelete == false
                         orderby l.CreateDateTime descending
                         select new
                         {
@@ -71,7 +70,18 @@ namespace QuilvianSystemBackendDev.Areas.HRD.Pengajuan.Controllers
                 .ToListAsync();
 
             if (!listData.Any())
-                return NotFound(new { message = "Belum ada data || 404 Not Found" });
+                return Ok(new
+                {
+                    message = "Belum ada data",
+                    data = new List<object>(),
+                    pagination = new
+                    {
+                        CurrentPage = page,
+                        PerPage = perPage,
+                        TotalRows = 0,
+                        TotalPages = 0
+                    }
+                });
 
             return Ok(new
             {
@@ -139,22 +149,18 @@ namespace QuilvianSystemBackendDev.Areas.HRD.Pengajuan.Controllers
             return NoContent();
         }
 
-        // ✅ DELETE (soft delete): api/HRD/PengajuanLembur/{id}
+        // ✅ DELETE (hard delete): api/HRD/PengajuanLembur/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeletePengajuanLembur(Guid id)
         {
             var pengajuan = await _context.PengajuanLemburs.FindAsync(id);
             if (pengajuan == null)
-                return NotFound();
+                return NotFound(new { message = "Data tidak ditemukan." });
 
-            pengajuan.IsDelete = true;
-            pengajuan.DeleteDateTime = DateTimeOffset.UtcNow;
-            // pengajuan.DeleteBy = user login id
-
-            _context.PengajuanLemburs.Update(pengajuan);
+            _context.PengajuanLemburs.Remove(pengajuan);
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Data berhasil dihapus (soft delete)" });
+            return Ok(new { message = "Data berhasil dihapus permanen (hard delete) || 200 OK" });
         }
     }
 }
