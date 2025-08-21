@@ -208,6 +208,7 @@ var app = builder.Build();
 // Konfigurasi SignalR
 app.MapHub<KunjunganHub>("/hubs/kunjungan");
 app.MapHub<ResepHub>("/hubs/resep");
+app.MapHub<VitalSignHub>("/hubs/vitalsign");
 
 
 // Configure the HTTP request pipeline.
