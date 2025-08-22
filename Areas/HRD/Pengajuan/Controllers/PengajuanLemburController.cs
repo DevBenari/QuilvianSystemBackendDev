@@ -50,6 +50,7 @@ namespace QuilvianSystemBackendDev.Areas.HRD.Pengajuan.Controllers
                             ApprovedBy1Name = u1 != null ? u1.FullName : null,
                             l.ApprovedBy2,
                             ApprovedBy2Name = u2 != null ? u2.FullName : null,
+                            l.Status,
 
                             l.CreateDateTime,
                             l.CreateBy,

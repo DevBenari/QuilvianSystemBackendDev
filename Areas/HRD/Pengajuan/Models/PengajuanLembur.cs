@@ -19,5 +19,6 @@ namespace QuilvianSystemBackendDev.Areas.HRD.Pengajuan.Models
         public string? Deskripsi { get; set; }
         public Guid? ApprovedBy1 { get; set; }
         public Guid? ApprovedBy2 { get; set; }
+        public string Status { get; set; }
     }
 }

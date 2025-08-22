@@ -38,5 +38,6 @@ namespace QuilvianSystemBackendDev.Areas.HRD.Pengajuan.ViewModels
         public Guid? ApprovedBy1 { get; set; }
 
         public Guid? ApprovedBy2 { get; set; }
+        public string Status { get; set; }
     }
 }
