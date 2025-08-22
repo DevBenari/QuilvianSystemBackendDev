@@ -346,7 +346,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 DateTime? startDate = null,
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
                 DateTime? endDate = null,
-        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null,
+        Guid? kunjunganId = null
+        )
         {
 
             // Query data
@@ -389,6 +391,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 query = query.Where(u =>
                     u.CreateDateTime >= startUtc &&
                     u.CreateDateTime <= endUtc);
+            }
+
+            // Filter KunjunganId (exact match)
+            if (kunjunganId.HasValue)
+            {
+                query = query.Where(u => u.KunjunganId == kunjunganId.Value);
             }
 
             // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
