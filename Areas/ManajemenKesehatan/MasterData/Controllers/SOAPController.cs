@@ -3,9 +3,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
@@ -27,19 +29,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
         private readonly ILogger<SOAPController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly IHubContext<SOAPHub> _hubContext;
 
         public SOAPController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ILogger<SOAPController> logger,
-            IWebHostEnvironment webHostEnvironment)
+            IWebHostEnvironment webHostEnvironment,
+            IHubContext<SOAPHub> hubContext
+            )
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+            _hubContext = hubContext;
         }
 
         [HttpGet]
@@ -605,6 +611,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 _applicationDbContext.SOAPs.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
+                //Notifikasi ke SignalR Hub
+                await _hubContext.Clients.All.SendAsync("SOAP ditambah", new
+                {
+                    action = "create",
+                    soapid = data.SOAPID,
+                });
 
                 if (result > 0)
                 {
@@ -679,6 +691,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 _applicationDbContext.SOAPs.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
+
+                // Notifikasi ke SignalR Hub
+                await _hubContext.Clients.All.SendAsync("SOAP diubah", new
+                {
+                    action = "update",
+                    soapid = data.SOAPID,
+                });
 
                 if (result > 0)
                 {

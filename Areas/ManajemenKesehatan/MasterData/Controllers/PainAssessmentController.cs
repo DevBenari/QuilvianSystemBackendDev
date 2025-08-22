@@ -3,9 +3,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
@@ -27,19 +29,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
         private readonly ILogger<PainAssessmentController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly IHubContext<PainAssesmentHub> _hubContext;
 
         public PainAssessmentController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ILogger<PainAssessmentController> logger,
-            IWebHostEnvironment webHostEnvironment)
+            IWebHostEnvironment webHostEnvironment,
+            IHubContext<PainAssesmentHub> hubContext
+            )
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+            _hubContext = hubContext;
         }
 
         [HttpGet]
@@ -310,6 +316,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 _applicationDbContext.PainAssessments.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
+                // notifikasi signalR
+                await _hubContext.Clients.All.SendAsync("PainAssesment ditambah", new
+                {
+                    action = "create",
+                    PainAssessmentId = data.PainAssessmentId,
+                });
+
                 if (result > 0)
                 {
                     return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
@@ -434,6 +447,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
                 int result = await _applicationDbContext.SaveChangesAsync();
+
+                // notifikasi signalR
+                await _hubContext.Clients.All.SendAsync("PainAssesment diupdate", new
+                {
+                    action = "update",
+                    PainAssessmentId = data.PainAssessmentId,
+                });
 
                 if (result > 0)
                 {
