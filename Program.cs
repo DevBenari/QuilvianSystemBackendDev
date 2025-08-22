@@ -209,6 +209,8 @@ var app = builder.Build();
 app.MapHub<KunjunganHub>("/hubs/kunjungan");
 app.MapHub<ResepHub>("/hubs/resep");
 app.MapHub<VitalSignHub>("/hubs/vitalsign");
+app.MapHub<SOAPHub>("/hubs/soap");
+app.MapHub<PainAssesmentHub>("/hubs/painassessment");
 
 
 // Configure the HTTP request pipeline.
