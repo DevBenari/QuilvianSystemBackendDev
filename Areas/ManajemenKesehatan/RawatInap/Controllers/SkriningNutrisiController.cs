@@ -366,7 +366,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 DateTime? startDate = null,
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
                 DateTime? endDate = null,
-        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null,
+        Guid? kunjunganId = null
+        )
         {
 
             // Query data
@@ -406,6 +408,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             //        EF.Functions.ILike(u.NamaDiskon, search)
             //    );
             //}
+
+            // filter berdasarkan kunjunganId
+            if (kunjunganId.HasValue)
+            {
+                query = query.Where(u => u.KunjunganId == kunjunganId.Value);
+            }
 
             //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
