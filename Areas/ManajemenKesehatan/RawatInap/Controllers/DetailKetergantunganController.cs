@@ -66,7 +66,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.KunjunganId,
                              a.PengkajianPerawatId,
                              a.KetergantunganId,
-                             a.IndikatorPengkajianId,
+                             a.IndikatorPengkajianIds,
                              a.Keterangan,
 
                          }).OrderByDescending(a => a.CreateDateTime);
@@ -163,9 +163,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     KunjunganId = vm.KunjunganId,
                     PengkajianPerawatId = vm.PengkajianPerawatId,
                     KetergantunganId = vm.KetergantunganId,
-                    IndikatorPengkajianId = vm.IndikatorPengkajianId,
+                    IndikatorPengkajianIds = vm.IndikatorPengkajianIds,
                     Keterangan = vm.Keterangan,
-                    
+
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
@@ -235,7 +235,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 data.KunjunganId = vm.KunjunganId;
                 data.PengkajianPerawatId = vm.PengkajianPerawatId;
                 data.KetergantunganId = vm.KetergantunganId;
-                data.IndikatorPengkajianId = vm.IndikatorPengkajianId;
+                data.IndikatorPengkajianIds = vm.IndikatorPengkajianIds;
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
@@ -353,7 +353,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.KunjunganId,
                              a.PengkajianPerawatId,
                              a.KetergantunganId,
-                             a.IndikatorPengkajianId,
+                             a.IndikatorPengkajianIds,
                              a.Keterangan,
 
                          });
