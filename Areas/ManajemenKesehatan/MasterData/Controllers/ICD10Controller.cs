@@ -65,6 +65,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             ICDName = a.ICDName,
                             DTDCode = a.DTDCode,
                             NamaDtd = a.NamaDtd,
+                            Keterangan = a.Keterangan
                         }).OrderByDescending(a => a.ICDCode);
 
             // Hitung total data sebelum paginasi
@@ -160,6 +161,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     ICDName = vm.ICDName,
                     DTDCode = vm.DTDCode,
                     NamaDtd = vm.NamaDtd,
+                    Keterangan = vm.Keterangan,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow
                 };
@@ -230,6 +232,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.ICDName = vm.ICDName;
                 data.DTDCode = vm.DTDCode;
                 data.NamaDtd = vm.NamaDtd;
+                data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -344,6 +347,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             ICDName = a.ICDName,
                             DTDCode = a.DTDCode,
                             NamaDtd = a.NamaDtd,
+                            Keterangan = a.Keterangan
                         };
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**

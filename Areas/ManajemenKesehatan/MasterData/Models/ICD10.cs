@@ -13,5 +13,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? ICDName { get; set; }
         public string? DTDCode { get; set; }
         public string? NamaDtd { get; set; }
+        public string? Keterangan { get; set; }
     }
 }
