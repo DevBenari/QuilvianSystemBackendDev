@@ -1,7 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
+using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
 {
@@ -16,43 +20,93 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
             _context = context;
         }
 
-        // GET: api/JenisTiketing
+        // ✅ GET: api/HRD/JenisTiketing?page=1&perPage=10
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<JenisTiketing>>> GetJenisTiketing()
+        public async Task<IActionResult> GetJenisTiketing(int page = 1, int perPage = 10)
         {
-            return await _context.Set<JenisTiketing>().ToListAsync();
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
+
+            var query = from j in _context.JenisTiketings
+                        join uc in _context.UserActives on j.CreateBy equals uc.UserActiveId into createdByJoin
+                        from uc in createdByJoin.DefaultIfEmpty()
+                        orderby j.CreateDateTime descending
+                        select new
+                        {
+                            j.JenisTicketId,
+                            j.DepartementId,
+                            j.NamaTicket,
+                            j.Keterangan,
+
+                            j.CreateDateTime,
+                            j.CreateBy,
+                            CreateByName = uc != null ? uc.FullName : null,
+                            j.UpdateDateTime,
+                            j.UpdateBy,
+                            j.DeleteDateTime,
+                            j.DeleteBy,
+                            j.IsDelete
+                        };
+
+            var totalRows = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            var listData = await query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToListAsync();
+
+            if (!listData.Any())
+                return NotFound(new { message = "Belum ada data || 404 Not Found" });
+
+            return Ok(new
+            {
+                message = "Berhasil || 200 OK",
+                data = listData,
+                pagination = new
+                {
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalRows = totalRows,
+                    TotalPages = totalPages
+                }
+            });
         }
 
-        // GET: api/JenisTiketing/{id}
+        // ✅ GET: api/HRD/JenisTiketing/{id}
         [HttpGet("{id}")]
         public async Task<ActionResult<JenisTiketing>> GetJenisTiketing(Guid id)
         {
-            var jenisTiketing = await _context.Set<JenisTiketing>().FindAsync(id);
+            var jenis = await _context.JenisTiketings.FindAsync(id);
 
-            if (jenisTiketing == null)
+            if (jenis == null)
                 return NotFound();
 
-            return jenisTiketing;
+            return jenis;
         }
 
-        // POST: api/JenisTiketing
+        // ✅ POST: api/HRD/JenisTiketing
         [HttpPost]
-        public async Task<ActionResult<JenisTiketing>> PostJenisTiketing(JenisTiketing jenisTiketing)
+        public async Task<ActionResult<JenisTiketing>> PostJenisTiketing(JenisTiketing jenis)
         {
-            _context.Set<JenisTiketing>().Add(jenisTiketing);
+            jenis.JenisTicketId = Guid.NewGuid();
+            jenis.CreateDateTime = DateTimeOffset.UtcNow;
+
+            _context.JenisTiketings.Add(jenis);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetJenisTiketing), new { id = jenisTiketing.JenisTicketId }, jenisTiketing);
+            return CreatedAtAction(nameof(GetJenisTiketing), new { id = jenis.JenisTicketId }, jenis);
         }
 
-        // PUT: api/JenisTiketing/{id}
+        // ✅ PUT: api/HRD/JenisTiketing/{id}
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutJenisTiketing(Guid id, JenisTiketing jenisTiketing)
+        public async Task<IActionResult> PutJenisTiketing(Guid id, JenisTiketing jenis)
         {
-            if (id != jenisTiketing.JenisTicketId)
+            if (id != jenis.JenisTicketId)
                 return BadRequest();
 
-            _context.Entry(jenisTiketing).State = EntityState.Modified;
+            jenis.UpdateDateTime = DateTimeOffset.UtcNow;
+            _context.Entry(jenis).State = EntityState.Modified;
 
             try
             {
@@ -60,27 +114,33 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!_context.Set<JenisTiketing>().Any(e => e.JenisTicketId == id))
+                if (!_context.JenisTiketings.Any(e => e.JenisTicketId == id))
                     return NotFound();
-                else
-                    throw;
+
+                throw;
             }
 
             return NoContent();
         }
 
-        // DELETE: api/JenisTiketing/{id}
+        // ✅ DELETE: api/HRD/JenisTiketing/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteJenisTiketing(Guid id)
         {
-            var jenisTiketing = await _context.Set<JenisTiketing>().FindAsync(id);
-            if (jenisTiketing == null)
-                return NotFound();
+            if (!await _context.Database.CanConnectAsync())
+                return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
 
-            _context.Set<JenisTiketing>().Remove(jenisTiketing);
-            await _context.SaveChangesAsync();
+            var data = await _context.JenisTiketings.FindAsync(id);
+            if (data == null)
+                return NotFound(new { message = "Data tidak ditemukan." });
 
-            return NoContent();
+            _context.JenisTiketings.Remove(data);
+            int result = await _context.SaveChangesAsync();
+
+            if (result > 0)
+                return Ok(new { message = "Data berhasil dihapus (hard delete) || 200 OK" });
+
+            return StatusCode(500, new { message = "Data tidak berhasil dihapus." });
         }
     }
 }

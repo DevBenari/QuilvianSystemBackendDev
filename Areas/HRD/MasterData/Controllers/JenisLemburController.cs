@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
 {
-    [Route("api/HRD/[controller]")]
+    [Route("api/[controller]")]
     [ApiController]
     public class JenisLemburController : ControllerBase
     {
