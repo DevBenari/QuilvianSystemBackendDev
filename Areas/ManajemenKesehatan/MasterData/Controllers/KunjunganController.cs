@@ -72,6 +72,31 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             return null;
         }
 
+        private static string? HitungUmurLengkap(DateTime? tanggalLahir)
+        {
+            if (!tanggalLahir.HasValue) return "-";
+
+            var today = DateTime.Today;
+            int tahun = today.Year - tanggalLahir.Value.Year;
+            int bulan = today.Month - tanggalLahir.Value.Month;
+            int hari = today.Day - tanggalLahir.Value.Day;
+
+            if (hari < 0)
+            {
+                bulan--;
+                var prevMonth = today.AddMonths(-1);
+                hari += DateTime.DaysInMonth(prevMonth.Year, prevMonth.Month);
+            }
+
+            if (bulan < 0)
+            {
+                tahun--;
+                bulan += 12;
+            }
+
+            return $"{tahun} tahun {bulan} bulan {hari} hari";
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetAllKunjungan(int page = 1, int perPage = 10)
         {
@@ -131,6 +156,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             ps.NamaKontakDarurat,
                             ps.NoTeleponDarurat,
                             ps.Email,
+                            Umur = HitungUmurLengkap(ps.TanggalLahir),
+
                             a.NoRekamMedis,
                             a.TipePasien,
                             a.TipePembayaran,
@@ -141,6 +168,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.IsScreening,
                             a.IsPresent,
                             a.Antrian,
+                            
 
                             d.NmDokter,
                             gambardokter = !string.IsNullOrEmpty(d.FotoName)
@@ -167,6 +195,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             Tglmasuk = bb != null ? bb.TglMasuk : null,
                             NomorSuratPengantar = sp != null ? sp.NomorSuratPengantar : null,
                             Diagnosa = sp != null ? sp.Diagnosa : null,
+                            AsalUnit = sp != null ? sp.AsalUnit : null,
 
 
                             // pain assesment
@@ -260,6 +289,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.TipePasien,
                             a.TipePembayaran,
                             a.JenisKunjungan,
+                            Umur = HitungUmurLengkap(ps.TanggalLahir),
+
                             a.CreateDateTime,
                             a.CreateBy,
                             a.IsFinished,
@@ -272,6 +303,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg",
                             CreateByName = u.FullName,
                             JumlahJenisKunjungan = j.JumlahJenis,
+                            
+
 
                             // ttg ranap
                             BookingBedRanapId = bb != null ? (Guid?)bb.BookingBedRanapId : null,
@@ -288,6 +321,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             Tglmasuk = bb != null ? bb.TglMasuk : null,
                             NomorSuratPengantar = sp != null ? sp.NomorSuratPengantar : null,
                             Diagnosa = sp != null ? sp.Diagnosa : null,
+                            AsalUnit = sp != null ? sp.AsalUnit : null,
 
                             // pain
                             Alergic = pain != null ? pain.Alergic : null,
@@ -1058,12 +1092,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              ps.NamaKontakDarurat,
                              ps.NoTeleponDarurat,
                              ps.Email,
+                             Umur = HitungUmurLengkap(ps.TanggalLahir),
+
                              a.NoRekamMedis,
                              a.TipePasien,
                              a.TipePembayaran,
                              a.JenisKunjungan,
                              a.CreateDateTime,
                              a.CreateBy,
+
                              a.IsFinished,
                              a.IsScreening,
                              a.IsPresent,
@@ -1094,6 +1131,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              Tglmasuk = bb != null ? bb.TglMasuk : null,
                              NomorSuratPengantar = sp != null ? sp.NomorSuratPengantar : null,
                              Diagnosa = sp != null ? sp.Diagnosa : null,
+                             AsalUnit = sp != null ? sp.AsalUnit : null,
 
                              // pain
                              Alergic = pain != null ? pain.Alergic : null,
