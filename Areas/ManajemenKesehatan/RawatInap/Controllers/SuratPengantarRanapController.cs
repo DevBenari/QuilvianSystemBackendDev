@@ -1,8 +1,10 @@
 ﻿using System.Security.Claims;
+using Microsoft.AspNet.SignalR.Client.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -12,6 +14,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.ViewModels;
 using QuilvianSystemBackendDev.Models;
@@ -33,19 +36,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
         private readonly ILogger<SuratPengantarRanapController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly IHubContext<SuratPengantarRanapHub> _hubContext;
 
         public SuratPengantarRanapController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ILogger<SuratPengantarRanapController> logger,
-            IWebHostEnvironment webHostEnvironment)
+            IWebHostEnvironment webHostEnvironment,
+            IHubContext<SuratPengantarRanapHub> hubContext
+            )
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+            _hubContext = hubContext;
         }
 
         private static string HitungUmurLengkap(DateTime? tanggalLahir)
@@ -406,10 +413,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                  _applicationDbContext.SuratPengantarRawatInaps.Add(data);
                  int result = await _applicationDbContext.SaveChangesAsync();
 
-                 if (result > 0)
-                 {
+                // Notifikasi signalR
+                await _hubContext.Clients.All.SendAsync("Surat pengantar rawat inap ditambah", new
+                {
+                    action = "create",
+                    suratid = data.SuratPengantarRawatInapId,
+                    kunjunganId = data.KunjunganId,
+                });
+
+
+                if (result > 0)
+                {
                      return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
-                 }
+                }
                  else
                  {
                     return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
@@ -476,6 +492,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                 _applicationDbContext.SuratPengantarRawatInaps.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
+
+                // Notifikasi signalR
+                await _hubContext.Clients.All.SendAsync("Surat pengantar rawat inap diupdate", new
+                {
+                    action = "update",
+                    suratid = data.SuratPengantarRawatInapId,
+                    kunjunganId = data.KunjunganId,
+                });
 
                 if (result > 0)
                 {
