@@ -133,13 +133,16 @@ namespace QuilvianSystemBackendDev.Repositories
 
         #region Areas Hrd
         public DbSet<JenisCuti> JenisCutis { get; set; }
-        public DbSet<PengajuanCuti> PengajuanCutis { get; set; }
         public DbSet<Level> Levels { get; set; }
         public DbSet<GradePay> GradePays { get; set; }
-        public DbSet<PengajuanLembur> PengajuanLemburs { get; set; }
         public DbSet<JenisLembur> JenisLemburs { get; set; }
         public DbSet<JenisTiketing> JenisTiketings { get; set; }
+        public DbSet<SubLevel> SubLevels { get; set; }
+
+        public DbSet<PengajuanCuti> PengajuanCutis { get; set; }
+        public DbSet<PengajuanLembur> PengajuanLemburs { get; set; }
         public DbSet<PengajuanTiketing> PengajuanTiketings { get; set; }
+        public DbSet<PengajuanResign> PengajuanResigns { get; set; }
         #endregion
 
         #region Areas Pendaftaran
