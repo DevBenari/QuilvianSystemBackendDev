@@ -2,7 +2,7 @@
 {
     public class SDKIKolaborasiViewModel
     {
-        public Guid? SDKIEtiologiId { get; set; }
+        public Guid? SDKIDiagnosaId { get; set; }
         public string? NamaKolaborasi { get; set; }
         public string? Keterangan { get; set; }
     }
