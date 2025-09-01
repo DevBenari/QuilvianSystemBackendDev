@@ -1038,17 +1038,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
         [HttpGet("paged")]
         public async Task<IActionResult> PagedSOAP(
-    int page = 1,
-    int perPage = 10,
-    Guid? search = null,                         // pasienId
-    string? orderBy = "CreateDateTime",
-    string? sortDirection = "desc",
-    [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-    DateTime? startDate = null,
-    [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-    DateTime? endDate = null,
-    [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null
-)
+        int page = 1,
+        int perPage = 10,
+        Guid? search = null,                         // pasienId
+        string? orderBy = "CreateDateTime",
+        string? sortDirection = "desc",
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+        DateTime? startDate = null,
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+        DateTime? endDate = null,
+        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null
+        )
         {
             if (!search.HasValue)
                 return BadRequest(new { message = "PasienId (search) is required." });
@@ -1064,7 +1064,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 join d in _applicationDbContext.Dokters on k.DokterId equals d.DokterId
                 join p in _applicationDbContext.PendaftaranPasienBarus on k.PasienId equals p.PendaftaranPasienBaruId
                 where a.IsDelete == false
-                   && k.PasienId == search.Value                    // <--- ini kuncinya
+                   && k.PasienId == search.Value                    
                 select new
                 {
                     a.CreateDateTime,
@@ -1075,7 +1075,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     PasienId = k.PasienId,
                     a.Subjective,
                     a.Objective,
-                    a.DaftarICD10,                                   // biarkan string CSV dulu
+                    a.DaftarICD10,                                   
                     a.Assessment,
                     a.Planning,
                     a.Evaluasi,
