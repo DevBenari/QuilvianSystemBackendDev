@@ -345,7 +345,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.SDKIDiagnosaId,
                              a.NamaEdukasi,
                              a.Keterangan,
-
                          });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
