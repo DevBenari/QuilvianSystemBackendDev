@@ -441,6 +441,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateBy = a.CreateBy,
                             ap.PasienId,
                             ap.AsuransiId,
+                            ap.AsuransiPasienId,
                             NamaPasien = p.NamaLengkap,
                             NamaAsuransi = a.NamaAsuransi,
                             a.IsPKS,
