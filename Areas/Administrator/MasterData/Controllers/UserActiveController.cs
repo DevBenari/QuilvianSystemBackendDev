@@ -1238,7 +1238,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             if (!string.IsNullOrWhiteSpace(search))
             {
-                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+                search = $"%{search.ToLower()}%"; 
                 query = query.Where(u =>
                     EF.Functions.ILike(u.FullName, search) ||
                     EF.Functions.ILike(u.CreateByName, search)  ||

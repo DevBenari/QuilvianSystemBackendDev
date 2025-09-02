@@ -237,6 +237,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                     rt.KodeResepTemplate,
                                     rt.ResepTemplateId,
                                     rt.ObatId,
+                                    rt.Obat.ObatName,
                                     rt.Qty,
                                     rt.Signa,
                                     rt.SignaTambahan,
@@ -298,6 +299,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                         select new
                         {
                             rt.ObatId,
+                            rt.Obat.ObatName,
                             rt.Judul,
                             rt.DokterId,
                             rt.Qty,
