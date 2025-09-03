@@ -6,7 +6,6 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace QuilvianSystemBackendDev.Migrations
 {
     public partial class newsql : Migration
-
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
