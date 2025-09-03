@@ -143,6 +143,9 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<PengajuanLembur> PengajuanLemburs { get; set; }
         public DbSet<PengajuanTiketing> PengajuanTiketings { get; set; }
         public DbSet<PengajuanResign> PengajuanResigns { get; set; }
+        public DbSet<GradeLevelJob> GradeLevelJobs { get; set; }
+        public DbSet<CounterOffer> CounterOffers { get; set; }
+
         #endregion
 
         #region Areas Pendaftaran
