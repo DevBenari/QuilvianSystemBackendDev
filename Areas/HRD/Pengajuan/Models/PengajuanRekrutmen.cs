@@ -17,6 +17,8 @@ namespace QuilvianSystemBackendDev.Areas.HRD.Pengajuan.Models
         public string? LokasiPenempatan { get; set; }
 
         public int? JumlahDibutuhkan { get; set; }
+        public string? Jobtype { get; set; }
+        public string? SalaryRange { get; set; }
         public string? JenisKontrak { get; set; }
         public DateTime? TglPerkiraan { get; set; }
         public string? StatusPrioritas { get; set; }
