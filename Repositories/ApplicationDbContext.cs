@@ -80,6 +80,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<DetailICD> DetailICDs { get; set; }
         public DbSet<Resep> Reseps { get; set; }
         public DbSet<ResepTemplate> ResepTemplates { get; set; }
+        public DbSet<ResepTemplateDetail> ResepTemplateDetails { get; set; }
         public DbSet<ResepDetail> DetailReseps { get; set; }
         public DbSet<Kelas> Kelass { get; set; }
         public DbSet<TarifKelas> TarifKelass { get; set; } 
@@ -193,6 +194,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<PengkajianPernapasan> PengkajianPernapasans { get; set; }
         public DbSet<PengkajianPerawat> PengkajianPerawats { get; set; }
         public DbSet<DetailKetergantungan> DetailKetergantungans { get; set; }
+        public DbSet<ResumePulang> ResumePulangs { get; set; }
 
         #endregion
     }

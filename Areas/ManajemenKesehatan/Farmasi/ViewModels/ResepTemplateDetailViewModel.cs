@@ -1,0 +1,20 @@
+﻿namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels
+{
+    public class ResepTemplateDetailViewModel
+    {
+        public Guid? ResepTemplateId { get; set; }
+        public Guid? AsuransiId { get; set; }
+        public string? NamaAsuransi { get; set; }
+        public Guid? ObatId { get; set; }
+        public int? Qty { get; set; }
+        public decimal? TakaranDosis { get; set; }
+        public string? Signa { get; set; }
+        public string? SignaTambahan { get; set; }
+        public string? JenisObat { get; set; }
+        public decimal? HargaObat { get; set; }
+        public bool? StatusCoverObat { get; set; } = false;
+        public bool? IsRacikan { get; set; }
+        public List<RacikanViewModel>? Racikan { get; set; }
+        public string? KeteranganRacikan { get; set; }
+    }
+}

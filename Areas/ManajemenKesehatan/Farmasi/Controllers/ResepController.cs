@@ -186,8 +186,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             if (resep == null)
                 return NotFound(new { message = "Resep tidak ditemukan!" });
 
-            var user = await _applicationDbContext.UserActives
-                .FirstOrDefaultAsync(u => u.UserActiveId == resep.CreateBy);
+            //var user = await _applicationDbContext.UserActives
+            //    .FirstOrDefaultAsync(u => u.UserActiveId == resep.CreateBy);
 
             var daftarObat = await _applicationDbContext.DetailReseps
                 .Where(d => d.ResepId == resep.ResepId && (d.IsRacikan == false || d.IsRacikan == null))
