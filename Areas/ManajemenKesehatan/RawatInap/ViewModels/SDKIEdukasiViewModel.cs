@@ -2,7 +2,7 @@
 {
     public class SDKIEdukasiViewModel
     {
-        public Guid? SDKIEtiologiId { get; set; }
+        public Guid? SDKIDiagnosaId { get; set; }
         public string? NamaEdukasi { get; set; }
         public string? Keterangan { get; set; }
     }

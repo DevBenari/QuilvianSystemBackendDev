@@ -12,6 +12,7 @@ using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using System.Text;
 using QuilvianSystemBackendDev.Helpers;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.HubSignalR;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -211,6 +212,7 @@ app.MapHub<ResepHub>("/hubs/resep");
 app.MapHub<VitalSignHub>("/hubs/vitalsign");
 app.MapHub<SOAPHub>("/hubs/soap");
 app.MapHub<PainAssesmentHub>("/hubs/painassessment");
+app.MapHub<SuratPengantarRanapHub>("/hubs/suratpengantarranap");
 
 
 // Configure the HTTP request pipeline.

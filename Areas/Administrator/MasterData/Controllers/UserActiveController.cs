@@ -1152,6 +1152,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
         int page = 1,
         int perPage = 10,
         string? search = null,
+        string? email = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -1237,7 +1238,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             if (!string.IsNullOrWhiteSpace(search))
             {
-                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+                search = $"%{search.ToLower()}%"; 
                 query = query.Where(u =>
                     EF.Functions.ILike(u.FullName, search) ||
                     EF.Functions.ILike(u.CreateByName, search)  ||
@@ -1245,6 +1246,14 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                     EF.Functions.ILike(u.NamaTipeUser, search)
                 );
             }
+
+            // Filter berdasarkan email
+            if (!string.IsNullOrWhiteSpace(email))
+            {
+                email = email.ToLower();
+                query = query.Where(u => u.Email.ToLower() == email);
+            }
+
 
             // === Filter Tipe User (enum -> Display(Name)) ===
             if (tipeUser.HasValue)

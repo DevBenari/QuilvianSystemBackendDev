@@ -63,7 +63,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.CreateBy,
                              CreateByName = u.FullName,
                              a.SDKITeraupetikId,
-                             a.SDKIEtiologiId,
+                             a.SDKIDiagnosaId,
                              a.NamaTeraupetik,
                              a.Keterangan,
 
@@ -158,7 +158,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 var data = new SDKITeraupetik
                 {
                     SDKITeraupetikId = Guid.NewGuid(),
-                    SDKIEtiologiId = vm.SDKIEtiologiId,
+                    SDKIDiagnosaId = vm.SDKIDiagnosaId,
                     NamaTeraupetik = vm.NamaTeraupetik,
                     Keterangan = vm.Keterangan,
                     
@@ -228,7 +228,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 }
 
                 // **Update Data**
-                data.SDKIEtiologiId = vm.SDKIEtiologiId;
+                data.SDKIDiagnosaId = vm.SDKIDiagnosaId;
                 data.NamaTeraupetik = vm.NamaTeraupetik;
                 data.Keterangan = vm.Keterangan;
 
@@ -343,7 +343,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.CreateBy,
                              CreateByName = u.FullName,
                              a.SDKITeraupetikId,
-                             a.SDKIEtiologiId,
+                             a.SDKIDiagnosaId,
                              a.NamaTeraupetik,
                              a.Keterangan,
 

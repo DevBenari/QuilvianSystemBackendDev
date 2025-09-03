@@ -51,174 +51,261 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet]
         public async Task<IActionResult> GetAlLSOAP(int page = 1, int perPage = 10)
         {
-            // Normalisasi parameter
-            if (page < 1) page = 1;
-            if (perPage < 1) perPage = 10;
+            try
+            {
+                // Normalisasi parameter
+                if (page < 1) page = 1;
+                if (perPage < 1) perPage = 10;
 
-            // 1) Ambil kamus ICD (Kode -> Nama) sekali saja
-            var icdDict = await _applicationDbContext.ICD10s
-                .AsNoTracking()
-                .Select(x => new { x.ICDCode, x.ICDName })
-                .ToDictionaryAsync(x => x.ICDCode, x => x.ICDName);
+                // =========================
+                // 1) Ambil & rapikan kamus ICD (Kode -> Nama) aman dari duplikat
+                // =========================
+                var icdRows = await _applicationDbContext.ICD10s
+                    .AsNoTracking()
+                    .Select(x => new { x.ICDCode, x.ICDName })
+                    .ToListAsync();
 
-            // 2) Ambil data utama (tanpa Split di server, supaya tetap bisa dieksekusi oleh EF/SQL)
-            var raw = await (from a in _applicationDbContext.SOAPs
-                             join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId
-                             join k in _applicationDbContext.Kunjungans on a.KunjunganId equals k.KunjunganID
-                             join d in _applicationDbContext.Dokters on k.DokterId equals d.DokterId
-                             join p in _applicationDbContext.PendaftaranPasienBarus on k.PasienId equals p.PendaftaranPasienBaruId
-                             where a.IsDelete == false
-                             select new
-                             {
-                                 a.CreateDateTime,
-                                 a.CreateBy,
-                                 CreateByName = u.FullName,
-                                 a.SOAPID,
-                                 a.KunjunganId,
-                                 PasienId = k.PasienId,
-                                 a.Subjective,
-                                 a.Objective,
-                                 a.DaftarICD10, // simpan apa adanya dulu (CSV)
-                                 a.Assessment,
-                                 a.Planning,
-                                 a.Evaluasi,
-                                 a.Intervensi,
-                                 a.Reevaluasi,
-                                 a.Profesi,
-                                 NamaDokter = d.NmDokter,
-                                 DokterId = d.DokterId,
-                                 NamaPasien = p.NamaLengkap
-                             })
-                            .AsNoTracking()
-                            .ToListAsync();
+                // Normalisasi + dedup di memory: Trim + case-insensitive
+                var icdDict = icdRows
+                    .Where(x => !string.IsNullOrWhiteSpace(x.ICDCode))
+                    .Select(x => new { Code = x.ICDCode.Trim(), x.ICDName })
+                    .GroupBy(x => x.Code, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(
+                        g => g.Key,                 // key sudah unik setelah group
+                        g => g.First().ICDName,     // ambil entry pertama (ubah aturan jika perlu)
+                        StringComparer.OrdinalIgnoreCase // lookup jadi case-insensitive
+                    );
 
-            var projected = raw
-                .Select(a =>
-                {
-                    var codes = (a.DaftarICD10 ?? "")
-                        .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                        .Select(s => s.Trim())
-                        .Where(s => !string.IsNullOrWhiteSpace(s))
-                        .Distinct(StringComparer.OrdinalIgnoreCase)
-                        .ToList();
-
-                    var namaIcd = codes
-                        .Select(code =>
-                            icdDict.TryGetValue(code, out var nama)
-                                ? nama
-                                : $"(Kode tidak ditemukan: {code})")
-                        .ToList();
-
-                    return new
+                // =========================
+                // 2) Query utama (tanpa parsing ICD di SQL)
+                //    - Hitung totalRows di DB
+                //    - Ambil data halaman tertentu saja dari DB
+                // =========================
+                var baseQuery =
+                    from a in _applicationDbContext.SOAPs
+                    join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId
+                    join k in _applicationDbContext.Kunjungans on a.KunjunganId equals k.KunjunganID
+                    join d in _applicationDbContext.Dokters on k.DokterId equals d.DokterId
+                    join p in _applicationDbContext.PendaftaranPasienBarus on k.PasienId equals p.PendaftaranPasienBaruId
+                    where a.IsDelete == false || a.IsDelete == null
+                    select new
                     {
                         a.CreateDateTime,
                         a.CreateBy,
-                        a.CreateByName,
+                        CreateByName = u.FullName,
                         a.SOAPID,
                         a.KunjunganId,
-                        a.PasienId,
+                        PasienId = k.PasienId,
                         a.Subjective,
                         a.Objective,
-                        DaftarICD10 = codes,   // list kode ICD
-                        NamaICD = namaIcd,     // list nama ICD hasil "join"
+                        a.DaftarICD10, // CSV
                         a.Assessment,
                         a.Planning,
                         a.Evaluasi,
                         a.Intervensi,
                         a.Reevaluasi,
                         a.Profesi,
-                        a.NamaDokter,
-                        a.DokterId,
-                        a.NamaPasien
+                        NamaDokter = d.NmDokter,
+                        DokterId = d.DokterId,
+                        NamaPasien = p.NamaLengkap
                     };
-                })
-                .OrderByDescending(a => a.CreateDateTime)
-                .ToList();
 
-            // 4) Paging di sisi memory (karena sudah perlu materialize untuk parsing ICD)
-            var totalRows = projected.Count;
-            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+                // Hitung total rows di DB (sesuai join/filter)
+                var totalRows = await baseQuery.CountAsync();
 
-            var listdata = projected
-                .Skip((page - 1) * perPage)
-                .Take(perPage)
-                .ToList();
+                // Hitung total halaman
+                var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
 
-            if (!listdata.Any())
-            {
-                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
-            }
+                // Ambil hanya halaman yang diminta (paging di DB)
+                var rawPage = await baseQuery
+                    .AsNoTracking()
+                    .OrderByDescending(a => a.CreateDateTime)
+                    .Skip((page - 1) * perPage)
+                    .Take(perPage)
+                    .ToListAsync();
 
-            // 5) Return hasil
-            return Ok(new
-            {
-                message = "Berhasil || 200 OK",
-                data = listdata,
-                pagination = new
+                if (rawPage.Count == 0)
                 {
-                    CurrentPage = page,
-                    PerPage = perPage,
-                    TotalRows = totalRows,
-                    TotalPages = totalPages
+                    return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
                 }
-            });
+
+                // =========================
+                // 3) Proyeksikan + parsing ICD di memory
+                // =========================
+                var listdata = rawPage
+                    .Select(a =>
+                    {
+                        // Split CSV kode ICD
+                        var codes = (a.DaftarICD10 ?? string.Empty)
+                            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                            .Select(s => s.Trim())
+                            .Where(s => !string.IsNullOrWhiteSpace(s))
+                            .Distinct(StringComparer.OrdinalIgnoreCase)
+                            .ToList();
+
+                        // Map ke nama ICD (lookup case-insensitive)
+                        var namaIcd = codes
+                            .Select(code =>
+                                icdDict.TryGetValue(code, out var nama)
+                                    ? nama
+                                    : $"(Kode tidak ditemukan: {code})")
+                            .ToList();
+
+                        return new
+                        {
+                            a.CreateDateTime,
+                            a.CreateBy,
+                            a.CreateByName,
+                            a.SOAPID,
+                            a.KunjunganId,
+                            a.PasienId,
+                            a.Subjective,
+                            a.Objective,
+                            DaftarICD10 = codes,   // list kode ICD (distinct, trimmed)
+                            NamaICD = namaIcd,     // list nama hasil join kamus
+                            a.Assessment,
+                            a.Planning,
+                            a.Evaluasi,
+                            a.Intervensi,
+                            a.Reevaluasi,
+                            a.Profesi,
+                            a.NamaDokter,
+                            a.DokterId,
+                            a.NamaPasien
+                        };
+                    })
+                    .ToList();
+
+                // =========================
+                // 4) Return hasil
+                // =========================
+                return Ok(new
+                {
+                    message = "Berhasil || 200 OK",
+                    data = listdata,
+                    pagination = new
+                    {
+                        CurrentPage = page,
+                        PerPage = perPage,
+                        TotalRows = totalRows,
+                        TotalPages = totalPages
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                // Logging ex di sini jika ada logger
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    message = "Terjadi kesalahan tak terduga.",
+                    error = ex.Message
+                });
+            }
         }
+
 
         //[HttpGet]
         //public async Task<IActionResult> GetAlLSOAP(int page = 1, int perPage = 10)
         //{
-        //    // Validasi agar page dan perPage minimal bernilai 1
+        //    // Normalisasi parameter
         //    if (page < 1) page = 1;
         //    if (perPage < 1) perPage = 10;
 
-        //    // Query data
-        //    var query = (from a in _applicationDbContext.SOAPs
-        //                 join u in _applicationDbContext.UserActives
-        //                     on a.CreateBy equals u.UserActiveId
-        //                 join k in _applicationDbContext.Kunjungans
-        //                     on a.KunjunganId equals k.KunjunganID
-        //                 join d in _applicationDbContext.Dokters
-        //                      on k.DokterId equals d.DokterId
-        //                 join p in _applicationDbContext.PendaftaranPasienBarus
-        //                     on k.PasienId equals p.PendaftaranPasienBaruId
-        //                 where a.IsDelete == false
-        //                 select new
-        //                 {
-        //                     CreateDateTime = a.CreateDateTime,
-        //                     CreateBy = a.CreateBy,
-        //                     CreateByName = u.FullName,
-        //                     SOAPID = a.SOAPID,
-        //                     KunjunganId = a.KunjunganId,
-        //                     PasienId = k.PasienId, // Tambahan ini
-        //                     Subjective = a.Subjective,
-        //                     Objective = a.Objective,
-        //                     DaftarICD10 = (a.DaftarICD10 ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
-        //                     Assessment = a.Assessment,
-        //                     Planning = a.Planning,
-        //                     Evaluasi = a.Evaluasi,
-        //                     Intervensi = a.Intervensi,
-        //                     Reevaluasi = a.Reevaluasi,
-        //                     Profesi = a.Profesi,
-        //                     NamaDokter = d.NmDokter,
-        //                     DokterId = d.DokterId, // Tambahan ini untuk mendapatkan DokterId
-        //                     NamaPasien = p.NamaLengkap, // Tambahan ini untuk mendapatkan Nama Pasien
-        //                 }).OrderByDescending(a => a.CreateDateTime).ToList();
+        //    // 1) Ambil kamus ICD (Kode -> Nama) sekali saja
+        //    var icdDict = await _applicationDbContext.ICD10s
+        //        .AsNoTracking()
+        //        .Select(x => new { x.ICDCode, x.ICDName })
+        //        .ToDictionaryAsync(x => x.ICDCode, x => x.ICDName);
 
-        //    // Hitung total data sebelum paginasi
-        //    var totalRows = query.Count();
+        //    // 2) Ambil data utama (tanpa Split di server, supaya tetap bisa dieksekusi oleh EF/SQL)
+        //    var raw = await (from a in _applicationDbContext.SOAPs
+        //                     join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId
+        //                     join k in _applicationDbContext.Kunjungans on a.KunjunganId equals k.KunjunganID
+        //                     join d in _applicationDbContext.Dokters on k.DokterId equals d.DokterId
+        //                     join p in _applicationDbContext.PendaftaranPasienBarus on k.PasienId equals p.PendaftaranPasienBaruId
+        //                     where a.IsDelete == false
+        //                     select new
+        //                     {
+        //                         a.CreateDateTime,
+        //                         a.CreateBy,
+        //                         CreateByName = u.FullName,
+        //                         a.SOAPID,
+        //                         a.KunjunganId,
+        //                         PasienId = k.PasienId,
+        //                         a.Subjective,
+        //                         a.Objective,
+        //                         a.DaftarICD10, // simpan apa adanya dulu (CSV)
+        //                         a.Assessment,
+        //                         a.Planning,
+        //                         a.Evaluasi,
+        //                         a.Intervensi,
+        //                         a.Reevaluasi,
+        //                         a.Profesi,
+        //                         NamaDokter = d.NmDokter,
+        //                         DokterId = d.DokterId,
+        //                         NamaPasien = p.NamaLengkap
+        //                     })
+        //                    .AsNoTracking()
+        //                    .ToListAsync();
+
+        //    var projected = raw
+        //        .Select(a =>
+        //        {
+        //            var codes = (a.DaftarICD10 ?? "")
+        //                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+        //                .Select(s => s.Trim())
+        //                .Where(s => !string.IsNullOrWhiteSpace(s))
+        //                .Distinct(StringComparer.OrdinalIgnoreCase)
+        //                .ToList();
+
+        //            var namaIcd = codes
+        //                .Select(code =>
+        //                    icdDict.TryGetValue(code, out var nama)
+        //                        ? nama
+        //                        : $"(Kode tidak ditemukan: {code})")
+        //                .ToList();
+
+        //            return new
+        //            {
+        //                a.CreateDateTime,
+        //                a.CreateBy,
+        //                a.CreateByName,
+        //                a.SOAPID,
+        //                a.KunjunganId,
+        //                a.PasienId,
+        //                a.Subjective,
+        //                a.Objective,
+        //                DaftarICD10 = codes,   // list kode ICD
+        //                NamaICD = namaIcd,     // list nama ICD hasil "join"
+        //                a.Assessment,
+        //                a.Planning,
+        //                a.Evaluasi,
+        //                a.Intervensi,
+        //                a.Reevaluasi,
+        //                a.Profesi,
+        //                a.NamaDokter,
+        //                a.DokterId,
+        //                a.NamaPasien
+        //            };
+        //        })
+        //        .OrderByDescending(a => a.CreateDateTime)
+        //        .ToList();
+
+        //    // 4) Paging di sisi memory (karena sudah perlu materialize untuk parsing ICD)
+        //    var totalRows = projected.Count;
         //    var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
 
-        //    // Ambil data sesuai paging
-        //    var listdata = query
+        //    var listdata = projected
         //        .Skip((page - 1) * perPage)
-        //        .Take(perPage).ToList();
+        //        .Take(perPage)
+        //        .ToList();
 
         //    if (!listdata.Any())
         //    {
         //        return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
         //    }
 
-        //    // Return hasil dengan paging info
+        //    // 5) Return hasil
         //    return Ok(new
         //    {
         //        message = "Berhasil || 200 OK",
@@ -236,241 +323,69 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet("{id}")]
         public async Task<IActionResult> GetSOAPById(Guid id)
         {
-            // 1) Ambil kamus ICD (Kode -> Nama) sekali saja
-            var icdDict = await _applicationDbContext.ICD10s
-                .AsNoTracking()
-                .Select(x => new { x.ICDCode, x.ICDName })
-                .ToDictionaryAsync(x => x.ICDCode, x => x.ICDName);
-
-            // 2) Ambil data utama berdasarkan SOAPID
-            var raw = await (from a in _applicationDbContext.SOAPs
-                             join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId
-                             join k in _applicationDbContext.Kunjungans on a.KunjunganId equals k.KunjunganID
-                             join d in _applicationDbContext.Dokters on k.DokterId equals d.DokterId
-                             join p in _applicationDbContext.PendaftaranPasienBarus on k.PasienId equals p.PendaftaranPasienBaruId
-                             where a.SOAPID == id && a.IsDelete == false // Filter berdasarkan SOAPID
-                             select new
-                             {
-                                 a.CreateDateTime,
-                                 a.CreateBy,
-                                 CreateByName = u.FullName,
-                                 a.SOAPID,
-                                 a.KunjunganId,
-                                 PasienId = k.PasienId,
-                                 a.Subjective,
-                                 a.Objective,
-                                 a.DaftarICD10, // simpan apa adanya dulu (CSV)
-                                 a.Assessment,
-                                 a.Planning,
-                                 a.Evaluasi,
-                                 a.Intervensi,
-                                 a.Reevaluasi,
-                                 a.Profesi,
-                                 NamaDokter = d.NmDokter,
-                                 DokterId = d.DokterId,
-                                 NamaPasien = p.NamaLengkap
-                             })
-                             .AsNoTracking()
-                             .FirstOrDefaultAsync(); // Mengambil satu data
-
-            // 3) Jika data tidak ditemukan, kembalikan 404 Not Found
-            if (raw == null)
+            try
             {
-                return NotFound(new { message = "Data tidak ditemukan" });
-            }
+                // =========================
+                // 1) Ambil & rapikan kamus ICD (Kode -> Nama) aman dari duplikat
+                // =========================
+                var icdRows = await _applicationDbContext.ICD10s
+                    .AsNoTracking()
+                    .Select(x => new { x.ICDCode, x.ICDName })
+                    .ToListAsync();
 
-            // 4) Proses ICD (parsing dan lookup)
-            var codes = (raw.DaftarICD10 ?? "")
-                .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                .Select(s => s.Trim())
-                .Where(s => !string.IsNullOrWhiteSpace(s))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
+                var icdDict = icdRows
+                    .Where(x => !string.IsNullOrWhiteSpace(x.ICDCode))
+                    .Select(x => new { Code = x.ICDCode.Trim(), x.ICDName })
+                    .GroupBy(x => x.Code, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(
+                        g => g.Key,                 // key unik setelah group
+                        g => g.First().ICDName,     // ambil salah satu (atur sesuai kebutuhan)
+                        StringComparer.OrdinalIgnoreCase
+                    );
 
-            var namaIcd = codes
-                .Select(code =>
+                // =========================
+                // 2) Query utama 1 record (by id)
+                // =========================
+                var data = await (
+                    from a in _applicationDbContext.SOAPs
+                    join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId
+                    join k in _applicationDbContext.Kunjungans on a.KunjunganId equals k.KunjunganID
+                    join d in _applicationDbContext.Dokters on k.DokterId equals d.DokterId
+                    join p in _applicationDbContext.PendaftaranPasienBarus on k.PasienId equals p.PendaftaranPasienBaruId
+                    where a.IsDelete == false && a.SOAPID == id
+                    select new
+                    {
+                        a.CreateDateTime,
+                        a.CreateBy,
+                        CreateByName = u.FullName,
+                        a.SOAPID,
+                        a.KunjunganId,
+                        PasienId = k.PasienId,
+                        a.Subjective,
+                        a.Objective,
+                        a.DaftarICD10, // CSV
+                        a.Assessment,
+                        a.Planning,
+                        a.Evaluasi,
+                        a.Intervensi,
+                        a.Reevaluasi,
+                        a.Profesi,
+                        NamaDokter = d.NmDokter,
+                        DokterId = d.DokterId,
+                        NamaPasien = p.NamaLengkap
+                    })
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync();
+
+                if (data == null)
                 {
-                    icdDict.TryGetValue(code, out var nama);
-                    return nama ?? $"(Kode tidak ditemukan: {code})";
-                })
-                .ToList();
+                    return NotFound(new { message = "Data tidak ditemukan. || 404 Not Found" });
+                }
 
-            // 5) Proyeksi hasil akhir
-            var resultData = new
-            {
-                raw.CreateDateTime,
-                raw.CreateBy,
-                raw.CreateByName,
-                raw.SOAPID,
-                raw.KunjunganId,
-                raw.PasienId,
-                raw.Subjective,
-                raw.Objective,
-                DaftarICD10 = codes,    // list kode ICD
-                NamaICD = namaIcd,      // list nama ICD hasil "join"
-                raw.Assessment,
-                raw.Planning,
-                raw.Evaluasi,
-                raw.Intervensi,
-                raw.Reevaluasi,
-                raw.Profesi,
-                raw.NamaDokter,
-                raw.DokterId,
-                raw.NamaPasien
-            };
-
-            // 6) Return hasil
-            return Ok(new
-            {
-                message = "Berhasil || 200 OK",
-                data = resultData
-            });
-        }
-
-        [HttpGet("kunjungan/{kunjunganid}")]
-        public async Task<IActionResult> GetByKunjunganId(Guid kunjunganid)
-        {
-            // 1) Ambil kamus ICD(Kode->Nama) sekali saja
-            var icdDict = await _applicationDbContext.ICD10s
-                .AsNoTracking()
-                .Select(x => new { x.ICDCode, x.ICDName })
-                .ToDictionaryAsync(x => x.ICDCode, x => x.ICDName);
-
-            // 2) Ambil data utama berdasarkan SOAPID
-            var raw = await (from a in _applicationDbContext.SOAPs
-                             join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId
-                             join k in _applicationDbContext.Kunjungans on a.KunjunganId equals k.KunjunganID
-                             join d in _applicationDbContext.Dokters on k.DokterId equals d.DokterId
-                             join p in _applicationDbContext.PendaftaranPasienBarus on k.PasienId equals p.PendaftaranPasienBaruId
-                             where a.KunjunganId == kunjunganid && a.IsDelete == false // Filter berdasarkan SOAPID
-                             select new
-                             {
-                                 a.CreateDateTime,
-                                 a.CreateBy,
-                                 CreateByName = u.FullName,
-                                 a.SOAPID,
-                                 a.KunjunganId,
-                                 PasienId = k.PasienId,
-                                 a.Subjective,
-                                 a.Objective,
-                                 a.DaftarICD10, // simpan apa adanya dulu (CSV)
-                                 a.Assessment,
-                                 a.Planning,
-                                 a.Evaluasi,
-                                 a.Intervensi,
-                                 a.Reevaluasi,
-                                 a.Profesi,
-                                 NamaDokter = d.NmDokter,
-                                 DokterId = d.DokterId,
-                                 NamaPasien = p.NamaLengkap
-                             })
-                             .AsNoTracking()
-                             .FirstOrDefaultAsync(); // Mengambil satu data
-
-            // 3) Jika data tidak ditemukan, kembalikan 404 Not Found
-            if (raw == null)
-            {
-                return NotFound(new { message = "Data tidak ditemukan" });
-            }
-
-            // 4) Proses ICD (parsing dan lookup)
-            var codes = (raw.DaftarICD10 ?? "")
-                .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                .Select(s => s.Trim())
-                .Where(s => !string.IsNullOrWhiteSpace(s))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
-
-            var namaIcd = codes
-                .Select(code =>
-                {
-                    icdDict.TryGetValue(code, out var nama);
-                    return nama ?? $"(Kode tidak ditemukan: {code})";
-                })
-                .ToList();
-
-            // 5) Proyeksi hasil akhir
-            var resultData = new
-            {
-                raw.CreateDateTime,
-                raw.CreateBy,
-                raw.CreateByName,
-                raw.SOAPID,
-                raw.KunjunganId,
-                raw.PasienId,
-                raw.Subjective,
-                raw.Objective,
-                DaftarICD10 = codes,    // list kode ICD
-                NamaICD = namaIcd,      // list nama ICD hasil "join"
-                raw.Assessment,
-                raw.Planning,
-                raw.Evaluasi,
-                raw.Intervensi,
-                raw.Reevaluasi,
-                raw.Profesi,
-                raw.NamaDokter,
-                raw.DokterId,
-                raw.NamaPasien
-            };
-
-            // 6) Return hasil
-            return Ok(new
-            {
-                message = "Berhasil || 200 OK",
-                data = resultData
-            });
-        }
-
-        [HttpGet("pasien/{pasienid}")]
-        public async Task<IActionResult> GetByPasienId(Guid pasienid)
-        {
-            // 1) Ambil kamus ICD(Kode->Nama) sekali saja  
-            var icdDict = await _applicationDbContext.ICD10s
-                .AsNoTracking()
-                .Select(x => new { x.ICDCode, x.ICDName })
-                .ToDictionaryAsync(x => x.ICDCode, x => x.ICDName);
-
-            // 2) Ambil data utama berdasarkan PasienId  
-            var raw = await (from a in _applicationDbContext.SOAPs
-                             join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId
-                             join k in _applicationDbContext.Kunjungans on a.KunjunganId equals k.KunjunganID
-                             join d in _applicationDbContext.Dokters on k.DokterId equals d.DokterId
-                             join p in _applicationDbContext.PendaftaranPasienBarus on k.PasienId equals p.PendaftaranPasienBaruId
-                             where k.PasienId == pasienid && a.IsDelete == false
-                             select new
-                             {
-                                 a.CreateDateTime,
-                                 a.CreateBy,
-                                 CreateByName = u.FullName,
-                                 a.SOAPID,
-                                 a.KunjunganId,
-                                 PasienId = k.PasienId,
-                                 a.Subjective,
-                                 a.Objective,
-                                 a.DaftarICD10,
-                                 a.Assessment,
-                                 a.Planning,
-                                 a.Evaluasi,
-                                 a.Intervensi,
-                                 a.Reevaluasi,
-                                 a.Profesi,
-                                 NamaDokter = d.NmDokter,
-                                 DokterId = d.DokterId,
-                                 NamaPasien = p.NamaLengkap
-                             })
-                           .AsNoTracking()
-                           .ToListAsync();
-
-            // 3) Jika data tidak ditemukan, kembalikan 404 Not Found  
-            if (raw == null || !raw.Any())
-            {
-                return NotFound(new { message = "Data tidak ditemukan" });
-            }
-
-            // 4) Proses ICD (parsing dan lookup)  
-            var resultData = raw.Select(data =>
-            {
-                var codes = (data.DaftarICD10 ?? "")
+                // =========================
+                // 3) Proyeksi + parsing ICD di memory (1 record)
+                // =========================
+                var codes = (data.DaftarICD10 ?? string.Empty)
                     .Split(',', StringSplitOptions.RemoveEmptyEntries)
                     .Select(s => s.Trim())
                     .Where(s => !string.IsNullOrWhiteSpace(s))
@@ -478,14 +393,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     .ToList();
 
                 var namaIcd = codes
-                    .Select(code =>
-                    {
-                        icdDict.TryGetValue(code, out var nama);
-                        return nama ?? $"(Kode tidak ditemukan: {code})";
-                    })
+                    .Select(code => icdDict.TryGetValue(code, out var nama)
+                        ? nama
+                        : $"(Kode tidak ditemukan: {code})")
                     .ToList();
 
-                return new
+                var result = new
                 {
                     data.CreateDateTime,
                     data.CreateBy,
@@ -495,8 +408,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     data.PasienId,
                     data.Subjective,
                     data.Objective,
-                    DaftarICD10 = codes,    // list kode ICD  
-                    NamaICD = namaIcd,      // list nama ICD hasil "join"  
+                    DaftarICD10 = codes,   // list kode ICD
+                    NamaICD = namaIcd,     // list nama ICD hasil lookup
                     data.Assessment,
                     data.Planning,
                     data.Evaluasi,
@@ -507,14 +420,358 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     data.DokterId,
                     data.NamaPasien
                 };
-            }).ToList();
 
-            // 5) Return hasil  
-            return Ok(new
+                // =========================
+                // 4) Return hasil
+                // =========================
+                return Ok(new
+                {
+                    message = "Berhasil || 200 OK",
+                    data = result
+                });
+            }
+            catch (Exception ex)
             {
-                message = "Berhasil || 200 OK",
-                data = resultData
-            });
+                // TODO: log ex
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    message = "Terjadi kesalahan tak terduga.",
+                    error = ex.Message
+                });
+            }
+        }
+        //{
+        //    // 1) Ambil kamus ICD (Kode -> Nama) sekali saja
+        //    var icdDict = await _applicationDbContext.ICD10s
+        //        .AsNoTracking()
+        //        .Select(x => new { x.ICDCode, x.ICDName })
+        //        .ToDictionaryAsync(x => x.ICDCode, x => x.ICDName);
+
+        //    // 2) Ambil data utama berdasarkan SOAPID
+        //    var raw = await (from a in _applicationDbContext.SOAPs
+        //                     join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId
+        //                     join k in _applicationDbContext.Kunjungans on a.KunjunganId equals k.KunjunganID
+        //                     join d in _applicationDbContext.Dokters on k.DokterId equals d.DokterId
+        //                     join p in _applicationDbContext.PendaftaranPasienBarus on k.PasienId equals p.PendaftaranPasienBaruId
+        //                     where a.SOAPID == id && a.IsDelete == false // Filter berdasarkan SOAPID
+        //                     select new
+        //                     {
+        //                         a.CreateDateTime,
+        //                         a.CreateBy,
+        //                         CreateByName = u.FullName,
+        //                         a.SOAPID,
+        //                         a.KunjunganId,
+        //                         PasienId = k.PasienId,
+        //                         a.Subjective,
+        //                         a.Objective,
+        //                         a.DaftarICD10, // simpan apa adanya dulu (CSV)
+        //                         a.Assessment,
+        //                         a.Planning,
+        //                         a.Evaluasi,
+        //                         a.Intervensi,
+        //                         a.Reevaluasi,
+        //                         a.Profesi,
+        //                         NamaDokter = d.NmDokter,
+        //                         DokterId = d.DokterId,
+        //                         NamaPasien = p.NamaLengkap
+        //                     })
+        //                     .AsNoTracking()
+        //                     .FirstOrDefaultAsync(); // Mengambil satu data
+
+        //    // 3) Jika data tidak ditemukan, kembalikan 404 Not Found
+        //    if (raw == null)
+        //    {
+        //        return NotFound(new { message = "Data tidak ditemukan" });
+        //    }
+
+        //    // 4) Proses ICD (parsing dan lookup)
+        //    var codes = (raw.DaftarICD10 ?? "")
+        //        .Split(',', StringSplitOptions.RemoveEmptyEntries)
+        //        .Select(s => s.Trim())
+        //        .Where(s => !string.IsNullOrWhiteSpace(s))
+        //        .Distinct(StringComparer.OrdinalIgnoreCase)
+        //        .ToList();
+
+        //    var namaIcd = codes
+        //        .Select(code =>
+        //        {
+        //            icdDict.TryGetValue(code, out var nama);
+        //            return nama ?? $"(Kode tidak ditemukan: {code})";
+        //        })
+        //        .ToList();
+
+        //    // 5) Proyeksi hasil akhir
+        //    var resultData = new
+        //    {
+        //        raw.CreateDateTime,
+        //        raw.CreateBy,
+        //        raw.CreateByName,
+        //        raw.SOAPID,
+        //        raw.KunjunganId,
+        //        raw.PasienId,
+        //        raw.Subjective,
+        //        raw.Objective,
+        //        DaftarICD10 = codes,    // list kode ICD
+        //        NamaICD = namaIcd,      // list nama ICD hasil "join"
+        //        raw.Assessment,
+        //        raw.Planning,
+        //        raw.Evaluasi,
+        //        raw.Intervensi,
+        //        raw.Reevaluasi,
+        //        raw.Profesi,
+        //        raw.NamaDokter,
+        //        raw.DokterId,
+        //        raw.NamaPasien
+        //    };
+
+        //    // 6) Return hasil
+        //    return Ok(new
+        //    {
+        //        message = "Berhasil || 200 OK",
+        //        data = resultData
+        //    });
+        //}
+
+        [HttpGet("kunjungan/{kunjunganid}")]
+        public async Task<IActionResult> GetByKunjunganId(Guid kunjunganid)
+        {
+            try
+            {
+                // =========================
+                // 1) Ambil & rapikan kamus ICD (Kode -> Nama) aman dari duplikat
+                // =========================
+                var icdRows = await _applicationDbContext.ICD10s
+                    .AsNoTracking()
+                    .Select(x => new { x.ICDCode, x.ICDName })
+                    .ToListAsync();
+
+                var icdDict = icdRows
+                    .Where(x => !string.IsNullOrWhiteSpace(x.ICDCode))
+                    .Select(x => new { Code = x.ICDCode.Trim(), x.ICDName })
+                    .GroupBy(x => x.Code, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(
+                        g => g.Key,                 // key unik setelah group
+                        g => g.First().ICDName,     // ambil salah satu (atur sesuai kebutuhan)
+                        StringComparer.OrdinalIgnoreCase
+                    );
+
+                // =========================
+                // 2) Query utama 1 record (by id)
+                // =========================
+                var data = await (
+                    from a in _applicationDbContext.SOAPs
+                    join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId
+                    join k in _applicationDbContext.Kunjungans on a.KunjunganId equals k.KunjunganID
+                    join d in _applicationDbContext.Dokters on k.DokterId equals d.DokterId
+                    join p in _applicationDbContext.PendaftaranPasienBarus on k.PasienId equals p.PendaftaranPasienBaruId
+                    where a.IsDelete == false && a.KunjunganId == kunjunganid
+                    select new
+                    {
+                        a.CreateDateTime,
+                        a.CreateBy,
+                        CreateByName = u.FullName,
+                        a.SOAPID,
+                        a.KunjunganId,
+                        PasienId = k.PasienId,
+                        a.Subjective,
+                        a.Objective,
+                        a.DaftarICD10, // CSV
+                        a.Assessment,
+                        a.Planning,
+                        a.Evaluasi,
+                        a.Intervensi,
+                        a.Reevaluasi,
+                        a.Profesi,
+                        NamaDokter = d.NmDokter,
+                        DokterId = d.DokterId,
+                        NamaPasien = p.NamaLengkap
+                    })
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync();
+
+                if (data == null)
+                {
+                    return NotFound(new { message = "Data tidak ditemukan. || 404 Not Found" });
+                }
+
+                // =========================
+                // 3) Proyeksi + parsing ICD di memory (1 record)
+                // =========================
+                var codes = (data.DaftarICD10 ?? string.Empty)
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s => s.Trim())
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                var namaIcd = codes
+                    .Select(code => icdDict.TryGetValue(code, out var nama)
+                        ? nama
+                        : $"(Kode tidak ditemukan: {code})")
+                    .ToList();
+
+                var result = new
+                {
+                    data.CreateDateTime,
+                    data.CreateBy,
+                    data.CreateByName,
+                    data.SOAPID,
+                    data.KunjunganId,
+                    data.PasienId,
+                    data.Subjective,
+                    data.Objective,
+                    DaftarICD10 = codes,   // list kode ICD
+                    NamaICD = namaIcd,     // list nama ICD hasil lookup
+                    data.Assessment,
+                    data.Planning,
+                    data.Evaluasi,
+                    data.Intervensi,
+                    data.Reevaluasi,
+                    data.Profesi,
+                    data.NamaDokter,
+                    data.DokterId,
+                    data.NamaPasien
+                };
+
+                // =========================
+                // 4) Return hasil
+                // =========================
+                return Ok(new
+                {
+                    message = "Berhasil || 200 OK",
+                    data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                // TODO: log ex
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    message = "Terjadi kesalahan tak terduga.",
+                    error = ex.Message
+                });
+            }
+        }
+
+        [HttpGet("pasien/{pasienid}")]
+        public async Task<IActionResult> GetByPasienId(Guid pasienid)
+        {
+            try
+            {
+                // =========================
+                // 1) Ambil & rapikan kamus ICD (Kode -> Nama) aman dari duplikat
+                // =========================
+                var icdRows = await _applicationDbContext.ICD10s
+                    .AsNoTracking()
+                    .Select(x => new { x.ICDCode, x.ICDName })
+                    .ToListAsync();
+
+                var icdDict = icdRows
+                    .Where(x => !string.IsNullOrWhiteSpace(x.ICDCode))
+                    .Select(x => new { Code = x.ICDCode.Trim(), x.ICDName })
+                    .GroupBy(x => x.Code, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(
+                        g => g.Key,                 // key unik setelah group
+                        g => g.First().ICDName,     // ambil salah satu (atur sesuai kebutuhan)
+                        StringComparer.OrdinalIgnoreCase
+                    );
+
+                // =========================
+                // 2) Query utama 1 record (by id)
+                // =========================
+                var data = await (
+                    from a in _applicationDbContext.SOAPs
+                    join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId
+                    join k in _applicationDbContext.Kunjungans on a.KunjunganId equals k.KunjunganID
+                    join d in _applicationDbContext.Dokters on k.DokterId equals d.DokterId
+                    join p in _applicationDbContext.PendaftaranPasienBarus on k.PasienId equals p.PendaftaranPasienBaruId
+                    where a.IsDelete == false && k.PasienId == pasienid
+                    select new
+                    {
+                        a.CreateDateTime,
+                        a.CreateBy,
+                        CreateByName = u.FullName,
+                        a.SOAPID,
+                        a.KunjunganId,
+                        PasienId = k.PasienId,
+                        a.Subjective,
+                        a.Objective,
+                        a.DaftarICD10, // CSV
+                        a.Assessment,
+                        a.Planning,
+                        a.Evaluasi,
+                        a.Intervensi,
+                        a.Reevaluasi,
+                        a.Profesi,
+                        NamaDokter = d.NmDokter,
+                        DokterId = d.DokterId,
+                        NamaPasien = p.NamaLengkap
+                    })
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync();
+
+                if (data == null)
+                {
+                    return NotFound(new { message = "Data tidak ditemukan. || 404 Not Found" });
+                }
+
+                // =========================
+                // 3) Proyeksi + parsing ICD di memory (1 record)
+                // =========================
+                var codes = (data.DaftarICD10 ?? string.Empty)
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s => s.Trim())
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                var namaIcd = codes
+                    .Select(code => icdDict.TryGetValue(code, out var nama)
+                        ? nama
+                        : $"(Kode tidak ditemukan: {code})")
+                    .ToList();
+
+                var result = new
+                {
+                    data.CreateDateTime,
+                    data.CreateBy,
+                    data.CreateByName,
+                    data.SOAPID,
+                    data.KunjunganId,
+                    data.PasienId,
+                    data.Subjective,
+                    data.Objective,
+                    DaftarICD10 = codes,   // list kode ICD
+                    NamaICD = namaIcd,     // list nama ICD hasil lookup
+                    data.Assessment,
+                    data.Planning,
+                    data.Evaluasi,
+                    data.Intervensi,
+                    data.Reevaluasi,
+                    data.Profesi,
+                    data.NamaDokter,
+                    data.DokterId,
+                    data.NamaPasien
+                };
+
+                // =========================
+                // 4) Return hasil
+                // =========================
+                return Ok(new
+                {
+                    message = "Berhasil || 200 OK",
+                    data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                // TODO: log ex
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    message = "Terjadi kesalahan tak terduga.",
+                    error = ex.Message
+                });
+            }
         }
 
         //[HttpGet("SOAPDokter/{dokterid}")]
@@ -781,127 +1038,118 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
         [HttpGet("paged")]
         public async Task<IActionResult> PagedSOAP(
-            int page = 1,
-            int perPage = 10,
-            Guid? search = null,
-            string? orderBy = "CreateDateTime",
-            string? sortDirection = "desc",
-            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-            DateTime? startDate = null,
-            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-            DateTime? endDate = null,
-            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null
+        int page = 1,
+        int perPage = 10,
+        Guid? search = null,                         // pasienId
+        string? orderBy = "CreateDateTime",
+        string? sortDirection = "desc",
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+        DateTime? startDate = null,
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+        DateTime? endDate = null,
+        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null
         )
         {
             if (!search.HasValue)
-            {
                 return BadRequest(new { message = "PasienId (search) is required." });
-            }
 
-            // Cari Kunjungan berdasarkan PasienId
-            var kunjungan = await _applicationDbContext.Kunjungans
-                .FirstOrDefaultAsync(k => k.PasienId == search);
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
 
-            if (kunjungan == null)
-            {
-                return NotFound(new { message = "Kunjungan untuk pasien ini tidak ditemukan." });
-            }
+            // --- Base query: WAJIB filter pasien di sini ---
+            var query =
+                from a in _applicationDbContext.SOAPs
+                join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId
+                join k in _applicationDbContext.Kunjungans on a.KunjunganId equals k.KunjunganID
+                join d in _applicationDbContext.Dokters on k.DokterId equals d.DokterId
+                join p in _applicationDbContext.PendaftaranPasienBarus on k.PasienId equals p.PendaftaranPasienBaruId
+                where a.IsDelete == false
+                   && k.PasienId == search.Value                    
+                select new
+                {
+                    a.CreateDateTime,
+                    a.CreateBy,
+                    CreateByName = u.FullName,
+                    a.SOAPID,
+                    a.KunjunganId,
+                    PasienId = k.PasienId,
+                    a.Subjective,
+                    a.Objective,
+                    a.DaftarICD10,                                   
+                    a.Assessment,
+                    a.Planning,
+                    a.Evaluasi,
+                    a.Intervensi,
+                    a.Reevaluasi,
+                    a.Profesi,
+                    NamaDokter = d.NmDokter,
+                    DokterId = d.DokterId,
+                    NamaPasien = p.NamaLengkap,
+                };
 
-            // Query data SOAP berdasarkan KunjunganId yang ditemukan
-            var query = (from a in _applicationDbContext.SOAPs
-                         join u in _applicationDbContext.UserActives
-                             on a.CreateBy equals u.UserActiveId
-                         join k in _applicationDbContext.Kunjungans
-                             on a.KunjunganId equals k.KunjunganID
-                        join d in _applicationDbContext.Dokters
-                             on k.DokterId equals d.DokterId
-                         join p in _applicationDbContext.PendaftaranPasienBarus
-                                on k.PasienId equals p.PendaftaranPasienBaruId
-                         where a.IsDelete == false
-                         select new
-                         {
-                             CreateDateTime = a.CreateDateTime,
-                             CreateBy = a.CreateBy,
-                             CreateByName = u.FullName,
-                             SOAPID = a.SOAPID,
-                             KunjunganId = a.KunjunganId,
-                             PasienId = k.PasienId, // Tambahan ini
-                             Subjective = a.Subjective,
-                             Objective = a.Objective,
-                             DaftarICD10 = (a.DaftarICD10 ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
-                             Assessment = a.Assessment,
-                             Planning = a.Planning,
-                             Evaluasi = a.Evaluasi,
-                             Intervensi = a.Intervensi,
-                             Reevaluasi = a.Reevaluasi,
-                             Profesi = a.Profesi,
-                             NamaDokter = d.NmDokter,
-                             DokterId = d.DokterId, // Tambahan ini untuk mendapatkan DokterId
-                             NamaPasien = p.NamaLengkap, // Tambahan ini untuk mendapatkan Nama Pasien
-                         });
-
-            // **Filter berdasarkan tanggal**
+            // --- Filter tanggal rentang eksplisit ---
             if (startDate.HasValue && endDate.HasValue)
             {
-                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
-                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+                // Jadikan rentang [start 00:00:00, end 23:59:59.999...] dalam UTC
+                var startUtc = DateTime.SpecifyKind(startDate.Value.Date, DateTimeKind.Utc);
+                var endUtc = DateTime.SpecifyKind(endDate.Value.Date.AddDays(1).AddTicks(-1), DateTimeKind.Utc);
 
-                query = query.Where(u =>
-                    u.CreateDateTime >= startUtc &&
-                    u.CreateDateTime <= endUtc);
+                query = query.Where(u => u.CreateDateTime >= startUtc && u.CreateDateTime <= endUtc);
             }
 
-            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll)
+            // --- Filter periode relatif ---
             if (periode.HasValue)
             {
-                DateTime today = DateTime.UtcNow.Date;
+                var todayUtc = DateTime.UtcNow.Date;
 
                 switch (periode)
                 {
                     case PeriodeFilter.Today:
-                        query = query.Where(u => u.CreateDateTime.Date == today);
+                        query = query.Where(u => u.CreateDateTime.Date == todayUtc);
                         break;
+
                     case PeriodeFilter.ThisWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
-                            u.CreateDateTime.Date <= today
-                        );
+                        // Minggu ini (Mulai Minggu s/d hari ini)
+                        var startOfWeek = todayUtc.AddDays(-((int)todayUtc.DayOfWeek));
+                        query = query.Where(u => u.CreateDateTime.Date >= startOfWeek && u.CreateDateTime.Date <= todayUtc);
                         break;
+
                     case PeriodeFilter.LastWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek))
-                        );
+                        var startOfThisWeek = todayUtc.AddDays(-((int)todayUtc.DayOfWeek));
+                        var startOfLastWeek = startOfThisWeek.AddDays(-7);
+                        query = query.Where(u => u.CreateDateTime.Date >= startOfLastWeek && u.CreateDateTime.Date < startOfThisWeek);
                         break;
+
                     case PeriodeFilter.ThisMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month &&
-                            u.CreateDateTime.Year == today.Year
-                        );
+                        query = query.Where(u => u.CreateDateTime.Month == todayUtc.Month && u.CreateDateTime.Year == todayUtc.Year);
                         break;
+
                     case PeriodeFilter.LastMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month - 1 &&
-                            u.CreateDateTime.Year == today.Year
-                        );
+                        var lastMonthDate = todayUtc.AddMonths(-1);
+                        query = query.Where(u => u.CreateDateTime.Month == lastMonthDate.Month && u.CreateDateTime.Year == lastMonthDate.Year);
                         break;
+
                     case PeriodeFilter.ThisYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
+                        query = query.Where(u => u.CreateDateTime.Year == todayUtc.Year);
                         break;
+
                     case PeriodeFilter.LastYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
+                        query = query.Where(u => u.CreateDateTime.Year == todayUtc.Year - 1);
                         break;
+
                     case PeriodeFilter.Last3Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
+                        query = query.Where(u => u.CreateDateTime >= todayUtc.AddMonths(-3));
                         break;
+
                     case PeriodeFilter.Last6Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
+                        query = query.Where(u => u.CreateDateTime >= todayUtc.AddMonths(-6));
                         break;
                 }
             }
 
-            // Sorting Data
-            query = sortDirection?.ToLower() == "desc"
+            // --- Sorting ---
+            bool desc = string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase);
+            query = desc
                 ? orderBy switch
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
@@ -923,15 +1171,52 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     _ => query.OrderBy(u => u.CreateDateTime)
                 };
 
-            // Pagination
+            // --- Paging ---
             var totalRows = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-            var rows = await query.Skip((page - 1) * perPage).Take(perPage).ToListAsync();
 
-            if (rows.Count == 0 && page > totalPages)
+            if (totalRows == 0)
+            {
+                return NotFound(new { message = "Data untuk pasien ini tidak ditemukan." });
+            }
+            if (page > totalPages)
             {
                 return NotFound(new { message = "Page not found." });
             }
+
+            // Ambil halaman
+            var pageRows = await query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToListAsync();
+
+            // --- (Opsional) Ubah CSV ICD menjadi List<string> setelah materialize ---
+            var rows = pageRows.Select(x => new
+            {
+                x.CreateDateTime,
+                x.CreateBy,
+                x.CreateByName,
+                x.SOAPID,
+                x.KunjunganId,
+                x.PasienId,
+                x.Subjective,
+                x.Objective,
+                daftarICD10 = (x.DaftarICD10 ?? string.Empty)
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s => s.Trim())
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList(),
+                x.Assessment,
+                x.Planning,
+                x.Evaluasi,
+                x.Intervensi,
+                x.Reevaluasi,
+                x.Profesi,
+                x.NamaDokter,
+                x.DokterId,
+                x.NamaPasien
+            });
 
             return Ok(new
             {
@@ -947,6 +1232,176 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
             });
         }
+
+
+        //[HttpGet("paged")]
+        //public async Task<IActionResult> PagedSOAP(
+        //    int page = 1,
+        //    int perPage = 10,
+        //    Guid? search = null,
+        //    string? orderBy = "CreateDateTime",
+        //    string? sortDirection = "desc",
+        //    [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+        //    DateTime? startDate = null,
+        //    [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+        //    DateTime? endDate = null,
+        //    [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null
+        //)
+        //{
+        //    if (!search.HasValue)
+        //    {
+        //        return BadRequest(new { message = "PasienId (search) is required." });
+        //    }
+
+        //    // Cari Kunjungan berdasarkan PasienId
+        //    var kunjungan = await _applicationDbContext.Kunjungans
+        //        .FirstOrDefaultAsync(k => k.PasienId == search);
+
+        //    if (kunjungan == null)
+        //    {
+        //        return NotFound(new { message = "Kunjungan untuk pasien ini tidak ditemukan." });
+        //    }
+
+        //    // Query data SOAP berdasarkan KunjunganId yang ditemukan
+        //    var query = (from a in _applicationDbContext.SOAPs
+        //                 join u in _applicationDbContext.UserActives
+        //                     on a.CreateBy equals u.UserActiveId
+        //                 join k in _applicationDbContext.Kunjungans
+        //                     on a.KunjunganId equals k.KunjunganID
+        //                join d in _applicationDbContext.Dokters
+        //                     on k.DokterId equals d.DokterId
+        //                 join p in _applicationDbContext.PendaftaranPasienBarus
+        //                        on k.PasienId equals p.PendaftaranPasienBaruId
+        //                 where a.IsDelete == false
+        //                 select new
+        //                 {
+        //                     CreateDateTime = a.CreateDateTime,
+        //                     CreateBy = a.CreateBy,
+        //                     CreateByName = u.FullName,
+        //                     SOAPID = a.SOAPID,
+        //                     KunjunganId = a.KunjunganId,
+        //                     PasienId = k.PasienId, // Tambahan ini
+        //                     Subjective = a.Subjective,
+        //                     Objective = a.Objective,
+        //                     DaftarICD10 = (a.DaftarICD10 ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
+        //                     Assessment = a.Assessment,
+        //                     Planning = a.Planning,
+        //                     Evaluasi = a.Evaluasi,
+        //                     Intervensi = a.Intervensi,
+        //                     Reevaluasi = a.Reevaluasi,
+        //                     Profesi = a.Profesi,
+        //                     NamaDokter = d.NmDokter,
+        //                     DokterId = d.DokterId, // Tambahan ini untuk mendapatkan DokterId
+        //                     NamaPasien = p.NamaLengkap, // Tambahan ini untuk mendapatkan Nama Pasien
+        //                 });
+
+        //    // **Filter berdasarkan tanggal**
+        //    if (startDate.HasValue && endDate.HasValue)
+        //    {
+        //        DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
+        //        DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+
+        //        query = query.Where(u =>
+        //            u.CreateDateTime >= startUtc &&
+        //            u.CreateDateTime <= endUtc);
+        //    }
+
+        //    // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll)
+        //    if (periode.HasValue)
+        //    {
+        //        DateTime today = DateTime.UtcNow.Date;
+
+        //        switch (periode)
+        //        {
+        //            case PeriodeFilter.Today:
+        //                query = query.Where(u => u.CreateDateTime.Date == today);
+        //                break;
+        //            case PeriodeFilter.ThisWeek:
+        //                query = query.Where(u =>
+        //                    u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
+        //                    u.CreateDateTime.Date <= today
+        //                );
+        //                break;
+        //            case PeriodeFilter.LastWeek:
+        //                query = query.Where(u =>
+        //                    u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
+        //                    u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek))
+        //                );
+        //                break;
+        //            case PeriodeFilter.ThisMonth:
+        //                query = query.Where(u =>
+        //                    u.CreateDateTime.Month == today.Month &&
+        //                    u.CreateDateTime.Year == today.Year
+        //                );
+        //                break;
+        //            case PeriodeFilter.LastMonth:
+        //                query = query.Where(u =>
+        //                    u.CreateDateTime.Month == today.Month - 1 &&
+        //                    u.CreateDateTime.Year == today.Year
+        //                );
+        //                break;
+        //            case PeriodeFilter.ThisYear:
+        //                query = query.Where(u => u.CreateDateTime.Year == today.Year);
+        //                break;
+        //            case PeriodeFilter.LastYear:
+        //                query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
+        //                break;
+        //            case PeriodeFilter.Last3Months:
+        //                query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
+        //                break;
+        //            case PeriodeFilter.Last6Months:
+        //                query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
+        //                break;
+        //        }
+        //    }
+
+        //    // Sorting Data
+        //    query = sortDirection?.ToLower() == "desc"
+        //        ? orderBy switch
+        //        {
+        //            "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
+        //            "CreateByName" => query.OrderByDescending(u => u.CreateByName),
+        //            "Subjective" => query.OrderByDescending(u => u.Subjective),
+        //            "Objective" => query.OrderByDescending(u => u.Objective),
+        //            "Assessment" => query.OrderByDescending(u => u.Assessment),
+        //            "Planning" => query.OrderByDescending(u => u.Planning),
+        //            _ => query.OrderByDescending(u => u.CreateDateTime)
+        //        }
+        //        : orderBy switch
+        //        {
+        //            "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
+        //            "CreateByName" => query.OrderBy(u => u.CreateByName),
+        //            "Subjective" => query.OrderBy(u => u.Subjective),
+        //            "Objective" => query.OrderBy(u => u.Objective),
+        //            "Assessment" => query.OrderBy(u => u.Assessment),
+        //            "Planning" => query.OrderBy(u => u.Planning),
+        //            _ => query.OrderBy(u => u.CreateDateTime)
+        //        };
+
+        //    // Pagination
+        //    var totalRows = await query.CountAsync();
+        //    var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+        //    var rows = await query.Skip((page - 1) * perPage).Take(perPage).ToListAsync();
+
+        //    if (rows.Count == 0 && page > totalPages)
+        //    {
+        //        return NotFound(new { message = "Page not found." });
+        //    }
+
+        //    return Ok(new
+        //    {
+        //        status = "success",
+        //        message = "Data retrieved successfully",
+        //        data = new
+        //        {
+        //            Rows = rows,
+        //            TotalRows = totalRows,
+        //            CurrentPage = page,
+        //            PerPage = perPage,
+        //            TotalPages = totalPages
+        //        }
+        //    });
+        //}
 
 
 

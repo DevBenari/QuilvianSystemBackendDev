@@ -9,7 +9,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models
     {
         [Key]
         public Guid SDKITeraupetikId { get; set; }
-        public Guid? SDKIEtiologiId { get; set; }
+        public Guid? SDKIDiagnosaId { get; set; }
         public string? NamaTeraupetik { get; set; }
         public string? Keterangan { get; set; }
     }

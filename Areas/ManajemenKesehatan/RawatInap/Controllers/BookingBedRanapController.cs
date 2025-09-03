@@ -202,7 +202,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                 // validasi kunjunganId yang sama tidak boleh membuat booking bed lagi
                 var existingBooking = _applicationDbContext.BookingBedRanaps
-                    .FirstOrDefault(b => b.KunjunganId == vm.KunjunganId && b.IsDelete == false);
+                    .FirstOrDefault(b => b.KunjunganId == vm.KunjunganId && b.TglKeluar == null);
+
                 if (existingBooking != null)
                 {
                     return BadRequest(new
