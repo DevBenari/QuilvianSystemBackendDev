@@ -963,6 +963,36 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             return Ok(new { message = "Status IsScreening berhasil diperbarui." });
         }
 
+        [HttpPut("{id}/StatusPengkajian")]
+        public async Task<IActionResult> UpdateStatusPengkajian(Guid id, [FromBody] StatusPengkajianVM request)
+        {
+            var kunjungan = await _applicationDbContext.Kunjungans.FindAsync(id);
+            if (kunjungan == null)
+                return NotFound(new { message = "Kunjungan tidak ditemukan." });
+
+            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(EmailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var userId = user?.UserActiveId ?? Guid.Empty;
+
+            kunjungan.StatusPengkajian = request.Status;
+            kunjungan.UpdateDateTime = DateTimeOffset.UtcNow;
+
+            kunjungan.UpdateBy = userId;
+            await _applicationDbContext.SaveChangesAsync();
+
+            // Notifikasi SignalR
+            await _hubContext.Clients.All.SendAsync("StatusPengkajianChanged", new
+            {
+                action = "updateStatusPengkajian",
+                kunjunganId = kunjungan.KunjunganID,
+                StatusPengkajian = request.Status
+            });
+            return Ok(new { message = "Status IsScreening berhasil diperbarui." });
+        }
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
