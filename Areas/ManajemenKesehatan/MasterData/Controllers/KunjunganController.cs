@@ -162,6 +162,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.TipePasien,
                             a.TipePembayaran,
                             a.JenisKunjungan,
+                            a.StatusPengkajian,
                             a.CreateDateTime,
                             a.CreateBy,
                             a.IsFinished,
@@ -289,6 +290,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.TipePasien,
                             a.TipePembayaran,
                             a.JenisKunjungan,
+                            a.StatusPengkajian,
                             Umur = HitungUmurLengkap(ps.TanggalLahir),
 
                             a.CreateDateTime,
@@ -1128,6 +1130,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              a.TipePasien,
                              a.TipePembayaran,
                              a.JenisKunjungan,
+                             a.StatusPengkajian,
                              a.CreateDateTime,
                              a.CreateBy,
 
