@@ -12,6 +12,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
         public Guid ResepTemplateId { get; set; }
         public string? KodeResepTemplate { get; set; }
         public string? Judul { get; set; }
+        public string? Diagnosa { get; set; }
+        public string? Deskripsi { get; set; }
         public Guid? DokterId { get; set; }
     }
 }

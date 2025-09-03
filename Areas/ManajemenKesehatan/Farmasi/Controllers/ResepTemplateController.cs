@@ -65,6 +65,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     r.ResepTemplateId,
                     r.KodeResepTemplate,
                     r.Judul,
+                    r.Diagnosa,
+                    r.Deskripsi,
                     r.DokterId,
 
                     DaftarObat = ( from d in _applicationDbContext.ResepTemplateDetails
@@ -226,6 +228,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             {
                 resepTemplate.ResepTemplateId,
                 resepTemplate.DokterId,
+                resepTemplate.Judul,
+                resepTemplate.Diagnosa,
+                resepTemplate.Deskripsi,
                 resepTemplate.CreateBy,
                 DaftarObat = daftarObat,
                 DaftarRacikan = daftarRacikan,
@@ -299,6 +304,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     ResepTemplateId = Guid.NewGuid(),
                     KodeResepTemplate = KodeResepTemplate,  // Gunakan kode yang sudah dihasilkan
                     Judul = vm.Judul,
+                    Diagnosa = vm.Diagnosa,
+                    Deskripsi = vm.Deskripsi,
                     DokterId = vm.DokterId,
 
                     CreateBy = userActiveId,
@@ -486,7 +493,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
                 // Update field yang diperbolehkan
                 resepTemplate.Judul = vm.Judul;
+                resepTemplate.Diagnosa = vm.Diagnosa;
+                resepTemplate.Deskripsi = vm.Deskripsi;
                 resepTemplate.DokterId = vm.DokterId;
+
                 resepTemplate.UpdateBy = userActiveId;
                 resepTemplate.UpdateDateTime = DateTimeOffset.UtcNow;
 
@@ -711,6 +721,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 {
                     resepTemplate.ResepTemplateId,
                     resepTemplate.DokterId,
+                    resepTemplate.Judul,
+                    resepTemplate.Diagnosa,
+                    resepTemplate.Deskripsi,
                     resepTemplate.CreateBy,
                     DaftarObat = daftarObat,
                     DaftarRacikan = daftarRacikan,
@@ -841,6 +854,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     r.ResepTemplateId,
                     r.KodeResepTemplate,
                     r.Judul,
+                    r.Diagnosa,
+                    r.Deskripsi,
                     r.DokterId,
 
                     // Non-racikan
