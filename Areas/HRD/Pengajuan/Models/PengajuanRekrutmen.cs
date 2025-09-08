@@ -12,10 +12,10 @@ namespace QuilvianSystemBackendDev.Areas.HRD.Pengajuan.Models
 
         public Guid UserActiveId { get; set; }
         public Guid DepartementId { get; set; }
+        public Guid? ProvinsiId { get; set; }
+        public Guid? PendidikanId { get; set; }
 
         public DateTime? TglPengajuan { get; set; }
-        public string? LokasiPenempatan { get; set; }
-
         public int? JumlahDibutuhkan { get; set; }
         public string? Jobtype { get; set; }
         public string? SalaryRange { get; set; }
@@ -37,5 +37,6 @@ namespace QuilvianSystemBackendDev.Areas.HRD.Pengajuan.Models
         public string? MinimalPendidikan { get; set; }
 
         public string? Keterangan { get; set; }
+        public bool? status { get; set; }
     }
 }
