@@ -8,5 +8,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Enum
 
         [Display(Name = "Pain Assessment")]
         PainAssessment = 1,
+
     }
 }
