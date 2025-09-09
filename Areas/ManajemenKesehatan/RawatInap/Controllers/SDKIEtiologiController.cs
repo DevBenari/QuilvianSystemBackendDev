@@ -326,6 +326,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         string? search = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
+        [FromQuery] Guid? sdkidiagnosaid = null,
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
                 DateTime? startDate = null,
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -347,8 +348,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.SDKIDiagnosaId,
                              a.NamaEtiologi,
                              a.Keterangan,
-
-
                          });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
@@ -358,6 +357,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 query = query.Where(u =>
                     EF.Functions.ILike(u.NamaEtiologi, search)
                 );
+            }
+            // **Filter berdasarkan SDKIDiagnosaId**
+            if (sdkidiagnosaid.HasValue)
+            {
+                query = query.Where(u => u.SDKIDiagnosaId == sdkidiagnosaid.Value);
             }
 
             //// **Filter berdasarkan tanggal**
