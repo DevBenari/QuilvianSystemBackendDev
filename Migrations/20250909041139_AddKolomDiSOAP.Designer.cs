@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -11,9 +12,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250909041139_AddKolomDiSOAP")]
+    partial class AddKolomDiSOAP
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -863,9 +865,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("AlasanPengajuanRekrutmen")
                         .HasColumnType("text");
 
-                    b.Property<decimal?>("Berat")
-                        .HasColumnType("numeric");
-
                     b.Property<Guid>("CreateBy")
                         .HasColumnType("uuid");
 
@@ -905,13 +904,7 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<int?>("JumlahDibutuhkan")
                         .HasColumnType("integer");
 
-                    b.Property<string>("KesehatanUmum")
-                        .HasColumnType("text");
-
                     b.Property<string>("Keterangan")
-                        .HasColumnType("text");
-
-                    b.Property<string>("KondisiFisik")
                         .HasColumnType("text");
 
                     b.Property<string>("KualifikasiTambahan")
@@ -938,17 +931,11 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("StatusPrioritas")
                         .HasColumnType("text");
 
-                    b.Property<string>("TesNarkoba")
-                        .HasColumnType("text");
-
                     b.Property<DateTime?>("TglPengajuan")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("TglPerkiraan")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<decimal?>("Tinggi")
-                        .HasColumnType("numeric");
 
                     b.Property<Guid>("UpdateBy")
                         .HasColumnType("uuid");
