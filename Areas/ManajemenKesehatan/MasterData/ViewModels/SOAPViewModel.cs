@@ -7,6 +7,7 @@
         public string? Subjective { get; set; }
         public string? Objective { get; set; }
         public List<string>? DaftarICD10 { get; set; }
+        public List<string>? DaftarSDKI { get; set; }
         public string? Assessment { get; set; }
         public string? Planning { get; set; }
         public string? Profesi { get; set; }

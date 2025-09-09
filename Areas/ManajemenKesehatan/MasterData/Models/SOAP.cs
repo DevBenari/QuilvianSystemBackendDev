@@ -13,6 +13,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? Subjective { get; set; }
         public string? Objective { get; set; }
         public string? DaftarICD10 { get; set; } // dengan ICD-10
+        public string? DaftarSDKI { get; set; } 
         public string? Assessment { get; set; }
         public string? Planning { get; set; }
         public string? Evaluasi { get; set; }

@@ -76,6 +76,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         StringComparer.OrdinalIgnoreCase // lookup jadi case-insensitive
                     );
 
+                // ambil kamus SDKI
+                var sdkiRows = await _applicationDbContext.SDKIDiagnosas
+                    .AsNoTracking()
+                    .Select(x => new { x.SDKIKodeDiagnosa, x.NamaDiagnosa })
+                    .ToListAsync();
+
+                var sdkiDict = sdkiRows
+                    .Where(x => !string.IsNullOrWhiteSpace(x.SDKIKodeDiagnosa))
+                    .Select(x => new { Code = x.SDKIKodeDiagnosa.Trim(), x.NamaDiagnosa })
+                    .GroupBy(x => x.Code, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(
+                        g => g.Key,
+                        g => g.First().NamaDiagnosa,
+                        StringComparer.OrdinalIgnoreCase
+                    );
+
+
                 // =========================
                 // 2) Query utama (tanpa parsing ICD di SQL)
                 //    - Hitung totalRows di DB
@@ -99,6 +116,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.Subjective,
                         a.Objective,
                         a.DaftarICD10, // CSV
+                        a.DaftarSDKI,
                         a.Assessment,
                         a.Planning,
                         a.Evaluasi,
@@ -151,6 +169,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                     : $"(Kode tidak ditemukan: {code})")
                             .ToList();
 
+                        // Split CSV kode SDKI
+                        var sdkiCodes = (a.DaftarSDKI ?? string.Empty)
+                            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                            .Select(s => s.Trim())
+                            .Where(s => !string.IsNullOrWhiteSpace(s))
+                            .Distinct(StringComparer.OrdinalIgnoreCase)
+                            .ToList();
+
+                        // Map ke nama SDKI (lookup case-insensitive)
+                        var namaSdki = sdkiCodes
+                            .Select(code =>
+                                sdkiDict.TryGetValue(code, out var nama)
+                                    ? nama
+                                    : $"(Kode tidak ditemukan: {code})")
+                            .ToList();
+
                         return new
                         {
                             a.CreateDateTime,
@@ -161,8 +195,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.PasienId,
                             a.Subjective,
                             a.Objective,
-                            DaftarICD10 = codes,   // list kode ICD (distinct, trimmed)
-                            NamaICD = namaIcd,     // list nama hasil join kamus
+                            DaftarICD10 = codes,   
+                            NamaICD = namaIcd,     
+                            DaftarSDKI = sdkiCodes, 
+                            NamaSDKI = namaSdki,   
                             a.Assessment,
                             a.Planning,
                             a.Evaluasi,
@@ -343,6 +379,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         StringComparer.OrdinalIgnoreCase
                     );
 
+                // ambil kamus SDKI
+                var sdkiRows = await _applicationDbContext.SDKIDiagnosas
+                    .AsNoTracking()
+                    .Select(x => new { x.SDKIKodeDiagnosa, x.NamaDiagnosa })
+                    .ToListAsync();
+
+                var sdkiDict = sdkiRows
+                    .Where(x => !string.IsNullOrWhiteSpace(x.SDKIKodeDiagnosa))
+                    .Select(x => new { Code = x.SDKIKodeDiagnosa.Trim(), x.NamaDiagnosa })
+                    .GroupBy(x => x.Code, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(
+                        g => g.Key,
+                        g => g.First().NamaDiagnosa,
+                        StringComparer.OrdinalIgnoreCase
+                    );
+
                 // =========================
                 // 2) Query utama 1 record (by id)
                 // =========================
@@ -364,6 +416,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.Subjective,
                         a.Objective,
                         a.DaftarICD10, // CSV
+                        a.DaftarSDKI,
                         a.Assessment,
                         a.Planning,
                         a.Evaluasi,
@@ -398,6 +451,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         : $"(Kode tidak ditemukan: {code})")
                     .ToList();
 
+                // Split CSV kode SDKI
+                var sdkiCodes = (data.DaftarSDKI ?? string.Empty)
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s => s.Trim())
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                // Map ke nama SDKI (lookup case-insensitive)
+                var namaSdki = sdkiCodes
+                    .Select(code =>
+                        sdkiDict.TryGetValue(code, out var nama)
+                            ? nama
+                            : $"(Kode tidak ditemukan: {code})")
+                    .ToList();
+
+
                 var result = new
                 {
                     data.CreateDateTime,
@@ -408,8 +478,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     data.PasienId,
                     data.Subjective,
                     data.Objective,
-                    DaftarICD10 = codes,   // list kode ICD
-                    NamaICD = namaIcd,     // list nama ICD hasil lookup
+                    DaftarICD10 = codes,   
+                    NamaICD = namaIcd,     
+                    DaftarSDKI = sdkiCodes, 
+                    NamaSDKI = namaSdki,   
                     data.Assessment,
                     data.Planning,
                     data.Evaluasi,
@@ -555,6 +627,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         StringComparer.OrdinalIgnoreCase
                     );
 
+
+                var sdkiRows = await _applicationDbContext.SDKIDiagnosas
+                    .AsNoTracking()
+                    .Select(x => new { x.SDKIKodeDiagnosa, x.NamaDiagnosa })
+                    .ToListAsync();
+
+                var sdkiDict = sdkiRows
+                    .Where(x => !string.IsNullOrWhiteSpace(x.SDKIKodeDiagnosa))
+                    .Select(x => new { Code = x.SDKIKodeDiagnosa.Trim(), x.NamaDiagnosa })
+                    .GroupBy(x => x.Code, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(
+                        g => g.Key,
+                        g => g.First().NamaDiagnosa,
+                        StringComparer.OrdinalIgnoreCase
+                    );
+
                 // =========================
                 // 2) Query utama 1 record (by id)
                 // =========================
@@ -576,6 +664,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.Subjective,
                         a.Objective,
                         a.DaftarICD10, // CSV
+                        a.DaftarSDKI,
                         a.Assessment,
                         a.Planning,
                         a.Evaluasi,
@@ -610,6 +699,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         : $"(Kode tidak ditemukan: {code})")
                     .ToList();
 
+                // Split CSV kode SDKI
+                var sdkiCodes = (data.DaftarSDKI ?? string.Empty)
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s => s.Trim())
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                // Map ke nama SDKI (lookup case-insensitive)
+                var namaSdki = sdkiCodes
+                    .Select(code =>
+                        sdkiDict.TryGetValue(code, out var nama)
+                            ? nama
+                            : $"(Kode tidak ditemukan: {code})")
+                    .ToList();
+
                 var result = new
                 {
                     data.CreateDateTime,
@@ -622,6 +727,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     data.Objective,
                     DaftarICD10 = codes,   // list kode ICD
                     NamaICD = namaIcd,     // list nama ICD hasil lookup
+                    DaftarSDKI = sdkiCodes,
+                    NamaSDKI = namaSdki,
                     data.Assessment,
                     data.Planning,
                     data.Evaluasi,
@@ -676,6 +783,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         StringComparer.OrdinalIgnoreCase
                     );
 
+                var sdkiRows = await _applicationDbContext.SDKIDiagnosas
+                    .AsNoTracking()
+                    .Select(x => new { x.SDKIKodeDiagnosa, x.NamaDiagnosa })
+                    .ToListAsync();
+
+                var sdkiDict = sdkiRows
+                    .Where(x => !string.IsNullOrWhiteSpace(x.SDKIKodeDiagnosa))
+                    .Select(x => new { Code = x.SDKIKodeDiagnosa.Trim(), x.NamaDiagnosa })
+                    .GroupBy(x => x.Code, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(
+                        g => g.Key,
+                        g => g.First().NamaDiagnosa,
+                        StringComparer.OrdinalIgnoreCase
+                    );
+
                 // =========================
                 // 2) Query utama 1 record (by id)
                 // =========================
@@ -697,6 +819,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.Subjective,
                         a.Objective,
                         a.DaftarICD10, // CSV
+                        a.DaftarSDKI,
                         a.Assessment,
                         a.Planning,
                         a.Evaluasi,
@@ -731,6 +854,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         : $"(Kode tidak ditemukan: {code})")
                     .ToList();
 
+                // Split CSV kode SDKI
+                var sdkiCodes = (data.DaftarSDKI ?? string.Empty)
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s => s.Trim())
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                // Map ke nama SDKI (lookup case-insensitive)
+                var namaSdki = sdkiCodes
+                    .Select(code =>
+                        sdkiDict.TryGetValue(code, out var nama)
+                            ? nama
+                            : $"(Kode tidak ditemukan: {code})")
+                    .ToList();
+
                 var result = new
                 {
                     data.CreateDateTime,
@@ -743,6 +882,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     data.Objective,
                     DaftarICD10 = codes,   // list kode ICD
                     NamaICD = namaIcd,     // list nama ICD hasil lookup
+                    DaftarSDKI = sdkiCodes,
+                    NamaSDKI = namaSdki,
                     data.Assessment,
                     data.Planning,
                     data.Evaluasi,
@@ -855,6 +996,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     Subjective = vm.Subjective,
                     Objective = vm.Objective,
                     DaftarICD10 = vm.DaftarICD10 != null ? string.Join(",", vm.DaftarICD10) : null,
+                    DaftarSDKI = vm.DaftarSDKI != null ? string.Join(",", vm.DaftarSDKI) : null,
                     Assessment = vm.Assessment,
                     Planning = vm.Planning,
                     Evaluasi = vm.Evaluasi,
@@ -937,6 +1079,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.Subjective = vm.Subjective;
                 data.Objective = vm.Objective;
                 data.DaftarICD10 = vm.DaftarICD10 != null ? string.Join(",", vm.DaftarICD10) : null;
+                data.DaftarSDKI = vm.DaftarSDKI != null ? string.Join(",", vm.DaftarSDKI) : null;
                 data.Assessment = vm.Assessment;
                 data.Planning = vm.Planning;
                 data.Evaluasi = vm.Evaluasi;
@@ -1075,7 +1218,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     PasienId = k.PasienId,
                     a.Subjective,
                     a.Objective,
-                    a.DaftarICD10,                                   
+                    a.DaftarICD10,
+                    a.DaftarSDKI,
                     a.Assessment,
                     a.Planning,
                     a.Evaluasi,
