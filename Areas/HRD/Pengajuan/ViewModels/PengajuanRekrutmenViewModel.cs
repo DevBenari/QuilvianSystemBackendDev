@@ -30,7 +30,13 @@ namespace QuilvianSystemBackendDev.Areas.HRD.Pengajuan.ViewModels
 
         public string? MinimalPengalaman { get; set; }
         public string? MinimalPendidikan { get; set; }
+        public decimal? Tinggi { get; set; }
+        public decimal? Berat { get; set; }
+        public string? KondisiFisik { get; set; }
+        public string? KesehatanUmum { get; set; }
+        public string? TesNarkoba { get; set; }
 
         public string? Keterangan { get; set; }
+        public bool? status { get; set; }
     }
 }
