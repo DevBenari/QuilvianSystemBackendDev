@@ -14,6 +14,7 @@
         public decimal? HargaObat { get; set; }
         public bool? StatusCoverObat { get; set; } = false;
         public bool? IsRacikan { get; set; } // "Ya" or "Tidak"
+        public bool? IsContinued { get; set; }
         public List<RacikanViewModel>? Racikan { get; set; }
         public string? KeteranganRacikan { get; set; }
         //public decimal? JumlahIteratur { get; set; }

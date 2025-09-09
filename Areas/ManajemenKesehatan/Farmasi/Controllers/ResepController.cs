@@ -64,11 +64,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             var query = (from r in _applicationDbContext.Reseps
                          join u in _applicationDbContext.UserActives
                              on r.CreateBy equals u.UserActiveId
+                         join k in _applicationDbContext.Kunjungans
+                             on r.KunjunganId equals k.KunjunganID
                          where !r.IsDelete // jika ada IsDelete
                          select new
                          {
                              r.ResepId,
                              r.KunjunganId,
+                             k.JenisKunjungan,
                              r.CreateDateTime,
                              r.CreateBy,
                              r.AntrianRegistrasi,
@@ -183,6 +186,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             var resep = await _applicationDbContext.Reseps
                 .FirstOrDefaultAsync(r => r.ResepId == id);
 
+            var jenisKunjungan = await _applicationDbContext.Kunjungans
+                .Where(k => k.KunjunganID == resep.KunjunganId)
+                .Select(k => k.JenisKunjungan /* atau k.NamaJenisKunjungan */)
+                .FirstOrDefaultAsync();
+
             if (resep == null)
                 return NotFound(new { message = "Resep tidak ditemukan!" });
 
@@ -260,6 +268,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             {
                 resep.ResepId,
                 resep.KunjunganId,
+                JenisKunjungan = jenisKunjungan,
                 resep.AsuransiId,
                 resep.NamaAsuransi,
                 resep.PasienId,
@@ -378,6 +387,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                 StatusCoverObat = obat.StatusCoverObat,
                                 JenisObat = obat.JenisObat,
                                 IsRacikan = false,
+                                IsContinued = obat.IsContinued,
                                 RacikanId = null,
                                 TakaranDosis = obatDb.TakaranDosis,
                                 StatusPengambilanObat = true,
@@ -503,6 +513,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                 TotalHargaObat = totalHargaRacikan * racikanEntity.QtyRacikan,
                                 StatusCoverObat = false,
                                 JenisObat = obat.JenisObat,
+                                IsContinued = obat.IsContinued,
                                 IsRacikan = true,
                                 RacikanId = racikanId,
                                 TakaranDosis = null,
@@ -867,6 +878,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             TotalHargaObat = obatDb.HTEPrice * qty,
                             StatusCoverObat = obat.StatusCoverObat,
                             JenisObat = obat.JenisObat,
+                            IsContinued = obat.IsContinued,
                             IsRacikan = false,
                             RacikanId = null,
                             TakaranDosis = obatDb.TakaranDosis,
@@ -957,6 +969,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                         Signa = first.Obat.Signa,
                         SignaTambahan = first.Obat.SignaTambahan,
                         JenisObat = first.Obat.JenisObat,
+                        IsContinued = first.Obat.IsContinued,
                         StatusPengambilanObat = true,
                         CreateBy = userId,
                         CreateDateTime = DateTimeOffset.UtcNow
@@ -1467,12 +1480,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            var query = _applicationDbContext.Reseps
-                .Where(r => !r.IsDelete)
-                .Join(_applicationDbContext.UserActives,
-                      r => r.CreateBy,
-                      u => u.UserActiveId,
-                      (r, u) => new { Resep = r, User = u });
+            var query =
+                from r in _applicationDbContext.Reseps
+                where !r.IsDelete
+                join u in _applicationDbContext.UserActives
+                    on r.CreateBy equals u.UserActiveId
+                join k in _applicationDbContext.Kunjungans
+                    on r.KunjunganId equals k.KunjunganID into gj   // group join
+                from k in gj.DefaultIfEmpty()                       // LEFT JOIN
+                select new { Resep = r, User = u, Kunjungan = k };
 
             // Filter by date range
             if (startDate.HasValue && endDate.HasValue)
@@ -1574,6 +1590,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 {
                     q.Resep.ResepId,
                     q.Resep.KunjunganId,
+                    JenisKunjungan = q.Kunjungan != null ? q.Kunjungan.JenisKunjungan : null,
                     q.Resep.CreateDateTime,
                     q.Resep.CreateBy,
                     q.Resep.AntrianRegistrasi,
@@ -1690,12 +1707,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            var query = _applicationDbContext.Reseps
-                .Where(r => !r.IsDelete && r.IsLunas==false)
-                .Join(_applicationDbContext.UserActives,
-                      r => r.CreateBy,
-                      u => u.UserActiveId,
-                      (r, u) => new { Resep = r, User = u });
+            var query =
+                from r in _applicationDbContext.Reseps
+                where !r.IsDelete
+                join u in _applicationDbContext.UserActives
+                    on r.CreateBy equals u.UserActiveId
+                join k in _applicationDbContext.Kunjungans
+                    on r.KunjunganId equals k.KunjunganID into gj   // group join
+                from k in gj.DefaultIfEmpty()                       // LEFT JOIN
+                select new { Resep = r, User = u, Kunjungan = k };
+
 
             // Filter by date range
             if (startDate.HasValue && endDate.HasValue)
@@ -1796,6 +1817,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 {
                     q.Resep.ResepId,
                     q.Resep.KunjunganId,
+                    JenisKunjungan = q.Kunjungan != null ? q.Kunjungan.JenisKunjungan : null,
                     q.Resep.CreateDateTime,
                     q.Resep.CreateBy,
                     q.Resep.AntrianRegistrasi,
