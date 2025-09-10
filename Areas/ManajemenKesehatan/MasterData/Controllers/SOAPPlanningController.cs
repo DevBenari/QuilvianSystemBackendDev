@@ -48,71 +48,128 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet]
         public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
         {
-            // Validasi agar page dan perPage minimal bernilai 1
-            if (page < 1) page = 1;
-            if (perPage < 1) perPage = 10;
-
-            // Query data
-            var query = (from a in _applicationDbContext.SOAPPlannings
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false || a.IsDelete == null
-                         select new
-                         {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = u.FullName,
-                             a.SOAPPlanningId,
-                             a.IcdId,
-                             a.PlanningIcdId,
-                             a.Keterangan,
-
-                         }).OrderByDescending(a => a.CreateDateTime);
-
-            // Hitung total data sebelum paginasi
-            var totalRows = query.Count();
-            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-
-            // Ambil data sesuai paging
-            var listdata = query
-                .Skip((page - 1) * perPage)
-                .Take(perPage)
-                .ToList();
-
-            if (!listdata.Any())
+            try
             {
-                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
-            }
+                if (page < 1) page = 1;
+                if (perPage < 1) perPage = 10;
 
-            // Return hasil dengan paging info
-            return Ok(new
-            {
-                message = "Berhasil || 200 OK",
-                data = listdata,
-                pagination = new
+                var baseQuery =
+                    from a in _applicationDbContext.SOAPPlannings.AsNoTracking()
+                    join u in _applicationDbContext.UserActives.AsNoTracking()
+                        on a.CreateBy equals u.UserActiveId into gu
+                    from u in gu.DefaultIfEmpty() // LEFT JOIN User
+                                                  // >>> GANTI `ICD10Id` DI BAWAH DENGAN NAMA PK GUID DI TABEL ICD10s MILIKMU <<<
+                    join icd in _applicationDbContext.ICD10s.AsNoTracking()
+                        on a.IcdId equals icd.ICDId into gi
+                    from icd in gi.DefaultIfEmpty() // LEFT JOIN ICD10s
+                    join plan in _applicationDbContext.ICDPlannings.AsNoTracking()
+                        on a.PlanningIcdId equals plan.ICDPlanningId into gp
+                    from plan in gp.DefaultIfEmpty() // LEFT JOIN ICDPlannings
+                    where a.IsDelete != true
+                    select new
+                    {
+                        a.CreateDateTime,
+                        a.CreateBy,
+                        CreateByName = u != null ? u.FullName : null,
+                        a.SOAPPlanningId,
+
+                        a.IcdId,
+                        IcdName = icd != null ? icd.ICDName : null,
+
+                        a.PlanningIcdId,
+                        PlanningIcdName = plan != null ? plan.NamaPlanning : null,
+
+                        a.Keterangan
+                    };
+
+                var totalRows = await baseQuery.CountAsync();
+                var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+                var listdata = await baseQuery
+                    .OrderByDescending(a => a.CreateDateTime)
+                    .Skip((page - 1) * perPage)
+                    .Take(perPage)
+                    .ToListAsync();
+
+                if (listdata.Count == 0)
+                    return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
+
+                return Ok(new
                 {
-                    CurrentPage = page,
-                    PerPage = perPage,
-                    TotalRows = totalRows,
-                    TotalPages = totalPages
-                }
-            });
+                    message = "Berhasil || 200 OK",
+                    data = listdata,
+                    pagination = new
+                    {
+                        CurrentPage = page,
+                        PerPage = perPage,
+                        TotalRows = totalRows,
+                        TotalPages = totalPages
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    message = "Terjadi kesalahan tak terduga.",
+                    error = ex.Message
+                });
+            }
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.SOAPPlannings.Find(id);
-            if (listdata == null)
+            try
             {
-                return NotFound(new { message = "Data tidak ditemukan." });
-            }
+                var data = await (
+                    from a in _applicationDbContext.SOAPPlannings.AsNoTracking()
+                        // LEFT JOIN ke ICD10s (PK GUID) -> untuk ambil ICDName
+                    join icd in _applicationDbContext.ICD10s.AsNoTracking()
+                        on a.IcdId equals icd.ICDId into gi   // <<< GANTI ICD10Id jika nama kolom berbeda
+                    from icd in gi.DefaultIfEmpty()
 
-            return Ok(new
+                        // LEFT JOIN ke ICDPlannings -> untuk ambil NamaPlanning
+                    join plan in _applicationDbContext.ICDPlannings.AsNoTracking()
+                        on a.PlanningIcdId equals plan.ICDPlanningId into gp
+                    from plan in gp.DefaultIfEmpty()
+
+                    where a.SOAPPlanningId == id && a.IsDelete != true
+                    select new
+                    {
+                        a.SOAPPlanningId,
+                        a.CreateDateTime,
+                        a.CreateBy,
+                        a.IcdId,
+                        IcdName = icd != null ? icd.ICDName : null,
+                        a.PlanningIcdId,
+                        PlanningIcdName = plan != null ? plan.NamaPlanning : null,
+                        a.Keterangan,
+                        a.UpdateBy,
+                        a.UpdateDateTime,
+                        a.DeleteBy,
+                        a.DeleteDateTime,
+                        a.IsDelete
+                    })
+                    .FirstOrDefaultAsync();
+
+                if (data == null)
+                    return NotFound(new { message = "Data tidak ditemukan. || 404 Not Found" });
+
+                return Ok(new
+                {
+                    message = "Ditemukan || 200 OK",
+                    data
+                });
+            }
+            catch (Exception ex)
             {
-                message = "Ditemukan || 200 OK",
-                data = listdata
-            });
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    message = "Terjadi kesalahan tak terduga.",
+                    error = ex.Message
+                });
+            }
         }
 
         [HttpPost]
@@ -318,129 +375,152 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet("paged")]
-        public IActionResult Paged(
+        public async Task<IActionResult> PagedAsync(
         int page = 1,
         int perPage = 10,
         string? search = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                DateTime? startDate = null,
+        DateTime? startDate = null,
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                DateTime? endDate = null,
+        DateTime? endDate = null,
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
 
-            // Query data
-            var query = (from a in _applicationDbContext.SOAPPlannings
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false || a.IsDelete == null
-                         select new
-                         {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = u.FullName,
-                             a.SOAPPlanningId,
-                             a.IcdId,
-                             a.PlanningIcdId,
-                             a.Keterangan,
-
-                         });
-
-            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-            //if (!string.IsNullOrWhiteSpace(search))
-            //{
-            //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-            //    query = query.Where(u =>
-            //        EF.Functions.ILike(u.NamaObjective, search)
-            //    );
-            //}
-
-            //// **Filter berdasarkan tanggal**
-            if (startDate.HasValue && endDate.HasValue)
-            {
-                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
-                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
-
-                query = query.Where(u =>
-                    u.CreateDateTime >= startUtc &&
-                    u.CreateDateTime <= endUtc);
-            }
-
-            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
-            if (periode.HasValue)
-            {
-                DateTime today = DateTime.UtcNow.Date;
-
-                switch (periode)
+            // Base query + LEFT JOINs (User, ICD10s, ICDPlannings)
+            var query =
+                from a in _applicationDbContext.SOAPPlannings.AsNoTracking()
+                join u in _applicationDbContext.UserActives.AsNoTracking()
+                    on a.CreateBy equals u.UserActiveId into gu
+                from u in gu.DefaultIfEmpty()
+                join icd in _applicationDbContext.ICD10s.AsNoTracking()
+                    on a.IcdId equals icd.ICDId into gi   // <<< GANTI ICD10Id jika berbeda
+                from icd in gi.DefaultIfEmpty()
+                join plan in _applicationDbContext.ICDPlannings.AsNoTracking()
+                    on a.PlanningIcdId equals plan.ICDPlanningId into gp
+                from plan in gp.DefaultIfEmpty()
+                where a.IsDelete != true
+                select new
                 {
-                    case PeriodeFilter.Today:
-                        query = query.Where(u => u.CreateDateTime.Date == today);
-                        break;
-                    case PeriodeFilter.ThisWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date <= today
-                        );
-                        break;
-                    case PeriodeFilter.LastWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)
-                        );
-                        break;
-                    case PeriodeFilter.ThisMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month &&
-                            u.CreateDateTime.Year == today.Year
-                        );
-                        break;
-                    case PeriodeFilter.LastMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month - 1 &&
-                            u.CreateDateTime.Year == today.Year
-                        );
-                        break;
-                    case PeriodeFilter.ThisYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
-                        break;
-                    case PeriodeFilter.LastYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
-                        break;
-                    case PeriodeFilter.Last3Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
-                        break;
-                    case PeriodeFilter.Last6Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
-                        break;
-                }
-            }
-
-            // Sorting Data dengan cara yang lebih aman
-            query = sortDirection?.ToLower() == "desc"
-                ? orderBy switch
-                {
-                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    _ => query.OrderByDescending(u => u.CreateDateTime)
-                }
-                : orderBy switch
-                {
-                    "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    _ => query.OrderBy(u => u.CreateDateTime)
+                    a.CreateDateTime,
+                    a.CreateBy,
+                    CreateByName = u != null ? u.FullName : null,
+                    a.SOAPPlanningId,
+                    a.IcdId,
+                    IcdName = icd != null ? icd.ICDName : null,
+                    a.PlanningIcdId,
+                    PlanningIcdName = plan != null ? plan.NamaPlanning : null,
+                    a.Keterangan
                 };
 
-            // Pagination
-            var totalRows = query.Count();
-            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
-
-            if (rows.Count == 0 && page > totalPages)
+            // Search (ILike) — mendukung 1 huruf
+            if (!string.IsNullOrWhiteSpace(search))
             {
-                return NotFound(new { message = "Page not found." });
+                var pattern = $"%{search.Trim()}%";
+                query = query.Where(x =>
+                    EF.Functions.ILike(x.IcdName ?? "", pattern) ||
+                    EF.Functions.ILike(x.PlanningIcdName ?? "", pattern) ||
+                    EF.Functions.ILike(x.Keterangan ?? "", pattern) ||
+                    EF.Functions.ILike(x.CreateByName ?? "", pattern));
             }
+
+            // Filter rentang tanggal eksplisit
+            if (startDate.HasValue || endDate.HasValue)
+            {
+                // [start, end) — end exclusive agar aman
+                var startUtc = (startDate?.Date ?? DateTime.UtcNow.Date);
+                var endUtc = (endDate?.Date.AddDays(1) ?? DateTime.UtcNow.Date.AddDays(1));
+                query = query.Where(x => x.CreateDateTime >= startUtc && x.CreateDateTime < endUtc);
+            }
+
+            // Filter berdasarkan periode (gunakan boundaries, hindari .Date di server)
+            if (periode.HasValue)
+            {
+                var today = DateTime.UtcNow.Date;
+                DateTime start, end;
+
+                switch (periode.Value)
+                {
+                    case PeriodeFilter.Today:
+                        start = today;
+                        end = today.AddDays(1);
+                        break;
+
+                    case PeriodeFilter.ThisWeek:
+                        // minggu dimulai Minggu (DayOfWeek.Sunday = 0)
+                        start = today.AddDays(-(int)today.DayOfWeek);
+                        end = today.AddDays(1); // s.d. hari ini
+                        break;
+
+                    case PeriodeFilter.LastWeek:
+                        var startThisWeek = today.AddDays(-(int)today.DayOfWeek);
+                        start = startThisWeek.AddDays(-7);
+                        end = startThisWeek;
+                        break;
+
+                    case PeriodeFilter.ThisMonth:
+                        start = new DateTime(today.Year, today.Month, 1);
+                        end = start.AddMonths(1);
+                        break;
+
+                    case PeriodeFilter.LastMonth:
+                        start = new DateTime(today.Year, today.Month, 1).AddMonths(-1);
+                        end = start.AddMonths(1);
+                        break;
+
+                    case PeriodeFilter.ThisYear:
+                        start = new DateTime(today.Year, 1, 1);
+                        end = start.AddYears(1);
+                        break;
+
+                    case PeriodeFilter.LastYear:
+                        start = new DateTime(today.Year - 1, 1, 1);
+                        end = start.AddYears(1);
+                        break;
+
+                    case PeriodeFilter.Last3Months:
+                        start = today.AddMonths(-3);
+                        end = today.AddDays(1);
+                        break;
+
+                    case PeriodeFilter.Last6Months:
+                        start = today.AddMonths(-6);
+                        end = today.AddDays(1);
+                        break;
+
+                    default:
+                        start = today;
+                        end = today.AddDays(1);
+                        break;
+                }
+
+                query = query.Where(x => x.CreateDateTime >= start && x.CreateDateTime < end);
+            }
+
+            // Sorting (tambahkan kolom yang bisa di-sort)
+            bool desc = string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase);
+            query = (orderBy?.Trim()) switch
+            {
+                "CreateByName" => (desc ? query.OrderByDescending(x => x.CreateByName) : query.OrderBy(x => x.CreateByName)),
+                "IcdName" => (desc ? query.OrderByDescending(x => x.IcdName) : query.OrderBy(x => x.IcdName)),
+                "PlanningIcdName" => (desc ? query.OrderByDescending(x => x.PlanningIcdName) : query.OrderBy(x => x.PlanningIcdName)),
+                _ /*CreateDateTime*/ => (desc ? query.OrderByDescending(x => x.CreateDateTime) : query.OrderBy(x => x.CreateDateTime)),
+            };
+
+            // Pagination
+            var totalRows = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            var rows = await query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToListAsync();
+
+            if (rows.Count == 0 && page > Math.Max(totalPages, 1))
+                return NotFound(new { message = "Page not found." });
 
             return Ok(new
             {
