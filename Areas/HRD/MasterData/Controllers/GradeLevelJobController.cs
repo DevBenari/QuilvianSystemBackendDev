@@ -30,6 +30,31 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
+            var query = from j in _context.GradeLevelJobs
+                        join p in _context.Positions on j.PositionId equals p.PositionId into positionGradeJoin
+                        from p in positionGradeJoin.DefaultIfEmpty()
+                        join g in _context.GradePays on j.GradeId equals g.GradePayId into gradeGradeLevelJoin
+                        from g in gradeGradeLevelJoin.DefaultIfEmpty()
+                        join l in _context.Levels on j.LevelId equals l.LevelId into levelGradeLevelJoin
+                        from l in levelGradeLevelJoin.DefaultIfEmpty()
+                        join uc in _context.UserActives on j.CreateBy equals uc.UserActiveId into createdByJoin
+                        from uc in createdByJoin.DefaultIfEmpty()
+                        orderby j.CreateDateTime descending
+                        select new
+                        {
+                            j.GradeLevelJobId,
+                            j.PositionId,
+                            p.PositionName,
+                            j.GradeId,
+                            g.KodeGrade,
+                            g.MinSalary,
+                            g.MaxSalary,
+                            j.LevelId,
+                            l.KodeLevel,
+                            LevelMinSal = l.MinSalary,
+                            LevelMaxSal = l.MaxSalary,
+                        };
+
             var totalItems = await _context.GradeLevelJobs.CountAsync();
             var totalPages = (int)Math.Ceiling(totalItems / (double)perPage);
 

@@ -10,7 +10,7 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Models
         [Key]
         public Guid GradeLevelJobId { get; set; }
 
-        public Guid GradeLevelId { get; set; }
+        //public Guid GradeLevelId { get; set; } // tidak digunakan
         public Guid PositionId { get; set; }
         public Guid GradeId { get; set; }
         public Guid LevelId { get; set; }
