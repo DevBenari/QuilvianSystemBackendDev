@@ -17,6 +17,9 @@
         public bool? IsContinued { get; set; }
         public List<RacikanViewModel>? Racikan { get; set; }
         public string? KeteranganRacikan { get; set; }
+        public string? EstimasiPemberian { get; set; }
+        public string? CaraPemakaian { get; set; }
+        public string? TglStopPemakaian { get; set; }
         //public decimal? JumlahIteratur { get; set; }
         //public string? TglMulaiIteratur { get; set; }
         //public decimal? JarakPenebusan { get; set; }

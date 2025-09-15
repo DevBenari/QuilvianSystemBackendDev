@@ -1,6 +1,4 @@
-﻿using System;
-using System.Globalization;
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
@@ -8,66 +6,44 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class ResepDetailController : Controller
+    public class GudangController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<ResepDetailController> _logger;
+        private readonly ILogger<GudangController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public ResepDetailController(
+        public GudangController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<ResepDetailController> logger,
-            IWebHostEnvironment webHostEnvironment)
+            ILogger<GudangController> logger,
+            IWebHostEnvironment webHostEnvironment
+            )
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
-        }
-
-        private DateTime? TryParseTanggalToUtc(string tanggal)
-        {
-            if (DateTime.TryParseExact(
-                    tanggal,
-                    "yyyy-MM-dd",
-                    CultureInfo.InvariantCulture,
-                    DateTimeStyles.None,
-                    out var parsedDate))
-            {
-                var now = DateTime.Now; // atau DateTime.UtcNow jika kamu mau jam UTC
-                var finalDateTime = new DateTime(
-                    parsedDate.Year,
-                    parsedDate.Month,
-                    parsedDate.Day,
-                    now.Hour,
-                    now.Minute,
-                    now.Second,
-                    DateTimeKind.Local); // atau Utc jika perlu
-
-                return finalDateTime.ToUniversalTime(); // simpan dalam UTC
-            }
-
-            return null;
         }
 
         [HttpGet]
@@ -78,45 +54,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = (from a in _applicationDbContext.DetailReseps
-                         join u in _applicationDbContext.UserActives
+            var query = (from a in _applicationDbContext.Gudangs
+                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false
+                         where a.IsDelete == false || a.IsDelete == null
                          select new
                          {
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
-                             a.DetailResepId,
-                             a.ResepId,
-                             a.AsuransiId,
-                             a.NamaAsuransi,
-                             a.ObatId,
-                             a.Qty,
-                             a.JenisRacikan,
-                             a.Signa,
-                             a.SignaTambahan,
-                             a.JenisObat,
-                             a.HargaObat,
-                             a.TotalHargaObat,
-                             a.StatusCoverObat,
-                             a.IsRacikan,
-                             a.RacikanId,
-                             a.IsIteratur,
-                             a.JumlahIteratur,
-                             a.TglMulaiIteratur,
-                             a.JarakPenebusan,
-                             a.MasaAktifIteratur,
-                             a.StatusPengambilanObat,
-                             a.TakaranDosis,
-                             a.IsContinued,
-                             a.CaraPemakaian,
-                             a.EstimasiPemberian,
-                             a.TglStopPemakaian,
+                             a.GudangId,
+                             a.NamaGudang,
+                             a.Lokasi,
+                             a.Keterangan,
+
                          }).OrderByDescending(a => a.CreateDateTime);
 
-        // Hitung total data sebelum paginasi
-        var totalRows = query.Count();
+            // Hitung total data sebelum paginasi
+            var totalRows = query.Count();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
 
             // Ambil data sesuai paging
@@ -143,13 +98,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     TotalPages = totalPages
                 }
             });
-
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.DetailReseps.Find(id);
+            var listdata = _applicationDbContext.Gudangs.Find(id);
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -162,54 +116,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             });
         }
 
-        [HttpPut("{id}/StatusObat")]
-        public async Task<IActionResult> UpdateIsLunas(Guid id, [FromBody] StatusPengambilanObatViewModel request)
-        {
-            var data = await _applicationDbContext.DetailReseps.FindAsync(id);
-            if (data == null)
-                return NotFound(new { message = "Resep tidak ditemukan." });
-
-            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(EmailLogin))
-                return Unauthorized(new { message = "User tidak terautentikasi!" });
-
-            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
-            var userId = user?.UserActiveId ?? Guid.Empty;
-
-            data.StatusPengambilanObat = request.Status;
-            data.UpdateDateTime = DateTimeOffset.UtcNow;
-            data.UpdateBy = userId;
-
-            await _applicationDbContext.SaveChangesAsync();
-
-            return Ok(new { message = "Status isFinished berhasil diperbarui." });
-        }
-
-        [HttpPut("{id}/IsContinuedMedicine")]
-        public async Task<IActionResult> UpdateIsContinued(Guid id, [FromBody] StatusPengambilanObatViewModel request)
-        {
-            var data = await _applicationDbContext.DetailReseps.FindAsync(id);
-            if (data == null)
-                return NotFound(new { message = "Obat tidak ditemukan." });
-
-            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(EmailLogin))
-                return Unauthorized(new { message = "User tidak terautentikasi!" });
-
-            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
-            var userId = user?.UserActiveId ?? Guid.Empty;
-
-            data.IsContinued = request.Status;
-            data.UpdateDateTime = DateTimeOffset.UtcNow;
-            data.UpdateBy = userId;
-
-            await _applicationDbContext.SaveChangesAsync();
-
-            return Ok(new { message = "Status isContinued berhasil diperbarui." });
-        }
-
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] ResepDetailViewModel vm)
+        public async Task<IActionResult> Create([FromBody] GudangViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -239,62 +147,27 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 var userActiveId = getUserActive.UserActiveId;
 
                 //// **Cek Duplikasi**
-                //bool isDuplicate = _applicationDbContext.Benefits
-                //                    .Any(c => c.NamaBenefit == vm.NamaBenefit);
+                //bool isDuplicate = _applicationDbContext.Diskons
+                //                    .Any(c => c.NamaDiskon == vm.NamaDiskon);
 
                 //if (isDuplicate)
                 //{
                 //    return Conflict(new { message = "Nama benefit ini telah tersedia" });
                 //}
 
-                //if (!DateTime.TryParseExact(vm.TglMulaiIteratur, "yyyy-MM-dd",
-                //    CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsedTglMulaiIteratur))
-                //{
-                //    return BadRequest(new { message = "Format TglMulaiIteratur tidak valid. Gunakan format yyyy-MM-dd." });
-                //}
-
-                //parsedTglMulaiIteratur = DateTime.SpecifyKind(parsedTglMulaiIteratur, DateTimeKind.Utc);
-
-                //if (!DateTime.TryParseExact(vm.MasaAktifIteratur, "yyyy-MM-dd",
-                //    CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsedMasaAktif))
-                //{
-                //    return BadRequest(new { message = "Format TglMulaiIteratur tidak valid. Gunakan format yyyy-MM-dd." });
-                //}
-
-                //parsedMasaAktif = DateTime.SpecifyKind(parsedMasaAktif, DateTimeKind.Utc);
-
                 // **Buat Data Baru**
-                var data = new ResepDetail
+                var data = new Gudang
                 {
-                    DetailResepId = Guid.NewGuid(),
-                    ResepId = vm.ResepId,
-                    AsuransiId = vm.AsuransiId,
-                    NamaAsuransi = vm.NamaAsuransi,
-                    ObatId = vm.ObatId,
-                    Qty = vm.Qty,
-                    TakaranDosis = vm.TakaranDosis,
-                    Signa = vm.Signa,
-                    SignaTambahan = vm.SignaTambahan,
-                    JenisObat = vm.JenisObat,
-                    HargaObat = vm.HargaObat,
-                    TotalHargaObat = vm.Qty.HasValue && vm.HargaObat.HasValue ? vm.Qty.Value * vm.HargaObat.Value : 0,
-                    StatusCoverObat = vm.StatusCoverObat,
-                    IsRacikan = vm.IsRacikan, // Tambahkan properti IsRacikan jika diperlukan
-                    //IsIteratur = vm.IsIteratur,
-                    //JumlahIteratur = vm.JumlahIteratur,
-                    //TglMulaiIteratur = parsedTglMulaiIteratur,
-                    //JarakPenebusan = vm.JarakPenebusan,
-                    //MasaAktifIteratur = parsedMasaAktif,
-                    StatusPengambilanObat = false, // Default nilai StatusPengambilanObat
-                    CaraPemakaian = vm.CaraPemakaian,
-                    EstimasiPemberian = vm.EstimasiPemberian,
-                    TglStopPemakaian = TryParseTanggalToUtc(vm.TglStopPemakaian),
+                    GudangId = Guid.NewGuid(),
+                    NamaGudang = vm.NamaGudang,
+                    Lokasi = vm.Lokasi,
+                    Keterangan = vm.Keterangan,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
 
                 // **Simpan ke Database**
-                _applicationDbContext.DetailReseps.Add(data);
+                _applicationDbContext.Gudangs.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -317,7 +190,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] ResepDetailViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] GudangViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -348,55 +221,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.DetailReseps.FindAsync(id);
+                var data = await _applicationDbContext.Gudangs.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
-                //if (!DateTime.TryParseExact(vm.TglMulaiIteratur, "yyyy-MM-dd",
-                //    CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsedTglMulaiIteratur))
-                //{
-                //    return BadRequest(new { message = "Format TglMulaiIteratur tidak valid. Gunakan format yyyy-MM-dd." });
-                //}
-
-                //parsedTglMulaiIteratur = DateTime.SpecifyKind(parsedTglMulaiIteratur, DateTimeKind.Utc);
-
-                //if (!DateTime.TryParseExact(vm.MasaAktifIteratur, "yyyy-MM-dd",
-                //    CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsedMasaAktif))
-                //{
-                //    return BadRequest(new { message = "Format TglMulaiIteratur tidak valid. Gunakan format yyyy-MM-dd." });
-                //}
-                //parsedMasaAktif = DateTime.SpecifyKind(parsedMasaAktif, DateTimeKind.Utc);
-
-
                 // **Update Data**
-                data.ObatId = vm.ObatId;
-                data.AsuransiId = vm.AsuransiId;
-                data.NamaAsuransi = vm.NamaAsuransi;
-                data.ResepId = vm.ResepId;
-                data.Qty = vm.Qty;
-                data.Signa = vm.Signa;
-                data.SignaTambahan = vm.SignaTambahan;
-                data.JenisObat = vm.JenisObat;
-                data.HargaObat = vm.HargaObat;
-                data.TotalHargaObat = vm.Qty.HasValue && vm.HargaObat.HasValue ? vm.Qty.Value * vm.HargaObat.Value : 0;
-                data.StatusCoverObat = vm.StatusCoverObat;
-                data.IsRacikan = vm.IsRacikan; // Update properti IsRacikan jika diperlukan
-                //data.IsIteratur = vm.IsIteratur;
-                //data.JumlahIteratur = vm.JumlahIteratur;
-                //data.TglMulaiIteratur = parsedTglMulaiIteratur;
-                //data.JarakPenebusan = vm.JarakPenebusan;
-                //data.MasaAktifIteratur = parsedMasaAktif;
-                data.TakaranDosis = vm.TakaranDosis;
-                data.CaraPemakaian = vm.CaraPemakaian;
-                data.EstimasiPemberian = vm.EstimasiPemberian;
-                data.TglStopPemakaian = TryParseTanggalToUtc(vm.TglStopPemakaian);
+                data.NamaGudang = vm.NamaGudang;
+                data.Lokasi = vm.Lokasi;
+                data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.DetailReseps.Update(data);
+                _applicationDbContext.Gudangs.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -445,7 +284,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.DetailReseps.FindAsync(id);
+                var data = await _applicationDbContext.Gudangs.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -457,7 +296,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
                 data.IsDelete = true;
 
-                _applicationDbContext.DetailReseps.Update(data);
+                _applicationDbContext.Gudangs.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -480,64 +319,44 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         }
 
         [HttpGet("paged")]
-        public IActionResult PagedDetailResep(
+        public IActionResult Paged(
         int page = 1,
         int perPage = 10,
         string? search = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                DateTime? startDate = null,
+                        DateTime? startDate = null,
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                DateTime? endDate = null,
+                        DateTime? endDate = null,
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
-            // query
-            var query = from a in _applicationDbContext.DetailReseps
-                         join u in _applicationDbContext.UserActives
+
+            // Query data
+            var query = (from a in _applicationDbContext.Gudangs
+                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false
+                         where a.IsDelete == false || a.IsDelete == null
                          select new
                          {
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
-                             a.DetailResepId,
-                             a.ResepId,
-                             a.AsuransiId,
-                             a.NamaAsuransi,
-                             a.ObatId,
-                             a.Qty,
-                             a.JenisRacikan,
-                             a.Signa,
-                             a.SignaTambahan,
-                             a.JenisObat,
-                             a.HargaObat,
-                             a.StatusCoverObat,
-                             a.TotalHargaObat,
-                             a.IsRacikan,
-                             a.RacikanId,
-                             a.IsIteratur,
-                             a.JumlahIteratur,
-                             a.TglMulaiIteratur,
-                             a.JarakPenebusan,
-                             a.MasaAktifIteratur,
-                             a.StatusPengambilanObat,
-                             a.TakaranDosis,
-                             a.IsContinued,
-                             a.CaraPemakaian,
-                             a.EstimasiPemberian,
-                             a.TglStopPemakaian,
-                         };
+                             a.GudangId,
+                             a.NamaGudang,
+                             a.Lokasi,
+                             a.Keterangan,
+
+                         });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-            //if (!string.IsNullOrWhiteSpace(search))
-            //{
-            //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-            //    query = query.Where(u =>
-            //        EF.Functions.ILike(u.NamaBenefit, search)
-            //    );
-            //}
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+                query = query.Where(u =>
+                    EF.Functions.ILike(u.NamaGudang, search)
+                );
+            }
 
             //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
@@ -600,21 +419,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             }
 
             // Sorting Data dengan cara yang lebih aman
-            //query = sortDirection?.ToLower() == "desc"
-            //    ? orderBy switch
-            //    {
-            //        "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
-            //        "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-            //        "NamaBenefit" => query.OrderByDescending(u => u.NamaBenefit),
-            //        _ => query.OrderByDescending(u => u.CreateDateTime)
-            //    }
-            //    : orderBy switch
-            //    {
-            //        "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
-            //        "CreateByName" => query.OrderBy(u => u.CreateByName),
-            //        "NamaBenefit" => query.OrderBy(u => u.NamaBenefit),
-            //        _ => query.OrderBy(u => u.CreateDateTime)
-            //    };
+            query = sortDirection?.ToLower() == "desc"
+                ? orderBy switch
+                {
+                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
+                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
+                    _ => query.OrderByDescending(u => u.CreateDateTime)
+                }
+                : orderBy switch
+                {
+                    "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
+                    "CreateByName" => query.OrderBy(u => u.CreateByName),
+                    _ => query.OrderBy(u => u.CreateDateTime)
+                };
 
             // Pagination
             var totalRows = query.Count();

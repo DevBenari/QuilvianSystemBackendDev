@@ -1,0 +1,14 @@
+﻿namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels
+{
+    public class CttPemberianObatViewModel
+    {
+        public Guid? ObatId { get; set; }
+        public string? TglPemberian { get; set; }
+        public TimeOnly? WaktuPemberian { get; set; }
+        public string? StatusPemberian { get; set; }
+        public string? CaraPemberianObat { get; set; }
+        public Guid? UserActiveIdPerawat { get; set; }
+        public Guid? TTDId { get; set; }
+        public string? Keterangan { get; set; }
+    }
+}

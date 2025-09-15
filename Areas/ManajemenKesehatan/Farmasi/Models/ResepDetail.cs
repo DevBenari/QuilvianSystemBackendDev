@@ -28,6 +28,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
         public bool? IsIteratur { get; set; } = false;
         public bool? IsContinued { get; set; } = false;
         public decimal? JumlahIteratur { get; set; }
+        public string? EstimasiPemberian { get; set; }
+        public string? CaraPemakaian { get; set; }
+        public DateTime? TglStopPemakaian { get; set; }
         public DateTime? TglMulaiIteratur { get; set; }
         public decimal? JarakPenebusan { get; set; }
         public DateTime? MasaAktifIteratur { get; set; }
