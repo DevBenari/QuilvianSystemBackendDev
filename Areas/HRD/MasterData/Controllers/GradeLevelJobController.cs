@@ -55,11 +55,10 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
                             LevelMaxSal = l.MaxSalary,
                         };
 
-            var totalItems = await _context.GradeLevelJobs.CountAsync();
+            var totalItems = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalItems / (double)perPage);
 
-            var data = await _context.GradeLevelJobs
-                .OrderBy(g => g.GradeLevelJobId)
+            var data = await query
                 .Skip((page - 1) * perPage)
                 .Take(perPage)
                 .ToListAsync();
@@ -73,6 +72,7 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
                 data
             });
         }
+
 
         // GET: api/GradeLevelJob/{id}
         [HttpGet("{id}")]
