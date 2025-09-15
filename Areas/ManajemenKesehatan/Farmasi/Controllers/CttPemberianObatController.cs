@@ -12,6 +12,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
@@ -79,27 +80,38 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            // Query data
-            var query = (from a in _applicationDbContext.CttPemberianObats
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false || a.IsDelete == null
-                         select new
-                         {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = u.FullName,
-                             a.CttPemberianObatId,
-                             a.ObatId,
-                             a.TglPemberian,
-                             a.WaktuPemberian,
-                             a.StatusPemberian,
-                             a.CaraPemberianObat,
-                             a.UserActiveIdPerawat,
-                             a.TTDId,
-                             a.Keterangan,
+            var query =
+                   from a in _applicationDbContext.CttPemberianObats
+                       // LEFT JOIN UserActive (creator)
+                   join u0 in _applicationDbContext.UserActives on a.CreateBy equals u0.UserActiveId into gu0
+                   from u in gu0.DefaultIfEmpty()
+                       // LEFT JOIN Obat
+                   join o0 in _applicationDbContext.Obats on a.ObatId equals o0.ObatId into go0
+                   from o in go0.DefaultIfEmpty()
+                    where (a.IsDelete == false || a.IsDelete == null)
+                   orderby a.CreateDateTime descending
+                   select new
+                   {
+                       a.CreateDateTime,
+                       a.CreateBy,
+                       CreateByName = u.FullName,
 
-                         }).OrderByDescending(a => a.CreateDateTime);
+                       a.CttPemberianObatId,
+                       a.ObatId,
+                       a.TglPemberian,
+                       a.WaktuPemberian,
+                       a.StatusPemberian,
+                       a.CaraPemberianObat,
+                       a.UserActiveIdPerawat,
+                       a.TTDId,
+                       a.Keterangan,
+
+                       // >>> Informasi Obat (berdasarkan ObatId)
+                       NamaObat = o != null ? o.ObatName : null,
+                       DosisObat = o != null ? (decimal?)o.TakaranDosis : null, 
+
+                   };
+
 
             // Hitung total data sebelum paginasi
             var totalRows = query.Count();
@@ -135,18 +147,65 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.CttPemberianObats.Find(id);
-            if (listdata == null)
-            {
+            var data =
+                await (from a in _applicationDbContext.CttPemberianObats.AsNoTracking()
+                       where a.CttPemberianObatId == id
+                             && (a.IsDelete == false || a.IsDelete == null)
+
+                       // LEFT JOIN creator
+                       join u0 in _applicationDbContext.UserActives
+                            on a.CreateBy equals u0.UserActiveId into gu0
+                       from u in gu0.DefaultIfEmpty()
+
+                           // LEFT JOIN perawat pemberi obat
+                       join p0 in _applicationDbContext.UserActives
+                            on a.UserActiveIdPerawat equals p0.UserActiveId into gp0
+                       from perawat in gp0.DefaultIfEmpty()
+
+                           // LEFT JOIN obat
+                       join o0 in _applicationDbContext.Obats
+                            on a.ObatId equals o0.ObatId into go0
+                       from o in go0.DefaultIfEmpty()
+
+                       select new
+                       {
+                           a.CttPemberianObatId,
+                           a.CreateDateTime,
+                           a.CreateBy,
+                           CreateByName = u != null ? u.FullName : null,
+
+                           a.ObatId,
+                           ObatInfo = new
+                           {
+                               // === sesuaikan nama kolom entity Obat kamu ===
+                               NamaObat = o != null ? o.ObatName : null,
+                               DosisObat = o != null ? (decimal?)o.TakaranDosis : null,
+
+                           },
+
+                           a.TglPemberian,
+                           a.WaktuPemberian,
+                           a.StatusPemberian,
+                           a.CaraPemberianObat,
+
+                           a.UserActiveIdPerawat,
+                           PerawatName = perawat != null ? perawat.FullName : null,
+
+                           a.TTDId,
+                           a.Keterangan
+                       })
+                       .FirstOrDefaultAsync();
+
+            if (data == null)
                 return NotFound(new { message = "Data tidak ditemukan." });
-            }
 
             return Ok(new
             {
                 message = "Ditemukan || 200 OK",
-                data = listdata
+                data
             });
         }
+
 
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CttPemberianObatViewModel vm)
@@ -375,26 +434,37 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         {
 
             // Query data
-            var query = (from a in _applicationDbContext.CttPemberianObats
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false || a.IsDelete == null
-                         select new
-                         {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = u.FullName,
-                             a.CttPemberianObatId,
-                             a.ObatId,
-                             a.TglPemberian,
-                             a.WaktuPemberian,
-                             a.StatusPemberian,
-                             a.CaraPemberianObat,
-                             a.UserActiveIdPerawat,
-                             a.TTDId,
-                             a.Keterangan,
+            var query =
+                   from a in _applicationDbContext.CttPemberianObats
+                       // LEFT JOIN UserActive (creator)
+                   join u0 in _applicationDbContext.UserActives on a.CreateBy equals u0.UserActiveId into gu0
+                   from u in gu0.DefaultIfEmpty()
+                       // LEFT JOIN Obat
+                   join o0 in _applicationDbContext.Obats on a.ObatId equals o0.ObatId into go0
+                   from o in go0.DefaultIfEmpty()
+                   where (a.IsDelete == false || a.IsDelete == null)
+                   orderby a.CreateDateTime descending
+                   select new
+                   {
+                       a.CreateDateTime,
+                       a.CreateBy,
+                       CreateByName = u.FullName,
 
-                         });
+                       a.CttPemberianObatId,
+                       a.ObatId,
+                       a.TglPemberian,
+                       a.WaktuPemberian,
+                       a.StatusPemberian,
+                       a.CaraPemberianObat,
+                       a.UserActiveIdPerawat,
+                       a.TTDId,
+                       a.Keterangan,
+
+                       // >>> Informasi Obat (berdasarkan ObatId)
+                       NamaObat = o != null ? o.ObatName : null,
+                       DosisObat = o != null ? (decimal?)o.TakaranDosis : null,
+
+                   };
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             //if (!string.IsNullOrWhiteSpace(search))
