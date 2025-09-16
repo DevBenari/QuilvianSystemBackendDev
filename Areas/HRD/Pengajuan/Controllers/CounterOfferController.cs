@@ -101,14 +101,17 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCounterOffer(Guid id)
         {
-            var item = await _context.CounterOffers.FindAsync(id);
-            if (item == null)
-                return NotFound();
+            var data = await _context.CounterOffers.FindAsync(id);
+            if (data == null)
+                return NotFound(new { message = "Data tidak ditemukan." });
 
-            _context.CounterOffers.Remove(item);
-            await _context.SaveChangesAsync();
+            _context.CounterOffers.Remove(data);
+            var result = await _context.SaveChangesAsync();
 
-            return NoContent();
+            if (result > 0)
+                return Ok(new { message = "Data berhasil dihapus || 200 OK" });
+
+            return StatusCode(500, new { message = "Data tidak berhasil dihapus." });
         }
     }
 }

@@ -42,18 +42,53 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            var query = _applicationDbContext.PengajuanResigns.AsNoTracking();
+            var query = from r in _applicationDbContext.PengajuanResigns
+                        join u1 in _applicationDbContext.UserActives on r.Approved1 equals u1.UserActiveId into approved1Join
+                        from u1 in approved1Join.DefaultIfEmpty()
+                        join u2 in _applicationDbContext.UserActives on r.Approved2 equals u2.UserActiveId into approved2Join
+                        from u2 in approved2Join.DefaultIfEmpty()
+                        join u3 in _applicationDbContext.UserActives on r.CreateBy equals u3.UserActiveId into createdByJoin
+                        from u3 in createdByJoin.DefaultIfEmpty()
+                        orderby r.TglEfektifResign descending
+                        select new
+                        {
+                            r.ResignId,
+                            r.UserActiveId,
+                            r.DepartementId,
+                            r.PositionId,
+                            r.TglEfektifResign,
+                            r.NoticePeriod,
+                            r.AlasanUtama,
+                            r.AlasanTambahan,
+                            r.Approved1,
+                            Approved1Name = u1 != null ? u1.FullName : null,
+                            r.Approved2,
+                            Approved2Name = u2 != null ? u2.FullName : null,
+                            r.isTerimaPenawaran,
+                            r.StatusResign,
+
+                            r.CreateBy,
+                            CreateByName = u3 != null ? u3.FullName : null,
+                            r.CreateDateTime,
+                            r.UpdateBy,
+                            r.UpdateDateTime,
+                            r.DeleteBy,
+                            r.DeleteDateTime,
+                            r.IsDelete
+                        };
 
             var totalRows = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
             var listdata = await query
-                .OrderByDescending(r => r.TglEfektifResign)
                 .Skip((page - 1) * perPage)
                 .Take(perPage)
                 .ToListAsync();
 
             if (!listdata.Any())
+            {
                 return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
+            }
 
             return Ok(new
             {
@@ -68,6 +103,7 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
                 }
             });
         }
+
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetPengajuanResignById(Guid id)
