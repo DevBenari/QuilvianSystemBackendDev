@@ -15,7 +15,6 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
         {
             _context = context;
         }
-
         // ================================
         // CRUD JENIS USER
         // ================================
