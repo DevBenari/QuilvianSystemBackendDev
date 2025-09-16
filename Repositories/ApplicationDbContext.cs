@@ -159,6 +159,13 @@ namespace QuilvianSystemBackendDev.Repositories
 
         #endregion
 
+        #region Areas Administrator
+        public DbSet<JenisUser> JenisUsers { get; set; }
+        public DbSet<JenisPembayaran> JenisPembayarans { get; set; }
+        public DbSet<Pembayaran> Pembayarans { get; set; }
+
+        #endregion
+
         #region Areas Pendaftaran
         public DbSet<PendaftaranPasienBaru> PendaftaranPasienBarus { get; set; }
         public DbSet<PendaftaranPasien> PendaftaranPasiens { get; set; }
