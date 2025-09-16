@@ -118,8 +118,8 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<ICDPlanning> ICDPlannings { get; set; }
         public DbSet<SOAPPlanning> SOAPPlannings { get; set; }
         public DbSet<DetailPlanning> DetailPlannings { get; set; }
-
-
+        public DbSet<Gudang> Gudangs { get; set; }
+        public DbSet<GudangUnit> GudangUnits { get; set; }
         #endregion
 
         #region Areas Keuangan
@@ -201,6 +201,13 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<DetailKetergantungan> DetailKetergantungans { get; set; }
         public DbSet<ResumePulang> ResumePulangs { get; set; }
 
+        #endregion
+
+        #region Farmasi
+        public DbSet<LogRacikPenerimaan> LogRacikPenerimaans { get; set; }
+        public DbSet<PermintaanUnit> PermintaanUnits { get; set; }
+        public DbSet<DetailPermintaanUnit> DetailPermintaanUnits { get; set; }
+        public DbSet<CttPemberianObat> CttPemberianObats { get; set; }
         #endregion
     }
 }

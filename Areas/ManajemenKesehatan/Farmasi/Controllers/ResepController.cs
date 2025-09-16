@@ -55,6 +55,31 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             _hubContext = hubContext;
         }
 
+        private DateTime? TryParseTanggalToUtc(string tanggal)
+        {
+            if (DateTime.TryParseExact(
+                    tanggal,
+                    "yyyy-MM-dd",
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out var parsedDate))
+            {
+                var now = DateTime.Now; // atau DateTime.UtcNow jika kamu mau jam UTC
+                var finalDateTime = new DateTime(
+                    parsedDate.Year,
+                    parsedDate.Month,
+                    parsedDate.Day,
+                    now.Hour,
+                    now.Minute,
+                    now.Second,
+                    DateTimeKind.Local); // atau Utc jika perlu
+
+                return finalDateTime.ToUniversalTime(); // simpan dalam UTC
+            }
+
+            return null;
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetAllResep(int page = 1, int perPage = 10)
         {
@@ -115,6 +140,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                                d.JarakPenebusan,
                                                d.StatusCoverObat,
                                                d.StatusPengambilanObat,
+                                               d.CaraPemakaian,
+                                               d.EstimasiPemberian,
+                                               d.TglStopPemakaian,
                                                d.CreateBy,
                                                d.CreateDateTime
                                            }).ToList(),
@@ -132,6 +160,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                                   d.SignaTambahan,
                                                   d.HargaObat,
                                                   d.TotalHargaObat,
+                                                  d.CaraPemakaian,
+                                                  d.EstimasiPemberian,
+                                                  d.TglStopPemakaian,
                                                   ra.CreateBy,
                                                   ra.CreateDateTime,
 
@@ -220,6 +251,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                           d.JarakPenebusan,
                           d.StatusCoverObat,
                           d.StatusPengambilanObat,
+                          d.CaraPemakaian,
+                          d.EstimasiPemberian,
+                          d.TglStopPemakaian,
                           d.CreateBy,
                           d.CreateDateTime
                       })
@@ -234,6 +268,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     {
                         ra.RacikanId,
                         ra.NamaRacikan,
+                        d.CaraPemakaian,
+                        d.EstimasiPemberian,
+                        d.TglStopPemakaian,
                         d.Qty,
                         d.Signa,
                         d.SignaTambahan,
@@ -391,6 +428,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                 RacikanId = null,
                                 TakaranDosis = obatDb.TakaranDosis,
                                 StatusPengambilanObat = true,
+                                EstimasiPemberian = obat.EstimasiPemberian,
+                                CaraPemakaian = obat.CaraPemakaian,
+                                TglStopPemakaian = TryParseTanggalToUtc(obat.TglStopPemakaian),
+
                                 CreateBy = getUserActive.UserActiveId,
                                 CreateDateTime = DateTimeOffset.UtcNow
                             };
@@ -518,6 +559,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                 RacikanId = racikanId,
                                 TakaranDosis = null,
                                 StatusPengambilanObat = true,
+                                CaraPemakaian = obat.CaraPemakaian,
+                                EstimasiPemberian = obat.EstimasiPemberian,
+                                TglStopPemakaian = TryParseTanggalToUtc(obat.TglStopPemakaian),
                                 CreateBy = getUserActive.UserActiveId,
                                 CreateDateTime = DateTimeOffset.UtcNow
                             };
@@ -883,6 +927,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             RacikanId = null,
                             TakaranDosis = obatDb.TakaranDosis,
                             StatusPengambilanObat = true,
+                            CaraPemakaian = obat.CaraPemakaian,
+                            EstimasiPemberian = obat.EstimasiPemberian,
+                            TglStopPemakaian = TryParseTanggalToUtc(obat.TglStopPemakaian),
                             CreateBy = userId,
                             CreateDateTime = DateTimeOffset.UtcNow
                         };
@@ -971,6 +1018,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                         JenisObat = first.Obat.JenisObat,
                         IsContinued = first.Obat.IsContinued,
                         StatusPengambilanObat = true,
+                        CaraPemakaian = first.Obat.CaraPemakaian,
+                        EstimasiPemberian = first.Obat.EstimasiPemberian,
+                        TglStopPemakaian = TryParseTanggalToUtc(first.Obat.TglStopPemakaian),
                         CreateBy = userId,
                         CreateDateTime = DateTimeOffset.UtcNow
                     });
@@ -1468,6 +1518,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             int page = 1,
             int perPage = 10,
             string? search = null,
+            Guid? kunjunganid = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
             [FromQuery] DateTime? startDate = null,
@@ -1506,6 +1557,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             if (IsCancelled.HasValue)
                 query = query.Where(q => q.Resep.IsCancelled == IsCancelled.Value);
 
+            // Filter by KunjunganId
+            if (kunjunganid.HasValue)
+                query = query.Where(q => q.Resep.KunjunganId == kunjunganid.Value);
 
             // Periode filter
             if (periode.HasValue)
@@ -1634,6 +1688,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                   d.JarakPenebusan,
                                   d.StatusCoverObat,
                                   d.StatusPengambilanObat,
+                                  d.CaraPemakaian,
+                                  d.EstimasiPemberian,
+                                  d.TglStopPemakaian,
                                   d.CreateBy,
                                   d.CreateDateTime
                               })
@@ -1651,6 +1708,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                   d.Qty,
                                   d.Signa,
                                   d.SignaTambahan,
+                                  d.CaraPemakaian,
+                                  d.EstimasiPemberian,
+                                  d.TglStopPemakaian,
                                   ra.CreateBy,
                                   ra.CreateDateTime,
                                   DaftarRacikanDetail = _applicationDbContext.RacikanDetails
@@ -1733,6 +1793,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             // IsCancelled filters
             if (IsCancelled.HasValue)
                 query = query.Where(q => q.Resep.IsCancelled == IsCancelled.Value);
+
 
             // Periode filter
             if (periode.HasValue)
