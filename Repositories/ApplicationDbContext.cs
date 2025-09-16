@@ -147,6 +147,15 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<GradeLevelJob> GradeLevelJobs { get; set; }
         public DbSet<CounterOffer> CounterOffers { get; set; }
         public DbSet<PengajuanRekrutmen> PengajuanRekrutmens { get; set; }
+        public DbSet<RiwayatPendidikan> RiwayatPendidikans { get; set; }
+        public DbSet<RiwayatSertifikat> RiwayatSertifikats { get; set; }
+        public DbSet<DokumenDetailKaryawan> DokumenDetailKaryawans { get; set; }
+        public DbSet<MasterKeahlian> MasterKeahlians { get; set; }
+        public DbSet<DetailKeahlian> DetailKeahlians { get; set; }
+        public DbSet<MasterTTD> MasterTTDs { get; set; }
+        public DbSet<MasterSoal> MasterSoals { get; set; }
+        public DbSet<HasilTest> HasilTests { get; set; }
+
 
         #endregion
 
