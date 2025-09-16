@@ -21,7 +21,7 @@ namespace QuilvianSystemBackendDev.Repositories
         {
             if (!optionsBuilder.IsConfigured)
             {
-                optionsBuilder.UseNpgsql("Host=160.20.104.98;Port=5432;Database=QuilvianSystemBackendDev;Username=sa;Password=Admin@1234;");
+                optionsBuilder.UseNpgsql("Host=160.20.104.98;Port=5432;Username=postgres;Password=Admin@1234;Database=QuilvianDbNew;");
             }
         }
 

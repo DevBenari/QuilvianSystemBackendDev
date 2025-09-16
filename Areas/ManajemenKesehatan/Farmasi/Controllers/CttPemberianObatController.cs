@@ -98,6 +98,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
                        a.CttPemberianObatId,
                        a.ObatId,
+                       a.RacikanId,
                        a.TglPemberian,
                        a.WaktuPemberian,
                        a.StatusPemberian,
@@ -167,6 +168,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             on a.ObatId equals o0.ObatId into go0
                        from o in go0.DefaultIfEmpty()
 
+                           // Left Join Racikan
+                           join r0 in _applicationDbContext.Racikans
+                            on a.RacikanId equals r0.RacikanId into gr0
+                       from r in gr0.DefaultIfEmpty()
+
                        select new
                        {
                            a.CttPemberianObatId,
@@ -181,6 +187,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                NamaObat = o != null ? o.ObatName : null,
                                DosisObat = o != null ? (decimal?)o.TakaranDosis : null,
 
+                           },
+
+                           a.RacikanId,
+                           RacikanInfo = new
+                           {
+                               // === sesuaikan nama kolom entity Racikan kamu ===
+                               NamaRacikan = r != null ? r.NamaRacikan : null,
+                               KeteranganRacikan = r != null ? r.Keterangan : null,
                            },
 
                            a.TglPemberian,
@@ -251,6 +265,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 {
                     CttPemberianObatId = Guid.NewGuid(),
                     ObatId = vm.ObatId,
+                    RacikanId = vm.RacikanId,
                     TglPemberian = TryParseTanggalToUtc(vm.TglPemberian),
                     WaktuPemberian = vm.WaktuPemberian,
                     StatusPemberian = vm.StatusPemberian,
@@ -325,6 +340,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
                 // **Update Data**
                 data.ObatId = vm.ObatId;
+                data.RacikanId = vm.RacikanId;
                 data.TglPemberian = TryParseTanggalToUtc(vm.TglPemberian);
                 data.WaktuPemberian = vm.WaktuPemberian;
                 data.StatusPemberian = vm.StatusPemberian;
@@ -442,6 +458,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                        // LEFT JOIN Obat
                    join o0 in _applicationDbContext.Obats on a.ObatId equals o0.ObatId into go0
                    from o in go0.DefaultIfEmpty()
+
+                   // left join racikan
+                   join r0 in _applicationDbContext.Racikans on a.RacikanId equals r0.RacikanId into gr0
+                   from r in gr0.DefaultIfEmpty()
+
                    where (a.IsDelete == false || a.IsDelete == null)
                    orderby a.CreateDateTime descending
                    select new
@@ -452,6 +473,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
                        a.CttPemberianObatId,
                        a.ObatId,
+                       a.RacikanId,
                        a.TglPemberian,
                        a.WaktuPemberian,
                        a.StatusPemberian,
@@ -463,6 +485,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                        // >>> Informasi Obat (berdasarkan ObatId)
                        NamaObat = o != null ? o.ObatName : null,
                        DosisObat = o != null ? (decimal?)o.TakaranDosis : null,
+
+                       // >>> Informasi Racikan (berdasarkan RacikanId)
+                       NamaRacikan = r != null ? r.NamaRacikan : null,
+                       KeteranganRacikan = r != null ? r.Keterangan : null,
 
                    };
 

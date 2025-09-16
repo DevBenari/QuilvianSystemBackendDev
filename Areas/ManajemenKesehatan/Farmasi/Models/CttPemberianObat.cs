@@ -8,6 +8,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
         [Key]
         public Guid CttPemberianObatId { get; set; }
         public Guid? ObatId { get; set; }
+        public Guid? RacikanId { get; set; }
         public DateTime? TglPemberian { get; set; }
         public TimeOnly? WaktuPemberian { get; set; }
         public string? StatusPemberian { get; set; }

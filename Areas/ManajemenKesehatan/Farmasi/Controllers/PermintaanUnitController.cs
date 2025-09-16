@@ -173,19 +173,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
-                //// **Cek Duplikasi**
-                //bool isDuplicate = _applicationDbContext.Diskons
-                //                    .Any(c => c.NamaDiskon == vm.NamaDiskon);
-
-                //if (isDuplicate)
-                //{
-                //    return Conflict(new { message = "Nama benefit ini telah tersedia" });
-                //}
-
-                // **Buat Data Baru**
+                // **Buat Data Baru untuk PermintaanUnit**
+                var permintaanUnitId = Guid.NewGuid();
                 var data = new PermintaanUnit
                 {
-                    PermintaanUnitId = Guid.NewGuid(),
+                    PermintaanUnitId = permintaanUnitId,
                     UnitId = vm.UnitId,
                     JenisPermintaan = vm.JenisPermintaan,
                     TglPembuatanPermintaan = TryParseTanggalToUtc(vm.TglPembuatanPermintaan),
@@ -195,8 +187,31 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
 
+                // **Buat Data Baru untuk DetailPermintaanUnit**
+                var detailItems = new List<DetailPermintaanUnit>();
+                if (vm.DetailPermintaanUnit != null && vm.DetailPermintaanUnit.Any())
+                {
+                    foreach (var detailVm in vm.DetailPermintaanUnit)
+                    {
+                        detailItems.Add(new DetailPermintaanUnit
+                        {
+                            DetailPermintaanUnitId = Guid.NewGuid(),
+                            PermintaanUnitId = permintaanUnitId, // Link to the main record
+                            ObatId = detailVm.ObatId,
+                            QtyPermintaan = detailVm.QtyPermintaan,
+                            SatuanItem = detailVm.SatuanItem,
+                            KategoriItem = detailVm.KategoriItem,
+                            Keterangan = detailVm.Keterangan,
+                            CreateBy = userActiveId,
+                            CreateDateTime = DateTimeOffset.UtcNow,
+                        });
+                    }
+                }
+
                 // **Simpan ke Database**
-                _applicationDbContext.PermintaanUnits.Add(data);
+                await _applicationDbContext.PermintaanUnits.AddAsync(data);
+                await _applicationDbContext.DetailPermintaanUnits.AddRangeAsync(detailItems);
+
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -217,6 +232,79 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+        //public async Task<IActionResult> Create([FromBody] PermintaanUnitViewModel vm)
+        //{
+        //    if (vm == null || !ModelState.IsValid)
+        //    {
+        //        return BadRequest(new { message = "Data tidak valid." });
+        //    }
+
+        //    try
+        //    {
+        //        // **Cek koneksi ke database**
+        //        if (!_applicationDbContext.Database.CanConnect())
+        //        {
+        //            return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+        //        }
+
+        //        // **Ambil User ID dari JWT Claims**
+        //        var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        //        if (string.IsNullOrEmpty(emailLogin))
+        //        {
+        //            return Unauthorized(new { message = "User tidak terautentikasi!" });
+        //        }
+
+        //        var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
+        //        if (getUserActive == null)
+        //        {
+        //            return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+        //        }
+        //        var userActiveId = getUserActive.UserActiveId;
+
+        //        //// **Cek Duplikasi**
+        //        //bool isDuplicate = _applicationDbContext.Diskons
+        //        //                    .Any(c => c.NamaDiskon == vm.NamaDiskon);
+
+        //        //if (isDuplicate)
+        //        //{
+        //        //    return Conflict(new { message = "Nama benefit ini telah tersedia" });
+        //        //}
+
+        //        // **Buat Data Baru**
+        //        var data = new PermintaanUnit
+        //        {
+        //            PermintaanUnitId = Guid.NewGuid(),
+        //            UnitId = vm.UnitId,
+        //            JenisPermintaan = vm.JenisPermintaan,
+        //            TglPembuatanPermintaan = TryParseTanggalToUtc(vm.TglPembuatanPermintaan),
+        //            StatusPermintaan = vm.StatusPermintaan,
+        //            Keterangan = vm.Keterangan,
+        //            CreateBy = userActiveId,
+        //            CreateDateTime = DateTimeOffset.UtcNow,
+        //        };
+
+        //        // **Simpan ke Database**
+        //        _applicationDbContext.PermintaanUnits.Add(data);
+        //        int result = await _applicationDbContext.SaveChangesAsync();
+
+        //        if (result > 0)
+        //        {
+        //            return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
+        //        }
+        //        else
+        //        {
+        //            return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
+        //        }
+        //    }
+        //    catch (DbUpdateException dbEx)
+        //    {
+        //        return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+        //    }
+        //}
 
 
         [HttpPut("{id}")]
@@ -229,13 +317,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
             try
             {
-                // **Cek koneksi ke database**
+                // Cek koneksi ke database
                 if (!await _applicationDbContext.Database.CanConnectAsync())
                 {
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
                 }
 
-                // **Ambil User ID dari JWT Claims**
+                // Ambil User ID dari JWT Claims
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
                 {
@@ -243,31 +331,59 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 }
 
                 var getUserActive = await _applicationDbContext.UserActives
-                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+                                          .FirstOrDefaultAsync(u => u.Email == emailLogin);
                 if (getUserActive == null)
                 {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
-                // **Cari Data**
+                // Cari Data PermintaanUnit
                 var data = await _applicationDbContext.PermintaanUnits.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
-                // **Update Data**
+                // Update Data PermintaanUnit (Parent)
                 data.UnitId = vm.UnitId;
                 data.JenisPermintaan = vm.JenisPermintaan;
                 data.TglPembuatanPermintaan = TryParseTanggalToUtc(vm.TglPembuatanPermintaan);
                 data.StatusPermintaan = vm.StatusPermintaan;
                 data.Keterangan = vm.Keterangan;
-
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.PermintaanUnits.Update(data);
+                // **Strategi Baru: Hapus dan Buat Ulang Detail Items**
+
+                // 1. Ambil semua detail yang ada di database untuk PermintaanUnit ini
+                var existingDetails = await _applicationDbContext.DetailPermintaanUnits
+                                                                  .Where(d => d.PermintaanUnitId == id)
+                                                                  .ToListAsync();
+
+                // 2. Hapus semua detail yang ada
+                _applicationDbContext.DetailPermintaanUnits.RemoveRange(existingDetails);
+
+                // 3. Buat dan tambahkan detail baru dari ViewModel
+                if (vm.DetailPermintaanUnit != null && vm.DetailPermintaanUnit.Any())
+                {
+                    var newDetails = vm.DetailPermintaanUnit.Select(detailVm => new DetailPermintaanUnit
+                    {
+                        DetailPermintaanUnitId = Guid.NewGuid(),
+                        PermintaanUnitId = id,
+                        ObatId = detailVm.ObatId,
+                        QtyPermintaan = detailVm.QtyPermintaan,
+                        SatuanItem = detailVm.SatuanItem,
+                        KategoriItem = detailVm.KategoriItem,
+                        Keterangan = detailVm.Keterangan,
+                        CreateBy = userActiveId,
+                        CreateDateTime = DateTimeOffset.UtcNow
+                    }).ToList();
+
+                    _applicationDbContext.DetailPermintaanUnits.AddRange(newDetails);
+                }
+
+                // Simpan semua perubahan dalam satu transaksi
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)

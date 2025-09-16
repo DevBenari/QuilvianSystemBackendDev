@@ -108,6 +108,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.JarakPenebusan,
                              a.MasaAktifIteratur,
                              a.StatusPengambilanObat,
+                             a.StatusDiberikanPasien,
                              a.TakaranDosis,
                              a.IsContinued,
                              a.CaraPemakaian,
@@ -206,6 +207,29 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             await _applicationDbContext.SaveChangesAsync();
 
             return Ok(new { message = "Status isContinued berhasil diperbarui." });
+        }
+
+        [HttpPut("{id}/StatusDiberikanPasien")]
+        public async Task<IActionResult> UpdateStatusDiberikan(Guid id, [FromBody] StatusPengambilanObatViewModel request)
+        {
+            var data = await _applicationDbContext.DetailReseps.FindAsync(id);
+            if (data == null)
+                return NotFound(new { message = "Obat tidak ditemukan." });
+
+            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(EmailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var userId = user?.UserActiveId ?? Guid.Empty;
+
+            data.StatusDiberikanPasien = request.Status;
+            data.UpdateDateTime = DateTimeOffset.UtcNow;
+            data.UpdateBy = userId;
+
+            await _applicationDbContext.SaveChangesAsync();
+
+            return Ok(new { message = "Status StatusDiberikanPasien berhasil diperbarui." });
         }
 
         [HttpPost]
