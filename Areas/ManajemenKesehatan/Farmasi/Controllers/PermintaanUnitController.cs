@@ -80,8 +80,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
             // Query data
             var query = (from a in _applicationDbContext.PermintaanUnits
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
+                         join u in _applicationDbContext.UserActives
+                             on a.CreateBy equals u.UserActiveId into ua
+                         from u in ua.DefaultIfEmpty()
+
                          where a.IsDelete == false || a.IsDelete == null
                          select new
                          {
@@ -95,7 +97,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.StatusPermintaan,
                              a.Keterangan,
 
-                         }).OrderByDescending(a => a.CreateDateTime);
+                             DetailPermintaan = (from d in _applicationDbContext.DetailPermintaanUnits
+                                                 where d.PermintaanUnitId == a.PermintaanUnitId
+                                                 select new
+                                                 {
+                                                     d.DetailPermintaanUnitId,
+                                                     d.ObatId,
+                                                     d.QtyPermintaan,
+                                                     d.SatuanItem,
+                                                     d.KategoriItem,
+                                                     d.Keterangan
+                                                 }).ToList()
+                         })
+                         .OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
             var totalRows = query.Count();
@@ -130,8 +144,40 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.PermintaanUnits.Find(id);
-            if (listdata == null)
+            var data = (from a in _applicationDbContext.PermintaanUnits
+                        join u in _applicationDbContext.UserActives
+                            on a.CreateBy equals u.UserActiveId into ua
+                        from u in ua.DefaultIfEmpty()
+
+                        where a.PermintaanUnitId == id
+                              && (a.IsDelete == false || a.IsDelete == null)
+
+                        select new
+                        {
+                            a.PermintaanUnitId,
+                            a.CreateDateTime,
+                            a.CreateBy,
+                            CreateByName = u.FullName,
+                            a.UnitId,
+                            a.JenisPermintaan,
+                            a.TglPembuatanPermintaan,
+                            a.StatusPermintaan,
+                            a.Keterangan,
+
+                            DetailPermintaan = (from d in _applicationDbContext.DetailPermintaanUnits
+                                                where d.PermintaanUnitId == a.PermintaanUnitId
+                                                select new
+                                                {
+                                                    d.DetailPermintaanUnitId,
+                                                    d.ObatId,
+                                                    d.QtyPermintaan,
+                                                    d.SatuanItem,
+                                                    d.KategoriItem,
+                                                    d.Keterangan
+                                                }).ToList()
+                        }).FirstOrDefault();
+
+            if (data == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
             }
@@ -139,9 +185,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             return Ok(new
             {
                 message = "Ditemukan || 200 OK",
-                data = listdata
+                data = data
             });
         }
+
 
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] PermintaanUnitViewModel vm)
@@ -482,22 +529,36 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
             // Query data
             var query = (from a in _applicationDbContext.PermintaanUnits
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false || a.IsDelete == null
-                         select new
-                         {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = u.FullName,
-                             a.PermintaanUnitId,
-                             a.UnitId,
-                             a.JenisPermintaan,
-                             a.TglPembuatanPermintaan,
-                             a.StatusPermintaan,
-                             a.Keterangan,
+                        join u in _applicationDbContext.UserActives
+                            on a.CreateBy equals u.UserActiveId into ua
+                        from u in ua.DefaultIfEmpty()
 
-                         });
+                        where (a.IsDelete == false || a.IsDelete == null)
+
+                        select new
+                        {
+                            a.PermintaanUnitId,
+                            a.CreateDateTime,
+                            a.CreateBy,
+                            CreateByName = u.FullName,
+                            a.UnitId,
+                            a.JenisPermintaan,
+                            a.TglPembuatanPermintaan,
+                            a.StatusPermintaan,
+                            a.Keterangan,
+
+                            DetailPermintaan = (from d in _applicationDbContext.DetailPermintaanUnits
+                                                where d.PermintaanUnitId == a.PermintaanUnitId
+                                                select new
+                                                {
+                                                    d.DetailPermintaanUnitId,
+                                                    d.ObatId,
+                                                    d.QtyPermintaan,
+                                                    d.SatuanItem,
+                                                    d.KategoriItem,
+                                                    d.Keterangan
+                                                }).ToList()
+                        });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             //if (!string.IsNullOrWhiteSpace(search))
