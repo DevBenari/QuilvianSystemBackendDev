@@ -70,123 +70,70 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             return null;
         }
 
+
         [HttpGet]
-        public async Task<IActionResult> GetAllDetailResep(int page = 1, int perPage = 10)
+        public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
         {
+            // Validasi agar page dan perPage minimal bernilai 1
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            var query = (from d in _applicationDbContext.DetailReseps
-
-                             // Join ke Resep (parent)
-                         join r in _applicationDbContext.Reseps
-                             on d.ResepId equals r.ResepId into resepJoin
-                         from r in resepJoin.DefaultIfEmpty()
-
-                             // Join ke User (creator)
+            // Query data
+            var query = (from a in _applicationDbContext.DetailReseps
                          join u in _applicationDbContext.UserActives
-                             on d.CreateBy equals u.UserActiveId into userJoin
-                         from u in userJoin.DefaultIfEmpty()
+                         on a.CreateBy equals u.UserActiveId
 
-                             // Join ke Obat (jika bukan racikan)
-                         join o in _applicationDbContext.Obats
-                             on d.ObatId equals o.ObatId into obatJoin
-                         from o in obatJoin.DefaultIfEmpty()
+                         // join ke resep
+                         join r in _applicationDbContext.Reseps
+                            on a.ResepId equals r.ResepId
 
-                             // Join ke Racikan (jika racikan)
-                         join ra in _applicationDbContext.Racikans
-                             on d.RacikanId equals ra.RacikanId into racikanJoin
+                        // join ke racikan
+                        join ra in _applicationDbContext.Racikans
+                            on a.RacikanId equals ra.RacikanId into racikanJoin
                          from ra in racikanJoin.DefaultIfEmpty()
 
-                         where d.IsDelete == false
+                         where a.IsDelete == false
                          select new
                          {
-                             // ===== Data Detail Resep =====
-                             d.DetailResepId,
-                             d.ResepId,
-                             d.ObatId,
-                             d.RacikanId,
-                             d.IsRacikan,
-                             d.Qty,
-                             d.HargaObat,
-                             d.TotalHargaObat,
-                             d.Signa,
-                             d.SignaTambahan,
-                             d.TakaranDosis,
-                             d.IsIteratur,
-                             d.JumlahIteratur,
-                             TglMulaiIteratur = d.TglMulaiIteratur.HasValue
-                                                ? d.TglMulaiIteratur.Value.ToString("yyyy-MM-dd")
-                                                : null,
-                             MasaAktifIteratur = d.MasaAktifIteratur.HasValue
-                                                ? d.MasaAktifIteratur.Value.ToString("yyyy-MM-dd")
-                                                : null,
-                             d.JarakPenebusan,
-                             d.StatusCoverObat,
-                             d.StatusPengambilanObat,
-                             d.StatusDiberikanPasien,
-                             d.CaraPemakaian,
-                             d.EstimasiPemberian,
-                             d.TglStopPemakaian,
-                             d.CreateDateTime,
-                             d.CreateBy,
-                             CreateByName = u != null ? u.FullName : null,
+                             a.CreateDateTime,
+                             a.CreateBy,
+                             CreateByName = u.FullName,
+                             a.DetailResepId,
+                             a.ResepId,
+                             r.KunjunganId,
+                             a.AsuransiId,
+                             a.NamaAsuransi,
+                             a.ObatId,
+                             a.Qty,
+                             a.JenisRacikan,
+                             a.Signa,
+                             a.SignaTambahan,
+                             a.JenisObat,
+                             a.HargaObat,
+                             a.TotalHargaObat,
+                             a.StatusCoverObat,
+                             a.IsRacikan,
+                             a.RacikanId,
+                             NamaRacikan = ra != null ? ra.NamaRacikan : null,
+                             a.IsIteratur,
+                             a.JumlahIteratur,
+                             a.TglMulaiIteratur,
+                             a.JarakPenebusan,
+                             a.MasaAktifIteratur,
+                             a.StatusPengambilanObat,
+                             a.StatusDiberikanPasien,
+                             a.TakaranDosis,
+                             a.IsContinued,
+                             a.CaraPemakaian,
+                             a.EstimasiPemberian,
+                             a.TglStopPemakaian,
+                         }).OrderByDescending(a => a.CreateDateTime);
 
-                             // ===== Data Resep (parent) =====
-                             Resep = r == null ? null : new
-                             {
-                                 r.ResepId,
-                                 r.KunjunganId,
-                                 r.NamaPasien,
-                                 r.NamaDokter,
-                                 r.NamaPoliklinik,
-                                 r.NamaAsuransi,
-                                 r.StatusPembuatanResep,
-                                 r.StatusPengambilanResep,
-                                 r.IsCancelled,
-                                 r.IsLunas,
-                                 r.CreateDateTime
-                             },
-
-                             // ===== Data Obat (jika bukan racikan) =====
-                             Obat = (d.IsRacikan == false || d.IsRacikan == null) && o != null ? new
-                             {
-                                 o.ObatId,
-                                 o.ObatName,
-                                 o.Dosis,
-                                 o.CaraKerja
-                             } : null,
-
-                             // ===== Data Racikan (jika racikan) =====
-                             Racikan = d.IsRacikan == true && ra != null ? new
-                             {
-                                 ra.RacikanId,
-                                 ra.NamaRacikan,
-                                 ra.CreateBy,
-                                 ra.CreateDateTime,
-
-                                 DaftarRacikanDetail = (from rd in _applicationDbContext.RacikanDetails
-                                                        join ob in _applicationDbContext.Obats
-                                                            on rd.ObatId equals ob.ObatId into rdObatJoin
-                                                        from ob in rdObatJoin.DefaultIfEmpty()
-                                                        where rd.RacikanId == ra.RacikanId
-                                                        select new
-                                                        {
-                                                            rd.DetailRacikanId,
-                                                            rd.ObatId,
-                                                            ObatName = ob != null ? ob.ObatName : null,
-                                                            rd.QtyUsed,
-                                                            rd.KomposisiDosis,
-                                                            rd.CreateBy,
-                                                            rd.CreateDateTime
-                                                        }).ToList()
-                             } : null
-                         })
-                         .OrderByDescending(d => d.CreateDateTime);
-
+            // Hitung total data sebelum paginasi
             var totalRows = query.Count();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
 
+            // Ambil data sesuai paging
             var listdata = query
                 .Skip((page - 1) * perPage)
                 .Take(perPage)
@@ -197,6 +144,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
             }
 
+            // Return hasil dengan paging info
             return Ok(new
             {
                 message = "Berhasil || 200 OK",
@@ -209,200 +157,69 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     TotalPages = totalPages
                 }
             });
+
         }
-
-
-
-        //public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
-        //{
-        //    // Validasi agar page dan perPage minimal bernilai 1
-        //    if (page < 1) page = 1;
-        //    if (perPage < 1) perPage = 10;
-
-        //    // Query data
-        //    var query = (from a in _applicationDbContext.DetailReseps
-        //                 join u in _applicationDbContext.UserActives
-        //                 on a.CreateBy equals u.UserActiveId
-
-        //                 // join ke resep
-        //                 join r in _applicationDbContext.Reseps
-        //                    on a.ResepId equals r.ResepId
-
-        //                 where a.IsDelete == false
-        //                 select new
-        //                 {
-        //                     a.CreateDateTime,
-        //                     a.CreateBy,
-        //                     CreateByName = u.FullName,
-        //                     a.DetailResepId,
-        //                     a.ResepId,
-        //                     r.KunjunganId,
-        //                     a.AsuransiId,
-        //                     a.NamaAsuransi,
-        //                     a.ObatId,
-        //                     a.Qty,
-        //                     a.JenisRacikan,
-        //                     a.Signa,
-        //                     a.SignaTambahan,
-        //                     a.JenisObat,
-        //                     a.HargaObat,
-        //                     a.TotalHargaObat,
-        //                     a.StatusCoverObat,
-        //                     a.IsRacikan,
-        //                     a.RacikanId,
-        //                     a.IsIteratur,
-        //                     a.JumlahIteratur,
-        //                     a.TglMulaiIteratur,
-        //                     a.JarakPenebusan,
-        //                     a.MasaAktifIteratur,
-        //                     a.StatusPengambilanObat,
-        //                     a.StatusDiberikanPasien,
-        //                     a.TakaranDosis,
-        //                     a.IsContinued,
-        //                     a.CaraPemakaian,
-        //                     a.EstimasiPemberian,
-        //                     a.TglStopPemakaian,
-        //                 }).OrderByDescending(a => a.CreateDateTime);
-
-        //// Hitung total data sebelum paginasi
-        //var totalRows = query.Count();
-        //    var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-
-        //    // Ambil data sesuai paging
-        //    var listdata = query
-        //        .Skip((page - 1) * perPage)
-        //        .Take(perPage)
-        //        .ToList();
-
-        //    if (!listdata.Any())
-        //    {
-        //        return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
-        //    }
-
-        //    // Return hasil dengan paging info
-        //    return Ok(new
-        //    {
-        //        message = "Berhasil || 200 OK",
-        //        data = listdata,
-        //        pagination = new
-        //        {
-        //            CurrentPage = page,
-        //            PerPage = perPage,
-        //            TotalRows = totalRows,
-        //            TotalPages = totalPages
-        //        }
-        //    });
-
-        //}
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetByIdDetailResep(Guid id)
         {
-            var data = (from d in _applicationDbContext.DetailReseps
+            var data = (from a in _applicationDbContext.DetailReseps
 
                             // Join ke Resep (parent)
                         join r in _applicationDbContext.Reseps
-                            on d.ResepId equals r.ResepId into resepJoin
+                            on a.ResepId equals r.ResepId into resepJoin
                         from r in resepJoin.DefaultIfEmpty()
 
                             // Join ke User (creator)
                         join u in _applicationDbContext.UserActives
-                            on d.CreateBy equals u.UserActiveId into userJoin
+                            on a.CreateBy equals u.UserActiveId into userJoin
                         from u in userJoin.DefaultIfEmpty()
 
                             // Join ke Obat (jika bukan racikan)
                         join o in _applicationDbContext.Obats
-                            on d.ObatId equals o.ObatId into obatJoin
+                            on a.ObatId equals o.ObatId into obatJoin
                         from o in obatJoin.DefaultIfEmpty()
 
                             // Join ke Racikan (jika racikan)
                         join ra in _applicationDbContext.Racikans
-                            on d.RacikanId equals ra.RacikanId into racikanJoin
+                            on a.RacikanId equals ra.RacikanId into racikanJoin
                         from ra in racikanJoin.DefaultIfEmpty()
 
-                        where d.IsDelete == false && d.DetailResepId == id
+                        where a.IsDelete == false && a.DetailResepId == id
                         select new
                         {
-                            // ===== Data Detail Resep =====
-                            d.DetailResepId,
-                            d.ResepId,
-                            d.ObatId,
-                            d.RacikanId,
-                            d.IsRacikan,
-                            d.Qty,
-                            d.HargaObat,
-                            d.TotalHargaObat,
-                            d.Signa,
-                            d.SignaTambahan,
-                            d.TakaranDosis,
-                            d.IsIteratur,
-                            d.JumlahIteratur,
-                            TglMulaiIteratur = d.TglMulaiIteratur.HasValue
-                                                ? d.TglMulaiIteratur.Value.ToString("yyyy-MM-dd")
-                                                : null,
-                            MasaAktifIteratur = d.MasaAktifIteratur.HasValue
-                                                ? d.MasaAktifIteratur.Value.ToString("yyyy-MM-dd")
-                                                : null,
-                            d.JarakPenebusan,
-                            d.StatusCoverObat,
-                            d.StatusPengambilanObat,
-                            d.StatusDiberikanPasien,
-                            d.CaraPemakaian,
-                            d.EstimasiPemberian,
-                            d.TglStopPemakaian,
-                            d.CreateDateTime,
-                            d.CreateBy,
-                            CreateByName = u != null ? u.FullName : null,
-
-                            // ===== Data Resep (parent) =====
-                            Resep = r == null ? null : new
-                            {
-                                r.ResepId,
-                                r.KunjunganId,
-                                r.NamaPasien,
-                                r.NamaDokter,
-                                r.NamaPoliklinik,
-                                r.NamaAsuransi,
-                                r.StatusPembuatanResep,
-                                r.StatusPengambilanResep,
-                                r.IsCancelled,
-                                r.IsLunas,
-                                r.CreateDateTime
-                            },
-
-                            // ===== Data Obat (jika bukan racikan) =====
-                            Obat = (d.IsRacikan == false || d.IsRacikan == null) && o != null ? new
-                            {
-                                o.ObatId,
-                                o.ObatName,
-                                o.Dosis,
-                                o.CaraKerja
-                            } : null,
-
-                            // ===== Data Racikan (jika racikan) =====
-                            Racikan = d.IsRacikan == true && ra != null ? new
-                            {
-                                ra.RacikanId,
-                                ra.NamaRacikan,
-                                ra.CreateBy,
-                                ra.CreateDateTime,
-
-                                DaftarRacikanDetail = (from rd in _applicationDbContext.RacikanDetails
-                                                       join ob in _applicationDbContext.Obats
-                                                           on rd.ObatId equals ob.ObatId into rdObatJoin
-                                                       from ob in rdObatJoin.DefaultIfEmpty()
-                                                       where rd.RacikanId == ra.RacikanId
-                                                       select new
-                                                       {
-                                                           rd.DetailRacikanId,
-                                                           rd.ObatId,
-                                                           ObatName = ob != null ? ob.ObatName : null,
-                                                           rd.QtyUsed,
-                                                           rd.KomposisiDosis,
-                                                           rd.CreateBy,
-                                                           rd.CreateDateTime
-                                                       }).ToList()
-                            } : null
+                            a.CreateDateTime,
+                            a.CreateBy,
+                            CreateByName = u.FullName,
+                            a.DetailResepId,
+                            a.ResepId,
+                            r.KunjunganId,
+                            a.AsuransiId,
+                            a.NamaAsuransi,
+                            a.ObatId,
+                            a.Qty,
+                            a.JenisRacikan,
+                            a.Signa,
+                            a.SignaTambahan,
+                            a.JenisObat,
+                            a.HargaObat,
+                            a.TotalHargaObat,
+                            a.StatusCoverObat,
+                            a.IsRacikan,
+                            a.RacikanId,
+                            NamaRacikan = ra != null ? ra.NamaRacikan : null,
+                            a.IsIteratur,
+                            a.JumlahIteratur,
+                            a.TglMulaiIteratur,
+                            a.JarakPenebusan,
+                            a.MasaAktifIteratur,
+                            a.StatusPengambilanObat,
+                            a.StatusDiberikanPasien,
+                            a.TakaranDosis,
+                            a.IsContinued,
+                            a.CaraPemakaian,
+                            a.EstimasiPemberian,
+                            a.TglStopPemakaian,
                         })
                         .FirstOrDefault();
 
@@ -764,163 +581,95 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             int page = 1,
             int perPage = 10,
             string? search = null,
-            Guid? kunjunganId = null,
             string? orderBy = "CreateDateTime",
-            string? sortDirection = "desc",
-            DateTime? startDate = null,
-            DateTime? endDate = null,
-            PeriodeFilter? periode = null)
+            string? sortDirection = "desc")
         {
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
             // Query dasar
-            var query = from d in _applicationDbContext.DetailReseps
-                        join r in _applicationDbContext.Reseps
-                            on d.ResepId equals r.ResepId into resepJoin
-                        from r in resepJoin.DefaultIfEmpty()
+            var query = from a in _applicationDbContext.DetailReseps
                         join u in _applicationDbContext.UserActives
-                            on d.CreateBy equals u.UserActiveId into userJoin
-                        from u in userJoin.DefaultIfEmpty()
-                        join o in _applicationDbContext.Obats
-                            on d.ObatId equals o.ObatId into obatJoin
-                        from o in obatJoin.DefaultIfEmpty()
+                            on a.CreateBy equals u.UserActiveId
+                        join r in _applicationDbContext.Reseps
+                            on a.ResepId equals r.ResepId
                         join ra in _applicationDbContext.Racikans
-                            on d.RacikanId equals ra.RacikanId into racikanJoin
+                            on a.RacikanId equals ra.RacikanId into racikanJoin
                         from ra in racikanJoin.DefaultIfEmpty()
-                        where d.IsDelete == false
-                        select new { d, r, u, o, ra };
+                        where a.IsDelete == false
+                        select new
+                        {
+                            a.CreateDateTime,
+                            a.CreateBy,
+                            CreateByName = u.FullName,
+                            a.DetailResepId,
+                            a.ResepId,
+                            r.KunjunganId,
+                            a.AsuransiId,
+                            a.NamaAsuransi,
+                            a.ObatId,
+                            a.Qty,
+                            a.JenisRacikan,
+                            a.Signa,
+                            a.SignaTambahan,
+                            a.JenisObat,
+                            a.HargaObat,
+                            a.TotalHargaObat,
+                            a.StatusCoverObat,
+                            a.IsRacikan,
+                            a.RacikanId,
+                            NamaRacikan = ra != null ? ra.NamaRacikan : null,
+                            a.IsIteratur,
+                            a.JumlahIteratur,
+                            a.TglMulaiIteratur,
+                            a.JarakPenebusan,
+                            a.MasaAktifIteratur,
+                            a.StatusPengambilanObat,
+                            a.StatusDiberikanPasien,
+                            a.TakaranDosis,
+                            a.IsContinued,
+                            a.CaraPemakaian,
+                            a.EstimasiPemberian,
+                            a.TglStopPemakaian,
+                        };
 
-            // 🔎 Filter KunjunganId dilakukan di sini
-            if (kunjunganId.HasValue)
+            // 🔎 Search sederhana
+            if (!string.IsNullOrWhiteSpace(search))
             {
-                query = query.Where(x => x.r != null && x.r.KunjunganId == kunjunganId.Value);
+                string lower = search.ToLower();
+                query = query.Where(x =>
+                    (x.NamaAsuransi != null && x.NamaAsuransi.ToLower().Contains(lower)) ||
+                    (x.CreateByName != null && x.CreateByName.ToLower().Contains(lower)) ||
+                    (x.NamaRacikan != null && x.NamaRacikan.ToLower().Contains(lower))
+                );
             }
 
-            // 🔎 Filter tanggal
-            if (startDate.HasValue && endDate.HasValue)
-            {
-                DateTime start = startDate.Value.Date;
-                DateTime end = endDate.Value.Date.AddDays(1).AddTicks(-1);
-                query = query.Where(x => x.d.CreateDateTime >= start && x.d.CreateDateTime <= end);
-            }
-
-            // 🔎 Filter periode
-            if (periode.HasValue)
-            {
-                DateTime today = DateTime.UtcNow.Date;
-                switch (periode)
-                {
-                    case PeriodeFilter.Today:
-                        query = query.Where(x => x.d.CreateDateTime.Date == today);
-                        break;
-                    case PeriodeFilter.ThisWeek:
-                        query = query.Where(x => x.d.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek));
-                        break;
-                    case PeriodeFilter.LastWeek:
-                        query = query.Where(x =>
-                            x.d.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                            x.d.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek));
-                        break;
-                    case PeriodeFilter.ThisMonth:
-                        query = query.Where(x => x.d.CreateDateTime.Month == today.Month && x.d.CreateDateTime.Year == today.Year);
-                        break;
-                    case PeriodeFilter.LastMonth:
-                        query = query.Where(x => x.d.CreateDateTime.Month == today.AddMonths(-1).Month && x.d.CreateDateTime.Year == today.Year);
-                        break;
-                    case PeriodeFilter.ThisYear:
-                        query = query.Where(x => x.d.CreateDateTime.Year == today.Year);
-                        break;
-                    case PeriodeFilter.LastYear:
-                        query = query.Where(x => x.d.CreateDateTime.Year == today.Year - 1);
-                        break;
-                }
-            }
-
-            // Baru lakukan projection ke object hasil
-            var projected = query.Select(x => new
-            {
-                // DetailResep
-                x.d.DetailResepId,
-                x.d.ResepId,
-                x.d.ObatId,
-                x.d.RacikanId,
-                x.d.IsRacikan,
-                x.d.Qty,
-                x.d.HargaObat,
-                x.d.TotalHargaObat,
-                x.d.Signa,
-                x.d.SignaTambahan,
-                x.d.TakaranDosis,
-                x.d.IsIteratur,
-                x.d.JumlahIteratur,
-                TglMulaiIteratur = x.d.TglMulaiIteratur.HasValue ? x.d.TglMulaiIteratur.Value.ToString("yyyy-MM-dd") : null,
-                MasaAktifIteratur = x.d.MasaAktifIteratur.HasValue ? x.d.MasaAktifIteratur.Value.ToString("yyyy-MM-dd") : null,
-                x.d.JarakPenebusan,
-                x.d.StatusCoverObat,
-                x.d.StatusPengambilanObat,
-                x.d.StatusDiberikanPasien,
-                x.d.CaraPemakaian,
-                x.d.EstimasiPemberian,
-                x.d.TglStopPemakaian,
-                x.d.CreateDateTime,
-                x.d.CreateBy,
-                CreateByName = x.u != null ? x.u.FullName : null,
-
-                // Resep
-                Resep = x.r == null ? null : new
-                {
-                    x.r.ResepId,
-                    x.r.KunjunganId,
-                    x.r.NamaPasien,
-                    x.r.NamaDokter,
-                    x.r.NamaPoliklinik,
-                    x.r.NamaAsuransi,
-                    x.r.StatusPembuatanResep,
-                    x.r.StatusPengambilanResep,
-                    x.r.IsCancelled,
-                    x.r.IsLunas,
-                    x.r.CreateDateTime
-                },
-
-                // Obat
-                Obat = (x.d.IsRacikan == false || x.d.IsRacikan == null) && x.o != null ? new
-                {
-                    x.o.ObatId,
-                    x.o.ObatName,
-                    x.o.Dosis,
-                    x.o.CaraKerja
-                } : null,
-
-                // Racikan
-                Racikan = x.d.IsRacikan == true && x.ra != null ? new
-                {
-                    x.ra.RacikanId,
-                    x.ra.NamaRacikan,
-                    x.ra.CreateBy,
-                    x.ra.CreateDateTime
-                } : null
-            });
-
-            // 🔎 Sorting
-            projected = sortDirection?.ToLower() == "desc"
+            // 🔎 Sorting dinamis
+            query = sortDirection?.ToLower() == "desc"
                 ? orderBy switch
                 {
-                    "CreateDateTime" => projected.OrderByDescending(u => u.CreateDateTime),
-                    "CreateByName" => projected.OrderByDescending(u => u.CreateByName),
-                    _ => projected.OrderByDescending(u => u.CreateDateTime)
+                    "CreateDateTime" => query.OrderByDescending(x => x.CreateDateTime),
+                    "CreateByName" => query.OrderByDescending(x => x.CreateByName),
+                    "NamaAsuransi" => query.OrderByDescending(x => x.NamaAsuransi),
+                    _ => query.OrderByDescending(x => x.CreateDateTime)
                 }
                 : orderBy switch
                 {
-                    "CreateDateTime" => projected.OrderBy(u => u.CreateDateTime),
-                    "CreateByName" => projected.OrderBy(u => u.CreateByName),
-                    _ => projected.OrderBy(u => u.CreateDateTime)
+                    "CreateDateTime" => query.OrderBy(x => x.CreateDateTime),
+                    "CreateByName" => query.OrderBy(x => x.CreateByName),
+                    "NamaAsuransi" => query.OrderBy(x => x.NamaAsuransi),
+                    _ => query.OrderBy(x => x.CreateDateTime)
                 };
 
             // Pagination
-            var totalRows = projected.Count();
+            var totalRows = query.Count();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-            var rows = projected.Skip((page - 1) * perPage).Take(perPage).ToList();
+            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
+
+            if (rows.Count == 0 && page > totalPages)
+            {
+                return NotFound(new { message = "Page not found." });
+            }
 
             return Ok(new
             {
@@ -936,6 +685,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 }
             });
         }
+
 
 
     }

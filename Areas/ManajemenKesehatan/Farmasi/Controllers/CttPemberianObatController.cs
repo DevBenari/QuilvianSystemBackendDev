@@ -98,6 +98,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
                        a.CttPemberianObatId,
                        a.ObatId,
+                       a.KunjunganId,
                        a.RacikanId,
                        a.TglPemberian,
                        a.WaktuPemberian,
@@ -179,7 +180,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                            a.CreateDateTime,
                            a.CreateBy,
                            CreateByName = u != null ? u.FullName : null,
-
+                           a.KunjunganId,
                            a.ObatId,
                            ObatInfo = new
                            {
@@ -264,6 +265,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 var data = new CttPemberianObat
                 {
                     CttPemberianObatId = Guid.NewGuid(),
+                    KunjunganId = vm.KunjunganId,
                     ObatId = vm.ObatId,
                     RacikanId = vm.RacikanId,
                     TglPemberian = TryParseTanggalToUtc(vm.TglPemberian),
@@ -339,6 +341,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 }
 
                 // **Update Data**
+                data.KunjunganId = vm.KunjunganId;
                 data.ObatId = vm.ObatId;
                 data.RacikanId = vm.RacikanId;
                 data.TglPemberian = TryParseTanggalToUtc(vm.TglPemberian);
@@ -472,6 +475,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                        CreateByName = u.FullName,
 
                        a.CttPemberianObatId,
+                       a.KunjunganId,
                        a.ObatId,
                        a.RacikanId,
                        a.TglPemberian,
