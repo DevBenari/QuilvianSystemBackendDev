@@ -74,171 +74,148 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
         {
-            // Validasi agar page dan perPage minimal bernilai 1
-            if (page < 1) page = 1;
-            if (perPage < 1) perPage = 10;
+            var query =
+                from a in _applicationDbContext.DetailReseps
+                join u in _applicationDbContext.UserActives
+                    on a.CreateBy equals u.UserActiveId
+                join r in _applicationDbContext.Reseps
+                    on a.ResepId equals r.ResepId
+                join ra in _applicationDbContext.Racikans
+                    on a.RacikanId equals ra.RacikanId into racikanJoin
+                from ra in racikanJoin.DefaultIfEmpty()
+                join rd in _applicationDbContext.RacikanDetails
+                    on ra.RacikanId equals rd.RacikanId into racikanDetailJoin
+                from rd in racikanDetailJoin.DefaultIfEmpty()
+                join ob in _applicationDbContext.Obats
+                    on a.ObatId equals ob.ObatId into obatJoin
+                from ob in obatJoin.DefaultIfEmpty()
+                join obRD in _applicationDbContext.Obats
+                    on rd.ObatId equals obRD.ObatId into obatRacikanJoin
+                from obRD in obatRacikanJoin.DefaultIfEmpty()
+                where a.IsDelete == false
+                select new
+                {
+                    a.CreateDateTime,
+                    a.CreateBy,
+                    CreateByName = u.FullName,
+                    a.DetailResepId,
+                    a.ResepId,
+                    r.KunjunganId,
+                    a.AsuransiId,
+                    a.NamaAsuransi,
+                    ObatId = (bool)!a.IsRacikan ? a.ObatId : rd.ObatId,
+                    NamaObat = (bool)!a.IsRacikan ? ob.ObatName : obRD.ObatName,
+                    a.Qty,
+                    a.JenisRacikan,
+                    Signa = (bool)!a.IsRacikan ? a.Signa : ra.Signa,
+                    SignaTambahan = (bool)!a.IsRacikan ? a.SignaTambahan : ra.SignaTambahan,
+                    a.JenisObat,
+                    a.HargaObat,
+                    a.TotalHargaObat,
+                    a.StatusCoverObat,
+                    a.IsRacikan,
+                    a.RacikanId,
+                    NamaRacikan = ra != null ? ra.NamaRacikan : null,
+                    a.IsIteratur,
+                    a.JumlahIteratur,
+                    a.TglMulaiIteratur,
+                    a.JarakPenebusan,
+                    a.MasaAktifIteratur,
+                    a.StatusPengambilanObat,
+                    a.StatusDiberikanPasien,
+                    TakaranDosis = (bool)!a.IsRacikan ? a.TakaranDosis : obRD.TakaranDosis,
+                    a.IsContinued,
+                    a.CaraPemakaian,
+                    a.EstimasiPemberian,
+                    a.TglStopPemakaian,
+                };
 
-            // Query data
-            var query = (from a in _applicationDbContext.DetailReseps
-                         join u in _applicationDbContext.UserActives
-                         on a.CreateBy equals u.UserActiveId
+            var result = query.ToList();
 
-                         // join ke resep
-                         join r in _applicationDbContext.Reseps
-                            on a.ResepId equals r.ResepId
-
-                        // join ke racikan
-                        join ra in _applicationDbContext.Racikans
-                            on a.RacikanId equals ra.RacikanId into racikanJoin
-                         from ra in racikanJoin.DefaultIfEmpty()
-
-                             // join ke obat
-                         join o in _applicationDbContext.Obats
-                             on a.ObatId equals o.ObatId into obatJoin
-                         from o in obatJoin.DefaultIfEmpty()
-
-                         where a.IsDelete == false
-                         select new
-                         {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = u.FullName,
-                             a.DetailResepId,
-                             a.ResepId,
-                             r.KunjunganId,
-                             a.AsuransiId,
-                             a.NamaAsuransi,
-                             a.ObatId,
-                             NamaObat = o != null ? o.ObatName : null,
-                             a.Qty,
-                             a.JenisRacikan,
-                             a.Signa,
-                             a.SignaTambahan,
-                             a.JenisObat,
-                             a.HargaObat,
-                             a.TotalHargaObat,
-                             a.StatusCoverObat,
-                             a.IsRacikan,
-                             a.RacikanId,
-                             NamaRacikan = ra != null ? ra.NamaRacikan : null,
-                             a.IsIteratur,
-                             a.JumlahIteratur,
-                             a.TglMulaiIteratur,
-                             a.JarakPenebusan,
-                             a.MasaAktifIteratur,
-                             a.StatusPengambilanObat,
-                             a.StatusDiberikanPasien,
-                             a.TakaranDosis,
-                             a.IsContinued,
-                             a.CaraPemakaian,
-                             a.EstimasiPemberian,
-                             a.TglStopPemakaian,
-                         }).OrderByDescending(a => a.CreateDateTime);
-
-            // Hitung total data sebelum paginasi
-            var totalRows = query.Count();
-            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-
-            // Ambil data sesuai paging
-            var listdata = query
-                .Skip((page - 1) * perPage)
-                .Take(perPage)
-                .ToList();
-
-            if (!listdata.Any())
+            if (result == null || result.Count == 0)
             {
-                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
+                return NotFound(new { message = "Data not found." });
             }
 
-            // Return hasil dengan paging info
             return Ok(new
             {
-                message = "Berhasil || 200 OK",
-                data = listdata,
-                pagination = new
-                {
-                    CurrentPage = page,
-                    PerPage = perPage,
-                    TotalRows = totalRows,
-                    TotalPages = totalPages
-                }
+                status = "success",
+                message = "Data retrieved successfully",
+                data = result
             });
-
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetByIdDetailResep(Guid id)
         {
-            var data = (from a in _applicationDbContext.DetailReseps
+            var query =
+                from a in _applicationDbContext.DetailReseps
+                join u in _applicationDbContext.UserActives
+                    on a.CreateBy equals u.UserActiveId
+                join r in _applicationDbContext.Reseps
+                    on a.ResepId equals r.ResepId
+                join ra in _applicationDbContext.Racikans
+                    on a.RacikanId equals ra.RacikanId into racikanJoin
+                from ra in racikanJoin.DefaultIfEmpty()
+                join rd in _applicationDbContext.RacikanDetails
+                    on ra.RacikanId equals rd.RacikanId into racikanDetailJoin
+                from rd in racikanDetailJoin.DefaultIfEmpty()
+                join ob in _applicationDbContext.Obats
+                    on a.ObatId equals ob.ObatId into obatJoin
+                from ob in obatJoin.DefaultIfEmpty()
+                join obRD in _applicationDbContext.Obats
+                    on rd.ObatId equals obRD.ObatId into obatRacikanJoin
+                from obRD in obatRacikanJoin.DefaultIfEmpty()
+                where a.IsDelete == false && a.DetailResepId == id
+                select new
+                {
+                    a.CreateDateTime,
+                    a.CreateBy,
+                    CreateByName = u.FullName,
+                    a.DetailResepId,
+                    a.ResepId,
+                    r.KunjunganId,
+                    a.AsuransiId,
+                    a.NamaAsuransi,
+                    ObatId = (bool)!a.IsRacikan ? a.ObatId : rd.ObatId,
+                    NamaObat = (bool)!a.IsRacikan ? ob.ObatName : obRD.ObatName,
+                    a.Qty,
+                    a.JenisRacikan,
+                    Signa = (bool)!a.IsRacikan ? a.Signa : ra.Signa,
+                    SignaTambahan = (bool)!a.IsRacikan ? a.SignaTambahan : ra.SignaTambahan,
+                    a.JenisObat,
+                    a.HargaObat,
+                    a.TotalHargaObat,
+                    a.StatusCoverObat,
+                    a.IsRacikan,
+                    a.RacikanId,
+                    NamaRacikan = ra != null ? ra.NamaRacikan : null,
+                    a.IsIteratur,
+                    a.JumlahIteratur,
+                    a.TglMulaiIteratur,
+                    a.JarakPenebusan,
+                    a.MasaAktifIteratur,
+                    a.StatusPengambilanObat,
+                    a.StatusDiberikanPasien,
+                    TakaranDosis = (bool)!a.IsRacikan ? a.TakaranDosis : obRD.TakaranDosis,
+                    a.IsContinued,
+                    a.CaraPemakaian,
+                    a.EstimasiPemberian,
+                    a.TglStopPemakaian,
+                };
 
-                            // Join ke Resep (parent)
-                        join r in _applicationDbContext.Reseps
-                            on a.ResepId equals r.ResepId into resepJoin
-                        from r in resepJoin.DefaultIfEmpty()
+            var result = query.ToList();
 
-                            // Join ke User (creator)
-                        join u in _applicationDbContext.UserActives
-                            on a.CreateBy equals u.UserActiveId into userJoin
-                        from u in userJoin.DefaultIfEmpty()
-
-                            // Join ke Obat (jika bukan racikan)
-                        join o in _applicationDbContext.Obats
-                            on a.ObatId equals o.ObatId into obatJoin
-                        from o in obatJoin.DefaultIfEmpty()
-
-                            // Join ke Racikan (jika racikan)
-                        join ra in _applicationDbContext.Racikans
-                            on a.RacikanId equals ra.RacikanId into racikanJoin
-                        from ra in racikanJoin.DefaultIfEmpty()
-
-                        where a.IsDelete == false && a.DetailResepId == id
-                        select new
-                        {
-                            a.CreateDateTime,
-                            a.CreateBy,
-                            CreateByName = u.FullName,
-                            a.DetailResepId,
-                            a.ResepId,
-                            r.KunjunganId,
-                            a.AsuransiId,
-                            a.NamaAsuransi,
-                            a.ObatId,
-                            NamaObat = o != null ? o.ObatName : null,
-                            a.Qty,
-                            a.JenisRacikan,
-                            a.Signa,
-                            a.SignaTambahan,
-                            a.JenisObat,
-                            a.HargaObat,
-                            a.TotalHargaObat,
-                            a.StatusCoverObat,
-                            a.IsRacikan,
-                            a.RacikanId,
-                            NamaRacikan = ra != null ? ra.NamaRacikan : null,
-                            a.IsIteratur,
-                            a.JumlahIteratur,
-                            a.TglMulaiIteratur,
-                            a.JarakPenebusan,
-                            a.MasaAktifIteratur,
-                            a.StatusPengambilanObat,
-                            a.StatusDiberikanPasien,
-                            a.TakaranDosis,
-                            a.IsContinued,
-                            a.CaraPemakaian,
-                            a.EstimasiPemberian,
-                            a.TglStopPemakaian,
-                        })
-                        .FirstOrDefault();
-
-            if (data == null)
+            if (result == null || result.Count == 0)
             {
-                return NotFound(new { message = $"DetailResep dengan ID {id} tidak ditemukan. || 404 Not Found" });
+                return NotFound(new { message = "DetailResepId not found." });
             }
 
             return Ok(new
             {
-                message = "Berhasil || 200 OK",
-                data
+                status = "success",
+                message = "Data retrieved successfully",
+                data = result
             });
         }
 
@@ -599,15 +576,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             var query = from a in _applicationDbContext.DetailReseps
                         join u in _applicationDbContext.UserActives
                             on a.CreateBy equals u.UserActiveId
+
                         join r in _applicationDbContext.Reseps
                             on a.ResepId equals r.ResepId
+
                         join ra in _applicationDbContext.Racikans
                             on a.RacikanId equals ra.RacikanId into racikanJoin
                         from ra in racikanJoin.DefaultIfEmpty()
 
+                        join rd in _applicationDbContext.RacikanDetails
+                            on ra.RacikanId equals rd.RacikanId into racikanDetailJoin
+                        from rd in racikanDetailJoin.DefaultIfEmpty()
+
                         join ob in _applicationDbContext.Obats
                             on a.ObatId equals ob.ObatId into obatJoin
                             from ob in obatJoin.DefaultIfEmpty()
+
+                        join obRD in _applicationDbContext.Obats
+                            on rd.ObatId equals obRD.ObatId into obatRacikanJoin
+                        from obRD in obatRacikanJoin.DefaultIfEmpty()
+
                         where a.IsDelete == false
                         select new
                         {
@@ -619,12 +607,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             r.KunjunganId,
                             a.AsuransiId,
                             a.NamaAsuransi,
-                            a.ObatId,
-                            NamaObat = ob != null ? ob.ObatName : null,
+                            ObatId = (bool)!a.IsRacikan ? a.ObatId : rd.ObatId,
+                            NamaObat = (bool)!a.IsRacikan ? ob.ObatName : obRD.ObatName,
                             a.Qty,
                             a.JenisRacikan,
-                            a.Signa,
-                            a.SignaTambahan,
+                            Signa = (bool)!a.IsRacikan ? a.Signa : ra.Signa ,
+                            SignaTambahan = (bool)!a.IsRacikan ? a.SignaTambahan : ra.SignaTambahan,
                             a.JenisObat,
                             a.HargaObat,
                             a.TotalHargaObat,
@@ -639,7 +627,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             a.MasaAktifIteratur,
                             a.StatusPengambilanObat,
                             a.StatusDiberikanPasien,
-                            a.TakaranDosis,
+                            TakaranDosis = (bool)!a.IsRacikan ? a.TakaranDosis : obRD.TakaranDosis,
                             a.IsContinued,
                             a.CaraPemakaian,
                             a.EstimasiPemberian,
