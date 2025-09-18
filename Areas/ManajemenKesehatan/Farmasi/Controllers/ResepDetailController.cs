@@ -92,6 +92,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             on a.RacikanId equals ra.RacikanId into racikanJoin
                          from ra in racikanJoin.DefaultIfEmpty()
 
+                             // join ke obat
+                         join o in _applicationDbContext.Obats
+                             on a.ObatId equals o.ObatId into obatJoin
+                         from o in obatJoin.DefaultIfEmpty()
+
                          where a.IsDelete == false
                          select new
                          {
@@ -104,6 +109,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.AsuransiId,
                              a.NamaAsuransi,
                              a.ObatId,
+                             NamaObat = o != null ? o.ObatName : null,
                              a.Qty,
                              a.JenisRacikan,
                              a.Signa,
@@ -197,6 +203,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             a.AsuransiId,
                             a.NamaAsuransi,
                             a.ObatId,
+                            NamaObat = o != null ? o.ObatName : null,
                             a.Qty,
                             a.JenisRacikan,
                             a.Signa,
@@ -596,6 +603,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                         join ra in _applicationDbContext.Racikans
                             on a.RacikanId equals ra.RacikanId into racikanJoin
                         from ra in racikanJoin.DefaultIfEmpty()
+
+                        join ob in _applicationDbContext.Obats
+                            on a.ObatId equals ob.ObatId into obatJoin
+                            from ob in obatJoin.DefaultIfEmpty()
                         where a.IsDelete == false
                         select new
                         {
@@ -608,6 +619,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             a.AsuransiId,
                             a.NamaAsuransi,
                             a.ObatId,
+                            NamaObat = ob != null ? ob.ObatName : null,
                             a.Qty,
                             a.JenisRacikan,
                             a.Signa,
