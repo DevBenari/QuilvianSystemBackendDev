@@ -588,6 +588,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             int page = 1,
             int perPage = 10,
             string? search = null,
+            Guid? kunjungan = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc")
         {
@@ -654,6 +655,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     (x.CreateByName != null && x.CreateByName.ToLower().Contains(lower)) ||
                     (x.NamaRacikan != null && x.NamaRacikan.ToLower().Contains(lower))
                 );
+            }
+
+            // Filter by KunjunganId
+            if (kunjungan.HasValue && kunjungan != Guid.Empty)
+            {
+                query = query.Where(x => x.KunjunganId == kunjungan);
             }
 
             // 🔎 Sorting dinamis
