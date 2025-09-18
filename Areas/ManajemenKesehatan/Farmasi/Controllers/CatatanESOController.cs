@@ -110,6 +110,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.KunjunganId,
                              a.CttPemberianObatId,
                              a.ObatId,
+                             a.RacikanId,
                              a.IsTandaiObat,
                              a.TglTerjadi,
                              a.ManifestasiESO,
@@ -194,6 +195,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                   a.KunjunganId,
                                   a.CttPemberianObatId,
                                   a.ObatId,
+                                  a.RacikanId,
                                   a.IsTandaiObat,
                                   a.TglTerjadi,
                                   a.ManifestasiESO,
@@ -255,14 +257,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
-                //// **Cek Duplikasi**
-                //bool isDuplicate = _applicationDbContext.Diskons
-                //                    .Any(c => c.NamaDiskon == vm.NamaDiskon);
+                // **Cek Duplikasi**
+                bool isDuplicate = _applicationDbContext.CatatanESOs
+                                    .Any(c => c.KunjunganId == vm.KunjunganId && (c.RacikanId == vm.RacikanId || c.ObatId == vm.ObatId));
 
-                //if (isDuplicate)
-                //{
-                //    return Conflict(new { message = "Nama benefit ini telah tersedia" });
-                //}
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Catatan efek samping obat ini sudah ada." });
+                }
 
                 // **Buat Data Baru**
                 var data = new CatatanESO
@@ -271,6 +273,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     KunjunganId = vm.KunjunganId,
                     CttPemberianObatId = vm.CttPemberianObatId,
                     ObatId = vm.ObatId,
+                    RacikanId = vm.RacikanId,
                     IsTandaiObat = false,
                     TglTerjadi = TryParseTanggalToUtc(vm.TglTerjadi),
                     ManifestasiESO = vm.ManifestasiESO,
@@ -413,6 +416,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 data.KunjunganId = vm.KunjunganId;
                 data.CttPemberianObatId = vm.CttPemberianObatId;
                 data.ObatId = vm.ObatId;
+                data.RacikanId = vm.RacikanId;
                 data.IsTandaiObat = vm.IsTandaiObat;
                 data.TglTerjadi = TryParseTanggalToUtc(vm.TglTerjadi);
                 data.ManifestasiESO = vm.ManifestasiESO;
@@ -536,6 +540,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.KunjunganId,
                              a.CttPemberianObatId,
                              a.ObatId,
+                             a.RacikanId,
                              a.IsTandaiObat,
                              a.TglTerjadi,
                              a.ManifestasiESO,
