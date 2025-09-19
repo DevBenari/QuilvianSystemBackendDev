@@ -16,7 +16,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models
         public string NamaJenisUser { get; set; } = string.Empty;
         public string? Kode { get; set; }
         public int? No { get; set; }
-        public int? Tlp { get; set; }
+        public string? Tlp { get; set; }
         public string? Pas { get; set; }
         public string? Keterangan { get; set; }
         public bool? IsActive { get; set; } = true;
