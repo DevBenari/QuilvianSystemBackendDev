@@ -6,7 +6,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models
     // ======================================
     // 1. JENIS USER
     // ======================================
-    [Table("Adm_JenisUser", Schema = "public")]
+    [Table("JnsUser", Schema = "public")]
     public class JenisUser
     {
         [Key]
@@ -17,13 +17,14 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models
         public string? Kode { get; set; }
         public int? No { get; set; }
         public int? Tlp { get; set; }
+        public string? Pas { get; set; }
         public string? Keterangan { get; set; }
         public bool? IsActive { get; set; } = true;
     }
     // ======================================
     // 2. JENIS PEMBAYARAN
     // ======================================
-    [Table("Adm_JenisPembayaran", Schema = "public")]
+    [Table("JnsPembayaran", Schema = "public")]
     public class JenisPembayaran
     {
         [Key]
@@ -46,7 +47,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models
     // ======================================
     // 3. PEMBAYARAN
     // ======================================
-    [Table("Adm_Pembayaran", Schema = "public")]
+    [Table("JnsPembayaranNominal", Schema = "public")]
     public class Pembayaran
     {
         [Key]
