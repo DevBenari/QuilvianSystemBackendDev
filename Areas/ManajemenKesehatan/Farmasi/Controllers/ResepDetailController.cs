@@ -70,97 +70,155 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             return null;
         }
 
+
         [HttpGet]
         public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
         {
-            // Validasi agar page dan perPage minimal bernilai 1
-            if (page < 1) page = 1;
-            if (perPage < 1) perPage = 10;
+            var query =
+                from a in _applicationDbContext.DetailReseps
+                join u in _applicationDbContext.UserActives
+                    on a.CreateBy equals u.UserActiveId
+                join r in _applicationDbContext.Reseps
+                    on a.ResepId equals r.ResepId
+                join ra in _applicationDbContext.Racikans
+                    on a.RacikanId equals ra.RacikanId into racikanJoin
+                from ra in racikanJoin.DefaultIfEmpty()
+                join rd in _applicationDbContext.RacikanDetails
+                    on ra.RacikanId equals rd.RacikanId into racikanDetailJoin
+                from rd in racikanDetailJoin.DefaultIfEmpty()
+                join ob in _applicationDbContext.Obats
+                    on a.ObatId equals ob.ObatId into obatJoin
+                from ob in obatJoin.DefaultIfEmpty()
+                join obRD in _applicationDbContext.Obats
+                    on rd.ObatId equals obRD.ObatId into obatRacikanJoin
+                from obRD in obatRacikanJoin.DefaultIfEmpty()
+                where a.IsDelete == false
+                select new
+                {
+                    a.CreateDateTime,
+                    a.CreateBy,
+                    CreateByName = u.FullName,
+                    a.DetailResepId,
+                    a.ResepId,
+                    r.KunjunganId,
+                    a.AsuransiId,
+                    a.NamaAsuransi,
+                    ObatId = (bool)!a.IsRacikan ? a.ObatId : rd.ObatId,
+                    NamaObat = (bool)!a.IsRacikan ? ob.ObatName : obRD.ObatName,
+                    a.Qty,
+                    a.JenisRacikan,
+                    Signa = (bool)!a.IsRacikan ? a.Signa : ra.Signa,
+                    SignaTambahan = (bool)!a.IsRacikan ? a.SignaTambahan : ra.SignaTambahan,
+                    a.JenisObat,
+                    a.HargaObat,
+                    a.TotalHargaObat,
+                    a.StatusCoverObat,
+                    a.IsRacikan,
+                    a.RacikanId,
+                    NamaRacikan = ra != null ? ra.NamaRacikan : null,
+                    a.IsIteratur,
+                    a.JumlahIteratur,
+                    a.TglMulaiIteratur,
+                    a.JarakPenebusan,
+                    a.MasaAktifIteratur,
+                    a.StatusPengambilanObat,
+                    a.StatusDiberikanPasien,
+                    TakaranDosis = (bool)!a.IsRacikan ? a.TakaranDosis : obRD.TakaranDosis,
+                    a.IsContinued,
+                    a.CaraPemakaian,
+                    a.EstimasiPemberian,
+                    a.TglStopPemakaian,
+                };
 
-            // Query data
-            var query = (from a in _applicationDbContext.DetailReseps
-                         join u in _applicationDbContext.UserActives
-                         on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false
-                         select new
-                         {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = u.FullName,
-                             a.DetailResepId,
-                             a.ResepId,
-                             a.AsuransiId,
-                             a.NamaAsuransi,
-                             a.ObatId,
-                             a.Qty,
-                             a.JenisRacikan,
-                             a.Signa,
-                             a.SignaTambahan,
-                             a.JenisObat,
-                             a.HargaObat,
-                             a.TotalHargaObat,
-                             a.StatusCoverObat,
-                             a.IsRacikan,
-                             a.RacikanId,
-                             a.IsIteratur,
-                             a.JumlahIteratur,
-                             a.TglMulaiIteratur,
-                             a.JarakPenebusan,
-                             a.MasaAktifIteratur,
-                             a.StatusPengambilanObat,
-                             a.TakaranDosis,
-                             a.IsContinued,
-                             a.CaraPemakaian,
-                             a.EstimasiPemberian,
-                             a.TglStopPemakaian,
-                         }).OrderByDescending(a => a.CreateDateTime);
+            var result = query.ToList();
 
-        // Hitung total data sebelum paginasi
-        var totalRows = query.Count();
-            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-
-            // Ambil data sesuai paging
-            var listdata = query
-                .Skip((page - 1) * perPage)
-                .Take(perPage)
-                .ToList();
-
-            if (!listdata.Any())
+            if (result == null || result.Count == 0)
             {
-                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
+                return NotFound(new { message = "Data not found." });
             }
 
-            // Return hasil dengan paging info
             return Ok(new
             {
-                message = "Berhasil || 200 OK",
-                data = listdata,
-                pagination = new
-                {
-                    CurrentPage = page,
-                    PerPage = perPage,
-                    TotalRows = totalRows,
-                    TotalPages = totalPages
-                }
+                status = "success",
+                message = "Data retrieved successfully",
+                data = result
             });
-
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(Guid id)
+        public async Task<IActionResult> GetByIdDetailResep(Guid id)
         {
-            var listdata = _applicationDbContext.DetailReseps.Find(id);
-            if (listdata == null)
+            var query =
+                from a in _applicationDbContext.DetailReseps
+                join u in _applicationDbContext.UserActives
+                    on a.CreateBy equals u.UserActiveId
+                join r in _applicationDbContext.Reseps
+                    on a.ResepId equals r.ResepId
+                join ra in _applicationDbContext.Racikans
+                    on a.RacikanId equals ra.RacikanId into racikanJoin
+                from ra in racikanJoin.DefaultIfEmpty()
+                join rd in _applicationDbContext.RacikanDetails
+                    on ra.RacikanId equals rd.RacikanId into racikanDetailJoin
+                from rd in racikanDetailJoin.DefaultIfEmpty()
+                join ob in _applicationDbContext.Obats
+                    on a.ObatId equals ob.ObatId into obatJoin
+                from ob in obatJoin.DefaultIfEmpty()
+                join obRD in _applicationDbContext.Obats
+                    on rd.ObatId equals obRD.ObatId into obatRacikanJoin
+                from obRD in obatRacikanJoin.DefaultIfEmpty()
+                where a.IsDelete == false && a.DetailResepId == id
+                select new
+                {
+                    a.CreateDateTime,
+                    a.CreateBy,
+                    CreateByName = u.FullName,
+                    a.DetailResepId,
+                    a.ResepId,
+                    r.KunjunganId,
+                    a.AsuransiId,
+                    a.NamaAsuransi,
+                    ObatId = (bool)!a.IsRacikan ? a.ObatId : rd.ObatId,
+                    NamaObat = (bool)!a.IsRacikan ? ob.ObatName : obRD.ObatName,
+                    a.Qty,
+                    a.JenisRacikan,
+                    Signa = (bool)!a.IsRacikan ? a.Signa : ra.Signa,
+                    SignaTambahan = (bool)!a.IsRacikan ? a.SignaTambahan : ra.SignaTambahan,
+                    a.JenisObat,
+                    a.HargaObat,
+                    a.TotalHargaObat,
+                    a.StatusCoverObat,
+                    a.IsRacikan,
+                    a.RacikanId,
+                    NamaRacikan = ra != null ? ra.NamaRacikan : null,
+                    a.IsIteratur,
+                    a.JumlahIteratur,
+                    a.TglMulaiIteratur,
+                    a.JarakPenebusan,
+                    a.MasaAktifIteratur,
+                    a.StatusPengambilanObat,
+                    a.StatusDiberikanPasien,
+                    TakaranDosis = (bool)!a.IsRacikan ? a.TakaranDosis : obRD.TakaranDosis,
+                    a.IsContinued,
+                    a.CaraPemakaian,
+                    a.EstimasiPemberian,
+                    a.TglStopPemakaian,
+                };
+
+            var result = query.ToList();
+
+            if (result == null || result.Count == 0)
             {
-                return NotFound(new { message = "Data tidak ditemukan." });
+                return NotFound(new { message = "DetailResepId not found." });
             }
 
             return Ok(new
             {
-                message = "Ditemukan || 200 OK",
-                data = listdata
+                status = "success",
+                message = "Data retrieved successfully",
+                data = result
             });
         }
+
 
         [HttpPut("{id}/StatusObat")]
         public async Task<IActionResult> UpdateIsLunas(Guid id, [FromBody] StatusPengambilanObatViewModel request)
@@ -206,6 +264,29 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             await _applicationDbContext.SaveChangesAsync();
 
             return Ok(new { message = "Status isContinued berhasil diperbarui." });
+        }
+
+        [HttpPut("{id}/StatusDiberikanPasien")]
+        public async Task<IActionResult> UpdateStatusDiberikan(Guid id, [FromBody] StatusPengambilanObatViewModel request)
+        {
+            var data = await _applicationDbContext.DetailReseps.FindAsync(id);
+            if (data == null)
+                return NotFound(new { message = "Obat tidak ditemukan." });
+
+            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(EmailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var userId = user?.UserActiveId ?? Guid.Empty;
+
+            data.StatusDiberikanPasien = request.Status;
+            data.UpdateDateTime = DateTimeOffset.UtcNow;
+            data.UpdateBy = userId;
+
+            await _applicationDbContext.SaveChangesAsync();
+
+            return Ok(new { message = "Status StatusDiberikanPasien berhasil diperbarui." });
         }
 
         [HttpPost]
@@ -481,140 +562,111 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
         [HttpGet("paged")]
         public IActionResult PagedDetailResep(
-        int page = 1,
-        int perPage = 10,
-        string? search = null,
-        string? orderBy = "CreateDateTime",
-        string? sortDirection = "desc",
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                DateTime? startDate = null,
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                DateTime? endDate = null,
-        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+            int page = 1,
+            int perPage = 10,
+            string? search = null,
+            Guid? kunjungan = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc")
         {
-            // query
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
+
+            // Query dasar
             var query = from a in _applicationDbContext.DetailReseps
-                         join u in _applicationDbContext.UserActives
-                         on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false
-                         select new
-                         {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = u.FullName,
-                             a.DetailResepId,
-                             a.ResepId,
-                             a.AsuransiId,
-                             a.NamaAsuransi,
-                             a.ObatId,
-                             a.Qty,
-                             a.JenisRacikan,
-                             a.Signa,
-                             a.SignaTambahan,
-                             a.JenisObat,
-                             a.HargaObat,
-                             a.StatusCoverObat,
-                             a.TotalHargaObat,
-                             a.IsRacikan,
-                             a.RacikanId,
-                             a.IsIteratur,
-                             a.JumlahIteratur,
-                             a.TglMulaiIteratur,
-                             a.JarakPenebusan,
-                             a.MasaAktifIteratur,
-                             a.StatusPengambilanObat,
-                             a.TakaranDosis,
-                             a.IsContinued,
-                             a.CaraPemakaian,
-                             a.EstimasiPemberian,
-                             a.TglStopPemakaian,
-                         };
+                        join u in _applicationDbContext.UserActives
+                            on a.CreateBy equals u.UserActiveId
 
-            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-            //if (!string.IsNullOrWhiteSpace(search))
-            //{
-            //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-            //    query = query.Where(u =>
-            //        EF.Functions.ILike(u.NamaBenefit, search)
-            //    );
-            //}
+                        join r in _applicationDbContext.Reseps
+                            on a.ResepId equals r.ResepId
 
-            //// **Filter berdasarkan tanggal**
-            if (startDate.HasValue && endDate.HasValue)
+                        join ra in _applicationDbContext.Racikans
+                            on a.RacikanId equals ra.RacikanId into racikanJoin
+                        from ra in racikanJoin.DefaultIfEmpty()
+
+                        join rd in _applicationDbContext.RacikanDetails
+                            on ra.RacikanId equals rd.RacikanId into racikanDetailJoin
+                        from rd in racikanDetailJoin.DefaultIfEmpty()
+
+                        join ob in _applicationDbContext.Obats
+                            on a.ObatId equals ob.ObatId into obatJoin
+                            from ob in obatJoin.DefaultIfEmpty()
+
+                        join obRD in _applicationDbContext.Obats
+                            on rd.ObatId equals obRD.ObatId into obatRacikanJoin
+                        from obRD in obatRacikanJoin.DefaultIfEmpty()
+
+                        where a.IsDelete == false
+                        select new
+                        {
+                            a.CreateDateTime,
+                            a.CreateBy,
+                            CreateByName = u.FullName,
+                            a.DetailResepId,
+                            a.ResepId,
+                            r.KunjunganId,
+                            a.AsuransiId,
+                            a.NamaAsuransi,
+                            ObatId = (bool)!a.IsRacikan ? a.ObatId : rd.ObatId,
+                            NamaObat = (bool)!a.IsRacikan ? ob.ObatName : obRD.ObatName,
+                            a.Qty,
+                            a.JenisRacikan,
+                            Signa = (bool)!a.IsRacikan ? a.Signa : ra.Signa ,
+                            SignaTambahan = (bool)!a.IsRacikan ? a.SignaTambahan : ra.SignaTambahan,
+                            a.JenisObat,
+                            a.HargaObat,
+                            a.TotalHargaObat,
+                            a.StatusCoverObat,
+                            a.IsRacikan,
+                            a.RacikanId,
+                            NamaRacikan = ra != null ? ra.NamaRacikan : null,
+                            a.IsIteratur,
+                            a.JumlahIteratur,
+                            a.TglMulaiIteratur,
+                            a.JarakPenebusan,
+                            a.MasaAktifIteratur,
+                            a.StatusPengambilanObat,
+                            a.StatusDiberikanPasien,
+                            TakaranDosis = (bool)!a.IsRacikan ? a.TakaranDosis : obRD.TakaranDosis,
+                            a.IsContinued,
+                            a.CaraPemakaian,
+                            a.EstimasiPemberian,
+                            a.TglStopPemakaian,
+                        };
+
+            // 🔎 Search sederhana
+            if (!string.IsNullOrWhiteSpace(search))
             {
-                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
-                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
-
-                query = query.Where(u =>
-                    u.CreateDateTime >= startUtc &&
-                    u.CreateDateTime <= endUtc);
+                string lower = search.ToLower();
+                query = query.Where(x =>
+                    (x.NamaAsuransi != null && x.NamaAsuransi.ToLower().Contains(lower)) ||
+                    (x.CreateByName != null && x.CreateByName.ToLower().Contains(lower)) ||
+                    (x.NamaRacikan != null && x.NamaRacikan.ToLower().Contains(lower))
+                );
             }
 
-            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
-            if (periode.HasValue)
+            // Filter by KunjunganId
+            if (kunjungan.HasValue && kunjungan != Guid.Empty)
             {
-                DateTime today = DateTime.UtcNow.Date;
+                query = query.Where(x => x.KunjunganId == kunjungan);
+            }
 
-                switch (periode)
+            // 🔎 Sorting dinamis
+            query = sortDirection?.ToLower() == "desc"
+                ? orderBy switch
                 {
-                    case PeriodeFilter.Today:
-                        query = query.Where(u => u.CreateDateTime.Date == today);
-                        break;
-                    case PeriodeFilter.ThisWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date <= today
-                        );
-                        break;
-                    case PeriodeFilter.LastWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)
-                        );
-                        break;
-                    case PeriodeFilter.ThisMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month &&
-                            u.CreateDateTime.Year == today.Year
-                        );
-                        break;
-                    case PeriodeFilter.LastMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month - 1 &&
-                            u.CreateDateTime.Year == today.Year
-                        );
-                        break;
-                    case PeriodeFilter.ThisYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
-                        break;
-                    case PeriodeFilter.LastYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
-                        break;
-                    case PeriodeFilter.Last3Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
-                        break;
-                    case PeriodeFilter.Last6Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
-                        break;
+                    "CreateDateTime" => query.OrderByDescending(x => x.CreateDateTime),
+                    "CreateByName" => query.OrderByDescending(x => x.CreateByName),
+                    "NamaAsuransi" => query.OrderByDescending(x => x.NamaAsuransi),
+                    _ => query.OrderByDescending(x => x.CreateDateTime)
                 }
-            }
-
-            // Sorting Data dengan cara yang lebih aman
-            //query = sortDirection?.ToLower() == "desc"
-            //    ? orderBy switch
-            //    {
-            //        "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
-            //        "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-            //        "NamaBenefit" => query.OrderByDescending(u => u.NamaBenefit),
-            //        _ => query.OrderByDescending(u => u.CreateDateTime)
-            //    }
-            //    : orderBy switch
-            //    {
-            //        "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
-            //        "CreateByName" => query.OrderBy(u => u.CreateByName),
-            //        "NamaBenefit" => query.OrderBy(u => u.NamaBenefit),
-            //        _ => query.OrderBy(u => u.CreateDateTime)
-            //    };
+                : orderBy switch
+                {
+                    "CreateDateTime" => query.OrderBy(x => x.CreateDateTime),
+                    "CreateByName" => query.OrderBy(x => x.CreateByName),
+                    "NamaAsuransi" => query.OrderBy(x => x.NamaAsuransi),
+                    _ => query.OrderBy(x => x.CreateDateTime)
+                };
 
             // Pagination
             var totalRows = query.Count();
@@ -640,5 +692,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 }
             });
         }
+
+
+
     }
 }

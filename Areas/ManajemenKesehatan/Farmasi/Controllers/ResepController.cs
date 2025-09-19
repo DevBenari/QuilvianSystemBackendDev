@@ -140,6 +140,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                                d.JarakPenebusan,
                                                d.StatusCoverObat,
                                                d.StatusPengambilanObat,
+                                               d.StatusDiberikanPasien,
                                                d.CaraPemakaian,
                                                d.EstimasiPemberian,
                                                d.TglStopPemakaian,
@@ -162,6 +163,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                                   d.TotalHargaObat,
                                                   d.CaraPemakaian,
                                                   d.EstimasiPemberian,
+                                                  d.StatusDiberikanPasien,
                                                   d.TglStopPemakaian,
                                                   ra.CreateBy,
                                                   ra.CreateDateTime,
@@ -254,6 +256,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                           d.CaraPemakaian,
                           d.EstimasiPemberian,
                           d.TglStopPemakaian,
+                          d.StatusDiberikanPasien,
                           d.CreateBy,
                           d.CreateDateTime
                       })
@@ -269,6 +272,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                         ra.RacikanId,
                         ra.NamaRacikan,
                         d.CaraPemakaian,
+                        d.StatusDiberikanPasien,
                         d.EstimasiPemberian,
                         d.TglStopPemakaian,
                         d.Qty,
@@ -430,6 +434,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                 StatusPengambilanObat = true,
                                 EstimasiPemberian = obat.EstimasiPemberian,
                                 CaraPemakaian = obat.CaraPemakaian,
+                                StatusDiberikanPasien = obat.StatusDiberikanPasien,
                                 TglStopPemakaian = TryParseTanggalToUtc(obat.TglStopPemakaian),
 
                                 CreateBy = getUserActive.UserActiveId,
@@ -561,6 +566,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                 StatusPengambilanObat = true,
                                 CaraPemakaian = obat.CaraPemakaian,
                                 EstimasiPemberian = obat.EstimasiPemberian,
+                                StatusDiberikanPasien = obat.StatusDiberikanPasien,
                                 TglStopPemakaian = TryParseTanggalToUtc(obat.TglStopPemakaian),
                                 CreateBy = getUserActive.UserActiveId,
                                 CreateDateTime = DateTimeOffset.UtcNow
@@ -930,6 +936,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             CaraPemakaian = obat.CaraPemakaian,
                             EstimasiPemberian = obat.EstimasiPemberian,
                             TglStopPemakaian = TryParseTanggalToUtc(obat.TglStopPemakaian),
+                            StatusDiberikanPasien = obat.StatusDiberikanPasien,
                             CreateBy = userId,
                             CreateDateTime = DateTimeOffset.UtcNow
                         };
@@ -1688,6 +1695,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                   d.JarakPenebusan,
                                   d.StatusCoverObat,
                                   d.StatusPengambilanObat,
+                                  d.JenisObat,
+                                  d.IsRacikan,
+                                  d.StatusDiberikanPasien,
                                   d.CaraPemakaian,
                                   d.EstimasiPemberian,
                                   d.TglStopPemakaian,
@@ -1710,6 +1720,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                   d.SignaTambahan,
                                   d.CaraPemakaian,
                                   d.EstimasiPemberian,
+                                  d.StatusDiberikanPasien,
                                   d.TglStopPemakaian,
                                   ra.CreateBy,
                                   ra.CreateDateTime,

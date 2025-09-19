@@ -2,7 +2,9 @@
 {
     public class CttPemberianObatViewModel
     {
+        public Guid? KunjunganId { get; set; }
         public Guid? ObatId { get; set; }
+        public Guid? RacikanId { get; set; }
         public string? TglPemberian { get; set; }
         public TimeOnly? WaktuPemberian { get; set; }
         public string? StatusPemberian { get; set; }

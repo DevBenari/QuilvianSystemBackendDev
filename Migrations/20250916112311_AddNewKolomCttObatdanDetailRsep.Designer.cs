@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -11,9 +12,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250916112311_AddNewKolomCttObatdanDetailRsep")]
+    partial class AddNewKolomCttObatdanDetailRsep
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -187,7 +189,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("JenisPembayaranId");
 
-                    b.ToTable("JnsPembayaran", "public");
+                    b.ToTable("Adm_JenisPembayaran", "public");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models.JenisUser", b =>
@@ -212,15 +214,12 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<int?>("No")
                         .HasColumnType("integer");
 
-                    b.Property<string>("Pas")
-                        .HasColumnType("text");
-
                     b.Property<int?>("Tlp")
                         .HasColumnType("integer");
 
                     b.HasKey("JenisUserId");
 
-                    b.ToTable("JnsUser", "public");
+                    b.ToTable("Adm_JenisUser", "public");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models.Pembayaran", b =>
@@ -258,7 +257,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("PembayaranId");
 
-                    b.ToTable("JnsPembayaranNominal", "public");
+                    b.ToTable("Adm_Pembayaran", "public");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models.UserActive", b =>
@@ -1618,71 +1617,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.ToTable("Hrd_PengajuanTiketing", "public");
                 });
 
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models.CatatanESO", b =>
-                {
-                    b.Property<Guid?>("ESOId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("CreateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("CttPemberianObatId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("DeleteBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("DeleteDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsDelete")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool?>("IsTandaiObat")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Keterangan")
-                        .HasColumnType("text");
-
-                    b.Property<Guid?>("KunjunganId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("ManifestasiESO")
-                        .HasColumnType("text");
-
-                    b.Property<Guid?>("ObatId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("PerawatUserActiveId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("RacikanId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("TTDid")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("TglKesudahan")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("TglTerjadi")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("UpdateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("UpdateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("ESOId");
-
-                    b.ToTable("CatatanESOs");
-                });
-
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models.CttPemberianObat", b =>
                 {
                     b.Property<Guid>("CttPemberianObatId")
@@ -1709,9 +1643,6 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.Property<string>("Keterangan")
                         .HasColumnType("text");
-
-                    b.Property<Guid?>("KunjunganId")
-                        .HasColumnType("uuid");
 
                     b.Property<Guid?>("ObatId")
                         .HasColumnType("uuid");

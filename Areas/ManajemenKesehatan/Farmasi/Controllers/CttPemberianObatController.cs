@@ -98,6 +98,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
                        a.CttPemberianObatId,
                        a.ObatId,
+                       a.KunjunganId,
+                       a.RacikanId,
                        a.TglPemberian,
                        a.WaktuPemberian,
                        a.StatusPemberian,
@@ -167,13 +169,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             on a.ObatId equals o0.ObatId into go0
                        from o in go0.DefaultIfEmpty()
 
+                           // Left Join Racikan
+                           join r0 in _applicationDbContext.Racikans
+                            on a.RacikanId equals r0.RacikanId into gr0
+                       from r in gr0.DefaultIfEmpty()
+
                        select new
                        {
                            a.CttPemberianObatId,
                            a.CreateDateTime,
                            a.CreateBy,
                            CreateByName = u != null ? u.FullName : null,
-
+                           a.KunjunganId,
                            a.ObatId,
                            ObatInfo = new
                            {
@@ -181,6 +188,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                NamaObat = o != null ? o.ObatName : null,
                                DosisObat = o != null ? (decimal?)o.TakaranDosis : null,
 
+                           },
+
+                           a.RacikanId,
+                           RacikanInfo = new
+                           {
+                               // === sesuaikan nama kolom entity Racikan kamu ===
+                               NamaRacikan = r != null ? r.NamaRacikan : null,
+                               KeteranganRacikan = r != null ? r.Keterangan : null,
                            },
 
                            a.TglPemberian,
@@ -237,20 +252,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
-                //// **Cek Duplikasi**
-                //bool isDuplicate = _applicationDbContext.Diskons
-                //                    .Any(c => c.NamaDiskon == vm.NamaDiskon);
+                // **Cek Duplikasi**
+                bool isDuplicate = _applicationDbContext.CttPemberianObats
+                                    .Any(c => c.KunjunganId == vm.KunjunganId && (c.RacikanId == vm.RacikanId || c.ObatId == vm.ObatId));
 
-                //if (isDuplicate)
-                //{
-                //    return Conflict(new { message = "Nama benefit ini telah tersedia" });
-                //}
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Catatan pemberian obat ini sudah ada." });
+                }
 
                 // **Buat Data Baru**
                 var data = new CttPemberianObat
                 {
                     CttPemberianObatId = Guid.NewGuid(),
+                    KunjunganId = vm.KunjunganId,
                     ObatId = vm.ObatId,
+                    RacikanId = vm.RacikanId,
                     TglPemberian = TryParseTanggalToUtc(vm.TglPemberian),
                     WaktuPemberian = vm.WaktuPemberian,
                     StatusPemberian = vm.StatusPemberian,
@@ -324,7 +341,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 }
 
                 // **Update Data**
+                data.KunjunganId = vm.KunjunganId;
                 data.ObatId = vm.ObatId;
+                data.RacikanId = vm.RacikanId;
                 data.TglPemberian = TryParseTanggalToUtc(vm.TglPemberian);
                 data.WaktuPemberian = vm.WaktuPemberian;
                 data.StatusPemberian = vm.StatusPemberian;
@@ -424,6 +443,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         int page = 1,
         int perPage = 10,
         string? search = null,
+        Guid? kunjunganid = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -442,6 +462,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                        // LEFT JOIN Obat
                    join o0 in _applicationDbContext.Obats on a.ObatId equals o0.ObatId into go0
                    from o in go0.DefaultIfEmpty()
+
+                   // left join racikan
+                   join r0 in _applicationDbContext.Racikans on a.RacikanId equals r0.RacikanId into gr0
+                   from r in gr0.DefaultIfEmpty()
+
                    where (a.IsDelete == false || a.IsDelete == null)
                    orderby a.CreateDateTime descending
                    select new
@@ -451,7 +476,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                        CreateByName = u.FullName,
 
                        a.CttPemberianObatId,
+                       a.KunjunganId,
                        a.ObatId,
+                       a.RacikanId,
                        a.TglPemberian,
                        a.WaktuPemberian,
                        a.StatusPemberian,
@@ -464,6 +491,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                        NamaObat = o != null ? o.ObatName : null,
                        DosisObat = o != null ? (decimal?)o.TakaranDosis : null,
 
+                       // >>> Informasi Racikan (berdasarkan RacikanId)
+                       NamaRacikan = r != null ? r.NamaRacikan : null,
+                       KeteranganRacikan = r != null ? r.Keterangan : null,
+
                    };
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
@@ -474,6 +505,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             //        EF.Functions.ILike(u.NamaDiskon, search)
             //    );
             //}
+
+            //**Filter berdasarkan KunjunganId**
+            if (kunjunganid.HasValue)
+            {
+                query = query.Where(u => u.KunjunganId == kunjunganid.Value);
+            }
 
             //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)

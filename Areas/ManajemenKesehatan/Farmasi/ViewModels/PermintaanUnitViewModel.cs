@@ -7,5 +7,6 @@
         public string? TglPembuatanPermintaan { get; set; }
         public string? StatusPermintaan { get; set; }
         public string? Keterangan { get; set; }
+        public List<DetailPermintaanUnitViewModel> DetailPermintaanUnit { get; set; }
     }
 }

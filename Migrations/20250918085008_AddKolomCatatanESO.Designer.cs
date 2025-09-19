@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -11,9 +12,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250918085008_AddKolomCatatanESO")]
+    partial class AddKolomCatatanESO
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -187,7 +189,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("JenisPembayaranId");
 
-                    b.ToTable("JnsPembayaran", "public");
+                    b.ToTable("Adm_JenisPembayaran", "public");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models.JenisUser", b =>
@@ -212,15 +214,12 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<int?>("No")
                         .HasColumnType("integer");
 
-                    b.Property<string>("Pas")
-                        .HasColumnType("text");
-
                     b.Property<int?>("Tlp")
                         .HasColumnType("integer");
 
                     b.HasKey("JenisUserId");
 
-                    b.ToTable("JnsUser", "public");
+                    b.ToTable("Adm_JenisUser", "public");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models.Pembayaran", b =>
@@ -258,7 +257,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("PembayaranId");
 
-                    b.ToTable("JnsPembayaranNominal", "public");
+                    b.ToTable("Adm_Pembayaran", "public");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models.UserActive", b =>
