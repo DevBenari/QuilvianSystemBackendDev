@@ -103,6 +103,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                        a.TglPemberian,
                        a.WaktuPemberian,
                        a.StatusPemberian,
+                       a.StatusCttEso,
                        a.CaraPemberianObat,
                        a.UserActiveIdPerawat,
                        a.TTDId,
@@ -201,6 +202,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                            a.TglPemberian,
                            a.WaktuPemberian,
                            a.StatusPemberian,
+                           a.StatusCttEso,
                            a.CaraPemberianObat,
 
                            a.UserActiveIdPerawat,
@@ -271,6 +273,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     TglPemberian = TryParseTanggalToUtc(vm.TglPemberian),
                     WaktuPemberian = vm.WaktuPemberian,
                     StatusPemberian = vm.StatusPemberian,
+                    StatusCttEso = vm.StatusCttEso,
                     CaraPemberianObat = vm.CaraPemberianObat,
                     UserActiveIdPerawat = vm.UserActiveIdPerawat,
                     TTDId = vm.TTDId,
@@ -290,6 +293,72 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 else
                 {
                     return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
+                }
+            }
+            catch (DbUpdateException dbEx)
+            {
+                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
+        [HttpPut("StatusCatatanESO/{id}")]
+        public async Task<IActionResult> UpdateStatusCatatanESO(Guid id, [FromBody] StatusCttEsoViewModel vm)
+        {
+            if (vm == null || !ModelState.IsValid)
+            {
+                return BadRequest(new { message = "Data tidak valid." });
+            }
+
+            try
+            {
+                // **Cek koneksi ke database**
+                if (!await _applicationDbContext.Database.CanConnectAsync())
+                {
+                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+                }
+
+                // **Ambil User ID dari JWT Claims**
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+                if (getUserActive == null)
+                {
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+                }
+                var userActiveId = getUserActive.UserActiveId;
+
+                // **Cari Data**
+                var data = await _applicationDbContext.CttPemberianObats.FindAsync(id);
+                if (data == null)
+                {
+                    return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                // **Update Data**
+                data.StatusCttEso = vm.Status;
+
+                data.UpdateBy = userActiveId;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
+
+                _applicationDbContext.CttPemberianObats.Update(data);
+                int result = await _applicationDbContext.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    return Ok(new { message = "Update Data Berhasil || 200 OK" });
+                }
+                else
+                {
+                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
                 }
             }
             catch (DbUpdateException dbEx)
