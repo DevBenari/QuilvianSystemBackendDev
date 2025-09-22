@@ -271,14 +271,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 if (vm.TTDFile != null && vm.TTDFile.Length > 0)
                 {
                     var maxSize = 1 * 1024 * 1024; // max 1MB
-                    var allowedExtensions = new List<string> { ".png" };
+                    var allowedExtensions = new List<string> { ".jpg", ".jpeg" };
                     var fileExtension = Path.GetExtension(vm.TTDFile.FileName).ToLower();
 
                     if (vm.TTDFile.Length > maxSize)
                         return BadRequest(new { message = "Ukuran file TTD terlalu besar! Maksimal 1MB." });
 
                     if (!allowedExtensions.Contains(fileExtension))
-                        return BadRequest(new { message = "Format TTD tidak valid! Gunakan PNG." });
+                        return BadRequest(new { message = "Format TTD tidak valid! Gunakan JPG atau JPEG." });
 
                     var folder = "TTDUser";
                     var uploadFolder = Path.Combine(_webHostEnvironment.WebRootPath, folder);
@@ -536,14 +536,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 if (vm.TTDFile != null && vm.TTDFile.Length > 0)
                 {
                     var maxSize = 1 * 1024 * 1024; // max 1MB
-                    var allowedExtensions = new List<string> { ".png" };
+                    var allowedExtensions = new List<string> { ".jpg", ".jpeg" };
                     var fileExtension = Path.GetExtension(vm.TTDFile.FileName).ToLower();
 
                     if (vm.TTDFile.Length > maxSize)
                         return BadRequest(new { message = "Ukuran file TTD terlalu besar! Maksimal 1MB." });
 
                     if (!allowedExtensions.Contains(fileExtension))
-                        return BadRequest(new { message = "Format TTD tidak valid! Gunakan PNG." });
+                        return BadRequest(new { message = "Format TTD tidak valid! Gunakan JPG atau JPEG." });
 
                     var folder = "TTDUser";
                     var uploadFolder = Path.Combine(_webHostEnvironment.WebRootPath, folder);
