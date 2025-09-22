@@ -223,7 +223,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             });
         }
 
-
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CttPemberianObatViewModel vm)
         {

@@ -98,11 +98,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.Keterangan,
 
                              DetailPermintaan = (from d in _applicationDbContext.DetailPermintaanUnits
+                                                 join ob in _applicationDbContext.Obats
+                                                     on d.ObatId equals ob.ObatId into obatJoin
+                                                 from ob in obatJoin.DefaultIfEmpty()
                                                  where d.PermintaanUnitId == a.PermintaanUnitId
                                                  select new
                                                  {
                                                      d.DetailPermintaanUnitId,
                                                      d.ObatId,
+                                                     NamaObat = ob != null ? ob.ObatName : null,
                                                      d.QtyPermintaan,
                                                      d.SatuanItem,
                                                      d.KategoriItem,
@@ -165,11 +169,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             a.Keterangan,
 
                             DetailPermintaan = (from d in _applicationDbContext.DetailPermintaanUnits
+                                                join ob in _applicationDbContext.Obats
+                                                    on d.ObatId equals ob.ObatId into obatJoin
+                                                from ob in obatJoin.DefaultIfEmpty()
                                                 where d.PermintaanUnitId == a.PermintaanUnitId
                                                 select new
                                                 {
                                                     d.DetailPermintaanUnitId,
                                                     d.ObatId,
+                                                    NamaObat = ob != null ? ob.ObatName : null,
                                                     d.QtyPermintaan,
                                                     d.SatuanItem,
                                                     d.KategoriItem,
@@ -548,11 +556,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             a.Keterangan,
 
                             DetailPermintaan = (from d in _applicationDbContext.DetailPermintaanUnits
+                                                join ob in _applicationDbContext.Obats
+                                                    on d.ObatId equals ob.ObatId into obatJoin
+                                                from ob in obatJoin.DefaultIfEmpty()
                                                 where d.PermintaanUnitId == a.PermintaanUnitId
                                                 select new
                                                 {
                                                     d.DetailPermintaanUnitId,
                                                     d.ObatId,
+                                                    NamaObat = ob != null ? ob.ObatName : null,
                                                     d.QtyPermintaan,
                                                     d.SatuanItem,
                                                     d.KategoriItem,
