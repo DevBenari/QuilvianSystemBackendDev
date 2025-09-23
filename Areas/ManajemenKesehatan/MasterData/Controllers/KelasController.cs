@@ -144,7 +144,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // **Cek Duplikasi**
                 var isDuplicate = _applicationDbContext.Kelass
-                    .Any(t => t.NamaKelas.ToLower().Trim() == vm.NamaKelas.ToLower().Trim());
+                    .Any(t => t.NamaKelas.ToLower().Trim() == vm.NamaKelas.ToLower().Trim() && t.KodeKelas == vm.KodeKelas);
 
                 if (isDuplicate)
                 {

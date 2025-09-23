@@ -54,6 +54,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         where a.IsDelete == false
                         join u in _applicationDbContext.UserActives
                         on a.CreateBy equals u.UserActiveId
+
+                        // Left Join obat
+                        join o in _applicationDbContext.Obats on a.ObatId equals o.ObatId into obatJoin
+                        from o in obatJoin.DefaultIfEmpty()
+
                         where a.IsDelete == false
                         select new
                         {
@@ -64,8 +69,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             KunjunganId = a.KunjunganId,
                             PendaftaranPasienBaruId = a.PendaftaranPasienBaruId,
                             NoRekamMedis = a.NoRekamMedis,
-                            NamaObat = a.NamaObat,
-                            Dosis = a.Dosis,
+                            ObatId = a.ObatId,
+                            NamaObat = o != null ? o.ObatName : a.NamaObat,
+                            Dosis = o != null ? o.Dosis : a.Dosis,
                             Frekuensi = a.Frekuensi,
                             LamaKonsumsi = a.LamaKonsumsi,
                             Status = a.Status,
@@ -385,26 +391,32 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // Query data
-                var query = from a in _applicationDbContext.CurrentMedications
-                            where a.IsDelete == false
-                            join u in _applicationDbContext.UserActives
-                            on a.CreateBy equals u.UserActiveId
-                            where a.IsDelete == false
-                            select new
-                            {
-                                CreateDateTime = a.CreateDateTime,
-                                CreateBy = a.CreateBy,
-                                CreateByName = u.FullName,
-                                CurrentMedicationId = a.CurrentMedicationID,
-                                KunjunganId = a.KunjunganId,
-                                PendaftaranPasienBaruId = a.PendaftaranPasienBaruId,
-                                NoRekamMedis = a.NoRekamMedis,
-                                NamaObat = a.NamaObat,
-                                Dosis = a.Dosis,
-                                Frekuensi = a.Frekuensi,
-                                LamaKonsumsi = a.LamaKonsumsi,
-                                Status = a.Status,
-                            };
+                var query = (from a in _applicationDbContext.CurrentMedications
+                             where a.IsDelete == false
+                             join u in _applicationDbContext.UserActives
+                             on a.CreateBy equals u.UserActiveId
+
+                             // Left Join obat
+                             join o in _applicationDbContext.Obats on a.ObatId equals o.ObatId into obatJoin
+                             from o in obatJoin.DefaultIfEmpty()
+
+                             where a.IsDelete == false
+                             select new
+                             {
+                                 CreateDateTime = a.CreateDateTime,
+                                 CreateBy = a.CreateBy,
+                                 CreateByName = u.FullName,
+                                 CurrentMedicationId = a.CurrentMedicationID,
+                                 KunjunganId = a.KunjunganId,
+                                 PendaftaranPasienBaruId = a.PendaftaranPasienBaruId,
+                                 NoRekamMedis = a.NoRekamMedis,
+                                 ObatId = a.ObatId,
+                                 NamaObat = o != null ? o.ObatName : a.NamaObat,
+                                 Dosis = o != null ? o.Dosis : a.Dosis,
+                                 Frekuensi = a.Frekuensi,
+                                 LamaKonsumsi = a.LamaKonsumsi,
+                                 Status = a.Status,
+                             });
 
                 // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
                 if (!string.IsNullOrWhiteSpace(search))
