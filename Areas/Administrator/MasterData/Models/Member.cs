@@ -19,7 +19,8 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models
         public string? Tlp { get; set; }
         public string? Pas { get; set; }
         public string? Keterangan { get; set; }
-        public bool? IsActive { get; set; } = true;
+        public string? Status { get; set; }
+        public int KodePembayaran { get; set; }
     }
     // ======================================
     // 2. JENIS PEMBAYARAN
@@ -31,18 +32,15 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models
         public Guid JenisPembayaranId { get; set; }
 
         [Required]
-        public string NamaPembayaran { get; set; } = string.Empty;
+        public int KodePembayaran { get; set; }
+        public string NamaPembayaran { get; set; }
         public int NominalDefault { get; set; }
         public string? Keterangan { get; set; }
-        public string? bln { get; set; }
-
-        [Column(TypeName = "date")]
-        public DateTime TanggalMasuk { get; set; }
-
-        [Column(TypeName = "date")]
-        public DateTime TanggalKeluar { get; set; }
-        public bool Set { get; set; } = true;
-        public bool IsActive { get; set; } = true;
+        public string JenisTanggal { get; set; }
+        public string? TanggalMasuk { get; set; }
+        public string? TanggalKeluar { get; set; }
+        public string? Set { get; set; }
+        public string? Status { get; set; }
     }
     // ======================================
     // 3. PEMBAYARAN
@@ -59,12 +57,13 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models
 
         [Required]
         public Guid JenisPembayaranId { get; set; }
+        public int KodePembayaran { get; set; }
         public string NamaPembayaran { get; set; } = string.Empty;
         public int Nominal { get; set; }
 
         [Column(TypeName = "date")]
         public DateTime TanggalPembayaran { get; set; }
         public string? Keterangan { get; set; }
-        public string Status { get; set; } = "Pending";
+        public string? Status { get; set; }
     }
 }
