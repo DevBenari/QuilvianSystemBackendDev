@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
@@ -224,7 +225,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] CttPemberianObatViewModel vm)
+        public async Task<IActionResult> Create([FromForm] CttPemberianObatViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -262,6 +263,58 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     return Conflict(new { message = "Catatan pemberian obat ini sudah ada." });
                 }
 
+                // ==================================================
+                // ✅ PROSES UPLOAD TTD
+                // ==================================================
+
+                string ttdPath = null;
+                Guid ttdId;
+
+                if (vm.TTDFile != null && vm.TTDFile.Length > 0)
+                {
+                    var maxSize = 1 * 1024 * 1024; // max 1MB
+                    var allowedExtensions = new List<string> { ".jpg", ".jpeg" };
+                    var fileExtension = Path.GetExtension(vm.TTDFile.FileName).ToLower();
+
+                    if (vm.TTDFile.Length > maxSize)
+                        return BadRequest(new { message = "Ukuran file TTD terlalu besar! Maksimal 1MB." });
+
+                    if (!allowedExtensions.Contains(fileExtension))
+                        return BadRequest(new { message = "Format TTD tidak valid! Gunakan JPG atau JPEG." });
+
+                    var folder = "TTDUser";
+                    var uploadFolder = Path.Combine(_webHostEnvironment.WebRootPath, folder);
+                    if (!Directory.Exists(uploadFolder)) Directory.CreateDirectory(uploadFolder);
+
+                    var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
+                    var ttdFileName = $"{getUserActive.FullName}{safeTime}{"CttObat"}{fileExtension}";
+                    var ttdFilePath = Path.Combine(uploadFolder, ttdFileName);
+
+                    using (var stream = new FileStream(ttdFilePath, FileMode.Create))
+                        await vm.TTDFile.CopyToAsync(stream);
+
+                    ttdPath = $"/{folder}/{ttdFileName}";
+
+                    // Simpan ke MasterTTD
+                    var newTTD = new MasterTTD
+                    {
+                        TTDId = Guid.NewGuid(),
+                        UserActiveId = userActiveId,
+                        TTDPath = ttdPath,
+                        CreateDateTime = DateTimeOffset.UtcNow,
+                        CreateBy = userActiveId
+                    };
+
+                    _applicationDbContext.MasterTTDs.Add(newTTD);
+                    await _applicationDbContext.SaveChangesAsync();
+                    ttdId = newTTD.TTDId;
+                }
+                else
+                {
+                    return BadRequest(new { message = "TTD harus diisi." });
+                }
+
+
                 // **Buat Data Baru**
                 var data = new CttPemberianObat
                 {
@@ -275,7 +328,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     StatusCttEso = vm.StatusCttEso,
                     CaraPemberianObat = vm.CaraPemberianObat,
                     UserActiveIdPerawat = vm.UserActiveIdPerawat,
-                    TTDId = vm.TTDId,
+                    TTDId = ttdId,
                     Keterangan = vm.Keterangan,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
@@ -371,7 +424,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] CttPemberianObatViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromForm] CttPemberianObatViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -408,6 +461,48 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
+                // ==================================================
+                // ✅ PROSES UPDATE TTD (opsional)
+                // ==================================================
+                if (vm.TTDFile != null && vm.TTDFile.Length > 0)
+                {
+                    var maxSize = 1 * 1024 * 1024; // max 1MB
+                    var allowedExtensions = new List<string> { ".jpg", ".jpeg" };
+                    var fileExtension = Path.GetExtension(vm.TTDFile.FileName).ToLower();
+
+                    if (vm.TTDFile.Length > maxSize)
+                        return BadRequest(new { message = "Ukuran file TTD terlalu besar! Maksimal 1MB." });
+
+                    if (!allowedExtensions.Contains(fileExtension))
+                        return BadRequest(new { message = "Format TTD tidak valid! Gunakan JPG atau JPEG." });
+
+                    var folder = "TTDUser";
+                    var uploadFolder = Path.Combine(_webHostEnvironment.WebRootPath, folder);
+                    if (!Directory.Exists(uploadFolder)) Directory.CreateDirectory(uploadFolder);
+
+                    var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
+                    var ttdFileName = $"{getUserActive.FullName}{safeTime}{"CttObat"}{fileExtension}";
+                    var ttdFilePath = Path.Combine(uploadFolder, ttdFileName);
+
+                    using (var stream = new FileStream(ttdFilePath, FileMode.Create))
+                        await vm.TTDFile.CopyToAsync(stream);
+
+                    var ttdPath = $"/{folder}/{ttdFileName}";
+
+                    // Update MasterTTD
+                    var masterTTD = _applicationDbContext.MasterTTDs.FirstOrDefault(t => t.TTDId == data.TTDId);
+                    if (masterTTD != null)
+                    {
+                        masterTTD.TTDPath = ttdPath;
+                        masterTTD.UpdateDateTime = DateTimeOffset.UtcNow;
+                        masterTTD.UpdateBy = userActiveId;
+                        _applicationDbContext.MasterTTDs.Update(masterTTD);
+                    }
+
+                    // Update catatan obaat juga
+                    data.TTDId = masterTTD?.TTDId ?? data.TTDId;
+                }
+
                 // **Update Data**
                 data.KunjunganId = vm.KunjunganId;
                 data.ObatId = vm.ObatId;
@@ -417,7 +512,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 data.StatusPemberian = vm.StatusPemberian;
                 data.CaraPemberianObat = vm.CaraPemberianObat;
                 data.UserActiveIdPerawat = vm.UserActiveIdPerawat;
-                data.TTDId = vm.TTDId;
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;

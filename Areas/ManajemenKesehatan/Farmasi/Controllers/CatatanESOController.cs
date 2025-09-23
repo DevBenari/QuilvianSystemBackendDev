@@ -285,7 +285,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     if (!Directory.Exists(uploadFolder)) Directory.CreateDirectory(uploadFolder);
 
                     var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
-                    var ttdFileName = $"{getUserActive.FullName}{safeTime}{fileExtension}";
+                    var ttdFileName = $"{getUserActive.FullName}{safeTime}{"CttESO"}{fileExtension}";
                     var ttdFilePath = Path.Combine(uploadFolder, ttdFileName);
 
                     using (var stream = new FileStream(ttdFilePath, FileMode.Create))
@@ -551,7 +551,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     if (!Directory.Exists(uploadFolder)) Directory.CreateDirectory(uploadFolder);
 
                     var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
-                    var ttdFileName = $"{getUserActive.FullName}{safeTime}{fileExtension}";
+                    var ttdFileName = $"{getUserActive.FullName}{safeTime}{"CttESO"}{fileExtension}";
                     var ttdFilePath = Path.Combine(uploadFolder, ttdFileName);
 
                     using (var stream = new FileStream(ttdFilePath, FileMode.Create))
