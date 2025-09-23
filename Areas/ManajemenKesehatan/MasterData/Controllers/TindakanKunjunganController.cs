@@ -160,11 +160,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 string kelasKode = "";
                 if (kunjungan.JenisKunjungan == "OP")  // Jenis Kunjungan adalah rawat jalan
                 {
-                    kelasKode = "KL001";  // Kode kelas untuk rawat jalan
+                    kelasKode = "OP";  // Kode kelas untuk rawat jalan
                 }
                 else if (kunjungan.JenisKunjungan == "IP")  // Jenis Kunjungan adalah rawat inap
                 {
-                    kelasKode = "KL002";  // Kode kelas untuk rawat inap
+                    kelasKode = "IP";  // Kode kelas untuk rawat inap
                 }
 
                 // Cari kelas berdasarkan kode kelas
