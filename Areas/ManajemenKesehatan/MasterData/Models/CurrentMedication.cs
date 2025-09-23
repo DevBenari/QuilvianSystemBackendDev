@@ -16,5 +16,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? Dosis { get; set; }
         public string? Frekuensi { get; set; }
         public string? LamaKonsumsi { get; set; }
+        public string? Status { get; set; }
+
     }
 }

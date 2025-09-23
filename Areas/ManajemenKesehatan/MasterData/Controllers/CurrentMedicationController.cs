@@ -68,6 +68,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             Dosis = a.Dosis,
                             Frekuensi = a.Frekuensi,
                             LamaKonsumsi = a.LamaKonsumsi,
+                            Status = a.Status,
                         }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -189,6 +190,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     Dosis = vm.Dosis,
                     Frekuensi = vm.Frekuensi,
                     LamaKonsumsi = vm.LamaKonsumsi,
+                    Status = vm.Status,
                     IsDelete = false,
 
                     CreateBy = userActiveId,
@@ -273,6 +275,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.Dosis = vm.Dosis;
                 data.Frekuensi = vm.Frekuensi;
                 data.LamaKonsumsi = vm.LamaKonsumsi;
+                data.Status = vm.Status;
+
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
@@ -399,6 +403,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 Dosis = a.Dosis,
                                 Frekuensi = a.Frekuensi,
                                 LamaKonsumsi = a.LamaKonsumsi,
+                                Status = a.Status,
                             };
 
                 // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
