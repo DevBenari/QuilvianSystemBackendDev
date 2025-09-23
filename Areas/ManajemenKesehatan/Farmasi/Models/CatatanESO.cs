@@ -17,6 +17,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
         public DateTime? TglKesudahan { get; set; }
         public Guid? PerawatUserActiveId { get; set; }
         public Guid? TTDid { get; set; }
+        public string? TTDPath { get; set; }
         public string? Keterangan {  get; set; }
     }
 }

@@ -11,7 +11,10 @@
         public string? ManifestasiESO { get; set; }
         public string? TglKesudahan { get; set; }
         public Guid? PerawatUserActiveId { get; set; }
-        public Guid? TTDid { get; set; }
+        //public Guid? TTDid { get; set; }
         public string? Keterangan { get; set; }
+
+        // Tambahan untuk upload TTD
+        public IFormFile? TTDFile { get; set; }
     }
 }

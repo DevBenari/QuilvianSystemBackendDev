@@ -1,12 +1,15 @@
 ﻿using System.Globalization;
 using System.Security.Claims;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
@@ -31,19 +34,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
         private readonly ILogger<PermintaanUnitController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly IHubContext<PermintaanUnitHub> _hubContext;
 
         public PermintaanUnitController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ILogger<PermintaanUnitController> logger,
-            IWebHostEnvironment webHostEnvironment)
+            IWebHostEnvironment webHostEnvironment,
+            IHubContext<PermintaanUnitHub> hubContext
+            )
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+            _hubContext = hubContext;
         }
 
         private DateTime? TryParseTanggalToUtc(string tanggal)
@@ -98,11 +105,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.Keterangan,
 
                              DetailPermintaan = (from d in _applicationDbContext.DetailPermintaanUnits
+                                                 join ob in _applicationDbContext.Obats
+                                                     on d.ObatId equals ob.ObatId into obatJoin
+                                                 from ob in obatJoin.DefaultIfEmpty()
                                                  where d.PermintaanUnitId == a.PermintaanUnitId
                                                  select new
                                                  {
                                                      d.DetailPermintaanUnitId,
                                                      d.ObatId,
+                                                     NamaObat = ob != null ? ob.ObatName : null,
                                                      d.QtyPermintaan,
                                                      d.SatuanItem,
                                                      d.KategoriItem,
@@ -165,11 +176,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             a.Keterangan,
 
                             DetailPermintaan = (from d in _applicationDbContext.DetailPermintaanUnits
+                                                join ob in _applicationDbContext.Obats
+                                                    on d.ObatId equals ob.ObatId into obatJoin
+                                                from ob in obatJoin.DefaultIfEmpty()
                                                 where d.PermintaanUnitId == a.PermintaanUnitId
                                                 select new
                                                 {
                                                     d.DetailPermintaanUnitId,
                                                     d.ObatId,
+                                                    NamaObat = ob != null ? ob.ObatName : null,
                                                     d.QtyPermintaan,
                                                     d.SatuanItem,
                                                     d.KategoriItem,
@@ -260,6 +275,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 await _applicationDbContext.DetailPermintaanUnits.AddRangeAsync(detailItems);
 
                 int result = await _applicationDbContext.SaveChangesAsync();
+                await _hubContext.Clients.All.SendAsync("PermintaanUnitCreated", new
+                {
+                    Action = "create",
+                    PermintaanUnitId = data.PermintaanUnitId
+                });
 
                 if (result > 0)
                 {
@@ -432,7 +452,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
                 // Simpan semua perubahan dalam satu transaksi
                 int result = await _applicationDbContext.SaveChangesAsync();
-
+                await _hubContext.Clients.All.SendAsync("PermintaanUnitUpdate", new
+                {
+                    Action = "update",
+                    PermintaanUnitId = data.PermintaanUnitId
+                });
                 if (result > 0)
                 {
                     return Ok(new { message = "Update Data Berhasil || 200 OK" });
@@ -548,11 +572,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             a.Keterangan,
 
                             DetailPermintaan = (from d in _applicationDbContext.DetailPermintaanUnits
+                                                join ob in _applicationDbContext.Obats
+                                                    on d.ObatId equals ob.ObatId into obatJoin
+                                                from ob in obatJoin.DefaultIfEmpty()
                                                 where d.PermintaanUnitId == a.PermintaanUnitId
                                                 select new
                                                 {
                                                     d.DetailPermintaanUnitId,
                                                     d.ObatId,
+                                                    NamaObat = ob != null ? ob.ObatName : null,
                                                     d.QtyPermintaan,
                                                     d.SatuanItem,
                                                     d.KategoriItem,

@@ -84,6 +84,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                           join k in _applicationDbContext.Kelass on tk.KelasId equals k.KelasId
                                           select new
                                           {
+                                              tk.KelasId,
                                               tk.TarifKelasId,
                                               tk.TarifDokter,
                                               tk.TarifRs,

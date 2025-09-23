@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using System.Linq;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
@@ -7,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
@@ -117,6 +119,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.TglKesudahan,
                              a.PerawatUserActiveId,
                              a.TTDid,
+                             a.TTDPath,
                              a.Keterangan,
 
                              // Data Obat
@@ -202,6 +205,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                   a.TglKesudahan,
                                   a.PerawatUserActiveId,
                                   a.TTDid,
+                                  a.TTDPath,
                                   a.Keterangan,
 
                                   // Data Obat
@@ -228,7 +232,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] CatatanESOViewModel vm)
+        public async Task<IActionResult> Create([FromForm] CatatanESOViewModel vm) // pakai FromForm biar bisa bawa file
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -237,36 +241,98 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
             try
             {
-                // **Cek koneksi ke database**
                 if (!_applicationDbContext.Database.CanConnect())
                 {
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
                 }
 
-                // **Ambil User ID dari JWT Claims**
+                // **Ambil user aktif dari JWT**
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
-                {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
-                }
 
                 var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
                 if (getUserActive == null)
-                {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-                }
+
                 var userActiveId = getUserActive.UserActiveId;
 
-                // **Cek Duplikasi**
+                // **Cek duplikasi**
                 bool isDuplicate = _applicationDbContext.CatatanESOs
-                                    .Any(c => c.KunjunganId == vm.KunjunganId && (c.RacikanId == vm.RacikanId || c.ObatId == vm.ObatId));
+                    .Any(c => c.KunjunganId == vm.KunjunganId && (c.RacikanId == vm.RacikanId || c.ObatId == vm.ObatId));
 
                 if (isDuplicate)
-                {
                     return Conflict(new { message = "Catatan efek samping obat ini sudah ada." });
+
+                // ==================================================
+                // ✅ PROSES UPLOAD TTD
+                // ==================================================
+                Guid ttdId;
+                string ttdPath;
+
+                if (vm.TTDFile != null && vm.TTDFile.Length > 0)
+                {
+                    var maxSize = 1 * 1024 * 1024; // max 1MB
+                    var allowedExtensions = new List<string> { ".jpg", ".jpeg" };
+                    var fileExtension = Path.GetExtension(vm.TTDFile.FileName).ToLower();
+
+                    if (vm.TTDFile.Length > maxSize)
+                        return BadRequest(new { message = "Ukuran file TTD terlalu besar! Maksimal 1MB." });
+
+                    if (!allowedExtensions.Contains(fileExtension))
+                        return BadRequest(new { message = "Format TTD tidak valid! Gunakan JPG atau JPEG." });
+
+                    // Nama file unik
+                    var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
+                    var ttdFileName = $"{getUserActive.FullName}_{safeTime}_CttESO{fileExtension}";
+
+                    // 📤 Upload ke Flask
+                    using var client = new HttpClient();
+                    using var ms = new MemoryStream();
+                    await vm.TTDFile.CopyToAsync(ms);
+                    ms.Position = 0;
+
+                    var content = new MultipartFormDataContent {
+                        { new StreamContent(ms) {
+                            Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.TTDFile.ContentType) }
+                        }, "file", ttdFileName },
+
+                        { new StringContent("TTDUser"), "folderTarget" }
+                    };
+
+                    var flaskResponse = await client.PostAsync("http://160.20.104.98:5050/upload", content);
+
+                    if (!flaskResponse.IsSuccessStatusCode)
+                        return StatusCode(500, new { message = "Gagal upload tanda tangan ke server Flask." });
+
+                    // Ambil URL/path hasil upload dari response Flask
+                    var responseBody = await flaskResponse.Content.ReadAsStringAsync();
+                    // Anggap Flask balikin JSON {"fileUrl": "/uploads/TTDUser/namafile.jpg"}
+                    dynamic jsonResp = Newtonsoft.Json.JsonConvert.DeserializeObject(responseBody);
+                    ttdPath = jsonResp.fileUrl;
+
+                    // Simpan ke MasterTTD
+                    var newTTD = new MasterTTD
+                    {
+                        TTDId = Guid.NewGuid(),
+                        UserActiveId = userActiveId,
+                        TTDPath = ttdPath, // langsung pakai path dari Flask
+                        CreateDateTime = DateTimeOffset.UtcNow,
+                        CreateBy = userActiveId
+                    };
+
+                    _applicationDbContext.MasterTTDs.Add(newTTD);
+                    await _applicationDbContext.SaveChangesAsync();
+                    ttdId = newTTD.TTDId;
+                }
+                else
+                {
+                    return BadRequest(new { message = "TTD harus diisi." });
                 }
 
-                // **Buat Data Baru**
+                // ==================================================
+                // ✅ BUAT DATA CATATAN ESO
+                // ==================================================
                 var data = new CatatanESO
                 {
                     ESOId = Guid.NewGuid(),
@@ -279,24 +345,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     ManifestasiESO = vm.ManifestasiESO,
                     TglKesudahan = TryParseTanggalToUtc(vm.TglKesudahan),
                     PerawatUserActiveId = vm.PerawatUserActiveId,
-                    TTDid = vm.TTDid,
+                    TTDid = ttdId,
+                    TTDPath = ttdPath,
                     Keterangan = vm.Keterangan,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
 
-                // **Simpan ke Database**
                 _applicationDbContext.CatatanESOs.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
-                {
                     return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
-                }
-                else
-                {
-                    return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
-                }
+
+                return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
             }
             catch (DbUpdateException dbEx)
             {
@@ -307,6 +369,88 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
+
+        //[HttpPost]
+        //public async Task<IActionResult> Create([FromBody] CatatanESOViewModel vm)
+        //{
+        //    if (vm == null || !ModelState.IsValid)
+        //    {
+        //        return BadRequest(new { message = "Data tidak valid." });
+        //    }
+
+        //    try
+        //    {
+        //        // **Cek koneksi ke database**
+        //        if (!_applicationDbContext.Database.CanConnect())
+        //        {
+        //            return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+        //        }
+
+        //        // **Ambil User ID dari JWT Claims**
+        //        var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        //        if (string.IsNullOrEmpty(emailLogin))
+        //        {
+        //            return Unauthorized(new { message = "User tidak terautentikasi!" });
+        //        }
+
+        //        var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
+        //        if (getUserActive == null)
+        //        {
+        //            return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+        //        }
+        //        var userActiveId = getUserActive.UserActiveId;
+
+        //        // **Cek Duplikasi**
+        //        bool isDuplicate = _applicationDbContext.CatatanESOs
+        //                            .Any(c => c.KunjunganId == vm.KunjunganId && (c.RacikanId == vm.RacikanId || c.ObatId == vm.ObatId));
+
+        //        if (isDuplicate)
+        //        {
+        //            return Conflict(new { message = "Catatan efek samping obat ini sudah ada." });
+        //        }
+
+        //        // **Buat Data Baru**
+        //        var data = new CatatanESO
+        //        {
+        //            ESOId = Guid.NewGuid(),
+        //            KunjunganId = vm.KunjunganId,
+        //            CttPemberianObatId = vm.CttPemberianObatId,
+        //            ObatId = vm.ObatId,
+        //            RacikanId = vm.RacikanId,
+        //            IsTandaiObat = false,
+        //            TglTerjadi = TryParseTanggalToUtc(vm.TglTerjadi),
+        //            ManifestasiESO = vm.ManifestasiESO,
+        //            TglKesudahan = TryParseTanggalToUtc(vm.TglKesudahan),
+        //            PerawatUserActiveId = vm.PerawatUserActiveId,
+        //            TTDid = vm.TTDid,
+        //            Keterangan = vm.Keterangan,
+        //            CreateBy = userActiveId,
+        //            CreateDateTime = DateTimeOffset.UtcNow,
+        //        };
+
+        //        // **Simpan ke Database**
+        //        _applicationDbContext.CatatanESOs.Add(data);
+        //        int result = await _applicationDbContext.SaveChangesAsync();
+
+        //        if (result > 0)
+        //        {
+        //            return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
+        //        }
+        //        else
+        //        {
+        //            return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
+        //        }
+        //    }
+        //    catch (DbUpdateException dbEx)
+        //    {
+        //        return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+        //    }
+        //}
 
         [HttpPut("TandaiObat/{id}")]
         public async Task<IActionResult> UpdateTandaiObat(Guid id, [FromBody] TandaiObatViewModel vm)
@@ -375,7 +519,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] CatatanESOViewModel vm)
+        public async Task<IActionResult> Edit(Guid id, [FromForm] CatatanESOViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -384,71 +528,204 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
             try
             {
-                // **Cek koneksi ke database**
-                if (!await _applicationDbContext.Database.CanConnectAsync())
+                if (!_applicationDbContext.Database.CanConnect())
                 {
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
                 }
 
-                // **Ambil User ID dari JWT Claims**
+                // **Ambil user aktif dari JWT**
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
-                {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
-                }
 
-                var getUserActive = await _applicationDbContext.UserActives
-                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+                var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
                 if (getUserActive == null)
-                {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-                }
+
                 var userActiveId = getUserActive.UserActiveId;
 
-                // **Cari Data**
-                var data = await _applicationDbContext.CatatanESOs.FindAsync(id);
-                if (data == null)
-                {
+                // **Cari data CatatanESO**
+                var existing = await _applicationDbContext.CatatanESOs.FindAsync(id);
+                if (existing == null)
                     return NotFound(new { message = "Data tidak ditemukan." });
+
+                string ttdPath = existing.TTDPath;
+                Guid ttdId = (Guid)existing.TTDid;
+
+                // ==================================================
+                // ✅ PROSES UPDATE TTD (jika ada file baru)
+                // ==================================================
+                if (vm.TTDFile != null && vm.TTDFile.Length > 0)
+                {
+                    var maxSize = 1 * 1024 * 1024; // max 1MB
+                    var allowedExtensions = new List<string> { ".jpg", ".jpeg" };
+                    var fileExtension = Path.GetExtension(vm.TTDFile.FileName).ToLower();
+
+                    if (vm.TTDFile.Length > maxSize)
+                        return BadRequest(new { message = "Ukuran file TTD terlalu besar! Maksimal 1MB." });
+
+                    if (!allowedExtensions.Contains(fileExtension))
+                        return BadRequest(new { message = "Format TTD tidak valid! Gunakan JPG atau JPEG." });
+
+                    var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
+                    var ttdFileName = $"{getUserActive.FullName}_{safeTime}_CttESO{fileExtension}";
+
+                    // 📤 Upload ke Flask
+                    using var client = new HttpClient();
+                    using var ms = new MemoryStream();
+                    await vm.TTDFile.CopyToAsync(ms);
+                    ms.Position = 0;
+
+                    var content = new MultipartFormDataContent {
+                        { new StreamContent(ms) {
+                            Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.TTDFile.ContentType) }
+                        }, "file", ttdFileName },
+
+                        { new StringContent("TTDUser"), "folderTarget" }
+                    };
+
+                    var flaskResponse = await client.PostAsync("http://160.20.104.98:5050/upload", content);
+                    if (!flaskResponse.IsSuccessStatusCode)
+                        return StatusCode(500, new { message = "Gagal upload tanda tangan ke server Flask." });
+
+                    var responseBody = await flaskResponse.Content.ReadAsStringAsync();
+                    dynamic jsonResp = Newtonsoft.Json.JsonConvert.DeserializeObject(responseBody);
+                    ttdPath = jsonResp.fileUrl;
+
+                    // Update MasterTTD
+                    var masterTTD = _applicationDbContext.MasterTTDs.FirstOrDefault(t => t.TTDId == existing.TTDid);
+                    if (masterTTD != null)
+                    {
+                        masterTTD.TTDPath = ttdPath;
+                        masterTTD.UpdateDateTime = DateTimeOffset.UtcNow;
+                        masterTTD.UpdateBy = userActiveId;
+                        _applicationDbContext.MasterTTDs.Update(masterTTD);
+                        ttdId = masterTTD.TTDId;
+                    }
+                    else
+                    {
+                        var newTTD = new MasterTTD
+                        {
+                            TTDId = Guid.NewGuid(),
+                            UserActiveId = userActiveId,
+                            TTDPath = ttdPath,
+                            CreateDateTime = DateTimeOffset.UtcNow,
+                            CreateBy = userActiveId
+                        };
+                        _applicationDbContext.MasterTTDs.Add(newTTD);
+                        await _applicationDbContext.SaveChangesAsync();
+                        ttdId = newTTD.TTDId;
+                    }
                 }
 
-                // **Update Data**
-                data.KunjunganId = vm.KunjunganId;
-                data.CttPemberianObatId = vm.CttPemberianObatId;
-                data.ObatId = vm.ObatId;
-                data.RacikanId = vm.RacikanId;
-                data.IsTandaiObat = vm.IsTandaiObat;
-                data.TglTerjadi = TryParseTanggalToUtc(vm.TglTerjadi);
-                data.ManifestasiESO = vm.ManifestasiESO;
-                data.TglKesudahan = TryParseTanggalToUtc(vm.TglKesudahan);
-                data.PerawatUserActiveId = vm.PerawatUserActiveId;
-                data.TTDid = vm.TTDid;
-                data.Keterangan = vm.Keterangan;
+                // ==================================================
+                // ✅ UPDATE FIELD CATATAN ESO
+                // ==================================================
+                existing.KunjunganId = vm.KunjunganId;
+                existing.CttPemberianObatId = vm.CttPemberianObatId;
+                existing.ObatId = vm.ObatId;
+                existing.RacikanId = vm.RacikanId;
+                existing.TglTerjadi = TryParseTanggalToUtc(vm.TglTerjadi);
+                existing.ManifestasiESO = vm.ManifestasiESO;
+                existing.TglKesudahan = TryParseTanggalToUtc(vm.TglKesudahan);
+                existing.PerawatUserActiveId = vm.PerawatUserActiveId;
+                existing.TTDid = ttdId;
+                existing.TTDPath = ttdPath;
+                existing.Keterangan = vm.Keterangan;
+                existing.UpdateBy = userActiveId;
+                existing.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                data.UpdateBy = userActiveId;
-                data.UpdateDateTime = DateTimeOffset.UtcNow;
-
-                _applicationDbContext.CatatanESOs.Update(data);
+                _applicationDbContext.CatatanESOs.Update(existing);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
-                {
                     return Ok(new { message = "Update Data Berhasil || 200 OK" });
-                }
-                else
-                {
-                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
-                }
+
+                return StatusCode(500, new { message = "Data tidak berhasil diperbarui di database." });
             }
             catch (DbUpdateException dbEx)
             {
-                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+                return StatusCode(500, new { message = $"Gagal update data: {dbEx.InnerException?.Message}" });
             }
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+        //public async Task<IActionResult> Update(Guid id, [FromBody] CatatanESOViewModel vm)
+        //{
+        //    if (vm == null || !ModelState.IsValid)
+        //    {
+        //        return BadRequest(new { message = "Data tidak valid." });
+        //    }
+
+        //    try
+        //    {
+        //        // **Cek koneksi ke database**
+        //        if (!await _applicationDbContext.Database.CanConnectAsync())
+        //        {
+        //            return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+        //        }
+
+        //        // **Ambil User ID dari JWT Claims**
+        //        var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        //        if (string.IsNullOrEmpty(emailLogin))
+        //        {
+        //            return Unauthorized(new { message = "User tidak terautentikasi!" });
+        //        }
+
+        //        var getUserActive = await _applicationDbContext.UserActives
+        //            .FirstOrDefaultAsync(u => u.Email == emailLogin);
+        //        if (getUserActive == null)
+        //        {
+        //            return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+        //        }
+        //        var userActiveId = getUserActive.UserActiveId;
+
+        //        // **Cari Data**
+        //        var data = await _applicationDbContext.CatatanESOs.FindAsync(id);
+        //        if (data == null)
+        //        {
+        //            return NotFound(new { message = "Data tidak ditemukan." });
+        //        }
+
+        //        // **Update Data**
+        //        data.KunjunganId = vm.KunjunganId;
+        //        data.CttPemberianObatId = vm.CttPemberianObatId;
+        //        data.ObatId = vm.ObatId;
+        //        data.RacikanId = vm.RacikanId;
+        //        data.IsTandaiObat = vm.IsTandaiObat;
+        //        data.TglTerjadi = TryParseTanggalToUtc(vm.TglTerjadi);
+        //        data.ManifestasiESO = vm.ManifestasiESO;
+        //        data.TglKesudahan = TryParseTanggalToUtc(vm.TglKesudahan);
+        //        data.PerawatUserActiveId = vm.PerawatUserActiveId;
+        //        data.TTDid = vm.TTDid;
+        //        data.Keterangan = vm.Keterangan;
+
+        //        data.UpdateBy = userActiveId;
+        //        data.UpdateDateTime = DateTimeOffset.UtcNow;
+
+        //        _applicationDbContext.CatatanESOs.Update(data);
+        //        int result = await _applicationDbContext.SaveChangesAsync();
+
+        //        if (result > 0)
+        //        {
+        //            return Ok(new { message = "Update Data Berhasil || 200 OK" });
+        //        }
+        //        else
+        //        {
+        //            return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
+        //        }
+        //    }
+        //    catch (DbUpdateException dbEx)
+        //    {
+        //        return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+        //    }
+        //}
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
@@ -547,6 +824,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.TglKesudahan,
                              a.PerawatUserActiveId,
                              a.TTDid,
+                             a.TTDPath,
                              a.Keterangan,
 
                          });

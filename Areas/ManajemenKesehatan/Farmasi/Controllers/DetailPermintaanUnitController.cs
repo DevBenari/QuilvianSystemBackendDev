@@ -3,9 +3,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
@@ -30,13 +32,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
         private readonly ILogger<DetailPermintaanUnitController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly IHubContext<DetailPermintaanHub> _hubContext;
 
         public DetailPermintaanUnitController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ILogger<DetailPermintaanUnitController> logger,
-            IWebHostEnvironment webHostEnvironment
+            IWebHostEnvironment webHostEnvironment,
+            IHubContext<DetailPermintaanHub> hubContext
             )
         {
             _applicationDbContext = applicationDbContext;
@@ -44,6 +48,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+            _hubContext = hubContext;
         }
 
         [HttpGet]
@@ -175,6 +180,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 // **Simpan ke Database**
                 _applicationDbContext.DetailPermintaanUnits.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
+                await _hubContext.Clients.All.SendAsync("DetailPermintaanUnitCreated", new
+                {
+                    Action = "create",
+                    DetailPermintaanUnitId = data.DetailPermintaanUnitId
+                });
 
                 if (result > 0)
                 {
@@ -247,6 +257,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 _applicationDbContext.DetailPermintaanUnits.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
+                await _hubContext.Clients.All.SendAsync("DetailPermintaanUnitUpdate", new
+                {
+                    Action = "update",
+                    DetailPermintaanUnitId = data.DetailPermintaanUnitId
+                });
                 if (result > 0)
                 {
                     return Ok(new { message = "Update Data Berhasil || 200 OK" });

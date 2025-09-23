@@ -144,61 +144,61 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // **Cek Duplikasi**
                 var isDuplicate = _applicationDbContext.Kelass
-                    .Any(t => t.NamaKelas.ToLower().Trim() == vm.NamaKelas.ToLower().Trim());
+                    .Any(t => t.NamaKelas.ToLower().Trim() == vm.NamaKelas.ToLower().Trim() && t.KodeKelas == vm.KodeKelas);
 
                 if (isDuplicate)
                 {
-                    return Conflict(new { message = "Tindakan dalam kelas ini sudah tersimpan!" });
+                    return Conflict(new { message = "Kelas ini sudah tersimpan!" });
                 }
 
-                // generate kode tindakan
-                var lastCode = _applicationDbContext.Kelass
-                            .Where(d => d.KodeKelas.StartsWith("KL"))
-                            .OrderByDescending(d => d.KodeKelas)
-                            .FirstOrDefault();
+                //// generate kode tindakan
+                //var lastCode = _applicationDbContext.Kelass
+                //            .Where(d => d.KodeKelas.StartsWith("KL"))
+                //            .OrderByDescending(d => d.KodeKelas)
+                //            .FirstOrDefault();
 
-                string kode;
+                //string kode;
 
-                if (lastCode == null)
-                {
-                    // Pertama kali data dimasukkan, kode "KL001" untuk "Rawat Jalan"
-                    kode = "KL001"; // Gunakan kode KL001 untuk Rawat Jalan pertama
+                //if (lastCode == null)
+                //{
+                //    // Pertama kali data dimasukkan, kode "KL001" untuk "Rawat Jalan"
+                //    kode = "KL001"; // Gunakan kode KL001 untuk Rawat Jalan pertama
 
-                    var data = new Kelas
-                    {
-                        KelasId = Guid.NewGuid(),
-                        KodeKelas = kode,
-                        NamaKelas = "Rawat Jalan", // Nama kelas adalah Rawat Jalan
-                        DeskripsiKelas = vm.DeskripsiKelas,
-                        CreateBy = userActiveId,
-                        CreateDateTime = DateTimeOffset.UtcNow,
-                        IsDelete = false
-                    };
+                //    var data = new Kelas
+                //    {
+                //        KelasId = Guid.NewGuid(),
+                //        KodeKelas = kode,
+                //        NamaKelas = "Rawat Jalan", // Nama kelas adalah Rawat Jalan
+                //        DeskripsiKelas = vm.DeskripsiKelas,
+                //        CreateBy = userActiveId,
+                //        CreateDateTime = DateTimeOffset.UtcNow,
+                //        IsDelete = false
+                //    };
 
-                    // **Simpan ke Database**
-                    _applicationDbContext.Kelass.Add(data);
-                }
-                else
-                {
-                    // Jika ada data sebelumnya, lanjutkan dengan urutan berikutnya
-                    var numberStr = lastCode.KodeKelas.Substring(2); // Ambil angka setelah 'KL'
+                //    // **Simpan ke Database**
+                //    _applicationDbContext.Kelass.Add(data);
+                //}
+                //else
+                //{
+                //    // Jika ada data sebelumnya, lanjutkan dengan urutan berikutnya
+                //    var numberStr = lastCode.KodeKelas.Substring(2); // Ambil angka setelah 'KL'
 
-                    if (int.TryParse(numberStr, out int lastNumber))
-                    {
-                        int nextNumber = lastNumber + 1;
-                        kode = $"KL{nextNumber:D3}"; // Gunakan D3 agar tetap 3 digit minimum
-                    }
-                    else
-                    {
-                        kode = "KL001"; // fallback jika parsing gagal
-                    }
-                }
+                //    if (int.TryParse(numberStr, out int lastNumber))
+                //    {
+                //        int nextNumber = lastNumber + 1;
+                //        kode = $"KL{nextNumber:D3}"; // Gunakan D3 agar tetap 3 digit minimum
+                //    }
+                //    else
+                //    {
+                //        kode = "KL001"; // fallback jika parsing gagal
+                //    }
+                //}
 
                 // **Buat Data Baru**
                 var newData = new Kelas
                 {
                     KelasId = Guid.NewGuid(),
-                    KodeKelas = kode,
+                    KodeKelas = vm.KodeKelas,
                     NamaKelas = vm.NamaKelas,
                     DeskripsiKelas = vm.DeskripsiKelas,
                     CreateBy = userActiveId,

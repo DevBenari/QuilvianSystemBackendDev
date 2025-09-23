@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -11,9 +12,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250923051023_AddKolomCurrentMedication")]
+    partial class AddKolomCurrentMedication
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -160,15 +162,11 @@ namespace QuilvianSystemBackendDev.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("JenisTanggal")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Keterangan")
                         .HasColumnType("text");
-
-                    b.Property<int>("KodePembayaran")
-                        .HasColumnType("integer");
 
                     b.Property<string>("NamaPembayaran")
                         .IsRequired()
@@ -177,16 +175,16 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<int>("NominalDefault")
                         .HasColumnType("integer");
 
-                    b.Property<string>("Set")
-                        .HasColumnType("text");
+                    b.Property<bool>("Set")
+                        .HasColumnType("boolean");
 
-                    b.Property<string>("Status")
-                        .HasColumnType("text");
+                    b.Property<DateTime>("TanggalKeluar")
+                        .HasColumnType("date");
 
-                    b.Property<string>("TanggalKeluar")
-                        .HasColumnType("text");
+                    b.Property<DateTime>("TanggalMasuk")
+                        .HasColumnType("date");
 
-                    b.Property<string>("TanggalMasuk")
+                    b.Property<string>("bln")
                         .HasColumnType("text");
 
                     b.HasKey("JenisPembayaranId");
@@ -200,14 +198,14 @@ namespace QuilvianSystemBackendDev.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<bool?>("IsActive")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Keterangan")
                         .HasColumnType("text");
 
                     b.Property<string>("Kode")
                         .HasColumnType("text");
-
-                    b.Property<int>("KodePembayaran")
-                        .HasColumnType("integer");
 
                     b.Property<string>("NamaJenisUser")
                         .IsRequired()
@@ -217,9 +215,6 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("integer");
 
                     b.Property<string>("Pas")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Status")
                         .HasColumnType("text");
 
                     b.Property<string>("Tlp")
@@ -245,9 +240,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("Keterangan")
                         .HasColumnType("text");
 
-                    b.Property<int>("KodePembayaran")
-                        .HasColumnType("integer");
-
                     b.Property<string>("NamaJenisUser")
                         .IsRequired()
                         .HasColumnType("text");
@@ -260,6 +252,7 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("integer");
 
                     b.Property<string>("Status")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<DateTime>("TanggalPembayaran")
@@ -3600,9 +3593,6 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.Property<string>("NoRekamMedis")
                         .HasColumnType("text");
-
-                    b.Property<Guid?>("ObatId")
-                        .HasColumnType("uuid");
 
                     b.Property<Guid?>("PendaftaranPasienBaruId")
                         .HasColumnType("uuid");

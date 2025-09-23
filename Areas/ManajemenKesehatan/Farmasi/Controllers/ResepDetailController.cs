@@ -5,9 +5,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
@@ -30,19 +32,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
         private readonly ILogger<ResepDetailController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly IHubContext<ResepDetailHub> _hubContext;
 
         public ResepDetailController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ILogger<ResepDetailController> logger,
-            IWebHostEnvironment webHostEnvironment)
+            IWebHostEnvironment webHostEnvironment,
+            IHubContext<ResepDetailHub> hubContext
+            )
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+            _hubContext = hubContext;
         }
 
         private DateTime? TryParseTanggalToUtc(string tanggal)
@@ -239,7 +245,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             data.UpdateBy = userId;
 
             await _applicationDbContext.SaveChangesAsync();
-
+            await _hubContext.Clients.All.SendAsync("StatusObatUpdated", new
+            {
+                Action = "update",
+                DetailResepId = data.DetailResepId
+            });
             return Ok(new { message = "Status isFinished berhasil diperbarui." });
         }
 
@@ -262,7 +272,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             data.UpdateBy = userId;
 
             await _applicationDbContext.SaveChangesAsync();
-
+            await _hubContext.Clients.All.SendAsync("IsContinuedMedicine", new
+            {
+                Action = "update",
+                DetailResepId = data.DetailResepId
+            });
             return Ok(new { message = "Status isContinued berhasil diperbarui." });
         }
 
@@ -285,6 +299,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             data.UpdateBy = userId;
 
             await _applicationDbContext.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("StatusDiberikanPasienUpdated", new
+            {
+                Action = "update",
+                DetailResepId = data.DetailResepId
+            });
 
             return Ok(new { message = "Status StatusDiberikanPasien berhasil diperbarui." });
         }
@@ -377,7 +396,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 // **Simpan ke Database**
                 _applicationDbContext.DetailReseps.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
-
+                await _hubContext.Clients.All.SendAsync("ResepDetailCreated", new
+                {
+                    Action = "create",
+                    DetailResepId = data.DetailResepId
+                });
                 if (result > 0)
                 {
                     return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
@@ -479,7 +502,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
                 _applicationDbContext.DetailReseps.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
-
+                await _hubContext.Clients.All.SendAsync("DetailResepUpdated", new
+                {
+                    Action = "update",
+                    DetailResepId = data.DetailResepId
+                });
                 if (result > 0)
                 {
                     return Ok(new { message = "Update Data Berhasil || 200 OK" });
