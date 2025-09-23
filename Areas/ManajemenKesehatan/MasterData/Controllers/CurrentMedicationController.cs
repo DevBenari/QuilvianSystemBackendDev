@@ -153,38 +153,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
-                // **Ambil Tanggal Sekarang**
-                //var dateNow = DateTime.UtcNow;
-                //var setDateNow = dateNow.ToString("yyMMdd"); // Format: YYMMDD
-
-
-                //// **Ambil Kode Terakhir**
-                //var lastCode = _applicationDbContext.Agamas
-                //    .Where(d => d.CreateDateTime.Date == dateNow.Date)
-                //    .OrderByDescending(k => k.CreateDateTime)
-
-                //    .FirstOrDefault();
-
-                //string kode;
-                //if (lastCode == null)
-                //{
-                //    kode = $"AGM{setDateNow}0001";
-                //}
-                //else
-                //{
-                //    var lastCodeTrim = lastCode.KodeAgama.Substring(3, 6);
-                //    if (lastCodeTrim != setDateNow)
-                //    {
-                //        kode = $"AGM{setDateNow}0001";
-                //    }
-                //    else
-                //    {
-                //        // Mengambil nomor urut terakhir dan menambah 1
-                //        var lastNumber = int.Parse(lastCode.KodeAgama.Substring(9));
-                //        kode = $"AGM{setDateNow}{(lastNumber + 1).ToString("D4")}";
-                //    }
-                //}
-
                 // **Buat Data Baru**
                 var data = new CurrentMedication
                 {
@@ -192,6 +160,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     KunjunganId = vm.KunjunganId,
                     PendaftaranPasienBaruId = vm.PendaftaranPasienBaruId,
                     NoRekamMedis = vm.NoRekamMedis,
+                    ObatId = vm.ObatId,
                     NamaObat = vm.NamaObat,
                     Dosis = vm.Dosis,
                     Frekuensi = vm.Frekuensi,
@@ -277,6 +246,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.KunjunganId = vm.KunjunganId;
                 data.PendaftaranPasienBaruId = vm.PendaftaranPasienBaruId;
                 data.NoRekamMedis = vm.NoRekamMedis;
+                data.ObatId = vm.ObatId;
                 data.NamaObat = vm.NamaObat;
                 data.Dosis = vm.Dosis;
                 data.Frekuensi = vm.Frekuensi;
