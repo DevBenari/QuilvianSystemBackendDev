@@ -373,7 +373,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         public async Task<IActionResult> PagedCurrentMedication(
         int page = 1,
         int perPage = 10,
-        string? search = null,
+        Guid? kunjunganId = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -418,14 +418,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                  Status = a.Status,
                              });
 
-                // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-                if (!string.IsNullOrWhiteSpace(search))
+                // Filter berdasarkan kunjungan id
+                if (kunjunganId.HasValue && kunjunganId != Guid.Empty)
                 {
-                    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-                    query = query.Where(u =>
-                        EF.Functions.ILike(u.NoRekamMedis, search)
-                    );
+                    query = query.Where(x => x.KunjunganId == kunjunganId);
                 }
+
+                //// **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
+                //if (!string.IsNullOrWhiteSpace(search))
+                //{
+                //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+                //    query = query.Where(u =>
+                //        EF.Functions.ILike(u.NoRekamMedis, search)
+                //    );
+                //}
 
                 //// **Filter berdasarkan tanggal**
                 if (startDate.HasValue && endDate.HasValue)
