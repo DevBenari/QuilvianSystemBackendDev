@@ -119,6 +119,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.TglKesudahan,
                              a.PerawatUserActiveId,
                              a.TTDid,
+                             a.TTDPath,
                              a.Keterangan,
 
                              // Data Obat
@@ -204,6 +205,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                   a.TglKesudahan,
                                   a.PerawatUserActiveId,
                                   a.TTDid,
+                                  a.TTDPath,
                                   a.Keterangan,
 
                                   // Data Obat
@@ -265,8 +267,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 // ==================================================
                 // ✅ PROSES UPLOAD TTD
                 // ==================================================
-                string ttdPath = null;
                 Guid ttdId;
+                string ttdPath;
 
                 if (vm.TTDFile != null && vm.TTDFile.Length > 0)
                 {
@@ -280,25 +282,41 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     if (!allowedExtensions.Contains(fileExtension))
                         return BadRequest(new { message = "Format TTD tidak valid! Gunakan JPG atau JPEG." });
 
-                    var folder = "TTDUser";
-                    var uploadFolder = Path.Combine(_webHostEnvironment.WebRootPath, folder);
-                    if (!Directory.Exists(uploadFolder)) Directory.CreateDirectory(uploadFolder);
-
+                    // Nama file unik
                     var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
-                    var ttdFileName = $"{getUserActive.FullName}{safeTime}{"CttESO"}{fileExtension}";
-                    var ttdFilePath = Path.Combine(uploadFolder, ttdFileName);
+                    var ttdFileName = $"{getUserActive.FullName}_{safeTime}_CttESO{fileExtension}";
 
-                    using (var stream = new FileStream(ttdFilePath, FileMode.Create))
-                        await vm.TTDFile.CopyToAsync(stream);
+                    // 📤 Upload ke Flask
+                    using var client = new HttpClient();
+                    using var ms = new MemoryStream();
+                    await vm.TTDFile.CopyToAsync(ms);
+                    ms.Position = 0;
 
-                    ttdPath = $"/{folder}/{ttdFileName}";
+                    var content = new MultipartFormDataContent {
+                        { new StreamContent(ms) {
+                            Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.TTDFile.ContentType) }
+                        }, "file", ttdFileName },
+
+                        { new StringContent("TTDUser"), "folderTarget" }
+                    };
+
+                    var flaskResponse = await client.PostAsync("http://160.20.104.98:5050/upload", content);
+
+                    if (!flaskResponse.IsSuccessStatusCode)
+                        return StatusCode(500, new { message = "Gagal upload tanda tangan ke server Flask." });
+
+                    // Ambil URL/path hasil upload dari response Flask
+                    var responseBody = await flaskResponse.Content.ReadAsStringAsync();
+                    // Anggap Flask balikin JSON {"fileUrl": "/uploads/TTDUser/namafile.jpg"}
+                    dynamic jsonResp = Newtonsoft.Json.JsonConvert.DeserializeObject(responseBody);
+                    ttdPath = jsonResp.fileUrl;
 
                     // Simpan ke MasterTTD
                     var newTTD = new MasterTTD
                     {
                         TTDId = Guid.NewGuid(),
                         UserActiveId = userActiveId,
-                        TTDPath = ttdPath,
+                        TTDPath = ttdPath, // langsung pakai path dari Flask
                         CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = userActiveId
                     };
@@ -526,13 +544,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
                 var userActiveId = getUserActive.UserActiveId;
 
-                // **Cari data CatatanESO yang akan diupdate**
-                var existingESO = await _applicationDbContext.CatatanESOs.FindAsync(id);
-                if (existingESO == null)
+                // **Cari data CatatanESO**
+                var existing = await _applicationDbContext.CatatanESOs.FindAsync(id);
+                if (existing == null)
                     return NotFound(new { message = "Data tidak ditemukan." });
 
+                string ttdPath = existing.TTDPath;
+                Guid ttdId = (Guid)existing.TTDid;
+
                 // ==================================================
-                // ✅ PROSES UPDATE TTD (opsional)
+                // ✅ PROSES UPDATE TTD (jika ada file baru)
                 // ==================================================
                 if (vm.TTDFile != null && vm.TTDFile.Length > 0)
                 {
@@ -546,50 +567,75 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     if (!allowedExtensions.Contains(fileExtension))
                         return BadRequest(new { message = "Format TTD tidak valid! Gunakan JPG atau JPEG." });
 
-                    var folder = "TTDUser";
-                    var uploadFolder = Path.Combine(_webHostEnvironment.WebRootPath, folder);
-                    if (!Directory.Exists(uploadFolder)) Directory.CreateDirectory(uploadFolder);
-
                     var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
-                    var ttdFileName = $"{getUserActive.FullName}{safeTime}{"CttESO"}{fileExtension}";
-                    var ttdFilePath = Path.Combine(uploadFolder, ttdFileName);
+                    var ttdFileName = $"{getUserActive.FullName}_{safeTime}_CttESO{fileExtension}";
 
-                    using (var stream = new FileStream(ttdFilePath, FileMode.Create))
-                        await vm.TTDFile.CopyToAsync(stream);
+                    // 📤 Upload ke Flask
+                    using var client = new HttpClient();
+                    using var ms = new MemoryStream();
+                    await vm.TTDFile.CopyToAsync(ms);
+                    ms.Position = 0;
 
-                    var ttdPath = $"/{folder}/{ttdFileName}";
+                    var content = new MultipartFormDataContent {
+                        { new StreamContent(ms) {
+                            Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.TTDFile.ContentType) }
+                        }, "file", ttdFileName },
+
+                        { new StringContent("TTDUser"), "folderTarget" }
+                    };
+
+                    var flaskResponse = await client.PostAsync("http://160.20.104.98:5050/upload", content);
+                    if (!flaskResponse.IsSuccessStatusCode)
+                        return StatusCode(500, new { message = "Gagal upload tanda tangan ke server Flask." });
+
+                    var responseBody = await flaskResponse.Content.ReadAsStringAsync();
+                    dynamic jsonResp = Newtonsoft.Json.JsonConvert.DeserializeObject(responseBody);
+                    ttdPath = jsonResp.fileUrl;
 
                     // Update MasterTTD
-                    var masterTTD = _applicationDbContext.MasterTTDs.FirstOrDefault(t => t.TTDId == existingESO.TTDid);
+                    var masterTTD = _applicationDbContext.MasterTTDs.FirstOrDefault(t => t.TTDId == existing.TTDid);
                     if (masterTTD != null)
                     {
                         masterTTD.TTDPath = ttdPath;
                         masterTTD.UpdateDateTime = DateTimeOffset.UtcNow;
                         masterTTD.UpdateBy = userActiveId;
                         _applicationDbContext.MasterTTDs.Update(masterTTD);
+                        ttdId = masterTTD.TTDId;
                     }
-
-                    // Update ESO juga
-                    existingESO.TTDid = masterTTD?.TTDId ?? existingESO.TTDid;
-                    existingESO.TTDPath = ttdPath;
+                    else
+                    {
+                        var newTTD = new MasterTTD
+                        {
+                            TTDId = Guid.NewGuid(),
+                            UserActiveId = userActiveId,
+                            TTDPath = ttdPath,
+                            CreateDateTime = DateTimeOffset.UtcNow,
+                            CreateBy = userActiveId
+                        };
+                        _applicationDbContext.MasterTTDs.Add(newTTD);
+                        await _applicationDbContext.SaveChangesAsync();
+                        ttdId = newTTD.TTDId;
+                    }
                 }
 
                 // ==================================================
                 // ✅ UPDATE FIELD CATATAN ESO
                 // ==================================================
-                existingESO.KunjunganId = vm.KunjunganId;
-                existingESO.CttPemberianObatId = vm.CttPemberianObatId;
-                existingESO.ObatId = vm.ObatId;
-                existingESO.RacikanId = vm.RacikanId;
-                existingESO.TglTerjadi = TryParseTanggalToUtc(vm.TglTerjadi);
-                existingESO.ManifestasiESO = vm.ManifestasiESO;
-                existingESO.TglKesudahan = TryParseTanggalToUtc(vm.TglKesudahan);
-                existingESO.PerawatUserActiveId = vm.PerawatUserActiveId;
-                existingESO.Keterangan = vm.Keterangan;
-                existingESO.UpdateBy = userActiveId;
-                existingESO.UpdateDateTime = DateTimeOffset.UtcNow;
+                existing.KunjunganId = vm.KunjunganId;
+                existing.CttPemberianObatId = vm.CttPemberianObatId;
+                existing.ObatId = vm.ObatId;
+                existing.RacikanId = vm.RacikanId;
+                existing.TglTerjadi = TryParseTanggalToUtc(vm.TglTerjadi);
+                existing.ManifestasiESO = vm.ManifestasiESO;
+                existing.TglKesudahan = TryParseTanggalToUtc(vm.TglKesudahan);
+                existing.PerawatUserActiveId = vm.PerawatUserActiveId;
+                existing.TTDid = ttdId;
+                existing.TTDPath = ttdPath;
+                existing.Keterangan = vm.Keterangan;
+                existing.UpdateBy = userActiveId;
+                existing.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.CatatanESOs.Update(existingESO);
+                _applicationDbContext.CatatanESOs.Update(existing);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -778,6 +824,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.TglKesudahan,
                              a.PerawatUserActiveId,
                              a.TTDid,
+                             a.TTDPath,
                              a.Keterangan,
 
                          });
