@@ -5,14 +5,18 @@ using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 {
@@ -237,10 +241,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     CairanKeluar = vm.CairanKeluar,
                     CairanSisa = vm.CairanSisa,
                     JumlahUrin = vm.JumlahUrin,
-
-
-
+                    TTDId = ttdId,
+                    TTDPath= ttdPath,
                     Keterangan = vm.Keterangan,
+
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
@@ -266,6 +270,355 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             {
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Edit(Guid id, [FromForm] ObservasiCairanViewModel vm)
+        {
+            if (vm == null || !ModelState.IsValid)
+            {
+                return BadRequest(new { message = "Data tidak valid." });
+            }
+
+            try
+            {
+                if (!_applicationDbContext.Database.CanConnect())
+                {
+                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+                }
+
+                // **Ambil user aktif dari JWT**
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin))
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+                var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
+                if (getUserActive == null)
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+
+                var userActiveId = getUserActive.UserActiveId;
+
+                // **Cari data CatatanESO**
+                var existing = await _applicationDbContext.ObservasiCairans.FindAsync(id);
+                if (existing == null)
+                    return NotFound(new { message = "Data tidak ditemukan." });
+
+                string ttdPath = existing.TTDPath;
+                Guid ttdId = (Guid)existing.TTDId;
+
+                // ==================================================
+                // ✅ PROSES UPDATE TTD (jika ada file baru)
+                // ==================================================
+                if (vm.TTDFile != null && vm.TTDFile.Length > 0)
+                {
+                    var maxSize = 1 * 1024 * 1024; // max 1MB
+                    var allowedExtensions = new List<string> { ".jpg", ".jpeg" };
+                    var fileExtension = Path.GetExtension(vm.TTDFile.FileName).ToLower();
+
+                    if (vm.TTDFile.Length > maxSize)
+                        return BadRequest(new { message = "Ukuran file TTD terlalu besar! Maksimal 1MB." });
+
+                    if (!allowedExtensions.Contains(fileExtension))
+                        return BadRequest(new { message = "Format TTD tidak valid! Gunakan JPG atau JPEG." });
+
+                    var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
+                    var ttdFileName = $"{getUserActive.FullName}_{safeTime}_CttESO{fileExtension}";
+
+                    // 📤 Upload ke Flask
+                    using var client = new HttpClient();
+                    using var ms = new MemoryStream();
+                    await vm.TTDFile.CopyToAsync(ms);
+                    ms.Position = 0;
+
+                    var content = new MultipartFormDataContent {
+                        { new StreamContent(ms) {
+                            Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.TTDFile.ContentType) }
+                        }, "file", ttdFileName },
+
+                        { new StringContent("TTDUser"), "folderTarget" }
+                    };
+
+                    var flaskResponse = await client.PostAsync("http://160.20.104.98:5050/upload", content);
+                    if (!flaskResponse.IsSuccessStatusCode)
+                        return StatusCode(500, new { message = "Gagal upload tanda tangan ke server Flask." });
+
+                    var responseBody = await flaskResponse.Content.ReadAsStringAsync();
+                    dynamic jsonResp = Newtonsoft.Json.JsonConvert.DeserializeObject(responseBody);
+                    ttdPath = jsonResp.fileUrl;
+
+                    // Update MasterTTD
+                    var masterTTD = _applicationDbContext.MasterTTDs.FirstOrDefault(t => t.TTDId == existing.TTDId);
+                    if (masterTTD != null)
+                    {
+                        masterTTD.TTDPath = ttdPath;
+                        masterTTD.UpdateDateTime = DateTimeOffset.UtcNow;
+                        masterTTD.UpdateBy = userActiveId;
+                        _applicationDbContext.MasterTTDs.Update(masterTTD);
+                        ttdId = masterTTD.TTDId;
+                    }
+                    else
+                    {
+                        var newTTD = new MasterTTD
+                        {
+                            TTDId = Guid.NewGuid(),
+                            UserActiveId = userActiveId,
+                            TTDPath = ttdPath,
+                            CreateDateTime = DateTimeOffset.UtcNow,
+                            CreateBy = userActiveId
+                        };
+                        _applicationDbContext.MasterTTDs.Add(newTTD);
+                        await _applicationDbContext.SaveChangesAsync();
+                        ttdId = newTTD.TTDId;
+                    }
+                }
+
+                // ==================================================
+                // ✅ UPDATE FIELD CATATAN ESO
+                // ==================================================
+                existing.KunjunganId = vm.KunjunganId;
+                existing.PasienId = vm.PasienId;
+                existing.UserActivePerawatId = vm.UserActivePerawatId;
+                existing.CairanMasuk = vm.CairanMasuk;
+                existing.CairanKeluar = vm.CairanKeluar;
+                existing.CairanSisa = vm.CairanSisa;
+                existing.JumlahUrin = vm.JumlahUrin;
+                existing.TTDId = ttdId;
+                existing.TTDPath = ttdPath;
+                existing.Keterangan = vm.Keterangan;
+                existing.UpdateBy = userActiveId;
+                existing.UpdateDateTime = DateTimeOffset.UtcNow;
+
+                _applicationDbContext.ObservasiCairans.Update(existing);
+                int result = await _applicationDbContext.SaveChangesAsync();
+
+                if (result > 0)
+                    return Ok(new { message = "Update Data Berhasil || 200 OK" });
+
+                return StatusCode(500, new { message = "Data tidak berhasil diperbarui di database." });
+            }
+            catch (DbUpdateException dbEx)
+            {
+                return StatusCode(500, new { message = $"Gagal update data: {dbEx.InnerException?.Message}" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(Guid id)
+        {
+            try
+            {
+                // **Cek koneksi ke database**
+                if (!await _applicationDbContext.Database.CanConnectAsync())
+                {
+                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+                }
+
+                // **Ambil User ID dari JWT Claims**
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+                if (getUserActive == null)
+                {
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+                }
+                var userActiveId = getUserActive.UserActiveId;
+
+                // **Cari Data**
+                var data = await _applicationDbContext.ObservasiCairans.FindAsync(id);
+                if (data == null)
+                {
+                    return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                // **Soft Delete (Tandai Data sebagai Terhapus)**
+                data.DeleteBy = userActiveId;
+                data.DeleteDateTime = DateTimeOffset.UtcNow;
+
+                data.IsDelete = true;
+
+                _applicationDbContext.ObservasiCairans.Update(data);
+                int result = await _applicationDbContext.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    return Ok(new { message = "Data berhasil dihapus (soft delete) || 200 OK" });
+                }
+                else
+                {
+                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
+                }
+            }
+            catch (DbUpdateException dbEx)
+            {
+                return StatusCode(500, new { message = $"Gagal menghapus data: {dbEx.InnerException?.Message}" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
+        [HttpGet("paged")]
+        public IActionResult Paged(
+        int page = 1,
+        int perPage = 10,
+        string? search = null,
+        Guid? kunjunganid = null,
+        string? orderBy = "CreateDateTime",
+        string? sortDirection = "desc",
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+                                DateTime? startDate = null,
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+                                DateTime? endDate = null,
+        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        {
+
+            // Query data
+            var query = (from a in _applicationDbContext.ObservasiCairans
+                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
+                         on a.CreateBy equals u.UserActiveId
+                         where a.IsDelete == false || a.IsDelete == null
+                         select new
+                         {
+                             a.CreateDateTime,
+                             a.CreateBy,
+                             CreateByName = u.FullName,
+                             a.ObservasiCairanId,
+                             a.KunjunganId,
+                             a.PasienId,
+                             a.UserActivePerawatId,
+                             a.TglObservasi,
+                             a.CairanMasuk,
+                             a.CairanSisa,
+                             a.JumlahUrin,
+                             a.TTDId,
+                             a.TTDPath,
+                             a.Keterangan,
+
+                         });
+
+            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
+            //if (!string.IsNullOrWhiteSpace(search))
+            //{
+            //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+            //    query = query.Where(u =>
+            //        EF.Functions.ILike(u.NamaDiskon, search)
+            //    );
+            //}
+
+            //kunjungan id
+            if (kunjunganid.HasValue && kunjunganid != Guid.Empty)
+            {
+                query = query.Where(u => u.KunjunganId == kunjunganid);
+            }
+
+            //// **Filter berdasarkan tanggal**
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
+                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+
+                query = query.Where(u =>
+                    u.CreateDateTime >= startUtc &&
+                    u.CreateDateTime <= endUtc);
+            }
+
+            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
+            if (periode.HasValue)
+            {
+                DateTime today = DateTime.UtcNow.Date;
+
+                switch (periode)
+                {
+                    case PeriodeFilter.Today:
+                        query = query.Where(u => u.CreateDateTime.Date == today);
+                        break;
+                    case PeriodeFilter.ThisWeek:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
+                            u.CreateDateTime.Date <= today
+                        );
+                        break;
+                    case PeriodeFilter.LastWeek:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
+                            u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)
+                        );
+                        break;
+                    case PeriodeFilter.ThisMonth:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Month == today.Month &&
+                            u.CreateDateTime.Year == today.Year
+                        );
+                        break;
+                    case PeriodeFilter.LastMonth:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Month == today.Month - 1 &&
+                            u.CreateDateTime.Year == today.Year
+                        );
+                        break;
+                    case PeriodeFilter.ThisYear:
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
+                        break;
+                    case PeriodeFilter.LastYear:
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
+                        break;
+                    case PeriodeFilter.Last3Months:
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
+                        break;
+                    case PeriodeFilter.Last6Months:
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
+                        break;
+                }
+            }
+
+            // Sorting Data dengan cara yang lebih aman
+            query = sortDirection?.ToLower() == "desc"
+                ? orderBy switch
+                {
+                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
+                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
+                    _ => query.OrderByDescending(u => u.CreateDateTime)
+                }
+                : orderBy switch
+                {
+                    "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
+                    "CreateByName" => query.OrderBy(u => u.CreateByName),
+                    _ => query.OrderBy(u => u.CreateDateTime)
+                };
+
+            // Pagination
+            var totalRows = query.Count();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
+
+            if (rows.Count == 0 && page > totalPages)
+            {
+                return NotFound(new { message = "Page not found." });
+            }
+
+            return Ok(new
+            {
+                status = "success",
+                message = "Data retrieved successfully",
+                data = new
+                {
+                    Rows = rows,
+                    TotalRows = totalRows,
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalPages = totalPages
+                }
+            });
         }
     }
 }
