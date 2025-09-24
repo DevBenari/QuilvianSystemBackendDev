@@ -616,25 +616,40 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
-                // **Cari Data**
-                var data = await _applicationDbContext.PermintaanUnits.FindAsync(id);
+                // **Cari Data Induk**
+                var data = await _applicationDbContext.PermintaanUnits
+                    .FirstOrDefaultAsync(x => x.PermintaanUnitId == id);
+
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
-                // **Soft Delete (Tandai Data sebagai Terhapus)**
+                // **Cari Detail yang terkait**
+                var details = await _applicationDbContext.DetailPermintaanUnits
+                    .Where(d => d.PermintaanUnitId == id)
+                    .ToListAsync();
+
+                // **Soft Delete (Tandai Data Induk)**
                 data.DeleteBy = userActiveId;
                 data.DeleteDateTime = DateTimeOffset.UtcNow;
-
                 data.IsDelete = true;
-
                 _applicationDbContext.PermintaanUnits.Update(data);
+
+                // **Soft Delete Detail juga**
+                foreach (var d in details)
+                {
+                    d.DeleteBy = userActiveId;
+                    d.DeleteDateTime = DateTimeOffset.UtcNow;
+                    d.IsDelete = true;
+                }
+                _applicationDbContext.DetailPermintaanUnits.UpdateRange(details);
+
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
                 {
-                    return Ok(new { message = "Data berhasil dihapus (soft delete) || 200 OK" });
+                    return Ok(new { message = "Data induk & detail berhasil dihapus (soft delete) || 200 OK" });
                 }
                 else
                 {

@@ -1,4 +1,4 @@
-﻿namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels
+﻿namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.ViewModels
 {
     public class StatusCttEsoViewModel
     {

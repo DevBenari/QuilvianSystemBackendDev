@@ -82,6 +82,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             LamaKonsumsi = a.LamaKonsumsi,
                             Status = a.Status,
                             Keterangan = a.Keterangan,
+                            CaraPemakian = a.CaraPemakaian
                         }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -174,6 +175,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     LamaKonsumsi = vm.LamaKonsumsi,
                     Status = vm.Status,
                     Keterangan = vm.Keterangan,
+                    CaraPemakaian = vm.CaraPemakaian,
                     IsDelete = false,
 
                     CreateBy = userActiveId,
@@ -261,6 +263,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.LamaKonsumsi = vm.LamaKonsumsi;
                 data.Status = vm.Status;
                 data.Keterangan = vm.Keterangan;
+                data.CaraPemakaian = vm.CaraPemakaian;
+
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
@@ -351,6 +355,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         public async Task<IActionResult> PagedCurrentMedication(
         int page = 1,
         int perPage = 10,
+        string? search = null,
         Guid? kunjunganId = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
@@ -401,6 +406,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                  LamaKonsumsi = a.LamaKonsumsi,
                                  Status = a.Status,
                                  Keterangan = a.Keterangan,
+                                 CaraPemakaian = a.CaraPemakaian
                              });
 
                 // Filter berdasarkan kunjungan id
@@ -409,14 +415,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     query = query.Where(x => x.KunjunganId == kunjunganId);
                 }
 
-                //// **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-                //if (!string.IsNullOrWhiteSpace(search))
-                //{
-                //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-                //    query = query.Where(u =>
-                //        EF.Functions.ILike(u.NoRekamMedis, search)
-                //    );
-                //}
+                // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
+                if (!string.IsNullOrWhiteSpace(search))
+                {
+                    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+                    query = query.Where(u =>
+                        EF.Functions.ILike(u.NamaObat, search)
+                    );
+                }
 
                 //// **Filter berdasarkan tanggal**
                 if (startDate.HasValue && endDate.HasValue)
@@ -437,7 +443,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     "createdatetime" => isDescending ? query.OrderByDescending(u => u.CreateDateTime) : query.OrderBy(u => u.CreateDateTime),
                     "createbyname" => isDescending ? query.OrderByDescending(u => u.CreateByName) : query.OrderBy(u => u.CreateByName),
-                    "NoRekamMedis" => isDescending ? query.OrderByDescending(u => u.NoRekamMedis) : query.OrderBy(u => u.NoRekamMedis),
+                    "NamaObat" => isDescending ? query.OrderByDescending(u => u.NamaObat) : query.OrderBy(u => u.NamaObat),
                    
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 };

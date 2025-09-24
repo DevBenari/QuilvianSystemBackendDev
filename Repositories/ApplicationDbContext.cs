@@ -216,6 +216,10 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<PengkajianPerawat> PengkajianPerawats { get; set; }
         public DbSet<DetailKetergantungan> DetailKetergantungans { get; set; }
         public DbSet<ResumePulang> ResumePulangs { get; set; }
+        public DbSet<CttPemberianObat> CttPemberianObats { get; set; }
+        public DbSet<CatatanESO> CatatanESOs { get; set; }
+        public DbSet<ObservasiCairan> ObservasiCairans { get; set; }
+        public DbSet<SlidingScale> SlidingScales { get; set; }
 
         #endregion
 
@@ -223,9 +227,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<LogRacikPenerimaan> LogRacikPenerimaans { get; set; }
         public DbSet<PermintaanUnit> PermintaanUnits { get; set; }
         public DbSet<DetailPermintaanUnit> DetailPermintaanUnits { get; set; }
-        public DbSet<CttPemberianObat> CttPemberianObats { get; set; }
-        public DbSet<CatatanESO> CatatanESOs { get; set; }
-        public DbSet<ObservasiCairan> ObservasiCairans { get; set; }
+
         public DbSet<DetailPenerimaanUnit> DetailPenerimaanUnits { get; set; }
         public DbSet<PenerimaanUnit> PenerimaanUnits { get; set; }
         #endregion

@@ -1,4 +1,4 @@
-﻿using System.Linq;
+﻿using System.Globalization;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
@@ -9,42 +9,70 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.ViewModels;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class ObservasiCairanController : Controller
+    public class CttPemberianObatController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<ObservasiCairanController> _logger;
+        private readonly ILogger<CttPemberianObatController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public ObservasiCairanController(
-            ApplicationDbContext applicationDbContext, 
-            UserManager<ApplicationUser> userManager, 
-            SignInManager<ApplicationUser> signInManager, 
-            ILogger<ObservasiCairanController> logger, 
-            IWebHostEnvironment webHostEnvironment)
+        public CttPemberianObatController(
+            ApplicationDbContext applicationDbContext,
+            UserManager<ApplicationUser> userManager,
+            SignInManager<ApplicationUser> signInManager,
+            ILogger<CttPemberianObatController> logger,
+            IWebHostEnvironment webHostEnvironment
+            )
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+        }
+
+        private DateTime? TryParseTanggalToUtc(string tanggal)
+        {
+            if (DateTime.TryParseExact(
+                    tanggal,
+                    "yyyy-MM-dd",
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out var parsedDate))
+            {
+                var now = DateTime.Now; // atau DateTime.UtcNow jika kamu mau jam UTC
+                var finalDateTime = new DateTime(
+                    parsedDate.Year,
+                    parsedDate.Month,
+                    parsedDate.Day,
+                    now.Hour,
+                    now.Minute,
+                    now.Second,
+                    DateTimeKind.Local); // atau Utc jika perlu
+
+                return finalDateTime.ToUniversalTime(); // simpan dalam UTC
+            }
+
+            return null;
         }
 
         [HttpGet]
@@ -54,29 +82,47 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            // Query data
-            var query = (from a in _applicationDbContext.ObservasiCairans
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false || a.IsDelete == null
-                         select new
-                         {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = u.FullName,
-                             a.ObservasiCairanId,
-                             a.KunjunganId,
-                             a.PasienId,
-                             a.UserActivePerawatId,
-                             a.TglObservasi,
-                             a.CairanMasuk,
-                             a.CairanSisa,
-                             a.JumlahUrin,
-                             a.TTDId,
-                             a.TTDPath,
-                             a.Keterangan,
+            var query =
+                   from a in _applicationDbContext.CttPemberianObats
+                       // LEFT JOIN UserActive (creator)
+                   join u0 in _applicationDbContext.UserActives on a.CreateBy equals u0.UserActiveId into gu0
+                   from u in gu0.DefaultIfEmpty()
+                       // LEFT JOIN Obat
+                   join o0 in _applicationDbContext.Obats on a.ObatId equals o0.ObatId into go0
+                   from o in go0.DefaultIfEmpty()
 
-                         }).OrderByDescending(a => a.CreateDateTime);
+                   // Left Join TTD Path
+                   join ttd in _applicationDbContext.MasterTTDs on a.TTDId equals ttd.TTDId into ttdgroup
+                   from t in ttdgroup.DefaultIfEmpty()
+
+                   where a.IsDelete == false || a.IsDelete == null
+                   orderby a.CreateDateTime descending
+                   select new
+                   {
+                       a.CreateDateTime,
+                       a.CreateBy,
+                       CreateByName = u.FullName,
+
+                       a.CttPemberianObatId,
+                       a.ObatId,
+                       a.KunjunganId,
+                       a.RacikanId,
+                       a.TglPemberian,
+                       a.WaktuPemberian,
+                       a.StatusPemberian,
+                       a.StatusCttEso,
+                       a.CaraPemberianObat,
+                       a.UserActiveIdPerawat,
+                       a.TTDId,
+                       TTdpath = t.TTDPath,
+                       a.Keterangan,
+
+                       // >>> Informasi Obat (berdasarkan ObatId)
+                       NamaObat = o != null ? o.ObatName : null,
+                       DosisObat = o != null ? o.TakaranDosis : null, 
+
+                   };
+
 
             // Hitung total data sebelum paginasi
             var totalRows = query.Count();
@@ -108,24 +154,89 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             });
         }
 
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.ObservasiCairans.Find(id);
-            if (listdata == null)
-            {
+            var data =
+                await (from a in _applicationDbContext.CttPemberianObats.AsNoTracking()
+                       where a.CttPemberianObatId == id
+                             && (a.IsDelete == false || a.IsDelete == null)
+
+                       // LEFT JOIN creator
+                       join u0 in _applicationDbContext.UserActives
+                            on a.CreateBy equals u0.UserActiveId into gu0
+                       from u in gu0.DefaultIfEmpty()
+
+                           // LEFT JOIN perawat pemberi obat
+                       join p0 in _applicationDbContext.UserActives
+                            on a.UserActiveIdPerawat equals p0.UserActiveId into gp0
+                       from perawat in gp0.DefaultIfEmpty()
+
+                           // LEFT JOIN obat
+                       join o0 in _applicationDbContext.Obats
+                            on a.ObatId equals o0.ObatId into go0
+                       from o in go0.DefaultIfEmpty()
+
+                           // Left Join Racikan
+                           join r0 in _applicationDbContext.Racikans
+                            on a.RacikanId equals r0.RacikanId into gr0
+                       from r in gr0.DefaultIfEmpty()
+
+                           // Left Join TTD Path
+                       join ttd in _applicationDbContext.MasterTTDs on a.TTDId equals ttd.TTDId into ttdgroup
+                       from t in ttdgroup.DefaultIfEmpty()
+                       select new
+                       {
+                           a.CttPemberianObatId,
+                           a.CreateDateTime,
+                           a.CreateBy,
+                           CreateByName = u != null ? u.FullName : null,
+                           a.KunjunganId,
+                           a.ObatId,
+                           ObatInfo = new
+                           {
+                               // === sesuaikan nama kolom entity Obat kamu ===
+                               NamaObat = o != null ? o.ObatName : null,
+                               DosisObat = o != null ? o.TakaranDosis : null,
+
+                           },
+
+                           a.RacikanId,
+                           RacikanInfo = new
+                           {
+                               // === sesuaikan nama kolom entity Racikan kamu ===
+                               NamaRacikan = r != null ? r.NamaRacikan : null,
+                               KeteranganRacikan = r != null ? r.Keterangan : null,
+                           },
+
+                           a.TglPemberian,
+                           a.WaktuPemberian,
+                           a.StatusPemberian,
+                           a.StatusCttEso,
+                           a.CaraPemberianObat,
+
+                           a.UserActiveIdPerawat,
+                           PerawatName = perawat != null ? perawat.FullName : null,
+
+                           a.TTDId,
+                           t.TTDPath,
+                           a.Keterangan
+                       })
+                       .FirstOrDefaultAsync();
+
+            if (data == null)
                 return NotFound(new { message = "Data tidak ditemukan." });
-            }
 
             return Ok(new
             {
                 message = "Ditemukan || 200 OK",
-                data = listdata
+                data
             });
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromForm] ObservasiCairanViewModel vm)
+        public async Task<IActionResult> Create([FromForm] CttPemberianObatViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -134,40 +245,34 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
             try
             {
-                // **Cek koneksi ke database**
                 if (!_applicationDbContext.Database.CanConnect())
                 {
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
                 }
 
-                // **Ambil User ID dari JWT Claims**
+                // **Ambil User aktif dari JWT**
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
-                {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
-                }
 
                 var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
                 if (getUserActive == null)
-                {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-                }
+
                 var userActiveId = getUserActive.UserActiveId;
 
-                ////// **Cek Duplikasi**
-                //bool isDuplicate = _applicationDbContext.Diskons
-                //                    .Any(c => c.NamaDiskon == vm.NamaDiskon);
+                // **Cek duplikasi**
+                bool isDuplicate = _applicationDbContext.CttPemberianObats
+                    .Any(c => c.KunjunganId == vm.KunjunganId && (c.RacikanId == vm.RacikanId || c.ObatId == vm.ObatId));
 
-                //if (isDuplicate)
-                //{
-                //    return Conflict(new { message = "Nama benefit ini telah tersedia" });
-                //}
+                if (isDuplicate)
+                    return Conflict(new { message = "Catatan pemberian obat ini sudah ada." });
 
                 // ==================================================
-                // ✅ PROSES UPLOAD TTD
+                // ✅ PROSES UPLOAD TTD (langsung ke server Flask)
                 // ==================================================
+                string ttdPath = null;
                 Guid ttdId;
-                string ttdPath;
 
                 if (vm.TTDFile != null && vm.TTDFile.Length > 0)
                 {
@@ -181,9 +286,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     if (!allowedExtensions.Contains(fileExtension))
                         return BadRequest(new { message = "Format TTD tidak valid! Gunakan JPG atau JPEG." });
 
-                    // Nama file unik
                     var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
-                    var ttdFileName = $"{getUserActive.FullName}_{safeTime}_CttESO{fileExtension}";
+                    var ttdFileName = $"{getUserActive.FullName}_{safeTime}_CttObat{fileExtension}";
 
                     // 📤 Upload ke Flask
                     using var client = new HttpClient();
@@ -200,22 +304,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     };
 
                     var flaskResponse = await client.PostAsync("http://160.20.104.98:5050/upload", content);
-
                     if (!flaskResponse.IsSuccessStatusCode)
                         return StatusCode(500, new { message = "Gagal upload tanda tangan ke server Flask." });
 
                     // Ambil URL/path hasil upload dari response Flask
                     var responseBody = await flaskResponse.Content.ReadAsStringAsync();
-                    // Anggap Flask balikin JSON {"fileUrl": "/uploads/TTDUser/namafile.jpg"}
-                    dynamic jsonResp = Newtonsoft.Json.JsonConvert.DeserializeObject(responseBody);
-                    ttdPath = jsonResp.fileUrl;
+                    dynamic jsonResp = JsonConvert.DeserializeObject(responseBody);
+                    ttdPath = jsonResp.fileUrl; // Pastikan Flask balikin {"fileUrl": "http://.../TTDUser/nama_file.jpg"}
 
                     // Simpan ke MasterTTD
                     var newTTD = new MasterTTD
                     {
                         TTDId = Guid.NewGuid(),
                         UserActiveId = userActiveId,
-                        TTDPath = ttdPath, // langsung pakai path dari Flask
+                        TTDPath = ttdPath,
                         CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = userActiveId
                     };
@@ -229,37 +331,100 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     return BadRequest(new { message = "TTD harus diisi." });
                 }
 
-                // **Buat Data Baru**
-                var data = new ObservasiCairan
+                // ==================================================
+                // ✅ BUAT DATA CATATAN PEMBERIAN OBAT
+                // ==================================================
+                var data = new CttPemberianObat
                 {
-                    ObservasiCairanId = Guid.NewGuid(),
+                    CttPemberianObatId = Guid.NewGuid(),
                     KunjunganId = vm.KunjunganId,
-                    PasienId = vm.PasienId,
-                    UserActivePerawatId = vm.UserActivePerawatId,
-                    TglObservasi = DateTime.UtcNow,
-                    CairanMasuk =vm.CairanMasuk,
-                    CairanKeluar = vm.CairanKeluar,
-                    CairanSisa = vm.CairanSisa,
-                    JumlahUrin = vm.JumlahUrin,
+                    ObatId = vm.ObatId,
+                    RacikanId = vm.RacikanId,
+                    TglPemberian = TryParseTanggalToUtc(vm.TglPemberian),
+                    WaktuPemberian = vm.WaktuPemberian,
+                    StatusPemberian = vm.StatusPemberian,
+                    StatusCttEso = vm.StatusCttEso,
+                    CaraPemberianObat = vm.CaraPemberianObat,
+                    UserActiveIdPerawat = vm.UserActiveIdPerawat,
                     TTDId = ttdId,
-                    TTDPath= ttdPath,
                     Keterangan = vm.Keterangan,
-
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
 
-                // **Simpan ke Database**
-                _applicationDbContext.ObservasiCairans.Add(data);
+                _applicationDbContext.CttPemberianObats.Add(data);
+                int result = await _applicationDbContext.SaveChangesAsync();
+
+                if (result > 0)
+                    return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
+
+                return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
+            }
+            catch (DbUpdateException dbEx)
+            {
+                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
+
+        [HttpPut("StatusCatatanESO/{id}")]
+        public async Task<IActionResult> UpdateStatusCatatanESO(Guid id, [FromBody] StatusCttEsoViewModel vm)
+        {
+            if (vm == null || !ModelState.IsValid)
+            {
+                return BadRequest(new { message = "Data tidak valid." });
+            }
+
+            try
+            {
+                // **Cek koneksi ke database**
+                if (!await _applicationDbContext.Database.CanConnectAsync())
+                {
+                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+                }
+
+                // **Ambil User ID dari JWT Claims**
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+                if (getUserActive == null)
+                {
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+                }
+                var userActiveId = getUserActive.UserActiveId;
+
+                // **Cari Data**
+                var data = await _applicationDbContext.CttPemberianObats.FindAsync(id);
+                if (data == null)
+                {
+                    return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                // **Update Data**
+                data.StatusCttEso = vm.Status;
+
+                data.UpdateBy = userActiveId;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
+
+                _applicationDbContext.CttPemberianObats.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
                 {
-                    return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
+                    return Ok(new { message = "Update Data Berhasil || 200 OK" });
                 }
                 else
                 {
-                    return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
+                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
                 }
             }
             catch (DbUpdateException dbEx)
@@ -273,7 +438,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Edit(Guid id, [FromForm] ObservasiCairanViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromForm] CttPemberianObatViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -298,12 +463,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
                 var userActiveId = getUserActive.UserActiveId;
 
-                // **Cari data CatatanESO**
-                var existing = await _applicationDbContext.ObservasiCairans.FindAsync(id);
+                // **Cari data yang mau diedit**
+                var existing = await _applicationDbContext.CttPemberianObats.FindAsync(id);
                 if (existing == null)
                     return NotFound(new { message = "Data tidak ditemukan." });
 
-                string ttdPath = existing.TTDPath;
+                string ttdPath;
                 Guid ttdId = (Guid)existing.TTDId;
 
                 // ==================================================
@@ -322,8 +487,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                         return BadRequest(new { message = "Format TTD tidak valid! Gunakan JPG atau JPEG." });
 
                     var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
-                    var ttdFileName = $"{getUserActive.FullName}_{safeTime}_CttESO{fileExtension}";
+                    var ttdFileName = $"{getUserActive.FullName}_{safeTime}_CttObat{fileExtension}";
 
+                    var masterTTD = _applicationDbContext.MasterTTDs.FirstOrDefault(t => t.TTDId == existing.TTDId);
+                    ttdPath = masterTTD.TTDPath;
                     // 📤 Upload ke Flask
                     using var client = new HttpClient();
                     using var ms = new MemoryStream();
@@ -343,11 +510,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                         return StatusCode(500, new { message = "Gagal upload tanda tangan ke server Flask." });
 
                     var responseBody = await flaskResponse.Content.ReadAsStringAsync();
-                    dynamic jsonResp = Newtonsoft.Json.JsonConvert.DeserializeObject(responseBody);
-                    ttdPath = jsonResp.fileUrl;
+                    dynamic jsonResp = JsonConvert.DeserializeObject(responseBody);
+                    ttdPath = jsonResp.fileUrl; // ambil URL dari Flask
 
                     // Update MasterTTD
-                    var masterTTD = _applicationDbContext.MasterTTDs.FirstOrDefault(t => t.TTDId == existing.TTDId);
                     if (masterTTD != null)
                     {
                         masterTTD.TTDPath = ttdPath;
@@ -373,22 +539,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 }
 
                 // ==================================================
-                // ✅ UPDATE FIELD CATATAN ESO
+                // ✅ UPDATE FIELD CATATAN PEMBERIAN OBAT
                 // ==================================================
                 existing.KunjunganId = vm.KunjunganId;
-                existing.PasienId = vm.PasienId;
-                existing.UserActivePerawatId = vm.UserActivePerawatId;
-                existing.CairanMasuk = vm.CairanMasuk;
-                existing.CairanKeluar = vm.CairanKeluar;
-                existing.CairanSisa = vm.CairanSisa;
-                existing.JumlahUrin = vm.JumlahUrin;
+                existing.ObatId = vm.ObatId;
+                existing.RacikanId = vm.RacikanId;
+                existing.TglPemberian = TryParseTanggalToUtc(vm.TglPemberian);
+                existing.WaktuPemberian = vm.WaktuPemberian;
+                existing.StatusPemberian = vm.StatusPemberian;
+                existing.StatusCttEso = vm.StatusCttEso;
+                existing.CaraPemberianObat = vm.CaraPemberianObat;
+                existing.UserActiveIdPerawat = vm.UserActiveIdPerawat;
                 existing.TTDId = ttdId;
-                existing.TTDPath = ttdPath;
                 existing.Keterangan = vm.Keterangan;
                 existing.UpdateBy = userActiveId;
                 existing.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.ObservasiCairans.Update(existing);
+                _applicationDbContext.CttPemberianObats.Update(existing);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -433,7 +600,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.ObservasiCairans.FindAsync(id);
+                var data = await _applicationDbContext.CttPemberianObats.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -445,7 +612,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
                 data.IsDelete = true;
 
-                _applicationDbContext.ObservasiCairans.Update(data);
+                _applicationDbContext.CttPemberianObats.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -476,35 +643,60 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                                DateTime? startDate = null,
+                        DateTime? startDate = null,
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                                DateTime? endDate = null,
+                        DateTime? endDate = null,
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
 
             // Query data
-            var query = (from a in _applicationDbContext.ObservasiCairans
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false || a.IsDelete == null
-                         select new
-                         {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = u.FullName,
-                             a.ObservasiCairanId,
-                             a.KunjunganId,
-                             a.PasienId,
-                             a.UserActivePerawatId,
-                             a.TglObservasi,
-                             a.CairanMasuk,
-                             a.CairanSisa,
-                             a.JumlahUrin,
-                             a.TTDId,
-                             a.TTDPath,
-                             a.Keterangan,
+            var query =
+                   from a in _applicationDbContext.CttPemberianObats
+                       // LEFT JOIN UserActive (creator)
+                   join u0 in _applicationDbContext.UserActives on a.CreateBy equals u0.UserActiveId into gu0
+                   from u in gu0.DefaultIfEmpty()
+                       // LEFT JOIN Obat
+                   join o0 in _applicationDbContext.Obats on a.ObatId equals o0.ObatId into go0
+                   from o in go0.DefaultIfEmpty()
 
-                         });
+                   // left join racikan
+                   join r0 in _applicationDbContext.Racikans on a.RacikanId equals r0.RacikanId into gr0
+                   from r in gr0.DefaultIfEmpty()
+
+                       // Left Join TTD Path
+                   join ttd in _applicationDbContext.MasterTTDs on a.TTDId equals ttd.TTDId into ttdgroup
+                   from t in ttdgroup.DefaultIfEmpty()
+
+                   where a.IsDelete == false || a.IsDelete == null
+                   orderby a.CreateDateTime descending
+                   select new
+                   {
+                       a.CreateDateTime,
+                       a.CreateBy,
+                       CreateByName = u.FullName,
+
+                       a.CttPemberianObatId,
+                       a.KunjunganId,
+                       a.ObatId,
+                       a.RacikanId,
+                       a.TglPemberian,
+                       a.WaktuPemberian,
+                       a.StatusPemberian,
+                       a.CaraPemberianObat,
+                       a.UserActiveIdPerawat,
+                       a.TTDId,
+                       TTdpath = t.TTDPath,
+                       a.Keterangan,
+
+                       // >>> Informasi Obat (berdasarkan ObatId)
+                       NamaObat = o != null ? o.ObatName : null,
+                       DosisObat = o != null ? o.TakaranDosis : null,
+
+                       // >>> Informasi Racikan (berdasarkan RacikanId)
+                       NamaRacikan = r != null ? r.NamaRacikan : null,
+                       KeteranganRacikan = r != null ? r.Keterangan : null,
+
+                   };
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             //if (!string.IsNullOrWhiteSpace(search))
@@ -515,10 +707,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             //    );
             //}
 
-            //kunjungan id
-            if (kunjunganid.HasValue && kunjunganid != Guid.Empty)
+            //**Filter berdasarkan KunjunganId**
+            if (kunjunganid.HasValue)
             {
-                query = query.Where(u => u.KunjunganId == kunjunganid);
+                query = query.Where(u => u.KunjunganId == kunjunganid.Value);
             }
 
             //// **Filter berdasarkan tanggal**
