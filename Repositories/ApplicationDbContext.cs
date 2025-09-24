@@ -226,6 +226,8 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<CttPemberianObat> CttPemberianObats { get; set; }
         public DbSet<CatatanESO> CatatanESOs { get; set; }
         public DbSet<ObservasiCairan> ObservasiCairans { get; set; }
+        public DbSet<DetailPenerimaanUnit> DetailPenerimaanUnits { get; set; }
+        public DbSet<PenerimaanUnit> PenerimaanUnits { get; set; }
         #endregion
     }
 }

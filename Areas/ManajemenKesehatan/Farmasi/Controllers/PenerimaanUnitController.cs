@@ -1,6 +1,5 @@
 ﻿using System.Globalization;
 using System.Security.Claims;
-using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
@@ -12,10 +11,6 @@ using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
@@ -27,21 +22,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class PermintaanUnitController : Controller
+    public class PenerimaanUnitController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<PermintaanUnitController> _logger;
+        private readonly ILogger<PenerimaanUnitController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly IHubContext<PermintaanUnitHub> _hubContext;
 
-        public PermintaanUnitController(
+        public PenerimaanUnitController
+            (
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<PermintaanUnitController> logger,
+            ILogger<PenerimaanUnitController> logger,
             IWebHostEnvironment webHostEnvironment,
             IHubContext<PermintaanUnitHub> hubContext
             )
@@ -49,9 +45,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
-            _logger = logger;
-            _webHostEnvironment = webHostEnvironment;
             _hubContext = hubContext;
+            _webHostEnvironment = webHostEnvironment;
+            _logger = logger;
         }
 
         private DateTime? TryParseTanggalToUtc(string tanggal)
@@ -85,14 +81,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            var query = from a in _applicationDbContext.PermintaanUnits
+            var query = from a in _applicationDbContext.PenerimaanUnits
                         join u in _applicationDbContext.UserActives
                             on a.CreateBy equals u.UserActiveId into ua
                         from u in ua.DefaultIfEmpty()
 
-                            // GroupJoin ke DetailPermintaanUnits
-                        join d in _applicationDbContext.DetailPermintaanUnits
-                            on a.PermintaanUnitId equals d.PermintaanUnitId into detailJoin
+                            // GroupJoin ke DetailPenerimaanUnits
+                        join d in _applicationDbContext.DetailPenerimaanUnits
+                            on a.PenerimaanUnitId equals d.PenerimaanUnitId into detailJoin
                         from d in detailJoin.DefaultIfEmpty()
 
                             // Left join ke Obats
@@ -111,16 +107,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             a.CreateDateTime,
                             a.CreateBy,
                             CreateByName = u.FullName,
-                            a.PermintaanUnitId,
+                            a.PenerimaanUnitId,
                             a.UnitId,
-                            a.JenisPermintaan,
-                            a.TglPembuatanPermintaan,
-                            a.StatusPermintaan,
+                            //a.JenisPermintaan,
+                            a.TglPenerimaan,
+                            a.StatusPenerimaan,
                             a.Keterangan,
 
                             Detail = d == null ? null : new
                             {
-                                d.DetailPermintaanUnitId,
+                                d.DetailPenerimaanUnitId,
                                 d.ObatId,
                                 NamaObat = ob != null ? ob.ObatName : null,
                                 Bentuk = b != null ? b.NamaBentukObat : null,
@@ -140,14 +136,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             var totalRows = await query
                 .GroupBy(x => new
                 {
-                    x.PermintaanUnitId,
+                    x.PenerimaanUnitId,
                     x.CreateDateTime,
                     x.CreateBy,
                     x.CreateByName,
                     x.UnitId,
-                    x.JenisPermintaan,
-                    x.TglPembuatanPermintaan,
-                    x.StatusPermintaan,
+                    //x.JenisPermintaan,
+                    x.TglPenerimaan,
+                    x.StatusPenerimaan,
                     x.Keterangan
                 })
                 .CountAsync();
@@ -158,26 +154,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             var listdata = await query
                 .GroupBy(x => new
                 {
-                    x.PermintaanUnitId,
+                    x.PenerimaanUnitId,
                     x.CreateDateTime,
                     x.CreateBy,
                     x.CreateByName,
                     x.UnitId,
-                    x.JenisPermintaan,
-                    x.TglPembuatanPermintaan,
-                    x.StatusPermintaan,
+                    //x.JenisPermintaan,
+                    x.TglPenerimaan,
+                    x.StatusPenerimaan,
                     x.Keterangan
                 })
                 .Select(g => new
                 {
-                    g.Key.PermintaanUnitId,
+                    g.Key.PenerimaanUnitId,
                     g.Key.CreateDateTime,
                     g.Key.CreateBy,
                     g.Key.CreateByName,
                     g.Key.UnitId,
-                    g.Key.JenisPermintaan,
-                    g.Key.TglPembuatanPermintaan,
-                    g.Key.StatusPermintaan,
+                    //g.Key.JenisPermintaan,
+                    g.Key.TglPenerimaan,
+                    g.Key.StatusPenerimaan,
                     g.Key.Keterangan,
 
                     DetailPermintaan = g.Where(x => x.Detail != null)
@@ -208,103 +204,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             });
         }
 
-
-        //[HttpGet]
-        //public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
-        //{
-        //    // Validasi agar page dan perPage minimal bernilai 1
-        //    if (page < 1) page = 1;
-        //    if (perPage < 1) perPage = 10;
-
-        //    // Query data
-        //    var query = (from a in _applicationDbContext.PermintaanUnits
-        //                 join u in _applicationDbContext.UserActives
-        //                     on a.CreateBy equals u.UserActiveId into ua
-        //                 from u in ua.DefaultIfEmpty()
-
-        //                 where a.IsDelete == false || a.IsDelete == null
-        //                 select new
-        //                 {
-        //                     a.CreateDateTime,
-        //                     a.CreateBy,
-        //                     CreateByName = u.FullName,
-        //                     a.PermintaanUnitId,
-        //                     a.UnitId,
-        //                     a.JenisPermintaan,
-        //                     a.TglPembuatanPermintaan,
-        //                     a.StatusPermintaan,
-        //                     a.Keterangan,
-
-        //                     DetailPermintaan = (from d in _applicationDbContext.DetailPermintaanUnits
-        //                                         // Left Join Obat
-        //                                         join ob in _applicationDbContext.Obats
-        //                                             on d.ObatId equals ob.ObatId into obatJoin
-        //                                         from ob in obatJoin.DefaultIfEmpty()
-
-        //                                         // Left Join bentuk obat
-        //                                         join b in _applicationDbContext.BentukObats
-        //                                         on ob.BentukObatId equals b.BentukObatId into bentukObat
-        //                                         from b in bentukObat.DefaultIfEmpty()
-        //                                         where d.PermintaanUnitId == a.PermintaanUnitId
-        //                                         select new
-        //                                         {
-        //                                             d.DetailPermintaanUnitId,
-        //                                             d.ObatId,
-        //                                             NamaObat = ob != null ? ob.ObatName : null,
-        //                                             Bentuk = b != null ? b.NamaBentukObat : null,
-        //                                             StokObat = ob != null ? ob.Stock : 0,
-        //                                             StockMinimal = ob != null ? ob.Minimal : 0,
-        //                                             StockMaksimal= ob != null ? ob.Maximal : 0,
-        //                                             Dosis = ob != null ? ob.TakaranDosis : 0,
-        //                                             HTE = ob != null ? ob.HTEPrice : 0,
-        //                                             d.QtyPermintaan,
-        //                                             d.SatuanItem,
-        //                                             d.KategoriItem,
-        //                                             d.Keterangan
-        //                                         }).ToList()
-        //                 })
-        //                 .OrderByDescending(a => a.CreateDateTime);
-
-        //    // Hitung total data sebelum paginasi
-        //    var totalRows = query.Count();
-        //    var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-
-        //    // Ambil data sesuai paging
-        //    var listdata = query
-        //        .Skip((page - 1) * perPage)
-        //        .Take(perPage)
-        //        .ToList();
-
-        //    if (!listdata.Any())
-        //    {
-        //        return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
-        //    }
-
-        //    // Return hasil dengan paging info
-        //    return Ok(new
-        //    {
-        //        message = "Berhasil || 200 OK",
-        //        data = listdata,
-        //        pagination = new
-        //        {
-        //            CurrentPage = page,
-        //            PerPage = perPage,
-        //            TotalRows = totalRows,
-        //            TotalPages = totalPages
-        //        }
-        //    });
-        //}
-
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var query = from a in _applicationDbContext.PermintaanUnits
+            var query = from a in _applicationDbContext.PenerimaanUnits
                         join u in _applicationDbContext.UserActives
                             on a.CreateBy equals u.UserActiveId into ua
                         from u in ua.DefaultIfEmpty()
 
-                        join d in _applicationDbContext.DetailPermintaanUnits
-                            on a.PermintaanUnitId equals d.PermintaanUnitId into detailJoin
+                        join d in _applicationDbContext.DetailPenerimaanUnits
+                            on a.PenerimaanUnitId equals d.PenerimaanUnitId into detailJoin
                         from d in detailJoin.DefaultIfEmpty()
 
                         join ob in _applicationDbContext.Obats
@@ -315,24 +224,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             on ob.BentukObatId equals b.BentukObatId into bentukJoin
                         from b in bentukJoin.DefaultIfEmpty()
 
-                        where a.PermintaanUnitId == id
-                              && (a.IsDelete == false || a.IsDelete == null)
-
+                        where (a.IsDelete == false || a.IsDelete == null)
+                              && a.PenerimaanUnitId == id
                         select new
                         {
-                            a.PermintaanUnitId,
+                            a.PenerimaanUnitId,
                             a.CreateDateTime,
                             a.CreateBy,
                             CreateByName = u.FullName,
                             a.UnitId,
-                            a.JenisPermintaan,
-                            a.TglPembuatanPermintaan,
-                            a.StatusPermintaan,
+                            a.TglPenerimaan,
+                            a.StatusPenerimaan,
                             a.Keterangan,
 
                             Detail = d == null ? null : new
                             {
-                                d.DetailPermintaanUnitId,
+                                d.DetailPenerimaanUnitId,
                                 d.ObatId,
                                 NamaObat = ob != null ? ob.ObatName : null,
                                 Bentuk = b != null ? b.NamaBentukObat : null,
@@ -351,26 +258,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             var data = await query
                 .GroupBy(x => new
                 {
-                    x.PermintaanUnitId,
+                    x.PenerimaanUnitId,
                     x.CreateDateTime,
                     x.CreateBy,
                     x.CreateByName,
                     x.UnitId,
-                    x.JenisPermintaan,
-                    x.TglPembuatanPermintaan,
-                    x.StatusPermintaan,
+                    x.TglPenerimaan,
+                    x.StatusPenerimaan,
                     x.Keterangan
                 })
                 .Select(g => new
                 {
-                    g.Key.PermintaanUnitId,
+                    g.Key.PenerimaanUnitId,
                     g.Key.CreateDateTime,
                     g.Key.CreateBy,
                     g.Key.CreateByName,
                     g.Key.UnitId,
-                    g.Key.JenisPermintaan,
-                    g.Key.TglPembuatanPermintaan,
-                    g.Key.StatusPermintaan,
+                    g.Key.TglPenerimaan,
+                    g.Key.StatusPenerimaan,
                     g.Key.Keterangan,
 
                     DetailPermintaan = g.Where(x => x.Detail != null)
@@ -391,10 +296,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             });
         }
 
-
-
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] PermintaanUnitViewModel vm)
+        public async Task<IActionResult> Create([FromBody] PenerimaanUnitViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -424,29 +327,29 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Buat Data Baru untuk PermintaanUnit**
-                var permintaanUnitId = Guid.NewGuid();
-                var data = new PermintaanUnit
+                var penerimaanUnitId = Guid.NewGuid();
+                var data = new PenerimaanUnit
                 {
-                    PermintaanUnitId = permintaanUnitId,
+                    PenerimaanUnitId = penerimaanUnitId,
                     UnitId = vm.UnitId,
-                    JenisPermintaan = vm.JenisPermintaan,
-                    TglPembuatanPermintaan = TryParseTanggalToUtc(vm.TglPembuatanPermintaan),
-                    StatusPermintaan = vm.StatusPermintaan,
+                    //JenisPermintaan = vm.JenisPermintaan,
+                    TglPenerimaan = TryParseTanggalToUtc(vm.TglPenerimaan),
+                    StatusPenerimaan = vm.StatusPenerimaan,
                     Keterangan = vm.Keterangan,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
 
-                // **Buat Data Baru untuk DetailPermintaanUnit**
-                var detailItems = new List<DetailPermintaanUnit>();
-                if (vm.DetailPermintaanUnit != null && vm.DetailPermintaanUnit.Any())
+                // **Buat Data Baru untuk DetailPenerimaanUnit**
+                var detailItems = new List<DetailPenerimaanUnit>();
+                if (vm.DetailPenerimaanUnit != null && vm.DetailPenerimaanUnit.Any())
                 {
-                    foreach (var detailVm in vm.DetailPermintaanUnit)
+                    foreach (var detailVm in vm.DetailPenerimaanUnit)
                     {
-                        detailItems.Add(new DetailPermintaanUnit
+                        detailItems.Add(new DetailPenerimaanUnit
                         {
-                            DetailPermintaanUnitId = Guid.NewGuid(),
-                            PermintaanUnitId = permintaanUnitId, // Link to the main record
+                            DetailPenerimaanUnitId = Guid.NewGuid(),
+                            PenerimaanUnitId = penerimaanUnitId, // Link to the main record
                             ObatId = detailVm.ObatId,
                             QtyPermintaan = detailVm.QtyPermintaan,
                             SatuanItem = detailVm.SatuanItem,
@@ -459,14 +362,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 }
 
                 // **Simpan ke Database**
-                await _applicationDbContext.PermintaanUnits.AddAsync(data);
-                await _applicationDbContext.DetailPermintaanUnits.AddRangeAsync(detailItems);
+                await _applicationDbContext.PenerimaanUnits.AddAsync(data);
+                await _applicationDbContext.DetailPenerimaanUnits.AddRangeAsync(detailItems);
 
                 int result = await _applicationDbContext.SaveChangesAsync();
-                await _hubContext.Clients.All.SendAsync("PermintaanUnitCreated", new
+                await _hubContext.Clients.All.SendAsync("PenerimaanUnitCreated", new
                 {
                     Action = "create",
-                    PermintaanUnitId = data.PermintaanUnitId
+                    PenerimaanUnitId = data.PenerimaanUnitId
                 });
 
                 if (result > 0)
@@ -489,7 +392,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] PermintaanUnitViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] PenerimaanUnitViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -498,97 +401,95 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
             try
             {
-                // Cek koneksi ke database
-                if (!await _applicationDbContext.Database.CanConnectAsync())
+                if (!_applicationDbContext.Database.CanConnect())
                 {
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
                 }
 
-                // Ambil User ID dari JWT Claims
+                // **Ambil user aktif dari JWT**
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
-                {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
-                }
 
                 var getUserActive = await _applicationDbContext.UserActives
-                                          .FirstOrDefaultAsync(u => u.Email == emailLogin);
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+
                 if (getUserActive == null)
-                {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-                }
+
                 var userActiveId = getUserActive.UserActiveId;
 
-                // Cari Data PermintaanUnit
-                var data = await _applicationDbContext.PermintaanUnits.FindAsync(id);
-                if (data == null)
-                {
+                // **Cek data existing**
+                var penerimaan = await _applicationDbContext.PenerimaanUnits
+                    .FirstOrDefaultAsync(p => p.PenerimaanUnitId == id && (p.IsDelete == false || p.IsDelete == null));
+
+                if (penerimaan == null)
                     return NotFound(new { message = "Data tidak ditemukan." });
-                }
 
-                // Update Data PermintaanUnit (Parent)
-                data.UnitId = vm.UnitId;
-                data.JenisPermintaan = vm.JenisPermintaan;
-                data.TglPembuatanPermintaan = TryParseTanggalToUtc(vm.TglPembuatanPermintaan);
-                data.StatusPermintaan = vm.StatusPermintaan;
-                data.Keterangan = vm.Keterangan;
-                data.UpdateBy = userActiveId;
-                data.UpdateDateTime = DateTimeOffset.UtcNow;
+                // **Update field utama**
+                penerimaan.UnitId = vm.UnitId;
+                penerimaan.TglPenerimaan = TryParseTanggalToUtc(vm.TglPenerimaan);
+                penerimaan.StatusPenerimaan = vm.StatusPenerimaan;
+                penerimaan.Keterangan = vm.Keterangan;
+                penerimaan.UpdateBy = userActiveId;
+                penerimaan.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                // **Strategi Baru: Hapus dan Buat Ulang Detail Items**
+                // **Hapus detail lama**
+                var oldDetails = await _applicationDbContext.DetailPenerimaanUnits
+                    .Where(d => d.PenerimaanUnitId == id)
+                    .ToListAsync();
 
-                // 1. Ambil semua detail yang ada di database untuk PermintaanUnit ini
-                var existingDetails = await _applicationDbContext.DetailPermintaanUnits
-                                                                  .Where(d => d.PermintaanUnitId == id)
-                                                                  .ToListAsync();
+                if (oldDetails.Any())
+                    _applicationDbContext.DetailPenerimaanUnits.RemoveRange(oldDetails);
 
-                // 2. Hapus semua detail yang ada
-                _applicationDbContext.DetailPermintaanUnits.RemoveRange(existingDetails);
-
-                // 3. Buat dan tambahkan detail baru dari ViewModel
-                if (vm.DetailPermintaanUnit != null && vm.DetailPermintaanUnit.Any())
+                // **Tambah detail baru**
+                var newDetails = new List<DetailPenerimaanUnit>();
+                if (vm.DetailPenerimaanUnit != null && vm.DetailPenerimaanUnit.Any())
                 {
-                    var newDetails = vm.DetailPermintaanUnit.Select(detailVm => new DetailPermintaanUnit
+                    foreach (var detailVm in vm.DetailPenerimaanUnit)
                     {
-                        DetailPermintaanUnitId = Guid.NewGuid(),
-                        PermintaanUnitId = id,
-                        ObatId = detailVm.ObatId,
-                        QtyPermintaan = detailVm.QtyPermintaan,
-                        SatuanItem = detailVm.SatuanItem,
-                        KategoriItem = detailVm.KategoriItem,
-                        Keterangan = detailVm.Keterangan,
-                        CreateBy = userActiveId,
-                        CreateDateTime = DateTimeOffset.UtcNow
-                    }).ToList();
-
-                    _applicationDbContext.DetailPermintaanUnits.AddRange(newDetails);
+                        newDetails.Add(new DetailPenerimaanUnit
+                        {
+                            DetailPenerimaanUnitId = Guid.NewGuid(),
+                            PenerimaanUnitId = id,
+                            ObatId = detailVm.ObatId,
+                            QtyPermintaan = detailVm.QtyPermintaan,
+                            SatuanItem = detailVm.SatuanItem,
+                            KategoriItem = detailVm.KategoriItem,
+                            Keterangan = detailVm.Keterangan,
+                            CreateBy = userActiveId,
+                            CreateDateTime = DateTimeOffset.UtcNow
+                        });
+                    }
                 }
 
-                // Simpan semua perubahan dalam satu transaksi
+                if (newDetails.Any())
+                    await _applicationDbContext.DetailPenerimaanUnits.AddRangeAsync(newDetails);
+
+                // **Simpan perubahan**
                 int result = await _applicationDbContext.SaveChangesAsync();
-                await _hubContext.Clients.All.SendAsync("PermintaanUnitUpdate", new
+
+                await _hubContext.Clients.All.SendAsync("PenerimaanUnitUpdated", new
                 {
                     Action = "update",
-                    PermintaanUnitId = data.PermintaanUnitId
+                    PenerimaanUnitId = penerimaan.PenerimaanUnitId
                 });
+
                 if (result > 0)
-                {
                     return Ok(new { message = "Update Data Berhasil || 200 OK" });
-                }
-                else
-                {
-                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
-                }
+
+                return StatusCode(500, new { message = "Data tidak berhasil diupdate ke database." });
             }
             catch (DbUpdateException dbEx)
             {
-                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+                return StatusCode(500, new { message = $"Gagal update data: {dbEx.InnerException?.Message}" });
             }
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
@@ -616,20 +517,38 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
-                // **Cari Data**
-                var data = await _applicationDbContext.PermintaanUnits.FindAsync(id);
-                if (data == null)
+                // **Cari Data PenerimaanUnit**
+                var penerimaan = await _applicationDbContext.PenerimaanUnits
+                    .FirstOrDefaultAsync(p => p.PenerimaanUnitId == id && (p.IsDelete == false || p.IsDelete == null));
+
+                if (penerimaan == null)
                 {
-                    return NotFound(new { message = "Data tidak ditemukan." });
+                    return NotFound(new { message = "Data penerimaan unit tidak ditemukan." });
                 }
 
-                // **Soft Delete (Tandai Data sebagai Terhapus)**
-                data.DeleteBy = userActiveId;
-                data.DeleteDateTime = DateTimeOffset.UtcNow;
+                // **Soft Delete Master**
+                penerimaan.IsDelete = true;
+                penerimaan.DeleteBy = userActiveId;
+                penerimaan.DeleteDateTime = DateTimeOffset.UtcNow;
+                _applicationDbContext.PenerimaanUnits.Update(penerimaan);
 
-                data.IsDelete = true;
+                // **Soft Delete Detail**
+                var details = await _applicationDbContext.DetailPenerimaanUnits
+                    .Where(d => d.PenerimaanUnitId == id && (d.IsDelete == false || d.IsDelete == null))
+                    .ToListAsync();
 
-                _applicationDbContext.PermintaanUnits.Update(data);
+                if (details.Any())
+                {
+                    foreach (var d in details)
+                    {
+                        d.IsDelete = true;
+                        d.DeleteBy = userActiveId;
+                        d.DeleteDateTime = DateTimeOffset.UtcNow;
+                    }
+                    _applicationDbContext.DetailPenerimaanUnits.UpdateRange(details);
+                }
+
+                // **Simpan perubahan**
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -653,68 +572,70 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
         [HttpGet("paged")]
         public async Task<IActionResult> Paged(
-            int page = 1,
-            int perPage = 10,
-            string? search = null,
-            string? orderBy = "CreateDateTime",
-            string? sortDirection = "desc",
-            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-            DateTime? startDate = null,
-            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-            DateTime? endDate = null,
-            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        int page = 1,
+        int perPage = 10,
+        string? search = null,
+        string? orderBy = "CreateDateTime",
+        string? sortDirection = "desc",
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+                DateTime? startDate = null,
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+                DateTime? endDate = null,
+        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            var baseQuery =
-                from a in _applicationDbContext.PermintaanUnits
-                join u in _applicationDbContext.UserActives
-                    on a.CreateBy equals u.UserActiveId into ua
-                from u in ua.DefaultIfEmpty()
+            var baseQuery = from a in _applicationDbContext.PenerimaanUnits
+                        join u in _applicationDbContext.UserActives
+                            on a.CreateBy equals u.UserActiveId into ua
+                        from u in ua.DefaultIfEmpty()
 
-                join d in _applicationDbContext.DetailPermintaanUnits
-                    on a.PermintaanUnitId equals d.PermintaanUnitId into detailJoin
-                from d in detailJoin.DefaultIfEmpty()
+                            // GroupJoin ke DetailPenerimaanUnits
+                        join d in _applicationDbContext.DetailPenerimaanUnits
+                            on a.PenerimaanUnitId equals d.PenerimaanUnitId into detailJoin
+                        from d in detailJoin.DefaultIfEmpty()
 
-                join ob in _applicationDbContext.Obats
-                    on d.ObatId equals ob.ObatId into obatJoin
-                from ob in obatJoin.DefaultIfEmpty()
+                            // Left join ke Obats
+                        join ob in _applicationDbContext.Obats
+                            on d.ObatId equals ob.ObatId into obatJoin
+                        from ob in obatJoin.DefaultIfEmpty()
 
-                join b in _applicationDbContext.BentukObats
-                    on ob.BentukObatId equals b.BentukObatId into bentukJoin
-                from b in bentukJoin.DefaultIfEmpty()
+                            // Left join ke BentukObats
+                        join b in _applicationDbContext.BentukObats
+                            on ob.BentukObatId equals b.BentukObatId into bentukJoin
+                        from b in bentukJoin.DefaultIfEmpty()
 
-                where (a.IsDelete == false || a.IsDelete == null)
-                select new
-                {
-                    a.PermintaanUnitId,
-                    a.CreateDateTime,
-                    a.CreateBy,
-                    CreateByName = u.FullName,
-                    a.UnitId,
-                    a.JenisPermintaan,
-                    a.TglPembuatanPermintaan,
-                    a.StatusPermintaan,
-                    a.Keterangan,
+                        where a.IsDelete == false || a.IsDelete == null
+                        select new
+                        {
+                            a.CreateDateTime,
+                            a.CreateBy,
+                            CreateByName = u.FullName,
+                            a.PenerimaanUnitId,
+                            a.UnitId,
+                            //a.JenisPermintaan,
+                            a.TglPenerimaan,
+                            a.StatusPenerimaan,
+                            a.Keterangan,
 
-                    Detail = d == null ? null : new
-                    {
-                        d.DetailPermintaanUnitId,
-                        d.ObatId,
-                        NamaObat = ob != null ? ob.ObatName : null,
-                        Bentuk = b != null ? b.NamaBentukObat : null,
-                        StokObat = ob != null ? ob.Stock : 0,
-                        StockMinimal = ob != null ? ob.Minimal : 0,
-                        StockMaksimal = ob != null ? ob.Maximal : 0,
-                        Dosis = ob != null ? ob.TakaranDosis : 0,
-                        HTE = ob != null ? ob.HTEPrice : 0,
-                        d.QtyPermintaan,
-                        d.SatuanItem,
-                        d.KategoriItem,
-                        d.Keterangan
-                    }
-                };
+                            Detail = d == null ? null : new
+                            {
+                                d.DetailPenerimaanUnitId,
+                                d.ObatId,
+                                NamaObat = ob != null ? ob.ObatName : null,
+                                Bentuk = b != null ? b.NamaBentukObat : null,
+                                StokObat = ob != null ? ob.Stock : 0,
+                                StockMinimal = ob != null ? ob.Minimal : 0,
+                                StockMaksimal = ob != null ? ob.Maximal : 0,
+                                Dosis = ob != null ? ob.TakaranDosis : 0,
+                                HTE = ob != null ? ob.HTEPrice : 0,
+                                d.QtyPermintaan,
+                                d.SatuanItem,
+                                d.KategoriItem,
+                                d.Keterangan
+                            }
+                        };
 
             // 🔎 Filter tanggal
             if (startDate.HasValue && endDate.HasValue)
@@ -785,26 +706,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             var groupedQuery = baseQuery
                 .GroupBy(x => new
                 {
-                    x.PermintaanUnitId,
+                    x.PenerimaanUnitId,
                     x.CreateDateTime,
                     x.CreateBy,
                     x.CreateByName,
                     x.UnitId,
-                    x.JenisPermintaan,
-                    x.TglPembuatanPermintaan,
-                    x.StatusPermintaan,
+                    //x.JenisPermintaan,
+                    x.TglPenerimaan,
+                    x.StatusPenerimaan,
                     x.Keterangan
                 })
                 .Select(g => new
                 {
-                    g.Key.PermintaanUnitId,
+                    g.Key.PenerimaanUnitId,
                     g.Key.CreateDateTime,
                     g.Key.CreateBy,
                     g.Key.CreateByName,
                     g.Key.UnitId,
-                    g.Key.JenisPermintaan,
-                    g.Key.TglPembuatanPermintaan,
-                    g.Key.StatusPermintaan,
+                    //g.Key.JenisPermintaan,
+                    g.Key.TglPenerimaan,
+                    g.Key.StatusPenerimaan,
                     g.Key.Keterangan,
                     DetailPermintaan = g.Where(x => x.Detail != null).Select(x => x.Detail).ToList()
                 });
@@ -836,6 +757,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 }
             });
         }
+
+
 
     }
 }
