@@ -363,6 +363,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         int page = 1,
         int perPage = 10,
         string? search = null,
+        Guid? kunjunganid = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -403,6 +404,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             //        EF.Functions.ILike(u.NamaDiskon, search)
             //    );
             //}
+
+            // Filter KunjunganId
+            if (kunjunganid.HasValue && kunjunganid!= Guid.Empty)
+            {
+                query = query.Where(x=> x.KunjunganId == kunjunganid);
+            }
 
             //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
