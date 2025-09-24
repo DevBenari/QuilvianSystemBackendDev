@@ -234,13 +234,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // **Cek Duplikasi**
-                bool isDuplicate = _applicationDbContext.CurrentMedications
-                    .Any(c => c.KunjunganId == vm.KunjunganId);
+                //bool isDuplicate = _applicationDbContext.CurrentMedications
+                //    .Any(c => c.KunjunganId == vm.KunjunganId);
 
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
-                }
+                //if (isDuplicate)
+                //{
+                //    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
+                //}
 
                 // **Update Data**
                 data.KunjunganId = vm.KunjunganId;
