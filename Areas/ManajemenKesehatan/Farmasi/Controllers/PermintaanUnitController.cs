@@ -15,6 +15,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
@@ -105,15 +106,27 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.Keterangan,
 
                              DetailPermintaan = (from d in _applicationDbContext.DetailPermintaanUnits
+                                                 // Left Join Obat
                                                  join ob in _applicationDbContext.Obats
                                                      on d.ObatId equals ob.ObatId into obatJoin
                                                  from ob in obatJoin.DefaultIfEmpty()
+
+                                                 // Left Join bentuk obat
+                                                 join b in _applicationDbContext.BentukObats
+                                                 on ob.BentukObatId equals b.BentukObatId into bentukObat
+                                                 from b in bentukObat.DefaultIfEmpty()
                                                  where d.PermintaanUnitId == a.PermintaanUnitId
                                                  select new
                                                  {
                                                      d.DetailPermintaanUnitId,
                                                      d.ObatId,
                                                      NamaObat = ob != null ? ob.ObatName : null,
+                                                     Bentuk = b != null ? b.NamaBentukObat : null,
+                                                     StokObat = ob != null ? ob.Stock : 0,
+                                                     StockMinimal = ob != null ? ob.Minimal : 0,
+                                                     StockMaksimal= ob != null ? ob.Maximal : 0,
+                                                     Dosis = ob != null ? ob.TakaranDosis : 0,
+                                                     HTE = ob != null ? ob.HTEPrice : 0,
                                                      d.QtyPermintaan,
                                                      d.SatuanItem,
                                                      d.KategoriItem,
@@ -176,15 +189,27 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             a.Keterangan,
 
                             DetailPermintaan = (from d in _applicationDbContext.DetailPermintaanUnits
+                                                    // Left Join Obat
                                                 join ob in _applicationDbContext.Obats
                                                     on d.ObatId equals ob.ObatId into obatJoin
                                                 from ob in obatJoin.DefaultIfEmpty()
+
+                                                    // Left Join bentuk obat
+                                                join b in _applicationDbContext.BentukObats
+                                                on ob.BentukObatId equals b.BentukObatId into bentukObat
+                                                from b in bentukObat.DefaultIfEmpty()
                                                 where d.PermintaanUnitId == a.PermintaanUnitId
                                                 select new
                                                 {
                                                     d.DetailPermintaanUnitId,
                                                     d.ObatId,
                                                     NamaObat = ob != null ? ob.ObatName : null,
+                                                    Bentuk = b != null ? b.NamaBentukObat : null,
+                                                    StokObat = ob != null ? ob.Stock : 0,
+                                                    StockMinimal = ob != null ? ob.Minimal : 0,
+                                                    StockMaksimal = ob != null ? ob.Maximal : 0,
+                                                    Dosis = ob != null ? ob.TakaranDosis : 0,
+                                                    HTE = ob != null ? ob.HTEPrice : 0,
                                                     d.QtyPermintaan,
                                                     d.SatuanItem,
                                                     d.KategoriItem,
@@ -572,15 +597,27 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             a.Keterangan,
 
                             DetailPermintaan = (from d in _applicationDbContext.DetailPermintaanUnits
+                                                    // Left Join Obat
                                                 join ob in _applicationDbContext.Obats
                                                     on d.ObatId equals ob.ObatId into obatJoin
                                                 from ob in obatJoin.DefaultIfEmpty()
+
+                                                    // Left Join bentuk obat
+                                                join b in _applicationDbContext.BentukObats
+                                                on ob.BentukObatId equals b.BentukObatId into bentukObat
+                                                from b in bentukObat.DefaultIfEmpty()
                                                 where d.PermintaanUnitId == a.PermintaanUnitId
                                                 select new
                                                 {
                                                     d.DetailPermintaanUnitId,
                                                     d.ObatId,
                                                     NamaObat = ob != null ? ob.ObatName : null,
+                                                    Bentuk = b != null ? b.NamaBentukObat : null,
+                                                    StokObat = ob != null ? ob.Stock : 0,
+                                                    StockMinimal = ob != null ? ob.Minimal : 0,
+                                                    StockMaksimal = ob != null ? ob.Maximal : 0,
+                                                    Dosis = ob != null ? ob.TakaranDosis : 0,
+                                                    HTE = ob != null ? ob.HTEPrice : 0,
                                                     d.QtyPermintaan,
                                                     d.SatuanItem,
                                                     d.KategoriItem,
