@@ -59,6 +59,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         join o in _applicationDbContext.Obats on a.ObatId equals o.ObatId into obatJoin
                         from o in obatJoin.DefaultIfEmpty()
 
+                        // Left join bentuk obat
+                        join bentuk in _applicationDbContext.BentukObats on o.BentukObatId equals bentuk.BentukObatId 
+                        into bentukjoin
+                        from bentuk in bentukjoin.DefaultIfEmpty()
+
                         where a.IsDelete == false
                         select new
                         {
@@ -71,6 +76,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             NoRekamMedis = a.NoRekamMedis,
                             ObatId = a.ObatId,
                             NamaObat = o != null ? o.ObatName : a.NamaObat,
+                            Bentuk = bentuk != null ? bentuk.NamaBentukObat : null,
                             Dosis = o != null ? o.Dosis : a.Dosis,
                             Frekuensi = a.Frekuensi,
                             LamaKonsumsi = a.LamaKonsumsi,
@@ -372,6 +378,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              join o in _applicationDbContext.Obats on a.ObatId equals o.ObatId into obatJoin
                              from o in obatJoin.DefaultIfEmpty()
 
+                                 // Left join bentuk obat
+                             join bentuk in _applicationDbContext.BentukObats on o.BentukObatId equals bentuk.BentukObatId
+                             into bentukjoin
+                             from bentuk in bentukjoin.DefaultIfEmpty()
+
                              where a.IsDelete == false
                              select new
                              {
@@ -384,6 +395,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                  NoRekamMedis = a.NoRekamMedis,
                                  ObatId = a.ObatId,
                                  NamaObat = o != null ? o.ObatName : a.NamaObat,
+                                 Bentuk = bentuk != null ? bentuk.NamaBentukObat : null,
                                  Dosis = o != null ? o.Dosis : a.Dosis,
                                  Frekuensi = a.Frekuensi,
                                  LamaKonsumsi = a.LamaKonsumsi,
