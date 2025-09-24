@@ -75,6 +75,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             Frekuensi = a.Frekuensi,
                             LamaKonsumsi = a.LamaKonsumsi,
                             Status = a.Status,
+                            Keterangan = a.Keterangan,
                         }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -166,6 +167,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     Frekuensi = vm.Frekuensi,
                     LamaKonsumsi = vm.LamaKonsumsi,
                     Status = vm.Status,
+                    Keterangan = vm.Keterangan,
                     IsDelete = false,
 
                     CreateBy = userActiveId,
@@ -252,7 +254,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.Frekuensi = vm.Frekuensi;
                 data.LamaKonsumsi = vm.LamaKonsumsi;
                 data.Status = vm.Status;
-
+                data.Keterangan = vm.Keterangan;
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
@@ -386,6 +388,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                  Frekuensi = a.Frekuensi,
                                  LamaKonsumsi = a.LamaKonsumsi,
                                  Status = a.Status,
+                                 Keterangan = a.Keterangan,
                              });
 
                 // Filter berdasarkan kunjungan id

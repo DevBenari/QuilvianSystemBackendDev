@@ -11,6 +11,7 @@
         public string? Frekuensi { get; set; }
         public string? LamaKonsumsi { get; set; }
         public string? Status { get; set; }
+        public string? Keterangan { get; set; }
 
     }
 }
