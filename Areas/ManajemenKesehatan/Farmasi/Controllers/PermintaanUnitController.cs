@@ -82,75 +82,118 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
         {
-            // Validasi agar page dan perPage minimal bernilai 1
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            // Query data
-            var query = (from a in _applicationDbContext.PermintaanUnits
-                         join u in _applicationDbContext.UserActives
-                             on a.CreateBy equals u.UserActiveId into ua
-                         from u in ua.DefaultIfEmpty()
+            var query = from a in _applicationDbContext.PermintaanUnits
+                        join u in _applicationDbContext.UserActives
+                            on a.CreateBy equals u.UserActiveId into ua
+                        from u in ua.DefaultIfEmpty()
 
-                         where a.IsDelete == false || a.IsDelete == null
-                         select new
-                         {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = u.FullName,
-                             a.PermintaanUnitId,
-                             a.UnitId,
-                             a.JenisPermintaan,
-                             a.TglPembuatanPermintaan,
-                             a.StatusPermintaan,
-                             a.Keterangan,
+                            // GroupJoin ke DetailPermintaanUnits
+                        join d in _applicationDbContext.DetailPermintaanUnits
+                            on a.PermintaanUnitId equals d.PermintaanUnitId into detailJoin
+                        from d in detailJoin.DefaultIfEmpty()
 
-                             DetailPermintaan = (from d in _applicationDbContext.DetailPermintaanUnits
-                                                 // Left Join Obat
-                                                 join ob in _applicationDbContext.Obats
-                                                     on d.ObatId equals ob.ObatId into obatJoin
-                                                 from ob in obatJoin.DefaultIfEmpty()
+                            // Left join ke Obats
+                        join ob in _applicationDbContext.Obats
+                            on d.ObatId equals ob.ObatId into obatJoin
+                        from ob in obatJoin.DefaultIfEmpty()
 
-                                                 // Left Join bentuk obat
-                                                 join b in _applicationDbContext.BentukObats
-                                                 on ob.BentukObatId equals b.BentukObatId into bentukObat
-                                                 from b in bentukObat.DefaultIfEmpty()
-                                                 where d.PermintaanUnitId == a.PermintaanUnitId
-                                                 select new
-                                                 {
-                                                     d.DetailPermintaanUnitId,
-                                                     d.ObatId,
-                                                     NamaObat = ob != null ? ob.ObatName : null,
-                                                     Bentuk = b != null ? b.NamaBentukObat : null,
-                                                     StokObat = ob != null ? ob.Stock : 0,
-                                                     StockMinimal = ob != null ? ob.Minimal : 0,
-                                                     StockMaksimal= ob != null ? ob.Maximal : 0,
-                                                     Dosis = ob != null ? ob.TakaranDosis : 0,
-                                                     HTE = ob != null ? ob.HTEPrice : 0,
-                                                     d.QtyPermintaan,
-                                                     d.SatuanItem,
-                                                     d.KategoriItem,
-                                                     d.Keterangan
-                                                 }).ToList()
-                         })
-                         .OrderByDescending(a => a.CreateDateTime);
+                            // Left join ke BentukObats
+                        join b in _applicationDbContext.BentukObats
+                            on ob.BentukObatId equals b.BentukObatId into bentukJoin
+                        from b in bentukJoin.DefaultIfEmpty()
 
-            // Hitung total data sebelum paginasi
-            var totalRows = query.Count();
+                        where a.IsDelete == false || a.IsDelete == null
+                        select new
+                        {
+                            a.CreateDateTime,
+                            a.CreateBy,
+                            CreateByName = u.FullName,
+                            a.PermintaanUnitId,
+                            a.UnitId,
+                            a.JenisPermintaan,
+                            a.TglPembuatanPermintaan,
+                            a.StatusPermintaan,
+                            a.Keterangan,
+
+                            Detail = d == null ? null : new
+                            {
+                                d.DetailPermintaanUnitId,
+                                d.ObatId,
+                                NamaObat = ob != null ? ob.ObatName : null,
+                                Bentuk = b != null ? b.NamaBentukObat : null,
+                                StokObat = ob != null ? ob.Stock : 0,
+                                StockMinimal = ob != null ? ob.Minimal : 0,
+                                StockMaksimal = ob != null ? ob.Maximal : 0,
+                                Dosis = ob != null ? ob.TakaranDosis : 0,
+                                HTE = ob != null ? ob.HTEPrice : 0,
+                                d.QtyPermintaan,
+                                d.SatuanItem,
+                                d.KategoriItem,
+                                d.Keterangan
+                            }
+                        };
+
+            // Hitung total data
+            var totalRows = await query
+                .GroupBy(x => new
+                {
+                    x.PermintaanUnitId,
+                    x.CreateDateTime,
+                    x.CreateBy,
+                    x.CreateByName,
+                    x.UnitId,
+                    x.JenisPermintaan,
+                    x.TglPembuatanPermintaan,
+                    x.StatusPermintaan,
+                    x.Keterangan
+                })
+                .CountAsync();
+
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
 
             // Ambil data sesuai paging
-            var listdata = query
+            var listdata = await query
+                .GroupBy(x => new
+                {
+                    x.PermintaanUnitId,
+                    x.CreateDateTime,
+                    x.CreateBy,
+                    x.CreateByName,
+                    x.UnitId,
+                    x.JenisPermintaan,
+                    x.TglPembuatanPermintaan,
+                    x.StatusPermintaan,
+                    x.Keterangan
+                })
+                .Select(g => new
+                {
+                    g.Key.PermintaanUnitId,
+                    g.Key.CreateDateTime,
+                    g.Key.CreateBy,
+                    g.Key.CreateByName,
+                    g.Key.UnitId,
+                    g.Key.JenisPermintaan,
+                    g.Key.TglPembuatanPermintaan,
+                    g.Key.StatusPermintaan,
+                    g.Key.Keterangan,
+
+                    DetailPermintaan = g.Where(x => x.Detail != null)
+                                        .Select(x => x.Detail)
+                                        .ToList()
+                })
+                .OrderByDescending(x => x.CreateDateTime)
                 .Skip((page - 1) * perPage)
                 .Take(perPage)
-                .ToList();
+                .ToListAsync();
 
             if (!listdata.Any())
             {
                 return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
             }
 
-            // Return hasil dengan paging info
             return Ok(new
             {
                 message = "Berhasil || 200 OK",
@@ -165,13 +208,112 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             });
         }
 
+
+        //[HttpGet]
+        //public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
+        //{
+        //    // Validasi agar page dan perPage minimal bernilai 1
+        //    if (page < 1) page = 1;
+        //    if (perPage < 1) perPage = 10;
+
+        //    // Query data
+        //    var query = (from a in _applicationDbContext.PermintaanUnits
+        //                 join u in _applicationDbContext.UserActives
+        //                     on a.CreateBy equals u.UserActiveId into ua
+        //                 from u in ua.DefaultIfEmpty()
+
+        //                 where a.IsDelete == false || a.IsDelete == null
+        //                 select new
+        //                 {
+        //                     a.CreateDateTime,
+        //                     a.CreateBy,
+        //                     CreateByName = u.FullName,
+        //                     a.PermintaanUnitId,
+        //                     a.UnitId,
+        //                     a.JenisPermintaan,
+        //                     a.TglPembuatanPermintaan,
+        //                     a.StatusPermintaan,
+        //                     a.Keterangan,
+
+        //                     DetailPermintaan = (from d in _applicationDbContext.DetailPermintaanUnits
+        //                                         // Left Join Obat
+        //                                         join ob in _applicationDbContext.Obats
+        //                                             on d.ObatId equals ob.ObatId into obatJoin
+        //                                         from ob in obatJoin.DefaultIfEmpty()
+
+        //                                         // Left Join bentuk obat
+        //                                         join b in _applicationDbContext.BentukObats
+        //                                         on ob.BentukObatId equals b.BentukObatId into bentukObat
+        //                                         from b in bentukObat.DefaultIfEmpty()
+        //                                         where d.PermintaanUnitId == a.PermintaanUnitId
+        //                                         select new
+        //                                         {
+        //                                             d.DetailPermintaanUnitId,
+        //                                             d.ObatId,
+        //                                             NamaObat = ob != null ? ob.ObatName : null,
+        //                                             Bentuk = b != null ? b.NamaBentukObat : null,
+        //                                             StokObat = ob != null ? ob.Stock : 0,
+        //                                             StockMinimal = ob != null ? ob.Minimal : 0,
+        //                                             StockMaksimal= ob != null ? ob.Maximal : 0,
+        //                                             Dosis = ob != null ? ob.TakaranDosis : 0,
+        //                                             HTE = ob != null ? ob.HTEPrice : 0,
+        //                                             d.QtyPermintaan,
+        //                                             d.SatuanItem,
+        //                                             d.KategoriItem,
+        //                                             d.Keterangan
+        //                                         }).ToList()
+        //                 })
+        //                 .OrderByDescending(a => a.CreateDateTime);
+
+        //    // Hitung total data sebelum paginasi
+        //    var totalRows = query.Count();
+        //    var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+        //    // Ambil data sesuai paging
+        //    var listdata = query
+        //        .Skip((page - 1) * perPage)
+        //        .Take(perPage)
+        //        .ToList();
+
+        //    if (!listdata.Any())
+        //    {
+        //        return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
+        //    }
+
+        //    // Return hasil dengan paging info
+        //    return Ok(new
+        //    {
+        //        message = "Berhasil || 200 OK",
+        //        data = listdata,
+        //        pagination = new
+        //        {
+        //            CurrentPage = page,
+        //            PerPage = perPage,
+        //            TotalRows = totalRows,
+        //            TotalPages = totalPages
+        //        }
+        //    });
+        //}
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var data = (from a in _applicationDbContext.PermintaanUnits
+            var query = from a in _applicationDbContext.PermintaanUnits
                         join u in _applicationDbContext.UserActives
                             on a.CreateBy equals u.UserActiveId into ua
                         from u in ua.DefaultIfEmpty()
+
+                        join d in _applicationDbContext.DetailPermintaanUnits
+                            on a.PermintaanUnitId equals d.PermintaanUnitId into detailJoin
+                        from d in detailJoin.DefaultIfEmpty()
+
+                        join ob in _applicationDbContext.Obats
+                            on d.ObatId equals ob.ObatId into obatJoin
+                        from ob in obatJoin.DefaultIfEmpty()
+
+                        join b in _applicationDbContext.BentukObats
+                            on ob.BentukObatId equals b.BentukObatId into bentukJoin
+                        from b in bentukJoin.DefaultIfEmpty()
 
                         where a.PermintaanUnitId == id
                               && (a.IsDelete == false || a.IsDelete == null)
@@ -188,34 +330,54 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             a.StatusPermintaan,
                             a.Keterangan,
 
-                            DetailPermintaan = (from d in _applicationDbContext.DetailPermintaanUnits
-                                                    // Left Join Obat
-                                                join ob in _applicationDbContext.Obats
-                                                    on d.ObatId equals ob.ObatId into obatJoin
-                                                from ob in obatJoin.DefaultIfEmpty()
+                            Detail = d == null ? null : new
+                            {
+                                d.DetailPermintaanUnitId,
+                                d.ObatId,
+                                NamaObat = ob != null ? ob.ObatName : null,
+                                Bentuk = b != null ? b.NamaBentukObat : null,
+                                StokObat = ob != null ? ob.Stock : 0,
+                                StockMinimal = ob != null ? ob.Minimal : 0,
+                                StockMaksimal = ob != null ? ob.Maximal : 0,
+                                Dosis = ob != null ? ob.TakaranDosis : 0,
+                                HTE = ob != null ? ob.HTEPrice : 0,
+                                d.QtyPermintaan,
+                                d.SatuanItem,
+                                d.KategoriItem,
+                                d.Keterangan
+                            }
+                        };
 
-                                                    // Left Join bentuk obat
-                                                join b in _applicationDbContext.BentukObats
-                                                on ob.BentukObatId equals b.BentukObatId into bentukObat
-                                                from b in bentukObat.DefaultIfEmpty()
-                                                where d.PermintaanUnitId == a.PermintaanUnitId
-                                                select new
-                                                {
-                                                    d.DetailPermintaanUnitId,
-                                                    d.ObatId,
-                                                    NamaObat = ob != null ? ob.ObatName : null,
-                                                    Bentuk = b != null ? b.NamaBentukObat : null,
-                                                    StokObat = ob != null ? ob.Stock : 0,
-                                                    StockMinimal = ob != null ? ob.Minimal : 0,
-                                                    StockMaksimal = ob != null ? ob.Maximal : 0,
-                                                    Dosis = ob != null ? ob.TakaranDosis : 0,
-                                                    HTE = ob != null ? ob.HTEPrice : 0,
-                                                    d.QtyPermintaan,
-                                                    d.SatuanItem,
-                                                    d.KategoriItem,
-                                                    d.Keterangan
-                                                }).ToList()
-                        }).FirstOrDefault();
+            var data = await query
+                .GroupBy(x => new
+                {
+                    x.PermintaanUnitId,
+                    x.CreateDateTime,
+                    x.CreateBy,
+                    x.CreateByName,
+                    x.UnitId,
+                    x.JenisPermintaan,
+                    x.TglPembuatanPermintaan,
+                    x.StatusPermintaan,
+                    x.Keterangan
+                })
+                .Select(g => new
+                {
+                    g.Key.PermintaanUnitId,
+                    g.Key.CreateDateTime,
+                    g.Key.CreateBy,
+                    g.Key.CreateByName,
+                    g.Key.UnitId,
+                    g.Key.JenisPermintaan,
+                    g.Key.TglPembuatanPermintaan,
+                    g.Key.StatusPermintaan,
+                    g.Key.Keterangan,
+
+                    DetailPermintaan = g.Where(x => x.Detail != null)
+                                        .Select(x => x.Detail)
+                                        .ToList()
+                })
+                .FirstOrDefaultAsync();
 
             if (data == null)
             {
@@ -225,9 +387,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             return Ok(new
             {
                 message = "Ditemukan || 200 OK",
-                data = data
+                data
             });
         }
+
 
 
         [HttpPost]
@@ -324,80 +487,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
-        //public async Task<IActionResult> Create([FromBody] PermintaanUnitViewModel vm)
-        //{
-        //    if (vm == null || !ModelState.IsValid)
-        //    {
-        //        return BadRequest(new { message = "Data tidak valid." });
-        //    }
-
-        //    try
-        //    {
-        //        // **Cek koneksi ke database**
-        //        if (!_applicationDbContext.Database.CanConnect())
-        //        {
-        //            return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
-        //        }
-
-        //        // **Ambil User ID dari JWT Claims**
-        //        var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        //        if (string.IsNullOrEmpty(emailLogin))
-        //        {
-        //            return Unauthorized(new { message = "User tidak terautentikasi!" });
-        //        }
-
-        //        var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
-        //        if (getUserActive == null)
-        //        {
-        //            return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-        //        }
-        //        var userActiveId = getUserActive.UserActiveId;
-
-        //        //// **Cek Duplikasi**
-        //        //bool isDuplicate = _applicationDbContext.Diskons
-        //        //                    .Any(c => c.NamaDiskon == vm.NamaDiskon);
-
-        //        //if (isDuplicate)
-        //        //{
-        //        //    return Conflict(new { message = "Nama benefit ini telah tersedia" });
-        //        //}
-
-        //        // **Buat Data Baru**
-        //        var data = new PermintaanUnit
-        //        {
-        //            PermintaanUnitId = Guid.NewGuid(),
-        //            UnitId = vm.UnitId,
-        //            JenisPermintaan = vm.JenisPermintaan,
-        //            TglPembuatanPermintaan = TryParseTanggalToUtc(vm.TglPembuatanPermintaan),
-        //            StatusPermintaan = vm.StatusPermintaan,
-        //            Keterangan = vm.Keterangan,
-        //            CreateBy = userActiveId,
-        //            CreateDateTime = DateTimeOffset.UtcNow,
-        //        };
-
-        //        // **Simpan ke Database**
-        //        _applicationDbContext.PermintaanUnits.Add(data);
-        //        int result = await _applicationDbContext.SaveChangesAsync();
-
-        //        if (result > 0)
-        //        {
-        //            return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
-        //        }
-        //        else
-        //        {
-        //            return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
-        //        }
-        //    }
-        //    catch (DbUpdateException dbEx)
-        //    {
-        //        return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
-        //    }
-        //}
-
 
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] PermintaanUnitViewModel vm)
@@ -563,160 +652,174 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         }
 
         [HttpGet("paged")]
-        public IActionResult Paged(
-        int page = 1,
-        int perPage = 10,
-        string? search = null,
-        string? orderBy = "CreateDateTime",
-        string? sortDirection = "desc",
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                        DateTime? startDate = null,
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                        DateTime? endDate = null,
-        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        public async Task<IActionResult> Paged(
+            int page = 1,
+            int perPage = 10,
+            string? search = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+        DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+        DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
 
-            // Query data
-            var query = (from a in _applicationDbContext.PermintaanUnits
-                        join u in _applicationDbContext.UserActives
-                            on a.CreateBy equals u.UserActiveId into ua
-                        from u in ua.DefaultIfEmpty()
+            var baseQuery =
+                from a in _applicationDbContext.PermintaanUnits
+                join u in _applicationDbContext.UserActives
+                    on a.CreateBy equals u.UserActiveId into ua
+                from u in ua.DefaultIfEmpty()
 
-                        where (a.IsDelete == false || a.IsDelete == null)
+                join d in _applicationDbContext.DetailPermintaanUnits
+                    on a.PermintaanUnitId equals d.PermintaanUnitId into detailJoin
+                from d in detailJoin.DefaultIfEmpty()
 
-                        select new
-                        {
-                            a.PermintaanUnitId,
-                            a.CreateDateTime,
-                            a.CreateBy,
-                            CreateByName = u.FullName,
-                            a.UnitId,
-                            a.JenisPermintaan,
-                            a.TglPembuatanPermintaan,
-                            a.StatusPermintaan,
-                            a.Keterangan,
+                join ob in _applicationDbContext.Obats
+                    on d.ObatId equals ob.ObatId into obatJoin
+                from ob in obatJoin.DefaultIfEmpty()
 
-                            DetailPermintaan = (from d in _applicationDbContext.DetailPermintaanUnits
-                                                    // Left Join Obat
-                                                join ob in _applicationDbContext.Obats
-                                                    on d.ObatId equals ob.ObatId into obatJoin
-                                                from ob in obatJoin.DefaultIfEmpty()
+                join b in _applicationDbContext.BentukObats
+                    on ob.BentukObatId equals b.BentukObatId into bentukJoin
+                from b in bentukJoin.DefaultIfEmpty()
 
-                                                    // Left Join bentuk obat
-                                                join b in _applicationDbContext.BentukObats
-                                                on ob.BentukObatId equals b.BentukObatId into bentukObat
-                                                from b in bentukObat.DefaultIfEmpty()
-                                                where d.PermintaanUnitId == a.PermintaanUnitId
-                                                select new
-                                                {
-                                                    d.DetailPermintaanUnitId,
-                                                    d.ObatId,
-                                                    NamaObat = ob != null ? ob.ObatName : null,
-                                                    Bentuk = b != null ? b.NamaBentukObat : null,
-                                                    StokObat = ob != null ? ob.Stock : 0,
-                                                    StockMinimal = ob != null ? ob.Minimal : 0,
-                                                    StockMaksimal = ob != null ? ob.Maximal : 0,
-                                                    Dosis = ob != null ? ob.TakaranDosis : 0,
-                                                    HTE = ob != null ? ob.HTEPrice : 0,
-                                                    d.QtyPermintaan,
-                                                    d.SatuanItem,
-                                                    d.KategoriItem,
-                                                    d.Keterangan
-                                                }).ToList()
-                        });
+                where (a.IsDelete == false || a.IsDelete == null)
+                select new
+                {
+                    a.PermintaanUnitId,
+                    a.CreateDateTime,
+                    a.CreateBy,
+                    CreateByName = u.FullName,
+                    a.UnitId,
+                    a.JenisPermintaan,
+                    a.TglPembuatanPermintaan,
+                    a.StatusPermintaan,
+                    a.Keterangan,
 
-            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-            //if (!string.IsNullOrWhiteSpace(search))
-            //{
-            //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-            //    query = query.Where(u =>
-            //        EF.Functions.ILike(u.NamaDiskon, search)
-            //    );
-            //}
+                    Detail = d == null ? null : new
+                    {
+                        d.DetailPermintaanUnitId,
+                        d.ObatId,
+                        NamaObat = ob != null ? ob.ObatName : null,
+                        Bentuk = b != null ? b.NamaBentukObat : null,
+                        StokObat = ob != null ? ob.Stock : 0,
+                        StockMinimal = ob != null ? ob.Minimal : 0,
+                        StockMaksimal = ob != null ? ob.Maximal : 0,
+                        Dosis = ob != null ? ob.TakaranDosis : 0,
+                        HTE = ob != null ? ob.HTEPrice : 0,
+                        d.QtyPermintaan,
+                        d.SatuanItem,
+                        d.KategoriItem,
+                        d.Keterangan
+                    }
+                };
 
-            //// **Filter berdasarkan tanggal**
+            // 🔎 Filter tanggal
             if (startDate.HasValue && endDate.HasValue)
             {
-                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
-                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
-
-                query = query.Where(u =>
+                var startUtc = startDate.Value.Date.ToUniversalTime();
+                var endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+                baseQuery = baseQuery.Where(u =>
                     u.CreateDateTime >= startUtc &&
                     u.CreateDateTime <= endUtc);
             }
 
-            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
+            // 🔎 Filter periode
             if (periode.HasValue)
             {
-                DateTime today = DateTime.UtcNow.Date;
-
+                var today = DateTime.UtcNow.Date;
                 switch (periode)
                 {
                     case PeriodeFilter.Today:
-                        query = query.Where(u => u.CreateDateTime.Date == today);
+                        baseQuery = baseQuery.Where(u => u.CreateDateTime.Date == today);
                         break;
                     case PeriodeFilter.ThisWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date <= today
-                        );
+                        var startWeek = today.AddDays(-(int)today.DayOfWeek);
+                        baseQuery = baseQuery.Where(u => u.CreateDateTime.Date >= startWeek && u.CreateDateTime.Date <= today);
                         break;
                     case PeriodeFilter.LastWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)
-                        );
+                        var lastWeekStart = today.AddDays(-7 - (int)today.DayOfWeek);
+                        var lastWeekEnd = lastWeekStart.AddDays(6);
+                        baseQuery = baseQuery.Where(u => u.CreateDateTime.Date >= lastWeekStart && u.CreateDateTime.Date <= lastWeekEnd);
                         break;
                     case PeriodeFilter.ThisMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month &&
-                            u.CreateDateTime.Year == today.Year
-                        );
+                        baseQuery = baseQuery.Where(u => u.CreateDateTime.Month == today.Month && u.CreateDateTime.Year == today.Year);
                         break;
                     case PeriodeFilter.LastMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month - 1 &&
-                            u.CreateDateTime.Year == today.Year
-                        );
+                        var lastMonth = today.AddMonths(-1);
+                        baseQuery = baseQuery.Where(u => u.CreateDateTime.Month == lastMonth.Month && u.CreateDateTime.Year == lastMonth.Year);
                         break;
                     case PeriodeFilter.ThisYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
+                        baseQuery = baseQuery.Where(u => u.CreateDateTime.Year == today.Year);
                         break;
                     case PeriodeFilter.LastYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
+                        baseQuery = baseQuery.Where(u => u.CreateDateTime.Year == today.Year - 1);
                         break;
                     case PeriodeFilter.Last3Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
+                        baseQuery = baseQuery.Where(u => u.CreateDateTime >= today.AddMonths(-3));
                         break;
                     case PeriodeFilter.Last6Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
+                        baseQuery = baseQuery.Where(u => u.CreateDateTime >= today.AddMonths(-6));
                         break;
                 }
             }
 
-            // Sorting Data dengan cara yang lebih aman
-            query = sortDirection?.ToLower() == "desc"
+            // 🔎 Sorting
+            baseQuery = sortDirection?.ToLower() == "desc"
                 ? orderBy switch
                 {
-                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    _ => query.OrderByDescending(u => u.CreateDateTime)
+                    "CreateByName" => baseQuery.OrderByDescending(u => u.CreateByName),
+                    "CreateDateTime" => baseQuery.OrderByDescending(u => u.CreateDateTime),
+                    _ => baseQuery.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
-                    "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    _ => query.OrderBy(u => u.CreateDateTime)
+                    "CreateByName" => baseQuery.OrderBy(u => u.CreateByName),
+                    "CreateDateTime" => baseQuery.OrderBy(u => u.CreateDateTime),
+                    _ => baseQuery.OrderBy(u => u.CreateDateTime)
                 };
 
-            // Pagination
-            var totalRows = query.Count();
-            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
+            // 🔎 Grouping biar DetailPermintaan jadi list
+            var groupedQuery = baseQuery
+                .GroupBy(x => new
+                {
+                    x.PermintaanUnitId,
+                    x.CreateDateTime,
+                    x.CreateBy,
+                    x.CreateByName,
+                    x.UnitId,
+                    x.JenisPermintaan,
+                    x.TglPembuatanPermintaan,
+                    x.StatusPermintaan,
+                    x.Keterangan
+                })
+                .Select(g => new
+                {
+                    g.Key.PermintaanUnitId,
+                    g.Key.CreateDateTime,
+                    g.Key.CreateBy,
+                    g.Key.CreateByName,
+                    g.Key.UnitId,
+                    g.Key.JenisPermintaan,
+                    g.Key.TglPembuatanPermintaan,
+                    g.Key.StatusPermintaan,
+                    g.Key.Keterangan,
+                    DetailPermintaan = g.Where(x => x.Detail != null).Select(x => x.Detail).ToList()
+                });
 
-            if (rows.Count == 0 && page > totalPages)
+            var totalRows = await groupedQuery.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            var rows = await groupedQuery
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToListAsync();
+
+            if (!rows.Any())
             {
-                return NotFound(new { message = "Page not found." });
+                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
             }
 
             return Ok(new
@@ -733,5 +836,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 }
             });
         }
+
     }
 }
