@@ -12,6 +12,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
 using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.HRD.Pengajuan.Models;
 using QuilvianSystemBackendDev.Areas.Operasi.Models;
+using QuilvianSystemBackendDev.Areas.OperasiOK.Models;
 
 namespace QuilvianSystemBackendDev.Repositories
 {
@@ -238,6 +239,8 @@ namespace QuilvianSystemBackendDev.Repositories
         #region OperasiOK
         public DbSet<ChecklistTemplate> ChecklistTemplates { get; set; }
         public DbSet<ChecklistItem> ChecklistItems { get; set; }
+        public DbSet<ChecklistResponse> ChecklistResponses { get; set; }
+        public DbSet<PraOperasi> PraOperasis { get; set; }
 
         #endregion
     }
