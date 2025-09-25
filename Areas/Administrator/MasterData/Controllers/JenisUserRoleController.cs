@@ -174,5 +174,94 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
             await _context.SaveChangesAsync();
             return NoContent();
         }
+        public class JenisUserWithPembayaranDto
+        {
+            public Guid JenisUserId { get; set; }
+            public string NamaJenisUser { get; set; } = string.Empty;
+            public string? Kode { get; set; }
+            public string? Tlp { get; set; }
+            public string? Keterangan { get; set; }
+
+            public List<PembayaranSimpleDto> Pembayarans { get; set; } = new();
+        }
+
+        public class PembayaranSimpleDto
+        {
+            public Guid PembayaranId { get; set; }
+            public string NamaPembayaran { get; set; } = string.Empty;
+            public int Nominal { get; set; }
+            public DateTime TanggalPembayaran { get; set; }
+            public string? Status { get; set; }
+
+            public string BulanTahun => TanggalPembayaran.ToString("MMMM yyyy");
+        }
+
+        [HttpGet("JenisUserWithPembayaranOnly")]
+        public async Task<ActionResult<IEnumerable<JenisUserWithPembayaranDto>>> GetJenisUserWithPembayaranOnly()
+        {
+            var data = await _context.JenisUsers
+                .Select(user => new JenisUserWithPembayaranDto
+                {
+                    JenisUserId = user.JenisUserId,
+                    NamaJenisUser = user.NamaJenisUser,
+                    Kode = user.Kode,
+                    Tlp = user.Tlp,
+                    Keterangan = user.Keterangan,
+
+                    Pembayarans = _context.Pembayarans
+                        .Where(p => p.JenisUserId == user.JenisUserId)
+                        .Select(p => new PembayaranSimpleDto
+                        {
+                            PembayaranId = p.PembayaranId,
+                            NamaPembayaran = p.NamaPembayaran,
+                            Nominal = p.Nominal,
+                            TanggalPembayaran = p.TanggalPembayaran,
+                            Status = p.Status
+                        })
+                        .OrderBy(p => p.TanggalPembayaran)
+                        .ToList()
+                })
+                .ToListAsync();
+
+            return Ok(data);
+        }
+
+        [HttpGet("JenisUserByJenisPembayaranId/{jenisPembayaranId}")]
+        public async Task<ActionResult<IEnumerable<JenisUserWithPembayaranDto>>> GetJenisUserByJenisPembayaranId(Guid jenisPembayaranId)
+        {
+            var data = await _context.JenisUsers
+                .AsNoTracking()
+                // URUT USER DI SINI (No null di belakang, lalu Kode sbg tie-breaker)
+                .OrderBy(u => u.No == null)
+                .ThenBy(u => u.No)
+                .ThenBy(u => u.Kode)
+                .Select(user => new JenisUserWithPembayaranDto
+                {
+                    JenisUserId = user.JenisUserId,
+                    NamaJenisUser = user.NamaJenisUser,
+                    Kode = user.Kode,
+                    Tlp = user.Tlp,
+                    Keterangan = user.Keterangan,
+                    // kalau butuh tampil No di FE, tinggal aktifkan baris ini:
+                    // No            = user.No,
+
+                    Pembayarans = _context.Pembayarans
+                        .Where(p => p.JenisUserId == user.JenisUserId && p.JenisPembayaranId == jenisPembayaranId)
+                        .Select(p => new PembayaranSimpleDto
+                        {
+                            PembayaranId = p.PembayaranId,
+                            NamaPembayaran = p.NamaPembayaran,
+                            TanggalPembayaran = p.TanggalPembayaran,
+                            Nominal = p.Nominal,
+                            Status = p.Status
+                        })
+                        .ToList()
+                })
+                .ToListAsync();
+
+            return Ok(data);
+        }
+
+
     }
 }

@@ -216,6 +216,8 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<PengkajianPerawat> PengkajianPerawats { get; set; }
         public DbSet<DetailKetergantungan> DetailKetergantungans { get; set; }
         public DbSet<ResumePulang> ResumePulangs { get; set; }
+        public DbSet<ObservasiCairan> ObservasiCairans { get; set; }
+        public DbSet<ObservasiCairanWsd> ObservasiCairanWsds { get; set; }
 
         #endregion
 
