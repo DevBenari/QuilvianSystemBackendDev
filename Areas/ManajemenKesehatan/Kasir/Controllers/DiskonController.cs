@@ -71,7 +71,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                              a.PersenDiskon,
                              a.NominalDiskon,
                              a.Keterangan,
-
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
