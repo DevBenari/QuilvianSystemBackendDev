@@ -11,6 +11,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
 using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.HRD.Pengajuan.Models;
+using QuilvianSystemBackendDev.Areas.Operasi.Models;
 
 namespace QuilvianSystemBackendDev.Repositories
 {
@@ -120,6 +121,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<DetailPlanning> DetailPlannings { get; set; }
         public DbSet<Gudang> Gudangs { get; set; }
         public DbSet<GudangUnit> GudangUnits { get; set; }
+
         #endregion
 
         #region Areas Keuangan
@@ -230,6 +232,11 @@ namespace QuilvianSystemBackendDev.Repositories
 
         public DbSet<DetailPenerimaanUnit> DetailPenerimaanUnits { get; set; }
         public DbSet<PenerimaanUnit> PenerimaanUnits { get; set; }
+        #endregion
+
+        #region OperasiOK
+        public DbSet<ChecklistTemplate> ChecklistTemplates { get; set; }
+
         #endregion
     }
 }

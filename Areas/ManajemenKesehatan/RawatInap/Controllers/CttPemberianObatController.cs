@@ -341,7 +341,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     ObatId = vm.ObatId,
                     RacikanId = vm.RacikanId,
                     TglPemberian = TryParseTanggalToUtc(vm.TglPemberian),
-                    WaktuPemberian = vm.WaktuPemberian,
+                    WaktuPemberian = TimeOnly.ParseExact(vm.WaktuPemberian, "HH:mm:ss"),
                     StatusPemberian = vm.StatusPemberian,
                     StatusCttEso = vm.StatusCttEso,
                     CaraPemberianObat = vm.CaraPemberianObat,
@@ -545,7 +545,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 existing.ObatId = vm.ObatId;
                 existing.RacikanId = vm.RacikanId;
                 existing.TglPemberian = TryParseTanggalToUtc(vm.TglPemberian);
-                existing.WaktuPemberian = vm.WaktuPemberian;
+                existing.WaktuPemberian = TimeOnly.ParseExact(vm.WaktuPemberian, "HH:mm:ss");
                 existing.StatusPemberian = vm.StatusPemberian;
                 existing.StatusCttEso = vm.StatusCttEso;
                 existing.CaraPemberianObat = vm.CaraPemberianObat;
