@@ -15,11 +15,12 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.ViewModels;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models
 {
     [ApiController]
     [Route("api/[controller]")]
@@ -125,11 +126,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              // Data Obat
                              DosisObat = o.Dosis,
                              BentukObat = bo.NamaBentukObat,
-                             CaraKerja = o.CaraKerja,
+                             o.CaraKerja,
 
                              // Data Catatan Pemberian Obat
-                             TglPemberian = cpo.TglPemberian,
-                             WaktuPemberian = cpo.WaktuPemberian
+                             cpo.TglPemberian,
+                             cpo.WaktuPemberian
                          })
                          .OrderByDescending(a => a.CreateDateTime);
 
@@ -211,11 +212,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                   // Data Obat
                                   DosisObat = o.Dosis,
                                   BentukObat = bo.NamaBentukObat,
-                                  CaraKerja = o.CaraKerja,
+                                  o.CaraKerja,
 
                                   // Data Catatan Pemberian Obat
-                                  TglPemberian = cpo.TglPemberian,
-                                  WaktuPemberian = cpo.WaktuPemberian
+                                  cpo.TglPemberian,
+                                  cpo.WaktuPemberian
                               })
                               .FirstOrDefaultAsync();
 
@@ -308,7 +309,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     // Ambil URL/path hasil upload dari response Flask
                     var responseBody = await flaskResponse.Content.ReadAsStringAsync();
                     // Anggap Flask balikin JSON {"fileUrl": "/uploads/TTDUser/namafile.jpg"}
-                    dynamic jsonResp = Newtonsoft.Json.JsonConvert.DeserializeObject(responseBody);
+                    dynamic jsonResp = JsonConvert.DeserializeObject(responseBody);
                     ttdPath = jsonResp.fileUrl;
 
                     // Simpan ke MasterTTD
@@ -589,7 +590,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                         return StatusCode(500, new { message = "Gagal upload tanda tangan ke server Flask." });
 
                     var responseBody = await flaskResponse.Content.ReadAsStringAsync();
-                    dynamic jsonResp = Newtonsoft.Json.JsonConvert.DeserializeObject(responseBody);
+                    dynamic jsonResp = JsonConvert.DeserializeObject(responseBody);
                     ttdPath = jsonResp.fileUrl;
 
                     // Update MasterTTD
@@ -804,7 +805,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         {
 
             // Query data
-            var query = (from a in _applicationDbContext.CatatanESOs
+            var query = from a in _applicationDbContext.CatatanESOs
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
                          where a.IsDelete == false || a.IsDelete == null
@@ -827,7 +828,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.TTDPath,
                              a.Keterangan,
 
-                         });
+                         };
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             //if (!string.IsNullOrWhiteSpace(search))

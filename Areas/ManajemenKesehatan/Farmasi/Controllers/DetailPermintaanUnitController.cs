@@ -62,6 +62,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             var query = (from a in _applicationDbContext.DetailPermintaanUnits
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
+                         // Left Join Obat
+                         join ob in _applicationDbContext.Obats
+                             on a.ObatId equals ob.ObatId into obatJoin
+                         from ob in obatJoin.DefaultIfEmpty()
+
+                             // Left Join bentuk obat
+                         join b in _applicationDbContext.BentukObats
+                         on ob.BentukObatId equals b.BentukObatId into bentukObat
+                         from b in bentukObat.DefaultIfEmpty()
+
                          where a.IsDelete == false || a.IsDelete == null
                          select new
                          {
@@ -71,6 +81,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.DetailPermintaanUnitId,
                              a.PermintaanUnitId,
                              a.ObatId,
+                             NamaObat = ob != null ? ob.ObatName : null,
+                             Bentuk = b != null ? b.NamaBentukObat : null,
+                             StokObat = ob != null ? ob.Stock : 0,
+                             StockMinimal = ob != null ? ob.Minimal : 0,
+                             StockMaksimal = ob != null ? ob.Maximal : 0,
+                             Dosis = ob != null ? ob.TakaranDosis : 0,
+                             HTE = ob != null ? ob.HTEPrice : 0,
                              a.QtyPermintaan,
                              a.SatuanItem,
                              a.KategoriItem,
@@ -111,16 +128,53 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.DetailPermintaanUnits.Find(id);
-            if (listdata == null)
+            // Query data berdasarkan DetailPermintaanUnitId
+            var data = (from a in _applicationDbContext.DetailPermintaanUnits
+                        join u in _applicationDbContext.UserActives
+                            on a.CreateBy equals u.UserActiveId into ua
+                        from u in ua.DefaultIfEmpty()
+
+                            // Left Join Obat
+                        join ob in _applicationDbContext.Obats
+                            on a.ObatId equals ob.ObatId into obatJoin
+                        from ob in obatJoin.DefaultIfEmpty()
+
+                            // Left Join Bentuk Obat
+                        join b in _applicationDbContext.BentukObats
+                            on ob.BentukObatId equals b.BentukObatId into bentukObat
+                        from b in bentukObat.DefaultIfEmpty()
+
+                        where a.IsDelete == false && a.DetailPermintaanUnitId == id
+                        select new
+                        {
+                            a.CreateDateTime,
+                            a.CreateBy,
+                            CreateByName = u.FullName,
+                            a.DetailPermintaanUnitId,
+                            a.PermintaanUnitId,
+                            a.ObatId,
+                            NamaObat = ob != null ? ob.ObatName : null,
+                            Bentuk = b != null ? b.NamaBentukObat : null,
+                            StokObat = ob != null ? ob.Stock : 0,
+                            StockMinimal = ob != null ? ob.Minimal : 0,
+                            StockMaksimal = ob != null ? ob.Maximal : 0,
+                            Dosis = ob != null ? ob.TakaranDosis : 0,
+                            HTE = ob != null ? ob.HTEPrice : 0,
+                            a.QtyPermintaan,
+                            a.SatuanItem,
+                            a.KategoriItem,
+                            a.Keterangan,
+                        }).FirstOrDefault();
+
+            if (data == null)
             {
-                return NotFound(new { message = "Data tidak ditemukan." });
+                return NotFound(new { message = "Data tidak ditemukan || 404 Not Found" });
             }
 
             return Ok(new
             {
-                message = "Ditemukan || 200 OK",
-                data = listdata
+                message = "Berhasil || 200 OK",
+                data
             });
         }
 
@@ -360,6 +414,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             var query = (from a in _applicationDbContext.DetailPermintaanUnits
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
+                         // Left Join Obat
+                         join ob in _applicationDbContext.Obats
+                             on a.ObatId equals ob.ObatId into obatJoin
+                         from ob in obatJoin.DefaultIfEmpty()
+
+                             // Left Join bentuk obat
+                         join b in _applicationDbContext.BentukObats
+                         on ob.BentukObatId equals b.BentukObatId into bentukObat
+                         from b in bentukObat.DefaultIfEmpty()
+
                          where a.IsDelete == false || a.IsDelete == null
                          select new
                          {
@@ -369,6 +433,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.DetailPermintaanUnitId,
                              a.PermintaanUnitId,
                              a.ObatId,
+                             NamaObat = ob != null ? ob.ObatName : null,
+                             Bentuk = b != null ? b.NamaBentukObat : null,
+                             StokObat = ob != null ? ob.Stock : 0,
+                             StockMinimal = ob != null ? ob.Minimal : 0,
+                             StockMaksimal = ob != null ? ob.Maximal : 0,
+                             Dosis = ob != null ? ob.TakaranDosis : 0,
+                             HTE = ob != null ? ob.HTEPrice : 0,
                              a.QtyPermintaan,
                              a.SatuanItem,
                              a.KategoriItem,

@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using QuilvianSystemBackendDev.Models;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models
 {
     public class CatatanESO : UserActivity
     {

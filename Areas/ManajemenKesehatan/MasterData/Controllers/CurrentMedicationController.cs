@@ -59,6 +59,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         join o in _applicationDbContext.Obats on a.ObatId equals o.ObatId into obatJoin
                         from o in obatJoin.DefaultIfEmpty()
 
+                        // Left join bentuk obat
+                        join bentuk in _applicationDbContext.BentukObats on o.BentukObatId equals bentuk.BentukObatId 
+                        into bentukjoin
+                        from bentuk in bentukjoin.DefaultIfEmpty()
+
                         where a.IsDelete == false
                         select new
                         {
@@ -71,10 +76,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             NoRekamMedis = a.NoRekamMedis,
                             ObatId = a.ObatId,
                             NamaObat = o != null ? o.ObatName : a.NamaObat,
-                            Dosis = o != null ? o.Dosis : a.Dosis,
+                            Bentuk = bentuk != null ? bentuk.NamaBentukObat : null,
+                            Dosis =  a.Dosis,
                             Frekuensi = a.Frekuensi,
                             LamaKonsumsi = a.LamaKonsumsi,
                             Status = a.Status,
+                            Keterangan = a.Keterangan,
+                            CaraPemakian = a.CaraPemakaian
                         }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -153,38 +161,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
-                // **Ambil Tanggal Sekarang**
-                //var dateNow = DateTime.UtcNow;
-                //var setDateNow = dateNow.ToString("yyMMdd"); // Format: YYMMDD
-
-
-                //// **Ambil Kode Terakhir**
-                //var lastCode = _applicationDbContext.Agamas
-                //    .Where(d => d.CreateDateTime.Date == dateNow.Date)
-                //    .OrderByDescending(k => k.CreateDateTime)
-
-                //    .FirstOrDefault();
-
-                //string kode;
-                //if (lastCode == null)
-                //{
-                //    kode = $"AGM{setDateNow}0001";
-                //}
-                //else
-                //{
-                //    var lastCodeTrim = lastCode.KodeAgama.Substring(3, 6);
-                //    if (lastCodeTrim != setDateNow)
-                //    {
-                //        kode = $"AGM{setDateNow}0001";
-                //    }
-                //    else
-                //    {
-                //        // Mengambil nomor urut terakhir dan menambah 1
-                //        var lastNumber = int.Parse(lastCode.KodeAgama.Substring(9));
-                //        kode = $"AGM{setDateNow}{(lastNumber + 1).ToString("D4")}";
-                //    }
-                //}
-
                 // **Buat Data Baru**
                 var data = new CurrentMedication
                 {
@@ -192,11 +168,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     KunjunganId = vm.KunjunganId,
                     PendaftaranPasienBaruId = vm.PendaftaranPasienBaruId,
                     NoRekamMedis = vm.NoRekamMedis,
+                    ObatId = vm.ObatId,
                     NamaObat = vm.NamaObat,
                     Dosis = vm.Dosis,
                     Frekuensi = vm.Frekuensi,
                     LamaKonsumsi = vm.LamaKonsumsi,
                     Status = vm.Status,
+                    Keterangan = vm.Keterangan,
+                    CaraPemakaian = vm.CaraPemakaian,
                     IsDelete = false,
 
                     CreateBy = userActiveId,
@@ -265,23 +244,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // **Cek Duplikasi**
-                bool isDuplicate = _applicationDbContext.CurrentMedications
-                    .Any(c => c.KunjunganId == vm.KunjunganId);
+                //bool isDuplicate = _applicationDbContext.CurrentMedications
+                //    .Any(c => c.KunjunganId == vm.KunjunganId);
 
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
-                }
+                //if (isDuplicate)
+                //{
+                //    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
+                //}
 
                 // **Update Data**
                 data.KunjunganId = vm.KunjunganId;
                 data.PendaftaranPasienBaruId = vm.PendaftaranPasienBaruId;
                 data.NoRekamMedis = vm.NoRekamMedis;
+                data.ObatId = vm.ObatId;
                 data.NamaObat = vm.NamaObat;
                 data.Dosis = vm.Dosis;
                 data.Frekuensi = vm.Frekuensi;
                 data.LamaKonsumsi = vm.LamaKonsumsi;
                 data.Status = vm.Status;
+                data.Keterangan = vm.Keterangan;
+                data.CaraPemakaian = vm.CaraPemakaian;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -374,6 +356,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         int page = 1,
         int perPage = 10,
         string? search = null,
+        Guid? kunjunganId = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -400,6 +383,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              join o in _applicationDbContext.Obats on a.ObatId equals o.ObatId into obatJoin
                              from o in obatJoin.DefaultIfEmpty()
 
+                                 // Left join bentuk obat
+                             join bentuk in _applicationDbContext.BentukObats on o.BentukObatId equals bentuk.BentukObatId
+                             into bentukjoin
+                             from bentuk in bentukjoin.DefaultIfEmpty()
+
                              where a.IsDelete == false
                              select new
                              {
@@ -412,18 +400,27 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                  NoRekamMedis = a.NoRekamMedis,
                                  ObatId = a.ObatId,
                                  NamaObat = o != null ? o.ObatName : a.NamaObat,
-                                 Dosis = o != null ? o.Dosis : a.Dosis,
+                                 Bentuk = bentuk != null ? bentuk.NamaBentukObat : null,
+                                 Dosis = a.Dosis,
                                  Frekuensi = a.Frekuensi,
                                  LamaKonsumsi = a.LamaKonsumsi,
                                  Status = a.Status,
+                                 Keterangan = a.Keterangan,
+                                 CaraPemakaian = a.CaraPemakaian
                              });
+
+                // Filter berdasarkan kunjungan id
+                if (kunjunganId.HasValue && kunjunganId != Guid.Empty)
+                {
+                    query = query.Where(x => x.KunjunganId == kunjunganId);
+                }
 
                 // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
                 if (!string.IsNullOrWhiteSpace(search))
                 {
                     search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                     query = query.Where(u =>
-                        EF.Functions.ILike(u.NoRekamMedis, search)
+                        EF.Functions.ILike(u.NamaObat, search)
                     );
                 }
 
@@ -446,7 +443,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     "createdatetime" => isDescending ? query.OrderByDescending(u => u.CreateDateTime) : query.OrderBy(u => u.CreateDateTime),
                     "createbyname" => isDescending ? query.OrderByDescending(u => u.CreateByName) : query.OrderBy(u => u.CreateByName),
-                    "NoRekamMedis" => isDescending ? query.OrderByDescending(u => u.NoRekamMedis) : query.OrderBy(u => u.NoRekamMedis),
+                    "NamaObat" => isDescending ? query.OrderByDescending(u => u.NamaObat) : query.OrderBy(u => u.NamaObat),
                    
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 };

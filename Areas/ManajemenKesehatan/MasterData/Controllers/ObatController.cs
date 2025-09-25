@@ -456,6 +456,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             int page = 1,
             int perPage = 10,
             string? search = null,
+            Guid? obatId = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc")
         {
@@ -517,6 +518,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.TakaranDosis,
                         a.JumlahSatuan,
                     });
+
+                // filter berdasarkan obat id
+                if (obatId.HasValue && obatId != Guid.Empty)
+                {
+                    query = query.Where(x => x.ObatId == obatId);
+                }
 
                 if (!string.IsNullOrWhiteSpace(search))
                 {

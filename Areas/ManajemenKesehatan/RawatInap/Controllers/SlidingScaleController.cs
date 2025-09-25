@@ -1,4 +1,6 @@
-﻿using System.Security.Claims;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Globalization;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
@@ -6,36 +8,36 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.ViewModels;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class DiskonController : Controller
+    public class SlidingScaleController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<DiskonController> _logger;
+        private readonly ILogger<SlidingScaleController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public DiskonController(
+        public SlidingScaleController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<DiskonController> logger,
+            ILogger<SlidingScaleController> logger,
             IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
@@ -43,6 +45,30 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+        }
+        private DateTime? TryParseTanggalToUtc(string tanggal)
+        {
+            if (DateTime.TryParseExact(
+                    tanggal,
+                    "yyyy-MM-dd",
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out var parsedDate))
+            {
+                var now = DateTime.Now; // atau DateTime.UtcNow jika kamu mau jam UTC
+                var finalDateTime = new DateTime(
+                    parsedDate.Year,
+                    parsedDate.Month,
+                    parsedDate.Day,
+                    now.Hour,
+                    now.Minute,
+                    now.Second,
+                    DateTimeKind.Local); // atau Utc jika perlu
+
+                return finalDateTime.ToUniversalTime(); // simpan dalam UTC
+            }
+
+            return null;
         }
 
         [HttpGet]
@@ -53,7 +79,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = (from a in _applicationDbContext.Diskons
+            var query = (from a in _applicationDbContext.SlidingScales
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
                          where a.IsDelete == false || a.IsDelete == null
@@ -62,15 +88,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
-                             a.DiskonId,
-                             a.NamaDiskon,
-                             a.TglBerlaku,
-                             a.TglBerakhir,
-                             a.IsAsuransi,
-                             a.AsuransiId,
-                             a.PersenDiskon,
-                             a.NominalDiskon,
+                             a.SlidingScaleId,
+                             a.PasienId,
+                             a.KunjunganId,
+                             a.TglSlidingScale,
+                             a.GDS,
+                             a.Insulin,
+                             a.InsulinDrip,
+                             a.UserActiveId,
                              a.Keterangan,
+
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -106,7 +133,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.Diskons.Find(id);
+            var listdata = _applicationDbContext.SlidingScales.Find(id);
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -120,7 +147,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] DiskonViewModel vm)
+        public async Task<IActionResult> Create([FromBody] SlidingScaleViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -150,32 +177,32 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 var userActiveId = getUserActive.UserActiveId;
 
                 //// **Cek Duplikasi**
-                bool isDuplicate = _applicationDbContext.Diskons
-                                    .Any(c => c.NamaDiskon == vm.NamaDiskon);
+                //bool isDuplicate = _applicationDbContext.Diskons
+                //                    .Any(c => c.NamaDiskon == vm.NamaDiskon);
 
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Nama benefit ini telah tersedia" });
-                }
+                //if (isDuplicate)
+                //{
+                //    return Conflict(new { message = "Nama benefit ini telah tersedia" });
+                //}
 
                 // **Buat Data Baru**
-                var data = new Diskon
+                var data = new SlidingScale
                 {
-                    DiskonId = Guid.NewGuid(),
-                    NamaDiskon = vm.NamaDiskon,
-                    TglBerlaku = vm.TglBerlaku,
-                    TglBerakhir = vm.TglBerakhir,
-                    IsAsuransi = vm.IsAsuransi,
-                    AsuransiId = vm.AsuransiId,
-                    PersenDiskon = vm.PersenDiskon,
-                    NominalDiskon = vm.NominalDiskon,
+                    SlidingScaleId = Guid.NewGuid(),
+                    KunjunganId = vm.KunjunganId,
+                    PasienId = vm.PasienId,
+                    TglSlidingScale = TryParseTanggalToUtc(vm.TglSlidingScale),
+                    GDS = vm.GDS,
+                    Insulin = vm.Insulin,
+                    InsulinDrip = vm.InsulinDrip,
+                    UserActiveId = vm.UserActiveId,
                     Keterangan = vm.Keterangan,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
 
                 // **Simpan ke Database**
-                _applicationDbContext.Diskons.Add(data);
+                _applicationDbContext.SlidingScales.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -198,7 +225,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] DiskonViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] SlidingScaleViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -229,26 +256,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.Diskons.FindAsync(id);
+                var data = await _applicationDbContext.SlidingScales.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
                 // **Update Data**
-                data.NamaDiskon = vm.NamaDiskon;
-                data.TglBerlaku = vm.TglBerlaku;
-                data.TglBerakhir = vm.TglBerakhir;
-                data.IsAsuransi = vm.IsAsuransi;
-                data.AsuransiId = vm.AsuransiId;
-                data.PersenDiskon = vm.PersenDiskon;
-                data.NominalDiskon = vm.NominalDiskon;
+                data.KunjunganId = vm.KunjunganId;
+                data.PasienId = vm.PasienId;
+                data.TglSlidingScale = TryParseTanggalToUtc(vm.TglSlidingScale);
+                data.GDS = vm.GDS;
+                data.Insulin = vm.Insulin;
+                data.InsulinDrip = vm.InsulinDrip;
+                data.UserActiveId = vm.UserActiveId;
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.Diskons.Update(data);
+                _applicationDbContext.SlidingScales.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -297,7 +324,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.Diskons.FindAsync(id);
+                var data = await _applicationDbContext.SlidingScales.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -309,7 +336,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
                 data.IsDelete = true;
 
-                _applicationDbContext.Diskons.Update(data);
+                _applicationDbContext.SlidingScales.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -336,43 +363,52 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         int page = 1,
         int perPage = 10,
         string? search = null,
+        Guid? kunjunganid = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                DateTime? startDate = null,
+                        DateTime? startDate = null,
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                DateTime? endDate = null,
+                        DateTime? endDate = null,
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
 
             // Query data
-            var query = from a in _applicationDbContext.Diskons
-                        join u in _applicationDbContext.UserActives
-                        on a.CreateBy equals u.UserActiveId
-                        where a.IsDelete == false || a.IsDelete == null
-                        select new
-                        {
-                            a.CreateDateTime,
-                            a.CreateBy,
-                            CreateByName = u.FullName,
-                            a.DiskonId,
-                            a.NamaDiskon,
-                            a.TglBerlaku,
-                            a.TglBerakhir,
-                            a.IsAsuransi,
-                            a.AsuransiId,
-                            a.PersenDiskon,
-                            a.NominalDiskon,
-                            a.Keterangan,
-                        };
+            // Query data
+            var query = (from a in _applicationDbContext.SlidingScales
+                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
+                         on a.CreateBy equals u.UserActiveId
+                         where a.IsDelete == false || a.IsDelete == null
+                         select new
+                         {
+                             a.CreateDateTime,
+                             a.CreateBy,
+                             CreateByName = u.FullName,
+                             a.SlidingScaleId,
+                             a.PasienId,
+                             a.KunjunganId,
+                             a.TglSlidingScale,
+                             a.GDS,
+                             a.Insulin,
+                             a.InsulinDrip,
+                             a.UserActiveId,
+                             a.Keterangan,
+
+                         });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-            if (!string.IsNullOrWhiteSpace(search))
+            //if (!string.IsNullOrWhiteSpace(search))
+            //{
+            //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+            //    query = query.Where(u =>
+            //        EF.Functions.ILike(u.NamaDiskon, search)
+            //    );
+            //}
+
+            // Filter KunjunganId
+            if (kunjunganid.HasValue && kunjunganid!= Guid.Empty)
             {
-                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-                query = query.Where(u =>
-                    EF.Functions.ILike(u.NamaDiskon, search)
-                );
+                query = query.Where(x=> x.KunjunganId == kunjunganid);
             }
 
             //// **Filter berdasarkan tanggal**
@@ -441,14 +477,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "NamaDiskon" => query.OrderByDescending(u => u.NamaDiskon),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
                     "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
                     "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    "NamaDiskon" => query.OrderBy(u => u.NamaDiskon),
                     _ => query.OrderBy(u => u.CreateDateTime)
                 };
 

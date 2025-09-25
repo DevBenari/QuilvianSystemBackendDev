@@ -181,7 +181,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 if (ModelState.IsValid)
                 {
-                    var data = new Operasi
+                    var data = new Models.Operasi
                     {
                         OperasiId = Guid.NewGuid(),
                         KodeOperasi = kode,
