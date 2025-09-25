@@ -236,6 +236,7 @@ namespace QuilvianSystemBackendDev.Repositories
 
         #region OperasiOK
         public DbSet<ChecklistTemplate> ChecklistTemplates { get; set; }
+        public DbSet<ChecklistItem> ChecklistItems { get; set; }
 
         #endregion
     }

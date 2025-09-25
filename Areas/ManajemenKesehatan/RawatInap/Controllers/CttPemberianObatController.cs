@@ -687,6 +687,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                        a.TTDId,
                        TTdpath = t.TTDPath,
                        a.Keterangan,
+                       a.StatusCttEso,
+
 
                        // >>> Informasi Obat (berdasarkan ObatId)
                        NamaObat = o != null ? o.ObatName : null,
