@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -11,9 +12,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250926023405_AddKolomDiPraOperasi")]
+    partial class AddKolomDiPraOperasi
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -9723,18 +9725,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("AlatBantu")
                         .HasColumnType("text");
 
-                    b.Property<Guid>("CreateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("DeleteBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("DeleteDateTime")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<Guid?>("DokterId")
                         .HasColumnType("uuid");
 
@@ -9742,9 +9732,6 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("text");
 
                     b.Property<bool>("IsBatukFluDemam")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsDelete")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("IsHaid")
@@ -9826,12 +9813,6 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("TglPernyataanPasien")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("UpdateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("UpdateDateTime")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid?>("VitalSignId")
