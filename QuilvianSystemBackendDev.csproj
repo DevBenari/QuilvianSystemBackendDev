@@ -67,6 +67,7 @@
     <Folder Include="Areas\ManajemenKesehatan\Resep\ViewModels\" />
     <Folder Include="Areas\ManajemenKesehatan\Tindakan\ViewModels\" />
     <Folder Include="Areas\ManajemenKesehatan\OperasiOK\Data\" />
+    <Folder Include="wwwroot\TTDKeluargaPasien\" />
     <Folder Include="wwwroot\TTDUser\" />
     <Folder Include="wwwroot\scanktp\tessdata\" />
   </ItemGroup>
