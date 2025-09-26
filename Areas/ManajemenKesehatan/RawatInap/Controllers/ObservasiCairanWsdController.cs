@@ -172,5 +172,105 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Observasi.Controller
 
             return Ok(new { message = "Data berhasil dihapus (soft delete)." });
         }
+
+        [HttpGet("paged")]
+        public async Task<IActionResult> Paged(
+            int page = 1,
+            int perPage = 10,
+            string? search = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+            DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+            DateTime? endDate = null)
+            {
+                try
+                {
+                    if (page < 1) page = 1;
+                    if (perPage < 1) perPage = 10;
+
+                    // Query dasar
+                    var query = from o in _db.ObservasiCairanWsds
+                                join u in _db.UserActives on o.UserActiveId equals u.UserActiveId
+                                where o.IsDelete == false
+                                select new
+                                {
+                                    o.ObservasiCairanWSDId,
+                                    o.KunjunganId,
+                                    o.PasienId,
+                                    o.UserActiveId,
+                                    UserFullName = u.FullName,
+                                    o.TglAwalObservasiWSD,
+                                    o.TglAkhirObservasiWSD,
+                                    o.CairanSisaWSDSebelumnya,
+                                    o.CairanWSDBertambah,
+                                    o.CairanSisaWSDTabung,
+                                    o.TtdId,
+                                    o.PathTtd,
+                                    o.Keterangan,
+                                    o.CreateDateTime
+                                };
+
+                    // Search
+                    if (!string.IsNullOrWhiteSpace(search))
+                    {
+                        search = $"%{search.ToLower()}%";
+                        query = query.Where(x =>
+                            EF.Functions.ILike(x.Keterangan ?? "", search) ||
+                            EF.Functions.ILike(x.UserFullName ?? "", search)
+                        );
+                    }
+
+                    // Filter tanggal
+                    if (startDate.HasValue && endDate.HasValue)
+                    {
+                        var start = startDate.Value.Date.ToUniversalTime();
+                        var end = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+
+                        query = query.Where(x => x.CreateDateTime >= start && x.CreateDateTime <= end);
+                    }
+
+                    // Sorting
+                    var sort = orderBy?.ToLower() ?? "createdatetime";
+                    var desc = sortDirection?.ToLower() == "desc";
+
+                    query = sort switch
+                    {
+                        "createdatetime" => desc ? query.OrderByDescending(x => x.CreateDateTime) : query.OrderBy(x => x.CreateDateTime),
+                        "userfullname" => desc ? query.OrderByDescending(x => x.UserFullName) : query.OrderBy(x => x.UserFullName),
+                        _ => query.OrderByDescending(x => x.CreateDateTime)
+                    };
+
+                    // Pagination
+                    int totalRows = await query.CountAsync();
+                    int totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+                    var data = await query.Skip((page - 1) * perPage).Take(perPage).ToListAsync();
+
+                    if (data.Count == 0 && page > totalPages)
+                    {
+                        return NotFound(new { message = "Page not found." });
+                    }
+
+                    return Ok(new
+                    {
+                        status = "success",
+                        message = "Data retrieved successfully",
+                        data = new
+                        {
+                            Rows = data,
+                            TotalRows = totalRows,
+                            CurrentPage = page,
+                            PerPage = perPage,
+                            TotalPages = totalPages
+                        }
+                    });
+                }
+                catch (Exception ex)
+                {
+                    return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
     }
 }
