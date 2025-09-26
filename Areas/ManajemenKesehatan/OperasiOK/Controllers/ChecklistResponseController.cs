@@ -9,34 +9,33 @@ using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
-using QuilvianSystemBackendDev.Areas.Operasi.Models;
-using QuilvianSystemBackendDev.Areas.Operasi.ViewModels;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace QuilvianSystemBackendDev.Areas.Operasi.Controllers
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class ChecklistTemplateController : Controller
+    public class ChecklistResponseController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<ChecklistTemplateController> _logger;
+        private readonly ILogger<ChecklistResponseController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public ChecklistTemplateController(
+        public ChecklistResponseController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<ChecklistTemplateController> logger,
+            ILogger<ChecklistResponseController> logger,
             IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
@@ -54,7 +53,7 @@ namespace QuilvianSystemBackendDev.Areas.Operasi.Controllers
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = (from a in _applicationDbContext.ChecklistTemplates
+            var query = (from a in _applicationDbContext.ChecklistResponses
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
                          where a.IsDelete == false || a.IsDelete == null
@@ -63,8 +62,12 @@ namespace QuilvianSystemBackendDev.Areas.Operasi.Controllers
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
-                             a.ChecklistTemplateId,
-                             a.NamaTemplateChecklist,
+                             a.ChecklistResponseId,
+                             a.ChecklistItemId,
+                             a.PraOperasiId,
+                             a.RoleAnswers,
+                             a.ChecklistAnswers,
+                             a.AnswersId,
                              a.Keterangan,
                          }).OrderByDescending(a => a.CreateDateTime);
 
@@ -101,7 +104,7 @@ namespace QuilvianSystemBackendDev.Areas.Operasi.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.ChecklistTemplates.Find(id);
+            var listdata = _applicationDbContext.ChecklistResponses.Find(id);
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -115,7 +118,7 @@ namespace QuilvianSystemBackendDev.Areas.Operasi.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] ChecklistTemplateViewModel vm)
+        public async Task<IActionResult> Create([FromBody] ChecklistResponseViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -145,19 +148,23 @@ namespace QuilvianSystemBackendDev.Areas.Operasi.Controllers
                 var userActiveId = getUserActive.UserActiveId;
 
                 //// **Cek Duplikasi**
-                bool isDuplicate = _applicationDbContext.ChecklistTemplates
-                                    .Any(c => c.NamaTemplateChecklist == vm.NamaTemplateChecklist);
+                //bool isDuplicate = _applicationDbContext.Diskons
+                //                    .Any(c => c.NamaDiskon == vm.NamaDiskon);
 
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Nama benefit ini telah tersedia" });
-                }
+                //if (isDuplicate)
+                //{
+                //    return Conflict(new { message = "Nama benefit ini telah tersedia" });
+                //}
 
                 // **Buat Data Baru**
-                var data = new ChecklistTemplate
+                var data = new ChecklistResponse
                 {
-                    ChecklistTemplateId = Guid.NewGuid(),
-                    NamaTemplateChecklist = vm.NamaTemplateChecklist,
+                    ChecklistResponseId = Guid.NewGuid(),
+                    ChecklistItemId = vm.ChecklistItemId,
+                    PraOperasiId = vm.PraOperasiId,
+                    RoleAnswers = vm.RoleAnswers,
+                    ChecklistAnswers = vm.ChecklistAnswers,
+                    AnswersId = vm.AnswersId,
                     Keterangan = vm.Keterangan,
                     
                     CreateBy = userActiveId,
@@ -165,7 +172,7 @@ namespace QuilvianSystemBackendDev.Areas.Operasi.Controllers
                 };
 
                 // **Simpan ke Database**
-                _applicationDbContext.ChecklistTemplates.Add(data);
+                _applicationDbContext.ChecklistResponses.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -188,7 +195,7 @@ namespace QuilvianSystemBackendDev.Areas.Operasi.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] ChecklistTemplateViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] ChecklistResponseViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -219,20 +226,24 @@ namespace QuilvianSystemBackendDev.Areas.Operasi.Controllers
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.ChecklistTemplates.FindAsync(id);
+                var data = await _applicationDbContext.ChecklistResponses.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
                 // **Update Data**
-                data.NamaTemplateChecklist = vm.NamaTemplateChecklist;
+                data.ChecklistItemId = vm.ChecklistItemId;
+                data.PraOperasiId = vm.PraOperasiId;
+                data.RoleAnswers = vm.RoleAnswers;
+                data.ChecklistAnswers = vm.ChecklistAnswers;
+                data.AnswersId = vm.AnswersId;
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.ChecklistTemplates.Update(data);
+                _applicationDbContext.ChecklistResponses.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -281,7 +292,7 @@ namespace QuilvianSystemBackendDev.Areas.Operasi.Controllers
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.ChecklistTemplates.FindAsync(id);
+                var data = await _applicationDbContext.ChecklistResponses.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -293,7 +304,7 @@ namespace QuilvianSystemBackendDev.Areas.Operasi.Controllers
 
                 data.IsDelete = true;
 
-                _applicationDbContext.ChecklistTemplates.Update(data);
+                _applicationDbContext.ChecklistResponses.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -330,7 +341,7 @@ namespace QuilvianSystemBackendDev.Areas.Operasi.Controllers
         {
 
             // Query data
-            var query = from a in _applicationDbContext.ChecklistTemplates
+            var query = from a in _applicationDbContext.ChecklistResponses
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
                          where a.IsDelete == false || a.IsDelete == null
@@ -339,8 +350,12 @@ namespace QuilvianSystemBackendDev.Areas.Operasi.Controllers
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
-                             a.ChecklistTemplateId,
-                             a.NamaTemplateChecklist,
+                             a.ChecklistResponseId,
+                             a.ChecklistItemId,
+                             a.PraOperasiId,
+                             a.RoleAnswers,
+                             a.ChecklistAnswers,
+                             a.AnswersId,
                              a.Keterangan,
                          };
 
@@ -452,6 +467,5 @@ namespace QuilvianSystemBackendDev.Areas.Operasi.Controllers
                 }
             });
         }
-
     }
 }

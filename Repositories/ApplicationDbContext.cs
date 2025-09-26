@@ -11,8 +11,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
 using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.HRD.Pengajuan.Models;
-using QuilvianSystemBackendDev.Areas.Operasi.Models;
-using QuilvianSystemBackendDev.Areas.OperasiOK.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Models;
 
 namespace QuilvianSystemBackendDev.Repositories
 {

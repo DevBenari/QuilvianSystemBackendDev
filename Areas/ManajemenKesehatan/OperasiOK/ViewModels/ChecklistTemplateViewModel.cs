@@ -1,4 +1,4 @@
-﻿namespace QuilvianSystemBackendDev.Areas.Operasi.ViewModels
+﻿namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.ViewModels
 {
     public class ChecklistTemplateViewModel
     {

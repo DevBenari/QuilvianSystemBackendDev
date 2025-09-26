@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using QuilvianSystemBackendDev.Models;
 
-namespace QuilvianSystemBackendDev.Areas.Operasi.Models
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Models
 {
     public class ChecklistItem : UserActivity
     {

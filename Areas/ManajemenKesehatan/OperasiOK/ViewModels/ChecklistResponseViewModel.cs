@@ -1,12 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
-using QuilvianSystemBackendDev.Models;
-
-namespace QuilvianSystemBackendDev.Areas.OperasiOK.Models
+﻿namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.ViewModels
 {
-    public class ChecklistResponse : UserActivity
+    public class ChecklistResponseViewModel
     {
-        [Key]
-        public Guid ChecklistResponseId { get; set; }
         public Guid? ChecklistItemId { get; set; }
         public Guid? PraOperasiId { get; set; }
 
