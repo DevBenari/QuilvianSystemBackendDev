@@ -643,6 +643,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                     return jsonResp.fileUrl;
                 }
 
+
                 // Upload file → folder TTDUser
                 var ttdPath = await UploadFileAsync(vm.TTDKeluarga, "TTDKeluarga", "TTDKeluargaPasien");
 
