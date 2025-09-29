@@ -471,7 +471,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
             }
         }
 
-
         [HttpPut("UploadTTDPerawatBedah/{id}")]
         public async Task<IActionResult> UploadTTDPerawatBedah(Guid id, [FromForm] PraOperasiTTDPerawatBedahViewModel vm)
         {

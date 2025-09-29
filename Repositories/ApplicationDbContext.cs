@@ -217,13 +217,18 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<PengkajianPernapasan> PengkajianPernapasans { get; set; }
         public DbSet<PengkajianPerawat> PengkajianPerawats { get; set; }
         public DbSet<DetailKetergantungan> DetailKetergantungans { get; set; }
-        public DbSet<ResumePulang> ResumePulangs { get; set; }
+        public DbSet<ResumePulang> ResumePulangs { get; set; } 
+        public DbSet<ResumePulangDetail> ResumePulangDetails { get; set; }
         public DbSet<CttPemberianObat> CttPemberianObats { get; set; }
         public DbSet<CatatanESO> CatatanESOs { get; set; }
         public DbSet<ObservasiCairan> ObservasiCairans { get; set; }
         public DbSet<ObservasiCairanWsd> ObservasiCairanWsds { get; set; }
         public DbSet<SlidingScale> SlidingScales { get; set; }
-
+        public DbSet<ChecklistTemplate> ChecklistTemplates { get; set; }
+        public DbSet<ChecklistItem> ChecklistItems { get; set; }
+        public DbSet<ChecklistResponse> ChecklistResponses { get; set; }
+        public DbSet<EvaluasiAwal> EvaluasiAwals { get; set; }
+        public DbSet<EvaluasiAwalDetail> EvaluasiAwalDetails { get; set; }
         #endregion
 
         #region Farmasi
@@ -236,9 +241,7 @@ namespace QuilvianSystemBackendDev.Repositories
         #endregion
 
         #region OperasiOK
-        public DbSet<ChecklistTemplate> ChecklistTemplates { get; set; }
-        public DbSet<ChecklistItem> ChecklistItems { get; set; }
-        public DbSet<ChecklistResponse> ChecklistResponses { get; set; }
+
         public DbSet<PraOperasi> PraOperasis { get; set; }
 
         #endregion

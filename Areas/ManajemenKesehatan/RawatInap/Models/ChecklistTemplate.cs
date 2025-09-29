@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using QuilvianSystemBackendDev.Models;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Models
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models
 {
     [Table("MstChecklistTemplate", Schema = "public")]
     public class ChecklistTemplate : UserActivity

@@ -27,5 +27,7 @@
         public string? TtdPemberi { get; set; }         // Image signature pemberi
         public bool? StatusResume { get; set; }         // Diberikan / Belum diberikan
         public string? Keterangan { get; set; }
+        public string? TglMasuk { get; set; }
+        public string? TglKeluar { get; set; }
     }
 }

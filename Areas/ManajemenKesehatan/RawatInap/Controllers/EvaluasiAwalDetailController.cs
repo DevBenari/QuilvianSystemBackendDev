@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Globalization;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
@@ -6,36 +7,34 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.ViewModels;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controllers
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class ChecklistResponseController : Controller
+    public class EvaluasiAwalDetailController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<ChecklistResponseController> _logger;
+        private readonly ILogger<EvaluasiAwalDetailController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public ChecklistResponseController(
+        public EvaluasiAwalDetailController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<ChecklistResponseController> logger,
+            ILogger<EvaluasiAwalDetailController> logger,
             IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
@@ -43,6 +42,31 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+        }
+
+        private DateTime? TryParseTanggalToUtc(string tanggal)
+        {
+            if (DateTime.TryParseExact(
+                    tanggal,
+                    "yyyy-MM-dd",
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out var parsedDate))
+            {
+                var now = DateTime.Now; // atau DateTime.UtcNow jika kamu mau jam UTC
+                var finalDateTime = new DateTime(
+                    parsedDate.Year,
+                    parsedDate.Month,
+                    parsedDate.Day,
+                    now.Hour,
+                    now.Minute,
+                    now.Second,
+                    DateTimeKind.Local); // atau Utc jika perlu
+
+                return finalDateTime.ToUniversalTime(); // simpan dalam UTC
+            }
+
+            return null;
         }
 
         [HttpGet]
@@ -53,7 +77,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = (from a in _applicationDbContext.ChecklistResponses
+            var query = (from a in _applicationDbContext.EvaluasiAwalDetails
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
                          where a.IsDelete == false || a.IsDelete == null
@@ -62,13 +86,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
-                             a.ChecklistResponseId,
+                             a.DetailEvaluasiAwalId,
+                             a.EvaluasiAwalId,
                              a.ChecklistItemId,
-                             a.PraOperasiId,
-                             a.RoleAnswers,
-                             a.ChecklistAnswers,
-                             a.AnswersId,
+                             a.TglPenyimpanan,
                              a.Keterangan,
+
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -104,7 +127,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.ChecklistResponses.Find(id);
+            var listdata = _applicationDbContext.EvaluasiAwalDetails.Find(id);
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -118,7 +141,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] ChecklistResponseViewModel vm)
+        public async Task<IActionResult> Create([FromBody] EvaluasiAwalDetailViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -147,32 +170,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
-                //// **Cek Duplikasi**
-                //bool isDuplicate = _applicationDbContext.Diskons
-                //                    .Any(c => c.NamaDiskon == vm.NamaDiskon);
-
-                //if (isDuplicate)
-                //{
-                //    return Conflict(new { message = "Nama benefit ini telah tersedia" });
-                //}
-
                 // **Buat Data Baru**
-                var data = new ChecklistResponse
+                var data = new EvaluasiAwalDetail
                 {
-                    ChecklistResponseId = Guid.NewGuid(),
+                    DetailEvaluasiAwalId = Guid.NewGuid(),
+                    EvaluasiAwalId = vm.EvaluasiAwalId,
+                    TglPenyimpanan = TryParseTanggalToUtc(vm.TglPenyimpanan),
                     ChecklistItemId = vm.ChecklistItemId,
-                    PraOperasiId = vm.PraOperasiId,
-                    RoleAnswers = vm.RoleAnswers,
-                    ChecklistAnswers = vm.ChecklistAnswers,
-                    AnswersId = vm.AnswersId,
                     Keterangan = vm.Keterangan,
-                    
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
 
                 // **Simpan ke Database**
-                _applicationDbContext.ChecklistResponses.Add(data);
+                _applicationDbContext.EvaluasiAwalDetails.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -195,7 +206,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] ChecklistResponseViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] EvaluasiAwalDetailViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -226,24 +237,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.ChecklistResponses.FindAsync(id);
+                var data = await _applicationDbContext.EvaluasiAwalDetails.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
                 // **Update Data**
+                data.EvaluasiAwalId = vm.EvaluasiAwalId;
+                data.TglPenyimpanan = TryParseTanggalToUtc(vm.TglPenyimpanan);
                 data.ChecklistItemId = vm.ChecklistItemId;
-                data.PraOperasiId = vm.PraOperasiId;
-                data.RoleAnswers = vm.RoleAnswers;
-                data.ChecklistAnswers = vm.ChecklistAnswers;
-                data.AnswersId = vm.AnswersId;
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.ChecklistResponses.Update(data);
+                _applicationDbContext.EvaluasiAwalDetails.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -292,7 +301,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.ChecklistResponses.FindAsync(id);
+                var data = await _applicationDbContext.EvaluasiAwalDetails.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -304,7 +313,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
 
                 data.IsDelete = true;
 
-                _applicationDbContext.ChecklistResponses.Update(data);
+                _applicationDbContext.EvaluasiAwalDetails.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -341,7 +350,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
         {
 
             // Query data
-            var query = from a in _applicationDbContext.ChecklistResponses
+            var query = (from a in _applicationDbContext.EvaluasiAwalDetails
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
                          where a.IsDelete == false || a.IsDelete == null
@@ -350,14 +359,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
-                             a.ChecklistResponseId,
+                             a.DetailEvaluasiAwalId,
+                             a.EvaluasiAwalId,
                              a.ChecklistItemId,
-                             a.PraOperasiId,
-                             a.RoleAnswers,
-                             a.ChecklistAnswers,
-                             a.AnswersId,
+                             a.TglPenyimpanan,
                              a.Keterangan,
-                         };
+
+                         });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             //if (!string.IsNullOrWhiteSpace(search))

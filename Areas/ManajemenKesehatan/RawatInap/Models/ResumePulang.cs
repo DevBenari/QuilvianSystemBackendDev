@@ -32,5 +32,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models
         public string? TtdPemberi { get; set; }         // Image signature pemberi
         public bool? StatusResume { get; set; }         // Diberikan / Belum diberikan
         public string? Keterangan { get; set; }
+
+        public DateTime? TglMasuk {  get; set; }
+        public DateTime? TglKeluar { get; set; }
+
     }
 }
