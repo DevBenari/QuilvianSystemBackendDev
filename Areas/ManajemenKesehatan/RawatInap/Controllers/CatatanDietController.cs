@@ -351,13 +351,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             }
         }
 
+
         [HttpGet("paged")]
         public async Task<IActionResult> Paged(
-    int page = 1,
-    int perPage = 10,
-    string? search = null,
-    string? orderBy = "CreateDateTime",
-    string? sortDirection = "desc")
+        int page = 1,
+        int perPage = 10,
+        string? search = null,
+        string? orderBy = "CreateDateTime",
+        string? sortDirection = "desc")
         {
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
