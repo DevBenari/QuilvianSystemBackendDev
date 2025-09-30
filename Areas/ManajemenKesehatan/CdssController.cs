@@ -78,32 +78,32 @@ namespace QuilvianSystemBackendDev.Controllers
                             PanelBloodPressure = new
                             {
                                 coding = new[] {
-                        new { system = "http://loinc.org", code = "85354-9", display = "Blood pressure panel with all children optional" }
-                    },
-                                text = "Blood pressure"
+                                new { system = "http://loinc.org", code = "85354-9", display = "Blood pressure panel with all children optional" }
                             },
-                            Systolic = new
-                            {
-                                coding = new[] {
-                        new { system = "http://loinc.org", code = "8480-6", display = "Systolic blood pressure" }
-                    },
-                                unit = new { system = "http://unitsofmeasure.org", code = "mm[Hg]", display = "mmHg" }
+                                        text = "Blood pressure"
+                                    },
+                                    Systolic = new
+                                    {
+                                        coding = new[] {
+                                new { system = "http://loinc.org", code = "8480-6", display = "Systolic blood pressure" }
                             },
-                            Diastolic = new
-                            {
-                                coding = new[] {
-                        new { system = "http://loinc.org", code = "8462-4", display = "Diastolic blood pressure" }
-                    },
-                                unit = new { system = "http://unitsofmeasure.org", code = "mm[Hg]", display = "mmHg" }
-                            }
-                        },
-                        Condition = new
-                        {
-                            Hypertension = new
-                            {
-                                coding = new[] {
-                        new { system = "http://snomed.info/sct", code = "38341003", display = "Hypertensive disorder, systemic arterial (disorder)" }
-                    },
+                                        unit = new { system = "http://unitsofmeasure.org", code = "mm[Hg]", display = "mmHg" }
+                                    },
+                                    Diastolic = new
+                                    {
+                                        coding = new[] {
+                                new { system = "http://loinc.org", code = "8462-4", display = "Diastolic blood pressure" }
+                            },
+                                        unit = new { system = "http://unitsofmeasure.org", code = "mm[Hg]", display = "mmHg" }
+                                    }
+                                },
+                                Condition = new
+                                {
+                                    Hypertension = new
+                                    {
+                                        coding = new[] {
+                                new { system = "http://snomed.info/sct", code = "38341003", display = "Hypertensive disorder, systemic arterial (disorder)" }
+                            },
                                 text = "Hypertension"
                             }
                         },
