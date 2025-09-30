@@ -110,10 +110,10 @@ namespace QuilvianSystemBackendDev.Controllers
                         CarePlan = new
                         {
                             Recommendations = new[] {
-                    new { text = "Kontrol tekanan darah secara rutin." },
-                    new { text = "Diet rendah garam dan olahraga teratur." },
-                    new { text = "Patuhi anjuran dokter jika sudah minum obat." }
-                }
+                                new { text = "Kontrol tekanan darah secara rutin." },
+                                new { text = "Diet rendah garam dan olahraga teratur." },
+                                new { text = "Patuhi anjuran dokter jika sudah minum obat." }
+                            }
                         }
                     }
                 }
