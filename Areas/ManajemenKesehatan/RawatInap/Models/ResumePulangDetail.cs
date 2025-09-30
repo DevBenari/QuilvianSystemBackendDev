@@ -32,7 +32,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models
         public string? Keterangan { get; set; }
         public DateTime? TglDetailResumePulang { get; set; }
 
-        public Guid? UserActiveId { get; set; }          // User (perawat)
         public Guid? TTId { get; set; }                  // Perawat Id
 
         // Optional: Navigation Properties (jika pakai EF Core relasi)

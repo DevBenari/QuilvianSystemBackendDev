@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -11,9 +12,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250930032528_AddCatatanDiet")]
+    partial class AddCatatanDiet
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -8140,7 +8142,7 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("StatusDiet")
                         .HasColumnType("text");
 
-                    b.Property<DateTime?>("TglCatatanDiet")
+                    b.Property<DateTime>("TglCatatanDiet")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("UpdateBy")
@@ -8160,38 +8162,17 @@ namespace QuilvianSystemBackendDev.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("CatatanDietId")
+                    b.Property<Guid>("CatatanDietId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("CreateBy")
+                    b.Property<Guid>("Icd10Id")
                         .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("DeleteBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("DeleteDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("Icd10Id")
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("IsDelete")
-                        .HasColumnType("boolean");
-
-                    b.Property<Guid>("UpdateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("UpdateDateTime")
-                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("CatatanDietDetailId");
 
                     b.HasIndex("CatatanDietId");
 
-                    b.ToTable("CatatanDietDetails");
+                    b.ToTable("CatatanDietDetail");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.CatatanESO", b =>
@@ -10377,7 +10358,9 @@ namespace QuilvianSystemBackendDev.Migrations
                 {
                     b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.CatatanDiet", "CatatanDiet")
                         .WithMany("DetailIcd10")
-                        .HasForeignKey("CatatanDietId");
+                        .HasForeignKey("CatatanDietId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("CatatanDiet");
                 });

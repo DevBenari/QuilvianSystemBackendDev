@@ -229,6 +229,8 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<ChecklistResponse> ChecklistResponses { get; set; }
         public DbSet<EvaluasiAwal> EvaluasiAwals { get; set; }
         public DbSet<EvaluasiAwalDetail> EvaluasiAwalDetails { get; set; }
+        public DbSet<CatatanDiet> CatatanDiets { get; set; }
+        public DbSet<CatatanDietDetail> CatatanDietDetails { get; set; }
         #endregion
 
         #region Farmasi

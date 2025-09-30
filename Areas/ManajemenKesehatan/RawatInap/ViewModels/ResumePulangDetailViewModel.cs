@@ -26,7 +26,7 @@
         public string? Keterangan { get; set; }
         public DateTime? TglDetailResumePulang { get; set; }
 
-        public Guid? UserActiveId { get; set; }          // User (perawat)
         public Guid? TTId { get; set; }                  // Perawat Id
+        public IFormFile? TTDFile { get; set; }
     }
 }

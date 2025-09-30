@@ -379,6 +379,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         int page = 1,
         int perPage = 10,
         string? search = null,
+        Guid? ICDid = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -425,6 +426,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     EF.Functions.ILike(x.PlanningIcdName ?? "", pattern) ||
                     EF.Functions.ILike(x.Keterangan ?? "", pattern) ||
                     EF.Functions.ILike(x.CreateByName ?? "", pattern));
+            }
+
+            // filter berdasarkan ICD
+            if (ICDid.HasValue)
+            {
+                query = query.Where(u => u.IcdId == ICDid.Value);
             }
 
             // Filter rentang tanggal eksplisit
