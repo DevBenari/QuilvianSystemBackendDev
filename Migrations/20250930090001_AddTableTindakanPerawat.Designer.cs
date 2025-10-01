@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -11,9 +12,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250930090001_AddTableTindakanPerawat")]
+    partial class AddTableTindakanPerawat
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -10246,8 +10248,8 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<DateTimeOffset>("UpdateDateTime")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<TimeOnly?>("WaktuTindakanHarian")
-                        .HasColumnType("time without time zone");
+                    b.Property<TimeSpan?>("WaktuTindakanHarian")
+                        .HasColumnType("interval");
 
                     b.HasKey("TindakanHarianId");
 
