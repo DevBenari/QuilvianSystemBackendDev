@@ -134,6 +134,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     a.CaraPemakaian,
                     a.EstimasiPemberian,
                     a.TglStopPemakaian,
+                    a.IsObatDibawaPlg
                 };
 
             var result = query.ToList();
@@ -208,6 +209,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     a.CaraPemakaian,
                     a.EstimasiPemberian,
                     a.TglStopPemakaian,
+                    a.IsObatDibawaPlg
                 };
 
             var result = query.ToList();
@@ -225,6 +227,32 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             });
         }
 
+        [HttpPut("{id}/IsObatDibawaPulang")]
+        public async Task<IActionResult> UpdateIsObatDibawaPulang(Guid id, [FromBody] StatusPengambilanObatViewModel request)
+        {
+            var data = await _applicationDbContext.DetailReseps.FindAsync(id);
+            if (data == null)
+                return NotFound(new { message = "Resep tidak ditemukan." });
+
+            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(EmailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var userId = user?.UserActiveId ?? Guid.Empty;
+
+            data.IsObatDibawaPlg = request.Status;
+            data.UpdateDateTime = DateTimeOffset.UtcNow;
+            data.UpdateBy = userId;
+
+            await _applicationDbContext.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("ObatDibawaPulangUpdated", new
+            {
+                Action = "update",
+                DetailResepId = data.DetailResepId
+            });
+            return Ok(new { message = "Status dibawa pulang berhasil diperbarui." });
+        }
 
         [HttpPut("{id}/StatusObat")]
         public async Task<IActionResult> UpdateIsLunas(Guid id, [FromBody] StatusPengambilanObatViewModel request)
@@ -659,6 +687,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             a.CaraPemakaian,
                             a.EstimasiPemberian,
                             a.TglStopPemakaian,
+                            a.IsObatDibawaPlg
                         };
 
             // 🔎 Search sederhana

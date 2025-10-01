@@ -160,6 +160,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                         d.CaraPemakaian,
                                         d.EstimasiPemberian,
                                         d.TglStopPemakaian,
+                                        d.IsObatDibawaPlg,
                                         d.CreateBy,
                                         d.CreateDateTime
                                     }).ToListAsync();
@@ -183,6 +184,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                            d.EstimasiPemberian,
                                            d.StatusDiberikanPasien,
                                            d.TglStopPemakaian,
+                                           d.IsObatDibawaPlg,
                                            ra.CreateBy,
                                            ra.CreateDateTime
                                        }).ToListAsync();
@@ -443,6 +445,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                         d.CaraPemakaian,
                                         d.EstimasiPemberian,
                                         d.TglStopPemakaian,
+                                        d.IsObatDibawaPlg,
                                         d.StatusDiberikanPasien,
                                         d.CreateBy,
                                         d.CreateDateTime
@@ -464,6 +467,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                            d.Qty,
                                            d.Signa,
                                            d.SignaTambahan,
+                                           d.IsObatDibawaPlg,
                                            ra.CreateBy,
                                            ra.CreateDateTime
                                        }).ToListAsync();
@@ -766,7 +770,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                 CaraPemakaian = obat.CaraPemakaian,
                                 StatusDiberikanPasien = obat.StatusDiberikanPasien,
                                 TglStopPemakaian = TryParseTanggalToUtc(obat.TglStopPemakaian),
-
+                                IsObatDibawaPlg = false,
                                 CreateBy = getUserActive.UserActiveId,
                                 CreateDateTime = DateTimeOffset.UtcNow
                             };
@@ -898,6 +902,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                 EstimasiPemberian = obat.EstimasiPemberian,
                                 StatusDiberikanPasien = obat.StatusDiberikanPasien,
                                 TglStopPemakaian = TryParseTanggalToUtc(obat.TglStopPemakaian),
+                                IsObatDibawaPlg = false,
                                 CreateBy = getUserActive.UserActiveId,
                                 CreateDateTime = DateTimeOffset.UtcNow
                             };
@@ -1267,6 +1272,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             EstimasiPemberian = obat.EstimasiPemberian,
                             TglStopPemakaian = TryParseTanggalToUtc(obat.TglStopPemakaian),
                             StatusDiberikanPasien = obat.StatusDiberikanPasien,
+                            IsObatDibawaPlg = false,
                             CreateBy = userId,
                             CreateDateTime = DateTimeOffset.UtcNow
                         };
@@ -1358,6 +1364,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                         CaraPemakaian = first.Obat.CaraPemakaian,
                         EstimasiPemberian = first.Obat.EstimasiPemberian,
                         TglStopPemakaian = TryParseTanggalToUtc(first.Obat.TglStopPemakaian),
+                        IsObatDibawaPlg = false,
                         CreateBy = userId,
                         CreateDateTime = DateTimeOffset.UtcNow
                     });
@@ -2249,6 +2256,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                         d.CaraPemakaian,
                                         d.EstimasiPemberian,
                                         d.TglStopPemakaian,
+                                        d.IsObatDibawaPlg,
                                         d.CreateBy,
                                         d.CreateDateTime
                                     }).ToListAsync();
@@ -2269,6 +2277,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                            d.EstimasiPemberian,
                                            d.StatusDiberikanPasien,
                                            d.TglStopPemakaian,
+                                           d.IsObatDibawaPlg,
                                            ra.CreateBy,
                                            ra.CreateDateTime
                                        }).ToListAsync();
@@ -2498,6 +2507,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                         d.JarakPenebusan,
                                         d.StatusCoverObat,
                                         d.StatusPengambilanObat,
+                                        d.IsObatDibawaPlg,
                                         d.CreateBy,
                                         d.CreateDateTime
                                     }).ToListAsync();
@@ -2514,6 +2524,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                            d.Qty,
                                            d.Signa,
                                            d.SignaTambahan,
+                                           d.IsObatDibawaPlg,
                                            ra.CreateBy,
                                            ra.CreateDateTime
                                        }).ToListAsync();
