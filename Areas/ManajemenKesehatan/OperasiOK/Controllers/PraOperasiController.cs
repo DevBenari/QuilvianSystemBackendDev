@@ -310,7 +310,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
-                    return Created("", new { message = "Data Pra-Operasi berhasil ditambahkan", id = data.PraOperasiId });
+                    return Created("", new { message = "Data Pra-Operasi berhasil ditambahkan", PraOperasiId = data.PraOperasiId });
 
                 return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
             }

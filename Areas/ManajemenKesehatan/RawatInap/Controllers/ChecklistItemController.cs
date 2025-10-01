@@ -336,6 +336,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         int page = 1,
         int perPage = 10,
         Guid? checklistTemplateid = null,
+        string? search = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -349,6 +350,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             var query = from a in _applicationDbContext.ChecklistItems
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
+
+                        join ct in _applicationDbContext.ChecklistTemplates on a.ChecklistTemplateId equals ct.ChecklistTemplateId into cTemplate
+                        from ct in cTemplate.DefaultIfEmpty() 
                          where a.IsDelete == false || a.IsDelete == null
                          select new
                          {
@@ -357,26 +361,28 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              CreateByName = u.FullName,
                              a.ChecklistItemId,
                              a.ChecklistTemplateId,
+                             ct.NamaTemplateChecklist,
                              a.UrutanChecklistItem,
                              a.KodeChecklistItem,
                              a.NamaChecklistItem,
                              a.Keterangan,
                          };
 
-            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-            //if (!string.IsNullOrWhiteSpace(search))
-            //{
-            //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-            //    query = query.Where(u =>
-            //        EF.Functions.ILike(u.NamaDiskon, search)
-            //    );
-            //}
+            //**Filter berdasarkan search(Perbaikan agar bisa mencari 1 huruf)**
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+                query = query.Where(u =>
+                    EF.Functions.ILike(u.NamaTemplateChecklist, search)
+                );
+            }
 
             // filter berdasarkan checklist template id
             if (checklistTemplateid.HasValue)
             {
                 query = query.Where(u=> u.ChecklistTemplateId ==  checklistTemplateid.Value);
             }
+
 
             //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
