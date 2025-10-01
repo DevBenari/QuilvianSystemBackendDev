@@ -320,7 +320,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         public IActionResult Paged(
         int page = 1,
         int perPage = 10,
-        string? search = null,
+        Guid? id = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -353,6 +353,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             //        EF.Functions.ILike(u.NamaDiskon, search)
             //    );
             //}
+
+            // filter berdasarkan checklist template id
+            if (id.HasValue)
+            {
+                query = query.Where(u => u.ChecklistTemplateId == id.Value);
+            }
 
             //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
