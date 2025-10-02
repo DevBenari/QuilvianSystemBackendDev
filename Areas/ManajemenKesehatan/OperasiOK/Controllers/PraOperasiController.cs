@@ -994,6 +994,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                 query = query.Where(u=> u.KunjunganId == kunjunganId.Value);
             }
 
+
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             //if (!string.IsNullOrWhiteSpace(search))
             //{
