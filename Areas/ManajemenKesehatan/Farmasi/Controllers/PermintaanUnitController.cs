@@ -112,6 +112,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     a.CreateBy,
                     CreateByName = u.FullName,
                     a.UnitId,
+                    a.TujuanUnitId,
+
                     a.JenisPermintaan,
                     a.TglPembuatanPermintaan,
                     a.StatusPermintaan,
@@ -327,6 +329,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     a.CreateBy,
                     CreateByName = u.FullName,
                     a.UnitId,
+                    a.TujuanUnitId,
                     a.JenisPermintaan,
                     a.TglPembuatanPermintaan,
                     a.StatusPermintaan,
@@ -433,6 +436,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 {
                     PermintaanUnitId = permintaanUnitId,
                     UnitId = vm.UnitId,
+                    TujuanUnitId = vm.TujuanUnitId,
                     JenisPermintaan = vm.JenisPermintaan,
                     TglPembuatanPermintaan = TryParseTanggalToUtc(vm.TglPembuatanPermintaan),
                     StatusPermintaan = vm.StatusPermintaan,
@@ -532,6 +536,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
                 // Update Data PermintaanUnit (Parent)
                 data.UnitId = vm.UnitId;
+                data.TujuanUnitId = vm.TujuanUnitId;
                 data.JenisPermintaan = vm.JenisPermintaan;
                 data.TglPembuatanPermintaan = TryParseTanggalToUtc(vm.TglPembuatanPermintaan);
                 data.StatusPermintaan = vm.StatusPermintaan;
@@ -713,6 +718,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     a.CreateBy,
                     CreateByName = u.FullName,
                     a.UnitId,
+                    a.TujuanUnitId,
+
                     a.JenisPermintaan,
                     a.TglPembuatanPermintaan,
                     a.StatusPermintaan,

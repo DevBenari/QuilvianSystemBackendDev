@@ -199,7 +199,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 if (result > 0)
                 {
-                    return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
+                    return Created("", new 
+                    { 
+                        message = "Tambah Data Berhasil || 201 Created",
+                        SkalaPainId = data.SkalaPainId,
+                    });
                 }
                 else
                 {
@@ -267,7 +271,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 if (result > 0)
                 {
-                    return Ok(new { message = "Update Data Berhasil || 200 OK" });
+                    return Ok(new 
+                    { 
+                        message = "Update Data Berhasil || 200 OK" ,
+                        SkalaPainId = data.SkalaPainId,
+                    });
                 }
                 else
                 {

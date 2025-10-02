@@ -9,6 +9,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
         [Key]
         public Guid PermintaanUnitId { get; set; }
         public Guid? UnitId { get; set; }
+        public Guid? TujuanUnitId { get; set; }
         public string? JenisPermintaan { get; set; }
         public DateTime? TglPembuatanPermintaan { get; set; } 
         public string? StatusPermintaan { get; set; }

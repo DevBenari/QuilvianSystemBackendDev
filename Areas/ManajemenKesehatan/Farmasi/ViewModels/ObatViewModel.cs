@@ -23,6 +23,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels
         public string? Dosis { get; set; }
         public string? InteraksiObat { get; set; }
         public string? Note { get; set; }
+        public string? Kategori { get; set; }
 
         //public string KategoriObat { get; set; }
         //public string Asuransi { get; set; }

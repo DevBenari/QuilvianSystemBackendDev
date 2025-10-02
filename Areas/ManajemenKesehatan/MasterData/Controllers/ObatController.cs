@@ -101,6 +101,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     a.Dosis,
                     a.TakaranDosis,
                     a.JumlahSatuan,
+                    a.Kategori,
                 }).OrderByDescending(a => a.CreateDateTime);
 
             var totalRows = await query.CountAsync();
@@ -185,6 +186,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     a.Dosis,
                     a.TakaranDosis,
                     a.JumlahSatuan,
+                    a.Kategori,
                 })
                 .FirstOrDefaultAsync();
 
@@ -285,7 +287,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     Dosis = vm.Dosis,
                     TakaranDosis = vm.TakaranDosis,
                     JumlahSatuan = vm.JumlahSatuan,
-                    Note = vm.Note
+                    Note = vm.Note,
+                    Kategori = vm.Kategori,
                 };
 
                 _applicationDbContext.Obats.Add(data);
@@ -370,6 +373,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.CaraKerja = vm.CaraKerja;
                 data.InteraksiObat = vm.InteraksiObat;
                 data.TakaranDosis = vm.TakaranDosis;
+                data.Kategori = vm.Kategori;
+
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTime.UtcNow;
 
@@ -518,6 +523,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                       a.Dosis,
                                       a.TakaranDosis,
                                       a.JumlahSatuan,
+                                      a.Kategori,
                                       a.CreateDateTime,
                                       CreateByName = u.FullName,
                                       a.BentukObatId,

@@ -3,6 +3,8 @@
     public class PermintaanUnitViewModel
     {
         public Guid? UnitId { get; set; }
+        public Guid? TujuanUnitId { get; set; }
+
         public string? JenisPermintaan { get; set; }
         public string? TglPembuatanPermintaan { get; set; }
         public string? StatusPermintaan { get; set; }

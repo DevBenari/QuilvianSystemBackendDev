@@ -32,7 +32,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? Note { get; set; }
         public decimal? Cogs { get; set; }
 
-        //public string KategoriObat { get; set; }
+        public string? Kategori{ get; set; }
         //public string Asuransi { get; set; }
         //public string KandunganObat { get; set; }
         //public string TipeHarga { get; set; }
