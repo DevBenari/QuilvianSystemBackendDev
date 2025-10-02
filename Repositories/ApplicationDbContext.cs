@@ -232,6 +232,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<CatatanDiet> CatatanDiets { get; set; }
         public DbSet<CatatanDietDetail> CatatanDietDetails { get; set; }
         public DbSet<TindakanHarian> TindakanHarians { get; set; }
+        public DbSet<PengawasanHarian> PengawasanHarians { get; set; }
         #endregion
 
         #region Farmasi

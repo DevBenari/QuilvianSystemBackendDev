@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Globalization;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
@@ -9,7 +10,6 @@ using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.ViewModels;
@@ -23,20 +23,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class ChecklistResponseController : Controller
+    public class PengawasanHarianController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<ChecklistResponseController> _logger;
+        private readonly ILogger<PengawasanHarianController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public ChecklistResponseController(
+        public PengawasanHarianController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<ChecklistResponseController> logger,
+            ILogger<PengawasanHarianController> logger,
             IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
@@ -45,70 +45,98 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
         }
+        private DateTime? TryParseTanggalToUtc(string tanggal)
+        {
+            if (DateTime.TryParseExact(
+                    tanggal,
+                    "yyyy-MM-dd",
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out var parsedDate))
+            {
+                var now = DateTime.Now; // atau DateTime.UtcNow jika kamu mau jam UTC
+                var finalDateTime = new DateTime(
+                    parsedDate.Year,
+                    parsedDate.Month,
+                    parsedDate.Day,
+                    now.Hour,
+                    now.Minute,
+                    now.Second,
+                    DateTimeKind.Local
+                ); // atau Utc jika perlu
+
+                return finalDateTime.ToUniversalTime(); // simpan dalam UTC
+            }
+            return null;
+        }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
+        public async Task<IActionResult> GetAll(
+            int page = 1,
+            int perPage = 10)
         {
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            var query = from a in _applicationDbContext.ChecklistResponses
+            // ✅ Query data dasar
+            var query = from a in _applicationDbContext.PengawasanHarians
                         join u in _applicationDbContext.UserActives
                             on a.CreateBy equals u.UserActiveId into userJoin
                         from u in userJoin.DefaultIfEmpty()
-
-                        join p in _applicationDbContext.Positions
-                            on u.PositionId equals p.PositionId into posJoin
-                        from p in posJoin.DefaultIfEmpty()
-
-                        join d in _applicationDbContext.Departements
-                            on u.DepartemenId equals d.DepartementId into deptJoin
-                        from d in deptJoin.DefaultIfEmpty()
-
-                        join t in _applicationDbContext.TipeUsers
-                            on u.TipeUserId equals t.TipeUserId into tipeJoin
-                        from t in tipeJoin.DefaultIfEmpty()
-
                         where a.IsDelete == false || a.IsDelete == null
-                        orderby a.CreateDateTime descending
                         select new
                         {
+                            a.PengawasanHarianId,
+                            a.KunjunganId,
+                            a.PasienId,
+                            a.VitalSignId,
+                            a.PainAssessmentId,
+                            a.ResepId,
+                            a.TglPengawasanHarian,
+                            a.WaktuPengawasan,
+                            a.IsRelaksasi,
+                            a.IsKompres,
+                            a.IsDetailKompres,
+                            a.IsPijatan,
+                            a.IsTens,
+                            a.IsIstirahat,
+                            a.IsMusik,
+                            a.IsTeraphyAktivitas,
+                            a.IsLatihanOtot,
+                            a.IntakeInfuse,
+                            a.IntakeOral,
+                            a.IntakeNGT,
+                            a.IntakeDarah,
+                            a.IntakeObat,
+                            a.TotalIntake,
+                            a.OutputUrin,
+                            a.OutputFeses,
+                            a.OutputNGT,
+                            a.OutputWL,
+                            a.TotalOutput,
+                            a.BalanceShift,
+                            a.Balance24H,
+                            a.GulaDarah,
+                            a.AsupanMakanan,
+                            a.Diet,
+                            a.LingkarPerut,
+                            a.MobilisasiPasien,
+                            a.Keterangan,
                             a.CreateDateTime,
                             a.CreateBy,
-                            CreateByName = u.FullName,
-
-                            // Checklist response
-                            a.ChecklistResponseId,
-                            a.ChecklistItemId,
-                            a.PraOperasiId,
-                            a.RoleAnswers,
-                            a.ChecklistAnswers,
-                            a.AnswersId,
-                            a.Keterangan,
-
-                            // Join Position
-                            PositionId = p.PositionId,
-                            PositionName = p.PositionName,
-
-                            // Join Departemen
-                            DepartementId = d.DepartementId,
-                            NamaDepartement = d.NamaDepartement,
-
-                            // Join TipeUser
-                            TipeUserId = t.TipeUserId,
-                            TipeUserName = t.NamaTipeUser
+                            CreateByName = u.FullName
                         };
 
-            // Paging
+            // ✅ Paging
             var totalRows = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
 
-            var listdata = await query
+            var rows = await query
                 .Skip((page - 1) * perPage)
                 .Take(perPage)
                 .ToListAsync();
 
-            if (!listdata.Any())
+            if (!rows.Any())
             {
                 return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
             }
@@ -116,7 +144,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             return Ok(new
             {
                 message = "Berhasil || 200 OK",
-                data = listdata,
+                data = rows,
                 pagination = new
                 {
                     CurrentPage = page,
@@ -127,11 +155,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             });
         }
 
-
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.ChecklistResponses.Find(id);
+            var listdata = _applicationDbContext.PengawasanHarians.Find(id);
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -145,7 +172,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] ChecklistResponseViewModel vm)
+        public async Task<IActionResult> Create([FromBody] PengawasanHarianViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -184,22 +211,47 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 //}
 
                 // **Buat Data Baru**
-                var data = new ChecklistResponse
+                var data = new PengawasanHarian
                 {
-                    ChecklistResponseId = Guid.NewGuid(),
-                    ChecklistItemId = vm.ChecklistItemId,
-                    PraOperasiId = vm.PraOperasiId,
-                    RoleAnswers = vm.RoleAnswers,
-                    ChecklistAnswers = vm.ChecklistAnswers,
-                    AnswersId = vm.AnswersId,
+                    PengawasanHarianId = Guid.NewGuid(),
+                    KunjunganId = vm.KunjunganId,
+                    PasienId = vm.PasienId,
+                    TglPengawasanHarian = vm.TglPengawasanHarian,
+                    WaktuPengawasan = vm.WaktuPengawasan,
+                    IsRelaksasi = vm.IsRelaksasi,
+                    IsKompres = vm.IsKompres,
+                    IsDetailKompres = vm.IsDetailKompres,
+                    IsPijatan = vm.IsPijatan,
+                    IsTens = vm.IsTens,
+                    IsIstirahat = vm.IsIstirahat,
+                    IsMusik = vm.IsMusik,
+                    IsTeraphyAktivitas = vm.IsTeraphyAktivitas,
+                    IntakeInfuse = vm.IntakeInfuse,
+                    IntakeOral = vm.IntakeOral,
+                    IntakeNGT = vm.IntakeNGT,
+                    IntakeDarah = vm.IntakeDarah,
+                    IntakeObat = vm.IntakeObat,
+                    TotalIntake = vm.TotalIntake,
+                    OutputUrin = vm.OutputUrin,
+                    OutputFeses = vm.OutputFeses,
+                    OutputNGT = vm.OutputNGT,
+                    OutputWL = vm.OutputWL,
+                    TotalOutput = vm.TotalOutput,
+                    Balance24H = vm.Balance24H,
+                    BalanceShift = vm.BalanceShift,
+                    GulaDarah = vm.GulaDarah,
+                    AsupanMakanan = vm.AsupanMakanan,
+                    Diet = vm.Diet,
+                    LingkarPerut = vm.LingkarPerut,
+                    MobilisasiPasien = vm.MobilisasiPasien,
                     Keterangan = vm.Keterangan,
-                    
+    
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
 
                 // **Simpan ke Database**
-                _applicationDbContext.ChecklistResponses.Add(data);
+                _applicationDbContext.PengawasanHarians.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -222,7 +274,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] ChecklistResponseViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] PengawasanHarianViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -253,24 +305,57 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.ChecklistResponses.FindAsync(id);
+                var data = await _applicationDbContext.PengawasanHarians.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
                 // **Update Data**
-                data.ChecklistItemId = vm.ChecklistItemId;
-                data.PraOperasiId = vm.PraOperasiId;
-                data.RoleAnswers = vm.RoleAnswers;
-                data.ChecklistAnswers = vm.ChecklistAnswers;
-                data.AnswersId = vm.AnswersId;
+                data.KunjunganId = vm.KunjunganId;
+                data.PasienId = vm.PasienId;
+                data.VitalSignId = vm.VitalSignId;
+                data.PainAssessmentId = vm.PainAssessmentId;
+                data.ResepId = vm.ResepId;
+                data.TglPengawasanHarian = vm.TglPengawasanHarian;
+                data.WaktuPengawasan = vm.WaktuPengawasan;
+
+                data.IsRelaksasi = vm.IsRelaksasi;
+                data.IsKompres = vm.IsKompres;
+                data.IsDetailKompres = vm.IsDetailKompres;
+                data.IsPijatan = vm.IsPijatan;
+                data.IsTens = vm.IsTens;
+                data.IsIstirahat = vm.IsIstirahat;
+                data.IsMusik = vm.IsMusik;
+                data.IsTeraphyAktivitas = vm.IsTeraphyAktivitas;
+                data.IsLatihanOtot = vm.IsLatihanOtot;
+
+                data.IntakeInfuse = vm.IntakeInfuse;
+                data.IntakeOral = vm.IntakeOral;
+                data.IntakeNGT = vm.IntakeNGT;
+                data.IntakeDarah = vm.IntakeDarah;
+                data.IntakeObat = vm.IntakeObat;
+                data.TotalIntake = vm.TotalIntake;
+
+                data.OutputUrin = vm.OutputUrin;
+                data.OutputFeses = vm.OutputFeses;
+                data.OutputNGT = vm.OutputNGT;
+                data.OutputWL = vm.OutputWL;
+                data.TotalOutput = vm.TotalOutput;
+
+                data.BalanceShift = vm.BalanceShift;
+                data.Balance24H = vm.Balance24H;
+                data.GulaDarah = vm.GulaDarah;
+                data.AsupanMakanan = vm.AsupanMakanan;
+                data.Diet = vm.Diet;
+                data.LingkarPerut = vm.LingkarPerut;
+                data.MobilisasiPasien = vm.MobilisasiPasien;
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.ChecklistResponses.Update(data);
+                _applicationDbContext.PengawasanHarians.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -319,7 +404,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.ChecklistResponses.FindAsync(id);
+                var data = await _applicationDbContext.PengawasanHarians.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -331,7 +416,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                 data.IsDelete = true;
 
-                _applicationDbContext.ChecklistResponses.Update(data);
+                _applicationDbContext.PengawasanHarians.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -368,61 +453,34 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         {
 
             // Query data
-            var query = from a in _applicationDbContext.ChecklistResponses
+            var query = from a in _applicationDbContext.Diskons
                         join u in _applicationDbContext.UserActives
-                            on a.CreateBy equals u.UserActiveId into userJoin
-                        from u in userJoin.DefaultIfEmpty()
-
-                        join p in _applicationDbContext.Positions
-                            on u.PositionId equals p.PositionId into posJoin
-                        from p in posJoin.DefaultIfEmpty()
-
-                        join d in _applicationDbContext.Departements
-                            on u.DepartemenId equals d.DepartementId into deptJoin
-                        from d in deptJoin.DefaultIfEmpty()
-
-                        join t in _applicationDbContext.TipeUsers
-                            on u.TipeUserId equals t.TipeUserId into tipeJoin
-                        from t in tipeJoin.DefaultIfEmpty()
-
+                        on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false || a.IsDelete == null
-                        orderby a.CreateDateTime descending
                         select new
                         {
                             a.CreateDateTime,
                             a.CreateBy,
                             CreateByName = u.FullName,
-
-                            // Checklist response
-                            a.ChecklistResponseId,
-                            a.ChecklistItemId,
-                            a.PraOperasiId,
-                            a.RoleAnswers,
-                            a.ChecklistAnswers,
-                            a.AnswersId,
+                            a.DiskonId,
+                            a.NamaDiskon,
+                            a.TglBerlaku,
+                            a.TglBerakhir,
+                            a.IsAsuransi,
+                            a.AsuransiId,
+                            a.PersenDiskon,
+                            a.NominalDiskon,
                             a.Keterangan,
-
-                            // Join Position
-                            PositionId = p.PositionId,
-                            PositionName = p.PositionName,
-
-                            // Join Departemen
-                            DepartementId = d.DepartementId,
-                            NamaDepartement = d.NamaDepartement,
-
-                            // Join TipeUser
-                            TipeUserId = t.TipeUserId,
-                            TipeUserName = t.NamaTipeUser
                         };
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-            //if (!string.IsNullOrWhiteSpace(search))
-            //{
-            //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-            //    query = query.Where(u =>
-            //        EF.Functions.ILike(u.NamaDiskon, search)
-            //    );
-            //}
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+                query = query.Where(u =>
+                    EF.Functions.ILike(u.NamaDiskon, search)
+                );
+            }
 
             //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
@@ -490,12 +548,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
+                    "NamaDiskon" => query.OrderByDescending(u => u.NamaDiskon),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
                     "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
                     "CreateByName" => query.OrderBy(u => u.CreateByName),
+                    "NamaDiskon" => query.OrderBy(u => u.NamaDiskon),
                     _ => query.OrderBy(u => u.CreateDateTime)
                 };
 
@@ -523,5 +583,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 }
             });
         }
+
     }
 }

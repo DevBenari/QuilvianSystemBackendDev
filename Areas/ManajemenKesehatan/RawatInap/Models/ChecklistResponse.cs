@@ -10,7 +10,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models
         public Guid? ChecklistItemId { get; set; }
         public Guid? PraOperasiId { get; set; }
 
-        public bool? RoleAnswers { get; set; }
+        public string? RoleAnswers { get; set; }
         public bool? ChecklistAnswers { get; set; }
 
         public Guid? AnswersId { get; set; }

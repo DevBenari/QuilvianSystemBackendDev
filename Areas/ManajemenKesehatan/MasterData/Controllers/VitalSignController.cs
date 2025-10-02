@@ -78,7 +78,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             Weight = a.Weight,
                             BMI = a.BMI,
                             LingkarKepalaBayi = a.LingkarKepalaBayi,
-                            RanapId = a.RanapId
+                            RanapId = a.RanapId,
+                            Nadi = a.Nadi,
                         }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -154,7 +155,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             Weight = a.Weight,
                             BMI = a.BMI,
                             LingkarKepalaBayi = a.LingkarKepalaBayi,
-                            RanapId = a.RanapId
+                            RanapId = a.RanapId,
+                            Nadi = a.Nadi,
                         }).ToList();
 
             if (!data.Any())
@@ -241,6 +243,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     Weight = vm.Weight,
                     BMI = vm.BMI,
                     LingkarKepalaBayi = vm.LingkarKepalaBayi,
+                    Nadi = vm.Nadi,
                     //RanapId = vm.RanapId,
                     CreateBy = createBy,
                     CreateDateTime = DateTimeOffset.UtcNow
@@ -361,6 +364,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.Weight = vm.Weight;
                 data.BMI = vm.BMI;
                 data.LingkarKepalaBayi = vm.LingkarKepalaBayi;
+                data.Nadi = vm.Nadi;
+
                 data.UpdateBy = modifyBy;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
@@ -660,6 +665,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 Weight = a.Weight,
                                 BMI = a.BMI,
                                 LingkarKepalaBayi = a.LingkarKepalaBayi,
+                                Nadi = a.Nadi,
                                 RanapId = a.RanapId
                             };
 

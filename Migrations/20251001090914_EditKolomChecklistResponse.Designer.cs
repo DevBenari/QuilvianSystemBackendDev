@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -11,9 +12,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251001090914_EditKolomChecklistResponse")]
+    partial class EditKolomChecklistResponse
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -7025,9 +7027,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<decimal?>("LingkarKepalaBayi")
                         .HasColumnType("numeric");
 
-                    b.Property<decimal?>("Nadi")
-                        .HasColumnType("numeric");
-
                     b.Property<int?>("RR")
                         .HasColumnType("integer");
 
@@ -9043,143 +9042,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.HasKey("ObservasiCairanWSDId");
 
                     b.ToTable("ObservasiCairanWsd", "public");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.PengawasanHarian", b =>
-                {
-                    b.Property<Guid>("PengawasanHarianId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("AsupanMakanan")
-                        .HasColumnType("text");
-
-                    b.Property<decimal?>("Balance24H")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("BalanceShift")
-                        .HasColumnType("numeric");
-
-                    b.Property<Guid>("CreateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("DeleteBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("DeleteDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Diet")
-                        .HasColumnType("text");
-
-                    b.Property<decimal?>("GulaDarah")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("IntakeDarah")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("IntakeInfuse")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("IntakeNGT")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("IntakeObat")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("IntakeOral")
-                        .HasColumnType("numeric");
-
-                    b.Property<bool>("IsDelete")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool?>("IsDetailKompres")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool?>("IsIstirahat")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool?>("IsKompres")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool?>("IsLatihanOtot")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool?>("IsMusik")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool?>("IsPijatan")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool?>("IsRelaksasi")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool?>("IsTens")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool?>("IsTeraphyAktivitas")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Keterangan")
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("KunjunganId")
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal?>("LingkarPerut")
-                        .HasColumnType("numeric");
-
-                    b.Property<string>("MobilisasiPasien")
-                        .HasColumnType("text");
-
-                    b.Property<decimal?>("OutputFeses")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("OutputNGT")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("OutputUrin")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("OutputWL")
-                        .HasColumnType("numeric");
-
-                    b.Property<Guid?>("PainAssessmentId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("PasienId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("ResepId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("TglPengawasanHarian")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<decimal?>("TotalIntake")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("TotalOutput")
-                        .HasColumnType("numeric");
-
-                    b.Property<Guid>("UpdateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("UpdateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("VitalSignId")
-                        .HasColumnType("uuid");
-
-                    b.Property<TimeOnly?>("WaktuPengawasan")
-                        .HasColumnType("time without time zone");
-
-                    b.HasKey("PengawasanHarianId");
-
-                    b.ToTable("PengawasanHarians");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.PengkajianEliminasi", b =>
