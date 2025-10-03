@@ -466,7 +466,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.TtdPemberi,
                              a.StatusResume,
                              a.Keterangan,
-
+                             a.TglMasuk,
+                             a.TglKeluar,
                          });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
