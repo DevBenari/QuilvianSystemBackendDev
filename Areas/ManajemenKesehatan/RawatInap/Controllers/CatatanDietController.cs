@@ -335,6 +335,66 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             }
         }
 
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(Guid id)
+        {
+            try
+            {
+                // **Cek koneksi ke database**
+                if (!await _applicationDbContext.Database.CanConnectAsync())
+                {
+                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+                }
+
+                // **Ambil User ID dari JWT Claims**
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+                if (getUserActive == null)
+                {
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+                }
+                var userActiveId = getUserActive.UserActiveId;
+
+                // **Cari Data**
+                var data = await _applicationDbContext.CatatanDiets.FindAsync(id);
+                if (data == null)
+                {
+                    return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                // **Soft Delete (Tandai Data sebagai Terhapus)**
+                data.DeleteBy = userActiveId;
+                data.DeleteDateTime = DateTimeOffset.UtcNow;
+
+                data.IsDelete = true;
+
+                _applicationDbContext.CatatanDiets.Update(data);
+                int result = await _applicationDbContext.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    return Ok(new { message = "Data berhasil dihapus (soft delete) || 200 OK" });
+                }
+                else
+                {
+                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
+                }
+            }
+            catch (DbUpdateException dbEx)
+            {
+                return StatusCode(500, new { message = $"Gagal menghapus data: {dbEx.InnerException?.Message}" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
 
         [HttpGet("paged")]
         public async Task<IActionResult> Paged(
