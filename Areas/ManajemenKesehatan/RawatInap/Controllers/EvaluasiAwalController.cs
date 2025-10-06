@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using System.Linq;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
@@ -69,60 +70,110 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         [HttpGet]
         public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
         {
-            // Validasi agar page dan perPage minimal bernilai 1
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            // Query data
-            var query = (from a in _applicationDbContext.EvaluasiAwals
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false || a.IsDelete == null
-                         select new
-                         {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = u.FullName,
-                             a.EvaluasiAwalId,
-                             a.KunjunganId,
-                             a.PasienId,
-                             a.KekuatanKemampuan,
-                             a.RiwayatKesehatan,
-                             a.KesehatanMental,
-                             a.TersedianyaDukungan,
-                             a.FinancialEvaluasiAwal,
-                             a.AsuransiId,
-                             a.RiwayatObatAlternatif,
-                             a.RiwayatTrauma,
-                             a.HarapanHasil,
-                             a.AspekLegal,
-                             a.DischargePlanning,
-                             a.KebutuhanLain,
-                             a.TglEvaluasiAwal,
-                             a.Keterangan,
+            // ✅ Ambil data utama EvaluasiAwal + pembuat (UserActive)
+            var query = from a in _applicationDbContext.EvaluasiAwals
+                        join u in _applicationDbContext.UserActives
+                            on a.CreateBy equals u.UserActiveId into userJoin
+                        from u in userJoin.DefaultIfEmpty()
+                        where a.IsDelete == false || a.IsDelete == null
+                        orderby a.CreateDateTime descending
+                        select new
+                        {
+                            a.EvaluasiAwalId,
+                            a.KunjunganId,
+                            a.PasienId,
+                            a.KekuatanKemampuan,
+                            a.RiwayatKesehatan,
+                            a.KesehatanMental,
+                            a.TersedianyaDukungan,
+                            a.FinancialEvaluasiAwal,
+                            a.AsuransiId,
+                            a.RiwayatObatAlternatif,
+                            a.RiwayatTrauma,
+                            a.HarapanHasil,
+                            a.AspekLegal,
+                            a.DischargePlanning,
+                            a.KebutuhanLain,
+                            a.TglEvaluasiAwal,
+                            a.Keterangan,
+                            a.CreateBy,
+                            a.CreateDateTime,
+                            CreateByName = u.FullName
+                        };
 
-                         }).OrderByDescending(a => a.CreateDateTime);
-
-            // Hitung total data sebelum paginasi
-            var totalRows = query.Count();
+            // ✅ Hitung total data untuk paginasi
+            var totalRows = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
 
-            // Ambil data sesuai paging
-            var listdata = query
+            // ✅ Ambil data sesuai paging
+            var evaluasiAwalList = await query
                 .Skip((page - 1) * perPage)
                 .Take(perPage)
-                .ToList();
+                .ToListAsync();
 
-            if (!listdata.Any())
+            if (!evaluasiAwalList.Any())
             {
                 return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
             }
 
-            // Return hasil dengan paging info
+            // ✅ Ambil semua EvaluasiAwalId dalam halaman ini
+            var evaluasiAwalIds = evaluasiAwalList.Select(e => e.EvaluasiAwalId).ToList();
+
+            // ✅ Ambil detail evaluasi awal sekaligus
+            var detailList = await (from d in _applicationDbContext.EvaluasiAwalDetails
+                                    join c in _applicationDbContext.ChecklistItems
+                                        on d.ChecklistItemId equals c.ChecklistItemId into checklistJoin
+                                    from c in checklistJoin.DefaultIfEmpty()
+                                    where evaluasiAwalIds.Contains((Guid)d.EvaluasiAwalId)
+                                    select new
+                                    {
+                                        d.EvaluasiAwalId,
+                                        d.DetailEvaluasiAwalId,
+                                        d.ChecklistItemId,
+                                        ChecklistItemName = c != null ? c.NamaChecklistItem : null,
+                                        d.Keterangan,
+                                        d.TglPenyimpanan
+                                    }).ToListAsync();
+
+            // ✅ Gabungkan data utama dengan array detail
+            var result = evaluasiAwalList.Select(e => new
+            {
+                e.EvaluasiAwalId,
+                e.KunjunganId,
+                e.PasienId,
+                e.KekuatanKemampuan,
+                e.RiwayatKesehatan,
+                e.KesehatanMental,
+                e.TersedianyaDukungan,
+                e.FinancialEvaluasiAwal,
+                e.AsuransiId,
+                e.RiwayatObatAlternatif,
+                e.RiwayatTrauma,
+                e.HarapanHasil,
+                e.AspekLegal,
+                e.DischargePlanning,
+                e.KebutuhanLain,
+                e.TglEvaluasiAwal,
+                e.Keterangan,
+                e.CreateBy,
+                e.CreateDateTime,
+                e.CreateByName,
+
+                // 👇 Array detail
+                EvaluasiAwalDetails = detailList
+                    .Where(d => d.EvaluasiAwalId == e.EvaluasiAwalId)
+                    .OrderBy(d => d.TglPenyimpanan)
+                    .ToList()
+            }).ToList();
+
+            // ✅ Return hasil
             return Ok(new
             {
                 message = "Berhasil || 200 OK",
-                data = listdata,
+                data = result,
                 pagination = new
                 {
                     CurrentPage = page,
@@ -133,21 +184,94 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             });
         }
 
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.EvaluasiAwals.Find(id);
-            if (listdata == null)
+            // ✅ Ambil data utama EvaluasiAwal + pembuat
+            var data = await (from a in _applicationDbContext.EvaluasiAwals
+                              join u in _applicationDbContext.UserActives
+                                  on a.CreateBy equals u.UserActiveId into userJoin
+                              from u in userJoin.DefaultIfEmpty()
+                              where a.EvaluasiAwalId == id && (a.IsDelete == false || a.IsDelete == null)
+                              select new
+                              {
+                                  a.EvaluasiAwalId,
+                                  a.KunjunganId,
+                                  a.PasienId,
+                                  a.KekuatanKemampuan,
+                                  a.RiwayatKesehatan,
+                                  a.KesehatanMental,
+                                  a.TersedianyaDukungan,
+                                  a.FinancialEvaluasiAwal,
+                                  a.AsuransiId,
+                                  a.RiwayatObatAlternatif,
+                                  a.RiwayatTrauma,
+                                  a.HarapanHasil,
+                                  a.AspekLegal,
+                                  a.DischargePlanning,
+                                  a.KebutuhanLain,
+                                  a.TglEvaluasiAwal,
+                                  a.Keterangan,
+                                  a.CreateBy,
+                                  a.CreateDateTime,
+                                  CreateByName = u.FullName
+                              }).FirstOrDefaultAsync();
+
+            if (data == null)
             {
-                return NotFound(new { message = "Data tidak ditemukan." });
+                return NotFound(new { message = "Data Evaluasi Awal tidak ditemukan || 404 Not Found" });
             }
+
+            // ✅ Ambil detail EvaluasiAwal berdasarkan EvaluasiAwalId
+            var details = await (from d in _applicationDbContext.EvaluasiAwalDetails
+                                 join c in _applicationDbContext.ChecklistItems
+                                     on d.ChecklistItemId equals c.ChecklistItemId into checklistJoin
+                                 from c in checklistJoin.DefaultIfEmpty()
+                                 where d.EvaluasiAwalId == id
+                                 select new
+                                 {
+                                     d.DetailEvaluasiAwalId,
+                                     d.EvaluasiAwalId,
+                                     d.ChecklistItemId,
+                                     ChecklistItemName = c != null ? c.NamaChecklistItem : null,
+                                     d.Keterangan,
+                                     d.TglPenyimpanan
+                                 }).OrderBy(d => d.TglPenyimpanan).ToListAsync();
+
+            // ✅ Gabungkan hasil utama dan array details
+            var result = new
+            {
+                data.EvaluasiAwalId,
+                data.KunjunganId,
+                data.PasienId,
+                data.KekuatanKemampuan,
+                data.RiwayatKesehatan,
+                data.KesehatanMental,
+                data.TersedianyaDukungan,
+                data.FinancialEvaluasiAwal,
+                data.AsuransiId,
+                data.RiwayatObatAlternatif,
+                data.RiwayatTrauma,
+                data.HarapanHasil,
+                data.AspekLegal,
+                data.DischargePlanning,
+                data.KebutuhanLain,
+                data.TglEvaluasiAwal,
+                data.Keterangan,
+                data.CreateBy,
+                data.CreateDateTime,
+                data.CreateByName,
+                EvaluasiAwalDetails = details
+            };
 
             return Ok(new
             {
-                message = "Ditemukan || 200 OK",
-                data = listdata
+                message = "Berhasil || 200 OK",
+                data = result
             });
         }
+
 
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] EvaluasiAwalViewModel vm)
@@ -405,23 +529,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
         [HttpGet("paged")]
         public async Task<IActionResult> Paged(
-        int page = 1,
-        int perPage = 10,
-        string? search = null,
-        string? orderBy = "CreateDateTime",
-        string? sortDirection = "desc")
+            int page = 1,
+            int perPage = 10,
+            string? search = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc")
         {
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            // Query Header + Detail
+            // ✅ Query utama EvaluasiAwal + pembuat
             var query = from a in _applicationDbContext.EvaluasiAwals
                         join u in _applicationDbContext.UserActives
                             on a.CreateBy equals u.UserActiveId into ua
                         from u in ua.DefaultIfEmpty()
-
-                        join d in _applicationDbContext.EvaluasiAwalDetails
-                            on a.EvaluasiAwalId equals d.EvaluasiAwalId into detailGroup
                         where a.IsDelete == false || a.IsDelete == null
                         select new
                         {
@@ -444,28 +565,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                             a.TglEvaluasiAwal,
                             a.CreateDateTime,
                             a.CreateBy,
-                            CreateByName = u.FullName,
-                            Details = detailGroup.Select(d => new
-                            {
-                                d.DetailEvaluasiAwalId,
-                                d.ChecklistItemId,
-                                d.Keterangan,
-                                d.TglPenyimpanan
-                            })
+                            CreateByName = u.FullName
                         };
 
-            // Filter search sederhana
+            // ✅ Search (LIKE case-insensitive PostgreSQL)
             if (!string.IsNullOrWhiteSpace(search))
             {
                 search = $"%{search.ToLower()}%";
                 query = query.Where(e =>
                     EF.Functions.ILike(e.KekuatanKemampuan, search) ||
                     EF.Functions.ILike(e.RiwayatKesehatan, search) ||
-                    EF.Functions.ILike(e.KesehatanMental, search)
+                    EF.Functions.ILike(e.KesehatanMental, search) ||
+                    EF.Functions.ILike(e.Keterangan, search)
                 );
             }
 
-            // Sorting
+            // ✅ Sorting dinamis
             query = sortDirection?.ToLower() == "desc"
                 ? orderBy switch
                 {
@@ -480,28 +595,76 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     _ => query.OrderBy(u => u.CreateDateTime)
                 };
 
-            // Hitung total
+            // ✅ Total Rows & Paging
             var totalRows = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
 
-            // Ambil data paged
-            var rows = await query
+            var dataPaged = await query
                 .Skip((page - 1) * perPage)
                 .Take(perPage)
                 .ToListAsync();
 
-            if (!rows.Any() && page > totalPages)
+            if (!dataPaged.Any())
             {
-                return NotFound(new { message = "Page not found." });
+                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
             }
 
+            // ✅ Ambil semua EvaluasiAwalId dari hasil paged
+            var evaluasiIds = dataPaged.Select(a => a.EvaluasiAwalId).ToList();
+
+            // ✅ Ambil detail berdasarkan EvaluasiAwalId (sekali query)
+            var detailList = await (from d in _applicationDbContext.EvaluasiAwalDetails
+                                    join c in _applicationDbContext.ChecklistItems
+                                        on d.ChecklistItemId equals c.ChecklistItemId into checklistJoin
+                                    from c in checklistJoin.DefaultIfEmpty()
+                                    where evaluasiIds.Contains((Guid)d.EvaluasiAwalId)
+                                    select new
+                                    {
+                                        d.EvaluasiAwalId,
+                                        d.DetailEvaluasiAwalId,
+                                        d.ChecklistItemId,
+                                        ChecklistItemName = c != null ? c.NamaChecklistItem : null,
+                                        d.Keterangan,
+                                        d.TglPenyimpanan
+                                    }).ToListAsync();
+
+            // ✅ Gabungkan header dan detail (grouping di memory)
+            var result = dataPaged.Select(a => new
+            {
+                a.EvaluasiAwalId,
+                a.KunjunganId,
+                a.PasienId,
+                a.KekuatanKemampuan,
+                a.RiwayatKesehatan,
+                a.KesehatanMental,
+                a.TersedianyaDukungan,
+                a.FinancialEvaluasiAwal,
+                a.AsuransiId,
+                a.RiwayatObatAlternatif,
+                a.RiwayatTrauma,
+                a.HarapanHasil,
+                a.AspekLegal,
+                a.DischargePlanning,
+                a.KebutuhanLain,
+                a.Keterangan,
+                a.TglEvaluasiAwal,
+                a.CreateDateTime,
+                a.CreateBy,
+                a.CreateByName,
+                EvaluasiAwalDetails = detailList
+                    .Where(d => d.EvaluasiAwalId == a.EvaluasiAwalId)
+                    .OrderBy(d => d.TglPenyimpanan)
+                    .ToList()
+            });
+
+            // ✅ Response lengkap
             return Ok(new
             {
                 status = "success",
-                message = "Data retrieved successfully",
+                message = "Data retrieved successfully || 200 OK",
                 data = new
                 {
-                    Rows = rows,
+                    Rows = result,
                     TotalRows = totalRows,
                     CurrentPage = page,
                     PerPage = perPage,
@@ -509,6 +672,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 }
             });
         }
+
 
 
     }

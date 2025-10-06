@@ -356,19 +356,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
         [HttpGet("paged")]
         public IActionResult Paged(
-        int page = 1,
-        int perPage = 10,
-        Guid? praOperasiId = null,
-        string? orderBy = "CreateDateTime",
-        string? sortDirection = "desc",
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                        DateTime? startDate = null,
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                        DateTime? endDate = null,
-        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+            int page = 1,
+            int perPage = 10,
+            Guid? praOperasiId = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+    DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+    DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
 
-            // Query data
+            // ✅ Query utama
             var query = from a in _applicationDbContext.ChecklistResponses
                         join u in _applicationDbContext.UserActives
                             on a.CreateBy equals u.UserActiveId into userJoin
@@ -386,6 +388,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                             on u.TipeUserId equals t.TipeUserId into tipeJoin
                         from t in tipeJoin.DefaultIfEmpty()
 
+                            // ✅ Tambahkan join ke ChecklistItems
+                        join c in _applicationDbContext.ChecklistItems
+                            on a.ChecklistItemId equals c.ChecklistItemId into checklistJoin
+                        from c in checklistJoin.DefaultIfEmpty()
+
                         where a.IsDelete == false || a.IsDelete == null
                         orderby a.CreateDateTime descending
                         select new
@@ -397,6 +404,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                             // Checklist response
                             a.ChecklistResponseId,
                             a.ChecklistItemId,
+                            ChecklistItemName = c.NamaChecklistItem, // ✅ dari join
+                            KodeChecklistItem= c.KodeChecklistItem,
+                            Urutan = c.UrutanChecklistItem,
                             a.PraOperasiId,
                             a.RoleAnswers,
                             a.ChecklistAnswers,
@@ -416,22 +426,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                             TipeUserName = t.NamaTipeUser
                         };
 
-            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-            //if (!string.IsNullOrWhiteSpace(search))
-            //{
-            //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-            //    query = query.Where(u =>
-            //        EF.Functions.ILike(u.NamaDiskon, search)
-            //    );
-            //}
-
-            // filter berdasarkan checklist response Id
+            // ✅ Filter berdasarkan PraOperasiId
             if (praOperasiId.HasValue)
             {
                 query = query.Where(u => u.PraOperasiId == praOperasiId.Value);
             }
 
-            //// **Filter berdasarkan tanggal**
+            // ✅ Filter berdasarkan tanggal
             if (startDate.HasValue && endDate.HasValue)
             {
                 DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
@@ -442,7 +443,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     u.CreateDateTime <= endUtc);
             }
 
-            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
+            // ✅ Filter berdasarkan periode
             if (periode.HasValue)
             {
                 DateTime today = DateTime.UtcNow.Date;
@@ -455,26 +456,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     case PeriodeFilter.ThisWeek:
                         query = query.Where(u =>
                             u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date <= today
-                        );
+                            u.CreateDateTime.Date <= today);
                         break;
                     case PeriodeFilter.LastWeek:
                         query = query.Where(u =>
                             u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)
-                        );
+                            u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek));
                         break;
                     case PeriodeFilter.ThisMonth:
                         query = query.Where(u =>
                             u.CreateDateTime.Month == today.Month &&
-                            u.CreateDateTime.Year == today.Year
-                        );
+                            u.CreateDateTime.Year == today.Year);
                         break;
                     case PeriodeFilter.LastMonth:
                         query = query.Where(u =>
                             u.CreateDateTime.Month == today.Month - 1 &&
-                            u.CreateDateTime.Year == today.Year
-                        );
+                            u.CreateDateTime.Year == today.Year);
                         break;
                     case PeriodeFilter.ThisYear:
                         query = query.Where(u => u.CreateDateTime.Year == today.Year);
@@ -491,7 +488,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 }
             }
 
-            // Sorting Data dengan cara yang lebih aman
+            // ✅ Sorting aman
             query = sortDirection?.ToLower() == "desc"
                 ? orderBy switch
                 {
@@ -506,16 +503,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     _ => query.OrderBy(u => u.CreateDateTime)
                 };
 
-            // Pagination
+            // ✅ Paging
             var totalRows = query.Count();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
 
-            if (rows.Count == 0 && page > totalPages)
+            var rows = query.Skip((page - 1) * perPage)
+                            .Take(perPage)
+                            .ToList();
+
+            if (!rows.Any() && page > totalPages)
             {
                 return NotFound(new { message = "Page not found." });
             }
 
+            // ✅ Return data lengkap
             return Ok(new
             {
                 status = "success",
