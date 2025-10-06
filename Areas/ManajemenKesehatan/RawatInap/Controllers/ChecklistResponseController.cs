@@ -9,6 +9,7 @@ using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
@@ -357,7 +358,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         public IActionResult Paged(
         int page = 1,
         int perPage = 10,
-        string? search = null,
+        Guid? praOperasiId = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -423,6 +424,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             //        EF.Functions.ILike(u.NamaDiskon, search)
             //    );
             //}
+
+            // filter berdasarkan checklist response Id
+            if (praOperasiId.HasValue)
+            {
+                query = query.Where(u => u.PraOperasiId == praOperasiId.Value);
+            }
 
             //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)

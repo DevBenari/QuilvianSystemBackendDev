@@ -5,11 +5,15 @@ using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.ViewModels;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controllers
 {
@@ -71,54 +75,63 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            // Query CatatanDiet + UserActive + Details
-            var query = _applicationDbContext.CatatanDiets
-                .Where(a => a.IsDelete == false || a.IsDelete == null)
-                .Include(a => a.DetailIcd10) // navigation property → otomatis ambil details
-                .Join(_applicationDbContext.UserActives,
-                      a => a.CreateBy,
-                      u => u.UserActiveId,
-                      (a, u) => new
-                      {
-                          a.CatatanDietId,
-                          a.KunjunganId,
-                          a.PasienId,
-                          a.Diet,
-                          a.StatusDiet,
-                          a.Keterangan,
-                          a.TglCatatanDiet,
-                          a.CreateDateTime,
-                          a.CreateBy,
-                          CreateByName = u.FullName,
+            // Ambil semua CatatanDiet + UserActive
+            var catatanQuery = from cd in _applicationDbContext.CatatanDiets
+                               join u in _applicationDbContext.UserActives
+                                   on cd.CreateBy equals u.UserActiveId into userJoin
+                               from u in userJoin.DefaultIfEmpty()
+                               where cd.IsDelete == false || cd.IsDelete == null
+                               select new
+                               {
+                                   cd.CatatanDietId,
+                                   cd.KunjunganId,
+                                   cd.PasienId,
+                                   cd.Diet,
+                                   cd.StatusDiet,
+                                   cd.Keterangan,
+                                   cd.Diagnosa,
+                                   cd.TglCatatanDiet,
+                                   cd.CreateDateTime,
+                                   cd.CreateBy,
+                                   CreateByName = u.FullName
+                               };
 
-                          // mapping details
-                          DetailIcd10 = a.DetailIcd10.Select(d => new
-                          {
-                              d.CatatanDietDetailId,
-                              d.Icd10Id
-                          }).ToList()
-                      });
-
-            // Total
-            var totalRows = await query.CountAsync();
+            // Hitung total sebelum paging
+            var totalRows = await catatanQuery.CountAsync();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
 
-            // Data Paged
-            var listdata = await query
-                .OrderByDescending(a => a.CreateDateTime)
+            // Paging CatatanDiet
+            var catatanList = await catatanQuery
+                .OrderByDescending(c => c.CreateDateTime)
                 .Skip((page - 1) * perPage)
                 .Take(perPage)
                 .ToListAsync();
 
-            if (!listdata.Any())
+            if (!catatanList.Any())
             {
                 return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
             }
 
+            // Grouping di memory
+            var data = catatanList.Select(c => new
+            {
+                c.CatatanDietId,
+                c.KunjunganId,
+                c.PasienId,
+                c.Diet,
+                c.StatusDiet,
+                c.Keterangan,
+                c.TglCatatanDiet,
+                c.CreateDateTime,
+                c.CreateBy,
+                c.CreateByName,
+
+            });
+
             return Ok(new
             {
                 message = "Berhasil || 200 OK",
-                data = listdata,
+                data,
                 pagination = new
                 {
                     CurrentPage = page,
@@ -129,47 +142,59 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             });
         }
 
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var data = await _applicationDbContext.CatatanDiets
-                .Where(a => (a.IsDelete == false || a.IsDelete == null) && a.CatatanDietId == id)
-                .Include(a => a.DetailIcd10) // relasi ke detail
-                .Join(_applicationDbContext.UserActives,
-                      a => a.CreateBy,
-                      u => u.UserActiveId,
-                      (a, u) => new
-                      {
-                          a.CatatanDietId,
-                          a.KunjunganId,
-                          a.PasienId,
-                          a.Diet,
-                          a.StatusDiet,
-                          a.Keterangan,
-                          a.TglCatatanDiet,
-                          a.CreateDateTime,
-                          a.CreateBy,
-                          CreateByName = u.FullName,
+            // ✅ Ambil data utama CatatanDiet + UserActive
+            var catatan = await (from cd in _applicationDbContext.CatatanDiets
+                                 join u in _applicationDbContext.UserActives
+                                     on cd.CreateBy equals u.UserActiveId into userJoin
+                                 from u in userJoin.DefaultIfEmpty()
+                                 where cd.CatatanDietId == id && (cd.IsDelete == false || cd.IsDelete == null)
+                                 select new
+                                 {
+                                     cd.CatatanDietId,
+                                     cd.KunjunganId,
+                                     cd.PasienId,
+                                     cd.Diet,
+                                     cd.Diagnosa,
+                                     cd.StatusDiet,
+                                     cd.Keterangan,
+                                     cd.TglCatatanDiet,
+                                     cd.CreateDateTime,
+                                     cd.CreateBy,
+                                     CreateByName = u.FullName
+                                 }).FirstOrDefaultAsync();
 
-                          DetailIcd10 = a.DetailIcd10.Select(d => new
-                          {
-                              d.CatatanDietDetailId,
-                              d.Icd10Id
-                          }).ToList()
-                      })
-                .FirstOrDefaultAsync();
-
-            if (data == null)
+            if (catatan == null)
             {
-                return NotFound(new { message = "Data tidak ditemukan." });
+                return NotFound(new { message = "Data Catatan Diet tidak ditemukan. || 404 Not Found" });
             }
+
+
+            // ✅ Format response
+            var result = new
+            {
+                catatan.CatatanDietId,
+                catatan.KunjunganId,
+                catatan.PasienId,
+                catatan.Diet,
+                catatan.StatusDiet,
+                catatan.Keterangan,
+                catatan.TglCatatanDiet,
+                catatan.CreateDateTime,
+                catatan.CreateBy,
+                catatan.CreateByName,
+            };
 
             return Ok(new
             {
-                message = "Ditemukan || 200 OK",
-                data
+                message = "Berhasil || 200 OK",
+                data = result
             });
         }
+
 
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CatatanDietViewModel vm)
@@ -209,6 +234,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     PasienId = vm.PasienId,
                     Diet = vm.Diet,
                     StatusDiet = vm.StatusDiet,
+                    Diagnosa = vm.Diagnosa,
                     Keterangan = vm.Keterangan,
                     TglCatatanDiet = TryParseTanggalToUtc(vm.TglCatatanDiet),
                     CreateBy = userActiveId,
@@ -216,24 +242,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 };
 
                 _applicationDbContext.CatatanDiets.Add(data);
-
-                // ✅ Simpan Detail ICD10 jika ada
-                if (vm.DetailIcd10 != null && vm.DetailIcd10.Any())
-                {
-                    foreach (var detailVm in vm.DetailIcd10)
-                    {
-                        var detail = new CatatanDietDetail
-                        {
-                            CatatanDietDetailId = Guid.NewGuid(),
-                            CatatanDietId = catatanDietId,
-                            Icd10Id = detailVm.Icd10Id,
-                            CreateBy = userActiveId,
-                            CreateDateTime = DateTimeOffset.UtcNow
-                        };
-
-                        _applicationDbContext.CatatanDietDetails.Add(detail);
-                    }
-                }
 
                 int result = await _applicationDbContext.SaveChangesAsync();
 
@@ -287,7 +295,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                 // ✅ Cari data CatatanDiet yang akan diupdate
                 var data = await _applicationDbContext.CatatanDiets
-                    .Include(cd => cd.DetailIcd10) // include biar bisa hapus detail
                     .FirstOrDefaultAsync(cd => cd.CatatanDietId == id && (cd.IsDelete == false || cd.IsDelete == null));
 
                 if (data == null)
@@ -300,35 +307,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 data.PasienId = vm.PasienId;
                 data.Diet = vm.Diet;
                 data.StatusDiet = vm.StatusDiet;
+                data.Diagnosa = vm.Diagnosa;
                 data.Keterangan = vm.Keterangan;
                 data.TglCatatanDiet = TryParseTanggalToUtc(vm.TglCatatanDiet);
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
-
-                // ✅ Hapus detail lama
-                if (data.DetailIcd10 != null && data.DetailIcd10.Any())
-                {
-                    _applicationDbContext.CatatanDietDetails.RemoveRange(data.DetailIcd10);
-                }
-
-                // ✅ Tambahkan detail baru dari VM
-                if (vm.DetailIcd10 != null && vm.DetailIcd10.Any())
-                {
-                    foreach (var detailVm in vm.DetailIcd10)
-                    {
-                        var detail = new CatatanDietDetail
-                        {
-                            CatatanDietDetailId = Guid.NewGuid(),
-                            CatatanDietId = data.CatatanDietId,
-                            Icd10Id = detailVm.Icd10Id,
-                            CreateBy = userActiveId,
-                            CreateDateTime = DateTimeOffset.UtcNow
-                        };
-
-                        _applicationDbContext.CatatanDietDetails.Add(detail);
-                    }
-                }
 
                 int result = await _applicationDbContext.SaveChangesAsync();
 
@@ -354,96 +338,166 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
         [HttpGet("paged")]
         public async Task<IActionResult> Paged(
-        int page = 1,
-        int perPage = 10,
-        string? search = null,
-        string? orderBy = "CreateDateTime",
-        string? sortDirection = "desc")
+            int page = 1,
+            int perPage = 10,
+            string? search = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+            DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+            DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            // ✅ Query CatatanDiet + User + Detail
-            var query = _applicationDbContext.CatatanDiets
-                .Where(a => a.IsDelete == false || a.IsDelete == null)
-                .Include(a => a.DetailIcd10)
-                .Join(_applicationDbContext.UserActives,
-                    a => a.CreateBy,
-                    u => u.UserActiveId,
-                    (a, u) => new
-                    {
-                        a.CatatanDietId,
-                        a.KunjunganId,
-                        a.PasienId,
-                        a.Diet,
-                        a.StatusDiet,
-                        a.Keterangan,
-                        a.TglCatatanDiet,
-                        a.CreateDateTime,
-                        a.CreateBy,
-                        CreateByName = u.FullName,
-                        DetailIcd10 = a.DetailIcd10.Select(d => new
+            // 🔹 Query utama CatatanDiet + UserActive
+            var query = from cd in _applicationDbContext.CatatanDiets
+                        join u in _applicationDbContext.UserActives
+                            on cd.CreateBy equals u.UserActiveId into userJoin
+                        from u in userJoin.DefaultIfEmpty()
+                        where cd.IsDelete == false || cd.IsDelete == null
+                        select new
                         {
-                            d.CatatanDietDetailId,
-                            d.Icd10Id
-                        }).ToList()
-                    });
+                            cd.CatatanDietId,
+                            cd.KunjunganId,
+                            cd.PasienId,
+                            cd.Diet,
+                            cd.Diagnosa,
+                            cd.StatusDiet,
+                            cd.Keterangan,
+                            cd.TglCatatanDiet,
+                            cd.CreateDateTime,
+                            cd.CreateBy,
+                            CreateByName = u.FullName
+                        };
 
-            // ✅ Filter search
+            // 🔹 Filter pencarian umum
             if (!string.IsNullOrWhiteSpace(search))
             {
                 search = search.ToLower();
-                query = query.Where(x =>
-                    x.Diet.ToLower().Contains(search) ||
-                    x.StatusDiet.ToLower().Contains(search) ||
-                    (x.Keterangan != null && x.Keterangan.ToLower().Contains(search))
-                );
+                query = query.Where(cd =>
+                    EF.Functions.ILike(cd.Diet, $"%{search}%") ||
+                    EF.Functions.ILike(cd.StatusDiet, $"%{search}%") ||
+                    EF.Functions.ILike(cd.Keterangan, $"%{search}%") ||
+                    EF.Functions.ILike(cd.CreateByName, $"%{search}%"));
             }
 
-            // ✅ Sorting
+            // 🔹 Filter tanggal
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
+                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+
+                query = query.Where(cd =>
+                    cd.CreateDateTime >= startUtc && cd.CreateDateTime <= endUtc);
+            }
+
+            // 🔹 Filter periode (Today, ThisWeek, LastMonth, etc.)
+            if (periode.HasValue)
+            {
+                DateTime today = DateTime.UtcNow.Date;
+
+                switch (periode)
+                {
+                    case PeriodeFilter.Today:
+                        query = query.Where(u => u.CreateDateTime.Date == today);
+                        break;
+                    case PeriodeFilter.ThisWeek:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
+                            u.CreateDateTime.Date <= today);
+                        break;
+                    case PeriodeFilter.LastWeek:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
+                            u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek));
+                        break;
+                    case PeriodeFilter.ThisMonth:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Month == today.Month && u.CreateDateTime.Year == today.Year);
+                        break;
+                    case PeriodeFilter.LastMonth:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Month == today.AddMonths(-1).Month && u.CreateDateTime.Year == today.Year);
+                        break;
+                    case PeriodeFilter.ThisYear:
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
+                        break;
+                    case PeriodeFilter.LastYear:
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
+                        break;
+                    case PeriodeFilter.Last3Months:
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
+                        break;
+                    case PeriodeFilter.Last6Months:
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
+                        break;
+                }
+            }
+
+            // 🔹 Sorting dinamis
             query = sortDirection?.ToLower() == "desc"
                 ? orderBy switch
                 {
-                    "CreateDateTime" => query.OrderByDescending(x => x.CreateDateTime),
-                    "CreateByName" => query.OrderByDescending(x => x.CreateByName),
-                    "Diet" => query.OrderByDescending(x => x.Diet),
-                    _ => query.OrderByDescending(x => x.CreateDateTime)
+                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
+                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
+                    "Diet" => query.OrderByDescending(u => u.Diet),
+                    _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
-                    "CreateDateTime" => query.OrderBy(x => x.CreateDateTime),
-                    "CreateByName" => query.OrderBy(x => x.CreateByName),
-                    "Diet" => query.OrderBy(x => x.Diet),
-                    _ => query.OrderBy(x => x.CreateDateTime)
+                    "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
+                    "CreateByName" => query.OrderBy(u => u.CreateByName),
+                    "Diet" => query.OrderBy(u => u.Diet),
+                    _ => query.OrderBy(u => u.CreateDateTime)
                 };
 
-            // ✅ Paging
+            // 🔹 Hitung total sebelum pagination
             var totalRows = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
 
-            var rows = await query
+            // 🔹 Ambil data sesuai page
+            var catatanList = await query
                 .Skip((page - 1) * perPage)
                 .Take(perPage)
                 .ToListAsync();
 
-            if (!rows.Any())
-            {
+            if (!catatanList.Any())
                 return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
-            }
 
+
+            // 🔹 Gabungkan hasil (grouping di memory)
+            var data = catatanList.Select(cd => new
+            {
+                cd.CatatanDietId,
+                cd.KunjunganId,
+                cd.PasienId,
+                cd.Diet,
+                cd.StatusDiet,
+                cd.Keterangan,
+                cd.TglCatatanDiet,
+                cd.CreateDateTime,
+                cd.CreateBy,
+                cd.CreateByName,
+            });
+
+            // 🔹 Return hasil
             return Ok(new
             {
                 message = "Berhasil || 200 OK",
-                data = rows,
-                pagination = new
+                data = new
                 {
+                    Rows = data,
+                    TotalRows = totalRows,
                     CurrentPage = page,
                     PerPage = perPage,
-                    TotalRows = totalRows,
                     TotalPages = totalPages
                 }
             });
         }
+
 
 
     }

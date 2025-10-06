@@ -40,8 +40,6 @@
 
         //// File upload tanda tangan
         public IFormFile? FileTTDPerawatRuangan { get; set; }
-
-        //// File Penandaan Operasi
         public IFormFile? FilePenandaanOperasiBag1 { get; set; }
         public IFormFile? FilePenandaanOperasiBag2 { get; set; }
     }

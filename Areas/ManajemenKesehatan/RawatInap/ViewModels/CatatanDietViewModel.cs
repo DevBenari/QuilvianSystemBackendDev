@@ -9,7 +9,7 @@
         public string? StatusDiet { get; set; }   // Pasien Baru / Pasien Puasa / Perubahan Diet
         public string? Keterangan { get; set; }
         public string? TglCatatanDiet { get; set; }
+        public string? Diagnosa { get; set; }
 
-        public List<CatatanDietDetailsViewModel> DetailIcd10 { get; set; } = new();
     }
 }

@@ -230,7 +230,6 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<EvaluasiAwal> EvaluasiAwals { get; set; }
         public DbSet<EvaluasiAwalDetail> EvaluasiAwalDetails { get; set; }
         public DbSet<CatatanDiet> CatatanDiets { get; set; }
-        public DbSet<CatatanDietDetail> CatatanDietDetails { get; set; }
         public DbSet<TindakanHarian> TindakanHarians { get; set; }
         public DbSet<PengawasanHarian> PengawasanHarians { get; set; }
         #endregion
