@@ -67,10 +67,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              b.TglBooking,
                              b.KelasId,
                              b.DokterId,
-                             b.DetailIcdId,
+
                              b.Keterangan,
                              b.IsCito,
-                             b.LabId,
+                             b.DiagnosaAwal,
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -164,10 +164,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     TglBooking = vm.TglBooking ?? DateTime.UtcNow, // default ke tanggal saat ini jika null
                     KelasId = vm.KelasId,
                     DokterId = vm.DokterId,
-                    DetailIcdId = vm.DetailIcdId,
+                    DiagnosaAwal = vm.DiagnosaAwal,
                     Keterangan = vm.Keterangan,
                     IsCito = vm.IsCito ?? false,
-                    LabId = vm.LabId,
+
 
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow
@@ -241,11 +241,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 existingData.TglBooking = vm.TglBooking ?? existingData.TglBooking;
                 existingData.KelasId = vm.KelasId;
                 existingData.DokterId = vm.DokterId;
-                existingData.DetailIcdId = vm.DetailIcdId;
                 existingData.Keterangan = vm.Keterangan;
                 existingData.IsCito = vm.IsCito ?? existingData.IsCito;
-                existingData.LabId = vm.LabId;
-
+                existingData.DiagnosaAwal = vm.DiagnosaAwal;
                 existingData.UpdateBy = userActiveId;
                 existingData.UpdateDateTime = DateTimeOffset.UtcNow;
 
@@ -362,10 +360,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              b.TglBooking,
                              b.KelasId,
                              b.DokterId,
-                             b.DetailIcdId,
                              b.Keterangan,
                              b.IsCito,
-                             b.LabId,
+                             b.DiagnosaAwal
                          });
 
             //// **Filter berdasarkan tanggal**
