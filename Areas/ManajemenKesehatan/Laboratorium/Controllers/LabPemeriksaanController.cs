@@ -335,6 +335,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         int page = 1,
         int perPage = 10,
         Guid? KategoriPemeriksaanId = null,
+        Guid? Labid = null,
         string? search = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
@@ -353,6 +354,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                          join k in _applicationDbContext.LabKategoriPemeriksaans
                             on a.KategoriPemeriksaanId equals k.KategoriPemeriksaanId into kategoriGroup
                          from k in kategoriGroup.DefaultIfEmpty()
+
+                         join l in _applicationDbContext.Labs
+                         on k.LabId equals l.LabId into labGroup
+                         from l in labGroup.DefaultIfEmpty()
+
                          where a.IsDelete == false || a.IsDelete == null
                          select new
                          {
@@ -365,6 +371,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.KodePemeriksaan,
                              a.KategoriPemeriksaanId,
                              k.NamaKategori,
+                             l.LabId,
+                             l.NamaLab,
                              a.Keterangan,
                          });
 
@@ -373,7 +381,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             {
                 search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
-                    EF.Functions.ILike(u.NamaPemeriksaan, search)
+                    EF.Functions.ILike(u.NamaKategori, search)
                 );
             }
 
@@ -381,6 +389,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             if (KategoriPemeriksaanId.HasValue) { 
                 query = query.Where(u=>u.KategoriPemeriksaanId == KategoriPemeriksaanId);
             }
+
+            // filter berdasarkan KategoriPemeriksaanId
+            if (Labid.HasValue)
+            {
+                query = query.Where(u => u.LabId == Labid);
+            }
+
 
             //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
@@ -448,14 +463,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "NamaPemeriksaan" => query.OrderByDescending(u => u.NamaPemeriksaan),
+                    "NamaKategori" => query.OrderByDescending(u => u.NamaKategori),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
                     "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
                     "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    "NamaPemeriksaan" => query.OrderBy(u => u.NamaPemeriksaan),
+                    "NamaKategori" => query.OrderBy(u => u.NamaKategori),
                     _ => query.OrderBy(u => u.CreateDateTime)
                 };
 
