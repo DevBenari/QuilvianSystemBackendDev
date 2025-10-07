@@ -359,6 +359,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             int page = 1,
             int perPage = 10,
             Guid? praOperasiId = null,
+            Guid? checklistTemplateId = null,
+            Guid? checklistItemId = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -407,6 +409,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                             ChecklistItemName = c.NamaChecklistItem, // ✅ dari join
                             KodeChecklistItem= c.KodeChecklistItem,
                             Urutan = c.UrutanChecklistItem,
+                            ChecklistTemplateId = c.ChecklistTemplateId,
                             a.PraOperasiId,
                             a.RoleAnswers,
                             a.ChecklistAnswers,
@@ -431,6 +434,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             if (praOperasiId.HasValue)
             {
                 query = query.Where(u => u.PraOperasiId == praOperasiId.Value);
+            }
+
+            // ✅ Filter berdasarkan ChecklistItemId
+            if (checklistItemId.HasValue)
+            {
+                query = query.Where(u => u.ChecklistItemId == checklistItemId.Value);
+            }
+
+            // ✅ Filter berdasarkan Checklist Template
+            if (checklistTemplateId.HasValue)
+            {
+                query = query.Where(u => u.ChecklistTemplateId == checklistTemplateId.Value);
             }
 
             // ✅ Filter berdasarkan tanggal
