@@ -334,6 +334,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         public IActionResult Paged(
         int page = 1,
         int perPage = 10,
+        Guid? KategoriPemeriksaanId = null,
         string? search = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
@@ -348,6 +349,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             var query = (from a in _applicationDbContext.LabPemeriksaans
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
+
+                         join k in _applicationDbContext.LabKategoriPemeriksaans
+                            on a.KategoriPemeriksaanId equals k.KategoriPemeriksaanId into kategoriGroup
+                         from k in kategoriGroup.DefaultIfEmpty()
                          where a.IsDelete == false || a.IsDelete == null
                          select new
                          {
@@ -359,6 +364,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.HargaPemeriksaan,
                              a.KodePemeriksaan,
                              a.KategoriPemeriksaanId,
+                             k.NamaKategori,
                              a.Keterangan,
                          });
 
@@ -369,6 +375,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 query = query.Where(u =>
                     EF.Functions.ILike(u.NamaPemeriksaan, search)
                 );
+            }
+
+            // filter berdasarkan KategoriPemeriksaanId
+            if (KategoriPemeriksaanId.HasValue) { 
+                query = query.Where(u=>u.KategoriPemeriksaanId == KategoriPemeriksaanId);
             }
 
             //// **Filter berdasarkan tanggal**
