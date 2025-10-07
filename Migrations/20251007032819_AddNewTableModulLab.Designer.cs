@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -11,9 +12,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251007032819_AddNewTableModulLab")]
+    partial class AddNewTableModulLab
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -3103,9 +3105,6 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.Property<DateTimeOffset>("DeleteDateTime")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Diagnosa")
-                        .HasColumnType("text");
 
                     b.Property<bool>("IsDelete")
                         .HasColumnType("boolean");
@@ -6910,9 +6909,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<Guid?>("KelasId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("PemeriksaanLabId")
-                        .HasColumnType("uuid");
-
                     b.Property<decimal?>("TarifBahp")
                         .HasColumnType("numeric");
 
@@ -10032,19 +10028,10 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("KondisiPenerangan")
                         .HasColumnType("text");
 
-                    b.Property<Guid?>("KunjunganId")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("LetakKamarPasien")
                         .HasColumnType("text");
 
                     b.Property<string>("NamaWali")
-                        .HasColumnType("text");
-
-                    b.Property<Guid?>("PasienID")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("PemakaianWC")
                         .HasColumnType("text");
 
                     b.Property<string>("PerawatanYangDibantu")

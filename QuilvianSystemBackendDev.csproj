@@ -59,9 +59,6 @@
     <Folder Include="Areas\ManajemenKesehatan\Radiologi\Controllers\" />
     <Folder Include="Areas\ManajemenKesehatan\Radiologi\Models\" />
     <Folder Include="Areas\ManajemenKesehatan\Radiologi\ViewModels\" />
-    <Folder Include="Areas\ManajemenKesehatan\Laboratorium\Controllers\" />
-    <Folder Include="Areas\ManajemenKesehatan\Laboratorium\Models\" />
-    <Folder Include="Areas\ManajemenKesehatan\Laboratorium\ViewModels\" />
     <Folder Include="Areas\ManajemenKesehatan\Resep\Controllers\" />
     <Folder Include="Areas\ManajemenKesehatan\Resep\Models\" />
     <Folder Include="Areas\ManajemenKesehatan\Resep\ViewModels\" />

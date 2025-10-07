@@ -9,7 +9,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models
         public Guid DetResumePulangId { get; set; }   // Generate Otomatis
 
         public Guid? ResumePulangId { get; set; }      // Relasi dengan tabel ResumePulang
-
+        public Guid? PasienID { get; set; }
+        public Guid? KunjunganId { get; set; }
         public bool? Is65th { get; set; }
         public bool? IsPercobaanBunuhDiri { get; set; }
         public bool? IsKorbanKriminal { get; set; }
@@ -31,7 +32,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models
 
         public string? Keterangan { get; set; }
         public DateTime? TglDetailResumePulang { get; set; }
-
+        public string? PemakaianWC {  get; set; }
         public Guid? TTId { get; set; }                  // Perawat Id
 
         // Optional: Navigation Properties (jika pakai EF Core relasi)

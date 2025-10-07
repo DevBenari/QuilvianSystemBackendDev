@@ -12,6 +12,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
 using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.HRD.Pengajuan.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
 
 namespace QuilvianSystemBackendDev.Repositories
 {
@@ -248,5 +249,15 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<PraOperasi> PraOperasis { get; set; }
 
         #endregion
+
+        #region Laborat
+        public DbSet<Lab> Labs { get; set; }
+        public DbSet<LabKategoriPemeriksaan> LabKategoriPemeriksaans { get; set; }
+        public DbSet<LabPemeriksaan> LabPemeriksaans { get; set; }
+        public DbSet<LabBooking> LabBookings { get; set; }
+        public DbSet<LabBookingDetail> LabBookingDetails { get; set; }
+
+        #endregion
+
     }
 }

@@ -91,6 +91,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              CreateByName = u.FullName,
                              a.DetResumePulangId,
                              a.ResumePulangId,
+                             a.KunjunganId,
+                             a.PasienID,
                              a.Is65th,
                              a.IsPercobaanBunuhDiri,
                              a.IsKorbanKriminal,
@@ -110,6 +112,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.Keterangan,
                              a.TglDetailResumePulang,
                              a.TTId,
+                             a.PemakaianWC,
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -253,6 +256,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 {
                     DetResumePulangId = Guid.NewGuid(),
                     ResumePulangId = vm.ResumePulangId,
+                    PasienID = vm.PasienId,
+                    KunjunganId = vm.KunjunganId,
+                    PemakaianWC = vm.PemakaianWc,
                     Is65th = vm.Is65th,
                     IsPercobaanBunuhDiri = vm.IsPercobaanBunuhDiri,
                     IsKorbanKriminal = vm.IsKorbanKriminal,
@@ -386,6 +392,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 // ✅ UPDATE FIELD RESUME PULANG DETAIL
                 // ==================================================
                 data.ResumePulangId = vm.ResumePulangId;
+                data.KunjunganId = vm.KunjunganId;
+                data.PasienID = vm.KunjunganId;
+                data.PemakaianWC = vm.PemakaianWc;
                 data.Is65th = vm.Is65th;
                 data.IsPercobaanBunuhDiri = vm.IsPercobaanBunuhDiri;
                 data.IsKorbanKriminal = vm.IsKorbanKriminal;
@@ -452,6 +461,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              CreateByName = u.FullName,
                              a.DetResumePulangId,
                              a.ResumePulangId,
+                             a.KunjunganId,
+                             a.PasienID,
                              a.Is65th,
                              a.IsPercobaanBunuhDiri,
                              a.IsKorbanKriminal,
@@ -471,6 +482,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.Keterangan,
                              a.TglDetailResumePulang,
                              a.TTId,
+                             a.PemakaianWC,
                          });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**

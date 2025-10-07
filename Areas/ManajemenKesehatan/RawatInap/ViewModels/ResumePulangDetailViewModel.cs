@@ -3,7 +3,9 @@
     public class ResumePulangDetailViewModel
     {
         public Guid? ResumePulangId { get; set; }      // Relasi dengan tabel ResumePulang
-
+        public Guid? KunjunganId { get; set; }
+        public Guid? PasienId { get; set; }
+        public string? PemakaianWc {  get; set; }
         public bool? Is65th { get; set; }
         public bool? IsPercobaanBunuhDiri { get; set; }
         public bool? IsKorbanKriminal { get; set; }

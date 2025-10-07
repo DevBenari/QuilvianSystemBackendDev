@@ -70,6 +70,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.TarifLain,
                             a.TarifTotal,
                             a.KSO,
+                            a.PemeriksaanLabId
                         }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -183,6 +184,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     TarifLain = vm.TarifLain,
                     TarifTotal = total,
                     KSO = vm.KSO,
+                    PemeriksaanLabId = vm.PemeriksaanLabId,
 
                     // **User Activity**
                     CreateBy = userActiveId,
@@ -253,6 +255,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 // **Update Data**
                 data.TindakanId = vm.TindakanId;
                 data.KelasId = vm.KelasId;
+                data.PemeriksaanLabId = vm.PemeriksaanLabId;
                 data.TarifDokter = vm.TarifDokter;
                 data.TarifRs = vm.TarifRs;
                 data.TarifJp = vm.TarifJp;
