@@ -420,7 +420,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     query = query.Where(u =>
                         EF.Functions.ILike(u.NamaPemeriksaan, search) ||
                         EF.Functions.ILike(u.KodeLab, search) ||
-                        EF.Functions.ILike(u.KodeKategoriPemeriksaan, search)
+                        EF.Functions.ILike(u.KodeKategoriPemeriksaan, search) ||
+                        EF.Functions.ILike(u.KodePemeriksaan, search)
                     );
                 }
 

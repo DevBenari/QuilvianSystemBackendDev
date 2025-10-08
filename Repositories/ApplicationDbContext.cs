@@ -260,6 +260,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<SpecimenJenis> SpecimenJeniss { get; set; }
         public DbSet<SpecimenMethod> SpecimenMethods { get; set; }
         public DbSet<SpecimenPemeriksaan> SpecimenPemeriksaans { get; set; }
+        public DbSet<Darah> Darahs { get; set; }
         #endregion
 
     }
