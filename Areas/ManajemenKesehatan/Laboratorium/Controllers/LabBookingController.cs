@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Globalization;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
@@ -41,6 +42,30 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+        }
+        private DateTime? TryParseTanggalToUtc(string tanggal)
+        {
+            if (DateTime.TryParseExact(
+                    tanggal,
+                    "yyyy-MM-dd",
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out var parsedDate))
+            {
+                var now = DateTime.Now; // atau DateTime.UtcNow jika kamu mau jam UTC
+                var finalDateTime = new DateTime(
+                    parsedDate.Year,
+                    parsedDate.Month,
+                    parsedDate.Day,
+                    now.Hour,
+                    now.Minute,
+                    now.Second,
+                    DateTimeKind.Local
+                ); // atau Utc jika perlu
+
+                return finalDateTime.ToUniversalTime(); // simpan dalam UTC
+            }
+            return null;
         }
 
         [HttpGet]
@@ -179,7 +204,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 if (result > 0)
                 {
-                    return Created("", new { message = "Tambah Data Booking Lab Berhasil || 201 Created" });
+                    return Created("", new 
+                    { 
+                        message = "Tambah Data Booking Lab Berhasil || 201 Created",
+                        BookingLabId = data.BookingLabId,
+                    });
                 }
                 else
                 {

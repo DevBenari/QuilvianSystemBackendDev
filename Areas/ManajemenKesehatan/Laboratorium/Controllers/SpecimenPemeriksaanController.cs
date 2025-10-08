@@ -175,8 +175,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 string newKode = $"{kodeJenisSpecimen}ST{nextNumber:D3}";
 
                 // ✅ Cek duplikasi kode (harus unik)
-                bool isDuplicate = _applicationDbContext.SpecimenPemeriksaans
-                    .Any(t => t.KodeSpecimenTest.ToLower() == newKode.ToLower());
+                bool isDuplicate = await _applicationDbContext.SpecimenPemeriksaans
+                    .AnyAsync(t => t.KodeSpecimenTest.ToLower() == newKode.ToLower());
 
                 if (isDuplicate)
                 {
@@ -294,8 +294,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 }
 
                 // ✅ Cek duplikasi nama pemeriksaan (case-insensitive, selain ID ini)
-                bool isDuplicateNama = _applicationDbContext.SpecimenPemeriksaans
-                    .Any(t => t.PemeriksaanSpecimen.ToLower() == vm.PemeriksaanSpecimen.ToLower() && t.SpecimenPemeriksaanId != id);
+                bool isDuplicateNama = await _applicationDbContext.SpecimenPemeriksaans
+                    .AnyAsync(t => t.PemeriksaanSpecimen.ToLower() == vm.PemeriksaanSpecimen.ToLower() && t.SpecimenPemeriksaanId != id);
 
                 if (isDuplicateNama)
                 {

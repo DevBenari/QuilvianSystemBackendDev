@@ -145,8 +145,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 var userActiveId = getUserActive.UserActiveId;
 
                 //// **Cek Duplikasi**
-                bool isDuplicate = _applicationDbContext.Labs
-                                    .Any(c => c.KodeKategori.ToLower() == vm.KodeKategori.ToLower());
+                bool isDuplicate = await _applicationDbContext.Labs
+                                    .AnyAsync(c => c.KodeKategori.ToLower() == vm.KodeKategori.ToLower());
 
                 if (isDuplicate)
                 {
@@ -225,8 +225,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
-                bool isDuplicate = _applicationDbContext.Labs
-                    .Any(c => c.KodeKategori.ToLower() == vm.KodeKategori.ToLower());
+                bool isDuplicate = await _applicationDbContext.Labs
+                    .AnyAsync(c => c.KodeKategori.ToLower() == vm.KodeKategori.ToLower() 
+                    && c.LabId != id);
 
                 if (isDuplicate)
                 {

@@ -175,8 +175,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 string newKode = $"{prefix}{nextNumber:D2}";
 
                 //// **Cek Duplikasi**
-                bool isDuplicate = _applicationDbContext.SpecimenJeniss
-                                    .Any(c => c.NamaJenisSpecimen.ToLower() == vm.NamaJenisSpecimen.ToLower());
+                bool isDuplicate = await _applicationDbContext.SpecimenJeniss
+                                    .AnyAsync(c => c.NamaJenisSpecimen.ToLower() == vm.NamaJenisSpecimen.ToLower());
 
                 if (isDuplicate)
                 {
@@ -258,8 +258,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 }
 
                 // **Cek Duplikasi Nama (case-insensitive, selain ID ini)**
-                bool isDuplicateNama = _applicationDbContext.SpecimenJeniss
-                    .Any(c => c.NamaJenisSpecimen.ToLower() == vm.NamaJenisSpecimen.ToLower() && c.JenisSpecimenId != id);
+                bool isDuplicateNama = await _applicationDbContext.SpecimenJeniss
+                    .AnyAsync(c => c.NamaJenisSpecimen.ToLower() == vm.NamaJenisSpecimen.ToLower() && c.JenisSpecimenId != id);
 
                 if (isDuplicateNama)
                 {

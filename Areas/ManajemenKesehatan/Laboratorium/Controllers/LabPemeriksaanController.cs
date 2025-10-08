@@ -230,8 +230,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 }
 
                 // **Cek Duplikasi (Nama Pemeriksaan case-insensitive dan berbeda ID)**
-                bool isDuplicate = _applicationDbContext.LabPemeriksaans
-                    .Any(c => c.NamaPemeriksaan.ToLower() == vm.NamaPemeriksaan.ToLower() && c.PemeriksaanLabId != id);
+                bool isDuplicate = await _applicationDbContext.LabPemeriksaans
+                    .AnyAsync(c => c.NamaPemeriksaan.ToLower() == vm.NamaPemeriksaan.ToLower() && c.PemeriksaanLabId != id);
 
                 if (isDuplicate)
                 {
@@ -330,41 +330,41 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             }
         }
 
-        [HttpGet("FiterLabdanKategori")]
-        public IActionResult GetDropdowns()
-        {
-            try
-            {
-                // Ambil semua nama lab aktif
-                var labs = _applicationDbContext.Labs
-                    .Where(l => l.IsDelete == false || l.IsDelete == null)
-                    .Select(l => l.NamaLab)
-                    .OrderBy(l => l)
-                    .ToList();
+        //[HttpGet("FiterLabdanKategori")]
+        //public IActionResult GetDropdowns()
+        //{
+        //    try
+        //    {
+        //        // Ambil semua nama lab aktif
+        //        var labs = _applicationDbContext.Labs
+        //            .Where(l => l.IsDelete == false || l.IsDelete == null)
+        //            .Select(l => l.NamaLab)
+        //            .OrderBy(l => l)
+        //            .ToList();
 
-                // Ambil semua nama kategori aktif
-                var kategoris = _applicationDbContext.LabKategoriPemeriksaans
-                    .Where(k => k.IsDelete == false || k.IsDelete == null)
-                    .Select(k => k.NamaKategori)
-                    .OrderBy(k => k)
-                    .ToList();
+        //        // Ambil semua nama kategori aktif
+        //        var kategoris = _applicationDbContext.LabKategoriPemeriksaans
+        //            .Where(k => k.IsDelete == false || k.IsDelete == null)
+        //            .Select(k => k.NamaKategori)
+        //            .OrderBy(k => k)
+        //            .ToList();
 
-                return Ok(new
-                {
-                    status = "success",
-                    message = "Dropdown data retrieved successfully",
-                    data = new
-                    {
-                        Labs = labs,
-                        Kategoris = kategoris
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
-            }
-        }
+        //        return Ok(new
+        //        {
+        //            status = "success",
+        //            message = "Dropdown data retrieved successfully",
+        //            data = new
+        //            {
+        //                Labs = labs,
+        //                Kategoris = kategoris
+        //            }
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+        //    }
+        //}
 
 
         [HttpGet("paged")]
@@ -374,6 +374,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             Guid? KategoriPemeriksaanId = null,
             Guid? Labid = null,
             string? search = null,
+            string? kodePemeriksaan = null,
             string? namaLab = null,
             string? namaKategori = null,
             string? orderBy = "CreateDateTime",
@@ -420,9 +421,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     query = query.Where(u =>
                         EF.Functions.ILike(u.NamaPemeriksaan, search) ||
                         EF.Functions.ILike(u.KodeLab, search) ||
-                        EF.Functions.ILike(u.KodeKategoriPemeriksaan, search) ||
-                        EF.Functions.ILike(u.KodePemeriksaan, search) 
+                        EF.Functions.ILike(u.KodeKategoriPemeriksaan, search)
                     );
+                }
+
+                // 🔹 Filter berdasarkan dropdown kode pemeriksaan
+                if (!string.IsNullOrWhiteSpace(kodePemeriksaan))
+                {
+                    string pattern = $"%{kodePemeriksaan.ToLower()}%";
+                    query = query.Where(u => EF.Functions.ILike(u.KodePemeriksaan, pattern));
                 }
 
                 // 🔹 Filter berdasarkan dropdown Nama Lab

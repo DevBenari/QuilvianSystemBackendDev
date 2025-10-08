@@ -257,8 +257,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 }
 
                 // **Cek Duplikasi (case-insensitive)**
-                bool isDuplicate = _applicationDbContext.LabKategoriPemeriksaans
-                    .Any(c => c.NamaKategori.ToLower() == vm.NamaKategori.ToLower() && c.KategoriPemeriksaanId != id);
+                bool isDuplicate = await _applicationDbContext.LabKategoriPemeriksaans
+                    .AnyAsync(c => c.KodeKategori.ToLower() == vm.KodeKategori.ToLower()
+                    && c.KategoriPemeriksaanId != id);
 
                 if (isDuplicate)
                 {

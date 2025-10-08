@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Globalization;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
@@ -22,20 +23,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class SpecimenController : Controller
+    public class DarahPermintaanController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<SpecimenController> _logger;
+        private readonly ILogger<DarahPermintaanController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public SpecimenController(
+        public DarahPermintaanController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<SpecimenController> logger,
+            ILogger<DarahPermintaanController> logger,
             IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
@@ -44,7 +45,30 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
         }
+        private DateTime? TryParseTanggalToUtc(string tanggal)
+        {
+            if (DateTime.TryParseExact(
+                    tanggal,
+                    "yyyy-MM-dd",
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out var parsedDate))
+            {
+                var now = DateTime.Now; // atau DateTime.UtcNow jika kamu mau jam UTC
+                var finalDateTime = new DateTime(
+                    parsedDate.Year,
+                    parsedDate.Month,
+                    parsedDate.Day,
+                    now.Hour,
+                    now.Minute,
+                    now.Second,
+                    DateTimeKind.Local
+                ); // atau Utc jika perlu
 
+                return finalDateTime.ToUniversalTime(); // simpan dalam UTC
+            }
+            return null;
+        }
         [HttpGet]
         public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
         {
@@ -53,7 +77,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = (from a in _applicationDbContext.Specimens
+            var query = (from a in _applicationDbContext.DarahPermintaans
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
                          where a.IsDelete == false || a.IsDelete == null
@@ -62,9 +86,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
-                             a.SpecimenId,
-                             a.NamaSpecimen,
-                             a.KodeSpecimen,
+                             a.BankDarahId,
+                             a.KomponenDarahId,
+                             a.GolonganDarahId,
+                             a.JumlahKantong,
+                             a.Rhesus,
+                             a.TglPemesanan,
+                             a.WaktuPemesanan,
+                             a.TglDiperlukan,
+                             a.DokterBDRSId,
+                             a.DokterPerujukId,
                              a.Keterangan,
                          }).OrderByDescending(a => a.CreateDateTime);
 
@@ -101,7 +132,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.Specimens.Find(id);
+            var listdata = _applicationDbContext.DarahPermintaans.Find(id);
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -115,7 +146,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] SpecimenViewModel vm)
+        public async Task<IActionResult> Create([FromBody] DarahPermintaanViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -144,28 +175,35 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
-                //// **Cek Duplikasi**
-                bool isDuplicate = await _applicationDbContext.Specimens
-                                    .AnyAsync(c => c.KodeSpecimen.ToLower() == vm.KodeSpecimen.ToLower());
+                ////// **Cek Duplikasi**
+                //bool isDuplicate = await _applicationDbContext.Diskons
+                //                    .AnyAsync(c => c.NamaDiskon == vm.NamaDiskon);
 
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Nama benefit ini telah tersedia" });
-                }
+                //if (isDuplicate)
+                //{
+                //    return Conflict(new { message = "Nama benefit ini telah tersedia" });
+                //}
 
                 // **Buat Data Baru**
-                var data = new Specimen
+                var data = new DarahPermintaan
                 {
-                    SpecimenId = Guid.NewGuid(),
-                    NamaSpecimen = vm.NamaSpecimen,
-                    KodeSpecimen = vm.KodeSpecimen,
+                    BankDarahId = Guid.NewGuid(),
+                    KomponenDarahId = vm.KomponenDarahId,
+                    GolonganDarahId = vm.GolonganDarahId,
+                    JumlahKantong = vm.JumlahKantong,
+                    Rhesus = vm.Rhesus,
+                    TglPemesanan = TryParseTanggalToUtc(vm.TglPemesanan),
+                    WaktuPemesanan = vm.WaktuPemesanan,
+                    TglDiperlukan = TryParseTanggalToUtc(vm.TglDiperlukan),
+                    DokterPerujukId = vm.DokterPerujukId,
+                    DokterBDRSId = vm.DokterBDRSId,
                     Keterangan = vm.Keterangan,
+
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
-
                 // **Simpan ke Database**
-                _applicationDbContext.Specimens.Add(data);
+                _applicationDbContext.DarahPermintaans.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -188,7 +226,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] SpecimenViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] DarahPermintaanViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -198,7 +236,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             try
             {
                 // **Cek koneksi ke database**
-                if (!await _applicationDbContext.Database.CanConnectAsync())
+                if (!_applicationDbContext.Database.CanConnect())
                 {
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
                 }
@@ -210,39 +248,36 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var getUserActive = await _applicationDbContext.UserActives
-                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+                var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
                 if (getUserActive == null)
                 {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
-                // **Cari Data**
-                var data = await _applicationDbContext.Specimens.FindAsync(id);
+                // **Cari Data Lama**
+                var data = await _applicationDbContext.DarahPermintaans.FindAsync(id);
                 if (data == null)
                 {
-                    return NotFound(new { message = "Data tidak ditemukan." });
-                }
-
-                //// **Cek Duplikasi**
-                bool isDuplicate = await _applicationDbContext.Specimens
-                                    .AnyAsync(c => c.KodeSpecimen.ToLower() == vm.KodeSpecimen.ToLower() && c.SpecimenId != id);
-
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Nama benefit ini telah tersedia" });
+                    return NotFound(new { message = "Data permintaan darah tidak ditemukan." });
                 }
 
                 // **Update Data**
-                data.NamaSpecimen = vm.NamaSpecimen;
-                data.KodeSpecimen = vm.KodeSpecimen;
+                data.KomponenDarahId = vm.KomponenDarahId;
+                data.GolonganDarahId = vm.GolonganDarahId;
+                data.JumlahKantong = vm.JumlahKantong;
+                data.Rhesus = vm.Rhesus;
+                data.TglPemesanan = TryParseTanggalToUtc(vm.TglPemesanan);
+                data.WaktuPemesanan = vm.WaktuPemesanan;
+                data.TglDiperlukan = TryParseTanggalToUtc(vm.TglDiperlukan);
+                data.DokterPerujukId = vm.DokterPerujukId;
+                data.DokterBDRSId = vm.DokterBDRSId;
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.Specimens.Update(data);
+                _applicationDbContext.DarahPermintaans.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -251,12 +286,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 }
                 else
                 {
-                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
+                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui di database." });
                 }
             }
             catch (DbUpdateException dbEx)
             {
-                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+                return StatusCode(500, new { message = $"Gagal memperbarui data: {dbEx.InnerException?.Message}" });
             }
             catch (Exception ex)
             {
@@ -291,7 +326,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.Specimens.FindAsync(id);
+                var data = await _applicationDbContext.DarahPermintaans.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -303,7 +338,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 data.IsDelete = true;
 
-                _applicationDbContext.Specimens.Update(data);
+                _applicationDbContext.DarahPermintaans.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -324,7 +359,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
-
         [HttpGet("paged")]
         public IActionResult Paged(
         int page = 1,
@@ -340,7 +374,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         {
 
             // Query data
-            var query = (from a in _applicationDbContext.Specimens
+            var query = (from a in _applicationDbContext.DarahPermintaans
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
                          where a.IsDelete == false || a.IsDelete == null
@@ -349,20 +383,27 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
-                             a.SpecimenId,
-                             a.NamaSpecimen,
-                             a.KodeSpecimen,
+                             a.BankDarahId,
+                             a.KomponenDarahId,
+                             a.GolonganDarahId,
+                             a.JumlahKantong,
+                             a.Rhesus,
+                             a.TglPemesanan,
+                             a.WaktuPemesanan,
+                             a.TglDiperlukan,
+                             a.DokterBDRSId,
+                             a.DokterPerujukId,
                              a.Keterangan,
                          });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-                query = query.Where(u =>
-                    EF.Functions.ILike(u.NamaSpecimen, search)
-                );
-            }
+            //if (!string.IsNullOrWhiteSpace(search))
+            //{
+            //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+            //    query = query.Where(u =>
+            //        EF.Functions.ILike(u.NamaDiskon, search)
+            //    );
+            //}
 
             //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
@@ -430,14 +471,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "NamaSpecimen" => query.OrderByDescending(u => u.NamaSpecimen),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
                     "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
                     "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    "NamaSpecimen" => query.OrderBy(u => u.NamaSpecimen),
                     _ => query.OrderBy(u => u.CreateDateTime)
                 };
 
@@ -465,5 +504,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 }
             });
         }
+
+
     }
 }
