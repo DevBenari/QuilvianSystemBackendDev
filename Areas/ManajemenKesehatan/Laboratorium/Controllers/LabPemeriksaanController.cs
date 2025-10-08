@@ -421,20 +421,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         EF.Functions.ILike(u.NamaPemeriksaan, search) ||
                         EF.Functions.ILike(u.KodeLab, search) ||
                         EF.Functions.ILike(u.KodeKategoriPemeriksaan, search) ||
-                        EF.Functions.ILike(u.KodePemeriksaan, search)
+                        EF.Functions.ILike(u.KodePemeriksaan, search) 
                     );
                 }
 
                 // 🔹 Filter berdasarkan dropdown Nama Lab
                 if (!string.IsNullOrWhiteSpace(namaLab))
                 {
-                    query = query.Where(u => u.NamaLab.ToLower() == namaLab.ToLower());
+                    string pattern = $"%{namaLab.ToLower()}%";
+                    query = query.Where(u => EF.Functions.ILike(u.NamaLab, pattern));
                 }
 
                 // 🔹 Filter berdasarkan dropdown Nama Kategori
                 if (!string.IsNullOrWhiteSpace(namaKategori))
                 {
-                    query = query.Where(u => u.NamaKategori.ToLower() == namaKategori.ToLower());
+                    string pattern = $"%%{namaKategori.ToLower()}";
+                    query = query.Where(u=> EF.Functions.ILike(u.NamaKategori, pattern));
                 }
 
                 // 🔹 Filter berdasarkan KategoriPemeriksaanId
@@ -448,6 +450,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 {
                     query = query.Where(u => u.LabId == Labid);
                 }
+
 
                 // 🔹 Filter berdasarkan tanggal
                 if (startDate.HasValue && endDate.HasValue)
