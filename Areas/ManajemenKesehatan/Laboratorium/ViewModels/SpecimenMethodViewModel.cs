@@ -1,0 +1,9 @@
+﻿namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.ViewModels
+{
+    public class SpecimenMethodViewModel
+    {
+        public string? CaraPengambilanSpecimen { get; set; }
+        public Guid? SpecimenId { get; set; }
+        public string? Keterangan { get; set; }
+    }
+}

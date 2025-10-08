@@ -113,6 +113,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.TglDetailResumePulang,
                              a.TTId,
                              a.PemakaianWC,
+                             a.Status
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -277,6 +278,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     IsPerluBantuanKhusus = vm.IsPerluBantuanKhusus,
                     Keterangan = vm.Keterangan,
                     TglDetailResumePulang = vm.TglDetailResumePulang,
+                    Status = false,
                     TTId = ttdId,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow
@@ -434,6 +436,88 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+        [HttpPut("{id}/Status-DetailResumePulang")]
+        public async Task<IActionResult> UpdateIsFinished(Guid id, [FromBody] StatusPrioritasCitoRanapVM request)
+        {
+            var data = await _applicationDbContext.ResumePulangDetails.FindAsync(id);
+            if (data == null)
+                return NotFound(new { message = "Resep tidak ditemukan." });
+
+            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(EmailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var userId = user?.UserActiveId ?? Guid.Empty;
+
+            data.Status = request.Status;
+            data.UpdateDateTime = DateTimeOffset.UtcNow;
+            data.UpdateBy = userId;
+
+            await _applicationDbContext.SaveChangesAsync();
+
+            return Ok(new { message = "Status detail resume pulang berhasil diperbarui." });
+        }
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(Guid id)
+        {
+            try
+            {
+                // **Cek koneksi ke database**
+                if (!await _applicationDbContext.Database.CanConnectAsync())
+                {
+                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+                }
+
+                // **Ambil User ID dari JWT Claims**
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+                if (getUserActive == null)
+                {
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+                }
+                var userActiveId = getUserActive.UserActiveId;
+
+                // **Cari Data**
+                var data = await _applicationDbContext.ResumePulangDetails.FindAsync(id);
+                if (data == null)
+                {
+                    return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                // **Soft Delete (Tandai Data sebagai Terhapus)**
+                data.DeleteBy = userActiveId;
+                data.DeleteDateTime = DateTimeOffset.UtcNow;
+
+                data.IsDelete = true;
+
+                _applicationDbContext.ResumePulangDetails.Update(data);
+                int result = await _applicationDbContext.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    return Ok(new { message = "Data berhasil dihapus (soft delete) || 200 OK" });
+                }
+                else
+                {
+                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
+                }
+            }
+            catch (DbUpdateException dbEx)
+            {
+                return StatusCode(500, new { message = $"Gagal menghapus data: {dbEx.InnerException?.Message}" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
 
         [HttpGet("paged")]
         public IActionResult Paged(
@@ -483,6 +567,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.TglDetailResumePulang,
                              a.TTId,
                              a.PemakaianWC,
+                             a.Status
                          });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**

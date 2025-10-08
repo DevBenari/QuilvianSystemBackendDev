@@ -29,7 +29,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models
         public bool? IsDibantuAlatMedis { get; set; }    // Butuh alat medis setelah keluar RS
         public bool? IsAlatBantu { get; set; }           // Pasien menggunakan alat bantu setelah keluar RS
         public bool? IsPerluBantuanKhusus { get; set; }
-
+        public bool? Status {  get; set; }
         public string? Keterangan { get; set; }
         public DateTime? TglDetailResumePulang { get; set; }
         public string? PemakaianWC {  get; set; }

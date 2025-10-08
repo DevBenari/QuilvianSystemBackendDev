@@ -134,6 +134,7 @@ builder.Services.AddSwaggerGen(c =>
             Array.Empty<string>()
         }
     });
+
 });
 
 //builder.Services.AddSwaggerGen(c =>
