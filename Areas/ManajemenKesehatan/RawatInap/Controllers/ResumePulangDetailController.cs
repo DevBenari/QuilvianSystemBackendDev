@@ -278,7 +278,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     IsPerluBantuanKhusus = vm.IsPerluBantuanKhusus,
                     Keterangan = vm.Keterangan,
                     TglDetailResumePulang = vm.TglDetailResumePulang,
-                    Status = false,
+                    Status = vm.Status,
                     TTId = ttdId,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow

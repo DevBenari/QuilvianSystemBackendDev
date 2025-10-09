@@ -25,6 +25,7 @@
         public bool? IsAlatBantu { get; set; }           // Pasien menggunakan alat bantu setelah keluar RS
         public bool? IsPerluBantuanKhusus { get; set; }
         public string? Keterangan { get; set; }
+        public bool? Status {  get; set; }
         public DateTime? TglDetailResumePulang { get; set; }
 
         public Guid? TTId { get; set; }                  // Perawat Id

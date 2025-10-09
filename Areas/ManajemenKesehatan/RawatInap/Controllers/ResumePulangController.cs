@@ -117,7 +117,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.TglMasuk,
                              a.TglKeluar,
                              a.Keterangan,
-
+                             
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
