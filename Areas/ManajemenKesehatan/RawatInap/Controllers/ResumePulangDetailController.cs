@@ -414,6 +414,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 data.IsAlatBantu = vm.IsAlatBantu;
                 data.IsPerluBantuanKhusus = vm.IsPerluBantuanKhusus;
                 data.Keterangan = vm.Keterangan;
+                data.Status = vm.Status;
                 data.TglDetailResumePulang = vm.TglDetailResumePulang;
 
                 // Audit
