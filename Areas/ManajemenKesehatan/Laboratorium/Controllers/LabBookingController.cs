@@ -281,7 +281,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 if (result > 0)
                 {
-                    return Ok(new { message = "Update Data Booking Lab Berhasil || 200 OK" });
+                    return Ok(new 
+                    { 
+                        message = "Update Data Booking Lab Berhasil || 200 OK",
+                        BookingLabId = existingData.BookingLabId,
+                    });
                 }
                 else
                 {
