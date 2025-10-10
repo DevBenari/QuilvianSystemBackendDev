@@ -384,6 +384,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 if (string.IsNullOrEmpty(kodePoli))
                     return BadRequest(new { message = "Kode antrean poli tidak ditemukan untuk poliklinik ini!" });
 
+
                 // Cek apakah pasien sudah terdaftar (belum selesai) di hari ini
                 var today = DateTime.UtcNow.Date;
                 var isAlreadyRegistered = _applicationDbContext.Kunjungans.Any(k =>
