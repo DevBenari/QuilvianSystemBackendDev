@@ -3,7 +3,7 @@
     public class SpecimenMethodViewModel
     {
         public string? CaraPengambilanSpecimen { get; set; }
-        public Guid? SpecimenId { get; set; }
+        public Guid? SpecimenJenisId { get; set; }
         public string? Keterangan { get; set; }
     }
 }

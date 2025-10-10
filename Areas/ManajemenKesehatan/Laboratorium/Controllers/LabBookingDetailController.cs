@@ -79,7 +79,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              d.BahanNonGC,
                              d.BahanMicrobiologi,
                              d.MasaHaidTerakhir,
-                             d.Diagnosa
+                             d.Diagnosa,
+                             d.SpecimenJenisId,
+                             d.SpecimenMethodId,
+                             d.SpecimenTestId,
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -180,6 +183,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     BahanMicrobiologi = vm.BahanMicrobiologi,
                     MasaHaidTerakhir = vm.MasaHaidTerakhir,
                     Diagnosa = vm.Diagnosa,
+                    SpecimenTestId = vm.SpecimenTestId,
+                    SpecimenMethodId = vm.SpecimenMethodId,
+                    SpecimenJenisId = vm.SpecimenJenisId,
 
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
@@ -275,6 +281,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 existingData.BahanMicrobiologi = vm.BahanMicrobiologi;
                 existingData.MasaHaidTerakhir = vm.MasaHaidTerakhir;
                 existingData.Diagnosa = vm.Diagnosa;
+                existingData.SpecimenJenisId = vm.SpecimenJenisId;
+                existingData.SpecimenMethodId = vm.SpecimenMethodId;
+                existingData.SpecimenTestId = vm.SpecimenTestId;
 
                 existingData.UpdateBy = userActiveId;
                 existingData.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -402,7 +411,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              d.BahanNonGC,
                              d.BahanMicrobiologi,
                              d.MasaHaidTerakhir,
-                             d.Diagnosa
+                             d.Diagnosa,
+                             d.SpecimenJenisId,
+                             d.SpecimenMethodId,
+                             d.SpecimenTestId,
                          });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**

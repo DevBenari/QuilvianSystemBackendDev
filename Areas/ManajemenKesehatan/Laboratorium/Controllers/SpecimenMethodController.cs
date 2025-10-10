@@ -63,7 +63,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.SpecimenMethodId,
                              a.CaraPengambilanSpecimen,
                              a.KodeSpecimenMethod,
-                             a.SpecimenId,
+                             a.SpecimenJenisId,
                              a.Keterangan,
                          }).OrderByDescending(a => a.CreateDateTime);
 
@@ -144,15 +144,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 var userActiveId = getUserActive.UserActiveId;
 
                 // ✅ Ambil Kode Specimen dari tabel MasterSpecimen berdasarkan SpecimenId
-                var specimen = await _applicationDbContext.Specimens
-                    .FirstOrDefaultAsync(s => s.SpecimenId == vm.SpecimenId);
+                var specimen = await _applicationDbContext.SpecimenJeniss
+                    .FirstOrDefaultAsync(s => s.JenisSpecimenId == vm.SpecimenJenisId);
 
                 if (specimen == null)
                 {
                     return NotFound(new { message = "Specimen tidak ditemukan." });
                 }
 
-                string kodeSpecimen = specimen.KodeSpecimen.ToUpper();
+                string kodeSpecimen = specimen.KodeJenisSpecimen.ToUpper();
 
                 // ✅ Cari kode terakhir untuk Specimen yang sama
                 var lastKode = await _applicationDbContext.SpecimenMethods
@@ -188,7 +188,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     SpecimenMethodId = Guid.NewGuid(),
                     CaraPengambilanSpecimen = vm.CaraPengambilanSpecimen,
                     KodeSpecimenMethod = newKode,
-                    SpecimenId = vm.SpecimenId,
+                    SpecimenJenisId = vm.SpecimenJenisId,
                     Keterangan = vm.Keterangan,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow
@@ -258,18 +258,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 }
 
                 // ✅ Cek perubahan SpecimenId (kalau Specimen ganti → generate ulang kode)
-                bool specimenBerubah = existingData.SpecimenId != vm.SpecimenId;
+                bool specimenBerubah = existingData.SpecimenJenisId != vm.SpecimenJenisId;
 
                 // ✅ Ambil specimen baru (kalau berubah)
-                var specimen = await _applicationDbContext.Specimens
-                    .FirstOrDefaultAsync(s => s.SpecimenId == vm.SpecimenId);
+                var specimen = await _applicationDbContext.SpecimenJeniss
+                    .FirstOrDefaultAsync(s => s.JenisSpecimenId == vm.SpecimenJenisId);
 
                 if (specimen == null)
                 {
                     return NotFound(new { message = "Specimen tidak ditemukan." });
                 }
 
-                string kodeSpecimen = specimen.KodeSpecimen.ToUpper();
+                string kodeSpecimen = specimen.KodeJenisSpecimen.ToUpper();
 
                 // ⚙️ Generate kode baru hanya jika Specimen berubah
                 if (specimenBerubah)
@@ -303,7 +303,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 // ✅ Update data
                 existingData.CaraPengambilanSpecimen = vm.CaraPengambilanSpecimen;
-                existingData.SpecimenId = vm.SpecimenId;
+                existingData.SpecimenJenisId = vm.SpecimenJenisId;
                 existingData.Keterangan = vm.Keterangan;
                 existingData.UpdateBy = userActiveId;
                 existingData.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -417,7 +417,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                             a.SpecimenMethodId,
                             a.CaraPengambilanSpecimen,
                             a.KodeSpecimenMethod,
-                            a.SpecimenId,
+                            a.SpecimenJenisId,
                             a.Keterangan,
                         };
 
