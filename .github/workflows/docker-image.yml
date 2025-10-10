@@ -58,7 +58,6 @@ jobs:
 
           echo "Deployment completed!"
 
-
           # Kirim notifikasi ke Telegram setelah update
           curl -X POST "https://api.telegram.org/bot7630899059:AAFqAUGUB7I5V9VGKXbcmoWmbYWvrdmnje8/sendMessage" \
               -d chat_id=-1002437306112 \
