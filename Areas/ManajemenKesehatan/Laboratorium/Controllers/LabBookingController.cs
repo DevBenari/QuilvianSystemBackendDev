@@ -367,6 +367,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         public IActionResult Paged(
         int page = 1,
         int perPage = 10,
+        Guid? kunjunganid = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -397,6 +398,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              b.IsCito,
                              b.DiagnosaAwal
                          });
+
+            // filter berdasarkan kunjunganId
+            if (kunjunganid.HasValue)
+            {
+                query = query.Where(u=> u.KunjunganId == kunjunganid.Value);
+            }
 
             //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
