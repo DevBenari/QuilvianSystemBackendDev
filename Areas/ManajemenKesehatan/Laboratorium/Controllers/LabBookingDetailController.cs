@@ -376,6 +376,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         int page = 1,
         int perPage = 10,
         string? NamaLaboratorium = null,
+        Guid? kunjunganId = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -390,9 +391,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on d.CreateBy equals u.UserActiveId
 
+                         // join lab
                          join l in _applicationDbContext.Labs 
                          on d.LabId equals l.LabId into labGroup
                          from l in labGroup.DefaultIfEmpty()
+
+
+                         // join ke lab booking
+                         join b in _applicationDbContext.LabBookings
+                         on d.BookingLabId equals b.BookingLabId into labBookings
+                         from b in labBookings.DefaultIfEmpty()
 
                          where d.IsDelete == false || d.IsDelete == null
                          select new
@@ -403,6 +411,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              d.DetailBookingLabId,
                              d.BookingLabId,
                              d.PasienId,
+                             b.KunjunganId,
                              d.PemeriksaanLabId,
                              d.LabId,
                              l.NamaLab,
@@ -423,6 +432,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              d.SpecimenMethodId,
                              d.SpecimenTestId,
                          });
+
+            // filter kunjungan id
+            if (kunjunganId.HasValue )
+            {
+                query = query.Where(u=>u.KunjunganId == kunjunganId.Value);
+            }
 
             //**Filter berdasarkan search(Perbaikan agar bisa mencari 1 huruf)**
             if (!string.IsNullOrWhiteSpace(NamaLaboratorium))
