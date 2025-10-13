@@ -45,76 +45,199 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             _webHostEnvironment = webHostEnvironment;
         }
 
+
         [HttpGet]
         public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
         {
-            // Validasi agar page dan perPage minimal bernilai 1
-            if (page < 1) page = 1;
-            if (perPage < 1) perPage = 10;
-
-            // Query data
-            var query = (from a in _applicationDbContext.LabPemeriksaans
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false || a.IsDelete == null
-                         select new
-                         {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = u.FullName,
-                             a.PemeriksaanLabId,
-                             a.NamaPemeriksaan,
-                             a.HargaPemeriksaan,
-                             a.KodePemeriksaan,
-                             a.KategoriPemeriksaanId,
-                             a.Keterangan,
-                         }).OrderByDescending(a => a.CreateDateTime);
-
-            // Hitung total data sebelum paginasi
-            var totalRows = query.Count();
-            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-
-            // Ambil data sesuai paging
-            var listdata = query
-                .Skip((page - 1) * perPage)
-                .Take(perPage)
-                .ToList();
-
-            if (!listdata.Any())
+            try
             {
-                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
-            }
+                // 🔹 1️⃣ Ambil semua data utama (Lab Pemeriksaan + Kategori + Lab + User)
+                var mainData = await (
+                    from a in _applicationDbContext.LabPemeriksaans
+                    join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId into userGroup
+                    from u in userGroup.DefaultIfEmpty()
+                    join k in _applicationDbContext.LabKategoriPemeriksaans on a.KategoriPemeriksaanId equals k.KategoriPemeriksaanId into kategoriGroup
+                    from k in kategoriGroup.DefaultIfEmpty()
+                    join l in _applicationDbContext.Labs on k.LabId equals l.LabId into labGroup
+                    from l in labGroup.DefaultIfEmpty()
+                    where a.IsDelete == false || a.IsDelete == null
+                    select new
+                    {
+                        a.PemeriksaanLabId,
+                        a.NamaPemeriksaan,
+                        a.HargaPemeriksaan,
+                        a.KodePemeriksaan,
+                        a.Keterangan,
+                        a.CreateDateTime,
+                        a.CreateBy,
+                        CreateByName = u != null ? u.FullName : null,
+                        KategoriPemeriksaanId = a.KategoriPemeriksaanId,
+                        NamaKategori = k != null ? k.NamaKategori : null,
+                        KodeKategoriPemeriksaan = k != null ? k.KodeKategori : null,
+                        LabId = l != null ? l.LabId : (Guid?)null,
+                        NamaLab = l != null ? l.NamaLab : null,
+                        KodeLab = l != null ? l.KodeKategori : null
+                    }
+                ).OrderByDescending(x => x.CreateDateTime)
+                 .ToListAsync();
 
-            // Return hasil dengan paging info
-            return Ok(new
-            {
-                message = "Berhasil || 200 OK",
-                data = listdata,
-                pagination = new
+                if (!mainData.Any())
                 {
-                    CurrentPage = page,
-                    PerPage = perPage,
-                    TotalRows = totalRows,
-                    TotalPages = totalPages
+                    return NotFound(new { message = "Belum ada data Lab Pemeriksaan yang tersedia. || 404 Not Found" });
                 }
-            });
+
+                // 🔹 2️⃣ Ambil semua TarifKelas sekaligus (hanya satu query)
+                var allTarifKelas = await (
+                    from tk in _applicationDbContext.TarifKelass
+                    join kl in _applicationDbContext.Kelass on tk.KelasId equals kl.KelasId
+                    select new
+                    {
+                        tk.PemeriksaanLabId,
+                        tk.KelasId,
+                        tk.TarifKelasId,
+                        tk.TarifDokter,
+                        tk.TarifRs,
+                        tk.TarifJp,
+                        tk.TarifBahp,
+                        tk.TarifLain,
+                        tk.TarifTotal,
+                        tk.KSO,
+                        NamaKelas = kl.NamaKelas
+                    }
+                ).ToListAsync();
+
+                // 🔹 3️⃣ Gabungkan TarifKelas dengan Pemeriksaan berdasarkan PemeriksaanLabId
+                var result = mainData.Select(r => new
+                {
+                    r.PemeriksaanLabId,
+                    r.NamaPemeriksaan,
+                    r.HargaPemeriksaan,
+                    r.KodePemeriksaan,
+                    r.Keterangan,
+                    r.CreateDateTime,
+                    r.CreateBy,
+                    r.CreateByName,
+                    r.KategoriPemeriksaanId,
+                    r.NamaKategori,
+                    r.KodeKategoriPemeriksaan,
+                    r.LabId,
+                    r.NamaLab,
+                    r.KodeLab,
+
+                    // 🔹 Ambil semua tarif kelas yang cocok
+                    TarifKelas = allTarifKelas
+                        .Where(t => t.PemeriksaanLabId == r.PemeriksaanLabId)
+                        .ToList()
+                }).ToList();
+
+                // ✅ Return hasil akhir
+                return Ok(new
+                {
+                    status = "success",
+                    message = "Data retrieved successfully",
+                    total = result.Count,
+                    data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(Guid id)
+        public async Task<IActionResult> GetLabPemeriksaanById(Guid id)
         {
-            var listdata = _applicationDbContext.LabPemeriksaans.Find(id);
-            if (listdata == null)
+            try
             {
-                return NotFound(new { message = "Data tidak ditemukan." });
-            }
+                // 🔹 1️⃣ Ambil data utama pemeriksaan lab
+                var mainData = await (
+                    from a in _applicationDbContext.LabPemeriksaans
+                    join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId into userGroup
+                    from u in userGroup.DefaultIfEmpty()
+                    join k in _applicationDbContext.LabKategoriPemeriksaans on a.KategoriPemeriksaanId equals k.KategoriPemeriksaanId into kategoriGroup
+                    from k in kategoriGroup.DefaultIfEmpty()
+                    join l in _applicationDbContext.Labs on k.LabId equals l.LabId into labGroup
+                    from l in labGroup.DefaultIfEmpty()
+                    where a.PemeriksaanLabId == id && (a.IsDelete == false || a.IsDelete == null)
+                    select new
+                    {
+                        a.PemeriksaanLabId,
+                        a.NamaPemeriksaan,
+                        a.HargaPemeriksaan,
+                        a.KodePemeriksaan,
+                        a.Keterangan,
+                        a.CreateDateTime,
+                        a.CreateBy,
+                        CreateByName = u != null ? u.FullName : null,
+                        KategoriPemeriksaanId = a.KategoriPemeriksaanId,
+                        NamaKategori = k != null ? k.NamaKategori : null,
+                        KodeKategoriPemeriksaan = k != null ? k.KodeKategori : null,
+                        LabId = l != null ? l.LabId : (Guid?)null,
+                        NamaLab = l != null ? l.NamaLab : null,
+                        KodeLab = l != null ? l.KodeKategori : null
+                    }
+                ).FirstOrDefaultAsync();
 
-            return Ok(new
+                if (mainData == null)
+                {
+                    return NotFound(new { message = "Pemeriksaan Lab tidak ditemukan." });
+                }
+
+                // 🔹 2️⃣ Ambil semua tarif kelas terkait sekali query (tanpa N+1)
+                var tarifKelasList = await (
+                    from tk in _applicationDbContext.TarifKelass
+                    join kl in _applicationDbContext.Kelass on tk.KelasId equals kl.KelasId
+                    where tk.PemeriksaanLabId == id
+                    select new
+                    {
+                        tk.KelasId,
+                        tk.TarifKelasId,
+                        tk.TarifDokter,
+                        tk.TarifRs,
+                        tk.TarifJp,
+                        tk.TarifBahp,
+                        tk.TarifLain,
+                        tk.TarifTotal,
+                        tk.KSO,
+                        NamaKelas = kl.NamaKelas
+                    }
+                ).ToListAsync();
+
+                // 🔹 3️⃣ Gabungkan hasil ke satu objek
+                var result = new
+                {
+                    mainData.PemeriksaanLabId,
+                    mainData.NamaPemeriksaan,
+                    mainData.HargaPemeriksaan,
+                    mainData.KodePemeriksaan,
+                    mainData.Keterangan,
+                    mainData.CreateDateTime,
+                    mainData.CreateBy,
+                    mainData.CreateByName,
+                    mainData.KategoriPemeriksaanId,
+                    mainData.NamaKategori,
+                    mainData.KodeKategoriPemeriksaan,
+                    mainData.LabId,
+                    mainData.NamaLab,
+                    mainData.KodeLab,
+                    TarifKelas = tarifKelasList
+                };
+
+                // ✅ Return hasil
+                return Ok(new
+                {
+                    status = "success",
+                    message = "Data retrieved successfully",
+                    data = result
+                });
+            }
+            catch (Exception ex)
             {
-                message = "Ditemukan || 200 OK",
-                data = listdata
-            });
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
         }
+
 
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] LabPemeriksaaanViewModel vm)
@@ -368,19 +491,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
         [HttpGet("paged")]
         public async Task<IActionResult> Paged(
-    int page = 1,
-    int perPage = 10,
-    Guid? KategoriPemeriksaanId = null,
-    Guid? Labid = null,
-    string? search = null,
-    string? kodePemeriksaan = null,
-    string? namaLab = null,
-    string? namaKategori = null,
-    string? orderBy = "CreateDateTime",
-    string? sortDirection = "desc",
-    [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? startDate = null,
-    [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? endDate = null,
-    [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        int page = 1,
+        int perPage = 10,
+        Guid? KategoriPemeriksaanId = null,
+        Guid? Labid = null,
+        string? search = null,
+        string? kodePemeriksaan = null,
+        string? namaLab = null,
+        string? namaKategori = null,
+        string? orderBy = "CreateDateTime",
+        string? sortDirection = "desc",
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? startDate = null,
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? endDate = null,
+        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
             try
             {

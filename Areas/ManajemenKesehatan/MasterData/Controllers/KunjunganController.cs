@@ -187,7 +187,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg",
                         CreateByName = u.FullName,
 
-                        KelasId = kl.KelasId,
+                        KelasId = kl != null ? (Guid?)kl.KelasId : null,
                         JumlahJenisKunjungan = j.JumlahJenis,
                         BookingBedRanapId = bb != null ? (Guid?)bb.BookingBedRanapId : null,
                         KamarId = bb != null ? bb.KamarId : null,
@@ -399,7 +399,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg",
                          CreateByName = u.FullName,
 
-                         KelasId = kl.KelasId,
+                         KelasId = kl != null ? (Guid?)kl.KelasId : null,
                          BookingBedRanapId = bb != null ? (Guid?)bb.BookingBedRanapId : null,
                          KamarId = bb != null ? bb.KamarId : null,
                          KamarNama = k != null ? k.NamaKamar : null,
@@ -1312,7 +1312,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         CreateByName = u.FullName,
                         JumlahJenisKunjungan = j.JumlahJenis,
                         BookingBedRanapId = bb != null ? (Guid?)bb.BookingBedRanapId : null,
-                        KelasId = kl.KelasId,
+                        KelasId = kl != null ? (Guid?)kl.KelasId : null,
                         KamarId = bb != null ? bb.KamarId : null,
                         KamarNama = k != null ? k.NamaKamar : null,
                         LantaiKamar = k != null ? k.Lantai : null,
