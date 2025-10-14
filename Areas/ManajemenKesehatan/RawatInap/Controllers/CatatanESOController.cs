@@ -262,6 +262,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                 var userActiveId = getUserActive.UserActiveId;
 
+
                 // **Cek duplikasi**
                 bool isDuplicate = _applicationDbContext.CatatanESOs
                     .Any(c => c.KunjunganId == vm.KunjunganId && (c.RacikanId == vm.RacikanId || c.ObatId == vm.ObatId));
