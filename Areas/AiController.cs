@@ -24,13 +24,16 @@ public class AiController : ControllerBase
         string apiKey = _configuration["AiSettings:ApiKey"];
         string model = _configuration["AiSettings:Model"];
 
+        // Prompt template yang sudah di-hardcode
+        string fullPrompt = $"Saya memiliki diagnosis awal: {request.Prompt}. Tolong buatkan analisis medis lanjutan untuk diagnosis ini dalam format JSON yang terdiri dari: 1. diagnosis_banding (dengan alasan), 2. pemeriksaan_lanjutan, 3. terapi_awal, dan 4. alert_klinis (hal-hal yang perlu diwaspadai dari kondisi ini). Format JSON. Jangan gunakan markdown.";
+
         var requestBody = new
         {
             model = model,
             messages = new[]
             {
-            new { role = "user", content = request.Prompt }
-        }
+                new { role = "user", content = fullPrompt }
+            }
         };
 
         var jsonContent = new StringContent(
@@ -51,7 +54,6 @@ public class AiController : ControllerBase
             return StatusCode((int)response.StatusCode, responseContent);
         }
 
-        // Ambil string isi pesan dari GPT
         var contentString = JsonDocument.Parse(responseContent)
                             .RootElement
                             .GetProperty("choices")[0]
@@ -59,16 +61,15 @@ public class AiController : ControllerBase
                             .GetProperty("content")
                             .GetString();
 
-        // Bersihkan jika ada ```json ... ```
         string cleaned = contentString.Trim();
 
         if (cleaned.StartsWith("```json"))
         {
-            cleaned = cleaned.Substring(7); // Hapus ```json
+            cleaned = cleaned.Substring(7);
         }
         else if (cleaned.StartsWith("```"))
         {
-            cleaned = cleaned.Substring(3); // Hapus ```
+            cleaned = cleaned.Substring(3);
         }
 
         if (cleaned.EndsWith("```"))
@@ -76,21 +77,18 @@ public class AiController : ControllerBase
             cleaned = cleaned.Substring(0, cleaned.Length - 3);
         }
 
-        // Trim dan parse JSON hasilnya
         cleaned = cleaned.Trim();
 
         try
         {
             var json = JsonDocument.Parse(cleaned);
-            return Ok(json.RootElement); // return as raw JSON
+            return Ok(json.RootElement);
         }
         catch (JsonException ex)
         {
-            // Jika parsing gagal, kirim raw content
             return Ok(new { raw = cleaned, error = "Gagal parsing JSON", detail = ex.Message });
         }
     }
-
 
     public class PromptRequest
     {
