@@ -176,6 +176,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
 
 
         [HttpPost]
+        [Consumes("multipart/form-data")]
         [RequestSizeLimit(50_000_000)] // 50 MB
         [RequestFormLimits(MultipartBodyLengthLimit = 50_000_000)]
         public async Task<IActionResult> Create([FromForm] PraOperasiViewModel vm)
@@ -314,6 +315,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
 
 
         [HttpPut("{id}")]
+        [Consumes("multipart/form-data")]
+        [RequestSizeLimit(50_000_000)] // 50 MB
+        [RequestFormLimits(MultipartBodyLengthLimit = 50_000_000)]
         public async Task<IActionResult> Edit(Guid id, [FromForm] PraOperasiViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
