@@ -11,7 +11,7 @@
         public string? TglPemesanan { get; set; }        // Tanggal pemesanan
         public TimeOnly? WaktuPemesanan { get; set; }      // Waktu pemesanan
         public string? TglDiperlukan { get; set; }       // Tanggal darah diperlukan
-
+        public Guid? Petugas { get; set; } //petugas yg ambil darah
         public Guid? DokterPerujukId { get; set; }                // Dokter Perujuk
         public Guid? DokterBDRSId { get; set; }            // Dokter BDRS
         public string? Keterangan { get; set; }            // Catatan tambahan
