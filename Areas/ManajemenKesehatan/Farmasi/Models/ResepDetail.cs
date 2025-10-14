@@ -36,5 +36,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
         public DateTime? TglMulaiIteratur { get; set; }
         public decimal? JarakPenebusan { get; set; }
         public DateTime? MasaAktifIteratur { get; set; }
+        public bool? ObatPagiDiambil { get; set; }
+        public bool? ObatSiangDiambil { get; set; }
+        public bool? ObatMalamDiambil { get; set; }
     }
 }

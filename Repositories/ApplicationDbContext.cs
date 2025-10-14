@@ -247,6 +247,7 @@ namespace QuilvianSystemBackendDev.Repositories
         #region OperasiOK
 
         public DbSet<PraOperasi> PraOperasis { get; set; }
+        public DbSet<RuangBedahBooking> RuangBedahBookings { get; set; }
 
         #endregion
 

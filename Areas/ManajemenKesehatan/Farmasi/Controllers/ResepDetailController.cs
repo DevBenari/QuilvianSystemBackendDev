@@ -336,6 +336,90 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             return Ok(new { message = "Status StatusDiberikanPasien berhasil diperbarui." });
         }
 
+        [HttpPut("{id}/ObatPagi")]
+        public async Task<IActionResult> UpdateObatPagi(Guid id, [FromBody] StatusPengambilanObatViewModel request)
+        {
+            var data = await _applicationDbContext.DetailReseps.FindAsync(id);
+            if (data == null)
+                return NotFound(new { message = "Obat tidak ditemukan." });
+
+            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(EmailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var userId = user?.UserActiveId ?? Guid.Empty;
+
+            data.ObatPagiDiambil = request.Status;
+            data.UpdateDateTime = DateTimeOffset.UtcNow;
+            data.UpdateBy = userId;
+
+            await _applicationDbContext.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("Obat pagi telah diberikan", new
+            {
+                Action = "update",
+                DetailResepId = data.DetailResepId
+            });
+
+            return Ok(new { message = "Obat pagi telah diberikan." });
+        }
+
+        [HttpPut("{id}/ObatSiang")]
+        public async Task<IActionResult> UpdateObatSiang(Guid id, [FromBody] StatusPengambilanObatViewModel request)
+        {
+            var data = await _applicationDbContext.DetailReseps.FindAsync(id);
+            if (data == null)
+                return NotFound(new { message = "Obat tidak ditemukan." });
+
+            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(EmailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var userId = user?.UserActiveId ?? Guid.Empty;
+
+            data.ObatSiangDiambil = request.Status;
+            data.UpdateDateTime = DateTimeOffset.UtcNow;
+            data.UpdateBy = userId;
+
+            await _applicationDbContext.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("Obat siang telah diberikan", new
+            {
+                Action = "update",
+                DetailResepId = data.DetailResepId
+            });
+
+            return Ok(new { message = "Obat siang telah diberikan." });
+        }
+
+        [HttpPut("{id}/ObatMalam")]
+        public async Task<IActionResult> UpdateObatMalam(Guid id, [FromBody] StatusPengambilanObatViewModel request)
+        {
+            var data = await _applicationDbContext.DetailReseps.FindAsync(id);
+            if (data == null)
+                return NotFound(new { message = "Obat tidak ditemukan." });
+
+            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(EmailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var userId = user?.UserActiveId ?? Guid.Empty;
+
+            data.ObatMalamDiambil = request.Status;
+            data.UpdateDateTime = DateTimeOffset.UtcNow;
+            data.UpdateBy = userId;
+
+            await _applicationDbContext.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("Obat Malam telah diberikan", new
+            {
+                Action = "update",
+                DetailResepId = data.DetailResepId
+            });
+
+            return Ok(new { message = "Obat malam telah diberikan." });
+        }
+
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] ResepDetailViewModel vm)
         {
