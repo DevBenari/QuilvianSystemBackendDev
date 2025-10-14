@@ -31,19 +31,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
 
         private readonly ILogger<PraOperasiController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly string _uploadUrl;
+
 
         public PraOperasiController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ILogger<PraOperasiController> logger,
-            IWebHostEnvironment webHostEnvironment)
+            IWebHostEnvironment webHostEnvironment,
+            IConfiguration configuration)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+            _uploadUrl = configuration["FileStorage:UploadUrl"];
         }
 
         private DateTime? TryParseTanggalToUtc(string tanggal)
@@ -225,7 +229,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                 { new StringContent(folderTarget), "folderTarget" }
             };
 
-                    var response = await client.PostAsync("http://160.20.104.98:5050/upload", content);
+                    var response = await client.PostAsync(_uploadUrl, content);
                     if (!response.IsSuccessStatusCode)
                         throw new Exception($"Gagal upload {prefix} ke server Flask.");
 
@@ -374,7 +378,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                 { new StringContent(folderTarget), "folderTarget" }
             };
 
-                    var flaskResponse = await client.PostAsync("http://160.20.104.98:5050/upload", content);
+                    var flaskResponse = await client.PostAsync(_uploadUrl, content);
                     if (!flaskResponse.IsSuccessStatusCode)
                         throw new Exception($"Gagal upload {prefix} ke server Flask.");
 
@@ -520,7 +524,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                         { new StringContent(folderTarget), "folderTarget" }
                     };
 
-                    var flaskResponse = await client.PostAsync("http://160.20.104.98:5050/upload", content);
+                    var flaskResponse = await client.PostAsync(_uploadUrl, content);
                     if (!flaskResponse.IsSuccessStatusCode)
                         throw new Exception($"Gagal upload {prefix} ke server Flask.");
 
@@ -622,7 +626,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                         { new StringContent(folderTarget), "folderTarget" }
                     };
 
-                    var flaskResponse = await client.PostAsync("http://160.20.104.98:5050/upload", content);
+                    var flaskResponse = await client.PostAsync(_uploadUrl, content);
                     if (!flaskResponse.IsSuccessStatusCode)
                         throw new Exception($"Gagal upload {prefix} ke server Flask.");
 
@@ -713,7 +717,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                         { new StringContent(folderTarget), "folderTarget" }
                     };
 
-                    var flaskResponse = await client.PostAsync("http://160.20.104.98:5050/upload", content);
+                    var flaskResponse = await client.PostAsync(_uploadUrl, content);
                     if (!flaskResponse.IsSuccessStatusCode)
                         throw new Exception($"Gagal upload {prefix} ke server Flask.");
 
@@ -815,7 +819,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                         { new StringContent(folderTarget), "folderTarget" }
                     };
 
-                    var flaskResponse = await client.PostAsync("http://160.20.104.98:5050/upload", content);
+                    var flaskResponse = await client.PostAsync(_uploadUrl, content);
                     if (!flaskResponse.IsSuccessStatusCode)
                         throw new Exception($"Gagal upload {prefix} ke server Flask.");
 

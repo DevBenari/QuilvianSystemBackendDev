@@ -45,13 +45,16 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly ILogger<UserActiveController> _logger;
+        private readonly string _uploadUrl;
+
 
         public UserActiveController(
             ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             IWebHostEnvironment webHostEnvironment,
-            ILogger<UserActiveController> logger
+            ILogger<UserActiveController> logger,
+            IConfiguration configuration
             )
         {
             _applicationDbContext = context;
@@ -59,6 +62,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+            _uploadUrl = configuration["FileStorage:UploadUrl"];
         }
         private string GeneratePinPegawai(DateTime? tanggalLahir)
         {
@@ -496,7 +500,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                     { new StringContent(folder), "folderTarget" }
                 };
 
-                    await client.PostAsync("http://160.20.104.98:5050/upload", content);
+                    await client.PostAsync(_uploadUrl, content);
                 }
                 else
                 {
@@ -823,7 +827,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                         { new StringContent(data.FotoName ?? ""), "oldFileName" }
                     };
 
-                    var response = await client.PostAsync("http://160.20.104.98:5050/upload", content);
+                    var response = await client.PostAsync(_uploadUrl, content);
                     if (!response.IsSuccessStatusCode)
                     {
                         return StatusCode(500, new { message = "Gagal upload foto ke server Flask." });
@@ -1062,7 +1066,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                        { new StringContent(data.FotoName ?? ""), "oldFileName" }
                     };
 
-                    var response = await client.PostAsync("http://160.20.104.98:5050/upload", content);
+                    var response = await client.PostAsync(_uploadUrl, content);
                     if (!response.IsSuccessStatusCode)
                     {
                         return StatusCode(500, new { message = "Gagal upload foto ke server Flask." });

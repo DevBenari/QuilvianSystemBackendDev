@@ -31,14 +31,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
         private readonly ILogger<DokterController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly string _uploadUrl;
+
         public DokterController
             (ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ILogger<DokterController> logger,
-            IWebHostEnvironment webHostEnvironment
-
-
+            IWebHostEnvironment webHostEnvironment,
+            IConfiguration configuration
             )
         {
             _context = context;
@@ -46,6 +47,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+            _uploadUrl = configuration["FileStorage:UploadUrl"];
         }
 
         // GET: api/Dokter
@@ -410,7 +412,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     };
 
                     // Ganti IP di bawah dengan alamat Python Flask server Anda
-                    var flaskResponse = await client.PostAsync("http://160.20.104.98:5050/upload", content);
+                    var flaskResponse = await client.PostAsync(_uploadUrl, content);
 
                 }
                 else
@@ -614,7 +616,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         { new StringContent(oldFileName), "oldFileName" }
                     };
 
-                    var flaskResponse = await client.PostAsync("http://160.20.104.98:5050/upload", content);
+                    var flaskResponse = await client.PostAsync(_uploadUrl, content);
                     if (!flaskResponse.IsSuccessStatusCode)
                     {
                         return StatusCode(500, new { message = "Gagal upload foto ke server Flask." });

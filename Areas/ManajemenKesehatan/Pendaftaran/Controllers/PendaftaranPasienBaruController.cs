@@ -32,6 +32,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly string _uploadUrl;
 
         private readonly ILogger<PendaftaranPasienBaruController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
@@ -41,7 +42,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-
+            IConfiguration configuration,
             ILogger<PendaftaranPasienBaruController> logger,
             IWebHostEnvironment webHostEnvironment
         )
@@ -51,6 +52,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+            _uploadUrl = configuration["FileStorage:UploadUrl"];
         }
 
         private async Task<string> GenerateNoRekamMedisAsync()
@@ -562,7 +564,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     { new StringContent("QRCodePasienBaru"), "folderTarget" }
                 };
 
-                var flaskResponseQR = await clientQR.PostAsync("http://160.20.104.98:5050/upload", qrContent);
+                var flaskResponseQR = await clientQR.PostAsync(_uploadUrl, qrContent);
 
 
                 // Cek Duplikasi
@@ -626,7 +628,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     };
 
                     // Ganti IP di bawah dengan alamat Python Flask server Anda
-                    var flaskResponse = await client.PostAsync("http://160.20.104.98:5050/upload", content);
+                    var flaskResponse = await client.PostAsync(_uploadUrl, content);
                 }
                 else
                 {
@@ -856,7 +858,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         { new StringContent(oldFileName), "oldFileName" }
                     };
 
-                    var flaskResponse = await client.PostAsync("http://160.20.104.98:5050/upload", content);
+                    var flaskResponse = await client.PostAsync(_uploadUrl, content);
                     if (!flaskResponse.IsSuccessStatusCode)
                     {
                         return StatusCode(500, new { message = "Gagal upload foto ke server Flask." });
