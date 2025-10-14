@@ -96,6 +96,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.TglDiperlukan,
                              a.DokterBDRSId,
                              a.DokterPerujukId,
+                             a.Petugas,
                              a.Keterangan,
                          }).OrderByDescending(a => a.CreateDateTime);
 
@@ -197,6 +198,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     TglDiperlukan = TryParseTanggalToUtc(vm.TglDiperlukan),
                     DokterPerujukId = vm.DokterPerujukId,
                     DokterBDRSId = vm.DokterBDRSId,
+                    Petugas = vm.Petugas,
                     Keterangan = vm.Keterangan,
 
                     CreateBy = userActiveId,
@@ -272,6 +274,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 data.TglDiperlukan = TryParseTanggalToUtc(vm.TglDiperlukan);
                 data.DokterPerujukId = vm.DokterPerujukId;
                 data.DokterBDRSId = vm.DokterBDRSId;
+                data.Petugas = vm.Petugas;
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
@@ -393,6 +396,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.TglDiperlukan,
                              a.DokterBDRSId,
                              a.DokterPerujukId,
+                             a.Petugas,
                              a.Keterangan,
                          });
 
