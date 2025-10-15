@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using System.Threading.Tasks.Dataflow;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
@@ -7,6 +8,8 @@ using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
@@ -20,21 +23,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class SpecimenPemeriksaanController : Controller
+    public class SpecimenAsalController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<SpecimenPemeriksaanController> _logger;
+        private readonly ILogger<SpecimenAsalController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-
-        public SpecimenPemeriksaanController(
+        public SpecimenAsalController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<SpecimenPemeriksaanController> logger,
+            ILogger<SpecimenAsalController> logger,
             IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
@@ -52,19 +54,33 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = (from a in _applicationDbContext.SpecimenPemeriksaans
+            var query = (from a in _applicationDbContext.SpecimenAsals
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
+
+                         // join ke specimen jenis
+                         join j in _applicationDbContext.SpecimenJeniss
+                         on a.SpecimenAsalId equals j.AsalSpecimenId into spJenis
+                         from j in spJenis.DefaultIfEmpty()
+
+                         // join ke specimen method
+                         join m in _applicationDbContext.SpecimenMethods
+                         on a.SpecimenAsalId equals m.AsalSpecimenId into spMethod
+                         from m in spMethod.DefaultIfEmpty()
+
                          where a.IsDelete == false || a.IsDelete == null
                          select new
                          {
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
-                             a.SpecimenPemeriksaanId,
-                             a.PemeriksaanSpecimen,
-                             a.KodeSpecimenTest,
-                             a.JenisSpecimenId,
+                             a.SpecimenAsalId,
+                             a.AsalSpecimen,
+                             j.JenisSpecimenId,
+                             j.NamaJenisSpecimen,
+                             m.SpecimenMethodId,
+                             m.CaraPengambilanSpecimen,
+                             a.KodeAsalSpecimen,
                              a.Keterangan,
                          }).OrderByDescending(a => a.CreateDateTime);
 
@@ -101,21 +117,93 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.SpecimenPemeriksaans.Find(id);
-            if (listdata == null)
+            try
             {
-                return NotFound(new { message = "Data tidak ditemukan." });
-            }
+                // ✅ Cek koneksi database
+                if (!_applicationDbContext.Database.CanConnect())
+                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
 
-            return Ok(new
+                // ✅ Query utama TransferPasien
+                var data = await (from t in _applicationDbContext.TransferPasiens
+                                  join u in _applicationDbContext.UserActives
+                                      on t.CreateBy equals u.UserActiveId into userGroup
+                                  from u in userGroup.DefaultIfEmpty()
+
+                                      // join Dokter 1, 2, 3 (opsional)
+                                  join d1 in _applicationDbContext.UserActives
+                                      on t.DokterId1 equals d1.UserActiveId into dokter1Group
+                                  from d1 in dokter1Group.DefaultIfEmpty()
+
+                                  join d2 in _applicationDbContext.UserActives
+                                      on t.DokterId2 equals d2.UserActiveId into dokter2Group
+                                  from d2 in dokter2Group.DefaultIfEmpty()
+
+                                  join d3 in _applicationDbContext.UserActives
+                                      on t.DokterId3 equals d3.UserActiveId into dokter3Group
+                                  from d3 in dokter3Group.DefaultIfEmpty()
+
+                                  where (t.IsDelete == false || t.IsDelete == null)
+                                        && t.TransferPasienId == id
+                                  select new
+                                  {
+                                      t.TransferPasienId,
+                                      t.KunjunganId,
+                                      t.KamarId,
+                                      t.DiagnosaUtama,
+                                      t.DiagnosaSekunder,
+                                      DokterUtama = d1.FullName,
+                                      DokterPendamping = d2.FullName,
+                                      DokterTambahan = d3.FullName,
+                                      t.IndikasiRanap,
+                                      t.IsAlergic,
+                                      t.AlergicOf,
+                                      t.AlasanPindahPasien,
+                                      t.TglPindah,
+                                      t.PengawasanHarianId,
+                                      t.ObservasiCairanId,
+                                      t.IndikatorPengkajianId,
+                                      t.PemberianObatId,
+                                      t.TotalScoreAldrete,
+                                      t.TotalScoreSteward,
+                                      t.IsICU,
+                                      t.BarangDiserahkan,
+                                      t.IntervensiPerawat,
+                                      t.PlanningTindakan,
+
+                                      // 🔹 File Path TTD
+                                      t.TTDMenyerahkanId,
+                                      t.TTDMenyerahkanPath,
+                                      t.TTDMengetahuiId,
+                                      t.TTDMengetahuiPath,
+                                      t.TTDPenerimaId,
+                                      t.TTDPenerimaPath,
+
+                                      t.Keterangan,
+                                      t.CreateDateTime,
+                                      CreateByName = u.FullName
+                                  }).AsNoTracking()
+                                  .FirstOrDefaultAsync();
+
+                // ✅ Jika tidak ditemukan
+                if (data == null)
+                    return NotFound(new { message = $"Data Transfer Pasien dengan ID {id} tidak ditemukan. || 404 Not Found" });
+
+                // ✅ Return hasil
+                return Ok(new
+                {
+                    message = "Berhasil mengambil data Transfer Pasien || 200 OK",
+                    data
+                });
+            }
+            catch (Exception ex)
             {
-                message = "Ditemukan || 200 OK",
-                data = listdata
-            });
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
         }
 
+
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] SpecimenPemeriksaanViewModel vm)
+        public async Task<IActionResult> Create([FromBody] SpecimenAsalViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -124,13 +212,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
             try
             {
-                // ✅ Cek koneksi ke database
+                // **Cek koneksi ke database**
                 if (!_applicationDbContext.Database.CanConnect())
                 {
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
                 }
 
-                // ✅ Ambil User ID dari JWT
+                // **Ambil User ID dari JWT Claims**
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
                 {
@@ -144,67 +232,33 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
-                // ✅ Ambil KodeJenisSpecimen dari tabel MasterJenisSpecimen berdasarkan JenisSpecimenId
-                var jenisSpecimen = await _applicationDbContext.SpecimenJeniss
-                    .FirstOrDefaultAsync(j => j.JenisSpecimenId == vm.JenisSpecimenId);
-
-                if (jenisSpecimen == null)
-                {
-                    return NotFound(new { message = "Jenis specimen tidak ditemukan." });
-                }
-
-                string kodeJenisSpecimen = jenisSpecimen.KodeJenisSpecimen.ToUpper();
-
-                // ✅ Cari kode terakhir untuk jenis specimen yang sama
-                var lastKode = await _applicationDbContext.SpecimenPemeriksaans
-                    .Where(t => t.KodeSpecimenTest.StartsWith(kodeJenisSpecimen + "ST"))
-                    .OrderByDescending(t => t.KodeSpecimenTest)
-                    .Select(t => t.KodeSpecimenTest)
-                    .FirstOrDefaultAsync();
-
-                int nextNumber = 1;
-                if (!string.IsNullOrEmpty(lastKode))
-                {
-                    // Ambil angka di akhir dan increment
-                    string numberPart = new string(lastKode.SkipWhile(c => !char.IsDigit(c)).ToArray());
-                    if (int.TryParse(numberPart, out int lastNum))
-                        nextNumber = lastNum + 1;
-                }
-
-                // ✅ Format akhir contoh: RSBST001
-                string newKode = $"{kodeJenisSpecimen}ST{nextNumber:D3}";
-
-                // ✅ Cek duplikasi kode (harus unik)
-                bool isDuplicate = await _applicationDbContext.SpecimenPemeriksaans
-                    .AnyAsync(t => t.KodeSpecimenTest.ToLower() == newKode.ToLower());
+                //// **Cek Duplikasi**
+                bool isDuplicate = await _applicationDbContext.SpecimenAsals
+                                    .AnyAsync(c => c.KodeAsalSpecimen.ToLower() == vm.KodeAsalSpecimen.ToLower());
 
                 if (isDuplicate)
                 {
-                    return Conflict(new { message = "Kode Specimen Test sudah ada." });
+                    return Conflict(new { message = "Nama benefit ini telah tersedia" });
                 }
 
-                // ✅ Buat Data Baru
-                var data = new SpecimenPemeriksaan
+                // **Buat Data Baru**
+                var data = new SpecimenAsal
                 {
-                    SpecimenPemeriksaanId = Guid.NewGuid(),
-                    PemeriksaanSpecimen = vm.PemeriksaanSpecimen,
-                    KodeSpecimenTest = newKode,
-                    JenisSpecimenId = vm.JenisSpecimenId,
+                    SpecimenAsalId = Guid.NewGuid(),
+                    AsalSpecimen = vm.AsalSpecimen,
+                    KodeAsalSpecimen = vm.KodeAsalSpecimen,
                     Keterangan = vm.Keterangan,
                     CreateBy = userActiveId,
-                    CreateDateTime = DateTimeOffset.UtcNow
+                    CreateDateTime = DateTimeOffset.UtcNow,
                 };
 
-                _applicationDbContext.SpecimenPemeriksaans.Add(data);
+                // **Simpan ke Database**
+                _applicationDbContext.SpecimenAsals.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
                 {
-                    return Created("", new
-                    {
-                        message = "Tambah Data Specimen Test Berhasil || 201 Created",
-                        kodeBaru = newKode
-                    });
+                    return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
                 }
                 else
                 {
@@ -222,7 +276,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] SpecimenPemeriksaanViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] SpecimenAsalViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -231,99 +285,66 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
             try
             {
-                // ✅ Cek koneksi ke database
-                if (!_applicationDbContext.Database.CanConnect())
+                // **Cek koneksi ke database**
+                if (!await _applicationDbContext.Database.CanConnectAsync())
                 {
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
                 }
 
-                // ✅ Ambil User ID dari JWT
+                // **Ambil User ID dari JWT Claims**
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
                 if (getUserActive == null)
                 {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
-                // ✅ Cek apakah data ada
-                var existingData = await _applicationDbContext.SpecimenPemeriksaans.FindAsync(id);
-                if (existingData == null)
+                // **Cari Data**
+                var data = await _applicationDbContext.SpecimenAsals.FindAsync(id);
+                if (data == null)
                 {
-                    return NotFound(new { message = "Data Specimen Pemeriksaan tidak ditemukan." });
+                    return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
-                // ✅ Cek apakah JenisSpecimen berubah
-                bool isJenisSpecimenChanged = existingData.JenisSpecimenId != vm.JenisSpecimenId;
+                //// **Cek Duplikasi**
+                bool isDuplicate = await _applicationDbContext.SpecimenAsals
+                                    .AnyAsync(c => c.KodeAsalSpecimen.ToLower() == vm.KodeAsalSpecimen.ToLower() && c.SpecimenAsalId != id);
 
-                // ✅ Ambil KodeJenisSpecimen dari tabel MasterJenisSpecimen
-                var jenisSpecimen = await _applicationDbContext.SpecimenJeniss
-                    .FirstOrDefaultAsync(j => j.JenisSpecimenId == vm.JenisSpecimenId);
-
-                if (jenisSpecimen == null)
+                if (isDuplicate)
                 {
-                    return NotFound(new { message = "Jenis specimen tidak ditemukan." });
+                    return Conflict(new { message = "Nama benefit ini telah tersedia" });
                 }
 
-                string kodeJenisSpecimen = jenisSpecimen.KodeJenisSpecimen.ToUpper();
+                // **Update Data**
+                data.AsalSpecimen = vm.AsalSpecimen;
+                data.KodeAsalSpecimen = vm.KodeAsalSpecimen;
+                data.Keterangan = vm.Keterangan;
 
-                // ⚙️ Jika Jenis Specimen berubah → generate kode baru
-                if (isJenisSpecimenChanged)
-                {
-                    var lastKode = await _applicationDbContext.SpecimenPemeriksaans
-                        .Where(t => t.KodeSpecimenTest.StartsWith(kodeJenisSpecimen + "ST"))
-                        .OrderByDescending(t => t.KodeSpecimenTest)
-                        .Select(t => t.KodeSpecimenTest)
-                        .FirstOrDefaultAsync();
+                data.UpdateBy = userActiveId;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                    int nextNumber = 1;
-                    if (!string.IsNullOrEmpty(lastKode))
-                    {
-                        string numberPart = new string(lastKode.SkipWhile(c => !char.IsDigit(c)).ToArray());
-                        if (int.TryParse(numberPart, out int lastNum))
-                            nextNumber = lastNum + 1;
-                    }
-
-                    string newKode = $"{kodeJenisSpecimen}ST{nextNumber:D3}";
-                    existingData.KodeSpecimenTest = newKode;
-                }
-
-                // ✅ Cek duplikasi nama pemeriksaan (case-insensitive, selain ID ini)
-                bool isDuplicateNama = await _applicationDbContext.SpecimenPemeriksaans
-                    .AnyAsync(t => t.PemeriksaanSpecimen.ToLower() == vm.PemeriksaanSpecimen.ToLower() && t.SpecimenPemeriksaanId != id);
-
-                if (isDuplicateNama)
-                {
-                    return Conflict(new { message = "Nama pemeriksaan specimen ini sudah tersedia." });
-                }
-
-                // ✅ Update data
-                existingData.PemeriksaanSpecimen = vm.PemeriksaanSpecimen;
-                existingData.JenisSpecimenId = vm.JenisSpecimenId;
-                existingData.Keterangan = vm.Keterangan;
-                existingData.UpdateBy = userActiveId;
-                existingData.UpdateDateTime = DateTimeOffset.UtcNow;
-
-                _applicationDbContext.SpecimenPemeriksaans.Update(existingData);
+                _applicationDbContext.SpecimenAsals.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
                 {
-                    return Ok(new { message = "Update Data Specimen Pemeriksaan Berhasil || 200 OK" });
+                    return Ok(new { message = "Update Data Berhasil || 200 OK" });
                 }
                 else
                 {
-                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui di database." });
+                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
                 }
             }
             catch (DbUpdateException dbEx)
             {
-                return StatusCode(500, new { message = $"Gagal memperbarui data: {dbEx.InnerException?.Message}" });
+                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
             }
             catch (Exception ex)
             {
@@ -358,7 +379,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.SpecimenPemeriksaans.FindAsync(id);
+                var data = await _applicationDbContext.SpecimenAsals.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -370,7 +391,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 data.IsDelete = true;
 
-                _applicationDbContext.SpecimenPemeriksaans.Update(data);
+                _applicationDbContext.SpecimenAsals.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -396,6 +417,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         public IActionResult Paged(
         int page = 1,
         int perPage = 10,
+        string? search = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -406,30 +428,45 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         {
 
             // Query data
-            var query = (from a in _applicationDbContext.SpecimenPemeriksaans
+            // Query data
+            var query = (from a in _applicationDbContext.SpecimenAsals
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
+
+                         // join ke specimen jenis
+                         join j in _applicationDbContext.SpecimenJeniss
+                         on a.SpecimenAsalId equals j.AsalSpecimenId into spJenis
+                         from j in spJenis.DefaultIfEmpty()
+
+                             // join ke specimen method
+                         join m in _applicationDbContext.SpecimenMethods
+                         on a.SpecimenAsalId equals m.AsalSpecimenId into spMethod
+                         from m in spMethod.DefaultIfEmpty()
+
                          where a.IsDelete == false || a.IsDelete == null
                          select new
                          {
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
-                             a.SpecimenPemeriksaanId,
-                             a.PemeriksaanSpecimen,
-                             a.KodeSpecimenTest,
-                             a.JenisSpecimenId,
+                             a.SpecimenAsalId,
+                             a.AsalSpecimen,
+                             j.JenisSpecimenId,
+                             j.NamaJenisSpecimen,
+                             m.SpecimenMethodId,
+                             m.CaraPengambilanSpecimen,
+                             a.KodeAsalSpecimen,
                              a.Keterangan,
                          });
 
-            //// **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-            //if (!string.IsNullOrWhiteSpace(search))
-            //{
-            //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-            //    query = query.Where(u =>
-            //        EF.Functions.ILike(u.NamaDiskon, search)
-            //    );
-            //}
+            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+                query = query.Where(u =>
+                    EF.Functions.ILike(u.AsalSpecimen, search)
+                );
+            }
 
             //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
@@ -497,12 +534,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
+                    "AsalSpecimen" => query.OrderByDescending(u => u.AsalSpecimen),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
                     "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
                     "CreateByName" => query.OrderBy(u => u.CreateByName),
+                    "AsalSpecimen" => query.OrderBy(u => u.AsalSpecimen),
                     _ => query.OrderBy(u => u.CreateDateTime)
                 };
 

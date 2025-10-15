@@ -362,6 +362,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
         [HttpGet("paged")]
         public IActionResult Paged(
         int page = 1,

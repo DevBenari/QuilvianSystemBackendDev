@@ -8,7 +8,7 @@
         public Guid? LabId { get; set; } // Relasi ke tabel Lab
         public Guid? SpecimenJenisId { get; set; }
         public Guid? SpecimenMethodId { get; set; }
-        public Guid? SpecimenTestId { get; set; }
+        public Guid? AsalSpecimenId { get; set; }
         public string? KategoriPatologiAnatomi { get; set; } // Histological / Cytology / Non Gynae Cytology
         public string? JenisSpecimen { get; set; } // Biopsi / Operasi / Kerokan / Cairan Tubuh, dll
         public string? LokasiSpecimen { get; set; } // Lokasi pengambilan specimen

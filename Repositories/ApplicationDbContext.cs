@@ -233,6 +233,8 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<CatatanDiet> CatatanDiets { get; set; }
         public DbSet<TindakanHarian> TindakanHarians { get; set; }
         public DbSet<PengawasanHarian> PengawasanHarians { get; set; }
+        public DbSet<TransferPasien> TransferPasiens { get; set; }
+        public DbSet<TransferPasienDetail> TransferPasienDetails { get; set; }
         #endregion
 
         #region Farmasi
@@ -257,10 +259,9 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<LabPemeriksaan> LabPemeriksaans { get; set; }
         public DbSet<LabBooking> LabBookings { get; set; }
         public DbSet<LabBookingDetail> LabBookingDetails { get; set; }
-        public DbSet<Specimen> Specimens { get; set; }
+        public DbSet<SpecimenAsal> SpecimenAsals { get; set; }
         public DbSet<SpecimenJenis> SpecimenJeniss { get; set; }
         public DbSet<SpecimenMethod> SpecimenMethods { get; set; }
-        public DbSet<SpecimenPemeriksaan> SpecimenPemeriksaans { get; set; }
         public DbSet<Darah> Darahs { get; set; }
         public DbSet<DarahPermintaan> DarahPermintaans { get; set; }
         #endregion

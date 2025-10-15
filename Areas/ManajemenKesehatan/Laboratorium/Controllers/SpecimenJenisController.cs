@@ -65,7 +65,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.JenisSpecimenId,
                              a.NamaJenisSpecimen,
                              a.KodeJenisSpecimen,
-                             a.SpecimenId,
+                             a.AsalSpecimenId,
                              a.Keterangan,
                          }).OrderByDescending(a => a.CreateDateTime);
 
@@ -189,7 +189,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     JenisSpecimenId = Guid.NewGuid(),
                     NamaJenisSpecimen = vm.NamaJenisSpecimen,
                     KodeJenisSpecimen = newKode,
-                    SpecimenId = vm.SpecimenId,
+                    AsalSpecimenId = vm.AsalSpecimenId,
                     Keterangan = vm.Keterangan,
 
                     CreateBy = userActiveId,
@@ -299,7 +299,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 // **Update Data**
                 existingData.NamaJenisSpecimen = vm.NamaJenisSpecimen;
-                existingData.SpecimenId = vm.SpecimenId;
+                existingData.AsalSpecimenId = vm.AsalSpecimenId;
                 existingData.Keterangan = vm.Keterangan;
                 existingData.UpdateBy = userActiveId;
                 existingData.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -416,7 +416,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.JenisSpecimenId,
                              a.NamaJenisSpecimen,
                              a.KodeJenisSpecimen,
-                             a.SpecimenId,
+                             a.AsalSpecimenId,
                              a.Keterangan,
                          });
 

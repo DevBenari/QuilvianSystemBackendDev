@@ -56,6 +56,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             var query = (from d in _applicationDbContext.LabBookingDetails
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on d.CreateBy equals u.UserActiveId
+
+                         // join lab
+                         join l in _applicationDbContext.Labs
+                         on d.LabId equals l.LabId into labGroup
+                         from l in labGroup.DefaultIfEmpty()
+
+
+                             // join ke lab booking
+                         join b in _applicationDbContext.LabBookings
+                         on d.BookingLabId equals b.BookingLabId into labBookings
+                         from b in labBookings.DefaultIfEmpty()
+
+                             // joimn ke lab pemeriksaan
+                         join p in _applicationDbContext.LabPemeriksaans
+                         on d.PemeriksaanLabId equals p.PemeriksaanLabId into labPemeriksaans
+                         from p in labPemeriksaans.DefaultIfEmpty()
+
                          where d.IsDelete == false || d.IsDelete == null
                          select new
                          {
@@ -65,8 +82,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              d.DetailBookingLabId,
                              d.BookingLabId,
                              d.PasienId,
+                             b.KunjunganId,
                              d.PemeriksaanLabId,
+                             p.NamaPemeriksaan,
                              d.LabId,
+                             l.NamaLab,
                              d.KategoriPatologiAnatomi,
                              d.JenisSpecimen,
                              d.LokasiSpecimen,
@@ -82,7 +102,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              d.Diagnosa,
                              d.SpecimenJenisId,
                              d.SpecimenMethodId,
-                             d.SpecimenTestId,
+                             d.AsalSpecimenId,
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -118,18 +138,85 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.LabBookingDetails.Find(id);
-            if (listdata == null)
+            try
             {
-                return NotFound(new { message = "Data tidak ditemukan." });
-            }
+                // ✅ Cek koneksi ke database
+                if (!_applicationDbContext.Database.CanConnect())
+                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
 
-            return Ok(new
+                // ✅ Query data lengkap dengan join
+                var data = await (from d in _applicationDbContext.LabBookingDetails
+                                  join u in _applicationDbContext.UserActives
+                                    on d.CreateBy equals u.UserActiveId into userGroup
+                                  from u in userGroup.DefaultIfEmpty()
+
+                                      // join ke Lab
+                                  join l in _applicationDbContext.Labs
+                                    on d.LabId equals l.LabId into labGroup
+                                  from l in labGroup.DefaultIfEmpty()
+
+                                      // join ke LabBooking
+                                  join b in _applicationDbContext.LabBookings
+                                    on d.BookingLabId equals b.BookingLabId into bookingGroup
+                                  from b in bookingGroup.DefaultIfEmpty()
+
+                                      // join ke LabPemeriksaan
+                                  join p in _applicationDbContext.LabPemeriksaans
+                                    on d.PemeriksaanLabId equals p.PemeriksaanLabId into pemeriksaanGroup
+                                  from p in pemeriksaanGroup.DefaultIfEmpty()
+
+                                  where (d.IsDelete == false || d.IsDelete == null)
+                                        && d.DetailBookingLabId == id
+                                  select new
+                                  {
+                                      d.DetailBookingLabId,
+                                      d.BookingLabId,
+                                      d.PasienId,
+                                      b.KunjunganId,
+                                      d.PemeriksaanLabId,
+                                      NamaPemeriksaan = p.NamaPemeriksaan ?? "-",
+                                      d.LabId,
+                                      NamaLab = l.NamaLab ?? "-",
+                                      d.KategoriPatologiAnatomi,
+                                      d.JenisSpecimen,
+                                      d.LokasiSpecimen,
+                                      d.KeteranganKlinik,
+                                      d.PerkiraanPenyakit,
+                                      d.PenyakitSebelumnya,
+                                      d.PenggunaanFiksasi,
+                                      d.JenisPemeriksaanGC,
+                                      d.JenisGC,
+                                      d.BahanNonGC,
+                                      d.BahanMicrobiologi,
+                                      d.MasaHaidTerakhir,
+                                      d.Diagnosa,
+                                      d.SpecimenJenisId,
+                                      d.SpecimenMethodId,
+                                      d.AsalSpecimenId,
+                                      d.CreateBy,
+                                      CreateByName = u.FullName ?? "(Tidak diketahui)",
+                                      d.CreateDateTime
+                                  })
+                                  .FirstOrDefaultAsync();
+
+                // ✅ Cek apakah data ditemukan
+                if (data == null)
+                    return NotFound(new { message = $"Data dengan ID {id} tidak ditemukan." });
+
+                // ✅ Return sukses
+                return Ok(new
+                {
+                    status = "success",
+                    message = "Data retrieved successfully",
+                    data
+                });
+            }
+            catch (Exception ex)
             {
-                message = "Ditemukan || 200 OK",
-                data = listdata
-            });
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
         }
+
 
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] LabBookingDetailViewModel vm)
@@ -183,7 +270,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     BahanMicrobiologi = vm.BahanMicrobiologi,
                     MasaHaidTerakhir = vm.MasaHaidTerakhir,
                     Diagnosa = vm.Diagnosa,
-                    SpecimenTestId = vm.SpecimenTestId,
+                    AsalSpecimenId = vm.AsalSpecimenId,
                     SpecimenMethodId = vm.SpecimenMethodId,
                     SpecimenJenisId = vm.SpecimenJenisId,
 
@@ -283,7 +370,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 existingData.Diagnosa = vm.Diagnosa;
                 existingData.SpecimenJenisId = vm.SpecimenJenisId;
                 existingData.SpecimenMethodId = vm.SpecimenMethodId;
-                existingData.SpecimenTestId = vm.SpecimenTestId;
+                existingData.AsalSpecimenId = vm.AsalSpecimenId;
 
                 existingData.UpdateBy = userActiveId;
                 existingData.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -402,6 +489,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                          on d.BookingLabId equals b.BookingLabId into labBookings
                          from b in labBookings.DefaultIfEmpty()
 
+                         // joimn ke lab pemeriksaan
+                         join p in _applicationDbContext.LabPemeriksaans
+                         on d.PemeriksaanLabId equals p.PemeriksaanLabId into labPemeriksaans
+                         from p in labPemeriksaans.DefaultIfEmpty()
+
                          where d.IsDelete == false || d.IsDelete == null
                          select new
                          {
@@ -413,6 +505,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              d.PasienId,
                              b.KunjunganId,
                              d.PemeriksaanLabId,
+                             p.NamaPemeriksaan,
                              d.LabId,
                              l.NamaLab,
                              d.KategoriPatologiAnatomi,
@@ -430,7 +523,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              d.Diagnosa,
                              d.SpecimenJenisId,
                              d.SpecimenMethodId,
-                             d.SpecimenTestId,
+                             d.AsalSpecimenId,
                          });
 
             // filter kunjungan id

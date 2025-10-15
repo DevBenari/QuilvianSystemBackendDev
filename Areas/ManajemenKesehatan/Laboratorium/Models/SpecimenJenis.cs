@@ -9,7 +9,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public Guid JenisSpecimenId { get; set; } 
         public string? NamaJenisSpecimen { get; set; } 
         public string? KodeJenisSpecimen { get; set; } 
-        public Guid? SpecimenId { get; set; }
+        public Guid? AsalSpecimenId { get; set; }
         public string? Keterangan { get; set; }
     }
 }

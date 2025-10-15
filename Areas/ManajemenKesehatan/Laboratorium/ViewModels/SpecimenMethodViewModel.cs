@@ -5,5 +5,7 @@
         public string? CaraPengambilanSpecimen { get; set; }
         public Guid? SpecimenJenisId { get; set; }
         public string? Keterangan { get; set; }
+        public Guid? AsalSpecimenId { get; set; }
+
     }
 }

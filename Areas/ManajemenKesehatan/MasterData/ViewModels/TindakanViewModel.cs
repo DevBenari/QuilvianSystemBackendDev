@@ -7,6 +7,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
     {
         public string KodeTindakan { get; set; }
         public string NamaTindakan { get; set; }
+        public bool? IsRawatInap {  get; set; }
 
     }
 

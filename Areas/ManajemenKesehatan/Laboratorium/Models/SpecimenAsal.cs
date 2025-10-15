@@ -5,14 +5,14 @@ using QuilvianSystemBackendDev.Models;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
 {
-    [Table("MstSpecimen", Schema = "public")]
+    [Table("MstSpecimenAsal", Schema = "public")]
 
-    public class Specimen : UserActivity
+    public class SpecimenAsal : UserActivity
     {
         [Key]
-        public Guid SpecimenId { get; set; }
-        public string? NamaSpecimen { get; set; } 
-        public string? KodeSpecimen { get; set; }
+        public Guid SpecimenAsalId { get; set; }
+        public string? AsalSpecimen { get; set; } 
+        public string? KodeAsalSpecimen { get; set; }
         public string? Keterangan { get; set; }
     }
 }

@@ -15,5 +15,7 @@
         public Guid? DokterPerujukId { get; set; }                // Dokter Perujuk
         public Guid? DokterBDRSId { get; set; }            // Dokter BDRS
         public string? Keterangan { get; set; }            // Catatan tambahan
+        public Guid? PasienId { get; set; }
+        public Guid? KunjunganId { get; set; }
     }
 }
