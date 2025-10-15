@@ -5,8 +5,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
 {
     public class AsuransiViewModel
     {
-        public Guid? AsuransiId { get; set; }
-        public string? KodeAsuransi { get; set; }
+        //public Guid AsuransiId { get; set; }
+        //public string? KodeAsuransi { get; set; }
 
         // Informasi Asuransi
         public string? NamaAsuransi { get; set; }

@@ -10,7 +10,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
     public class Asuransi : UserActivity
     {
         [Key]
-        public Guid? AsuransiId { get; set; }
+        public Guid AsuransiId { get; set; }
         public string? KodeAsuransi { get; set; }
 
         // Informasi Asuransi
