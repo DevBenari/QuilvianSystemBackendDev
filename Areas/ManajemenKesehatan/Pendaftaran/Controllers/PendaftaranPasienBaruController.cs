@@ -568,8 +568,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
 
 
                 // Cek Duplikasi
-                var isDuplicate = _applicationDbContext.PendaftaranPasienBarus
-                    .Any(c => c.KodePasien == kodePasien && c.NoIdentitas == vm.NoIdentitas);
+                var isDuplicate = await _applicationDbContext.PendaftaranPasienBarus
+                    .AnyAsync(c =>c.NoIdentitas == vm.NoIdentitas);
 
                 if (isDuplicate)
                 {
@@ -644,7 +644,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     return BadRequest(new { message = "Format TanggalLahir tidak valid! Gunakan format yyyy-MM-dd." });
                 }
                 parsedDate = DateTime.SpecifyKind(parsedDate, DateTimeKind.Utc);
-
 
                 if (ModelState.IsValid)
                 {
