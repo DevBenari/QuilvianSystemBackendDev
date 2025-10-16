@@ -166,7 +166,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
 
                 //// **Cek Duplikasi**
                 bool isDuplicate = await _applicationDbContext.RuangBedahBookings
-                                    .AnyAsync(c => c.KunjunganId == vm.KunjunganId);
+                                    .AnyAsync(c => c.KunjunganId == vm.KunjunganId && c.IsDelete==false);
 
                 if (isDuplicate)
                 {

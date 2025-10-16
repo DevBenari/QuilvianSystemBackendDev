@@ -88,6 +88,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                             a.PengawasanHarianId,
                             a.KunjunganId,
                             a.PasienId,
+                            a.VitalSignId,
+                            a.PainAssesmentId,
+                            a.ResepId,
                             a.TglPengawasanHarian,
                             a.WaktuPengawasan,
                             a.IsRelaksasi,
@@ -157,8 +160,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     v.BMI,
                     v.LingkarKepalaBayi,
                     v.RanapId,
-                    v.Nadi
-                }).ToListAsync();
+                    v.Nadi,
+                    v.CreateDateTime,
+                }).OrderByDescending(v => v.CreateDateTime).ToListAsync();
 
             // ✅ Ambil PainAssessment
             var painAssessments = await _applicationDbContext.PainAssessments
@@ -200,8 +204,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     p.RanapId,
                     p.RPD,
                     p.RPS,
-                    p.CurrentMedication
-                }).ToListAsync();
+                    p.CurrentMedication,
+                    p.CreateDateTime,
+                }).OrderByDescending(p => p.CreateDateTime).ToListAsync();
 
             // ✅ Ambil Resep (utama)
             var resepList = await _applicationDbContext.Reseps
@@ -226,8 +231,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     r.IsLunas,
                     r.RanapId,
                     TanggalPembuatanResepFormatted = r.TanggalPembuatanResep.HasValue ?
-                                        r.TanggalPembuatanResep.Value.ToString("yyyy-MM-dd") : null
+                                        r.TanggalPembuatanResep.Value.ToString("yyyy-MM-dd") : null,
+                    r.CreateDateTime,
                 })
+                .OrderByDescending(r => r.CreateDateTime)
                 .ToListAsync();
 
             var resepIds = resepList.Select(r => r.ResepId).ToList();
@@ -305,6 +312,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 p.PengawasanHarianId,
                 p.KunjunganId,
                 p.PasienId,
+                p.PainAssesmentId,
+                p.VitalSignId,
+                p.ResepId,
                 p.TglPengawasanHarian,
                 p.WaktuPengawasan,
                 p.IsRelaksasi,
@@ -413,6 +423,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                                         a.PengawasanHarianId,
                                         a.KunjunganId,
                                         a.PasienId,
+                                        a.VitalSignId,
+                                        a.PainAssesmentId,
+                                        a.ResepId,
                                         a.TglPengawasanHarian,
                                         a.WaktuPengawasan,
                                         a.IsRelaksasi,
@@ -473,8 +486,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     v.BMI,
                     v.LingkarKepalaBayi,
                     v.RanapId,
-                    v.Nadi
-                }).ToListAsync();
+                    v.Nadi,
+                    v.CreateDateTime,
+                }).OrderByDescending(v => v.CreateDateTime).ToListAsync();
 
             // ✅ PainAssessments
             var painAssessments = await _applicationDbContext.PainAssessments
@@ -515,8 +529,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     p.RanapId,
                     p.RPD,
                     p.RPS,
-                    p.CurrentMedication
-                }).ToListAsync();
+                    p.CurrentMedication,
+                    p.CreateDateTime
+                }).OrderByDescending(p => p.CreateDateTime).ToListAsync();
 
             // ✅ Resep
             var resepList = await _applicationDbContext.Reseps
@@ -541,8 +556,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     r.IsLunas,
                     r.RanapId,
                     TanggalPembuatanResepFormatted = r.TanggalPembuatanResep.HasValue ?
-                                        r.TanggalPembuatanResep.Value.ToString("yyyy-MM-dd") : null
+                                        r.TanggalPembuatanResep.Value.ToString("yyyy-MM-dd") : null,
+                    r.CreateDateTime,
                 })
+                .OrderByDescending(r => r.CreateDateTime)
                 .ToListAsync();
 
             var resepIds = resepList.Select(r => r.ResepId).ToList();
@@ -616,6 +633,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 pengawasan.PengawasanHarianId,
                 pengawasan.KunjunganId,
                 pengawasan.PasienId,
+                pengawasan.PainAssesmentId,
+                pengawasan.VitalSignId,
+                pengawasan.ResepId,
                 pengawasan.TglPengawasanHarian,
                 pengawasan.WaktuPengawasan,
                 pengawasan.IsRelaksasi,
@@ -672,7 +692,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     r.IsLunas,
                     r.RanapId,
                     r.TanggalPembuatanResepFormatted,
-
+                    r.CreateDateTime,
                     DaftarObat = detailObat.Where(d => d.ResepId == r.ResepId).ToList(),
                     DaftarRacikan = detailRacikan.Where(dr => dr.ResepId == r.ResepId)
                         .Select(dr => new
@@ -691,7 +711,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                             dr.Keterangan,
                             DaftarRacikanDetail = racikanDetails.Where(rd => rd.RacikanId == dr.RacikanId).ToList()
                         }).ToList()
-                }).ToList()
+                }).OrderByDescending(r => r.CreateDateTime).ToList()
             };
 
             return Ok(new
@@ -747,6 +767,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     PengawasanHarianId = Guid.NewGuid(),
                     KunjunganId = vm.KunjunganId,
                     PasienId = vm.PasienId,
+                    PainAssesmentId = vm.PainAssesmentId,
+                    VitalSignId = vm.VitalSignId,
+                    ResepId = vm.ResepId,
                     TglPengawasanHarian = vm.TglPengawasanHarian,
                     WaktuPengawasan = vm.WaktuPengawasan,
                     IsRelaksasi = vm.IsRelaksasi,
@@ -845,6 +868,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 // **Update Data**
                 data.KunjunganId = vm.KunjunganId;
                 data.PasienId = vm.PasienId;
+                data.PainAssesmentId = vm.PainAssesmentId;
+                data.VitalSignId = vm.VitalSignId;
+                data.ResepId = vm.ResepId;
                 data.TglPengawasanHarian = vm.TglPengawasanHarian;
                 data.WaktuPengawasan = vm.WaktuPengawasan;
 
@@ -967,7 +993,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         }
 
         [HttpGet("paged")]
-        public async Task<IActionResult> GetPaged(int page = 1, int perPage = 10)
+        public async Task<IActionResult> GetPaged(
+            int page = 1,
+            int perPage = 10,
+            Guid? kunjunganId = null,
+            Guid? vitalSignId = null,
+            Guid? painAssessmentId = null,
+            Guid? resepId = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+            DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+            DateTime? endDate = null)
         {
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
@@ -984,6 +1020,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                                 a.PengawasanHarianId,
                                 a.KunjunganId,
                                 a.PasienId,
+                                a.PainAssesmentId,
+                                a.VitalSignId,
+                                a.ResepId,
                                 a.TglPengawasanHarian,
                                 a.WaktuPengawasan,
                                 a.IsRelaksasi,
@@ -1018,6 +1057,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                                 a.CreateBy,
                                 CreateByName = u.FullName
                             };
+            // filter kunjungan
+            if (kunjunganId.HasValue)
+                baseQuery = baseQuery.Where(q => q.KunjunganId == kunjunganId.Value);
+
+            // filter start date dan end date
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
+                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+                baseQuery = baseQuery.Where(q => q.CreateDateTime >= startUtc && q.CreateDateTime <= endUtc);
+            }
 
             // ✅ Hitung total untuk pagination
             var totalRows = await baseQuery.CountAsync();
@@ -1037,8 +1087,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             var kunjunganIds = pengawasanList.Select(x => x.KunjunganId).ToList();
 
             // ✅ Ambil VitalSigns
-            var vitalSigns = await _applicationDbContext.VitalSigns
-                .Where(v => kunjunganIds.Contains((Guid)v.KunjunganId))
+            var vitalSignsQuery = _applicationDbContext.VitalSigns
+                .Where(v => kunjunganIds.Contains((Guid)v.KunjunganId));
+
+            if (vitalSignId.HasValue)
+                vitalSignsQuery = vitalSignsQuery.Where(v => v.VitalSignId == vitalSignId.Value);
+
+            var vitalSigns = await vitalSignsQuery
                 .Select(v => new
                 {
                     v.VitalSignId,
@@ -1054,12 +1109,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     v.BMI,
                     v.LingkarKepalaBayi,
                     v.RanapId,
-                    v.Nadi
-                }).ToListAsync();
+                    v.Nadi,
+                    v.CreateDateTime
+                })
+                .OrderByDescending(v => v.CreateDateTime)
+                .ToListAsync();
 
             // ✅ Ambil PainAssessments
-            var painAssessments = await _applicationDbContext.PainAssessments
-                .Where(p => kunjunganIds.Contains((Guid)p.KunjunganId))
+            var painQuery = _applicationDbContext.PainAssessments
+                .Where(p => kunjunganIds.Contains((Guid)p.KunjunganId));
+
+            if (painAssessmentId.HasValue)
+                painQuery = painQuery.Where(p => p.PainAssessmentId == painAssessmentId.Value);
+
+            var painAssessments = await painQuery
                 .Select(p => new
                 {
                     p.PainAssessmentId,
@@ -1097,12 +1160,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     p.RanapId,
                     p.RPD,
                     p.RPS,
-                    p.CurrentMedication
-                }).ToListAsync();
+                    p.CurrentMedication,
+                    p.CreateDateTime
+                })
+                .OrderByDescending(p => p.CreateDateTime)
+                .ToListAsync();
 
             // ✅ Ambil Resep
-            var resepList = await _applicationDbContext.Reseps
-                .Where(r => kunjunganIds.Contains((Guid)r.KunjunganId))
+            var resepQuery = _applicationDbContext.Reseps
+                .Where(r => kunjunganIds.Contains((Guid)r.KunjunganId));
+
+            if (resepId.HasValue)
+                resepQuery = resepQuery.Where(r => r.ResepId == resepId.Value);
+
+            var resepList = await resepQuery
                 .Select(r => new
                 {
                     r.ResepId,
@@ -1123,8 +1194,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     r.IsLunas,
                     r.RanapId,
                     TanggalPembuatanResepFormatted = r.TanggalPembuatanResep.HasValue ?
-                                                      r.TanggalPembuatanResep.Value.ToString("yyyy-MM-dd") : null
-                }).ToListAsync();
+                                                      r.TanggalPembuatanResep.Value.ToString("yyyy-MM-dd") : null,
+                    r.CreateDateTime
+                })
+                .OrderByDescending(r => r.CreateDateTime)
+                .ToListAsync();
 
             var resepIds = resepList.Select(r => r.ResepId).ToList();
 
@@ -1201,6 +1275,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 p.PengawasanHarianId,
                 p.KunjunganId,
                 p.PasienId,
+                p.PainAssesmentId,
+                p.VitalSignId,
+                p.ResepId,
                 p.TglPengawasanHarian,
                 p.WaktuPengawasan,
                 p.IsRelaksasi,
@@ -1256,6 +1333,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     r.IsLunas,
                     r.RanapId,
                     r.TanggalPembuatanResepFormatted,
+                    r.CreateDateTime,
                     DaftarObat = detailObat.Where(d => d.ResepId == r.ResepId).ToList(),
                     DaftarRacikan = detailRacikan.Where(dr => dr.ResepId == r.ResepId)
                         .Select(dr => new
@@ -1274,7 +1352,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                             dr.Keterangan,
                             DaftarRacikanDetail = racikanDetails.Where(rd => rd.RacikanId == dr.RacikanId).ToList()
                         }).ToList()
-                }).ToList()
+                }).OrderByDescending(r => r.CreateDateTime).ToList()
             });
 
             return Ok(new

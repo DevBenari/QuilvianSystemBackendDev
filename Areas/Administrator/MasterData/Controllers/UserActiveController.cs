@@ -989,6 +989,73 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
             }
         }
 
+        [HttpGet("UbahPassword/{userActiveId}")]
+        public async Task<IActionResult> UbahPasswordById(Guid userActiveId, [FromQuery] string newPassword)
+        {
+            if (userActiveId == Guid.Empty)
+            {
+                return BadRequest(new { message = "UserActiveId tidak boleh kosong." });
+            }
+
+            if (string.IsNullOrWhiteSpace(newPassword))
+            {
+                return BadRequest(new { message = "Password baru harus diisi." });
+            }
+
+            try
+            {
+                // 🔍 Cari user aktif di tabel UserActives
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.UserActiveId == userActiveId && (u.IsDelete == false || u.IsDelete == null));
+
+                if (getUserActive == null)
+                {
+                    return NotFound(new { message = "User aktif tidak ditemukan." });
+                }
+
+                // 🔍 Cari user di ASP.NET Identity
+                var user = await _userManager.FindByEmailAsync(getUserActive.Email);
+                if (user == null)
+                {
+                    return NotFound(new { message = "User identity tidak ditemukan untuk email terkait." });
+                }
+
+                // 🔑 Generate token dan ubah password
+                var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+                var result = await _userManager.ResetPasswordAsync(user, token, newPassword);
+
+                if (!result.Succeeded)
+                {
+                    return BadRequest(new
+                    {
+                        message = "Gagal mengubah password.",
+                        errors = result.Errors.Select(e => e.Description)
+                    });
+                }
+
+                // 🔄 Update waktu perubahan password
+                getUserActive.UpdateDateTime = DateTimeOffset.UtcNow;
+                _applicationDbContext.UserActives.Update(getUserActive);
+                await _applicationDbContext.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    message = "Password berhasil diubah.",
+                    user = new
+                    {
+                        getUserActive.UserActiveId,
+                        getUserActive.FullName,
+                        getUserActive.Email
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
+
         [HttpPut("UpdateFoto/{id}")]
         public async Task<IActionResult> UpdateFoto(Guid id, [FromForm] UpdateFotoViewModel vm)
         {

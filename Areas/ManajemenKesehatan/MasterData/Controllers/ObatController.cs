@@ -485,15 +485,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 //Filter Berdasarkan Kode
-                if (!string.IsNullOrWhiteSpace(search))
-                {
-                    var s = search.Trim().ToLower();
-                    query = query.Where(u =>
-                        u.ObatName.ToLower().Contains(s) || // Filter berdasarkan nama obat yang mengandung string 's'
-                        u.ObatCode.ToLower().Contains(s)   // Filter berdasarkan kode obat yang mengandung string 's'
-                    );
-                }
-
+                //if (!string.IsNullOrWhiteSpace(search))
+                //{
+                //    var s = search.Trim().ToLower();
+                //    query = query.Where(u =>
+                //        u.ObatName.ToLower().Contains(s) || // Filter berdasarkan nama obat yang mengandung string 's'
+                //        u.ObatCode.ToLower().Contains(s)   // Filter berdasarkan kode obat yang mengandung string 's'
+                //    );
+                //}
+                //if (!string.IsNullOrWhiteSpace(search))
+                //{
+                //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+                //    query = query.Where(u =>
+                //        EF.Functions.ILike(u.ObatName, search) ||
+                //        EF.Functions.ILike(u.ObatCode, search) 
+                //    );
+                //}
                 // Lakukan join untuk mendapatkan semua data yang diperlukan
                 var joinedQuery = from a in query
                                   join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId into ua
