@@ -191,6 +191,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 var data = new DarahPermintaan
                 {
                     BankDarahId = Guid.NewGuid(),
+                    KunjunganId = vm.KunjunganId,
+                    PasienId = vm.PasienId,
                     KomponenDarahId = vm.KomponenDarahId,
                     GolonganDarahId = vm.GolonganDarahId,
                     JumlahKantong = vm.JumlahKantong,
@@ -268,6 +270,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 // **Update Data**
                 data.KomponenDarahId = vm.KomponenDarahId;
+                data.KunjunganId = vm.KunjunganId;
+                data.PasienId = vm.PasienId;
                 data.GolonganDarahId = vm.GolonganDarahId;
                 data.JumlahKantong = vm.JumlahKantong;
                 data.Rhesus = vm.Rhesus;
