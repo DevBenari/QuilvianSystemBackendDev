@@ -1,6 +1,7 @@
 ﻿using QuilvianSystemBackendDev.Models;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels
 {
@@ -13,8 +14,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
         public string Class { get; set; }
         public bool IsSurgery { get; set; }
         public int Tarif { get; set; }
-        public DateTime? TglBerlaku { get; set; }
-        public DateTime? TglBerakhir { get; set; }
+        public string? TglBerlaku { get; set; }
+        public string? TglBerakhir { get; set; }
         public bool? IsPKS { get; set; }
         public Guid? AsuransiId { get; set; }
     }

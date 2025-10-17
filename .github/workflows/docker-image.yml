@@ -58,13 +58,16 @@ jobs:
 
           echo "Deployment completed!"
 
+          PUSHER="${{ github.actor }}"
+          
           # Kirim notifikasi ke Telegram setelah update
           curl -X POST "https://api.telegram.org/bot7630899059:AAFqAUGUB7I5V9VGKXbcmoWmbYWvrdmnje8/sendMessage" \
               -d chat_id=-1002437306112 \
-              -d text="âœ… Deployment Sukses! ðŸš€
+              -d text="✅ Deployment Sukses! 🚀
               *Docker Image:* $IMAGE_NAME
               *Container:* $CONTAINER_NAME
               *Tanggal:* $DEPLOY_TIME%0A
-              Deployment dilakukan Backend Branch *quilviandev*%0A
-              ðŸ”„ Container telah diperbarui dan berjalan dengan baik. ðŸŽ‰"
+              Deployment dilakukan Backend Branch *$PUSHER*%0A
+              🔄 Container telah diperbarui dan berjalan dengan baik. 🎉"
+
         EOF

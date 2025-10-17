@@ -51,7 +51,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
         [HttpPost("Registrasi")]
         public async Task<ActionResult<PendaftaranPasien>> PostPendaftaranPasienLuar(PendaftaranPasien pendaftaranPasien)
         {
-            var dateNow = DateTimeOffset.UtcNow;
+             var dateNow = DateTime.UtcNow;;
             var day = dateNow.Day;
             var month = dateNow.Month;
             var year = dateNow.Year;
@@ -110,7 +110,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
         [HttpPost("Baru")]
         public async Task<ActionResult<PendaftaranPasienBaru>> PostPendaftaranPasienBaruLuar(PendaftaranPasienBaru pendaftaranPasienBaru)
         {
-            var dateNow = DateTimeOffset.UtcNow;
+             var dateNow = DateTime.UtcNow;;
             var day = dateNow.Day;
             var month = dateNow.Month;
             var year = dateNow.Year;

@@ -1,6 +1,7 @@
 ﻿using QuilvianSystemBackendDev.Models;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
 {
@@ -16,7 +17,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
 
         // Tempat dan Tanggal Lahir
         public string TempatLahir { get; set; }
-        public DateTime TanggalLahir { get; set; }
+
+        [JsonConverter(typeof(DateOnlyJsonConverter))]
+        public DateOnly? TanggalLahir { get; set; }
 
         // Informasi Penjamin
         public string Penjamin { get; set; }

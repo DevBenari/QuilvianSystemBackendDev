@@ -1,8 +1,18 @@
 ﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
+using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers;
+using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models;
 using QuilvianSystemBackendDev.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
+using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
+using QuilvianSystemBackendDev.Areas.HRD.Pengajuan.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
 
 namespace QuilvianSystemBackendDev.Repositories
 {
@@ -48,15 +58,131 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<DokterPoli> DokterPolis { get; set; }
         public DbSet<CoveranAsuransi> CoveranAsuransis { get; set; }
         public DbSet<Operasi> Operasis { get; set; }
+        public DbSet<AsuransiPasien> AsuransiPasiens { get; set; }
+        public DbSet<KodePos> KodePoss { get; set; }
+        public DbSet<Suku> Sukus { get; set; }
+        public DbSet<FasilitasPasien> FasilitasPasiens { get; set; }
+        public DbSet<RegistFasilitasPasien> RegistFasilitasPasiens { get; set; }
+        public DbSet<DokterAsuransi> DokterAsuransis { get; set; }
+        public DbSet<Kunjungan> Kunjungans { get; set; }
+        public DbSet<KategoriObat> KategoriObats { get; set; }
+        public DbSet<Discount> Discounts { get; set; }
+        public DbSet<Measurement> Measurements { get; set; }
+        public DbSet<TermOfPayment> TermOfPayments { get; set; }
+        public DbSet<Supplier> Suppliers { get; set; }
+        public DbSet<WarehouseLocation> WarehouseLocations { get; set; }
+        public DbSet<Obat> Obats { get; set; }
+        public DbSet<CoveranObatAsuransi> CoveranObatAsuransis { get; set; }
+        public DbSet<CurrentMedication> CurrentMedications { get; set; }
+        public DbSet<SkalaPain> SkalaPains { get; set; }
+        public DbSet<PainAssessment> PainAssessments { get; set; }
+        public DbSet<VitalSign> VitalSigns { get; set; }
+        public DbSet<SOAP> SOAPs { get; set; }
+        public DbSet<ICD10> ICD10s { get; set; }
+        public DbSet<DetailICD> DetailICDs { get; set; }
+        public DbSet<Resep> Reseps { get; set; }
+        public DbSet<ResepTemplate> ResepTemplates { get; set; }
+        public DbSet<ResepTemplateDetail> ResepTemplateDetails { get; set; }
+        public DbSet<ResepDetail> DetailReseps { get; set; }
+        public DbSet<Kelas> Kelass { get; set; }
+        public DbSet<TarifKelas> TarifKelass { get; set; } 
+        public DbSet<CoveranTindakanAsuransi> CoveranTindakanAsuransis { get; set; }
+        public DbSet<Satuan> Satuans { get; set; }
+        public DbSet<Tindakan> Tindakans { get; set; }
+        public DbSet<TindakanPoli> TindakanPolis { get; set; }
+        public DbSet<TindakanAsuransi> TindakanAsuransis { get; set; }
+        public DbSet<TindakanKunjungan> TindakanKunjungans { get; set; }
+        public DbSet<ObatAsuransi> ObatAsuransis { get; set; }
+        public DbSet<ObatKandungan> ObatKandungans { get; set; }
+        public DbSet<Kandungan> Kandungans { get; set; }
+        public DbSet<BentukObat> BentukObats { get; set; }
+        public DbSet<TipeUser> TipeUsers { get; set; }
+        public DbSet<Benefit> Benefits { get; set; }
+        public DbSet<Membership> Membership { get; set; }
+        public DbSet<BenefitEntitiyMapping> BenefitEntitiyMappings { get; set; }
+        public DbSet<DetailMembership> DetailMembership { get; set; }
+        public DbSet<PasienBenefitAsign> PasienBenefitAsigns { get; set; }
+        public DbSet<PasienBenefitOverride> PasienBenefitOverrides { get; set; }
+        public DbSet<KonversiSatuan> KonversiSatuans { get; set; }
+        public DbSet<FarmasiRJ> FarmasiRJs { get; set; }
+        public DbSet<Racikan> Racikans { get; set; }
+        public DbSet<RacikanAddon> RacikanAddons { get; set; }
+        public DbSet<ResepTebus> ResepTebuss { get; set; }
+        public DbSet<ResepTebusDetail> ResepTebusDetails { get; set; }
+        public DbSet<PPN> PPNs { get; set; }
+        public DbSet<ObatReturn> ObatReturns { get; set; }
+        public DbSet<ObatReturnDetail> ObatReturnDetails { get; set; }
+        public DbSet<RacikanDetail> RacikanDetails { get; set; }
+        public DbSet<Kamar> Kamars { get; set; }
+        public DbSet<Bed> Beds { get; set; }
+        public DbSet<KamarAsuransi> KamarAsuransis { get; set; }
+        public DbSet<Delegasi> Delegasis { get; set; }
+        public DbSet<ICDPlanning> ICDPlannings { get; set; }
+        public DbSet<SOAPPlanning> SOAPPlannings { get; set; }
+        public DbSet<DetailPlanning> DetailPlannings { get; set; }
+        public DbSet<Gudang> Gudangs { get; set; }
+        public DbSet<GudangUnit> GudangUnits { get; set; }
+        public DbSet<TindakanPerawat> TindakanPerawats { get; set; }
+        #endregion
+
+        #region Areas Keuangan
+        public DbSet<MetodePembayaran> MetodePembayarans { get; set; }
+        public DbSet<Diskon> Diskons { get; set; }
+        public DbSet<BiayaAdministrasi> BiayaAdministrasis { get; set; }
+        public DbSet<MainKasir> MainKasirs { get; set; }
+        public DbSet<KasirTebusResep> KasirTebusReseps { get; set; }
+        public DbSet<MainKasirDetail> MainKasirDetails { get; set; }
+        public DbSet<Billing> Billings { get; set; }
+        #endregion
+
+        #region Areas Hrd
+        public DbSet<JenisCuti> JenisCutis { get; set; }
+        public DbSet<Level> Levels { get; set; }
+        public DbSet<GradePay> GradePays { get; set; }
+        public DbSet<JenisLembur> JenisLemburs { get; set; }
+        public DbSet<JenisTiketing> JenisTiketings { get; set; }
+        public DbSet<SubLevel> SubLevels { get; set; }
+
+        public DbSet<PengajuanCuti> PengajuanCutis { get; set; }
+        public DbSet<PengajuanLembur> PengajuanLemburs { get; set; }
+        public DbSet<PengajuanTiketing> PengajuanTiketings { get; set; }
+        public DbSet<PengajuanResign> PengajuanResigns { get; set; }
+        public DbSet<GradeLevelJob> GradeLevelJobs { get; set; }
+        public DbSet<CounterOffer> CounterOffers { get; set; }
+        public DbSet<PengajuanRekrutmen> PengajuanRekrutmens { get; set; }
+        public DbSet<RiwayatPendidikan> RiwayatPendidikans { get; set; }
+        public DbSet<RiwayatSertifikat> RiwayatSertifikats { get; set; }
+        public DbSet<DokumenDetailKaryawan> DokumenDetailKaryawans { get; set; }
+        public DbSet<MasterKeahlian> MasterKeahlians { get; set; }
+        public DbSet<DetailKeahlian> DetailKeahlians { get; set; }
+        public DbSet<MasterTTD> MasterTTDs { get; set; }
+        public DbSet<MasterSoal> MasterSoals { get; set; }
+        public DbSet<HasilTest> HasilTests { get; set; }
+
+
+        #endregion
+
+        #region Areas Administrator
+        public DbSet<JenisUser> JenisUsers { get; set; }
+        public DbSet<JenisPembayaran> JenisPembayarans { get; set; }
+        public DbSet<Pembayaran> Pembayarans { get; set; }
 
         #endregion
 
         #region Areas Pendaftaran
         public DbSet<PendaftaranPasienBaru> PendaftaranPasienBarus { get; set; }
         public DbSet<PendaftaranPasien> PendaftaranPasiens { get; set; }
+        public DbSet<PendaftaranPasienUGD> PendaftaranPasienUGDs { get; set; }
+        public DbSet<PendaftaranPasienOptik> PendaftaranPasienOptiks { get; set; }
+        public DbSet<PendaftaranPasienAmbulan> PendaftaranPasienAmbulans { get; set; }
+        public DbSet<PendaftaranPasienRehabMedik> PendaftaranPasienRehabMediks { get; set; }
+        public DbSet<PendaftaranPasienMCU> PendaftaranPasienMCUs { get; set; }
+        public DbSet<PendaftaranPasienRadiologi> PendaftaranPasienRadiologis { get; set; }
+        //public DbSet<PendaftaranPasienLaboratorium> PendaftaranPasienLaboratoriums { get; set; }
         #endregion
 
         #region Areas Tindakan
+
         //public DbSet<TindakanPasienAmbulan> TindakanPasienAmbulans { get; set; }
         //public DbSet<TindakanPasienFasilitas> TindakanPasienFasilitass { get; set; }
         ////public DbSet<TindakanPasienGizi> TindakanPasienGizis { get; set; }
@@ -65,6 +191,80 @@ namespace QuilvianSystemBackendDev.Repositories
         //public DbSet<TindakanPasienOptik> TindakanPasienOptiks { get; set; }
         //public DbSet<TindakanPasienRadiologi> TindakanPasienRadiologis { get; set; }
         //public DbSet<TindakanPasienRehabilitas> TindakanPasienRehabilitass { get; set; }
-        #endregion        
+        #endregion
+
+        #region Areas Rawat Inap
+        public DbSet<SuratPengantarRawatInap> SuratPengantarRawatInaps { get; set; }
+        public DbSet<BookingBedRanap> BookingBedRanaps { get; set; }
+        public DbSet<PerawatObjective> PerawatObjectives { get; set; }
+        public DbSet<PerawatSubjective> PerawatSubjectives { get; set; }
+        public DbSet<PerawatIntervensi> PerawatIntervensis { get; set; }
+        public DbSet<SDKIKolaborasi> SDKIKolaborasis { get; set; }
+        public DbSet<SDKIEdukasi> SDKIEdukasis { get; set; }
+        public DbSet<SDKITeraupetik> SDKITeraupetiks { get; set; }
+        public DbSet<SDKIEtiologi> SDKIEtiologis { get; set; }
+        public DbSet<SDKIDiagnosa> SDKIDiagnosas { get; set; }
+        public DbSet<SDKIObservasi> SDKIObservasis { get; set; }
+        public DbSet<SDKIEvaluasi> SDKIEvaluasis { get; set; }
+        public DbSet<KajianPasien> KajianPasiens { get; set; }
+        public DbSet<SDKIGroup> SDKIGroups { get; set; }
+        public DbSet<Indikator> Indikators { get; set; }
+        public DbSet<IndikatorScore> IndikatorScores { get; set; }
+        public DbSet<IndikatorPengkajian> IndikatorPengkajians { get; set; }
+        public DbSet<SkriningNutrisi> SkriningNutrisis { get; set; }
+        public DbSet<PengkajianEliminasi> PengkajianEliminasis { get; set; }
+        public DbSet<PengkajianKetergantungan> PengkajianKetergantungans { get; set; }
+        public DbSet<PengkajianKulit> PengkajianKulits { get; set; }
+        public DbSet<PengkajianPernapasan> PengkajianPernapasans { get; set; }
+        public DbSet<PengkajianPerawat> PengkajianPerawats { get; set; }
+        public DbSet<DetailKetergantungan> DetailKetergantungans { get; set; }
+        public DbSet<ResumePulang> ResumePulangs { get; set; } 
+        public DbSet<ResumePulangDetail> ResumePulangDetails { get; set; }
+        public DbSet<CttPemberianObat> CttPemberianObats { get; set; }
+        public DbSet<CatatanESO> CatatanESOs { get; set; }
+        public DbSet<ObservasiCairan> ObservasiCairans { get; set; }
+        public DbSet<ObservasiCairanWsd> ObservasiCairanWsds { get; set; }
+        public DbSet<SlidingScale> SlidingScales { get; set; }
+        public DbSet<ChecklistTemplate> ChecklistTemplates { get; set; }
+        public DbSet<ChecklistItem> ChecklistItems { get; set; }
+        public DbSet<ChecklistResponse> ChecklistResponses { get; set; }
+        public DbSet<EvaluasiAwal> EvaluasiAwals { get; set; }
+        public DbSet<EvaluasiAwalDetail> EvaluasiAwalDetails { get; set; }
+        public DbSet<CatatanDiet> CatatanDiets { get; set; }
+        public DbSet<TindakanHarian> TindakanHarians { get; set; }
+        public DbSet<PengawasanHarian> PengawasanHarians { get; set; }
+        public DbSet<TransferPasien> TransferPasiens { get; set; }
+        public DbSet<TransferPasienDetail> TransferPasienDetails { get; set; }
+        #endregion
+
+        #region Farmasi
+        public DbSet<LogRacikPenerimaan> LogRacikPenerimaans { get; set; }
+        public DbSet<PermintaanUnit> PermintaanUnits { get; set; }
+        public DbSet<DetailPermintaanUnit> DetailPermintaanUnits { get; set; }
+
+        public DbSet<DetailPenerimaanUnit> DetailPenerimaanUnits { get; set; }
+        public DbSet<PenerimaanUnit> PenerimaanUnits { get; set; }
+        #endregion
+
+        #region OperasiOK
+
+        public DbSet<PraOperasi> PraOperasis { get; set; }
+        public DbSet<RuangBedahBooking> RuangBedahBookings { get; set; }
+
+        #endregion
+
+        #region Laborat
+        public DbSet<Lab> Labs { get; set; }
+        public DbSet<LabKategoriPemeriksaan> LabKategoriPemeriksaans { get; set; }
+        public DbSet<LabPemeriksaan> LabPemeriksaans { get; set; }
+        public DbSet<LabBooking> LabBookings { get; set; }
+        public DbSet<LabBookingDetail> LabBookingDetails { get; set; }
+        public DbSet<SpecimenAsal> SpecimenAsals { get; set; }
+        public DbSet<SpecimenJenis> SpecimenJeniss { get; set; }
+        public DbSet<SpecimenMethod> SpecimenMethods { get; set; }
+        public DbSet<Darah> Darahs { get; set; }
+        public DbSet<DarahPermintaan> DarahPermintaans { get; set; }
+        #endregion
+
     }
 }

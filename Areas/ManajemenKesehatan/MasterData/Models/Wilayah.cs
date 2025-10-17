@@ -61,5 +61,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         //Relation
         [ForeignKey("KecamatanId")]
         public Kecamatan? Kecamatan { get; set; }
+
+        public ICollection<KodePos> KodePos { get; set; }
+    }
+
+    [Table("MstKodePos", Schema = "public")]
+    public class KodePos : UserActivity
+    {
+        [Key]
+        public Guid KodePosId { get; set; }
+        public string UniqueKodePos { get; set; }
+        public string NamaKodePos { get; set; }
+        public Guid? KelurahanId { get; set; }
+        //Relation
+        [ForeignKey("KelurahanId")]
+        public Kelurahan? Kelurahan { get; set; }
     }
 }

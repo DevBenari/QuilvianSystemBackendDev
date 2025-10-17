@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using QuilvianSystemBackendDev.Models;
 using System.Security.Claims;
+using SkiaSharp;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
@@ -52,27 +53,34 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            var query = from a in _applicationDbContext.JadwalPrakteks
+            var query = (from a in _applicationDbContext.JadwalPrakteks
                         join u in _applicationDbContext.UserActives
-                        on a.CreateBy equals u.UserActiveId
+                            on a.CreateBy equals u.UserActiveId
+
+                        join dp in _applicationDbContext.DokterPolis
+                            on a.DokterPoliId equals dp.DokterPoliId
+
+                        join d in _applicationDbContext.Dokters
+                            on dp.DokterId equals d.DokterId
+
                         where a.IsDelete == false
                         select new
                         {
+                            JadwalPraktekId = a.JadwalPraktekId,
                             CreateDateTime = a.CreateDateTime,
                             CreateByName = a.CreateBy,
                             UpdateDateTime = a.UpdateDateTime,
                             UpdateBy = a.UpdateBy,
-                            DokterId = a.DokterId,
                             DokterPoliId = a.DokterPoliId,
-                            NamaDokter = a.NamaDokter,
-                            PoliId = a.PoliId,
-                            SubPoliId = a.SubPoliId,
                             WaktuPraktek = a.WaktuPraktek,
                             HariPraktek = a.HariPraktek,
                             JamMulai = a.JamMulai,
                             JamBerakhir = a.JamBerakhir,
-                            MaxPasien = a.MaxPasien
-                        };
+                            KodeJadwalPraktek = a.KodeJadwalPraktek,
+
+                            // nama dokter
+                            NamaDokter = d.NmDokter
+                        }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
             var totalRows = query.Count();
@@ -101,6 +109,39 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     TotalRows = totalRows,
                     TotalPages = totalPages
                 }
+            });
+        }
+
+        [HttpGet("JadwalByDokter/{DokterId}")]
+        public IActionResult GetJadwalPraktekByDokterId(Guid DokterId)
+        {
+            var data = from jp in _applicationDbContext.JadwalPrakteks
+                       join dp in _applicationDbContext.DokterPolis on jp.DokterPoliId equals dp.DokterPoliId
+                       join d in _applicationDbContext.Dokters on dp.DokterId equals d.DokterId
+                       join p in _applicationDbContext.Polikliniks on dp.PoliId equals p.PoliklinikId
+                       where jp.IsDelete == false && dp.IsDelete == false && d.DokterId == DokterId
+                       select new
+                       {
+                           jp.JadwalPraktekId,
+                           jp.KodeJadwalPraktek,
+                           jp.HariPraktek,
+                           jp.WaktuPraktek,
+                           jp.JamMulai,
+                           jp.JamBerakhir,
+                           NamaPoliklinik = p.NamaPoliklinik,
+                           d.NmDokter,
+                           d.KdDokter,
+                           d.Email
+                       };
+
+            var result = data.ToList();
+            if (!result.Any())
+                return NotFound(new { message = "Jadwal tidak ditemukan untuk dokter ini." });
+
+            return Ok(new
+            {
+                message = "Berhasil mengambil data jadwal",
+                data = result
             });
         }
 
@@ -143,12 +184,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var dateNow = DateTimeOffset.UtcNow;
+                var dateNow = DateTime.UtcNow;
                 var setDateNow = dateNow.ToString("yyMMdd");
 
                 // Ambil data terakhir untuk hari ini (tanpa ToString di query)
                 var lastCode = _applicationDbContext.JadwalPrakteks
-                    .Where(d => d.CreateDateTime.Date == dateNow.UtcDateTime.Date)
+                    .Where(d => d.CreateDateTime.Date == dateNow.Date)
                     .OrderByDescending(k => k.KodeJadwalPraktek)
                     .FirstOrDefault();
 
@@ -170,7 +211,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         kode = $"JDW{setDateNow}" + (Convert.ToInt32(lastCode.KodeJadwalPraktek.Substring(9)) + 1).ToString("D4");
                     }
                 }
-
                 // cek duplikasi
                 var isDuplicate = _applicationDbContext.JadwalPrakteks
                     .Any(c => c.KodeJadwalPraktek == kode);
@@ -185,17 +225,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     var data = new JadwalPraktek
                     {
-                        DokterId = vm.DokterId,
                         DokterPoliId = vm.DokterPoliId,
-                        NamaDokter = vm.NamaDokter,
-                        PoliId = vm.PoliId,
-                        SubPoliId = vm.SubPoliId,
                         KodeJadwalPraktek = kode,
                         WaktuPraktek = vm.WaktuPraktek,
                         HariPraktek = vm.HariPraktek,
                         JamMulai = vm.JamMulai,
                         JamBerakhir = vm.JamBerakhir,
-                        MaxPasien = vm.MaxPasien,
                         CreateBy = UserActiveId,
                         CreateDateTime = DateTimeOffset.UtcNow
 
@@ -243,26 +278,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
-                // cek duplikasi
-                var isDuplicate = _applicationDbContext.JadwalPrakteks
-                    .Any(c => c.JadwalPraktekId != id);
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
-                }
+
                 // Validate ModelState
                 if (ModelState.IsValid)
                 {
-                    data.DokterId = vm.DokterId;
                     data.DokterPoliId = vm.DokterPoliId;
-                    data.NamaDokter = vm.NamaDokter;
-                    data.PoliId = vm.PoliId;
-                    data.SubPoliId = vm.SubPoliId;
                     data.WaktuPraktek = vm.WaktuPraktek;
                     data.HariPraktek = vm.HariPraktek;
                     data.JamMulai = vm.JamMulai;
                     data.JamBerakhir = vm.JamBerakhir;
-                    data.MaxPasien = vm.MaxPasien;
                     data.UpdateBy = UserActiveId;
                     data.UpdateDateTime = DateTimeOffset.UtcNow;
 
@@ -336,43 +360,58 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         {
             var query = from a in _applicationDbContext.JadwalPrakteks
                         join u in _applicationDbContext.UserActives
-                        on a.CreateBy equals u.UserActiveId
+                            on a.CreateBy equals u.UserActiveId
+
+                        join dp in _applicationDbContext.DokterPolis
+                            on a.DokterPoliId equals dp.DokterPoliId
+
+                        join p in _applicationDbContext.Polikliniks
+                            on dp.PoliId equals p.PoliklinikId
+
+                        join d in _applicationDbContext.Dokters
+                            on dp.DokterId equals d.DokterId
+
                         where a.IsDelete == false
                         select new
                         {
+                            JadwalPraktekId = a.JadwalPraktekId,
                             CreateDateTime = a.CreateDateTime,
                             CreateByName = a.CreateBy,
                             UpdateDateTime = a.UpdateDateTime,
                             UpdateBy = a.UpdateBy,
-                            DokterId = a.DokterId,
                             DokterPoliId = a.DokterPoliId,
-                            NamaDokter = a.NamaDokter,
-                            PoliId = a.PoliId,
-                            SubPoliId = a.SubPoliId,
-                            JadwalPraktekId = a.JadwalPraktekId,
-                            KodeJadwalPraktek = a.KodeJadwalPraktek,
+                            PoliId = dp.PoliId,
+                            NamaPoliklinik = p.NamaPoliklinik,
                             WaktuPraktek = a.WaktuPraktek,
                             HariPraktek = a.HariPraktek,
                             JamMulai = a.JamMulai,
                             JamBerakhir = a.JamBerakhir,
-                            MaxPasien = a.MaxPasien
+                            KodeJadwalPraktek = a.KodeJadwalPraktek,
+
+                            // nama dokter
+                            NamaDokter = d.NmDokter
                         };
 
-            // Filter berdasarkan search
+            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             if (!string.IsNullOrWhiteSpace(search))
             {
+                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
-                    u.KodeJadwalPraktek.Contains(search) || u.NamaDokter.Contains(search) || u.HariPraktek.Contains(search)
+                    EF.Functions.ILike(u.KodeJadwalPraktek, search) ||
+                    EF.Functions.ILike(u.HariPraktek, search) ||
+                    EF.Functions.ILike(u.NamaPoliklinik, search)
                 );
             }
 
-            // Filter berdasarkan daterange jika keduanya memiliki nilai
+            //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
             {
+                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
+                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+
                 query = query.Where(u =>
-                    u.CreateDateTime.Date >= startDate.Value.Date &&
-                    u.CreateDateTime.Date <= endDate.Value.Date
-                );
+                    u.CreateDateTime >= startUtc &&
+                    u.CreateDateTime <= endUtc);
             }
 
             // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
@@ -431,7 +470,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
                     "KodeJadwalPraktek" => query.OrderByDescending(u => u.KodeJadwalPraktek),
-                    "NamaDokter" => query.OrderByDescending(u => u.NamaDokter),
                     "HariPraktek" => query.OrderByDescending(u => u.HariPraktek),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
@@ -440,7 +478,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
                     "KodeJadwalPraktek" => query.OrderByDescending(u => u.KodeJadwalPraktek),
-                    "NamaDokter" => query.OrderByDescending(u => u.NamaDokter),
                     "HariPraktek" => query.OrderByDescending(u => u.HariPraktek),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 };

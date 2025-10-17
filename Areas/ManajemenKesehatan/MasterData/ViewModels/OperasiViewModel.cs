@@ -1,11 +1,14 @@
-﻿namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels
+﻿using System.Text.Json.Serialization;
+
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels
 {
     public class OperasiViewModel
     {
         public string JenisOperasi { get; set; }
         public string TipeOperasi { get; set; }
         public string NamaTindakanOperasi { get; set; }
-        public DateTime TanggalOperasi { get; set; }
+        [JsonConverter(typeof(DateOnlyJsonConverter))]
+        public DateOnly TanggalOperasi { get; set; }
         public string StatusOperasi { get; set; }
         public int LamaOperasi { get; set; }
         public string RuanganOperasi { get; set; }

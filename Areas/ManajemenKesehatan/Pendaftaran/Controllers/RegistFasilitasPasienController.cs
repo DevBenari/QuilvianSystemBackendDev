@@ -1,0 +1,454 @@
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewModels;
+using QuilvianSystemBackendDev.Models;
+using QuilvianSystemBackendDev.Repositories;
+using Swashbuckle.AspNetCore.Annotations;
+
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controllers
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    [Authorize]
+    [EnableCors("AllowSpecific")]
+    public class RegistFasilitasPasienController : Controller
+    {
+        private readonly ApplicationDbContext _context;
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly SignInManager<ApplicationUser> _signInManager;
+
+        private readonly ILogger<OperasiController> _logger;
+        private readonly IWebHostEnvironment _webHostEnvironment;
+
+        public RegistFasilitasPasienController
+            (ApplicationDbContext context, 
+            UserManager<ApplicationUser> userManager, 
+            SignInManager<ApplicationUser> signInManager, 
+            ILogger<OperasiController> logger, 
+            IWebHostEnvironment webHostEnvironment)
+        {
+            _context = context;
+            _userManager = userManager;
+            _signInManager = signInManager;
+            _logger = logger;
+            _webHostEnvironment = webHostEnvironment;
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAllRegistFasilitasPasien(int page = 1, int perPage = 10)
+        {
+            // validasi pagging
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
+
+            // Query data
+            var query = from a in _context.RegistFasilitasPasiens
+                        join u in _context.UserActives
+                        on a.CreateBy equals u.UserActiveId
+                        where a.IsDelete == false
+                        select new
+                        {
+                            CreateDateTime = a.CreateDateTime,
+                            CreateBy = a.CreateBy,
+                            CreateByName = u.FullName,
+                            RegistFasilitasPasienId = a.RegistFasilitasPasienId,
+                            KodeRegistFasilitas = a.KodeRegistFasilitas,
+                            NamaPasien = a.NamaPasien,
+                            NoRekamMedis = a.NoRekamMedis,
+                            TTL = a.TTL,
+                            JenisKelamin = a.JenisKelamin,
+                            Alamat = a.Alamat,
+                            NoTelepon = a.NoTelepon,
+                            DokterPemeriksa = a.DokterPemeriksa,
+                            NamaFasilitasPasien = a.NamaFasilitasPasien,
+                            PasienId = a.PasienId
+                        };
+
+            // Hitung total data sebelum paginasi
+            var totalRows = query.Count();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            // Ambil data sesuai paging
+            var listdata = query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToList();
+
+            if (!listdata.Any())
+            {
+                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
+            }
+
+            // Return hasil dengan paging info
+            return Ok(new
+            {
+                message = "Berhasil || 200 OK",
+                data = listdata,
+                pagination = new
+                {
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalRows = totalRows,
+                    TotalPages = totalPages
+                }
+            });
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(Guid id)
+        {
+            var record = await _context.RegistFasilitasPasiens.FindAsync(id);
+            if (record == null)
+            {
+                return NotFound(new { message = $"Data dengan ID {id} tidak ditemukan." });
+            }
+            return Ok(new { message = "Data ditemukan.", data = record });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Create([FromBody] RegistFasilitasPasienViewModel vm)
+        {
+            if (vm == null || !ModelState.IsValid)
+            {
+                return BadRequest(new { message = "Data tidak valid." });
+            }
+
+            try
+            {
+                // **Ambil User ID dari JWT Claims**
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _context.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
+
+                if (string.IsNullOrEmpty(EmailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                 var dateNow = DateTime.UtcNow;;
+                var setDateNow = DateTimeOffset.UtcNow.ToString("yyMMdd");
+
+                // Generate UserActiveCode
+                var lastCode = _context.RegistFasilitasPasiens
+                    .Where(d => d.CreateDateTime.Date == dateNow.Date)
+                    .OrderByDescending(k => k.KodeRegistFasilitas)
+                    .FirstOrDefault();
+
+                string kode;
+                if (lastCode == null)
+                {
+                    kode = $"RFP{setDateNow}0001";
+
+                }
+                else
+                {
+                    var lastCodeTrim = lastCode.KodeRegistFasilitas.Substring(3, 6);
+                    if (lastCodeTrim != setDateNow)
+                    {
+                        kode = $"RFP{setDateNow}0001";
+                    }
+                    else
+                    {
+                        kode = $"RFP{setDateNow}" + (Convert.ToInt32(lastCode.KodeRegistFasilitas.Substring(9)) + 1).ToString("D4");
+                    }
+                }
+
+                // Cek Duplikasi
+                var isDuplicate = _context.RegistFasilitasPasiens
+                    .Any(c => c.KodeRegistFasilitas == kode);
+
+                if (ModelState.IsValid)
+                {
+                    var data = new RegistFasilitasPasien
+                    {
+                        RegistFasilitasPasienId = Guid.NewGuid(),
+                        KodeRegistFasilitas = kode,
+                        NoRekamMedis = vm.NoRekamMedis,
+                        TTL = vm.TTL,
+                        JenisKelamin = vm.JenisKelamin,
+                        Alamat = vm.Alamat,
+                        NoTelepon = vm.NoTelepon,
+                        DokterPemeriksa = vm.DokterPemeriksa,
+                        NamaFasilitasPasien = vm.NamaFasilitasPasien,
+                        PasienId = vm.PasienId,
+                        NamaPasien = vm.NamaPasien,
+                        CreateDateTime = DateTimeOffset.UtcNow,
+                        CreateBy = UserActiveId,
+                        IsDelete = false,
+
+                    };
+                    _context.RegistFasilitasPasiens.Add(data);
+                    _context.SaveChanges();
+
+                    return Created("", new
+                    {
+                        message = "Tambah Data Berhasil || 201 Created",
+                        //uploadFotoUrl = fotoPath != null ? $"{Request.Scheme}://{Request.Host}{fotoPath}" : null
+                    });
+
+                }
+                else
+                {
+                    return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
+                }
+            }
+
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(Guid id, [FromBody] RegistFasilitasPasienViewModel vm)
+        {
+            if (vm == null || !ModelState.IsValid)
+            {
+                return BadRequest(new { message = "Data tidak valid." });
+            }
+
+            try
+            {
+                // **Ambil User ID dari JWT Claims**
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _context.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
+
+                if (string.IsNullOrEmpty(EmailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                // cari data
+                var data = _context.RegistFasilitasPasiens.Find(id);
+                if (data == null)
+                {
+                    return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                //update data
+                data.NoRekamMedis = vm.NoRekamMedis;
+                data.TTL = vm.TTL;
+                data.JenisKelamin = vm.JenisKelamin;
+                data.Alamat = vm.Alamat;
+                data.DokterPemeriksa = vm.DokterPemeriksa;
+                data.NamaFasilitasPasien = vm.NamaFasilitasPasien;
+                data.NoTelepon = vm.NoTelepon;
+                data.PasienId = vm.PasienId;
+                data.NamaPasien = vm.NamaPasien;
+               
+
+                data.UpdateBy = UserActiveId;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
+
+                _context.RegistFasilitasPasiens.Update(data);
+                _context.SaveChanges();
+
+                return Ok(new { message = "Data berhasil diupdate..." });
+            }
+
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(Guid id)
+        {
+            try
+            {
+                //Ambil User ID dari JWT Claims
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _context.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
+
+                if (string.IsNullOrEmpty(EmailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                // **Cari Data Dokter**
+                var data = _context.RegistFasilitasPasiens.Find(id);
+                if (data == null)
+                {
+                    return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                // **Soft Delete (Tandai Data sebagai Terhapus)**
+                data.DeleteBy = UserActiveId;
+                data.DeleteDateTime = DateTimeOffset.UtcNow;
+                data.IsDelete = true;
+
+                _context.RegistFasilitasPasiens.Update(data);
+                _context.SaveChanges();
+
+                return Ok(new { message = "Data berhasil dihapus..." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
+        [HttpGet("paged")]
+        public IActionResult PagedOperasi(
+        int page = 1,
+        int perPage = 10,
+        string? search = null,
+        string? orderBy = "CreateDateTime",
+        string? sortDirection = "desc",
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+        DateTime? startDate = null,
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+        DateTime? endDate = null,
+        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        {
+            // Query data
+            // Query data
+            var query = from a in _context.RegistFasilitasPasiens
+                        join u in _context.UserActives
+                        on a.CreateBy equals u.UserActiveId
+                        where a.IsDelete == false
+                        select new
+                        {
+                            CreateDateTime = a.CreateDateTime,
+                            CreateBy = a.CreateBy,
+                            CreateByName = u.FullName,
+                            RegistFasilitasPasienId = a.RegistFasilitasPasienId,
+                            KodeRegistFasilitas = a.KodeRegistFasilitas,
+                            NamaPasien = a.NamaPasien,
+                            NoRekamMedis = a.NoRekamMedis,
+                            TTL = a.TTL,
+                            JenisKelamin = a.JenisKelamin,
+                            Alamat = a.Alamat,
+                            NoTelepon = a.NoTelepon,
+                            DokterPemeriksa = a.DokterPemeriksa,
+                            NamaFasilitasPasien = a.NamaFasilitasPasien,
+                            PasienId = a.PasienId
+                        };
+
+            // Filter berdasarkan search
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(u =>
+                    u.KodeRegistFasilitas.Contains(search) || u.NamaFasilitasPasien.Contains(search) || u.DokterPemeriksa.Contains(search)
+                );
+            }
+
+            // Filter berdasarkan daterange jika keduanya memiliki nilai
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                query = query.Where(u =>
+                    u.CreateDateTime.Date >= startDate.Value.Date &&
+                    u.CreateDateTime.Date <= endDate.Value.Date
+                );
+            }
+
+            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
+            if (periode.HasValue)
+            {
+                DateTime today = DateTime.UtcNow.Date;
+
+                switch (periode)
+                {
+                    case PeriodeFilter.Today:
+                        query = query.Where(u => u.CreateDateTime.Date == today);
+                        break;
+                    case PeriodeFilter.ThisWeek:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
+                            u.CreateDateTime.Date <= today
+                        );
+                        break;
+                    case PeriodeFilter.LastWeek:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
+                            u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek))
+                        );
+                        break;
+                    case PeriodeFilter.ThisMonth:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Month == today.Month &&
+                            u.CreateDateTime.Year == today.Year
+                        );
+                        break;
+                    case PeriodeFilter.LastMonth:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Month == today.Month - 1 &&
+                            u.CreateDateTime.Year == today.Year
+                        );
+                        break;
+                    case PeriodeFilter.ThisYear:
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
+                        break;
+                    case PeriodeFilter.LastYear:
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
+                        break;
+                    case PeriodeFilter.Last3Months:
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
+                        break;
+                    case PeriodeFilter.Last6Months:
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
+                        break;
+                }
+            }
+
+            // Sorting Data dengan cara yang lebih aman
+            query = sortDirection?.ToLower() == "desc"
+                ? orderBy switch
+                {
+                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
+                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
+                    "KodeRegistFasilitas" => query.OrderByDescending(u => u.KodeRegistFasilitas),
+                    "NamaFasilitasPasien" => query.OrderByDescending(u => u.NamaFasilitasPasien),
+                    "DokterPemeriksa" => query.OrderByDescending(u => u.DokterPemeriksa),
+                    _ => query.OrderByDescending(u => u.CreateDateTime)
+                }
+                : orderBy switch
+                {
+                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
+                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
+                    "KodeRegistFasilitas" => query.OrderByDescending(u => u.KodeRegistFasilitas),
+                    "NamaFasilitasPasien" => query.OrderByDescending(u => u.NamaFasilitasPasien),
+                    "DokterPemeriksa" => query.OrderByDescending(u => u.DokterPemeriksa),
+                    _ => query.OrderByDescending(u => u.CreateDateTime)
+                };
+
+            // Pagination
+            var totalRows = query.Count();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
+
+            if (rows.Count == 0 && page > totalPages)
+            {
+                return NotFound(new { message = "Page not found." });
+            }
+
+            return Ok(new
+            {
+                status = "success",
+                message = "Data retrieved successfully",
+                data = new
+                {
+                    Rows = rows,
+                    TotalRows = totalRows,
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalPages = totalPages
+                }
+            });
+        }
+
+    }
+}

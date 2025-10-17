@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
@@ -51,9 +52,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = from a in _applicationDbContext.Polikliniks
+            var query = (from a in _applicationDbContext.Polikliniks
                         join u in _applicationDbContext.UserActives
-                        on a.CreateBy equals u.UserActiveId
+                        on a.CreateBy equals u.UserActiveId into creatorJoin
+                        from u in creatorJoin.DefaultIfEmpty()
                         where a.IsDelete == false
                         select new
                         {
@@ -64,15 +66,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             KodePoliklinik = a.KodePoliklinik,
                             NamaPoliklinik = a.NamaPoliklinik,
                             KepalaPoliklinik = a.KepalaPoliklinik,
-                            Lokasi = a.Lokasi,
+                            Ruang = a.Ruang,
                             Telepon = a.Telepon,
                             Email = a.Email,
                             JamBuka = a.JamBuka,
                             JamTutup = a.JamTutup,
                             LayananPoliklinik = a.LayananPoliklinik,
                             Deskripsi = a.Deskripsi,
+                            HariOperasional = a.HariOperasional,
+                            JumlahMaxPasien = a.JumlahMaxPasien,
+                            KodeAntreanPoli = a.KodeAntreanPoli,
+
                             //SubPolis = a.SubPolis
-                        };
+                        }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
             var totalRows = query.Count();
@@ -124,103 +130,129 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         public async Task<IActionResult> CreatePoliklinik([FromBody] PoliklinikViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
-            {
                 return BadRequest(new { message = "Data tidak valid. || 400 Bad Request" });
-            }
 
             try
             {
-                // **Ambil User ID dari JWT Claims**
-                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
-                var UserActiveId = GetUserActive.UserActiveId;
-
-                if (string.IsNullOrEmpty(EmailLogin))
-                {
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
+                if (getUserActive == null)
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
-                }
 
-                var dateNow = DateTimeOffset.UtcNow;
+                var userActiveId = getUserActive.UserActiveId;
+                var dateNow = DateTime.UtcNow;
                 var setDateNow = dateNow.ToString("yyMMdd");
 
-                // Ambil data terakhir untuk hari ini (tanpa ToString di query)
+                // KodePoliklinik
                 var lastCode = _applicationDbContext.Polikliniks
-                    .Where(d => d.CreateDateTime.Date == dateNow.UtcDateTime.Date)
+                    .Where(d => d.CreateDateTime.Date == dateNow.Date)
                     .OrderByDescending(k => k.KodePoliklinik)
                     .FirstOrDefault();
 
-                string kode;
-                if (lastCode == null)
+                string kodePoliklinik;
+                if (lastCode == null || lastCode.KodePoliklinik.Substring(3, 6) != setDateNow)
                 {
-                    kode = $"POL{setDateNow}0001";
+                    kodePoliklinik = $"POL{setDateNow}0001";
                 }
                 else
                 {
-                    var lastCodeTrim = lastCode.KodePoliklinik.Substring(3, 6);
+                    int lastNumber = Convert.ToInt32(lastCode.KodePoliklinik.Substring(9));
+                    kodePoliklinik = $"POL{setDateNow}{(lastNumber + 1).ToString("D4")}";
+                }
 
-                    if (lastCodeTrim != setDateNow)
+                // Atur kata-kata yang akan di-skip
+                var skipWords = new[] { "Poli", "Poliklinik", "dan" };
+
+                // Bersihkan dan pecah nama poli
+                var words = vm.NamaPoliklinik
+                    .Replace("(", "").Replace(")", "")
+                    .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                    .Where(w => !skipWords.Contains(w, StringComparer.OrdinalIgnoreCase))
+                    .ToList();
+
+                // Default
+                string kodeAntrean = "XX";
+
+                // Generate kode awal
+                if (words.Count > 0)
+                {
+                    if (words.Count == 1)
                     {
-                        kode = $"POL{setDateNow}0001";
+                        kodeAntrean = words[0].Substring(0, Math.Min(2, words[0].Length)).ToUpper();
                     }
                     else
                     {
-                        kode = $"POL{setDateNow}" + (Convert.ToInt32(lastCode.KodePoliklinik.Substring(9)) + 1).ToString("D4");
+                        kodeAntrean = (words[0][0].ToString() + words[1][0].ToString()).ToUpper();
+                    }
+
+                    // Simpan kode awal sebagai base
+                    var baseKode = kodeAntrean;
+                    int fallbackIndex = 1;
+
+                    // Loop untuk memastikan tidak duplikat
+                    while (_applicationDbContext.Polikliniks.Any(p => p.KodeAntreanPoli == kodeAntrean))
+                    {
+                        // Fallback huruf ke-2 dari kata kedua
+                        if (words.Count > 1 && words[1].Length > fallbackIndex)
+                        {
+                            kodeAntrean = (words[0][0].ToString() + words[1][fallbackIndex].ToString()).ToUpper();
+                            fallbackIndex++;
+                        }
+                        // Jika kata kedua habis, coba huruf ke-2 dari kata pertama
+                        else if (words[0].Length > fallbackIndex)
+                        {
+                            kodeAntrean = (words[0][0].ToString() + words[0][fallbackIndex].ToString()).ToUpper();
+                            fallbackIndex++;
+                        }
+                        // Jika semua kombinasi huruf habis, tambahkan angka
+                        else
+                        {
+                            kodeAntrean = baseKode + fallbackIndex.ToString();
+                            fallbackIndex++;
+                        }
                     }
                 }
 
-                // cek duplikasi
-                var isDuplicate = _applicationDbContext.Polikliniks
-                    .Any(c => c.KodePoliklinik == kode && c.NamaPoliklinik == vm.NamaPoliklinik);
+                // Cek duplikasi
+                bool isDuplicate = _applicationDbContext.Polikliniks
+                    .Any(c => c.KodePoliklinik == kodePoliklinik && c.NamaPoliklinik == vm.NamaPoliklinik);
 
                 if (isDuplicate)
-                {
                     return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
-                }
 
-                // Validate ModelState
-                if (ModelState.IsValid)
+                var data = new Poliklinik
                 {
-                    var data = new Poliklinik
-                    {
-                        PoliklinikId = Guid.NewGuid(),
-                        KodePoliklinik = kode,
-                        NamaPoliklinik = vm.NamaPoliklinik,
-                        KepalaPoliklinik = vm.KepalaPoliklinik,
-                        Lokasi = vm.Lokasi,
-                        Telepon = vm.Telepon,
-                        Email = vm.Email,
-                        HariOperasional = vm.HariOperasional,
-                        JamBuka = vm.JamBuka,
-                        JamTutup = vm.JamTutup,
-                        LayananPoliklinik = vm.LayananPoliklinik,
-                        Deskripsi = vm.Deskripsi,
-                        CreateDateTime = DateTimeOffset.UtcNow,
-                        CreateBy = UserActiveId,
-                        UpdateDateTime = DateTimeOffset.UtcNow,
-                        UpdateBy = UserActiveId,
-                        DeleteDateTime = DateTimeOffset.UtcNow,
-                        DeleteBy = UserActiveId,
-                        IsDelete = false
-                    };
+                    PoliklinikId = Guid.NewGuid(),
+                    KodePoliklinik = kodePoliklinik,
+                    KodeAntreanPoli = kodeAntrean,
+                    NamaPoliklinik = vm.NamaPoliklinik,
+                    KepalaPoliklinik = vm.KepalaPoliklinik,
+                    Ruang = vm.Ruang,
+                    Telepon = vm.Telepon,
+                    Email = vm.Email,
+                    HariOperasional = vm.HariOperasional,
+                    JamBuka = vm.JamBuka,
+                    JamTutup = vm.JamTutup,
+                    JumlahMaxPasien = vm.JumlahMaxPasien,
+                    LayananPoliklinik = vm.LayananPoliklinik,
+                    Deskripsi = vm.Deskripsi,
+                    CreateDateTime = DateTimeOffset.UtcNow,
+                    CreateBy = userActiveId,
 
-                    _applicationDbContext.Polikliniks.Add(data);
-                    _applicationDbContext.SaveChanges();
-                    return Created("", new
-                    {
-                        message = "Data berhasil ditambahkan. || 201 Created",
-                    });
-                }
-                else
-                {
-                    return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
-                }
+                    IsDelete = false
+                };
+
+                _applicationDbContext.Polikliniks.Add(data);
+                await _applicationDbContext.SaveChangesAsync();
+
+                return Created("", new { message = "Data berhasil ditambahkan. || 201 Created" });
             }
-            catch
-            (Exception ex)
+            catch (Exception ex)
             {
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
 
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdatePoliklinik(Guid id, [FromBody] PoliklinikViewModel vm)
@@ -256,7 +288,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     data.NamaPoliklinik = vm.NamaPoliklinik;
                     data.KepalaPoliklinik = vm.KepalaPoliklinik;
-                    data.Lokasi = vm.Lokasi;
+                    data.Ruang = vm.Ruang;
                     data.Telepon = vm.Telepon;
                     data.Email = vm.Email;
                     data.JamBuka = vm.JamBuka;
@@ -264,6 +296,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     data.LayananPoliklinik = vm.LayananPoliklinik;
                     data.UpdateDateTime = DateTimeOffset.UtcNow;
                     data.UpdateBy = UserActiveId;
+                    data.JumlahMaxPasien = vm.JumlahMaxPasien;
+                    data.Deskripsi = vm.Deskripsi;
+                    data.HariOperasional = vm.HariOperasional;
+                    
+
                     _applicationDbContext.Polikliniks.Update(data);
                     _applicationDbContext.SaveChanges();
                     return Ok(new
@@ -301,9 +338,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
+
                 data.IsDelete = true;
                 data.DeleteDateTime = DateTimeOffset.UtcNow;
                 data.DeleteBy = UserActiveId;
+
                 _applicationDbContext.Polikliniks.Update(data);
                 _applicationDbContext.SaveChanges();
                 return Ok(new
@@ -345,32 +384,39 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             KodePoliklinik = a.KodePoliklinik,
                             NamaPoliklinik = a.NamaPoliklinik,
                             KepalaPoliklinik = a.KepalaPoliklinik,
-                            Lokasi = a.Lokasi,
+                            Ruang = a.Ruang,
                             Telepon = a.Telepon,
                             Email = a.Email,
                             JamBuka = a.JamBuka,
                             JamTutup = a.JamTutup,
                             LayananPoliklinik = a.LayananPoliklinik,
                             Deskripsi = a.Deskripsi,
+                            HariOperasional = a.HariOperasional,
+                            JumlahMaxPasien = a.JumlahMaxPasien,
+                            KodeAntreanPoli = a.KodeAntreanPoli,
+
                             //SubPolis = a.SubPolis
                         };
 
-            // Filter berdasarkan search
+            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             if (!string.IsNullOrWhiteSpace(search))
             {
+                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
-                    u.KodePoliklinik.Contains(search) || u.NamaPoliklinik.Contains(search) || u.LayananPoliklinik.Contains(search)
-                    || u.Lokasi.Contains(search)
+                    EF.Functions.ILike(u.KodePoliklinik, search) ||
+                    EF.Functions.ILike(u.NamaPoliklinik, search)
                 );
             }
 
-            // Filter berdasarkan daterange jika keduanya memiliki nilai
+            //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
             {
+                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
+                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+
                 query = query.Where(u =>
-                    u.CreateDateTime.Date >= startDate.Value.Date &&
-                    u.CreateDateTime.Date <= endDate.Value.Date
-                );
+                    u.CreateDateTime >= startUtc &&
+                    u.CreateDateTime <= endUtc);
             }
 
             // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai

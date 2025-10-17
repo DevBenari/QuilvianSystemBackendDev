@@ -10,7 +10,6 @@ using Swashbuckle.AspNetCore.Annotations;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
-using QuilvianSystemBackendDev.Areas.Pendaftaran.Controllers;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 
@@ -129,7 +128,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
         // POST: api/Operasi
         [HttpPost]
-        public async Task<IActionResult> Create([FromForm] OperasiViewModel vm)
+        public async Task<IActionResult> Create([FromBody] OperasiViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -148,12 +147,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var dateNow = DateTimeOffset.UtcNow;
+                 var dateNow = DateTime.UtcNow;;
                 var setDateNow = DateTimeOffset.UtcNow.ToString("yyMMdd");
 
                 // Generate UserActiveCode
                 var lastCode = _context.Operasis
-                    .Where(d => d.CreateDateTime.Date == dateNow.UtcDateTime.Date)
+                    .Where(d => d.CreateDateTime.Date == dateNow.Date)
                     .OrderByDescending(k => k.KodeOperasi)
                     .FirstOrDefault();
 
@@ -182,7 +181,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 if (ModelState.IsValid)
                 {
-                    var data = new Operasi
+                    var data = new Models.Operasi
                     {
                         OperasiId = Guid.NewGuid(),
                         KodeOperasi = kode,
@@ -235,7 +234,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
         // PUT: api/operasi/{id}
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromForm] OperasiViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] OperasiViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -283,9 +282,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.NamaPasien = vm.NamaPasien;
                 data.KeluhanOperasi = vm.KeluhanOperasi;
 
-
-                data.UpdateDateTime = DateTimeOffset.UtcNow;
                 data.UpdateBy = UserActiveId;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
+
+
 
                 _context.Operasis.Update(data);
                 _context.SaveChanges();
@@ -339,7 +339,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet("paged")]
-        public IActionResult PagedPosition(
+        public IActionResult PagedOperasi(
         int page = 1,
         int perPage = 10,
         string? search = null,
@@ -385,21 +385,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             KeluhanOperasi = a.KeluhanOperasi
                         };
 
-            // Filter berdasarkan search
+            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             if (!string.IsNullOrWhiteSpace(search))
             {
+                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
-                    u.KodeOperasi.Contains(search) || u.NamaTindakanOperasi.Contains(search) || u.JenisOperasi.Contains(search)
+                    EF.Functions.ILike(u.KodeOperasi, search) ||
+                    EF.Functions.ILike(u.JenisOperasi, search) ||
+                    EF.Functions.ILike(u.NamaTindakanOperasi, search)
                 );
             }
 
-            // Filter berdasarkan daterange jika keduanya memiliki nilai
+            //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
             {
+                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
+                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+
                 query = query.Where(u =>
-                    u.CreateDateTime.Date >= startDate.Value.Date &&
-                    u.CreateDateTime.Date <= endDate.Value.Date
-                );
+                    u.CreateDateTime >= startUtc &&
+                    u.CreateDateTime <= endUtc);
             }
 
             // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai

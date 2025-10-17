@@ -1,0 +1,211 @@
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
+using QuilvianSystemBackendDev.Repositories;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Security.Claims;
+using QuilvianSystemBackendDev.Models;
+using Microsoft.AspNetCore.Identity;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels;
+
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    [Authorize]
+    public class ObatAsuransiController : Controller
+    {
+        private readonly ApplicationDbContext _applicationDbContext;
+        private readonly UserManager<ApplicationUser> _userManager;
+
+        public ObatAsuransiController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
+        {
+            _applicationDbContext = context;
+            _userManager = userManager;
+        }
+
+        // GET: api/ObatAsuransi
+        [HttpGet]
+        public async Task<IActionResult> GetAllObatAsuransi(int page = 1, int perPage = 10)
+        {
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
+
+            var query = (from oa in _applicationDbContext.ObatAsuransis
+                         join o in _applicationDbContext.Obats on oa.ObatId equals o.ObatId
+                         join a in _applicationDbContext.Asuransis on oa.AsuransiId equals a.AsuransiId
+                         select new
+                         {
+                             oa.CreateDateTime,
+                             oa.ObatAsuransiId,
+                             oa.ObatId,
+                             o.ObatName,
+                             oa.AsuransiId,
+                             AsuransiName = a.NamaAsuransi
+                         }).OrderByDescending(a => a.CreateDateTime);
+
+            var totalRows = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            var listdata = await query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToListAsync();
+
+            if (!listdata.Any())
+            {
+                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
+            }
+
+            return Ok(new
+            {
+                message = "Berhasil || 200 OK",
+                data = listdata,
+                pagination = new
+                {
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalRows = totalRows,
+                    TotalPages = totalPages
+                }
+            });
+        }
+
+        // GET: api/ObatAsuransi/{id}
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetObatAsuransiById(Guid id)
+        {
+            var obatAsuransi = await _applicationDbContext.ObatAsuransis
+                .FirstOrDefaultAsync(oa => oa.ObatAsuransiId == id);
+
+            if (obatAsuransi == null)
+            {
+                return NotFound(new { message = "Data tidak ditemukan." });
+            }
+
+            return Ok(new
+            {
+                message = "Ditemukan || 200 OK",
+                data = obatAsuransi
+            });
+        }
+
+        // POST: api/ObatAsuransi
+        [HttpPost]
+        public async Task<IActionResult> CreateObatAsuransi([FromBody] ObatAsuransiViewModel obatAsuransi)
+        {
+            if (obatAsuransi == null)
+            {
+                return BadRequest(new { message = "Data tidak valid." });
+            }
+
+            try
+            {
+                // Ambil User ID dari JWT Claims
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+
+                if (getUserActive == null)
+                {
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+                }
+                var userActiveId = getUserActive.UserActiveId;
+
+                // Cek jika sudah ada hubungan antara Obat dan Asuransi yang sama
+                var isDuplicate = await _applicationDbContext.ObatAsuransis
+                    .AnyAsync(oa => oa.ObatId == obatAsuransi.ObatId && oa.AsuransiId == obatAsuransi.AsuransiId);
+
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Data sudah ada || 409 Conflict Data" });
+                }
+
+                // Convert to entity model
+                var obatAsuransiEntity = new ObatAsuransi
+                {
+                    ObatAsuransiId = Guid.NewGuid(),
+                    ObatId = obatAsuransi.ObatId,
+                    AsuransiId = obatAsuransi.AsuransiId,
+                    CreateBy = userActiveId,
+                    CreateDateTime = DateTimeOffset.UtcNow
+                };
+
+                // Insert data baru ke database
+                _applicationDbContext.ObatAsuransis.Add(obatAsuransiEntity);
+                await _applicationDbContext.SaveChangesAsync();
+
+                return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
+
+        // PUT: api/ObatAsuransi/{id}
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateObatAsuransi(Guid id, [FromBody] ObatAsuransi obatAsuransi)
+        {
+            if (obatAsuransi == null)
+            {
+                return BadRequest(new { message = "Data tidak valid." });
+            }
+
+            try
+            {
+                // Cari data yang ingin diupdate
+                var data = await _applicationDbContext.ObatAsuransis.FindAsync(id);
+                if (data == null)
+                {
+                    return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                // Update data
+                data.ObatId = obatAsuransi.ObatId;
+                data.AsuransiId = obatAsuransi.AsuransiId;
+
+                _applicationDbContext.ObatAsuransis.Update(data);
+                await _applicationDbContext.SaveChangesAsync();
+
+                return Ok(new { message = "Update Data Berhasil || 200 OK" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
+        // DELETE: api/ObatAsuransi/{id}
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteObatAsuransi(Guid id)
+        {
+            try
+            {
+                var data = await _applicationDbContext.ObatAsuransis.FindAsync(id);
+                if (data == null)
+                {
+                    return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                _applicationDbContext.ObatAsuransis.Remove(data);
+                await _applicationDbContext.SaveChangesAsync();
+
+                return Ok(new { message = "Data berhasil dihapus || 200 OK" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+    }
+}
