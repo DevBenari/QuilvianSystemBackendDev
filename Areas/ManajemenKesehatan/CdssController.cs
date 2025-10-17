@@ -118,7 +118,6 @@ namespace QuilvianSystemBackendDev.Controllers
                     }
                 }
             });
-
         }
 
         // ANEMIA
