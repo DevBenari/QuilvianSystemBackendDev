@@ -235,6 +235,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<PengawasanHarian> PengawasanHarians { get; set; }
         public DbSet<TransferPasien> TransferPasiens { get; set; }
         public DbSet<TransferPasienDetail> TransferPasienDetails { get; set; }
+        public DbSet<VisitDokter> VisitDokters { get; set; }
         #endregion
 
         #region Farmasi

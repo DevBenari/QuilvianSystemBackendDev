@@ -180,6 +180,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                             TipePasien = a.TipePasien,
                             NamaLengkap = a.NamaLengkap,
                             JenisKelamin = a.JenisKelamin,
+                            CatatanKhusus = a.CatatanKhusus,
                             FotoName = a.FotoName,
                             FotoPath = a.FotoPath,
                             TitleId = a.TitleId,
@@ -295,6 +296,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     TanggalLahir = parsed,
                     Umur = HitungUmurLengkap(listdata.TanggalLahir),
                     listdata.JenisKelamin,
+                    listdata.CatatanKhusus,
                     listdata.StatusPerkawinan,
                     listdata.AgamaId,
                     listdata.PendidikanTerakhirId,
@@ -374,6 +376,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     listdata.IdentitasId,
                     listdata.NoIdentitas,
                     listdata.TempatLahir,
+                    listdata.CatatanKhusus,
                     TanggalLahir = parsed,
                     Umur = HitungUmurLengkap(listdata.TanggalLahir),
                     listdata.JenisKelamin,
@@ -662,6 +665,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         IdentitasId = vm.IdentitasId,
                         NoIdentitas = vm.NoIdentitas,
                         TempatLahir = vm.TempatLahir,
+                        CatatanKhusus = vm.CatatanKhusus,
                         TanggalLahir = parsedDate,
                         JenisKelamin = vm.JenisKelamin,
                         StatusPerkawinan = vm.StatusPerkawinan,
@@ -779,6 +783,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 pasien.TempatLahir = vm.TempatLahir ?? pasien.TempatLahir;
                 pasien.TanggalLahir = vm.TanggalLahir != default ? parsedDate : pasien.TanggalLahir;
                 pasien.JenisKelamin = vm.JenisKelamin ?? pasien.JenisKelamin;
+                pasien.CatatanKhusus = vm.CatatanKhusus ?? pasien.CatatanKhusus;
                 pasien.StatusPerkawinan = vm.StatusPerkawinan ?? pasien.StatusPerkawinan;
                 pasien.AgamaId = vm.AgamaId ?? pasien.AgamaId;
                 pasien.PendidikanTerakhirId = vm.PendidikanTerakhirId ?? pasien.PendidikanTerakhirId;
@@ -953,6 +958,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                             TipePasien = a.TipePasien,
                             NamaLengkap = a.NamaLengkap,
                             JenisKelamin = a.JenisKelamin,
+                            CatatanKhusus = a.CatatanKhusus,
                             FotoName = a.FotoName,
                             FotoPath = a.FotoPath,
                             TitleId = a.TitleId,

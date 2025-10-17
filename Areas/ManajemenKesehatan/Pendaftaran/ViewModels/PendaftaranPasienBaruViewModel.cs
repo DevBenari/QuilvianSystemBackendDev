@@ -18,7 +18,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewMode
         public string? StatusPerkawinan { get; set; }
         public Guid? AgamaId { get; set; }
         public Guid? PendidikanTerakhirId { get; set; }
-
+        public string? CatatanKhusus { get; set; }
         // Informasi Alamat
         public string? AlamatIdentitas { get; set; }
         public string? AlamatDomisili { get; set; }
