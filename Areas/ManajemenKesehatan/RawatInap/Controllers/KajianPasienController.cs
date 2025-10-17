@@ -74,6 +74,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              CreateByName = u.FullName,
                              a.KajianPasienId,
                              a.KunjunganId,
+                             a.VitalSignId,
                              k.NoRekamMedis,
                              a.DokterId,
                              a.UserActiveId,
@@ -199,6 +200,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 {
                     KajianPasienId = Guid.NewGuid(),
                     KunjunganId = vm.KunjunganId,
+                    VitalSignId = vm.VitalSignId,
                     DokterId = vm.DokterId,
                     UserActiveId = userActiveId,
                     KeadaanUmum = vm.KeadaanUmum,
@@ -289,6 +291,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                 // **Update Data**
                 data.KunjunganId = vm.KunjunganId;
+                data.VitalSignId = vm.VitalSignId;
                 data.DokterId = vm.DokterId;
                 data.UserActiveId = userActiveId;
                 data.KeadaanUmum = vm.KeadaanUmum;
@@ -437,6 +440,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              CreateByName = u.FullName,
                              a.KajianPasienId,
                              a.KunjunganId,
+                             a.VitalSignId,
                              k.NoRekamMedis,
                              a.DokterId,
                              a.UserActiveId,

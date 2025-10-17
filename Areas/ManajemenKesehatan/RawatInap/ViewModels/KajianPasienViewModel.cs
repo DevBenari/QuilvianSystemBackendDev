@@ -5,6 +5,7 @@
         public Guid? KunjunganId { get; set; }
         public Guid? DokterId { get; set; }
         public Guid? UserActiveId { get; set; }
+        public Guid? VitalSignId { get; set; }
         public string? KeadaanUmum { get; set; }
         public string? KeadaanKulit { get; set; }
         public string? KeadaanKepalaLeher { get; set; }

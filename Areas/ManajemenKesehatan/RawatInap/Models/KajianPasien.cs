@@ -11,6 +11,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models
         public Guid KajianPasienId { get; set; }
         public Guid? KunjunganId { get; set; }
         public Guid? DokterId { get; set; }
+        public Guid? VitalSignId { get; set; }
         public Guid? UserActiveId { get; set; }
         public string? KeadaanUmum { get; set; }
         public string? KeadaanKulit { get; set; }
