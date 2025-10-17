@@ -76,10 +76,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              CreateByName = u.FullName,
                              a.SpecimenAsalId,
                              a.AsalSpecimen,
-                             j.JenisSpecimenId,
-                             j.NamaJenisSpecimen,
-                             m.SpecimenMethodId,
-                             m.CaraPengambilanSpecimen,
+                             JenisSpecimenId = j != null ? j.JenisSpecimenId : (Guid?)null,
+                             NamaJenisSpecimen = j != null ? j.NamaJenisSpecimen : null,
+                             SpecimenMethodId = m != null ? m.SpecimenMethodId : (Guid?)null,
+                             CaraPengambilanSpecimen = m != null ? m.CaraPengambilanSpecimen : null,
                              a.KodeAsalSpecimen,
                              a.Keterangan,
                          }).OrderByDescending(a => a.CreateDateTime);
@@ -115,92 +115,60 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(Guid id)
+        public async Task<IActionResult> GetSpecimenAsalById(Guid id)
         {
             try
             {
-                // ✅ Cek koneksi database
-                if (!_applicationDbContext.Database.CanConnect())
-                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+                var data = await (
+                    from a in _applicationDbContext.SpecimenAsals
 
-                // ✅ Query utama TransferPasien
-                var data = await (from t in _applicationDbContext.TransferPasiens
-                                  join u in _applicationDbContext.UserActives
-                                      on t.CreateBy equals u.UserActiveId into userGroup
-                                  from u in userGroup.DefaultIfEmpty()
+                        // ✅ LEFT JOIN ke UserActive
+                    join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId into userJoin
+                    from u in userJoin.DefaultIfEmpty()
 
-                                      // join Dokter 1, 2, 3 (opsional)
-                                  join d1 in _applicationDbContext.UserActives
-                                      on t.DokterId1 equals d1.UserActiveId into dokter1Group
-                                  from d1 in dokter1Group.DefaultIfEmpty()
+                        // ✅ LEFT JOIN ke SpecimenJenis
+                    join j in _applicationDbContext.SpecimenJeniss on a.SpecimenAsalId equals j.AsalSpecimenId into spJenis
+                    from j in spJenis.DefaultIfEmpty()
 
-                                  join d2 in _applicationDbContext.UserActives
-                                      on t.DokterId2 equals d2.UserActiveId into dokter2Group
-                                  from d2 in dokter2Group.DefaultIfEmpty()
+                        // ✅ LEFT JOIN ke SpecimenMethod
+                    join m in _applicationDbContext.SpecimenMethods on a.SpecimenAsalId equals m.AsalSpecimenId into spMethod
+                    from m in spMethod.DefaultIfEmpty()
 
-                                  join d3 in _applicationDbContext.UserActives
-                                      on t.DokterId3 equals d3.UserActiveId into dokter3Group
-                                  from d3 in dokter3Group.DefaultIfEmpty()
+                    where a.SpecimenAsalId == id && (a.IsDelete == false || a.IsDelete == null)
+                    select new
+                    {
+                        a.SpecimenAsalId,
+                        a.AsalSpecimen,
+                        a.KodeAsalSpecimen,
+                        a.Keterangan,
+                        a.CreateDateTime,
+                        a.CreateBy,
+                        CreateByName = u != null ? u.FullName : null,
 
-                                  where (t.IsDelete == false || t.IsDelete == null)
-                                        && t.TransferPasienId == id
-                                  select new
-                                  {
-                                      t.TransferPasienId,
-                                      t.KunjunganId,
-                                      t.KamarId,
-                                      t.DiagnosaUtama,
-                                      t.DiagnosaSekunder,
-                                      DokterUtama = d1.FullName,
-                                      DokterPendamping = d2.FullName,
-                                      DokterTambahan = d3.FullName,
-                                      t.IndikasiRanap,
-                                      t.IsAlergic,
-                                      t.AlergicOf,
-                                      t.AlasanPindahPasien,
-                                      t.TglPindah,
-                                      t.PengawasanHarianId,
-                                      t.ObservasiCairanId,
-                                      t.IndikatorPengkajianId,
-                                      t.PemberianObatId,
-                                      t.TotalScoreAldrete,
-                                      t.TotalScoreSteward,
-                                      t.IsICU,
-                                      t.BarangDiserahkan,
-                                      t.IntervensiPerawat,
-                                      t.PlanningTindakan,
+                        // 🔹 Jika tidak ada relasi, akan otomatis null
+                        JenisSpecimenId = j != null ? j.JenisSpecimenId : (Guid?)null,
+                        NamaJenisSpecimen = j != null ? j.NamaJenisSpecimen : null,
 
-                                      // 🔹 File Path TTD
-                                      t.TTDMenyerahkanId,
-                                      t.TTDMenyerahkanPath,
-                                      t.TTDMengetahuiId,
-                                      t.TTDMengetahuiPath,
-                                      t.TTDPenerimaId,
-                                      t.TTDPenerimaPath,
+                        SpecimenMethodId = m != null ? m.SpecimenMethodId : (Guid?)null,
+                        CaraPengambilanSpecimen = m != null ? m.CaraPengambilanSpecimen : null
+                    }
+                ).FirstOrDefaultAsync();
 
-                                      t.Keterangan,
-                                      t.CreateDateTime,
-                                      CreateByName = u.FullName
-                                  }).AsNoTracking()
-                                  .FirstOrDefaultAsync();
-
-                // ✅ Jika tidak ditemukan
-                if (data == null)
-                    return NotFound(new { message = $"Data Transfer Pasien dengan ID {id} tidak ditemukan. || 404 Not Found" });
-
-                // ✅ Return hasil
+                // ✅ Jika data tidak ditemukan, tetap return OK tapi data = null
                 return Ok(new
                 {
-                    message = "Berhasil mengambil data Transfer Pasien || 200 OK",
-                    data
+                    message = data != null ? "Berhasil || 200 OK" : "Data tidak ditemukan || 200 OK",
+                    data = data
                 });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+                return StatusCode(500, new
+                {
+                    message = $"Terjadi kesalahan internal: {ex.Message}"
+                });
             }
         }
-
 
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] SpecimenAsalViewModel vm)
@@ -451,10 +419,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              CreateByName = u.FullName,
                              a.SpecimenAsalId,
                              a.AsalSpecimen,
-                             j.JenisSpecimenId,
-                             j.NamaJenisSpecimen,
-                             m.SpecimenMethodId,
-                             m.CaraPengambilanSpecimen,
+                             JenisSpecimenId = j != null ? j.JenisSpecimenId : (Guid?)null,
+                             NamaJenisSpecimen = j != null ? j.NamaJenisSpecimen : null,
+                             SpecimenMethodId = m != null ? m.SpecimenMethodId : (Guid?)null,
+                             CaraPengambilanSpecimen = m != null ? m.CaraPengambilanSpecimen : null,
                              a.KodeAsalSpecimen,
                              a.Keterangan,
                          });
@@ -464,7 +432,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             {
                 search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
-                    EF.Functions.ILike(u.AsalSpecimen, search)
+                    EF.Functions.ILike(u.AsalSpecimen, search) 
                 );
             }
 

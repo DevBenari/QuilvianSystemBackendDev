@@ -45,80 +45,195 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
+        public async Task<IActionResult> GetAllTransferPasien(int page = 1, int perPage = 10)
         {
-            // Validasi agar page dan perPage minimal bernilai 1
-            if (page < 1) page = 1;
-            if (perPage < 1) perPage = 10;
-
-            // Query data
-            var query = (from a in _applicationDbContext.DarahPermintaans
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false || a.IsDelete == null
-                         select new
-                         {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = u.FullName,
-                             a.BankDarahId,
-                             a.KomponenDarahId,
-                             a.GolonganDarahId,
-                             a.JumlahKantong,
-                             a.Rhesus,
-                             a.TglPemesanan,
-                             a.WaktuPemesanan,
-                             a.TglDiperlukan,
-                             a.DokterBDRSId,
-                             a.DokterPerujukId,
-                             a.Petugas,
-                             a.Keterangan,
-                         }).OrderByDescending(a => a.CreateDateTime);
-
-            // Hitung total data sebelum paginasi
-            var totalRows = query.Count();
-            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-
-            // Ambil data sesuai paging
-            var listdata = query
-                .Skip((page - 1) * perPage)
-                .Take(perPage)
-                .ToList();
-
-            if (!listdata.Any())
+            try
             {
-                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
-            }
+                // ✅ Cek koneksi database
+                if (!_applicationDbContext.Database.CanConnect())
+                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
 
-            // Return hasil dengan paging info
-            return Ok(new
-            {
-                message = "Berhasil || 200 OK",
-                data = listdata,
-                pagination = new
+                if (page < 1) page = 1;
+                if (perPage < 1) perPage = 10;
+
+                // ✅ Query utama
+                var query = from t in _applicationDbContext.TransferPasiens
+                            join u in _applicationDbContext.UserActives
+                                on t.CreateBy equals u.UserActiveId into userGroup
+                            from u in userGroup.DefaultIfEmpty()
+
+                            join d1 in _applicationDbContext.UserActives
+                                on t.DokterId1 equals d1.UserActiveId into dokter1Group
+                            from d1 in dokter1Group.DefaultIfEmpty()
+
+                            join d2 in _applicationDbContext.UserActives
+                                on t.DokterId2 equals d2.UserActiveId into dokter2Group
+                            from d2 in dokter2Group.DefaultIfEmpty()
+
+                            join d3 in _applicationDbContext.UserActives
+                                on t.DokterId3 equals d3.UserActiveId into dokter3Group
+                            from d3 in dokter3Group.DefaultIfEmpty()
+
+                            where t.IsDelete == false || t.IsDelete == null
+                            orderby t.CreateDateTime descending
+                            select new
+                            {
+                                t.TransferPasienId,
+                                t.KunjunganId,
+                                t.KamarId,
+                                t.DiagnosaUtama,
+                                t.DiagnosaSekunder,
+                                DokterUtama = d1 != null ? d1.FullName : null,
+                                DokterPendamping = d2 != null ? d2.FullName : null,
+                                DokterTambahan = d3 != null ? d3.FullName : null,
+                                t.IndikasiRanap,
+                                t.IsAlergic,
+                                t.AlergicOf,
+                                t.AlasanPindahPasien,
+                                t.TglPindah,
+                                t.PengawasanHarianId,
+                                t.ObservasiCairanId,
+                                t.IndikatorPengkajianId,
+                                t.PemberianObatId,
+                                t.TotalScoreAldrete,
+                                t.TotalScoreSteward,
+                                t.IsICU,
+                                t.BarangDiserahkan,
+                                t.IntervensiPerawat,
+                                t.PlanningTindakan,
+
+                                // 🔹 File Path TTD
+                                t.TTDMenyerahkanId,
+                                t.TTDMenyerahkanPath,
+                                t.TTDMengetahuiId,
+                                t.TTDMengetahuiPath,
+                                t.TTDPenerimaId,
+                                t.TTDPenerimaPath,
+
+                                t.Keterangan,
+                                t.CreateDateTime,
+                                CreateByName = u != null ? u.FullName : null
+                            };
+
+                // ✅ Hitung total data sebelum paginasi
+                var totalRows = await query.CountAsync();
+                var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+                // ✅ Ambil data sesuai halaman
+                var listData = await query
+                    .Skip((page - 1) * perPage)
+                    .Take(perPage)
+                    .AsNoTracking()
+                    .ToListAsync();
+
+                // ✅ Response tetap OK meski kosong
+                return Ok(new
                 {
-                    CurrentPage = page,
-                    PerPage = perPage,
-                    TotalRows = totalRows,
-                    TotalPages = totalPages
-                }
-            });
+                    message = listData.Any() ? "Berhasil || 200 OK" : "Tidak ada data Transfer Pasien || 200 OK",
+                    data = listData.Any() ? listData : null,
+                    pagination = new
+                    {
+                        CurrentPage = page,
+                        PerPage = perPage,
+                        TotalRows = totalRows,
+                        TotalPages = totalPages
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = $"Terjadi kesalahan internal: {ex.Message}"
+                });
+            }
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.TransferPasiens.Find(id);
-            if (listdata == null)
+            try
             {
-                return NotFound(new { message = "Data tidak ditemukan." });
-            }
+                // ✅ Cek koneksi database
+                if (!_applicationDbContext.Database.CanConnect())
+                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
 
-            return Ok(new
+                // ✅ Query utama TransferPasien
+                var data = await (from t in _applicationDbContext.TransferPasiens
+                                  join u in _applicationDbContext.UserActives
+                                      on t.CreateBy equals u.UserActiveId into userGroup
+                                  from u in userGroup.DefaultIfEmpty()
+
+                                      // join Dokter 1, 2, 3 (opsional)
+                                  join d1 in _applicationDbContext.UserActives
+                                      on t.DokterId1 equals d1.UserActiveId into dokter1Group
+                                  from d1 in dokter1Group.DefaultIfEmpty()
+
+                                  join d2 in _applicationDbContext.UserActives
+                                      on t.DokterId2 equals d2.UserActiveId into dokter2Group
+                                  from d2 in dokter2Group.DefaultIfEmpty()
+
+                                  join d3 in _applicationDbContext.UserActives
+                                      on t.DokterId3 equals d3.UserActiveId into dokter3Group
+                                  from d3 in dokter3Group.DefaultIfEmpty()
+
+                                  where (t.IsDelete == false || t.IsDelete == null)
+                                        && t.TransferPasienId == id
+                                  select new
+                                  {
+                                      t.TransferPasienId,
+                                      t.KunjunganId,
+                                      t.KamarId,
+                                      t.DiagnosaUtama,
+                                      t.DiagnosaSekunder,
+                                      DokterUtama = d1.FullName,
+                                      DokterPendamping = d2.FullName,
+                                      DokterTambahan = d3.FullName,
+                                      t.IndikasiRanap,
+                                      t.IsAlergic,
+                                      t.AlergicOf,
+                                      t.AlasanPindahPasien,
+                                      t.TglPindah,
+                                      t.PengawasanHarianId,
+                                      t.ObservasiCairanId,
+                                      t.IndikatorPengkajianId,
+                                      t.PemberianObatId,
+                                      t.TotalScoreAldrete,
+                                      t.TotalScoreSteward,
+                                      t.IsICU,
+                                      t.BarangDiserahkan,
+                                      t.IntervensiPerawat,
+                                      t.PlanningTindakan,
+
+                                      // 🔹 File Path TTD
+                                      t.TTDMenyerahkanId,
+                                      t.TTDMenyerahkanPath,
+                                      t.TTDMengetahuiId,
+                                      t.TTDMengetahuiPath,
+                                      t.TTDPenerimaId,
+                                      t.TTDPenerimaPath,
+
+                                      t.Keterangan,
+                                      t.CreateDateTime,
+                                      CreateByName = u.FullName
+                                  }).AsNoTracking()
+                                  .FirstOrDefaultAsync();
+
+                // ✅ Jika tidak ditemukan
+                if (data == null)
+                    return NotFound(new { message = $"Data Transfer Pasien dengan ID {id} tidak ditemukan. || 404 Not Found" });
+
+                // ✅ Return hasil
+                return Ok(new
+                {
+                    message = "Berhasil mengambil data Transfer Pasien || 200 OK",
+                    data
+                });
+            }
+            catch (Exception ex)
             {
-                message = "Ditemukan || 200 OK",
-                data = listdata
-            });
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
         }
 
 
