@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
@@ -7,36 +6,36 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.ViewModels;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Controllers
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class DarahPermintaanController : Controller
+    public class TopikEdukasiController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<DarahPermintaanController> _logger;
+        private readonly ILogger<TopikEdukasiController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public DarahPermintaanController(
+        public TopikEdukasiController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<DarahPermintaanController> logger,
+            ILogger<TopikEdukasiController> logger,
             IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
@@ -45,30 +44,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
         }
-        private DateTime? TryParseTanggalToUtc(string tanggal)
-        {
-            if (DateTime.TryParseExact(
-                    tanggal,
-                    "yyyy-MM-dd",
-                    CultureInfo.InvariantCulture,
-                    DateTimeStyles.None,
-                    out var parsedDate))
-            {
-                var now = DateTime.Now; // atau DateTime.UtcNow jika kamu mau jam UTC
-                var finalDateTime = new DateTime(
-                    parsedDate.Year,
-                    parsedDate.Month,
-                    parsedDate.Day,
-                    now.Hour,
-                    now.Minute,
-                    now.Second,
-                    DateTimeKind.Local
-                ); // atau Utc jika perlu
 
-                return finalDateTime.ToUniversalTime(); // simpan dalam UTC
-            }
-            return null;
-        }
         [HttpGet]
         public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
         {
@@ -77,7 +53,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = (from a in _applicationDbContext.DarahPermintaans
+            var query = (from a in _applicationDbContext.TopikEdukasis
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
                          where a.IsDelete == false || a.IsDelete == null
@@ -86,19 +62,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
-                             a.BankDarahId,
-                             a.KomponenDarahId,
-                             a.GolonganDarahId,
-                             a.KunjunganId,
-                             a.PasienId,
-                             a.JumlahKantong,
-                             a.Rhesus,
-                             a.TglPemesanan,
-                             a.WaktuPemesanan,
-                             a.TglDiperlukan,
-                             a.DokterBDRSId,
-                             a.DokterPerujukId,
-                             a.Petugas,
+                             a.TopikEdukasiId,
+                             a.NamaTopik,
                              a.Keterangan,
                          }).OrderByDescending(a => a.CreateDateTime);
 
@@ -135,7 +100,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.DarahPermintaans.Find(id);
+            var listdata = _applicationDbContext.TopikEdukasis.Find(id);
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -149,7 +114,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] DarahPermintaanViewModel vm)
+        public async Task<IActionResult> Create([FromBody] TopikEdukasiViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -179,35 +144,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 var userActiveId = getUserActive.UserActiveId;
 
                 ////// **Cek Duplikasi**
-                //bool isDuplicate = await _applicationDbContext.Diskons
-                //                    .AnyAsync(c => c.NamaDiskon == vm.NamaDiskon);
+                bool isDuplicate = await _applicationDbContext.TopikEdukasis
+                                    .AnyAsync(c => c.NamaTopik.ToLower() == vm.NamaTopik.ToLower());
 
-                //if (isDuplicate)
-                //{
-                //    return Conflict(new { message = "Nama benefit ini telah tersedia" });
-                //}
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Nama topik edukasi ini telah tersedia" });
+                }
 
                 // **Buat Data Baru**
-                var data = new DarahPermintaan
+                var data = new TopikEdukasi
                 {
-                    BankDarahId = Guid.NewGuid(),
-                    KomponenDarahId = vm.KomponenDarahId,
-                    GolonganDarahId = vm.GolonganDarahId,
-                    JumlahKantong = vm.JumlahKantong,
-                    Rhesus = vm.Rhesus,
-                    TglPemesanan = TryParseTanggalToUtc(vm.TglPemesanan),
-                    WaktuPemesanan = vm.WaktuPemesanan,
-                    TglDiperlukan = TryParseTanggalToUtc(vm.TglDiperlukan),
-                    DokterPerujukId = vm.DokterPerujukId,
-                    DokterBDRSId = vm.DokterBDRSId,
-                    Petugas = vm.Petugas,
+                    TopikEdukasiId = Guid.NewGuid(),
+                    NamaTopik = vm.NamaTopik,
                     Keterangan = vm.Keterangan,
 
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
                 // **Simpan ke Database**
-                _applicationDbContext.DarahPermintaans.Add(data);
+                _applicationDbContext.TopikEdukasis.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -230,7 +186,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] DarahPermintaanViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] TopikEdukasiViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -260,29 +216,29 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data Lama**
-                var data = await _applicationDbContext.DarahPermintaans.FindAsync(id);
+                var data = await _applicationDbContext.TopikEdukasis.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data permintaan darah tidak ditemukan." });
                 }
 
+                bool isDuplicate = await _applicationDbContext.TopikEdukasis
+                    .AnyAsync(c => c.NamaTopik.ToLower() == vm.NamaTopik.ToLower() 
+                    && c.TopikEdukasiId != id);
+
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Nama topik edukasi ini telah tersedia" });
+                }
+
                 // **Update Data**
-                data.KomponenDarahId = vm.KomponenDarahId;
-                data.GolonganDarahId = vm.GolonganDarahId;
-                data.JumlahKantong = vm.JumlahKantong;
-                data.Rhesus = vm.Rhesus;
-                data.TglPemesanan = TryParseTanggalToUtc(vm.TglPemesanan);
-                data.WaktuPemesanan = vm.WaktuPemesanan;
-                data.TglDiperlukan = TryParseTanggalToUtc(vm.TglDiperlukan);
-                data.DokterPerujukId = vm.DokterPerujukId;
-                data.DokterBDRSId = vm.DokterBDRSId;
-                data.Petugas = vm.Petugas;
+                data.NamaTopik = vm.NamaTopik;
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.DarahPermintaans.Update(data);
+                _applicationDbContext.TopikEdukasis.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -303,6 +259,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
@@ -331,7 +288,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.DarahPermintaans.FindAsync(id);
+                var data = await _applicationDbContext.TopikEdukasis.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -343,7 +300,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 data.IsDelete = true;
 
-                _applicationDbContext.DarahPermintaans.Update(data);
+                _applicationDbContext.TopikEdukasis.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -369,19 +326,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         public IActionResult Paged(
         int page = 1,
         int perPage = 10,
-        Guid? kunjunganId = null,
-        Guid? pasienId = null,
+        string? search = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                        DateTime? startDate = null,
+                                DateTime? startDate = null,
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                        DateTime? endDate = null,
+                                DateTime? endDate = null,
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
 
             // Query data
-            var query = (from a in _applicationDbContext.DarahPermintaans
+            var query = (from a in _applicationDbContext.TopikEdukasis
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
                          where a.IsDelete == false || a.IsDelete == null
@@ -390,41 +346,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
-                             a.BankDarahId,
-                             a.KunjunganId,
-                             a.PasienId,
-                             a.KomponenDarahId,
-                             a.GolonganDarahId,
-                             a.JumlahKantong,
-                             a.Rhesus,
-                             a.TglPemesanan,
-                             a.WaktuPemesanan,
-                             a.TglDiperlukan,
-                             a.DokterBDRSId,
-                             a.DokterPerujukId,
-                             a.Petugas,
+                             a.TopikEdukasiId,
+                             a.NamaTopik,
                              a.Keterangan,
                          });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-            //if (!string.IsNullOrWhiteSpace(search))
-            //{
-            //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-            //    query = query.Where(u =>
-            //        EF.Functions.ILike(u.NamaDiskon, search)
-            //    );
-            //}
-
-            // filter berdasarkan kunjungan id
-            if (kunjunganId.HasValue)
+            if (!string.IsNullOrWhiteSpace(search))
             {
-                query = query.Where(u=>u.KunjunganId == kunjunganId.Value);
+                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+                query = query.Where(u =>
+                    EF.Functions.ILike(u.NamaTopik, search)
+                );
             }
 
-            // filter berdasarkan pasien id
-            if (pasienId.HasValue) { 
-                query = query.Where(u=>u.PasienId== pasienId.Value);
-            }
             //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
             {
@@ -524,7 +459,5 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 }
             });
         }
-
-
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Diagnostics;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
@@ -122,7 +123,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.Evaluasi,
                         a.Intervensi,
                         a.Reevaluasi,
-                        a.Profesi,
+                        NamaProfesi = string.Equals(a.Profesi, "null", StringComparison.OrdinalIgnoreCase)
+                            ? null
+                            : a.Profesi,
                         NamaDokter = d.NmDokter,
                         DokterId = d.DokterId,
                         NamaPasien = p.NamaLengkap
@@ -204,7 +207,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.Evaluasi,
                             a.Intervensi,
                             a.Reevaluasi,
-                            a.Profesi,
+                            NamaProfesi = string.Equals(a.NamaProfesi, "null", StringComparison.OrdinalIgnoreCase)
+                            ? null
+                            : a.NamaProfesi,
                             a.NamaDokter,
                             a.DokterId,
                             a.NamaPasien
@@ -424,7 +429,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.Evaluasi,
                         a.Intervensi,
                         a.Reevaluasi,
-                        a.Profesi,
+                        NamaProfesi = string.Equals(a.Profesi, "null", StringComparison.OrdinalIgnoreCase)
+                            ? null
+                            : a.Profesi,
                         NamaDokter = d.NmDokter,
                         DokterId = d.DokterId,
                         NamaPasien = p.NamaLengkap
@@ -487,7 +494,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     data.Evaluasi,
                     data.Intervensi,
                     data.Reevaluasi,
-                    data.Profesi,
+                    data.NamaProfesi,
                     data.NamaDokter,
                     data.DokterId,
                     data.NamaPasien
@@ -670,7 +677,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.Evaluasi,
                         a.Intervensi,
                         a.Reevaluasi,
-                        a.Profesi,
+                        NamaProfesi = string.Equals(a.Profesi, "null", StringComparison.OrdinalIgnoreCase)
+                            ? null
+                            : a.Profesi,
                         NamaDokter = d.NmDokter,
                         DokterId = d.DokterId,
                         NamaPasien = p.NamaLengkap
@@ -736,7 +745,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         data.Evaluasi,
                         data.Intervensi,
                         data.Reevaluasi,
-                        data.Profesi,
+                        data.NamaProfesi,
                         data.NamaDokter,
                         data.DokterId,
                         data.NamaPasien
@@ -831,7 +840,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.Evaluasi,
                         a.Intervensi,
                         a.Reevaluasi,
-                        a.Profesi,
+                        NamaProfesi = string.Equals(a.Profesi, "null", StringComparison.OrdinalIgnoreCase)
+                            ? null
+                            : a.Profesi,
                         NamaDokter = d.NmDokter,
                         DokterId = d.DokterId,
                         NamaPasien = p.NamaLengkap
@@ -897,7 +908,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         data.Evaluasi,
                         data.Intervensi,
                         data.Reevaluasi,
-                        data.Profesi,
+                        data.NamaProfesi,
                         data.NamaDokter,
                         data.DokterId,
                         data.NamaPasien
@@ -1424,8 +1435,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null
         )
         {
-            if (!search.HasValue)
-                return BadRequest(new { message = "PasienId (search) is required." });
 
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
@@ -1438,7 +1447,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 join d in _applicationDbContext.Dokters on k.DokterId equals d.DokterId
                 join p in _applicationDbContext.PendaftaranPasienBarus on k.PasienId equals p.PendaftaranPasienBaruId
                 where a.IsDelete == false
-                   && k.PasienId == search.Value                    
                 select new
                 {
                     a.CreateDateTime,
@@ -1456,11 +1464,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     a.Evaluasi,
                     a.Intervensi,
                     a.Reevaluasi,
-                    a.Profesi,
+                    NamaProfesi = string.Equals(a.Profesi, "null", StringComparison.OrdinalIgnoreCase)
+                            ? null
+                            : a.Profesi,
                     NamaDokter = d.NmDokter,
                     DokterId = d.DokterId,
                     NamaPasien = p.NamaLengkap,
                 };
+
+            // filter berdasarkan pasien id
+            if (search.HasValue)
+            {
+                query = query.Where(u=>u.PasienId == search.Value);
+            }
 
             // --- Filter tanggal rentang eksplisit ---
             if (startDate.HasValue && endDate.HasValue)
@@ -1587,7 +1603,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 x.Evaluasi,
                 x.Intervensi,
                 x.Reevaluasi,
-                x.Profesi,
+                x.NamaProfesi,
                 x.NamaDokter,
                 x.DokterId,
                 x.NamaPasien

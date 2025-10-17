@@ -146,7 +146,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
             else
             {
-                var positionId = _applicationDbContext.RolePositions.Where(u => u.PositionId == getUser.UserActiveId).FirstOrDefault();
+                var positionId = _applicationDbContext.RolePositions.Where(u => u.PositionId == getUser.UserActiveId.ToString()).FirstOrDefault();
 
                 // Hapus 
                 _applicationDbContext.RolePositions.Remove(positionId);

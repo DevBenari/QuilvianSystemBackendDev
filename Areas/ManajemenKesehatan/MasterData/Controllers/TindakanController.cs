@@ -1,13 +1,17 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
-using QuilvianSystemBackendDev.Repositories;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
-using Microsoft.AspNetCore.Cors;
-using System.Security.Claims;
-using Microsoft.AspNetCore.Identity;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Models;
+using QuilvianSystemBackendDev.Repositories;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
@@ -314,6 +318,212 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
             catch (Exception ex)
             {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
+        [HttpGet("paged")]
+        public async Task<IActionResult> Paged(
+            int page = 1,
+            int perPage = 10,
+            string? search = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+            DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+            DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null,
+            // Tambahan filter boolean IsRawatInap
+            bool? isRawatInap = null)
+        {
+            try
+            {
+                // 1. Validasi Paging
+                if (page < 1) page = 1;
+                if (perPage < 1) perPage = 10;
+
+                // 2. Query data (Sama seperti GetAll, hanya diubah menjadi IQueryable)
+                var query = from t in _applicationDbContext.Tindakans
+                                // Left Join UserActives untuk menghindari error jika CreateBy null
+                            join u_inner in _applicationDbContext.UserActives on t.CreateBy equals u_inner.UserActiveId into userGroup
+                            from u in userGroup.DefaultIfEmpty()
+                            where t.IsDelete == false
+                            select new
+                            {
+                                t.TindakanId,
+                                t.KodeTindakan,
+                                t.NamaTindakan,
+                                t.IsRawatInap,
+                                CreateByName = u != null ? u.FullName : null,
+                                t.CreateDateTime,
+
+                                // Mengambil Asuransi terkait (Subquery)
+                                AsuransiNames = (from ta in _applicationDbContext.TindakanAsuransis
+                                                 join asu in _applicationDbContext.Asuransis on ta.AsuransiId equals asu.AsuransiId
+                                                 where ta.TindakanId == t.TindakanId
+                                                 select new
+                                                 {
+                                                     AsuransiId = asu.AsuransiId,
+                                                     NamaAsuransi = asu.NamaAsuransi
+                                                 }).Distinct().ToList(),
+
+                                // Mengambil Poli terkait (Subquery)
+                                PoliNames = (from tp in _applicationDbContext.TindakanPolis
+                                             join poli in _applicationDbContext.Polikliniks on tp.PoliId equals poli.PoliklinikId
+                                             where tp.TindakanId == t.TindakanId
+                                             select new
+                                             {
+                                                 PoliId = poli.PoliklinikId,
+                                                 NamaPoliklinik = poli.NamaPoliklinik
+                                             }).Distinct().ToList(),
+
+                                // Mengambil Tarif Kelas terkait (Subquery)
+                                TarifKelas = (from tk in _applicationDbContext.TarifKelass
+                                              where tk.TindakanId == t.TindakanId
+                                              join k in _applicationDbContext.Kelass on tk.KelasId equals k.KelasId
+                                              select new
+                                              {
+                                                  tk.KelasId,
+                                                  tk.TarifKelasId,
+                                                  tk.TarifDokter,
+                                                  tk.TarifRs,
+                                                  tk.TarifJp,
+                                                  tk.TarifBahp,
+                                                  tk.TarifLain,
+                                                  tk.TarifTotal,
+                                                  tk.KSO,
+                                                  NamaKelas = k.NamaKelas
+                                              }).ToList()
+                            };
+
+                // 3. Filter data berdasarkan input user
+
+                // Filter: IsRawatInap (Boolean)
+                if (isRawatInap.HasValue)
+                {
+                    query = query.Where(t => t.IsRawatInap == isRawatInap.Value);
+                }
+
+                // Filter: Search (Pencarian pada Kode atau Nama Tindakan)
+                if (!string.IsNullOrWhiteSpace(search))
+                {
+                    string searchLower = $"%{search.ToLower()}%";
+                    query = query.Where(t =>
+                        EF.Functions.ILike(t.KodeTindakan, searchLower) ||
+                        EF.Functions.ILike(t.NamaTindakan, searchLower)
+                    );
+                }
+
+                // Filter: Rentang Tanggal (StartDate & EndDate)
+                if (startDate.HasValue && endDate.HasValue)
+                {
+                    // Pastikan perbandingan tanggal yang akurat (awal hari StartDate hingga akhir hari EndDate)
+                    DateTimeOffset startUtc = startDate.Value.Date;
+                    DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1);
+
+                    query = query.Where(u =>
+                        u.CreateDateTime >= startUtc &&
+                        u.CreateDateTime <= endUtc);
+                }
+
+                // Filter: Periode (Today, ThisWeek, dll.)
+                if (periode.HasValue)
+                {
+                    // Menggunakan DateTime.Now atau DateTime.UtcNow tergantung konfigurasi database/server
+                    DateTime today = DateTime.UtcNow.Date;
+
+                    switch (periode)
+                    {
+                        case PeriodeFilter.Today:
+                            query = query.Where(u => u.CreateDateTime.Date == today);
+                            break;
+                        case PeriodeFilter.ThisWeek:
+                            DateTime startOfWeek = today.AddDays(-(int)today.DayOfWeek);
+                            query = query.Where(u => u.CreateDateTime.Date >= startOfWeek);
+                            break;
+                        case PeriodeFilter.LastWeek:
+                            DateTime startOfLastWeek = today.AddDays(-7 - (int)today.DayOfWeek);
+                            DateTime endOfLastWeek = today.AddDays(-(int)today.DayOfWeek).AddTicks(-1);
+                            query = query.Where(u => u.CreateDateTime.Date >= startOfLastWeek && u.CreateDateTime.Date <= endOfLastWeek);
+                            break;
+                        case PeriodeFilter.ThisMonth:
+                            query = query.Where(u => u.CreateDateTime.Month == today.Month && u.CreateDateTime.Year == today.Year);
+                            break;
+                        case PeriodeFilter.LastMonth:
+                            DateTime lastMonth = today.AddMonths(-1);
+                            query = query.Where(u => u.CreateDateTime.Month == lastMonth.Month && u.CreateDateTime.Year == lastMonth.Year);
+                            break;
+                        case PeriodeFilter.ThisYear:
+                            query = query.Where(u => u.CreateDateTime.Year == today.Year);
+                            break;
+                        case PeriodeFilter.LastYear:
+                            query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
+                            break;
+                        case PeriodeFilter.Last3Months:
+                            query = query.Where(u => u.CreateDateTime.Date >= today.AddMonths(-3));
+                            break;
+                        case PeriodeFilter.Last6Months:
+                            query = query.Where(u => u.CreateDateTime.Date >= today.AddMonths(-6));
+                            break;
+                    }
+                }
+
+                // 4. Sorting Data (Dynamic Sorting)
+                query = sortDirection?.ToLower() == "desc"
+                    ? orderBy switch
+                    {
+                        "CreateDateTime" => query.OrderByDescending(t => t.CreateDateTime),
+                        "KodeTindakan" => query.OrderByDescending(t => t.KodeTindakan),
+                        "NamaTindakan" => query.OrderByDescending(t => t.NamaTindakan),
+                        "CreateByName" => query.OrderByDescending(t => t.CreateByName),
+                        _ => query.OrderByDescending(t => t.CreateDateTime) // Default
+                    }
+                    : orderBy switch
+                    {
+                        "CreateDateTime" => query.OrderBy(t => t.CreateDateTime),
+                        "KodeTindakan" => query.OrderBy(t => t.KodeTindakan),
+                        "NamaTindakan" => query.OrderBy(t => t.NamaTindakan),
+                        "CreateByName" => query.OrderBy(t => t.CreateByName),
+                        _ => query.OrderBy(t => t.CreateDateTime) // Default
+                    };
+
+                // 5. Eksekusi Paging dan Hitung Total
+                var totalRows = await query.CountAsync();
+                var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+                var listdata = await query
+                    .Skip((page - 1) * perPage)
+                    .Take(perPage)
+                    .ToListAsync(); // Eksekusi query
+
+                // 6. Response
+                if (!listdata.Any())
+                {
+                    if (page > totalPages && totalRows > 0)
+                    {
+                        return NotFound(new { message = "Halaman tidak ditemukan." });
+                    }
+                    return NotFound(new { message = "Belum ada data tindakan yang sesuai dengan filter." });
+                }
+
+                return Ok(new
+                {
+                    status = "success",
+                    message = "Data retrieved successfully",
+                    data = new
+                    {
+                        Rows = listdata,
+                        TotalRows = totalRows,
+                        CurrentPage = page,
+                        PerPage = perPage,
+                        TotalPages = totalPages
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                // Penanganan error internal server
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
