@@ -22,5 +22,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public decimal? LingkarKepalaBayi { get; set; }
         public decimal? Nadi { get; set; }
         public Guid? RanapId { get; set; }
+        public decimal? PenggunaanOksigen { get; set; }
+        public string? OksigenTambahan { get; set; }
+        public decimal? MAP {  get; set; }
+        public string? HasilMAP { get; set; }
+        public decimal? SkorEWS { get; set; }
+        public string? FrekuensiMonitoring {  get; set; }
     }
 }

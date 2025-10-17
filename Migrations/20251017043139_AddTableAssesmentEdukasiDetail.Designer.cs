@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -11,9 +12,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251017043139_AddTableAssesmentEdukasiDetail")]
+    partial class AddTableAssesmentEdukasiDetail
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -7561,14 +7563,8 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<DateTimeOffset>("DeleteDateTime")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("FrekuensiMonitoring")
-                        .HasColumnType("text");
-
                     b.Property<int?>("HR")
                         .HasColumnType("integer");
-
-                    b.Property<string>("HasilMAP")
-                        .HasColumnType("text");
 
                     b.Property<decimal?>("Height")
                         .HasColumnType("numeric");
@@ -7582,16 +7578,7 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<decimal?>("LingkarKepalaBayi")
                         .HasColumnType("numeric");
 
-                    b.Property<decimal?>("MAP")
-                        .HasColumnType("numeric");
-
                     b.Property<decimal?>("Nadi")
-                        .HasColumnType("numeric");
-
-                    b.Property<string>("OksigenTambahan")
-                        .HasColumnType("text");
-
-                    b.Property<decimal?>("PenggunaanOksigen")
                         .HasColumnType("numeric");
 
                     b.Property<int?>("RR")
@@ -7601,9 +7588,6 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<decimal?>("SaturasiOksigen")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("SkorEWS")
                         .HasColumnType("numeric");
 
                     b.Property<decimal?>("Suhu")
@@ -8908,9 +8892,12 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<DateTimeOffset>("UpdateDateTime")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("UserActiveId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("DetailAsesmenEdukasiId");
 
-                    b.ToTable("AssesmentEdukasiDetails");
+                    b.ToTable("AssesmentEdukasiDetail");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.BookingBedRanap", b =>

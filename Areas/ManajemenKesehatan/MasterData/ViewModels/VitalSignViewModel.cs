@@ -17,5 +17,12 @@
         public decimal? Nadi { get; set; }
 
         public Guid? DelegasiId { get; set; }
+
+        public decimal? PenggunaanOksigen { get; set; }
+        public string? OksigenTambahan { get; set; }
+        public decimal? MAP { get; set; }
+        public string? HasilMAP { get; set; }
+        public decimal? SkorEWS { get; set; }
+        public string? FrekuensiMonitoring { get; set; }
     }
 }

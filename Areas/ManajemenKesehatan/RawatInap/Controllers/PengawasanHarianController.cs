@@ -161,6 +161,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     v.LingkarKepalaBayi,
                     v.RanapId,
                     v.Nadi,
+                    v.PenggunaanOksigen,
+                    v.OksigenTambahan,
+                    v.MAP,
+                    v.HasilMAP,
+                    v.SkorEWS,
+                    v.FrekuensiMonitoring,
                     v.CreateDateTime,
                 }).OrderByDescending(v => v.CreateDateTime).ToListAsync();
 
@@ -487,6 +493,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     v.LingkarKepalaBayi,
                     v.RanapId,
                     v.Nadi,
+                    v.PenggunaanOksigen,
+                    v.OksigenTambahan,
+                    v.MAP,
+                    v.HasilMAP,
+                    v.SkorEWS,
+                    v.FrekuensiMonitoring,
                     v.CreateDateTime,
                 }).OrderByDescending(v => v.CreateDateTime).ToListAsync();
 
@@ -1110,6 +1122,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     v.LingkarKepalaBayi,
                     v.RanapId,
                     v.Nadi,
+                    v.PenggunaanOksigen,
+                    v.OksigenTambahan,
+                    v.MAP,
+                    v.HasilMAP,
+                    v.SkorEWS,
+                    v.FrekuensiMonitoring,
                     v.CreateDateTime
                 })
                 .OrderByDescending(v => v.CreateDateTime)

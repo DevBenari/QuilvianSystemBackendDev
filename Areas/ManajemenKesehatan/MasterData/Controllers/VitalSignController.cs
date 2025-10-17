@@ -80,6 +80,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             LingkarKepalaBayi = a.LingkarKepalaBayi,
                             RanapId = a.RanapId,
                             Nadi = a.Nadi,
+                            a.PenggunaanOksigen,
+                            a.OksigenTambahan,
+                            a.MAP,
+                            a.HasilMAP,
+                            a.SkorEWS,
+                            a.FrekuensiMonitoring
                         }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -157,6 +163,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             LingkarKepalaBayi = a.LingkarKepalaBayi,
                             RanapId = a.RanapId,
                             Nadi = a.Nadi,
+                            a.PenggunaanOksigen,
+                            a.OksigenTambahan,
+                            a.MAP,
+                            a.HasilMAP,
+                            a.SkorEWS,
+                            a.FrekuensiMonitoring
                         }).ToList();
 
             if (!data.Any())
@@ -245,6 +257,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     LingkarKepalaBayi = vm.LingkarKepalaBayi,
                     Nadi = vm.Nadi,
                     //RanapId = vm.RanapId,
+                    PenggunaanOksigen = vm.PenggunaanOksigen,
+                    OksigenTambahan = vm.OksigenTambahan,
+                    MAP = vm.MAP,
+                    HasilMAP = vm.HasilMAP,
+                    SkorEWS = vm.SkorEWS,
+                    FrekuensiMonitoring = vm.FrekuensiMonitoring,
+
                     CreateBy = createBy,
                     CreateDateTime = DateTimeOffset.UtcNow
                 };
@@ -365,6 +384,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.BMI = vm.BMI;
                 data.LingkarKepalaBayi = vm.LingkarKepalaBayi;
                 data.Nadi = vm.Nadi;
+                data.PenggunaanOksigen = vm.PenggunaanOksigen;
+                data.OksigenTambahan = vm.OksigenTambahan;
+                data.MAP = vm.MAP;
+                data.HasilMAP = vm.HasilMAP;
+                data.SkorEWS = vm.SkorEWS;
+                data.FrekuensiMonitoring = vm.FrekuensiMonitoring;
 
                 data.UpdateBy = modifyBy;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -666,7 +691,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 BMI = a.BMI,
                                 LingkarKepalaBayi = a.LingkarKepalaBayi,
                                 Nadi = a.Nadi,
-                                RanapId = a.RanapId
+                                RanapId = a.RanapId,
+                                a.PenggunaanOksigen,
+                                a.OksigenTambahan,
+                                a.MAP,
+                                a.HasilMAP,
+                                a.SkorEWS,
+                                a.FrekuensiMonitoring
                             };
 
                 //**Filter berdasarkan search(Perbaikan agar bisa mencari 1 huruf)**
