@@ -6,7 +6,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models
     public class PenilaianResikoJatuhDetail : UserActivity
     {
         [Key]
-        public Guid DetailResikoJatuhOId { get; set; }
+        public Guid DetailResikoJatuhId { get; set; }
         public Guid? IndikatorPengkajianId { get; set; }
         public Guid? IntervensiResikoJatuhId { get; set; }
         public string? Keterangan {  get; set; }

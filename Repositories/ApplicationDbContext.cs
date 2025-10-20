@@ -242,6 +242,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<AssesmentEdukasi> AssesmentEdukasis { get; set; }
         public DbSet<AssesmentEdukasiDetail> AssesmentEdukasiDetails { get; set; }
         public DbSet<ResikoJatuh> ResikoJatuhs { get; set; }
+        public DbSet<PenilaianResikoJatuhDetail> PenilaianResikoJatuhDetails { get; set; }
         #endregion
 
         #region Farmasi
