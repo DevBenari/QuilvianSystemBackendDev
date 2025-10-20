@@ -44,92 +44,156 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
         }
-
         [HttpGet]
         public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
         {
-            // Validasi agar page dan perPage minimal bernilai 1
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
+            // =========================
+            // 1️⃣ Ambil data utama Kajian Pasien
+            // =========================
+            var baseQuery = from a in _applicationDbContext.KajianPasiens
+                            join u in _applicationDbContext.UserActives
+                                on a.CreateBy equals u.UserActiveId into userGroup
+                            from u in userGroup.DefaultIfEmpty()
 
-            var query = (from a in _applicationDbContext.KajianPasiens
-                         join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId into userGroup
-                         from u in userGroup.DefaultIfEmpty()
+                            join k in _applicationDbContext.Kunjungans
+                                on a.KunjunganId equals k.KunjunganID into kunjunganGroup
+                            from k in kunjunganGroup.DefaultIfEmpty()
 
-                         join k in _applicationDbContext.Kunjungans on a.KunjunganId equals k.KunjunganID into kunjunganGroup
-                         from k in kunjunganGroup.DefaultIfEmpty()
+                            where a.IsDelete == false || a.IsDelete == null
+                            orderby a.CreateDateTime descending
+                            select new
+                            {
+                                a.KajianPasienId,
+                                a.KunjunganId,
+                                a.VitalSignId,
+                                a.DokterId,
+                                a.UserActiveId,
+                                a.KeadaanUmum,
+                                a.KeadaanKulit,
+                                a.KeadaanKepalaLeher,
+                                a.KeadaanDada,
+                                a.KeadaanJantung,
+                                a.KeadaanParuParu,
+                                a.KeadaanAbdomen,
+                                a.KeadaanGenitalia,
+                                a.KeadaanAnggotaGerak,
+                                a.KeadaanLainnya,
+                                a.StatusLokalis,
+                                a.PemeriksaanPenunjang,
+                                a.DiagnosaSaatIni,
+                                a.DiagnosaBanding,
+                                a.DaftarMasalah,
+                                a.Program,
+                                a.Terapi,
+                                a.Edukasi,
+                                a.EdukasiKepada,
+                                a.Keterangan,
+                                a.TglKajian,
+                                a.CreateBy,
+                                a.CreateDateTime,
+                                a.KajianUtamaPengkajian,
+                                a.CurrentMedicationId,
+                                CreateByName = u.FullName,
+                                k.NoRekamMedis
+                            };
 
-                         join pa in _applicationDbContext.PainAssessments on a.KunjunganId equals pa.KunjunganId into painGroup
-                         from pa in painGroup.DefaultIfEmpty()
-
-                         join sp in _applicationDbContext.SuratPengantarRawatInaps on a.KunjunganId equals sp.KunjunganId into suratGroup
-                         from sp in suratGroup.DefaultIfEmpty()
-
-                         where a.IsDelete == false || a.IsDelete == null
-                         select new
-                         {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = u.FullName,
-                             a.KajianPasienId,
-                             a.KunjunganId,
-                             a.VitalSignId,
-                             k.NoRekamMedis,
-                             a.DokterId,
-                             a.UserActiveId,
-                             a.KeadaanUmum,
-                             a.KeadaanKulit,
-                             a.KeadaanKepalaLeher,
-                             a.KeadaanDada,
-                             a.KeadaanJantung,
-                             a.KeadaanParuParu,
-                             a.KeadaanAbdomen,
-                             a.KeadaanGenitalia,
-                             a.KeadaanAnggotaGerak,
-                             a.KeadaanLainnya,
-                             a.StatusLokalis,
-                             a.PemeriksaanPenunjang,
-                             a.DiagnosaSaatIni,
-                             a.DiagnosaBanding,
-                             a.DaftarMasalah,
-                             a.Program,
-                             a.Terapi,
-                             a.Edukasi,
-                             a.EdukasiKepada,
-                             a.Keterangan,
-                             a.TglKajian,
-                             a.KajianUtamaPengkajian,
-                             a.CurrentMedicationId,
-
-                             // info pain assessment
-                             pa.InheritedDisease,
-
-                             // info surat pengantar
-                             sp.AsalUnit,
-
-                         }).OrderByDescending(a => a.CreateDateTime);
-
-            // Hitung total data sebelum paginasi
-            var totalRows = query.Count();
+            var totalRows = await baseQuery.CountAsync();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
 
-            // Ambil data sesuai paging
-            var listdata = query
+            var listData = await baseQuery
                 .Skip((page - 1) * perPage)
                 .Take(perPage)
-                .ToList();
+                .AsNoTracking()
+                .ToListAsync();
 
-            if (!listdata.Any())
-            {
+            if (!listData.Any())
                 return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
-            }
 
-            // Return hasil dengan paging info
+            // =========================
+            // 2️⃣ Ambil data PainAssessment & SuratPengantar dalam batch (hindari N+1)
+            // =========================
+            var kunjunganIds = listData.Select(x => x.KunjunganId).Distinct().ToList();
+
+            var painAssessments = await _applicationDbContext.PainAssessments
+                .Where(p => kunjunganIds.Contains(p.KunjunganId))
+                .Select(p => new
+                {
+                    p.PainAssessmentId,
+                    p.KunjunganId,
+                    p.InheritedDisease,
+                    p.CreateDateTime
+                })
+                .OrderByDescending(p => p.CreateDateTime)
+                .ToListAsync();
+
+            var suratPengantar = await _applicationDbContext.SuratPengantarRawatInaps
+                .Where(s => kunjunganIds.Contains(s.KunjunganId))
+                .Select(s => new
+                {
+                    s.KunjunganId,
+                    s.AsalUnit
+                })
+                .ToListAsync();
+
+            // =========================
+            // 3️⃣ Buat lookup untuk relasi
+            // =========================
+            var painLookup = painAssessments.ToLookup(p => p.KunjunganId);
+            var suratLookup = suratPengantar.ToLookup(s => s.KunjunganId);
+
+            // =========================
+            // 4️⃣ Gabungkan hasil (tanpa duplikasi, 1 KajianPasien = 1 baris)
+            // =========================
+            var result = listData.Select(x => new
+            {
+                x.CreateDateTime,
+                x.CreateBy,
+                x.CreateByName,
+                x.KajianPasienId,
+                x.KunjunganId,
+                x.VitalSignId,
+                x.NoRekamMedis,
+                x.DokterId,
+                x.UserActiveId,
+                x.KeadaanUmum,
+                x.KeadaanKulit,
+                x.KeadaanKepalaLeher,
+                x.KeadaanDada,
+                x.KeadaanJantung,
+                x.KeadaanParuParu,
+                x.KeadaanAbdomen,
+                x.KeadaanGenitalia,
+                x.KeadaanAnggotaGerak,
+                x.KeadaanLainnya,
+                x.StatusLokalis,
+                x.PemeriksaanPenunjang,
+                x.DiagnosaSaatIni,
+                x.DiagnosaBanding,
+                x.DaftarMasalah,
+                x.Program,
+                x.Terapi,
+                x.Edukasi,
+                x.EdukasiKepada,
+                x.Keterangan,
+                x.TglKajian,
+                x.KajianUtamaPengkajian,
+                x.CurrentMedicationId,
+                // 🔹 List Pain Assessment (semua record terkait)
+                PainAssessments = painLookup[x.KunjunganId].ToList(),
+                // 🔹 Info surat pengantar (ambil 1 saja karena jarang multiple)
+                AsalUnit = suratLookup[x.KunjunganId].FirstOrDefault()?.AsalUnit
+            });
+
+            // =========================
+            // 5️⃣ Return hasil
+            // =========================
             return Ok(new
             {
                 message = "Berhasil || 200 OK",
-                data = listdata,
+                data = result,
                 pagination = new
                 {
                     CurrentPage = page,
@@ -139,6 +203,101 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 }
             });
         }
+
+        //[HttpGet]
+        //public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
+        //{
+        //    // Validasi agar page dan perPage minimal bernilai 1
+        //    if (page < 1) page = 1;
+        //    if (perPage < 1) perPage = 10;
+
+
+        //    var query = (from a in _applicationDbContext.KajianPasiens
+        //                 join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId into userGroup
+        //                 from u in userGroup.DefaultIfEmpty()
+
+        //                 join k in _applicationDbContext.Kunjungans on a.KunjunganId equals k.KunjunganID into kunjunganGroup
+        //                 from k in kunjunganGroup.DefaultIfEmpty()
+
+        //                 join pa in _applicationDbContext.PainAssessments on a.KunjunganId equals pa.KunjunganId into painGroup
+        //                 from pa in painGroup.DefaultIfEmpty()
+
+        //                 join sp in _applicationDbContext.SuratPengantarRawatInaps on a.KunjunganId equals sp.KunjunganId into suratGroup
+        //                 from sp in suratGroup.DefaultIfEmpty()
+
+        //                 where a.IsDelete == false || a.IsDelete == null
+        //                 select new
+        //                 {
+        //                     a.CreateDateTime,
+        //                     a.CreateBy,
+        //                     CreateByName = u.FullName,
+        //                     a.KajianPasienId,
+        //                     a.KunjunganId,
+        //                     a.VitalSignId,
+        //                     k.NoRekamMedis,
+        //                     a.DokterId,
+        //                     a.UserActiveId,
+        //                     a.KeadaanUmum,
+        //                     a.KeadaanKulit,
+        //                     a.KeadaanKepalaLeher,
+        //                     a.KeadaanDada,
+        //                     a.KeadaanJantung,
+        //                     a.KeadaanParuParu,
+        //                     a.KeadaanAbdomen,
+        //                     a.KeadaanGenitalia,
+        //                     a.KeadaanAnggotaGerak,
+        //                     a.KeadaanLainnya,
+        //                     a.StatusLokalis,
+        //                     a.PemeriksaanPenunjang,
+        //                     a.DiagnosaSaatIni,
+        //                     a.DiagnosaBanding,
+        //                     a.DaftarMasalah,
+        //                     a.Program,
+        //                     a.Terapi,
+        //                     a.Edukasi,
+        //                     a.EdukasiKepada,
+        //                     a.Keterangan,
+        //                     a.TglKajian,
+        //                     a.KajianUtamaPengkajian,
+        //                     a.CurrentMedicationId,
+
+        //                     // info pain assessment
+        //                     pa.InheritedDisease,
+
+        //                     // info surat pengantar
+        //                     sp.AsalUnit,
+
+        //                 }).OrderByDescending(a => a.CreateDateTime);
+
+        //    // Hitung total data sebelum paginasi
+        //    var totalRows = query.Count();
+        //    var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+        //    // Ambil data sesuai paging
+        //    var listdata = query
+        //        .Skip((page - 1) * perPage)
+        //        .Take(perPage)
+        //        .ToList();
+
+        //    if (!listdata.Any())
+        //    {
+        //        return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
+        //    }
+
+        //    // Return hasil dengan paging info
+        //    return Ok(new
+        //    {
+        //        message = "Berhasil || 200 OK",
+        //        data = listdata,
+        //        pagination = new
+        //        {
+        //            CurrentPage = page,
+        //            PerPage = perPage,
+        //            TotalRows = totalRows,
+        //            TotalPages = totalPages
+        //        }
+        //    });
+        //}
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)

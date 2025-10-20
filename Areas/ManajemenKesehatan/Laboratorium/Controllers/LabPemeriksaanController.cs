@@ -681,6 +681,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 {
                     r.PemeriksaanLabId,
                     r.NamaPemeriksaan,
+                    r.LabId,
                     r.NamaLab,
                     r.NamaKategori,
                     r.KodePemeriksaan,
