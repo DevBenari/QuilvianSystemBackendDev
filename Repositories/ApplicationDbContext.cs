@@ -123,6 +123,8 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<Gudang> Gudangs { get; set; }
         public DbSet<GudangUnit> GudangUnits { get; set; }
         public DbSet<TindakanPerawat> TindakanPerawats { get; set; }
+        public DbSet<KategoriIndikator> KategoriIndikators { get; set; }
+        public DbSet<IntervensiResikoJatuh> IntervensiResikoJatuhs { get; set; }
         #endregion
 
         #region Areas Keuangan
