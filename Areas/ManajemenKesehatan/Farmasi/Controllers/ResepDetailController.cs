@@ -437,33 +437,105 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         [HttpPut("{id}/ReturnObat")]
         public async Task<IActionResult> UpdateReturnObat(Guid id, [FromBody] EditReturnObatVM request)
         {
-            var data = await _applicationDbContext.DetailReseps.FindAsync(id);
-            if (data == null)
-                return NotFound(new { message = "Obat tidak ditemukan." });
-
-            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(EmailLogin))
-                return Unauthorized(new { message = "User tidak terautentikasi!" });
-
-            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
-            var userId = user?.UserActiveId ?? Guid.Empty;
-
-            data.IsReturn = request.IsReturn;
-            data.AlasanReturn = request.AlasanReturn;
-            data.QtyReturn = request.QtyReturn;
-            data.DikembalikanOleh = request.DikembalikanOleh;
-
-            data.UpdateDateTime = DateTimeOffset.UtcNow;
-            data.UpdateBy = userId;
-
-            await _applicationDbContext.SaveChangesAsync();
-            await _hubContext.Clients.All.SendAsync("Obat ini telah dikembalikan", new
+            try
             {
-                Action = "update",
-                DetailResepId = data.DetailResepId
-            });
+                // 🔹 Ambil data detail resep
+                var data = await _applicationDbContext.DetailReseps
+                    .FirstOrDefaultAsync(d => d.DetailResepId == id);
 
-            return Ok(new { message = "Obat ini telah dikembalikan." });
+                if (data == null)
+                    return NotFound(new { message = "Data resep tidak ditemukan." });
+
+                // 🔹 Ambil user login dari JWT
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin))
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+                var user = await _applicationDbContext.UserActives.FirstOrDefaultAsync(u => u.Email == emailLogin);
+                if (user == null)
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+
+                var userId = user.UserActiveId;
+
+                // 🔹 Validasi jumlah return
+                int qtyReturn = (int)(request.QtyReturn ?? 0);
+                if (qtyReturn <= 0)
+                    return BadRequest(new { message = "Jumlah return harus lebih dari 0." });
+
+                if (qtyReturn > data.Qty)
+                    return BadRequest(new { message = "Jumlah return melebihi jumlah obat yang diberikan." });
+
+                // 🔹 Update nilai return di tabel DetailResep
+                data.IsReturn = request.IsReturn;
+                data.AlasanReturn = request.AlasanReturn;
+                data.QtyReturn = qtyReturn;
+                data.DikembalikanOleh = request.DikembalikanOleh;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
+                data.UpdateBy = userId;
+
+                // 🔹 Jika return = true, tambahkan stok kembali
+                if (request.IsReturn == true)
+                {
+                    // === CASE 1: OBAT BIASA ===
+                    if (data.IsRacikan == false && data.ObatId != null)
+                    {
+                        var obat = await _applicationDbContext.Obats
+                            .FirstOrDefaultAsync(o => o.ObatId == data.ObatId);
+
+                        if (obat != null)
+                        {
+                            obat.Stock += qtyReturn;
+                            _applicationDbContext.Obats.Update(obat);
+                        }
+                    }
+
+                    // === CASE 2: OBAT RACIKAN ===
+                    if (data.IsRacikan == true && data.RacikanId != null)
+                    {
+                        // cari daftar komposisi racikan di tabel RacikanDetails
+                        var racikanDetails = await _applicationDbContext.RacikanDetails
+                            .Where(rd => rd.RacikanId == data.RacikanId)
+                            .ToListAsync();
+
+                        foreach (var detail in racikanDetails)
+                        {
+                            var obatRacikan = await _applicationDbContext.Obats
+                                .FirstOrDefaultAsync(o => o.ObatId == detail.ObatId);
+
+                            if (obatRacikan != null)
+                            {
+                                // stok yang dikembalikan = jumlah komposisi x qtyReturn racikan
+                                int jumlahKembali = (int)(detail.QtyUsed * qtyReturn);
+                                obatRacikan.Stock += jumlahKembali;
+
+                                _applicationDbContext.Obats.Update(obatRacikan);
+                            }
+                        }
+                    }
+                }
+
+                // 🔹 Simpan perubahan
+                await _applicationDbContext.SaveChangesAsync();
+
+                // 🔹 Kirim notifikasi realtime
+                await _hubContext.Clients.All.SendAsync("ResepUpdated", new
+                {
+                    Action = "return",
+                    DetailResepId = data.DetailResepId,
+                    IsReturn = data.IsReturn,
+                    QtyReturn = data.QtyReturn
+                });
+
+                return Ok(new { message = "Return obat berhasil dan stok diperbarui." });
+            }
+            catch (DbUpdateException dbEx)
+            {
+                return StatusCode(500, new { message = $"Gagal menyimpan perubahan: {dbEx.InnerException?.Message}" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
         }
 
         [HttpPost]
@@ -546,6 +618,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     StatusPengambilanObat = false, // Default nilai StatusPengambilanObat
                     CaraPemakaian = vm.CaraPemakaian,
                     EstimasiPemberian = vm.EstimasiPemberian,
+                    ObatPagiDiambil =  false,
+                    ObatSiangDiambil = false,
+                    ObatMalamDiambil = false,
+                    IsReturn = false,
                     TglStopPemakaian = TryParseTanggalToUtc(vm.TglStopPemakaian),
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
