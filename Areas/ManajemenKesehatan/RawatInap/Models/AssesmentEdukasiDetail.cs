@@ -9,7 +9,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models
         public Guid DetailAsesmenEdukasiId { get; set; }
 
         public Guid? AsesmenEdukasiId { get; set; }
-        public string? TopikEdukasi { get; set; }
+        public Guid? TopikEdukasi { get; set; }
         public DateTime? TglDetailAsesmenEdukasi { get; set; }
         public decimal? DurasiWaktu { get; set; }
         public Guid? TTDWaliId { get; set; }
