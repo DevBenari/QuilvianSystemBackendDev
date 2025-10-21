@@ -281,7 +281,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
-                    return Created("", new { message = "Berhasil menambahkan Detail Asesmen Edukasi", data.DetailAsesmenEdukasiId });
+                    return Created("", 
+                        new 
+                        { 
+                            message = "Berhasil menambahkan Detail Asesmen Edukasi", data.DetailAsesmenEdukasiId 
+                        });
 
                 return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
             }

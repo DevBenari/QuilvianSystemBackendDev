@@ -134,7 +134,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     a.CaraPemakaian,
                     a.EstimasiPemberian,
                     a.TglStopPemakaian,
-                    a.IsObatDibawaPlg
+                    a.IsObatDibawaPlg,
+                    a.ObatPagiDiambil,
+                    a.ObatSiangDiambil,
+                    a.ObatMalamDiambil,
+                    a.IsReturn,
+                    a.AlasanReturn,
+                    a.QtyReturn,
+                    a.DikembalikanOleh,
                 };
 
             var result = query.ToList();
@@ -209,7 +216,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     a.CaraPemakaian,
                     a.EstimasiPemberian,
                     a.TglStopPemakaian,
-                    a.IsObatDibawaPlg
+                    a.IsObatDibawaPlg,
+                    a.ObatPagiDiambil,
+                    a.ObatSiangDiambil,
+                    a.ObatMalamDiambil,
+                    a.IsReturn,
+                    a.AlasanReturn,
+                    a.QtyReturn,
+                    a.DikembalikanOleh,
                 };
 
             var result = query.ToList();
@@ -418,6 +432,38 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             });
 
             return Ok(new { message = "Obat malam telah diberikan." });
+        }
+
+        [HttpPut("{id}/ReturnObat")]
+        public async Task<IActionResult> UpdateReturnObat(Guid id, [FromBody] EditReturnObatVM request)
+        {
+            var data = await _applicationDbContext.DetailReseps.FindAsync(id);
+            if (data == null)
+                return NotFound(new { message = "Obat tidak ditemukan." });
+
+            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(EmailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var userId = user?.UserActiveId ?? Guid.Empty;
+
+            data.IsReturn = request.IsReturn;
+            data.AlasanReturn = request.AlasanReturn;
+            data.QtyReturn = request.QtyReturn;
+            data.DikembalikanOleh = request.DikembalikanOleh;
+
+            data.UpdateDateTime = DateTimeOffset.UtcNow;
+            data.UpdateBy = userId;
+
+            await _applicationDbContext.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("Obat ini telah dikembalikan", new
+            {
+                Action = "update",
+                DetailResepId = data.DetailResepId
+            });
+
+            return Ok(new { message = "Obat ini telah dikembalikan." });
         }
 
         [HttpPost]

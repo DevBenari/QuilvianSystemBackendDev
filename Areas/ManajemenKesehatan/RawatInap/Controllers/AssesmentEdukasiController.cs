@@ -188,7 +188,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                 if (result > 0)
                 {
-                    return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
+                    return Created
+                        ("", 
+                        new { 
+                            message = "Tambah Data Berhasil || 201 Created",
+                            AsesmenEdukasiId = data.AsesmenEdukasiId,
+                        }
+                        );
                 }
                 else
                 {
@@ -267,7 +273,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                 if (result > 0)
                 {
-                    return Ok(new { message = "Update Data Berhasil || 200 OK" });
+                    return Ok(new
+                    {
+                        message = "Update Data Berhasil || 200 Updated",
+                        AsesmenEdukasiId = existingData.AsesmenEdukasiId,
+                    });
                 }
                 else
                 {

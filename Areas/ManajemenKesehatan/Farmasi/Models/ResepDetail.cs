@@ -39,5 +39,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
         public bool? ObatPagiDiambil { get; set; }
         public bool? ObatSiangDiambil { get; set; }
         public bool? ObatMalamDiambil { get; set; }
+
+        // buat return obat
+        public bool? IsReturn {  get; set; }
+        public decimal? QtyReturn { get; set; }
+        public string? AlasanReturn { get; set; }
+        public Guid? DikembalikanOleh { get; set; }
     }
 }
