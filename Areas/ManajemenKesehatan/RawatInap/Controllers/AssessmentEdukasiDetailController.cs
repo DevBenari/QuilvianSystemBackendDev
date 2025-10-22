@@ -513,8 +513,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         public IActionResult Paged(
             int page = 1,
             int perPage = 10,
-            Guid? kunjunganId = null,
-            Guid? pasienId = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -562,16 +560,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             //}
 
             // filter berdasarkan kunjungan id
-            if (kunjunganId.HasValue)
-            {
-                query = query.Where(u => u.KunjunganId == kunjunganId.Value);
-            }
+            //if (kunjunganId.HasValue)
+            //{
+            //    query = query.Where(u => u.KunjunganId == kunjunganId.Value);
+            //}
 
-            // filter berdasarkan pasien id
-            if (pasienId.HasValue)
-            {
-                query = query.Where(u => u.PasienId == pasienId.Value);
-            }
+            //// filter berdasarkan pasien id
+            //if (pasienId.HasValue)
+            //{
+            //    query = query.Where(u => u.PasienId == pasienId.Value);
+            //}
             //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
             {
