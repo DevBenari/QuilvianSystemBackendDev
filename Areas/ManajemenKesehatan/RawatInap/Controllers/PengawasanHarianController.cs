@@ -220,7 +220,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     PainAssesment = vm.PainAssesment,
                     VitalSign = vm.VitalSign,
                     Resep = vm.Resep,
-                    TglPengawasanHarian = vm.TglPengawasanHarian,
+                    TglPengawasanHarian = TryParseTanggalToUtc(vm.TglPengawasanHarian),
                     WaktuPengawasan = vm.WaktuPengawasan,
                     IsRelaksasi = vm.IsRelaksasi,
                     IsKompres = vm.IsKompres,
@@ -321,7 +321,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 data.PainAssesment = vm.PainAssesment;
                 data.VitalSign = vm.VitalSign;
                 data.Resep = vm.Resep;
-                data.TglPengawasanHarian = vm.TglPengawasanHarian;
+                data.TglPengawasanHarian = TryParseTanggalToUtc(vm.TglPengawasanHarian);
                 data.WaktuPengawasan = vm.WaktuPengawasan;
 
                 data.IsRelaksasi = vm.IsRelaksasi;

@@ -7,7 +7,7 @@
         public string? VitalSign { get; set; }
         public string? PainAssesment { get; set; }
         public string? Resep { get; set; }
-        public DateTime? TglPengawasanHarian { get; set; }
+        public string? TglPengawasanHarian { get; set; }
         public TimeOnly? WaktuPengawasan { get; set; }
 
         // ✅ Aktivitas/Intervensi
