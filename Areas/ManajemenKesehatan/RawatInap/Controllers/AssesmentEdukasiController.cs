@@ -56,6 +56,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             var query = (from a in _applicationDbContext.AssesmentEdukasis
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
+
+                         // join ke table pendidikan
+                         join p in _applicationDbContext.Pendidikans
+                         on a.PendidikanId equals p.PendidikanId into pGroup
+                         from p in pGroup.DefaultIfEmpty()
                          where a.IsDelete == false || a.IsDelete == null
                          select new
                          {
@@ -71,6 +76,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.TipePembelajaran,
                              a.NilaiKepercayaan,
                              a.PendidikanId,
+                             NamaPendidikan = p != null ? p.NamaPendidikan : null,
                              a.HambatanEdukasi,
                              a.IsMenerimaEdukasi,
                              a.KebutuhanEdukasi,
@@ -375,6 +381,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             var query = (from a in _applicationDbContext.AssesmentEdukasis
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
+
+                         // join ke table pendidikan
+                         join p in _applicationDbContext.Pendidikans
+                         on a.PendidikanId equals p.PendidikanId into pGroup
+                         from p in pGroup.DefaultIfEmpty()
+
+
                          where a.IsDelete == false || a.IsDelete == null
                          select new
                          {
@@ -390,6 +403,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.TipePembelajaran,
                              a.NilaiKepercayaan,
                              a.PendidikanId,
+                             NamaPendidikan = p != null ? p.NamaPendidikan : null,
                              a.HambatanEdukasi,
                              a.IsMenerimaEdukasi,
                              a.KebutuhanEdukasi,
