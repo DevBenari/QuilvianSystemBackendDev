@@ -67,7 +67,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.NamaRacikan,
                              a.Keterangan,
                              a.Signa,
-                             a.SignaTambahan
+                             a.SignaTambahan,
+                             a.BentukRacikan
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -153,6 +154,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     Keterangan = vm.Keterangan,
                     Signa = vm.Signa,
                     SignaTambahan = vm.SignaTambahan,
+                    BentukRacikan = vm.BentukRacikan,
 
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
@@ -224,6 +226,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 data.Keterangan = vm.Keterangan;
                 data.Signa = vm.Signa;
                 data.SignaTambahan = vm.SignaTambahan;
+                data.BentukRacikan = vm.BentukRacikan;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -339,7 +342,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.NamaRacikan,
                              a.Keterangan,
                              a.Signa,
-                             a.SignaTambahan
+                             a.SignaTambahan,
+                             a.BentukRacikan,
                          };
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**

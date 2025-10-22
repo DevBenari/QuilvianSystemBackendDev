@@ -16,5 +16,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
         public string? SignaTambahan { get; set; } 
         public int? QtyRacikan { get; set; }
         public string? KodeRacikan { get; set; }
+        public string? BentukRacikan { get; set; }
     }
 }
