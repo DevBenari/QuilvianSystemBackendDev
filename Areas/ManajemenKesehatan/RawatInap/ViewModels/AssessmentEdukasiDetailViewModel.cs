@@ -4,7 +4,7 @@
     {
         public Guid? DetailAsesmenEdukasiId { get; set; } // Generate Otomatis
         public Guid? AsesmenEdukasiId { get; set; }       // Relasi ke tabel AsesmenEdukasi
-        public Guid? TopikEdukasi { get; set; }         // Topik edukasi yang diberikan
+        public Guid? TopikEdukasiId { get; set; }         // Topik edukasi yang diberikan
         public DateTime? TglDetailAsesmenEdukasi { get; set; } // Tanggal asesmen dilakukan
         public decimal? DurasiWaktu { get; set; }         // Lama edukasi (dalam menit/jam)
         public string? NamaWali { get; set; }             // Nama wali pasien (jika ada)

@@ -88,7 +88,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                          // join ke tabel mst topik edukasi
                          join te in _applicationDbContext.TopikEdukasis
-                         on a.TopikEdukasi equals te.TopikEdukasiId into teGroup
+                         on a.TopikEdukasiId equals te.TopikEdukasiId into teGroup
                          from te in teGroup.DefaultIfEmpty()
 
                          where a.IsDelete == false || a.IsDelete == null
@@ -99,7 +99,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              CreateByName = u.FullName,
                              a.DetailAsesmenEdukasiId,
                              a.AsesmenEdukasiId,
-                             a.TopikEdukasi,
+                             a.TopikEdukasiId,
                              te.NamaTopik,
                              a.TglDetailAsesmenEdukasi,
                              a.DurasiWaktu,
@@ -263,7 +263,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 {
                     DetailAsesmenEdukasiId = Guid.NewGuid(),
                     AsesmenEdukasiId = vm.AsesmenEdukasiId,
-                    TopikEdukasi = vm.TopikEdukasi,
+                    TopikEdukasiId = vm.TopikEdukasiId,
                     TglDetailAsesmenEdukasi = vm.TglDetailAsesmenEdukasi,
                     DurasiWaktu = vm.DurasiWaktu,
                     NamaWali = vm.NamaWali,
@@ -409,7 +409,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 // 🔹 Update field satu per satu
                 // ===============================
                 existingData.AsesmenEdukasiId = vm.AsesmenEdukasiId ?? existingData.AsesmenEdukasiId;
-                existingData.TopikEdukasi = vm.TopikEdukasi ?? existingData.TopikEdukasi;
+                existingData.TopikEdukasiId = vm.TopikEdukasiId ?? existingData.TopikEdukasiId;
                 existingData.TglDetailAsesmenEdukasi = vm.TglDetailAsesmenEdukasi ?? existingData.TglDetailAsesmenEdukasi;
                 existingData.DurasiWaktu = vm.DurasiWaktu ?? existingData.DurasiWaktu;
                 existingData.NamaWali = vm.NamaWali ?? existingData.NamaWali;
@@ -536,7 +536,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                          // join ke tabel mst topik edukasi
                          join te in _applicationDbContext.TopikEdukasis
-                         on a.TopikEdukasi equals te.TopikEdukasiId into teGroup
+                         on a.TopikEdukasiId equals te.TopikEdukasiId into teGroup
                          from te in teGroup.DefaultIfEmpty()
 
                          where a.IsDelete == false || a.IsDelete == null
@@ -547,7 +547,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              CreateByName = u.FullName,
                              a.DetailAsesmenEdukasiId,
                              a.AsesmenEdukasiId,
-                             a.TopikEdukasi,
+                             a.TopikEdukasiId,
                              te.NamaTopik,
                              a.TglDetailAsesmenEdukasi,
                              a.DurasiWaktu,
