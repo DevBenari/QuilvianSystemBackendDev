@@ -511,21 +511,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
         [HttpGet("paged")]
         public IActionResult Paged(
-int page = 1,
-int perPage = 10,
-Guid? kunjunganId = null,
-Guid? pasienId = null,
-string? orderBy = "CreateDateTime",
-string? sortDirection = "desc",
-[FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                        DateTime? startDate = null,
-[FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                        DateTime? endDate = null,
-[FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+            int page = 1,
+            int perPage = 10,
+            Guid? kunjunganId = null,
+            Guid? pasienId = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+                                    DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+                                    DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
 
             // Query data
-            var query = (from a in _applicationDbContext.DarahPermintaans
+            var query = (from a in _applicationDbContext.AssesmentEdukasiDetails
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
                          where a.IsDelete == false || a.IsDelete == null
@@ -534,19 +534,21 @@ string? sortDirection = "desc",
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
-                             a.BankDarahId,
-                             a.KunjunganId,
-                             a.PasienId,
-                             a.KomponenDarahId,
-                             a.GolonganDarahId,
-                             a.JumlahKantong,
-                             a.Rhesus,
-                             a.TglPemesanan,
-                             a.WaktuPemesanan,
-                             a.TglDiperlukan,
-                             a.DokterBDRSId,
-                             a.DokterPerujukId,
-                             a.Petugas,
+                             a.DetailAsesmenEdukasiId,
+                             a.AsesmenEdukasiId,
+                             a.TopikEdukasi,
+                             a.TglDetailAsesmenEdukasi,
+                             a.DurasiWaktu,
+                             a.TTDWaliId,
+                             a.NamaWali,
+                             a.TTDWaliPath,
+                             a.TingkatPemahaman,
+                             a.MetodeEdukasi,
+                             a.SaranaEdukasi,
+                             a.TTDPerawatId,
+                             a.TTDPerawatPath,
+                             a.EvaluasiEdukasi,
+                             a.TglEvaluasiEdukasi,
                              a.Keterangan,
                          });
 
