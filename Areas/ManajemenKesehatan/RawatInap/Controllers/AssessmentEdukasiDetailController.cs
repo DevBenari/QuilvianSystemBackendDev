@@ -85,6 +85,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             var query = (from a in _applicationDbContext.AssesmentEdukasiDetails
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
+
+                         // join ke tabel mst topik edukasi
+                         join te in _applicationDbContext.TopikEdukasis
+                         on a.TopikEdukasi equals te.TopikEdukasiId into teGroup
+                         from te in teGroup.DefaultIfEmpty()
+
                          where a.IsDelete == false || a.IsDelete == null
                          select new
                          {
@@ -94,6 +100,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.DetailAsesmenEdukasiId,
                              a.AsesmenEdukasiId,
                              a.TopikEdukasi,
+                             te.NamaTopik,
                              a.TglDetailAsesmenEdukasi,
                              a.DurasiWaktu,
                              a.TTDWaliId,
@@ -526,6 +533,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             var query = (from a in _applicationDbContext.AssesmentEdukasiDetails
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
+
+                         // join ke tabel mst topik edukasi
+                         join te in _applicationDbContext.TopikEdukasis
+                         on a.TopikEdukasi equals te.TopikEdukasiId into teGroup
+                         from te in teGroup.DefaultIfEmpty()
+
                          where a.IsDelete == false || a.IsDelete == null
                          select new
                          {
@@ -535,6 +548,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.DetailAsesmenEdukasiId,
                              a.AsesmenEdukasiId,
                              a.TopikEdukasi,
+                             te.NamaTopik,
                              a.TglDetailAsesmenEdukasi,
                              a.DurasiWaktu,
                              a.TTDWaliId,
