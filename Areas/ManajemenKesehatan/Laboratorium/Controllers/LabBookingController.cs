@@ -92,10 +92,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              b.TglBooking,
                              b.KelasId,
                              b.DokterId,
-
                              b.Keterangan,
                              b.IsCito,
                              b.DiagnosaAwal,
+                             b.DokterKonsulenId,
+                             b.TerapisId
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -192,7 +193,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     DiagnosaAwal = vm.DiagnosaAwal,
                     Keterangan = vm.Keterangan,
                     IsCito = vm.IsCito ?? false,
-
+                    DokterKonsulenId = vm.DokterKonsulenId,
+                    TerapisId = vm.TerapisId,
 
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow
@@ -273,6 +275,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 existingData.Keterangan = vm.Keterangan;
                 existingData.IsCito = vm.IsCito ?? existingData.IsCito;
                 existingData.DiagnosaAwal = vm.DiagnosaAwal;
+                existingData.DokterKonsulenId = vm.DokterKonsulenId;
+                existingData.TerapisId = vm.TerapisId;
+
                 existingData.UpdateBy = userActiveId;
                 existingData.UpdateDateTime = DateTimeOffset.UtcNow;
 
@@ -399,7 +404,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              b.DokterId,
                              b.Keterangan,
                              b.IsCito,
-                             b.DiagnosaAwal
+                             b.DiagnosaAwal,
+                             b.DokterKonsulenId,
+                             b.TerapisId
                          });
 
             // filter berdasarkan kunjunganId

@@ -11,6 +11,7 @@
         public string? DiagnosaAwal { get; set; }
         public string? Keterangan { get; set; } // Catatan atau keterangan tambahan
         public bool? IsCito { get; set; } // Penanda apakah pemeriksaan bersifat "Cito" (darurat)
-
+        public Guid? DokterKonsulenId { get; set; }
+        public Guid? TerapisId { get; set; }
     }
 }
