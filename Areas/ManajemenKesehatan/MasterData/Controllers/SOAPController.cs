@@ -936,6 +936,168 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 });
             }
         }
+        
+        [HttpGet("kunjungan/{kunjunganId}/dokter/{dokterId}")]
+        public async Task<IActionResult> GetAllByKunjunganIdAndDokterId(Guid kunjunganId, Guid dokterId)
+        {
+            try
+            {
+                // =========================
+                // 1️⃣ Ambil & rapikan kamus ICD dan SDKI (menghindari duplikat)
+                // =========================
+                var icdRows = await _applicationDbContext.ICD10s
+                    .AsNoTracking()
+                    .Select(x => new { x.ICDCode, x.ICDName })
+                    .ToListAsync();
+
+                var icdDict = icdRows
+                    .Where(x => !string.IsNullOrWhiteSpace(x.ICDCode))
+                    .Select(x => new { Code = x.ICDCode.Trim(), x.ICDName })
+                    .GroupBy(x => x.Code, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(
+                        g => g.Key,
+                        g => g.First().ICDName,
+                        StringComparer.OrdinalIgnoreCase
+                    );
+
+                var sdkiRows = await _applicationDbContext.SDKIDiagnosas
+                    .AsNoTracking()
+                    .Select(x => new { x.SDKIKodeDiagnosa, x.NamaDiagnosa })
+                    .ToListAsync();
+
+                var sdkiDict = sdkiRows
+                    .Where(x => !string.IsNullOrWhiteSpace(x.SDKIKodeDiagnosa))
+                    .Select(x => new { Code = x.SDKIKodeDiagnosa.Trim(), x.NamaDiagnosa })
+                    .GroupBy(x => x.Code, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(
+                        g => g.Key,
+                        g => g.First().NamaDiagnosa,
+                        StringComparer.OrdinalIgnoreCase
+                    );
+
+                // =========================
+                // 2️⃣ Query utama: filter by kunjunganId & dokterId
+                // =========================
+                var dataList = await (
+                    from a in _applicationDbContext.SOAPs
+                    join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId
+                    join k in _applicationDbContext.Kunjungans on a.KunjunganId equals k.KunjunganID
+                    join d in _applicationDbContext.Dokters on k.DokterId equals d.DokterId
+                    join p in _applicationDbContext.PendaftaranPasienBarus on k.PasienId equals p.PendaftaranPasienBaruId
+                    where a.IsDelete == false
+                          && a.KunjunganId == kunjunganId
+                          && d.DokterId == dokterId
+                    select new
+                    {
+                        a.CreateDateTime,
+                        a.CreateBy,
+                        CreateByName = u.FullName,
+                        a.SOAPID,
+                        a.KunjunganId,
+                        PasienId = k.PasienId,
+                        a.Subjective,
+                        a.Objective,
+                        a.DaftarICD10, // CSV
+                        a.DaftarSDKI,  // CSV
+                        a.Assessment,
+                        a.Planning,
+                        a.Evaluasi,
+                        a.Intervensi,
+                        a.Reevaluasi,
+                        NamaProfesi = string.Equals(a.Profesi, "null", StringComparison.OrdinalIgnoreCase)
+                            ? null
+                            : a.Profesi,
+                        NamaDokter = d.NmDokter,
+                        DokterId = d.DokterId,
+                        NamaPasien = p.NamaLengkap
+                    })
+                    .AsNoTracking()
+                    .OrderByDescending(x => x.CreateDateTime)
+                    .ToListAsync();
+
+                if (dataList.Count == 0)
+                {
+                    return NotFound(new { message = $"Data SOAP dengan KunjunganId {kunjunganId} dan DokterId {dokterId} tidak ditemukan. || 404 Not Found" });
+                }
+
+                // =========================
+                // 3️⃣ Parse ICD & SDKI menjadi list nama
+                // =========================
+                var result = dataList.Select(data =>
+                {
+                    // ICD
+                    var icdCodes = (data.DaftarICD10 ?? string.Empty)
+                        .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(s => s.Trim())
+                        .Where(s => !string.IsNullOrWhiteSpace(s))
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToList();
+
+                    var icdNames = icdCodes
+                        .Select(code => icdDict.TryGetValue(code, out var nama)
+                            ? nama
+                            : $"(Kode tidak ditemukan: {code})")
+                        .ToList();
+
+                    // SDKI
+                    var sdkiCodes = (data.DaftarSDKI ?? string.Empty)
+                        .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(s => s.Trim())
+                        .Where(s => !string.IsNullOrWhiteSpace(s))
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToList();
+
+                    var sdkiNames = sdkiCodes
+                        .Select(code => sdkiDict.TryGetValue(code, out var nama)
+                            ? nama
+                            : $"(Kode tidak ditemukan: {code})")
+                        .ToList();
+
+                    return new
+                    {
+                        data.CreateDateTime,
+                        data.CreateBy,
+                        data.CreateByName,
+                        data.SOAPID,
+                        data.KunjunganId,
+                        data.PasienId,
+                        data.Subjective,
+                        data.Objective,
+                        DaftarICD10 = icdCodes,
+                        NamaICD = icdNames,
+                        DaftarSDKI = sdkiCodes,
+                        NamaSDKI = sdkiNames,
+                        data.Assessment,
+                        data.Planning,
+                        data.Evaluasi,
+                        data.Intervensi,
+                        data.Reevaluasi,
+                        data.NamaProfesi,
+                        data.NamaDokter,
+                        data.DokterId,
+                        data.NamaPasien
+                    };
+                }).ToList();
+
+                // =========================
+                // 4️⃣ Return hasil
+                // =========================
+                return Ok(new
+                {
+                    message = "Berhasil || 200 OK",
+                    count = result.Count,
+                    data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    message = "Terjadi kesalahan tak terduga.",
+                    error = ex.Message
+                });
+            }
+        }
 
 
         //[HttpGet("SOAPDokter/{dokterid}")]
