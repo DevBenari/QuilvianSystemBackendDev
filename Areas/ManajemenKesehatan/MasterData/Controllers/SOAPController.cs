@@ -1428,6 +1428,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         Guid? search = null,                         // pasienId
         Guid? kunjunganId = null,
         Guid? dokterId = null,
+        Guid? CreateById = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -1480,7 +1481,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 query = query.Where(u=>u.PasienId == search.Value);
             }
 
-
             // filter based on kunjungan id
             if (kunjunganId.HasValue)
             {
@@ -1491,6 +1491,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (dokterId.HasValue) 
             { 
                 query = query.Where(u=>u.DokterId== dokterId.Value);
+            }
+
+            // filter based on create by id
+            if (CreateById.HasValue)
+            { 
+                query = query.Where(u=>u.CreateBy == CreateById.Value);
             }
 
             // --- Filter tanggal rentang eksplisit ---
