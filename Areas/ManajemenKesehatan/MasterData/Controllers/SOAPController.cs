@@ -1442,6 +1442,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
+
             // --- Base query: WAJIB filter pasien di sini ---
             var query =
                 from a in _applicationDbContext.SOAPs
