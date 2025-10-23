@@ -1425,7 +1425,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         public async Task<IActionResult> PagedSOAP(
         int page = 1,
         int perPage = 10,
-        Guid? search = null,                         // pasienId
+        Guid? search = null,                       
         Guid? kunjunganId = null,
         Guid? dokterId = null,
         Guid? CreateById = null,
