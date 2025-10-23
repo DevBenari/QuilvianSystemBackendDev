@@ -91,6 +91,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                          on a.TopikEdukasiId equals te.TopikEdukasiId into teGroup
                          from te in teGroup.DefaultIfEmpty()
 
+                         // join ke tabel assesment edukasi
+                         join ae in _applicationDbContext.AssesmentEdukasis
+                         on a.AsesmenEdukasiId equals ae.AsesmenEdukasiId into aeGroup
+                         from ae in aeGroup.DefaultIfEmpty()
+
                          where a.IsDelete == false || a.IsDelete == null
                          select new
                          {
@@ -100,6 +105,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.DetailAsesmenEdukasiId,
                              a.AsesmenEdukasiId,
                              a.TopikEdukasiId,
+                             ae.KunjunganId,
                              te.NamaTopik,
                              a.TglDetailAsesmenEdukasi,
                              a.DurasiWaktu,
@@ -520,6 +526,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         public IActionResult Paged(
             int page = 1,
             int perPage = 10,
+            Guid? kunjunganId = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -539,6 +546,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                          on a.TopikEdukasiId equals te.TopikEdukasiId into teGroup
                          from te in teGroup.DefaultIfEmpty()
 
+                         // join ke tabel assesment edukasi
+                         join ae in _applicationDbContext.AssesmentEdukasis
+                         on a.AsesmenEdukasiId equals ae.AsesmenEdukasiId into aeGroup
+                         from ae in aeGroup.DefaultIfEmpty()
+
                          where a.IsDelete == false || a.IsDelete == null
                          select new
                          {
@@ -548,6 +560,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.DetailAsesmenEdukasiId,
                              a.AsesmenEdukasiId,
                              a.TopikEdukasiId,
+                             ae.KunjunganId,
                              te.NamaTopik,
                              a.TglDetailAsesmenEdukasi,
                              a.DurasiWaktu,
@@ -574,10 +587,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             //}
 
             // filter berdasarkan kunjungan id
-            //if (kunjunganId.HasValue)
-            //{
-            //    query = query.Where(u => u.KunjunganId == kunjunganId.Value);
-            //}
+            if (kunjunganId.HasValue)
+            {
+                query = query.Where(u => u.KunjunganId == kunjunganId.Value);
+            }
 
             //// filter berdasarkan pasien id
             //if (pasienId.HasValue)
