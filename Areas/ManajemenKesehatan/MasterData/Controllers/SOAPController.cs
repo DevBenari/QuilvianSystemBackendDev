@@ -938,7 +938,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
         
         [HttpGet("kunjungan/{kunjunganId}/dokter/{dokterId}")]
-        public async Task<IActionResult> GetAllByKunjunganIdAndDokterId(Guid kunjunganId, Guid dokterId)
+        public async Task<IActionResult> GetAllByKunjunganIdAndDokterId(Guid kunjunganId, Guid dokterId, string namaProfesi)
         {
             try
             {
@@ -987,6 +987,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     where a.IsDelete == false
                           && a.KunjunganId == kunjunganId
                           && d.DokterId == dokterId
+                          && a.Profesi == namaProfesi
                     select new
                     {
                         a.CreateDateTime,
