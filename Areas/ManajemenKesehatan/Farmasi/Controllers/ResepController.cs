@@ -2168,6 +2168,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         int perPage = 10,
         string? search = null,
         Guid? kunjunganid = null,
+        Guid? dokterid = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery] DateTime? startDate = null,
@@ -2206,6 +2207,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             // 🔎 Filter by KunjunganId
             if (kunjunganid.HasValue)
                 query = query.Where(q => q.Resep.KunjunganId == kunjunganid.Value);
+
+            // filter by dokter id
+            if (dokterid.HasValue)
+                query = query.Where(q=> q.Resep.DokterId == dokterid.Value);
 
             // 🔎 Periode filter
             if (periode.HasValue)

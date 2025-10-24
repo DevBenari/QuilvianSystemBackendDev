@@ -249,9 +249,11 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<LogRacikPenerimaan> LogRacikPenerimaans { get; set; }
         public DbSet<PermintaanUnit> PermintaanUnits { get; set; }
         public DbSet<DetailPermintaanUnit> DetailPermintaanUnits { get; set; }
-
         public DbSet<DetailPenerimaanUnit> DetailPenerimaanUnits { get; set; }
         public DbSet<PenerimaanUnit> PenerimaanUnits { get; set; }
+        public DbSet<StockBatch> StockBatchs { get; set; }
+        public DbSet<StockKartu> StockKartus { get; set; }
+
         #endregion
 
         #region OperasiOK
