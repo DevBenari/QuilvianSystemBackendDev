@@ -56,6 +56,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             var query = (from a in _applicationDbContext.IndikatorPengkajians
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
+
+                         // join ke table indikator 
+                         join i in _applicationDbContext.Indikators
+                         on a.IndikatorId equals i.IndikatorId into iGroup
+                         from i in iGroup.DefaultIfEmpty()
+
+                             // join ke table indikator score
+                         join s in _applicationDbContext.IndikatorScores
+                         on a.IndikatorScoreId equals s.IndikatorScoreId into sGroup
+                         from s in sGroup.DefaultIfEmpty()
+
                          where a.IsDelete == false || a.IsDelete == null
                          select new
                          {
@@ -64,7 +75,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              CreateByName = u.FullName,
                              a.IndikatorPengkajianId,
                              a.IndikatorId,
+                             i.NamaIndikator,
                              a.IndikatorScoreId,
+                             s.NamaIndikatorScore,
+                             s.ScoreIndikator,
                              a.KategoriIndikatorId,
                              a.Keterangan,
 
@@ -344,6 +358,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             var query = (from a in _applicationDbContext.IndikatorPengkajians
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
+
+                         // join ke table indikator 
+                         join i in _applicationDbContext.Indikators
+                         on a.IndikatorId equals i.IndikatorId into iGroup
+                         from i in iGroup.DefaultIfEmpty()
+
+                         // join ke table indikator score
+                         join s in _applicationDbContext.IndikatorScores
+                         on a.IndikatorScoreId equals s.IndikatorScoreId into sGroup
+                         from s in sGroup.DefaultIfEmpty()
+
                          where a.IsDelete == false || a.IsDelete == null
                          select new
                          {
@@ -352,7 +377,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              CreateByName = u.FullName,
                              a.IndikatorPengkajianId,
                              a.IndikatorId,
+                             i.NamaIndikator,
                              a.IndikatorScoreId,
+                             s.NamaIndikatorScore,
+                             s.ScoreIndikator,
                              a.KategoriIndikatorId,
                              a.Keterangan,
 

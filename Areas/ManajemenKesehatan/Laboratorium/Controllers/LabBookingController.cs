@@ -26,6 +26,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly string _uploadUrl;
 
         private readonly ILogger<LabBookingController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
@@ -35,13 +36,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ILogger<LabBookingController> logger,
-            IWebHostEnvironment webHostEnvironment)
+            IWebHostEnvironment webHostEnvironment,
+            IConfiguration configuration
+            )
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+            _uploadUrl = configuration["FileStorage:UploadUrl"];
         }
         private DateTime? TryParseTanggalToUtc(string tanggal)
         {
@@ -96,7 +100,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              b.IsCito,
                              b.DiagnosaAwal,
                              b.DokterKonsulenId,
-                             b.TerapisId
+                             b.TerapisId,
+                             b.TglPemeriksaan,
+                             b.StatusPemeriksaan,
+                             b.AsuransiId,
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -146,7 +153,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] LabBookingViewModel vm)
+        public async Task<IActionResult> Create([FromForm] LabBookingViewModel vm) // pakai FromForm biar bisa upload file
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -155,39 +162,72 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
             try
             {
-                // **Cek koneksi ke database**
                 if (!_applicationDbContext.Database.CanConnect())
                 {
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
                 }
 
-                // **Ambil User ID dari JWT Claims**
+                // ✅ Ambil user aktif dari JWT
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
-                {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
-                }
 
                 var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
                 if (getUserActive == null)
-                {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-                }
 
                 var userActiveId = getUserActive.UserActiveId;
 
-                // (Opsional) Validasi: pastikan pasien, dokter, atau lab yang direferensikan ada
-                // if (!_applicationDbContext.Pasiens.Any(p => p.PasienId == vm.PasienId))
-                //     return NotFound(new { message = "Pasien tidak ditemukan." });
+                // ==================================================
+                // ✅ PROSES UPLOAD SURAT JAMINAN
+                // ==================================================
+                string? suratJaminanPath = null;
 
-                // **Buat Data Baru**
+                if (vm.SuratJaminan != null && vm.SuratJaminan.Length > 0)
+                {
+                    var maxSize = 2 * 1024 * 1024; // maksimal 2MB
+                    var allowedExtensions = new List<string> { ".jpg", ".jpeg", ".png", ".pdf" };
+                    var fileExtension = Path.GetExtension(vm.SuratJaminan.FileName).ToLower();
+
+                    if (vm.SuratJaminan.Length > maxSize)
+                        return BadRequest(new { message = "Ukuran file terlalu besar! Maksimal 2MB." });
+
+                    if (!allowedExtensions.Contains(fileExtension))
+                        return BadRequest(new { message = "Format file tidak valid! Gunakan JPG, PNG, atau PDF." });
+
+                    // Nama file unik
+                    var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
+                    var safeFileName = $"{vm.PasienId}_{safeTime}_SuratJaminan{fileExtension}";
+
+                    // Folder tujuan
+                    var uploadFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "SuratJaminan");
+
+                    if (!Directory.Exists(uploadFolder))
+                        Directory.CreateDirectory(uploadFolder);
+
+                    var filePath = Path.Combine(uploadFolder, safeFileName);
+
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await vm.SuratJaminan.CopyToAsync(stream);
+                    }
+
+                    // Simpan path relatif (misal untuk disajikan via API)
+                    suratJaminanPath = $"/SuratJaminan/{safeFileName}";
+                }
+
+                // ==================================================
+                // ✅ BUAT DATA LAB BOOKING
+                // ==================================================
                 var data = new LabBooking
                 {
                     BookingLabId = Guid.NewGuid(),
                     KunjunganId = vm.KunjunganId,
                     PasienId = vm.PasienId,
+                    AsuransiId = vm.AsuransiId,
                     TglPenyerahanSampling = vm.TglPenyerahanSampling,
-                    TglBooking = vm.TglBooking ?? DateTime.UtcNow, // default ke tanggal saat ini jika null
+                    TglBooking = vm.TglBooking ?? DateTime.UtcNow,
+                    TglPemeriksaan = vm.TglPemeriksaan,
                     KelasId = vm.KelasId,
                     DokterId = vm.DokterId,
                     DiagnosaAwal = vm.DiagnosaAwal,
@@ -195,27 +235,27 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     IsCito = vm.IsCito ?? false,
                     DokterKonsulenId = vm.DokterKonsulenId,
                     TerapisId = vm.TerapisId,
+                    StatusPemeriksaan = vm.StatusPemeriksaan ?? "Menunggu",
+                    SuratJaminanPath = suratJaminanPath, // simpan path hasil upload
 
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow
                 };
 
-                // **Simpan ke Database**
                 _applicationDbContext.LabBookings.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
                 {
-                    return Created("", new 
-                    { 
+                    return Created("", new
+                    {
                         message = "Tambah Data Booking Lab Berhasil || 201 Created",
-                        BookingLabId = data.BookingLabId,
+                        data.BookingLabId,
+                        data.SuratJaminanPath
                     });
                 }
-                else
-                {
-                    return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
-                }
+
+                return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
             }
             catch (DbUpdateException dbEx)
             {
@@ -227,8 +267,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             }
         }
 
+
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] LabBookingViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromForm] LabBookingViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -237,69 +278,114 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
             try
             {
-                // **Cek koneksi ke database**
                 if (!_applicationDbContext.Database.CanConnect())
                 {
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
                 }
 
-                // **Ambil User ID dari JWT Claims**
+                // 🔹 Ambil data lama dari database
+                var existing = await _applicationDbContext.LabBookings.FindAsync(id);
+                if (existing == null)
+                {
+                    return NotFound(new { message = "Data Booking Lab tidak ditemukan." });
+                }
+
+                // 🔹 Ambil user aktif dari JWT
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
-                {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
-                }
 
                 var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
                 if (getUserActive == null)
-                {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-                }
 
                 var userActiveId = getUserActive.UserActiveId;
 
-                // **Cari data berdasarkan ID**
-                var existingData = await _applicationDbContext.LabBookings.FindAsync(id);
-                if (existingData == null)
+                // ==================================================
+                // ✅ PROSES UPLOAD SURAT JAMINAN (Baru)
+                // ==================================================
+                string? suratJaminanPath = existing.SuratJaminanPath;
+
+                if (vm.SuratJaminan != null && vm.SuratJaminan.Length > 0)
                 {
-                    return NotFound(new { message = "Data booking lab tidak ditemukan." });
+                    var maxSize = 2 * 1024 * 1024; // 2MB
+                    var allowedExtensions = new List<string> { ".jpg", ".jpeg", ".png", ".pdf" };
+                    var fileExtension = Path.GetExtension(vm.SuratJaminan.FileName).ToLower();
+
+                    if (vm.SuratJaminan.Length > maxSize)
+                        return BadRequest(new { message = "Ukuran file terlalu besar! Maksimal 2MB." });
+
+                    if (!allowedExtensions.Contains(fileExtension))
+                        return BadRequest(new { message = "Format file tidak valid! Gunakan JPG, PNG, atau PDF." });
+
+                    // 🔸 Hapus file lama jika ada
+                    if (!string.IsNullOrEmpty(existing.SuratJaminanPath))
+                    {
+                        var oldPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", existing.SuratJaminanPath.TrimStart('/'));
+                        if (System.IO.File.Exists(oldPath))
+                            System.IO.File.Delete(oldPath);
+                    }
+
+                    // 🔸 Upload file baru
+                    var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
+                    var safeFileName = $"{vm.PasienId}_{safeTime}_SuratJaminan{fileExtension}";
+
+                    var uploadFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "SuratJaminan");
+                    if (!Directory.Exists(uploadFolder))
+                        Directory.CreateDirectory(uploadFolder);
+
+                    var filePath = Path.Combine(uploadFolder, safeFileName);
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await vm.SuratJaminan.CopyToAsync(stream);
+                    }
+
+                    suratJaminanPath = $"/SuratJaminan/{safeFileName}";
                 }
 
-                // **Update data**
-                existingData.KunjunganId = vm.KunjunganId;
-                existingData.PasienId = vm.PasienId;
-                existingData.TglPenyerahanSampling = vm.TglPenyerahanSampling;
-                existingData.TglBooking = vm.TglBooking ?? existingData.TglBooking;
-                existingData.KelasId = vm.KelasId;
-                existingData.DokterId = vm.DokterId;
-                existingData.Keterangan = vm.Keterangan;
-                existingData.IsCito = vm.IsCito ?? existingData.IsCito;
-                existingData.DiagnosaAwal = vm.DiagnosaAwal;
-                existingData.DokterKonsulenId = vm.DokterKonsulenId;
-                existingData.TerapisId = vm.TerapisId;
+                // ==================================================
+                // ✅ UPDATE DATA BOOKING LAB
+                // ==================================================
+                existing.KunjunganId = vm.KunjunganId ?? existing.KunjunganId;
+                existing.PasienId = vm.PasienId ?? existing.PasienId;
+                existing.AsuransiId = vm.AsuransiId ?? existing.AsuransiId;
+                existing.TglPenyerahanSampling = vm.TglPenyerahanSampling ?? existing.TglPenyerahanSampling;
+                existing.TglBooking = vm.TglBooking ?? existing.TglBooking;
+                existing.TglPemeriksaan = vm.TglPemeriksaan ?? existing.TglPemeriksaan;
+                existing.KelasId = vm.KelasId ?? existing.KelasId;
+                existing.DokterId = vm.DokterId ?? existing.DokterId;
+                existing.DiagnosaAwal = vm.DiagnosaAwal ?? existing.DiagnosaAwal;
+                existing.Keterangan = vm.Keterangan ?? existing.Keterangan;
+                existing.IsCito = vm.IsCito ?? existing.IsCito;
+                existing.DokterKonsulenId = vm.DokterKonsulenId ?? existing.DokterKonsulenId;
+                existing.TerapisId = vm.TerapisId ?? existing.TerapisId;
+                existing.StatusPemeriksaan = vm.StatusPemeriksaan ?? existing.StatusPemeriksaan;
+                existing.SuratJaminanPath = suratJaminanPath;
 
-                existingData.UpdateBy = userActiveId;
-                existingData.UpdateDateTime = DateTimeOffset.UtcNow;
+                existing.UpdateBy = userActiveId;
+                existing.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.LabBookings.Update(existingData);
+                _applicationDbContext.LabBookings.Update(existing);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
                 {
-                    return Ok(new 
-                    { 
+                    return Ok(new
+                    {
                         message = "Update Data Booking Lab Berhasil || 200 OK",
-                        BookingLabId = existingData.BookingLabId,
+                        data = new
+                        {
+                            existing.BookingLabId,
+                            existing.SuratJaminanPath
+                        }
                     });
                 }
-                else
-                {
-                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui di database." });
-                }
+
+                return StatusCode(500, new { message = "Tidak ada perubahan yang disimpan." });
             }
             catch (DbUpdateException dbEx)
             {
-                return StatusCode(500, new { message = $"Gagal memperbarui data: {dbEx.InnerException?.Message}" });
+                return StatusCode(500, new { message = $"Gagal update data: {dbEx.InnerException?.Message}" });
             }
             catch (Exception ex)
             {
