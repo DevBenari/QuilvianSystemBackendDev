@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
@@ -7,9 +6,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
@@ -23,20 +19,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class DarahPermintaanController : Controller
+    public class PemeriksaanAsuransiController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<DarahPermintaanController> _logger;
+        private readonly ILogger<PemeriksaanAsuransiController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public DarahPermintaanController(
+        public PemeriksaanAsuransiController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<DarahPermintaanController> logger,
+            ILogger<PemeriksaanAsuransiController> logger,
             IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
@@ -44,30 +40,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
-        }
-        private DateTime? TryParseTanggalToUtc(string tanggal)
-        {
-            if (DateTime.TryParseExact(
-                    tanggal,
-                    "yyyy-MM-dd",
-                    CultureInfo.InvariantCulture,
-                    DateTimeStyles.None,
-                    out var parsedDate))
-            {
-                var now = DateTime.Now; // atau DateTime.UtcNow jika kamu mau jam UTC
-                var finalDateTime = new DateTime(
-                    parsedDate.Year,
-                    parsedDate.Month,
-                    parsedDate.Day,
-                    now.Hour,
-                    now.Minute,
-                    now.Second,
-                    DateTimeKind.Local
-                ); // atau Utc jika perlu
-
-                return finalDateTime.ToUniversalTime(); // simpan dalam UTC
-            }
-            return null;
         }
 
         [HttpGet]
@@ -78,7 +50,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = (from a in _applicationDbContext.DarahPermintaans
+            var query = (from a in _applicationDbContext.PemeriksaanAsuransis
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
                          where a.IsDelete == false || a.IsDelete == null
@@ -87,19 +59,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
-                             a.BankDarahId,
-                             a.KomponenDarahId,
-                             a.GolonganDarahId,
-                             a.KunjunganId,
-                             a.PasienId,
-                             a.JumlahKantong,
-                             a.Rhesus,
-                             a.TglPemesanan,
-                             a.WaktuPemesanan,
-                             a.TglDiperlukan,
-                             a.DokterBDRSId,
-                             a.DokterPerujukId,
-                             a.Petugas,
+                             a.PemeriksaanAsuransiId,
+                             a.PemeriksaanLabId,
+                             a.AsuransiId,
                              a.Keterangan,
                          }).OrderByDescending(a => a.CreateDateTime);
 
@@ -136,7 +98,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.DarahPermintaans.Find(id);
+            var listdata = _applicationDbContext.PemeriksaanAsuransis.Find(id);
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -150,7 +112,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] DarahPermintaanViewModel vm)
+        public async Task<IActionResult> Create([FromBody] PemeriksaanAsuransiViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -189,28 +151,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 //}
 
                 // **Buat Data Baru**
-                var data = new DarahPermintaan
+                var data = new PemeriksaanAsuransi
                 {
-                    BankDarahId = Guid.NewGuid(),
-                    KunjunganId = vm.KunjunganId,
-                    PasienId = vm.PasienId,
-                    KomponenDarahId = vm.KomponenDarahId,
-                    GolonganDarahId = vm.GolonganDarahId,
-                    JumlahKantong = vm.JumlahKantong,
-                    Rhesus = vm.Rhesus,
-                    TglPemesanan = TryParseTanggalToUtc(vm.TglPemesanan),
-                    WaktuPemesanan = vm.WaktuPemesanan,
-                    TglDiperlukan = TryParseTanggalToUtc(vm.TglDiperlukan),
-                    DokterPerujukId = vm.DokterPerujukId,
-                    DokterBDRSId = vm.DokterBDRSId,
-                    Petugas = vm.Petugas,
+                    PemeriksaanAsuransiId = Guid.NewGuid(),
+                    PemeriksaanLabId = vm.PemeriksaanLabId,
+                    AsuransiId = vm.AsuransiId,
                     Keterangan = vm.Keterangan,
 
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
                 // **Simpan ke Database**
-                _applicationDbContext.DarahPermintaans.Add(data);
+                _applicationDbContext.PemeriksaanAsuransis.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -233,7 +185,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] DarahPermintaanViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] PemeriksaanAsuransiViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -263,31 +215,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data Lama**
-                var data = await _applicationDbContext.DarahPermintaans.FindAsync(id);
+                var data = await _applicationDbContext.PemeriksaanAsuransis.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data permintaan darah tidak ditemukan." });
                 }
 
                 // **Update Data**
-                data.KomponenDarahId = vm.KomponenDarahId;
-                data.KunjunganId = vm.KunjunganId;
-                data.PasienId = vm.PasienId;
-                data.GolonganDarahId = vm.GolonganDarahId;
-                data.JumlahKantong = vm.JumlahKantong;
-                data.Rhesus = vm.Rhesus;
-                data.TglPemesanan = TryParseTanggalToUtc(vm.TglPemesanan);
-                data.WaktuPemesanan = vm.WaktuPemesanan;
-                data.TglDiperlukan = TryParseTanggalToUtc(vm.TglDiperlukan);
-                data.DokterPerujukId = vm.DokterPerujukId;
-                data.DokterBDRSId = vm.DokterBDRSId;
-                data.Petugas = vm.Petugas;
+                data.AsuransiId = vm.AsuransiId;
+                data.PemeriksaanLabId = vm.PemeriksaanLabId;
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.DarahPermintaans.Update(data);
+                _applicationDbContext.PemeriksaanAsuransis.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -336,7 +278,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.DarahPermintaans.FindAsync(id);
+                var data = await _applicationDbContext.PemeriksaanAsuransis.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -348,7 +290,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 data.IsDelete = true;
 
-                _applicationDbContext.DarahPermintaans.Update(data);
+                _applicationDbContext.PemeriksaanAsuransis.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -370,6 +312,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             }
         }
 
+
         [HttpGet("paged")]
         public IActionResult Paged(
         int page = 1,
@@ -379,14 +322,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                        DateTime? startDate = null,
+                                DateTime? startDate = null,
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                        DateTime? endDate = null,
+                                DateTime? endDate = null,
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
 
             // Query data
-            var query = (from a in _applicationDbContext.DarahPermintaans
+            var query = (from a in _applicationDbContext.PemeriksaanAsuransis
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
                          where a.IsDelete == false || a.IsDelete == null
@@ -395,19 +338,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
-                             a.BankDarahId,
-                             a.KunjunganId,
-                             a.PasienId,
-                             a.KomponenDarahId,
-                             a.GolonganDarahId,
-                             a.JumlahKantong,
-                             a.Rhesus,
-                             a.TglPemesanan,
-                             a.WaktuPemesanan,
-                             a.TglDiperlukan,
-                             a.DokterBDRSId,
-                             a.DokterPerujukId,
-                             a.Petugas,
+                             a.PemeriksaanAsuransiId,
+                             a.PemeriksaanLabId,
+                             a.AsuransiId,
                              a.Keterangan,
                          });
 
@@ -420,16 +353,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             //    );
             //}
 
-            // filter berdasarkan kunjungan id
-            if (kunjunganId.HasValue)
-            {
-                query = query.Where(u=>u.KunjunganId == kunjunganId.Value);
-            }
 
-            // filter berdasarkan pasien id
-            if (pasienId.HasValue) { 
-                query = query.Where(u=>u.PasienId== pasienId.Value);
-            }
             //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
             {
@@ -529,7 +453,5 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 }
             });
         }
-
-
     }
 }

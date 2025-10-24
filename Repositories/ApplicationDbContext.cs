@@ -274,6 +274,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<SpecimenMethod> SpecimenMethods { get; set; }
         public DbSet<Darah> Darahs { get; set; }
         public DbSet<DarahPermintaan> DarahPermintaans { get; set; }
+        public DbSet<PemeriksaanAsuransi> PemeriksaanAsuransis { get; set; }
         #endregion
 
     }
