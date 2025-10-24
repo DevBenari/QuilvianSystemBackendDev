@@ -110,6 +110,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     r.StatusPengambilanResep,
                     r.IsCancelled,
                     r.IsLunas,
+                    r.IsResepPulang,
                     r.RanapId,
                     TanggalPembuatanResepFormatted = r.TanggalPembuatanResep.HasValue ?
                                                       r.TanggalPembuatanResep.Value.ToString("yyyy-MM-dd") : null
@@ -245,6 +246,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 r.IsCancelled,
                 r.IsLunas,
                 r.RanapId,
+                r.IsResepPulang,
                 r.TanggalPembuatanResepFormatted,
 
                 DaftarObat = detailObat.Where(d => d.ResepId == r.ResepId).ToList(),
@@ -289,139 +291,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 }
             });
         }
-
-
-        //[HttpGet]
-        //public async Task<IActionResult> GetAllResep(int page = 1, int perPage = 10)
-        //{
-        //    if (page < 1) page = 1;
-        //    if (perPage < 1) perPage = 10;
-
-        //    var query = (from r in _applicationDbContext.Reseps
-        //                 join u in _applicationDbContext.UserActives
-        //                     on r.CreateBy equals u.UserActiveId
-        //                 join k in _applicationDbContext.Kunjungans
-        //                     on r.KunjunganId equals k.KunjunganID
-        //                 where !r.IsDelete // jika ada IsDelete
-        //                 select new
-        //                 {
-        //                     r.ResepId,
-        //                     r.KunjunganId,
-        //                     k.JenisKunjungan,
-        //                     r.CreateDateTime,
-        //                     r.CreateBy,
-        //                     r.AntrianRegistrasi,
-        //                     r.AntrianResep,
-        //                     r.AsuransiId,
-        //                     r.NamaAsuransi,
-        //                     r.PasienId,
-        //                     r.NamaPasien,
-        //                     r.PoliklinikId,
-        //                     r.NamaPoliklinik,
-        //                     r.DokterId,
-        //                     r.NamaDokter,
-        //                     r.StatusPembuatanResep,
-        //                     r.StatusPengambilanResep,
-        //                     r.IsCancelled,
-        //                     r.IsLunas,
-        //                     r.RanapId,
-        //                     TanggalPembuatanResepFormatted = r.TanggalPembuatanResep.HasValue ? r.TanggalPembuatanResep.Value.ToString("yyyy-MM-dd") : null,
-        //                     CreateByName = u.FullName,
-
-        //                     DaftarObat = (from d in _applicationDbContext.DetailReseps
-        //                                   join o in _applicationDbContext.Obats
-        //                                       on d.ObatId equals o.ObatId
-        //                                   where d.ResepId == r.ResepId && (d.IsRacikan == false || d.IsRacikan == null)
-        //                                   select new
-        //                                   {
-        //                                       d.DetailResepId,
-        //                                       d.ResepId,
-        //                                       d.ObatId,
-        //                                       o.ObatName,
-        //                                       d.Qty,
-        //                                       d.HargaObat,
-        //                                       d.TotalHargaObat,
-        //                                       d.Signa,
-        //                                       d.SignaTambahan,
-        //                                       d.TakaranDosis,
-        //                                       d.IsIteratur,
-        //                                       d.JumlahIteratur,
-        //                                       TglMulaiIteratur = d.TglMulaiIteratur.HasValue ? d.TglMulaiIteratur.Value.ToString("yyyy-MM-dd") : null,
-        //                                       MasaAktifIteratur = d.MasaAktifIteratur.HasValue ? d.MasaAktifIteratur.Value.ToString("yyyy-MM-dd") : null,
-        //                                       d.JarakPenebusan,
-        //                                       d.StatusCoverObat,
-        //                                       d.StatusPengambilanObat,
-        //                                       d.StatusDiberikanPasien,
-        //                                       d.CaraPemakaian,
-        //                                       d.EstimasiPemberian,
-        //                                       d.TglStopPemakaian,
-        //                                       d.CreateBy,
-        //                                       d.CreateDateTime
-        //                                   }).ToList(),
-
-        //                     DaftarRacikan = (from d in _applicationDbContext.DetailReseps
-        //                                      join ra in _applicationDbContext.Racikans
-        //                                          on d.RacikanId equals ra.RacikanId
-        //                                      where d.ResepId == r.ResepId && d.IsRacikan == true
-        //                                      select new
-        //                                      {
-        //                                          ra.RacikanId,
-        //                                          ra.NamaRacikan,
-        //                                          d.Qty,
-        //                                          d.Signa,
-        //                                          d.SignaTambahan,
-        //                                          d.HargaObat,
-        //                                          d.TotalHargaObat,
-        //                                          d.CaraPemakaian,
-        //                                          d.EstimasiPemberian,
-        //                                          d.StatusDiberikanPasien,
-        //                                          d.TglStopPemakaian,
-        //                                          ra.CreateBy,
-        //                                          ra.CreateDateTime,
-
-        //                                          DaftarRacikanDetail = (from rd in _applicationDbContext.RacikanDetails
-        //                                                                 join ob in _applicationDbContext.Obats
-        //                                                                     on rd.ObatId equals ob.ObatId
-        //                                                                 where rd.RacikanId == ra.RacikanId
-        //                                                                 select new
-        //                                                                 {
-        //                                                                     rd.DetailRacikanId,
-        //                                                                     rd.ObatId,
-        //                                                                     ob.ObatName,
-        //                                                                     rd.QtyUsed,
-        //                                                                     rd.KomposisiDosis,
-        //                                                                     rd.CreateBy,
-        //                                                                     rd.CreateDateTime
-        //                                                                 }).ToList()
-        //                                      }).ToList()
-        //                 }).OrderByDescending(a => a.CreateDateTime);
-
-        //    var totalRows = query.Count();
-        //    var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-
-        //    var listdata = query
-        //        .Skip((page - 1) * perPage)
-        //        .Take(perPage)
-        //        .ToList();
-
-        //    if (!listdata.Any())
-        //    {
-        //        return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
-        //    }
-
-        //    return Ok(new
-        //    {
-        //        message = "Berhasil || 200 OK",
-        //        data = listdata,
-        //        pagination = new
-        //        {
-        //            CurrentPage = page,
-        //            PerPage = perPage,
-        //            TotalRows = totalRows,
-        //            TotalPages = totalPages
-        //        }
-        //    });
-        //}
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetResepById(Guid id)
@@ -477,6 +346,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                         d.AlasanReturn,
                                         d.QtyReturn,
                                         d.DikembalikanOleh,
+                                        d.IsStopped,
                                         d.CreateBy,
                                         d.CreateDateTime
                                     }).ToListAsync();
@@ -505,6 +375,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                            d.AlasanReturn,
                                            d.QtyReturn,
                                            d.DikembalikanOleh,
+                                           d.IsStopped,
                                            ra.BentukRacikan,
                                            ra.CreateBy,
                                            ra.CreateDateTime
@@ -579,6 +450,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 resep.IsCancelled,
                 resep.IsLunas,
                 resep.RanapId,
+                resep.IsResepPulang,
                 resep.CreateBy,
                 TanggalPembuatanResep = resep.TanggalPembuatanResep?.ToString("yyyy-MM-dd"),
                 DaftarObat = daftarObat,
@@ -587,127 +459,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
             return Ok(result);
         }
-
-
-        //[HttpGet("{id}")]
-        //public async Task<IActionResult> GetResepById(Guid id)
-        //{
-        //    var resep = await _applicationDbContext.Reseps
-        //        .FirstOrDefaultAsync(r => r.ResepId == id);
-
-        //    var jenisKunjungan = await _applicationDbContext.Kunjungans
-        //        .Where(k => k.KunjunganID == resep.KunjunganId)
-        //        .Select(k => k.JenisKunjungan /* atau k.NamaJenisKunjungan */)
-        //        .FirstOrDefaultAsync();
-
-        //    if (resep == null)
-        //        return NotFound(new { message = "Resep tidak ditemukan!" });
-
-        //    //var user = await _applicationDbContext.UserActives
-        //    //    .FirstOrDefaultAsync(u => u.UserActiveId == resep.CreateBy);
-
-        //    var daftarObat = await _applicationDbContext.DetailReseps
-        //        .Where(d => d.ResepId == resep.ResepId && (d.IsRacikan == false || d.IsRacikan == null))
-        //        .Join(_applicationDbContext.Obats,
-        //              d => d.ObatId,
-        //              o => o.ObatId,
-        //              (d, o) => new
-        //              {
-        //                  d.DetailResepId,
-        //                  d.ObatId,
-        //                  o.ObatName,
-        //                  d.Qty,
-        //                  d.HargaObat,
-        //                  d.TotalHargaObat,
-        //                  d.Signa,
-        //                  d.SignaTambahan,
-        //                  d.TakaranDosis,
-        //                  d.IsIteratur,
-        //                  d.JumlahIteratur,
-        //                  MasaAktifIteratur = d.MasaAktifIteratur.HasValue ? d.MasaAktifIteratur.Value.ToString("yyyy-MM-dd") : null,
-        //                  TglMulaiIteratur = d.TglMulaiIteratur.HasValue ? d.TglMulaiIteratur.Value.ToString("yyyy-MM-dd") : null,
-        //                  d.JarakPenebusan,
-        //                  d.StatusCoverObat,
-        //                  d.StatusPengambilanObat,
-        //                  d.CaraPemakaian,
-        //                  d.EstimasiPemberian,
-        //                  d.TglStopPemakaian,
-        //                  d.StatusDiberikanPasien,
-        //                  d.CreateBy,
-        //                  d.CreateDateTime
-        //              })
-        //        .ToListAsync();
-
-        //    var daftarRacikanRaw = await _applicationDbContext.DetailReseps
-        //        .Where(d => d.ResepId == resep.ResepId && d.RacikanId != null)
-        //        .Join(_applicationDbContext.Racikans,
-        //            d => d.RacikanId,
-        //            ra => ra.RacikanId,
-        //            (d, ra) => new
-        //            {
-        //                ra.RacikanId,
-        //                ra.NamaRacikan,
-        //                d.CaraPemakaian,
-        //                d.StatusDiberikanPasien,
-        //                d.EstimasiPemberian,
-        //                d.TglStopPemakaian,
-        //                d.Qty,
-        //                d.Signa,
-        //                d.SignaTambahan,
-        //                ra.CreateBy,
-        //                ra.CreateDateTime,
-        //                DaftarRacikanDetail = _applicationDbContext.RacikanDetails
-        //                    .Where(rd => rd.RacikanId == ra.RacikanId)
-        //                    .Join(_applicationDbContext.Obats,
-        //                          rd => rd.ObatId,
-        //                          ob => ob.ObatId,
-        //                          (rd, ob) => new
-        //                          {
-        //                              rd.DetailRacikanId,
-        //                              rd.ObatId,
-        //                              ob.ObatName,
-        //                              rd.QtyUsed,
-        //                              rd.KomposisiDosis,
-        //                              rd.CreateBy,
-        //                              rd.CreateDateTime
-        //                          })
-        //                    .ToList()
-        //            })
-        //        .ToListAsync(); // materialize dulu
-
-        //    // Ambil unik racikan per RacikanId
-        //    var daftarRacikan = daftarRacikanRaw
-        //        .GroupBy(r => r.RacikanId)
-        //        .Select(g => g.First())
-        //        .ToList();
-
-        //    var result = new
-        //    {
-        //        resep.ResepId,
-        //        resep.KunjunganId,
-        //        JenisKunjungan = jenisKunjungan,
-        //        resep.AsuransiId,
-        //        resep.NamaAsuransi,
-        //        resep.PasienId,
-        //        resep.NamaPasien,
-        //        resep.PoliklinikId,
-        //        resep.NamaPoliklinik,
-        //        resep.DokterId,
-        //        resep.NamaDokter,
-        //        resep.AntrianResep,
-        //        resep.AntrianRegistrasi,
-        //        resep.StatusPembuatanResep,
-        //        resep.StatusPengambilanResep,
-        //        resep.IsCancelled,
-        //        resep.IsLunas,
-        //        resep.RanapId,
-        //        resep.CreateBy,
-        //        TanggalPembuatanResep = resep.TanggalPembuatanResep?.ToString("yyyy-MM-dd"),
-        //        DaftarObat = daftarObat,
-        //        DaftarRacikan = daftarRacikan,
-        //    };
-        //    return Ok(result);
-        //}
 
         [HttpPost]
         public async Task<IActionResult> CreateResep([FromBody] ResepViewModel vm)
@@ -759,6 +510,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     IsLunas = false,
                     TanggalPembuatanResep = DateTime.UtcNow,
                     //RanapId = vm.RanapId,
+                    IsResepPulang = false,
 
                     CreateBy = getUserActive.UserActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow
@@ -818,7 +570,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                 ObatMalamDiambil = false,
                                 ObatSiangDiambil = false,
                                 IsReturn = false,
-
+                                IsStopped = false,
 
                                 CreateBy = getUserActive.UserActiveId,
                                 CreateDateTime = DateTimeOffset.UtcNow
@@ -958,6 +710,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                 ObatMalamDiambil = false,
                                 ObatSiangDiambil = false,
                                 IsReturn = false,
+                                IsStopped = false,
                                 CreateBy = getUserActive.UserActiveId,
                                 CreateDateTime = DateTimeOffset.UtcNow
                             };
@@ -1284,6 +1037,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 resep.NamaPoliklinik = vm.NamaPoliklinik;
                 resep.DokterId = vm.DokterId;
                 resep.NamaDokter = vm.NamaDokter;
+                resep.IsResepPulang = false;
                 //resep.RanapId = vm.RanapId;
                 resep.UpdateBy = userId;
                 resep.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -1620,6 +1374,36 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             });
 
             return Ok(new { message = "Status isFinished berhasil diperbarui." });
+        }
+
+        [HttpPut("{id}/Resep-Pulang")]
+        public async Task<IActionResult> UpdateResepPulang(Guid id, [FromBody] IsLunasResepViewModel request)
+        {
+            var data = await _applicationDbContext.Reseps.FindAsync(id);
+            if (data == null)
+                return NotFound(new { message = "Resep tidak ditemukan." });
+
+            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(EmailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var userId = user?.UserActiveId ?? Guid.Empty;
+
+            data.IsResepPulang = request.IsLunas;
+            data.UpdateDateTime = DateTimeOffset.UtcNow;
+            data.UpdateBy = userId;
+            await _applicationDbContext.SaveChangesAsync();
+
+            // Notifikasi signalR
+            await _hubContext.Clients.All.SendAsync("isResepPulang", new
+            {
+                Action = "updateResepPulang",
+                ResepId = id,
+                IsResepPulang = request.IsLunas
+            });
+
+            return Ok(new { message = "Status IsResepPulang berhasil diperbarui." });
         }
 
         //[HttpPut("{id}")]
@@ -2333,6 +2117,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                         d.AlasanReturn,
                                         d.QtyReturn,
                                         d.DikembalikanOleh,
+                                        d.IsStopped,
                                         d.CreateBy,
                                         d.CreateDateTime
                                     }).ToListAsync();
@@ -2361,6 +2146,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                            d.AlasanReturn,
                                            d.QtyReturn,
                                            d.DikembalikanOleh,
+                                           d.IsStopped,
                                            ra.BentukRacikan,
                                            ra.CreateBy,
                                            ra.CreateDateTime
@@ -2407,6 +2193,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 q.Resep.IsCancelled,
                 q.Resep.IsLunas,
                 q.Resep.RanapId,
+                q.Resep.IsResepPulang,
                 TanggalPembuatanResep = q.Resep.TanggalPembuatanResep?.ToString("yyyy-MM-dd"),
                 CreateByName = q.User.FullName,
 
@@ -2432,6 +2219,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                         r.AlasanReturn,
                         r.QtyReturn,
                         r.DikembalikanOleh,
+                        r.IsStopped,
                         r.CreateBy,
                         r.CreateDateTime,
                         DaftarRacikanDetail = daftarRacikanDetail.Where(rd => rd.RacikanId == r.RacikanId).ToList()
@@ -2607,6 +2395,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                         d.AlasanReturn,
                                         d.QtyReturn,
                                         d.DikembalikanOleh,
+                                        d.IsStopped,
                                         d.CreateBy,
                                         d.CreateDateTime
                                     }).ToListAsync();
@@ -2631,6 +2420,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                            d.AlasanReturn,
                                            d.QtyReturn,
                                            d.DikembalikanOleh,
+                                           d.IsStopped,
                                            ra.BentukRacikan,
                                            ra.CreateBy,
                                            ra.CreateDateTime
@@ -2676,6 +2466,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 q.Resep.StatusPengambilanResep,
                 q.Resep.IsCancelled,
                 q.Resep.IsLunas,
+                q.Resep.IsResepPulang,
                 TanggalPembuatanResep = q.Resep.TanggalPembuatanResep?.ToString("yyyy-MM-dd"),
                 CreateByName = q.User.FullName,
 
@@ -2697,6 +2488,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                         r.QtyReturn,
                         r.DikembalikanOleh,
                         r.BentukRacikan,
+                        r.IsStopped,
                         r.CreateBy,
                         r.CreateDateTime,
                         DaftarRacikanDetail = daftarRacikanDetail.Where(rd => rd.RacikanId == r.RacikanId).ToList()

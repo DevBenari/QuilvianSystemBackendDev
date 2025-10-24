@@ -537,7 +537,34 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+        
+        [HttpPut("{id}/IsStopped")]
+        public async Task<IActionResult> UpdateStopObat(Guid id, [FromBody] StatusPengambilanObatViewModel request)
+        {
+            var data = await _applicationDbContext.DetailReseps.FindAsync(id);
+            if (data == null)
+                return NotFound(new { message = "Obat tidak ditemukan." });
 
+            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(EmailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var userId = user?.UserActiveId ?? Guid.Empty;
+
+            data.IsStopped = request.Status;
+            data.UpdateDateTime = DateTimeOffset.UtcNow;
+            data.UpdateBy = userId;
+
+            await _applicationDbContext.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("Status stop obat telah diupdate.", new
+            {
+                Action = "update",
+                DetailResepId = data.DetailResepId
+            });
+
+            return Ok(new { message = "Status stop obat telah diupdate." });
+        }
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] ResepDetailViewModel vm)
         {
