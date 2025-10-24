@@ -24,5 +24,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public Guid? TerapisId { get; set; }
         public Guid? SuratJaminanId { get; set; }
         public string? SuratJaminanPath { get; set; }
+        public string? NoOrder {  get; set; }
     }
 }
