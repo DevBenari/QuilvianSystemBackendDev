@@ -81,6 +81,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              CreateByName = u.FullName,
                              d.DetailBookingLabId,
                              d.BookingLabId,
+                             d.NoOrder,
                              d.PasienId,
                              b.KunjunganId,
                              d.PemeriksaanLabId,
@@ -177,6 +178,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                       NamaPemeriksaan = p.NamaPemeriksaan ?? "-",
                                       d.LabId,
                                       NamaLab = l.NamaLab ?? "-",
+                                      d.NoOrder,
                                       d.KategoriPatologiAnatomi,
                                       d.JenisSpecimen,
                                       d.LokasiSpecimen,
@@ -248,6 +250,42 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
+                // ==========================================================
+                // ✅ Ambil kode lab dinamis dari tabel Labs
+                // ==========================================================
+                if (vm.LabId == null)
+                    return BadRequest(new { message = "LabId wajib diisi untuk menentukan NoOrder." });
+
+                var lab = await _applicationDbContext.Labs
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(l => l.LabId == vm.LabId);
+
+                if (lab == null)
+                    return NotFound(new { message = "Lab dengan ID tersebut tidak ditemukan." });
+
+                // Pastikan tabel Labs punya kolom KodeLab atau LabCode
+                var labPrefix = lab.KodeKategori?.Trim().ToUpper() ?? "UNK";
+
+                // ==========================================================
+                // ✅ Generate nomor order harian berdasarkan prefix
+                // ==========================================================
+                var today = DateTime.UtcNow.Date;
+
+                var lastOrderToday = await _applicationDbContext.LabBookingDetails
+                    .Where(d => d.CreateDateTime.Date == today && d.NoOrder.StartsWith(labPrefix))
+                    .OrderByDescending(d => d.NoOrder)
+                    .FirstOrDefaultAsync();
+
+                int nextNumber = 1;
+                if (lastOrderToday != null && lastOrderToday.NoOrder.Length >= labPrefix.Length + 4)
+                {
+                    string lastNumStr = lastOrderToday.NoOrder.Substring(labPrefix.Length);
+                    if (int.TryParse(lastNumStr, out int lastNum))
+                        nextNumber = lastNum + 1;
+                }
+
+                string newNoOrder = $"{labPrefix}{nextNumber:D4}";
+
                 // **Buat Data Baru**
                 var data = new LabBookingDetail
                 {
@@ -273,6 +311,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     AsalSpecimenId = vm.AsalSpecimenId,
                     SpecimenMethodId = vm.SpecimenMethodId,
                     SpecimenJenisId = vm.SpecimenJenisId,
+                    NoOrder = newNoOrder,
 
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
@@ -503,6 +542,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              d.DetailBookingLabId,
                              d.BookingLabId,
                              d.PasienId,
+                             d.NoOrder,
                              b.KunjunganId,
                              d.PemeriksaanLabId,
                              p.NamaPemeriksaan,
