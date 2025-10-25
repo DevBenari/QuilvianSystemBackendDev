@@ -510,7 +510,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     IsLunas = false,
                     TanggalPembuatanResep = DateTime.UtcNow,
                     //RanapId = vm.RanapId,
-                    IsResepPulang = false,
+                    IsResepPulang = vm.IsResepPulang,
 
                     CreateBy = getUserActive.UserActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow
@@ -1037,7 +1037,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 resep.NamaPoliklinik = vm.NamaPoliklinik;
                 resep.DokterId = vm.DokterId;
                 resep.NamaDokter = vm.NamaDokter;
-                resep.IsResepPulang = false;
+                resep.IsResepPulang = vm.IsResepPulang;
                 //resep.RanapId = vm.RanapId;
                 resep.UpdateBy = userId;
                 resep.UpdateDateTime = DateTimeOffset.UtcNow;
