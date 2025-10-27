@@ -320,6 +320,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             int page = 1,
             int perPage = 10,
             string? search = null,
+            string? kategori = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -333,6 +334,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             var query = (from a in _applicationDbContext.IntervensiResikoJatuhs
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
+
                          where a.IsDelete == false || a.IsDelete == null
                          select new
                          {
@@ -351,6 +353,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
                     EF.Functions.ILike(u.NamaIntervensi, search)
+                );
+            }
+
+            // **Filter berdasarkan nama kategori intervensi (Perbaikan agar bisa mencari 1 huruf)**
+            if (!string.IsNullOrWhiteSpace(kategori))
+            {
+                kategori = $"%{kategori.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+                query = query.Where(u =>
+                    EF.Functions.ILike(u.KategoriIntervensi, kategori)
                 );
             }
 

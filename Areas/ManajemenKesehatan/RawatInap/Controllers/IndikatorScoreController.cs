@@ -65,7 +65,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.IndikatorScoreId,
                              a.NamaIndikatorScore,
                              a.ScoreIndikator,
-                             a.Keterangan
+                             a.Keterangan,
+                             a.WarnaIndikator
+
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -160,6 +162,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     NamaIndikatorScore = vm.NamaIndikatorScore,
                     ScoreIndikator = vm.ScoreIndikator,
                     Keterangan = vm.Keterangan,
+                    WarnaIndikator = vm.WarnaIndikator,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
@@ -229,7 +232,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 data.NamaIndikatorScore = vm.NamaIndikatorScore;
                 data.ScoreIndikator = vm.ScoreIndikator;
                 data.Keterangan = vm.Keterangan;
-
+                data.WarnaIndikator = vm.WarnaIndikator;
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
@@ -344,6 +347,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.IndikatorScoreId,
                              a.NamaIndikatorScore,
                              a.ScoreIndikator,
+                             a.WarnaIndikator,
                              a.Keterangan
                          });
 

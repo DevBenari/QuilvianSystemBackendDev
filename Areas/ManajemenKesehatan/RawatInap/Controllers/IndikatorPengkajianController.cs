@@ -67,6 +67,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                          on a.IndikatorScoreId equals s.IndikatorScoreId into sGroup
                          from s in sGroup.DefaultIfEmpty()
 
+                             // join ke table kategori indikator
+                         join k in _applicationDbContext.KategoriIndikators
+                         on a.KategoriIndikatorId equals k.KategoriIndikatorId into kGroup
+                         from k in kGroup.DefaultIfEmpty()
+
                          where a.IsDelete == false || a.IsDelete == null
                          select new
                          {
@@ -80,6 +85,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              s.NamaIndikatorScore,
                              s.ScoreIndikator,
                              a.KategoriIndikatorId,
+                             k.NamaKategoriIndikator,
                              a.Keterangan,
 
                          }).OrderByDescending(a => a.CreateDateTime);
@@ -343,7 +349,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         public IActionResult Paged(
         int page = 1,
         int perPage = 10,
-        string? search = null,
+        string? kategori = null,
         Guid? kategoriIndikatorId = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
@@ -369,6 +375,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                          on a.IndikatorScoreId equals s.IndikatorScoreId into sGroup
                          from s in sGroup.DefaultIfEmpty()
 
+                         // join ke table kategori indikator
+                         join k in _applicationDbContext.KategoriIndikators
+                         on a.KategoriIndikatorId equals k.KategoriIndikatorId into kGroup
+                         from k in kGroup.DefaultIfEmpty()
+
                          where a.IsDelete == false || a.IsDelete == null
                          select new
                          {
@@ -382,18 +393,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              s.NamaIndikatorScore,
                              s.ScoreIndikator,
                              a.KategoriIndikatorId,
+                             k.NamaKategoriIndikator,
                              a.Keterangan,
 
                          });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-            //if (!string.IsNullOrWhiteSpace(search))
-            //{
-            //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-            //    query = query.Where(u =>
-            //        EF.Functions.ILike(u.NamaDiskon, search)
-            //    );
-            //}
+            if (!string.IsNullOrWhiteSpace(kategori))
+            {
+                kategori = $"%{kategori.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+                query = query.Where(u =>
+                    EF.Functions.ILike(u.NamaKategoriIndikator, kategori)
+                );
+            }
 
             // filter based on kategori indikator Id
             if (kategoriIndikatorId.HasValue)
