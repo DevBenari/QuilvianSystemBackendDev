@@ -157,6 +157,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         p.NamaPoliklinik,
                         a.DokterId,
                         a.PasienId,
+                        a.AsalKunjungan,
                         ps.NamaLengkap,
                         ps.TanggalLahir,
                         ps.JenisKelamin,
@@ -228,6 +229,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         r.NamaPoliklinik,
                         r.DokterId,
                         r.PasienId,
+                        r.AsalKunjungan,
                         r.NamaLengkap,
                         r.TanggalLahir,
                         r.JenisKelamin,
@@ -369,6 +371,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                          p.NamaPoliklinik,
                          a.DokterId,
                          a.PasienId,
+                         a.AsalKunjungan,
                          ps.NamaLengkap,
                          ps.TanggalLahir,
                          ps.JenisKelamin,
@@ -432,6 +435,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     result.NamaPoliklinik,
                     result.DokterId,
                     result.PasienId,
+                    result.AsalKunjungan,
                     result.NamaLengkap,
                     result.TanggalLahir,
                     result.JenisKelamin,
@@ -602,7 +606,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     IsScreening = false,
                     IsPresent = true,
                     IsFinishedKasir = false, // Default value
-                    Antrian = nomorAntrianFormatted   // Format akhir: BU001
+                    Antrian = nomorAntrianFormatted,   // Format akhir: BU001
+                    AsalKunjungan = request.AsalKunjungan
                 };
 
                 _applicationDbContext.Kunjungans.Add(newKunjungan);
@@ -936,6 +941,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 existingKunjungan.JenisKunjungan = kodeJenis;
                 existingKunjungan.Antrian = nomorAntrianFormatted;
+                existingKunjungan.AsalKunjungan = request.AsalKunjungan;
 
                 // ttg rawat inap
                 //existingKunjungan.TglMasukRanap = request.TglMasukRanapParsed;
@@ -1281,6 +1287,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         p.NamaPoliklinik,
                         a.DokterId,
                         a.PasienId,
+                        a.AsalKunjungan,
                         ps.NamaLengkap,
                         ps.TanggalLahir,
                         ps.JenisKelamin,
@@ -1431,6 +1438,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         r.NamaPoliklinik,
                         r.DokterId,
                         r.PasienId,
+                        r.AsalKunjungan,
                         r.NamaLengkap,
                         r.TanggalLahir,
                         r.JenisKelamin,

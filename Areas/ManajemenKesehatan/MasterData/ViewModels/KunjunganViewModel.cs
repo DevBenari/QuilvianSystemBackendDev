@@ -13,6 +13,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
         public string? TipePasien { get; set; }
         public string TipePembayaran { get; set; }
         public string? JenisKunjungan { get; set; }
+        public string? AsalKunjungan { get; set; }
+
         //public bool? IsScreening { get; set; } 
 
         // ttg rawat inap
