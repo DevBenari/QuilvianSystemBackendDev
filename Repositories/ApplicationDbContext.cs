@@ -13,6 +13,7 @@ using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.HRD.Pengajuan.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Models;
 
 namespace QuilvianSystemBackendDev.Repositories
 {
@@ -277,5 +278,9 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<PemeriksaanAsuransi> PemeriksaanAsuransis { get; set; }
         #endregion
 
+        #region IGD
+        public DbSet<IGDTriage> IGDTriages { get; set; }
+        public DbSet<IGDTriageDetail> IGDTriageDetails { get; set; }
+        #endregion
     }
 }
