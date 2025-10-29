@@ -3,9 +3,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
@@ -198,7 +200,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                     TypeOK = vm.TypeOK,
                     PenandaanLokasiOperasi = vm.PenandaanLokasiOperasi,
                     isBedahBersalin = vm.isBedahBersalin,
-                    isSuratIzinOperasi = vm.isSuratIzinOperasi,
+                    isSuratIzinOperasi = false,
                     Keterangan = vm.Keterangan,
 
                     CreateBy = userActiveId,
@@ -289,7 +291,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                 existingData.TypeOK = vm.TypeOK;
                 existingData.PenandaanLokasiOperasi = vm.PenandaanLokasiOperasi;
                 existingData.isBedahBersalin = vm.isBedahBersalin;
-                existingData.isSuratIzinOperasi = vm.isSuratIzinOperasi;
                 existingData.Keterangan = vm.Keterangan;
 
                 existingData.UpdateBy = userActiveId;
@@ -317,6 +318,35 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
             }
         }
 
+        [HttpPut("{id}/is-IzinOperasi")]
+        public async Task<IActionResult> UpdateIzinOperasi(Guid id, [FromBody] bool request)
+        {
+            var data = await _applicationDbContext.RuangBedahBookings.FindAsync(id);
+            if (data == null)
+                return NotFound(new { message = "Resep tidak ditemukan." });
+
+            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(EmailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var userId = user?.UserActiveId ?? Guid.Empty;
+
+            data.isSuratIzinOperasi = request;
+            data.UpdateDateTime = DateTimeOffset.UtcNow;
+            data.UpdateBy = userId;
+            await _applicationDbContext.SaveChangesAsync();
+
+            // Notifikasi signalR
+            //await _hubContext.Clients.All.SendAsync("isCancelledChanged", new
+            //{
+            //    Action = "updateIsCancelled",
+            //    ResepId = id,
+            //    IsCancelled = request.IsCancelled
+            //});
+
+            return Ok(new { message = "Status izin operasi berhasil diperbarui." });
+        }
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {

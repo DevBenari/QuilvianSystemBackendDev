@@ -17,6 +17,7 @@
         public Guid? DokterKonsulenId { get; set; }
         public Guid? TerapisId { get; set; }
         public IFormFile? SuratJaminan { get; set; }
+        public decimal? HemodialisaKe { get; set; }
 
     }
 }

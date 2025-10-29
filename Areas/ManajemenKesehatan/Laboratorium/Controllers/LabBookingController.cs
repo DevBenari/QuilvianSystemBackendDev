@@ -104,6 +104,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              b.TglPemeriksaan,
                              b.StatusPemeriksaan,
                              b.AsuransiId,
+                             b.HemodialisaKe
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -237,7 +238,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     TerapisId = vm.TerapisId,
                     StatusPemeriksaan = vm.StatusPemeriksaan ?? "Menunggu",
                     SuratJaminanPath = suratJaminanPath, // simpan path hasil upload
-
+                    HemodialisaKe = vm.HemodialisaKe,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow
                 };
@@ -361,7 +362,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 existing.TerapisId = vm.TerapisId ?? existing.TerapisId;
                 existing.StatusPemeriksaan = vm.StatusPemeriksaan ?? existing.StatusPemeriksaan;
                 existing.SuratJaminanPath = suratJaminanPath;
-
+                existing.HemodialisaKe = vm.HemodialisaKe ?? existing.HemodialisaKe;
                 existing.UpdateBy = userActiveId;
                 existing.UpdateDateTime = DateTimeOffset.UtcNow;
 
@@ -492,7 +493,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              b.IsCito,
                              b.DiagnosaAwal,
                              b.DokterKonsulenId,
-                             b.TerapisId
+                             b.TerapisId,
+                             b.AsuransiId,
+                             b.HemodialisaKe
                          });
 
             // filter berdasarkan kunjunganId
