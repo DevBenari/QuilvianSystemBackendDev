@@ -2,7 +2,7 @@
 {
     public class BentukObatViewModel
     {
-        public string KodeBentukObat { get; set; }
-        public string NamaBentukObat { get; set; }
+        public string KodeBentukSatuan { get; set; }
+        public string NamaBentukSatuan { get; set; }
     }
 }

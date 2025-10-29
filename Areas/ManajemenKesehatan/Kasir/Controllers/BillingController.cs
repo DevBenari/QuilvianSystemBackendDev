@@ -513,7 +513,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     join satuan in _applicationDbContext.Satuans on obat.SatuanId equals satuan.SatuanId into satuanJoin
                     from satuan in satuanJoin.DefaultIfEmpty()
 
-                    join bentuk in _applicationDbContext.BentukObats on obat.BentukObatId equals bentuk.BentukObatId into bentukJoin
+                    join bentuk in _applicationDbContext.BentukObats on obat.BentukObatId equals bentuk.BentukSatuanId into bentukJoin
                     from bentuk in bentukJoin.DefaultIfEmpty()
 
                     select new

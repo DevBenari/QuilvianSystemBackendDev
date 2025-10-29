@@ -70,8 +70,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     a.Note,
                     a.BentukObatId,
                     BentukObatName = _applicationDbContext.BentukObats
-                        .Where(bo => bo.BentukObatId == a.BentukObatId)
-                        .Select(bo => bo.NamaBentukObat)
+                        .Where(bo => bo.BentukSatuanId == a.BentukObatId)
+                        .Select(bo => bo.NamaBentukSatuan)
                         .FirstOrDefault(),
                     a.SatuanId,
                     SatuanName = _applicationDbContext.Satuans
@@ -155,8 +155,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     a.Note,
                     a.BentukObatId,
                     BentukObatName = _applicationDbContext.BentukObats
-                        .Where(bo => bo.BentukObatId == a.BentukObatId)
-                        .Select(bo => bo.NamaBentukObat)
+                        .Where(bo => bo.BentukSatuanId == a.BentukObatId)
+                        .Select(bo => bo.NamaBentukSatuan)
                         .FirstOrDefault(),
                     a.SatuanId,
                     SatuanName = _applicationDbContext.Satuans
@@ -272,7 +272,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     CreateBy = userActiveId,
                     ObatCode = kode,
                     ObatName = vm.ObatName,
-                    BentukObatId = vm.BentukObatId,
+                    BentukObatId = vm.BentukSatuanId,
                     HTEPrice = vm.HTEPrice,
                     Stock = vm.Stock,
                     IsActive = vm.IsActive,
@@ -357,7 +357,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 data.ObatName = vm.ObatName;
-                data.BentukObatId = vm.BentukObatId;
+                data.BentukObatId = vm.BentukSatuanId;
                 data.HTEPrice = vm.HTEPrice;
                 data.Stock = vm.Stock;
                 data.IsActive = vm.IsActive;
@@ -505,7 +505,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var joinedQuery = from a in query
                                   join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId into ua
                                   from u in ua.DefaultIfEmpty()
-                                  join bo in _applicationDbContext.BentukObats on a.BentukObatId equals bo.BentukObatId into boJoin
+                                  join bo in _applicationDbContext.BentukObats on a.BentukObatId equals bo.BentukSatuanId into boJoin
                                   from bo in boJoin.DefaultIfEmpty()
                                   join s in _applicationDbContext.Satuans on a.SatuanId equals s.SatuanId into sJoin
                                   from s in sJoin.DefaultIfEmpty()
@@ -534,7 +534,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                       a.CreateDateTime,
                                       CreateByName = u.FullName,
                                       a.BentukObatId,
-                                      BentukObatName = bo.NamaBentukObat,
+                                      BentukObatName = bo.NamaBentukSatuan,
                                       a.SatuanId,
                                       SatuanName = s.NamaSatuan,
                                   };

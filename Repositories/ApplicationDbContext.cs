@@ -126,6 +126,9 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<TindakanPerawat> TindakanPerawats { get; set; }
         public DbSet<KategoriIndikator> KategoriIndikators { get; set; }
         public DbSet<IntervensiResikoJatuh> IntervensiResikoJatuhs { get; set; }
+        public DbSet<ObatRute> ObatRutes { get; set; }
+        public DbSet<ItemKategori> ItemKategoris { get; set; }
+        public DbSet<Item> Items { get; set; }
         #endregion
 
         #region Areas Keuangan

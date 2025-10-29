@@ -150,12 +150,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 var userActiveId = getUserActive.UserActiveId;
 
                 //// **Cek Duplikasi**
-                bool isDuplicate = _applicationDbContext.Diskons
-                                    .Any(c => c.NamaDiskon == vm.NamaDiskon);
+                bool isDuplicate = await _applicationDbContext.Diskons
+                                    .AnyAsync(c => c.NamaDiskon == vm.NamaDiskon);
 
                 if (isDuplicate)
                 {
-                    return Conflict(new { message = "Nama benefit ini telah tersedia" });
+                    return Conflict(new { message = "Nama diskon ini telah tersedia" });
                 }
 
                 // **Buat Data Baru**

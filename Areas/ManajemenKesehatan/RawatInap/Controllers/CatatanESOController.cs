@@ -98,7 +98,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                              // join bentuk obat
                          join bo in _applicationDbContext.BentukObats
-                                on o.BentukObatId equals bo.BentukObatId into boJoin
+                                on o.BentukObatId equals bo.BentukSatuanId into boJoin
                          from bo in boJoin.DefaultIfEmpty()
 
                              // Join CatatanPemberianObat
@@ -129,7 +129,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                              // Data Obat
                              DosisObat = o.Dosis,
-                             BentukObat = bo.NamaBentukObat,
+                             BentukObat = bo.NamaBentukSatuan,
                              o.CaraKerja,
 
                              // Data Catatan Pemberian Obat
@@ -184,7 +184,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                                   // Join Bentuk Obat
                               join bo in _applicationDbContext.BentukObats
-                                  on o.BentukObatId equals bo.BentukObatId into boJoin
+                                  on o.BentukObatId equals bo.BentukSatuanId into boJoin
                               from bo in boJoin.DefaultIfEmpty()
 
                                   // Join Catatan Pemberian Obat
@@ -215,7 +215,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                                   // Data Obat
                                   DosisObat = o.Dosis,
-                                  BentukObat = bo.NamaBentukObat,
+                                  BentukObat = bo.NamaBentukSatuan,
                                   o.CaraKerja,
 
                                   // Data Catatan Pemberian Obat

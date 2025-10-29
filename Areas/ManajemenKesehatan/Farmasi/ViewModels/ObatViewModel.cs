@@ -7,7 +7,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels
         public string ObatName { get; set; }
         public string? JumlahSatuan { get; set; }
         public Guid? SatuanId { get; set; }
-        public Guid BentukObatId { get; set; }
+        public Guid BentukSatuanId { get; set; }
         public decimal HTEPrice { get; set; }
         public decimal? HNAPrice { get; set; }
         public bool? IsActive { get; set; }

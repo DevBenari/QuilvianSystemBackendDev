@@ -41,9 +41,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             var query = from b in _applicationDbContext.BentukObats
                         select new
                         {
-                            BentukObatId = b.BentukObatId,
-                            KodeBentukObat = b.KodeBentukObat,
-                            NamaBentukObat = b.NamaBentukObat
+                            b.BentukSatuanId,
+                            b.KodeBentukSatuan,
+                            b.NamaBentukSatuan
                         };
 
             var totalRows = await query.CountAsync();
@@ -78,7 +78,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         public async Task<IActionResult> GetBentukObatById(Guid id)
         {
             var bentukObat = await _applicationDbContext.BentukObats
-                .FirstOrDefaultAsync(b => b.BentukObatId == id);
+                .FirstOrDefaultAsync(b => b.BentukSatuanId == id);
 
             if (bentukObat == null)
             {
@@ -126,23 +126,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 // Menentukan KodeBentukObat berdasarkan tanggal dan urutan
                 var lastCode = await _applicationDbContext.BentukObats
                     .Where(d => d.CreateDateTime.Date == dateNow.Date)
-                    .OrderByDescending(b => b.KodeBentukObat)
+                    .OrderByDescending(b => b.KodeBentukSatuan)
                     .FirstOrDefaultAsync();
 
                 string KodeBentukObat;
-                if (lastCode == null || lastCode.KodeBentukObat.Substring(3, 6) != setDateNow)
+                if (lastCode == null || lastCode.KodeBentukSatuan.Substring(3, 6) != setDateNow)
                 {
                     KodeBentukObat = $"BKG{setDateNow}0001";
                 }
                 else
                 {
-                    int lastNumber = Convert.ToInt32(lastCode.KodeBentukObat.Substring(9));
+                    int lastNumber = Convert.ToInt32(lastCode.KodeBentukSatuan.Substring(9));
                     KodeBentukObat = $"BKG{setDateNow}{(lastNumber + 1).ToString("D4")}";
                 }
 
                 // Cek jika sudah ada data yang sama berdasarkan KodeBentukObat
                 var isDuplicate = await _applicationDbContext.BentukObats
-                    .AnyAsync(b => b.KodeBentukObat == KodeBentukObat);
+                    .AnyAsync(b => b.KodeBentukSatuan == KodeBentukObat);
 
                 if (isDuplicate)
                 {
@@ -152,9 +152,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 // Convert ViewModel ke Entity BentukObat
                 var bentukObat = new BentukObat
                 {
-                    BentukObatId = Guid.NewGuid(),
-                    KodeBentukObat = KodeBentukObat,  // Gunakan kode yang sudah dihasilkan
-                    NamaBentukObat = bentukObatViewModel.NamaBentukObat,
+                    BentukSatuanId = Guid.NewGuid(),
+                    KodeBentukSatuan = bentukObatViewModel.KodeBentukSatuan,  // Gunakan kode yang sudah dihasilkan
+                    NamaBentukSatuan = bentukObatViewModel.NamaBentukSatuan,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow
                 };
@@ -208,7 +208,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Cek duplikasi berdasarkan NamaBentukObat
                 bool isDuplicate = await _applicationDbContext.BentukObats
-                    .AnyAsync(b => b.NamaBentukObat.ToLower() == bentukObat.NamaBentukObat.ToLower() && b.BentukObatId != id);
+                    .AnyAsync(b => b.NamaBentukSatuan.ToLower() == bentukObat.NamaBentukSatuan.ToLower() && b.BentukSatuanId != id);
 
                 if (isDuplicate)
                 {
@@ -216,8 +216,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // Update data
-                data.KodeBentukObat = bentukObat.KodeBentukObat;
-                data.NamaBentukObat = bentukObat.NamaBentukObat;
+                data.KodeBentukSatuan = bentukObat.KodeBentukSatuan;
+                data.NamaBentukSatuan = bentukObat.NamaBentukSatuan;
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
@@ -272,9 +272,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         select new
                         {
                             CreateDateTime = b.CreateDateTime,
-                            BentukObatId = b.BentukObatId,
-                            KodeBentukObat = b.KodeBentukObat,
-                            NamaBentukObat = b.NamaBentukObat
+                            b.BentukSatuanId,
+                            b.KodeBentukSatuan,
+                            b.NamaBentukSatuan
                         };
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
@@ -282,8 +282,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             {
                 search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
-                    EF.Functions.ILike(u.KodeBentukObat, search) ||
-                    EF.Functions.ILike(u.NamaBentukObat, search)
+                    EF.Functions.ILike(u.KodeBentukSatuan, search) ||
+                    EF.Functions.ILike(u.NamaBentukSatuan, search)
                 );
             }
 
@@ -352,15 +352,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 ? orderBy switch
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
-                    "NamaBentukObat" => query.OrderByDescending(u => u.NamaBentukObat),
-                    "KodeBentukObat" => query.OrderByDescending(u => u.KodeBentukObat),
+                    "NamaBentukSatuan" => query.OrderByDescending(u => u.NamaBentukSatuan),
+                    "KodeBentukSatuan" => query.OrderByDescending(u => u.KodeBentukSatuan),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
-                    "NamaBentukObat" => query.OrderByDescending(u => u.NamaBentukObat),
-                    "KodeBentukObat" => query.OrderByDescending(u => u.KodeBentukObat),
+                    "NamaBentukSatuan" => query.OrderByDescending(u => u.NamaBentukSatuan),
+                    "KodeBentukSatuan" => query.OrderByDescending(u => u.KodeBentukSatuan),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 };
 
