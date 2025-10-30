@@ -102,6 +102,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     a.TakaranDosis,
                     a.JumlahSatuan,
                     a.Kategori,
+                    a.ItemId,
+                    a.ObatRuteId,
+                    a.KategoriObat,
+                    a.IsControlled,
                 }).OrderByDescending(a => a.CreateDateTime);
 
             var totalRows = await query.CountAsync();
@@ -187,6 +191,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     a.TakaranDosis,
                     a.JumlahSatuan,
                     a.Kategori,
+                    a.ItemId,
+                    a.ObatRuteId,
+                    a.KategoriObat,
+                    a.IsControlled,
                 })
                 .FirstOrDefaultAsync();
 
@@ -289,6 +297,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     JumlahSatuan = vm.JumlahSatuan,
                     Note = vm.Note,
                     Kategori = vm.Kategori,
+                    ItemId = vm.ItemId,
+                    ObatRuteId = vm.ObatRuteId,
+                    KategoriObat = vm.KategoriObat,
+                    IsControlled = vm.IsControlled,
                 };
 
                 _applicationDbContext.Obats.Add(data);
@@ -374,6 +386,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.InteraksiObat = vm.InteraksiObat;
                 data.TakaranDosis = vm.TakaranDosis;
                 data.Kategori = vm.Kategori;
+                data.ItemId = vm.ItemId;
+                data.ObatRuteId = vm.ObatRuteId;
+                data.KategoriObat = vm.KategoriObat;
+                data.IsControlled = vm.IsControlled;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTime.UtcNow;
@@ -537,6 +553,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                       BentukObatName = bo.NamaBentukSatuan,
                                       a.SatuanId,
                                       SatuanName = s.NamaSatuan,
+                                      a.ItemId,
+                                      a.ObatRuteId,
+                                      a.KategoriObat,
+                                      a.IsControlled
                                   };
 
                 // 2. Ambil data Kandungan dan Asuransi secara terpisah
@@ -618,6 +638,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     row.BentukObatName,
                     row.SatuanId,
                     row.SatuanName,
+                    row.ItemId,
+                    row.ObatRuteId,
+                    row.KategoriObat,
+                    row.IsControlled,
                     KandunganNames = groupedKandungan.ContainsKey(row.ObatId) ? groupedKandungan[row.ObatId] : new List<string>(),
                     AsuransiNames = groupedAsuransi.ContainsKey(row.ObatId) ? groupedAsuransi[row.ObatId] : new List<string>(),
                 }).ToList();

@@ -112,6 +112,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<ResepTebusDetail> ResepTebusDetails { get; set; }
         public DbSet<PPN> PPNs { get; set; }
         public DbSet<ObatReturn> ObatReturns { get; set; }
+        public DbSet<ObatHarga> ObatHargas { get; set; }
         public DbSet<ObatReturnDetail> ObatReturnDetails { get; set; }
         public DbSet<RacikanDetail> RacikanDetails { get; set; }
         public DbSet<Kamar> Kamars { get; set; }
@@ -129,6 +130,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<ObatRute> ObatRutes { get; set; }
         public DbSet<ItemKategori> ItemKategoris { get; set; }
         public DbSet<Item> Items { get; set; }
+        public DbSet<RacikanBentuk> RacikanBentuks { get; set; }
         #endregion
 
         #region Areas Keuangan

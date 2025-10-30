@@ -31,8 +31,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? Dosis { get; set; }
         public string? Note { get; set; }
         public decimal? Cogs { get; set; }
-
         public string? Kategori{ get; set; }
+        public Guid? ItemId { get; set; }
+        public Guid? ObatRuteId { get; set; }
+        public string? KategoriObat { get; set; }
+        public bool? IsControlled { get; set; }
         //public string Asuransi { get; set; }
         //public string KandunganObat { get; set; }
         //public string TipeHarga { get; set; }

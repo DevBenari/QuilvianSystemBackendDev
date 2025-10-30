@@ -200,7 +200,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                            d.AlasanReturn,
                                            d.QtyReturn,
                                            d.DikembalikanOleh,
-                                           ra.BentukRacikan,
+                                           ra.BentukRacikanId,
                                            ra.CreateBy,
                                            ra.CreateDateTime
                                        }).ToListAsync();
@@ -271,7 +271,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                     dr.AlasanReturn,
                                     dr.QtyReturn,
                                     dr.DikembalikanOleh,
-                                    dr.BentukRacikan,
+                                    dr.BentukRacikanId,
                                     dr.CreateBy,
                                     dr.CreateDateTime,
                                     DaftarRacikanDetail = racikanDetails.Where(rd => rd.RacikanId == dr.RacikanId).ToList()
@@ -376,7 +376,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                            d.QtyReturn,
                                            d.DikembalikanOleh,
                                            d.IsStopped,
-                                           ra.BentukRacikan,
+                                           ra.BentukRacikanId,
                                            ra.CreateBy,
                                            ra.CreateDateTime
                                        }).ToListAsync();
@@ -423,7 +423,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     x.Racikan.ObatPagiDiambil,
                     x.Racikan.ObatSiangDiambil,
                     x.Racikan.ObatMalamDiambil,
-                    x.Racikan.BentukRacikan,
+                    x.Racikan.BentukRacikanId,
                     x.Racikan.CreateBy,
                     x.Racikan.CreateDateTime,
                     DaftarRacikanDetail = x.DaftarRacikanDetail
@@ -641,7 +641,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                 SignaTambahan = racikan.SignaTambahan,
                                 QtyRacikan = obat.Qty ?? 1, // default jika null
                                 KodeRacikan = kodeRacikan,
-                                BentukRacikan = racikan.BentukRacikan,
+                                BentukRacikanId = racikan.BentukRacikanId,
 
                                 CreateBy = getUserActive.UserActiveId,
                                 CreateDateTime = DateTimeOffset.UtcNow
@@ -1154,7 +1154,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                         SignaTambahan = first.Obat.SignaTambahan,
                         QtyRacikan = totalQty,
                         KodeRacikan = $"RCK-{(await _applicationDbContext.Racikans.CountAsync(r => r.CreateDateTime.Date == today) + 1):D3}{todayString}",
-                        BentukRacikan = first.Racikan.BentukRacikan,
+                        BentukRacikanId = first.Racikan.BentukRacikanId,
                         CreateBy = userId,
                         CreateDateTime = DateTimeOffset.UtcNow
                     };
@@ -2147,7 +2147,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                            d.QtyReturn,
                                            d.DikembalikanOleh,
                                            d.IsStopped,
-                                           ra.BentukRacikan,
+                                           ra.BentukRacikanId,
                                            ra.CreateBy,
                                            ra.CreateDateTime
                                        }).ToListAsync();
@@ -2204,7 +2204,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     {
                         r.RacikanId,
                         r.NamaRacikan,
-                        r.BentukRacikan,
+                        r.BentukRacikanId,
                         r.Qty,
                         r.Signa,
                         r.SignaTambahan,
@@ -2421,7 +2421,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                            d.QtyReturn,
                                            d.DikembalikanOleh,
                                            d.IsStopped,
-                                           ra.BentukRacikan,
+                                           ra.BentukRacikanId,
                                            ra.CreateBy,
                                            ra.CreateDateTime
                                        }).ToListAsync();
@@ -2487,7 +2487,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                         r.AlasanReturn,
                         r.QtyReturn,
                         r.DikembalikanOleh,
-                        r.BentukRacikan,
+                        r.BentukRacikanId,
                         r.IsStopped,
                         r.CreateBy,
                         r.CreateDateTime,

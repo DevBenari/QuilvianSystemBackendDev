@@ -24,6 +24,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels
         public string? InteraksiObat { get; set; }
         public string? Note { get; set; }
         public string? Kategori { get; set; }
+        public Guid? ItemId { get; set; }
+        public Guid? ObatRuteId { get; set; }
+        public string? KategoriObat { get; set; }
+        public bool? IsControlled { get; set; }
 
         //public string KategoriObat { get; set; }
         //public string Asuransi { get; set; }

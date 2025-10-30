@@ -7,7 +7,7 @@
         public string? Signa { get; set; }
         public string? SignaTambahan { get; set; }
         public int? QtyRacikan { get; set; }
-        public string? BentukRacikan { get; set; }
+        public Guid? BentukRacikanId { get; set; }
 
         public List<RacikanDetailViewModel>? DaftarRacikan { get; set; }
     }
