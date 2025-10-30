@@ -88,6 +88,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                              a.isSuratIzinOperasi,
                              a.isBedahBersalin,
                              a.Keterangan,
+                             a.IsTerverifikasi,
+                             a.TglSelesai,
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -202,7 +204,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                     isBedahBersalin = vm.isBedahBersalin,
                     isSuratIzinOperasi = false,
                     Keterangan = vm.Keterangan,
-
+                    IsTerverifikasi = false,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
@@ -347,6 +349,67 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
 
             return Ok(new { message = "Status izin operasi berhasil diperbarui." });
         }
+
+        [HttpPut("{id}/Verifikasi-Operasi")]
+        public async Task<IActionResult> UpdateVerifikasiOP(Guid id, [FromBody] bool request)
+        {
+            var data = await _applicationDbContext.RuangBedahBookings.FindAsync(id);
+            if (data == null)
+                return NotFound(new { message = "Resep tidak ditemukan." });
+
+            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(EmailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var userId = user?.UserActiveId ?? Guid.Empty;
+
+            data.IsTerverifikasi = request;
+            data.UpdateDateTime = DateTimeOffset.UtcNow;
+            data.UpdateBy = userId;
+            await _applicationDbContext.SaveChangesAsync();
+
+            // Notifikasi signalR
+            //await _hubContext.Clients.All.SendAsync("isCancelledChanged", new
+            //{
+            //    Action = "updateIsCancelled",
+            //    ResepId = id,
+            //    IsCancelled = request.IsCancelled
+            //});
+
+            return Ok(new { message = "Status verifikasi operasi berhasil diperbarui." });
+        }
+
+        [HttpPut("{id}/Tanggal-Selesai-Operasi")]
+        public async Task<IActionResult> UpdateTglSelesaiOP(Guid id, [FromBody] DateTime request)
+        {
+            var data = await _applicationDbContext.RuangBedahBookings.FindAsync(id);
+            if (data == null)
+                return NotFound(new { message = "Resep tidak ditemukan." });
+
+            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(EmailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var userId = user?.UserActiveId ?? Guid.Empty;
+
+            data.TglSelesai = request;
+            data.UpdateDateTime = DateTimeOffset.UtcNow;
+            data.UpdateBy = userId;
+            await _applicationDbContext.SaveChangesAsync();
+
+            // Notifikasi signalR
+            //await _hubContext.Clients.All.SendAsync("isCancelledChanged", new
+            //{
+            //    Action = "updateIsCancelled",
+            //    ResepId = id,
+            //    IsCancelled = request.IsCancelled
+            //});
+
+            return Ok(new { message = "Tanggal selesai operasi berhasil diperbarui." });
+        }
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
