@@ -84,5 +84,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? RPS { get; set; }
         public string? RPD { get; set; }
         public string? CurrentMedication { get; set; }
+        public string? RiwayatPenyakit { get; set; }
+        public bool? IsIGD { get; set; }
+        public string? MasukIGD { get; set; }
+        public string? KondisiMasukIGD { get; set ; }
     }
 }

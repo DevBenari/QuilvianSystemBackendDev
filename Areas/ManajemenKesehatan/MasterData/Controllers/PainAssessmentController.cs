@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.ComponentModel;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
@@ -100,7 +101,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             RanapId = a.RanapId,
                             RPD = a.RPD,
                             RPS = a.RPS,
-                            CurrentMedication = a.CurrentMedication
+                            CurrentMedication = a.CurrentMedication,
+                            a.RiwayatPenyakit,
+                            a.IsIGD,
+                            a.MasukIGD,
+                            a.KondisiMasukIGD
 
                         }).OrderByDescending(a => a.CreateDateTime); ;
 
@@ -200,7 +205,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             RanapId = a.RanapId,
                             RPD = a.RPD,
                             RPS = a.RPS,
-                            CurrentMedication = a.CurrentMedication
+                            CurrentMedication = a.CurrentMedication,
+                            a.RiwayatPenyakit,
+                            a.IsIGD,
+                            a.MasukIGD,
+                            a.KondisiMasukIGD
                         }).ToList();
 
             if (!data.Any())
@@ -310,7 +319,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     RanapId = vm.RanapId,
                     RPD = vm.RPD,
                     RPS = vm.RPS,
-                    CurrentMedication = vm.CurrentMedication
+                    CurrentMedication = vm.CurrentMedication,
+                    RiwayatPenyakit = vm.RiwayatPenyakit,
+                    IsIGD = vm.IsIGD,
+                    MasukIGD = vm.MasukIGD,
+                    KondisiMasukIGD = vm.KondisiMasukIGD
                 };
 
                 _applicationDbContext.PainAssessments.Add(data);
@@ -446,7 +459,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.CurrentMedication = vm.CurrentMedication;
                 data.RanapId = vm.RanapId;
                 data.KunjunganId = vm.KunjunganId;
-
+                data.CurrentMedication = vm.CurrentMedication;
+                data.RiwayatPenyakit = vm.RiwayatPenyakit;
+                data.IsIGD = vm.IsIGD;
+                data.MasukIGD = vm.MasukIGD;
+                data.KondisiMasukIGD = vm.KondisiMasukIGD;
                 data.UpdateBy = modifyBy;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
@@ -808,7 +825,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 RanapId = a.RanapId,
                                 RPD = a.RPD,
                                 RPS = a.RPS,
-                                CurrentMedication = a.CurrentMedication
+                                CurrentMedication = a.CurrentMedication,
+                                a.RiwayatPenyakit,
+                                a.IsIGD,
+                                a.MasukIGD,
+                                a.KondisiMasukIGD
                             };
 
                 // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
