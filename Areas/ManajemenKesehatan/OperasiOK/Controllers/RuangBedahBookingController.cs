@@ -520,6 +520,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                              a.isSuratIzinOperasi,
                              a.isBedahBersalin,
                              a.Keterangan,
+                             a.IsTerverifikasi,
+                             a.TglSelesai,
                          });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
