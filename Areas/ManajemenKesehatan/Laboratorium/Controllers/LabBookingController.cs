@@ -460,6 +460,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         int page = 1,
         int perPage = 10,
         Guid? kunjunganid = null,
+        string? namaLab = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -475,6 +476,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                          on b.CreateBy equals u.UserActiveId
 
                          // join ke lab booking detail
+                         join lb in _applicationDbContext.LabBookingDetails
+                         on b.BookingLabId equals lb.BookingLabId into labBookings
+                         from lb in labBookings.DefaultIfEmpty()
+
+                         // join ke lab
+                         join l in _applicationDbContext.Labs
+                         on lb.LabId equals l.LabId into labGroup
+                         from l in labGroup.DefaultIfEmpty()
 
                          where b.IsDelete == false || b.IsDelete == null
                          select new
@@ -495,9 +504,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              b.DokterKonsulenId,
                              b.TerapisId,
                              b.AsuransiId,
-                             b.HemodialisaKe
+                             b.HemodialisaKe,
+                             NamaLab = l.NamaLab ?? null,
                          });
-
+            // filter berdasarkan search
+            if (!string.IsNullOrWhiteSpace(namaLab))
+            {
+                namaLab = $"%{namaLab.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+                query = query.Where(u =>
+                    EF.Functions.ILike(u.NamaLab, namaLab)
+                );
+            }
             // filter berdasarkan kunjunganId
             if (kunjunganid.HasValue)
             {
