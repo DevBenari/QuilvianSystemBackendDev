@@ -32,5 +32,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Models
         public string? Keterangan { get; set; }
         public DateTime? TglSelesai { get; set; }
         public bool? IsTerverifikasi {get; set; }
+        public string? TipeTindakan { get; set; }
     }
 }

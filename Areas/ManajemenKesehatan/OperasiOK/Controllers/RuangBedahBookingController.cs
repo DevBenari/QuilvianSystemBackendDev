@@ -90,6 +90,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                              a.Keterangan,
                              a.IsTerverifikasi,
                              a.TglSelesai,
+                             a.TipeTindakan
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -204,6 +205,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                     isBedahBersalin = vm.isBedahBersalin,
                     isSuratIzinOperasi = false,
                     Keterangan = vm.Keterangan,
+                    TipeTindakan = vm.TipeTindakan,
                     IsTerverifikasi = false,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
@@ -293,6 +295,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                 existingData.TypeOK = vm.TypeOK;
                 existingData.PenandaanLokasiOperasi = vm.PenandaanLokasiOperasi;
                 existingData.isBedahBersalin = vm.isBedahBersalin;
+                existingData.TipeTindakan = vm.TipeTindakan;
                 existingData.Keterangan = vm.Keterangan;
 
                 existingData.UpdateBy = userActiveId;
@@ -522,6 +525,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                              a.Keterangan,
                              a.IsTerverifikasi,
                              a.TglSelesai,
+                             a.TipeTindakan
                          });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**

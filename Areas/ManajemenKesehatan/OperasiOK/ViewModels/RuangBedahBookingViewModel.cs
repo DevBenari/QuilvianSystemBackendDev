@@ -25,5 +25,7 @@
         public bool? isSuratIzinOperasi { get; set; } = false; // Default: Belum
         public bool? isBedahBersalin { get; set; } = false; // Default: false
         public string? Keterangan { get; set; }
+        public string? TipeTindakan { get; set; }
+
     }
 }
