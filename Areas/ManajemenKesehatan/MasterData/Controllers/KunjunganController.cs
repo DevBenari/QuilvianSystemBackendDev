@@ -548,13 +548,36 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Cek apakah pasien sudah terdaftar (belum selesai) di hari ini
                 var today = DateTime.UtcNow.Date;
-                var isAlreadyRegistered = _applicationDbContext.Kunjungans.Any(k =>
-                    k.PasienId == request.PasienId &&
-                    !k.IsDelete && k.IsFinished == false);
+                bool isAlreadyRegistered = false;
+
+                // Cek jenis kunjungan yang diminta
+                if (request.JenisKunjungan?.Equals("OP", StringComparison.OrdinalIgnoreCase) == true)
+                {
+                    // 🟢 Rawat Jalan: pasien boleh daftar ke poli lain,
+                    // tapi tidak boleh daftar ulang ke poli yang sama kalau belum selesai
+                    isAlreadyRegistered = _applicationDbContext.Kunjungans.Any(k =>
+                        k.PasienId == request.PasienId &&
+                        k.PoliklinikId == request.PoliklinikId &&
+                        !k.IsDelete &&
+                        k.IsFinished == false &&
+                        k.JenisKunjungan == "OP" &&
+                        k.CreateDateTime.Date == today);
+                }
+                else if (request.JenisKunjungan?.Equals("IP", StringComparison.OrdinalIgnoreCase) == true)
+                {
+                    // 🔴 Rawat Inap: pasien hanya boleh punya satu rawat inap aktif
+                    isAlreadyRegistered = _applicationDbContext.Kunjungans.Any(k =>
+                        k.PasienId == request.PasienId &&
+                        !k.IsDelete &&
+                        k.IsFinished == false &&
+                        k.JenisKunjungan == "IP");
+                }
+
                 if (isAlreadyRegistered)
                 {
-                    return BadRequest(new { message = "Pasien sudah terdaftar untuk kunjungan yang belum selesai." });
+                    return BadRequest(new { message = "Pasien sudah terdaftar untuk kunjungan aktif yang belum selesai." });
                 }
+
 
                 // Hitung nomor antrian hari ini berdasarkan Poliklinik
                 var jumlahAntrianHariIni = _applicationDbContext.Kunjungans
