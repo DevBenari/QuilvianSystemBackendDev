@@ -535,26 +535,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 string kodeJenis = inputJenis == "Rawat Inap" ? "IP" : "OP";
-
-                // Ambil kode antrean dari tabel Poliklinik
-                var kodePoli = _applicationDbContext.Polikliniks
-                    .Where(p => p.PoliklinikId == request.PoliklinikId)
-                    .Select(p => p.KodeAntreanPoli)
-                    .FirstOrDefault();
-
-                if (string.IsNullOrEmpty(kodePoli))
-                    return BadRequest(new { message = "Kode antrean poli tidak ditemukan untuk poliklinik ini!" });
-
-
-                // Cek apakah pasien sudah terdaftar (belum selesai) di hari ini
                 var today = DateTime.UtcNow.Date;
+
+                // =============================
+                // 🔎 Cek apakah pasien masih punya kunjungan aktif
+                // =============================
                 bool isAlreadyRegistered = false;
 
-                // Cek jenis kunjungan yang diminta
-                if (request.JenisKunjungan?.Equals("OP", StringComparison.OrdinalIgnoreCase) == true)
+                if (kodeJenis == "OP")
                 {
-                    // 🟢 Rawat Jalan: pasien boleh daftar ke poli lain,
-                    // tapi tidak boleh daftar ulang ke poli yang sama kalau belum selesai
                     isAlreadyRegistered = _applicationDbContext.Kunjungans.Any(k =>
                         k.PasienId == request.PasienId &&
                         k.PoliklinikId == request.PoliklinikId &&
@@ -563,9 +552,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         k.JenisKunjungan == "OP" &&
                         k.CreateDateTime.Date == today);
                 }
-                else if (request.JenisKunjungan?.Equals("IP", StringComparison.OrdinalIgnoreCase) == true)
+                else if (kodeJenis == "IP")
                 {
-                    // 🔴 Rawat Inap: pasien hanya boleh punya satu rawat inap aktif
                     isAlreadyRegistered = _applicationDbContext.Kunjungans.Any(k =>
                         k.PasienId == request.PasienId &&
                         !k.IsDelete &&
@@ -578,39 +566,59 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return BadRequest(new { message = "Pasien sudah terdaftar untuk kunjungan aktif yang belum selesai." });
                 }
 
+                // =============================
+                // 🩺 Penentuan Nomor Antrean
+                // =============================
+                string nomorAntrianFormatted = null;
+                string kodePoli = null;
 
-                // Hitung nomor antrian hari ini berdasarkan Poliklinik
-                var jumlahAntrianHariIni = _applicationDbContext.Kunjungans
-                    .Count(k => k.PoliklinikId == request.PoliklinikId
-                                && k.CreateDateTime.Date == today
-                                && !k.IsDelete);
+                // Hanya generate antrean jika AsalKunjungan bukan IGD
+                if (!string.Equals(request.AsalKunjungan?.Trim(), "igd", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Pastikan PoliklinikId ada
+                    if (request.PoliklinikId == null || request.PoliklinikId == Guid.Empty)
+                    {
+                        return BadRequest(new { message = "Poliklinik wajib dipilih untuk kunjungan non-IGD." });
+                    }
 
-                int nomorAntrian = jumlahAntrianHariIni + 1;
-                string nomorAntrianFormatted = $"{kodePoli}{nomorAntrian:000}"; // Contoh: BU001
+                    // Ambil kode antrean poli
+                    kodePoli = _applicationDbContext.Polikliniks
+                        .Where(p => p.PoliklinikId == request.PoliklinikId)
+                        .Select(p => p.KodeAntreanPoli)
+                        .FirstOrDefault();
 
-                // ==============================
-                // VALIDASI ANTI-DUPLIKAT KunjunganID
-                // ==============================
+                    if (string.IsNullOrEmpty(kodePoli))
+                        return BadRequest(new { message = "Kode antrean poli tidak ditemukan untuk poliklinik ini!" });
+
+                    // Hitung jumlah antrean hari ini
+                    var jumlahAntrianHariIni = _applicationDbContext.Kunjungans
+                        .Count(k => k.PoliklinikId == request.PoliklinikId &&
+                                    k.CreateDateTime.Date == today &&
+                                    !k.IsDelete);
+
+                    int nomorAntrian = jumlahAntrianHariIni + 1;
+                    nomorAntrianFormatted = $"{kodePoli}{nomorAntrian:000}";
+                }
+
+                // =============================
+                // 🔐 Generate ID unik untuk kunjungan
+                // =============================
                 Guid newKunjunganId;
-                int maxRetry = 5; // batas wajar, secara praktik harusnya 1x cukup
                 int attempt = 0;
                 do
                 {
                     newKunjunganId = Guid.NewGuid();
                     attempt++;
-                    // cek ke DB apakah GUID ini sudah pernah dipakai
-                    if (!await _applicationDbContext.Kunjungans.AnyAsync(k => k.KunjunganID == newKunjunganId))
-                    {
-                        break; // aman, tidak duplikat
-                    }
-                } while (attempt < maxRetry);
+                } while (await _applicationDbContext.Kunjungans.AnyAsync(k => k.KunjunganID == newKunjunganId) && attempt < 5);
 
                 if (await _applicationDbContext.Kunjungans.AnyAsync(k => k.KunjunganID == newKunjunganId))
                 {
-                    // fallback jika (sangat kecil kemungkinan) tetap duplikat setelah retry
                     return StatusCode(500, new { message = "Gagal membuat KunjunganID unik. Silakan coba lagi." });
                 }
 
+                // =============================
+                // 💾 Simpan data kunjungan
+                // =============================
                 var newKunjungan = new Kunjungan
                 {
                     KunjunganID = newKunjunganId,
@@ -628,46 +636,45 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     IsDelete = false,
                     IsScreening = false,
                     IsPresent = true,
-                    IsFinishedKasir = false, // Default value
-                    Antrian = nomorAntrianFormatted,   // Format akhir: BU001
+                    IsFinishedKasir = false,
+                    Antrian = nomorAntrianFormatted, // null jika IGD
                     AsalKunjungan = request.AsalKunjungan
                 };
 
                 _applicationDbContext.Kunjungans.Add(newKunjungan);
 
-                // Cari data biaya admin berdasarkan jenis kunjungan
+                // =============================
+                // 💰 Tambahkan Biaya Administrasi (jika ada)
+                // =============================
                 var biayaAdmin = await _applicationDbContext.BiayaAdministrasis
                     .Where(b => b.BiayaAdministrasiKode == kodeJenis)
                     .FirstOrDefaultAsync();
 
-                // Hitung jumlah billing kunjungan sebelumnya (berdasarkan jenis "Biaya Admin")
-                int billingKunjunganCount = await _applicationDbContext.Billings
-                    .Where(b => b.KunjunganId == newKunjungan.KunjunganID && b.JenisBilling == "Biaya Admin")
-                    .CountAsync();
-                int billingIndex = billingKunjunganCount + 1;
-                string billingKode = $"{billingIndex:D3}";
-
-                var bill = new Billing
+                if (biayaAdmin != null)
                 {
-                    BillingId = Guid.NewGuid(),
-                    KunjunganId = newKunjungan.KunjunganID,
-                    DiskonId = null,
-                    ItemId = biayaAdmin?.BiayaAdministrasiId ?? Guid.Empty,
-                    NamaItem = biayaAdmin?.NamaBiayaAdministrasi ?? "Biaya Administrasi",
-                    HargaItem = biayaAdmin?.NominalBiayaAdministrasi ?? 0,
-                    QtyItem = 1,
-                    SubTotalItem = biayaAdmin?.NominalBiayaAdministrasi ?? 0,
-                    BillingKode = billingKode,
-                    JenisBilling = "Biaya Admin",
-                    BillingDate = DateTime.UtcNow,
-                    CreateDateTime = DateTimeOffset.UtcNow,
-                    CreateBy = UserActiveId
-                };
-                _applicationDbContext.Billings.Add(bill);
+                    var bill = new Billing
+                    {
+                        BillingId = Guid.NewGuid(),
+                        KunjunganId = newKunjungan.KunjunganID,
+                        ItemId = biayaAdmin.BiayaAdministrasiId,
+                        NamaItem = biayaAdmin.NamaBiayaAdministrasi,
+                        HargaItem = biayaAdmin.NominalBiayaAdministrasi,
+                        QtyItem = 1,
+                        SubTotalItem = biayaAdmin.NominalBiayaAdministrasi,
+                        BillingKode = "001",
+                        JenisBilling = "Biaya Admin",
+                        BillingDate = DateTime.UtcNow,
+                        CreateDateTime = DateTimeOffset.UtcNow,
+                        CreateBy = UserActiveId
+                    };
+                    _applicationDbContext.Billings.Add(bill);
+                }
 
                 await _applicationDbContext.SaveChangesAsync();
 
-                // Notifikasi SignalR
+                // =============================
+                // 🔔 Kirim notifikasi SignalR
+                // =============================
                 await _hubContext.Clients.All.SendAsync("Kunjungan ditambah", new
                 {
                     action = "create",
@@ -686,7 +693,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         request.DokterId,
                         newKunjungan.KunjunganID,
                         JenisKunjungan = inputJenis,
-                        NomorAntrian = nomorAntrianFormatted
+                        NomorAntrian = nomorAntrianFormatted ?? "Tanpa antrean (IGD)"
                     }
                 });
             }
@@ -695,6 +702,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 return StatusCode(500, new { message = $"Terjadi kesalahan: {ex.Message}" });
             }
         }
+
 
 
         //[HttpPost]
