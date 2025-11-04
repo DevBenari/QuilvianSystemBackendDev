@@ -286,6 +286,8 @@ namespace QuilvianSystemBackendDev.Repositories
         #region IGD
         public DbSet<IGDTriage> IGDTriages { get; set; }
         public DbSet<IGDTriageDetail> IGDTriageDetails { get; set; }
+        public DbSet<IGDPasienDetail> IGDPasienDetails { get; set; }
+        public DbSet<IGDTindakanDetail> IGDTindakanDetails { get;set; } 
         #endregion
     }
 }

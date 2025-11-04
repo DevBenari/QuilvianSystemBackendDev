@@ -1,0 +1,9 @@
+﻿namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.ViewModels
+{
+    public class IGDTindakanDetailViewModel
+    {
+        public Guid? KunjunganId { get; set; }
+        public Guid? TindakanId { get; set; }
+        public string? Keterangan { get; set; }
+    }
+}
