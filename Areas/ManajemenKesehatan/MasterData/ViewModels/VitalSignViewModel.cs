@@ -24,5 +24,7 @@
         public string? HasilMAP { get; set; }
         public decimal? SkorEWS { get; set; }
         public string? FrekuensiMonitoring { get; set; }
+        public string? Kesadaran { get; set; }
+        public bool? IsNadiTeraba { get; set; }
     }
 }

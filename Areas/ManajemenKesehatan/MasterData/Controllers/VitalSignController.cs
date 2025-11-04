@@ -85,7 +85,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.MAP,
                             a.HasilMAP,
                             a.SkorEWS,
-                            a.FrekuensiMonitoring
+                            a.FrekuensiMonitoring,
+                            a.Kesadaran,
+                            a.IsNadiTeraba
                         }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -168,7 +170,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.MAP,
                             a.HasilMAP,
                             a.SkorEWS,
-                            a.FrekuensiMonitoring
+                            a.FrekuensiMonitoring,
+                            a.IsNadiTeraba,
+                            a.Kesadaran
                         }).ToList();
 
             if (!data.Any())
@@ -263,6 +267,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     HasilMAP = vm.HasilMAP,
                     SkorEWS = vm.SkorEWS,
                     FrekuensiMonitoring = vm.FrekuensiMonitoring,
+                    IsNadiTeraba = vm.IsNadiTeraba,
+                    Kesadaran = vm.Kesadaran,
 
                     CreateBy = createBy,
                     CreateDateTime = DateTimeOffset.UtcNow
@@ -390,6 +396,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.HasilMAP = vm.HasilMAP;
                 data.SkorEWS = vm.SkorEWS;
                 data.FrekuensiMonitoring = vm.FrekuensiMonitoring;
+                data.IsNadiTeraba = vm.IsNadiTeraba;
+                data.Kesadaran = vm.Kesadaran;
 
                 data.UpdateBy = modifyBy;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -697,7 +705,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 a.MAP,
                                 a.HasilMAP,
                                 a.SkorEWS,
-                                a.FrekuensiMonitoring
+                                a.FrekuensiMonitoring,
+                                a.IsNadiTeraba,
+                                a.Kesadaran
                             };
 
                 //**Filter berdasarkan search(Perbaikan agar bisa mencari 1 huruf)**

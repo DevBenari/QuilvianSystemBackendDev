@@ -60,5 +60,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
         public bool? IsIGD { get; set; }
         public string? MasukIGD { get; set; }
         public string? KondisiMasukIGD { get; set; }
+        public bool? IsPengobatanSaatIni { get; set; }
+        public bool? IsTubuhTidakSeimbang { get; set; }
+        public bool? IsMenggunakanPenopang { get; set; }
+        public string? KeluhanTambahan { get; set; }
+        public bool? IsFarmakologi { get; set; }
     }
 }

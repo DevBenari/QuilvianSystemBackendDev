@@ -105,7 +105,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.RiwayatPenyakit,
                             a.IsIGD,
                             a.MasukIGD,
-                            a.KondisiMasukIGD
+                            a.KondisiMasukIGD,
+                            a.IsPengobatanSaatIni,
+                            a.IsTubuhTidakSeimbang,
+                            a.IsMenggunakanPenopang,
+                            a.KeluhanTambahan,
+                            a.IsFarmakologi
 
                         }).OrderByDescending(a => a.CreateDateTime); ;
 
@@ -209,7 +214,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.RiwayatPenyakit,
                             a.IsIGD,
                             a.MasukIGD,
-                            a.KondisiMasukIGD
+                            a.KondisiMasukIGD,
+                            a.IsPengobatanSaatIni,
+                            a.IsTubuhTidakSeimbang,
+                            a.IsMenggunakanPenopang,
+                            a.KeluhanTambahan,
+                            a.IsFarmakologi
                         }).ToList();
 
             if (!data.Any())
@@ -323,7 +333,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     RiwayatPenyakit = vm.RiwayatPenyakit,
                     IsIGD = vm.IsIGD,
                     MasukIGD = vm.MasukIGD,
-                    KondisiMasukIGD = vm.KondisiMasukIGD
+                    KondisiMasukIGD = vm.KondisiMasukIGD,
+                    IsPengobatanSaatIni = vm.IsPengobatanSaatIni,
+                    IsTubuhTidakSeimbang = vm.IsTubuhTidakSeimbang,
+                    IsMenggunakanPenopang = vm.IsMenggunakanPenopang,
+                    KeluhanTambahan = vm.KeluhanTambahan,
+                    IsFarmakologi = vm.IsFarmakologi,
                 };
 
                 _applicationDbContext.PainAssessments.Add(data);
@@ -464,6 +479,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.IsIGD = vm.IsIGD;
                 data.MasukIGD = vm.MasukIGD;
                 data.KondisiMasukIGD = vm.KondisiMasukIGD;
+                data.IsPengobatanSaatIni = vm.IsPengobatanSaatIni;
+                data.IsTubuhTidakSeimbang = vm.IsTubuhTidakSeimbang;
+                data.IsMenggunakanPenopang = vm.IsMenggunakanPenopang;
+                data.KeluhanTambahan = vm.KeluhanTambahan;
+                data.IsFarmakologi = vm.IsFarmakologi;
+
                 data.UpdateBy = modifyBy;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
@@ -829,7 +850,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 a.RiwayatPenyakit,
                                 a.IsIGD,
                                 a.MasukIGD,
-                                a.KondisiMasukIGD
+                                a.KondisiMasukIGD,
+                                a.IsPengobatanSaatIni,
+                                a.IsTubuhTidakSeimbang,
+                                a.IsMenggunakanPenopang,
+                                a.KeluhanTambahan,
+                                a.IsFarmakologi
                             };
 
                 // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**

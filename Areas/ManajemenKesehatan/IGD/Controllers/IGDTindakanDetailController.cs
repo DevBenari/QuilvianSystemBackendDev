@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
@@ -27,6 +28,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly string _uploadUrl;
 
         private readonly ILogger<IGDTindakanDetailController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
@@ -36,13 +38,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ILogger<IGDTindakanDetailController> logger,
-            IWebHostEnvironment webHostEnvironment)
+            IWebHostEnvironment webHostEnvironment,
+            IConfiguration configuration)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+            _uploadUrl = configuration["FileStorage:UploadUrl"];
         }
 
         [HttpGet]
@@ -65,6 +69,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                              a.DetailTindakanIGDId,
                              a.KunjunganId,
                              a.TindakanId,
+                             a.KategoriTindakan,
+                             a.WaktuTindakan,
+                             a.TTDPath,
                              a.Keterangan,
                          }).OrderByDescending(a => a.CreateDateTime);
 
@@ -115,7 +122,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] IGDTindakanDetailViewModel vm)
+        public async Task<IActionResult> Create([FromForm] IGDTindakanDetailViewModel vm) // FromForm agar bisa menerima file
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -130,53 +137,109 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
                 }
 
-                // **Ambil User ID dari JWT Claims**
+                // **Ambil user aktif dari JWT**
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
-                {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
-                }
 
                 var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
                 if (getUserActive == null)
-                {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-                }
+
                 var userActiveId = getUserActive.UserActiveId;
 
-                //// **Cek Duplikasi**
-                //bool isDuplicate = await _applicationDbContext.Diskons
-                //                    .AnyAsync(c => c.NamaDiskon == vm.NamaDiskon);
+                // ==================================================
+                // ✅ PROSES UPLOAD TTD
+                // ==================================================
+                Guid ttdId;
+                string ttdPath;
 
-                //if (isDuplicate)
-                //{
-                //    return Conflict(new { message = "Nama diskon ini telah tersedia" });
-                //}
+                if (vm.TTDFile != null && vm.TTDFile.Length > 0)
+                {
+                    var maxSize = 1 * 1024 * 1024; // max 1MB
+                    var allowedExtensions = new List<string> { ".jpg", ".jpeg" };
+                    var fileExtension = Path.GetExtension(vm.TTDFile.FileName).ToLower();
 
-                // **Buat Data Baru**
+                    if (vm.TTDFile.Length > maxSize)
+                        return BadRequest(new { message = "Ukuran file TTD terlalu besar! Maksimal 1MB." });
+
+                    if (!allowedExtensions.Contains(fileExtension))
+                        return BadRequest(new { message = "Format TTD tidak valid! Gunakan JPG atau JPEG." });
+
+                    // Nama file unik
+                    var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
+                    var ttdFileName = $"{getUserActive.FullName}_{safeTime}_TindakanIGD{fileExtension}";
+
+                    // 📤 Upload ke Flask
+                    using var client = new HttpClient();
+                    using var ms = new MemoryStream();
+                    await vm.TTDFile.CopyToAsync(ms);
+                    ms.Position = 0;
+
+                    var content = new MultipartFormDataContent
+                    {
+                        {
+                            new StreamContent(ms)
+                            {
+                                Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.TTDFile.ContentType) }
+                            },
+                            "file", ttdFileName
+                        },
+                        { new StringContent("TTDIGD"), "folderTarget" }
+                    };
+
+                    // Pastikan _uploadUrl diinisialisasi di controller (misal: "https://yourflaskserver/upload")
+                    var flaskResponse = await client.PostAsync(_uploadUrl, content);
+
+                    if (!flaskResponse.IsSuccessStatusCode)
+                        return StatusCode(500, new { message = "Gagal upload tanda tangan ke server Flask." });
+
+                    // Ambil URL/path hasil upload dari response Flask
+                    var responseBody = await flaskResponse.Content.ReadAsStringAsync();
+                    dynamic jsonResp = JsonConvert.DeserializeObject(responseBody);
+                    ttdPath = jsonResp.fileUrl;
+
+                    // Simpan ke MasterTTD
+                    var newTTD = new MasterTTD
+                    {
+                        TTDId = Guid.NewGuid(),
+                        UserActiveId = userActiveId,
+                        TTDPath = ttdPath,
+                        CreateDateTime = DateTimeOffset.UtcNow,
+                        CreateBy = userActiveId
+                    };
+
+                    _applicationDbContext.MasterTTDs.Add(newTTD);
+                    await _applicationDbContext.SaveChangesAsync();
+                    ttdId = newTTD.TTDId;
+                }
+                else
+                {
+                    return BadRequest(new { message = "TTD harus diisi." });
+                }
+
+                // ==================================================
+                // ✅ BUAT DATA IGD TINDAKAN DETAIL
+                // ==================================================
                 var data = new IGDTindakanDetail
                 {
                     DetailTindakanIGDId = Guid.NewGuid(),
                     KunjunganId = vm.KunjunganId,
                     TindakanId = vm.TindakanId,
                     Keterangan = vm.Keterangan,
-                    
+                    TTDPath = ttdPath,
                     CreateBy = userActiveId,
-                    CreateDateTime = DateTimeOffset.UtcNow,
+                    CreateDateTime = DateTimeOffset.UtcNow
                 };
 
-                // **Simpan ke Database**
+                // Simpan ke database
                 _applicationDbContext.IGDTindakanDetails.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
-                {
                     return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
-                }
-                else
-                {
-                    return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
-                }
+
+                return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
             }
             catch (DbUpdateException dbEx)
             {
@@ -188,8 +251,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
             }
         }
 
+
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] IGDTindakanDetailViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromForm] IGDTindakanDetailViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -198,57 +262,117 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
             try
             {
-                // **Cek koneksi ke database**
-                if (!await _applicationDbContext.Database.CanConnectAsync())
+                // ✅ Cek koneksi ke database
+                if (!_applicationDbContext.Database.CanConnect())
                 {
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
                 }
 
-                // **Ambil User ID dari JWT Claims**
+                // ✅ Ambil user aktif dari JWT
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
-                {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
-                }
 
                 var getUserActive = await _applicationDbContext.UserActives
                     .FirstOrDefaultAsync(u => u.Email == emailLogin);
                 if (getUserActive == null)
-                {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-                }
+
                 var userActiveId = getUserActive.UserActiveId;
 
-                // **Cari Data**
-                var data = await _applicationDbContext.IGDTindakanDetails.FindAsync(id);
-                if (data == null)
+                // ✅ Ambil data lama dari database
+                var existingData = await _applicationDbContext.IGDTindakanDetails
+                    .FirstOrDefaultAsync(x => x.DetailTindakanIGDId == id);
+
+                if (existingData == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
-                // **Update Data**
-                data.KunjunganId = vm.KunjunganId;
-                data.TindakanId = vm.TindakanId;
-                data.Keterangan = vm.Keterangan;
+                // ==================================================
+                // ✅ PROSES UPLOAD TTD (jika ada file baru)
+                // ==================================================
+                string? ttdPath = existingData.TTDPath;
 
-                data.UpdateBy = userActiveId;
-                data.UpdateDateTime = DateTimeOffset.UtcNow;
+                if (vm.TTDFile != null && vm.TTDFile.Length > 0)
+                {
+                    var maxSize = 1 * 1024 * 1024; // max 1MB
+                    var allowedExtensions = new List<string> { ".jpg", ".jpeg" };
+                    var fileExtension = Path.GetExtension(vm.TTDFile.FileName).ToLower();
 
-                _applicationDbContext.IGDTindakanDetails.Update(data);
+                    if (vm.TTDFile.Length > maxSize)
+                        return BadRequest(new { message = "Ukuran file TTD terlalu besar! Maksimal 1MB." });
+
+                    if (!allowedExtensions.Contains(fileExtension))
+                        return BadRequest(new { message = "Format TTD tidak valid! Gunakan JPG atau JPEG." });
+
+                    // Nama file unik
+                    var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
+                    var ttdFileName = $"{getUserActive.FullName}_{safeTime}_TindakanIGD{fileExtension}";
+
+                    // 📤 Upload ke Flask
+                    using var client = new HttpClient();
+                    using var ms = new MemoryStream();
+                    await vm.TTDFile.CopyToAsync(ms);
+                    ms.Position = 0;
+
+                    var content = new MultipartFormDataContent
+            {
+                {
+                    new StreamContent(ms)
+                    {
+                        Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.TTDFile.ContentType) }
+                    },
+                    "file", ttdFileName
+                },
+                { new StringContent("TTDIGD"), "folderTarget" }
+            };
+
+                    // Pastikan _uploadUrl sudah didefinisikan di controller
+                    var flaskResponse = await client.PostAsync(_uploadUrl, content);
+                    if (!flaskResponse.IsSuccessStatusCode)
+                        return StatusCode(500, new { message = "Gagal upload tanda tangan ke server Flask." });
+
+                    // Ambil URL/path hasil upload dari response Flask
+                    var responseBody = await flaskResponse.Content.ReadAsStringAsync();
+                    dynamic jsonResp = JsonConvert.DeserializeObject(responseBody);
+                    ttdPath = jsonResp.fileUrl;
+
+                    // Simpan ke MasterTTD
+                    var newTTD = new MasterTTD
+                    {
+                        TTDId = Guid.NewGuid(),
+                        UserActiveId = userActiveId,
+                        TTDPath = ttdPath,
+                        CreateDateTime = DateTimeOffset.UtcNow,
+                        CreateBy = userActiveId
+                    };
+
+                    _applicationDbContext.MasterTTDs.Add(newTTD);
+                    await _applicationDbContext.SaveChangesAsync();
+                }
+
+                // ==================================================
+                // ✅ UPDATE DATA LAMA
+                // ==================================================
+                existingData.KunjunganId = vm.KunjunganId ?? existingData.KunjunganId;
+                existingData.TindakanId = vm.TindakanId ?? existingData.TindakanId;
+                existingData.Keterangan = vm.Keterangan ?? existingData.Keterangan;
+                existingData.TTDPath = ttdPath;
+                existingData.UpdateBy = userActiveId;
+                existingData.UpdateDateTime = DateTimeOffset.UtcNow;
+
+                _applicationDbContext.IGDTindakanDetails.Update(existingData);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
-                {
-                    return Ok(new { message = "Update Data Berhasil || 200 OK" });
-                }
-                else
-                {
-                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
-                }
+                    return Ok(new { message = "Data berhasil diperbarui || 200 OK" });
+
+                return StatusCode(500, new { message = "Data tidak berhasil diperbarui di database." });
             }
             catch (DbUpdateException dbEx)
             {
-                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+                return StatusCode(500, new { message = $"Gagal memperbarui data: {dbEx.InnerException?.Message}" });
             }
             catch (Exception ex)
             {
@@ -344,6 +468,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                              a.DetailTindakanIGDId,
                              a.KunjunganId,
                              a.TindakanId,
+                             a.KategoriTindakan,
+                             a.WaktuTindakan,
+                             a.TTDPath,
                              a.Keterangan,
                          });
 

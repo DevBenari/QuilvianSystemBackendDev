@@ -83,6 +83,42 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             var query = (from b in _applicationDbContext.LabBookings
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on b.CreateBy equals u.UserActiveId
+
+                         // join ke lab booking detail
+                         join lb in _applicationDbContext.LabBookingDetails
+                         on b.BookingLabId equals lb.BookingLabId into labBookings
+                         from lb in labBookings.DefaultIfEmpty()
+
+                             // join ke lab
+                         join l in _applicationDbContext.Labs
+                         on lb.LabId equals l.LabId into labGroup
+                         from l in labGroup.DefaultIfEmpty()
+
+                             // join ke kunjungan
+                         join k in _applicationDbContext.Kunjungans
+                         on b.KunjunganId equals k.KunjunganID into kGroup
+                         from k in kGroup.DefaultIfEmpty()
+
+                             // join ke asuransi
+                         join a in _applicationDbContext.Asuransis
+                         on b.AsuransiId equals a.AsuransiId into aGroup
+                         from a in aGroup.DefaultIfEmpty()
+
+                             // join ke pasien baru
+                         join p in _applicationDbContext.PendaftaranPasienBarus
+                         on b.PasienId equals p.PendaftaranPasienBaruId into pGroup
+                         from p in pGroup.DefaultIfEmpty()
+
+                             //join ke dokter
+                         join d1 in _applicationDbContext.Dokters
+                         on b.DokterId equals d1.DokterId into d1Group
+                         from d1 in d1Group.DefaultIfEmpty()
+
+                             // join ke dokter konsulen
+                         join d2 in _applicationDbContext.Dokters
+                         on b.DokterKonsulenId equals d2.DokterId into d2Group
+                         from d2 in d2Group.DefaultIfEmpty()
+
                          where b.IsDelete == false || b.IsDelete == null
                          select new
                          {
@@ -91,20 +127,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              CreateByName = u.FullName,
                              b.BookingLabId,
                              b.KunjunganId,
+                             k.AsalKunjungan,
+                             k.TipePasien,
                              b.PasienId,
+                             p.NamaLengkap,
+                             p.NoRekamMedis,
                              b.TglPenyerahanSampling,
                              b.TglBooking,
                              b.KelasId,
                              b.DokterId,
+                             NamaDokter = d1.NmDokter,
                              b.Keterangan,
                              b.IsCito,
                              b.DiagnosaAwal,
                              b.DokterKonsulenId,
+                             DokterKonsulen = d2.NmDokter,
                              b.TerapisId,
-                             b.TglPemeriksaan,
-                             b.StatusPemeriksaan,
                              b.AsuransiId,
-                             b.HemodialisaKe
+                             a.NamaAsuransi,
+                             b.HemodialisaKe,
+                             NamaLab = l.NamaLab ?? null,
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -485,6 +527,31 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                          on lb.LabId equals l.LabId into labGroup
                          from l in labGroup.DefaultIfEmpty()
 
+                         // join ke kunjungan
+                         join k in _applicationDbContext.Kunjungans
+                         on b.KunjunganId equals k.KunjunganID into kGroup
+                         from k in kGroup.DefaultIfEmpty()
+
+                         // join ke asuransi
+                         join a in _applicationDbContext.Asuransis
+                         on b.AsuransiId equals a.AsuransiId into aGroup
+                         from a in aGroup.DefaultIfEmpty()
+
+                         // join ke pasien baru
+                         join p in _applicationDbContext.PendaftaranPasienBarus
+                         on b.PasienId equals p.PendaftaranPasienBaruId into pGroup
+                         from p in pGroup.DefaultIfEmpty()
+
+                         //join ke dokter
+                         join d1 in _applicationDbContext.Dokters
+                         on b.DokterId equals d1.DokterId into d1Group
+                         from d1 in d1Group.DefaultIfEmpty()
+
+                         // join ke dokter konsulen
+                         join d2 in _applicationDbContext.Dokters
+                         on b.DokterKonsulenId equals d2.DokterId into d2Group
+                         from d2 in d2Group.DefaultIfEmpty()
+
                          where b.IsDelete == false || b.IsDelete == null
                          select new
                          {
@@ -493,17 +560,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              CreateByName = u.FullName,
                              b.BookingLabId,
                              b.KunjunganId,
+                             k.AsalKunjungan,
+                             k.TipePasien,
                              b.PasienId,
+                             p.NamaLengkap,
+                             p.NoRekamMedis,
                              b.TglPenyerahanSampling,
                              b.TglBooking,
                              b.KelasId,
                              b.DokterId,
+                             NamaDokter = d1.NmDokter,
                              b.Keterangan,
                              b.IsCito,
                              b.DiagnosaAwal,
                              b.DokterKonsulenId,
+                             DokterKonsulen = d2.NmDokter,
                              b.TerapisId,
                              b.AsuransiId,
+                             a.NamaAsuransi,
                              b.HemodialisaKe,
                              NamaLab = l.NamaLab ?? null,
                          });
