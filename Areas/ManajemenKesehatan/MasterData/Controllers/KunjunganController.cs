@@ -1238,7 +1238,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             [FromQuery] bool? isPresent = null,
             [FromQuery] bool? isFinishedKasir = null,
             [FromQuery] TipePasienFilter? TipePasien = null,
-            [FromQuery] EnumJenisKunjungan? JenisKunjungan = null
+            [FromQuery] EnumJenisKunjungan? JenisKunjungan = null,
+            [FromQuery] string? AsalKunjungan = null
         )
         {
             try
@@ -1374,6 +1375,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
                     DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
                     baseQuery = baseQuery.Where(u => u.CreateDateTime >= startUtc && u.CreateDateTime <= endUtc);
+                }
+
+                // ✅ Filter asal kunjungan
+                if (!string.IsNullOrWhiteSpace(AsalKunjungan))
+                {
+                    string pattern = $"%{AsalKunjungan.ToLower()}%";
+                    baseQuery = baseQuery.Where(u =>
+                        EF.Functions.ILike(u.AsalKunjungan, pattern));
                 }
 
                 // ✅ Filter pencarian
