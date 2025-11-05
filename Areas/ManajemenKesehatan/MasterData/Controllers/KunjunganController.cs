@@ -22,6 +22,7 @@ using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using SkiaSharp;
 using Swashbuckle.AspNetCore.Annotations;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
@@ -1383,6 +1384,55 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     string pattern = $"%{AsalKunjungan.ToLower()}%";
                     baseQuery = baseQuery.Where(u =>
                         EF.Functions.ILike(u.AsalKunjungan, pattern));
+                }
+
+                // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
+                if (periode.HasValue)
+                {
+                    DateTime today = DateTime.UtcNow.Date;
+
+                    switch (periode)
+                    {
+                        case PeriodeFilter.Today:
+                            baseQuery = baseQuery.Where(u => u.CreateDateTime.Date == today);
+                            break;
+                        case PeriodeFilter.ThisWeek:
+                            baseQuery = baseQuery.Where(u =>
+                                u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
+                                u.CreateDateTime.Date <= today
+                            );
+                            break;
+                        case PeriodeFilter.LastWeek:
+                            baseQuery = baseQuery.Where(u =>
+                                u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
+                                u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)
+                            );
+                            break;
+                        case PeriodeFilter.ThisMonth:
+                            baseQuery = baseQuery.Where(u =>
+                                u.CreateDateTime.Month == today.Month &&
+                                u.CreateDateTime.Year == today.Year
+                            );
+                            break;
+                        case PeriodeFilter.LastMonth:
+                            baseQuery = baseQuery.Where(u =>
+                                u.CreateDateTime.Month == today.Month - 1 &&
+                                u.CreateDateTime.Year == today.Year
+                            );
+                            break;
+                        case PeriodeFilter.ThisYear:
+                            baseQuery = baseQuery.Where(u => u.CreateDateTime.Year == today.Year);
+                            break;
+                        case PeriodeFilter.LastYear:
+                            baseQuery = baseQuery.Where(u => u.CreateDateTime.Year == today.Year - 1);
+                            break;
+                        case PeriodeFilter.Last3Months:
+                            baseQuery = baseQuery.Where(u => u.CreateDateTime >= today.AddMonths(-3));
+                            break;
+                        case PeriodeFilter.Last6Months:
+                            baseQuery = baseQuery.Where(u => u.CreateDateTime >= today.AddMonths(-6));
+                            break;
+                    }
                 }
 
                 // ✅ Filter pencarian
