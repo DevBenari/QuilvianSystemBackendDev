@@ -94,6 +94,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                          on lb.LabId equals l.LabId into labGroup
                          from l in labGroup.DefaultIfEmpty()
 
+                            // join ke lab pemeriksaan
+                        join lp in _applicationDbContext.LabPemeriksaans
+                        on lb.PemeriksaanLabId equals lp.PemeriksaanLabId into lpGroup
+                        from lp in lpGroup.DefaultIfEmpty()
+
                              // join ke kunjungan
                          join k in _applicationDbContext.Kunjungans
                          on b.KunjunganId equals k.KunjunganID into kGroup
@@ -135,6 +140,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              b.TglPenyerahanSampling,
                              b.TglBooking,
                              b.KelasId,
+                             lb.PemeriksaanLabId,
+                             lp.NamaPemeriksaan,
+                             lp.HargaPemeriksaan,
                              b.DokterId,
                              NamaDokter = d1.NmDokter,
                              b.Keterangan,
@@ -147,6 +155,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.NamaAsuransi,
                              b.HemodialisaKe,
                              NamaLab = l.NamaLab ?? null,
+                             b.SuratJaminanPath,
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -256,7 +265,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     }
 
                     // Simpan path relatif (misal untuk disajikan via API)
-                    suratJaminanPath = $"/SuratJaminan/{safeFileName}";
+                    suratJaminanPath = $"/SuratJaminan/{safeFileName}{vm.PasienId}";
                 }
 
                 // ==================================================
@@ -383,7 +392,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         await vm.SuratJaminan.CopyToAsync(stream);
                     }
 
-                    suratJaminanPath = $"/SuratJaminan/{safeFileName}";
+                    suratJaminanPath = $"/SuratJaminan/{safeFileName}{existing.PasienId}";
                 }
 
                 // ==================================================
@@ -512,7 +521,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
 
-            // Query data
             var query = (from b in _applicationDbContext.LabBookings
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on b.CreateBy equals u.UserActiveId
@@ -522,32 +530,37 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                          on b.BookingLabId equals lb.BookingLabId into labBookings
                          from lb in labBookings.DefaultIfEmpty()
 
-                         // join ke lab
+                             // join ke lab
                          join l in _applicationDbContext.Labs
                          on lb.LabId equals l.LabId into labGroup
                          from l in labGroup.DefaultIfEmpty()
 
-                         // join ke kunjungan
+                             // join ke lab pemeriksaan
+                         join lp in _applicationDbContext.LabPemeriksaans
+                         on lb.PemeriksaanLabId equals lp.PemeriksaanLabId into lpGroup
+                         from lp in lpGroup.DefaultIfEmpty()
+
+                             // join ke kunjungan
                          join k in _applicationDbContext.Kunjungans
                          on b.KunjunganId equals k.KunjunganID into kGroup
                          from k in kGroup.DefaultIfEmpty()
 
-                         // join ke asuransi
+                             // join ke asuransi
                          join a in _applicationDbContext.Asuransis
                          on b.AsuransiId equals a.AsuransiId into aGroup
                          from a in aGroup.DefaultIfEmpty()
 
-                         // join ke pasien baru
+                             // join ke pasien baru
                          join p in _applicationDbContext.PendaftaranPasienBarus
                          on b.PasienId equals p.PendaftaranPasienBaruId into pGroup
                          from p in pGroup.DefaultIfEmpty()
 
-                         //join ke dokter
+                             //join ke dokter
                          join d1 in _applicationDbContext.Dokters
                          on b.DokterId equals d1.DokterId into d1Group
                          from d1 in d1Group.DefaultIfEmpty()
 
-                         // join ke dokter konsulen
+                             // join ke dokter konsulen
                          join d2 in _applicationDbContext.Dokters
                          on b.DokterKonsulenId equals d2.DokterId into d2Group
                          from d2 in d2Group.DefaultIfEmpty()
@@ -568,6 +581,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              b.TglPenyerahanSampling,
                              b.TglBooking,
                              b.KelasId,
+                             lb.PemeriksaanLabId,
+                             lp.NamaPemeriksaan,
+                             lp.HargaPemeriksaan,
                              b.DokterId,
                              NamaDokter = d1.NmDokter,
                              b.Keterangan,
@@ -580,6 +596,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.NamaAsuransi,
                              b.HemodialisaKe,
                              NamaLab = l.NamaLab ?? null,
+                             b.SuratJaminanPath,
                          });
             // filter berdasarkan search
             if (!string.IsNullOrWhiteSpace(namaLab))
@@ -694,5 +711,209 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 }
             });
         }
+
+        [HttpGet("pagedv2")]
+        public IActionResult Pagedv2(
+    int page = 1,
+    int perPage = 10,
+    Guid? kunjunganid = null,
+    string? namaLab = null,
+    string? orderBy = "CreateDateTime",
+    string? sortDirection = "desc",
+    [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+    DateTime? startDate = null,
+    [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+    DateTime? endDate = null,
+    [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        {
+            var baseQuery = from b in _applicationDbContext.LabBookings
+                            join u in _applicationDbContext.UserActives on b.CreateBy equals u.UserActiveId into uGroup
+                            from u in uGroup.DefaultIfEmpty()
+
+                            join k in _applicationDbContext.Kunjungans on b.KunjunganId equals k.KunjunganID into kGroup
+                            from k in kGroup.DefaultIfEmpty()
+
+                            join a in _applicationDbContext.Asuransis on b.AsuransiId equals a.AsuransiId into aGroup
+                            from a in aGroup.DefaultIfEmpty()
+
+                            join p in _applicationDbContext.PendaftaranPasienBarus on b.PasienId equals p.PendaftaranPasienBaruId into pGroup
+                            from p in pGroup.DefaultIfEmpty()
+
+                            join d1 in _applicationDbContext.Dokters on b.DokterId equals d1.DokterId into d1Group
+                            from d1 in d1Group.DefaultIfEmpty()
+
+                            join d2 in _applicationDbContext.Dokters on b.DokterKonsulenId equals d2.DokterId into d2Group
+                            from d2 in d2Group.DefaultIfEmpty()
+
+                            join lb in _applicationDbContext.LabBookingDetails on b.BookingLabId equals lb.BookingLabId into lbGroup
+                            from lb in lbGroup.DefaultIfEmpty()
+
+                            join l in _applicationDbContext.Labs on lb.LabId equals l.LabId into lGroup
+                            from l in lGroup.DefaultIfEmpty()
+
+                            join lp in _applicationDbContext.LabPemeriksaans on lb.PemeriksaanLabId equals lp.PemeriksaanLabId into lpGroup
+                            from lp in lpGroup.DefaultIfEmpty()
+
+                            where b.IsDelete == false || b.IsDelete == null
+                            select new
+                            {
+                                // Header
+                                b.BookingLabId,
+                                KunjunganId = (Guid?)b.KunjunganId,
+                                PasienId = (Guid?)b.PasienId,
+                                PasienNama = p.NamaLengkap,
+                                p.NoRekamMedis,
+                                b.TglBooking,
+                                b.TglPenyerahanSampling,
+                                b.KelasId,
+                                b.Keterangan,
+                                b.IsCito,
+                                b.DiagnosaAwal,
+                                b.HemodialisaKe,
+                                b.SuratJaminanPath,
+                                AsuransiId = (Guid?)b.AsuransiId,
+                                AsuransiNama = a.NamaAsuransi ?? null,
+                                DokterId = (Guid?)b.DokterId,
+                                DokterNama = d1.NmDokter ?? null,
+                                DokterKonsulen = d2.NmDokter ?? null,
+                                AsalKunjungan = k != null ? k.AsalKunjungan : null,
+                                TipePasien = k != null ? k.TipePasien : null,
+                                b.CreateBy,
+                                CreateByName = u.FullName,
+                                b.CreateDateTime,
+
+                                // Detail
+                                LabBookingDetailId = (Guid?)lb.DetailBookingLabId,
+                                PemeriksaanLabId = (Guid?)lb.PemeriksaanLabId,
+                                PemeriksaanNama = lp.NamaPemeriksaan,
+                                HargaPemeriksaan = (decimal?)(lp.HargaPemeriksaan ?? 0),
+                                NamaLab = l.NamaLab ?? null
+
+                            };
+
+            // 🔍 Filter nama lab
+            if (!string.IsNullOrWhiteSpace(namaLab))
+            {
+                var pattern = $"%{namaLab.ToLower()}%";
+                baseQuery = baseQuery.Where(u => EF.Functions.ILike(u.NamaLab, pattern));
+            }
+
+            // 🔍 Filter kunjungan
+            if (kunjunganid.HasValue)
+                baseQuery = baseQuery.Where(u => u.KunjunganId == kunjunganid.Value);
+
+            // 🔍 Filter tanggal
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                var startUtc = startDate.Value.Date.ToUniversalTime();
+                var endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+                baseQuery = baseQuery.Where(u => u.CreateDateTime >= startUtc && u.CreateDateTime <= endUtc);
+            }
+
+            // 🔍 Filter periode
+            if (periode.HasValue)
+            {
+                DateTime today = DateTime.UtcNow.Date;
+                switch (periode)
+                {
+                    case PeriodeFilter.Today:
+                        baseQuery = baseQuery.Where(u => u.CreateDateTime.Date == today);
+                        break;
+                    case PeriodeFilter.ThisWeek:
+                        baseQuery = baseQuery.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
+                            u.CreateDateTime.Date <= today);
+                        break;
+                    case PeriodeFilter.LastWeek:
+                        baseQuery = baseQuery.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
+                            u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek));
+                        break;
+                    case PeriodeFilter.ThisMonth:
+                        baseQuery = baseQuery.Where(u => u.CreateDateTime.Month == today.Month && u.CreateDateTime.Year == today.Year);
+                        break;
+                    case PeriodeFilter.LastMonth:
+                        var lastMonth = today.AddMonths(-1);
+                        baseQuery = baseQuery.Where(u => u.CreateDateTime.Month == lastMonth.Month && u.CreateDateTime.Year == lastMonth.Year);
+                        break;
+                    case PeriodeFilter.Last3Months:
+                        baseQuery = baseQuery.Where(u => u.CreateDateTime >= today.AddMonths(-3));
+                        break;
+                }
+            }
+
+            // Sorting
+            baseQuery = sortDirection?.ToLower() == "desc"
+                ? baseQuery.OrderByDescending(u => u.CreateDateTime)
+                : baseQuery.OrderBy(u => u.CreateDateTime);
+
+            // Eksekusi query ke memory (hanya 1 query SQL)
+            var rawData = baseQuery.ToList();
+
+            // ======================================================
+            // ✅ Grouping by BookingLabId tanpa N+1
+            // ======================================================
+            var grouped = rawData
+                .GroupBy(x => x.BookingLabId)
+                .Select(g => new
+                {
+                    // Header
+                    BookingLabId = g.Key,
+                    g.First().KunjunganId,
+                    g.First().PasienId,
+                    g.First().PasienNama,
+                    g.First().NoRekamMedis,
+                    g.First().TglBooking,
+                    g.First().TglPenyerahanSampling,
+                    g.First().AsuransiId,
+                    g.First().AsuransiNama,
+                    g.First().DokterId,
+                    g.First().DokterNama,
+                    g.First().DokterKonsulen,
+                    g.First().SuratJaminanPath,
+                    g.First().AsalKunjungan,
+                    g.First().TipePasien,
+                    g.First().IsCito,
+                    g.First().DiagnosaAwal,
+                    g.First().HemodialisaKe,
+                    g.First().Keterangan,
+                    g.First().CreateBy,
+                    g.First().CreateByName,
+                    g.First().CreateDateTime,
+
+                    // Array detail lab
+                    Details = g.Where(d => d.LabBookingDetailId != null).Select(d => new
+                    {
+                        d.LabBookingDetailId,
+                        d.PemeriksaanLabId,
+                        d.PemeriksaanNama,
+                        d.HargaPemeriksaan,
+                        d.NamaLab
+                    }).ToList()
+                });
+
+            // Pagination manual
+            var totalRows = grouped.Count();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+            var rows = grouped.Skip((page - 1) * perPage).Take(perPage).ToList();
+
+            if (!rows.Any())
+                return NotFound(new { message = "Page not found." });
+
+            return Ok(new
+            {
+                status = "success",
+                message = "Data retrieved successfully",
+                data = new
+                {
+                    Rows = rows,
+                    TotalRows = totalRows,
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalPages = totalPages
+                }
+            });
+        }
+
     }
 }
