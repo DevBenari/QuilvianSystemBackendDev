@@ -47,6 +47,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
             _uploadUrl = configuration["FileStorage:UploadUrl"];
+
+            if (string.IsNullOrEmpty(_uploadUrl))
+            {
+                _logger.LogError("Konfigurasi UploadUrl tidak ditemukan di appsettings.json!");
+            }
+            else
+            {
+                _logger.LogInformation($"Upload URL berhasil dimuat: {_uploadUrl}");
+            }
         }
 
         [HttpGet]
@@ -196,8 +205,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
                     // Ambil URL/path hasil upload dari response Flask
                     var responseBody = await flaskResponse.Content.ReadAsStringAsync();
+                    Console.WriteLine("[DEBUG] Flask response: " + responseBody);
+                    _logger.LogInformation($"[DEBUG] Flask response: {responseBody}");
                     dynamic jsonResp = JsonConvert.DeserializeObject(responseBody);
-                    ttdPath = jsonResp.fileUrl;
+                    ttdPath = jsonResp?.url ?? jsonResp?.fileUrl ?? jsonResp?.path ?? "";
 
                     // Simpan ke MasterTTD
                     var newTTD = new MasterTTD
@@ -237,7 +248,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
-                    return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
+                    return Created("", new { message = "Tambah Data Berhasil || 201 Created"});
 
                 return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
             }
@@ -334,9 +345,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                         return StatusCode(500, new { message = "Gagal upload tanda tangan ke server Flask." });
 
                     // Ambil URL/path hasil upload dari response Flask
-                    var responseBody = await flaskResponse.Content.ReadAsStringAsync();
+
+                    var responseBody = await flaskResponse.Content.ReadAsStringAsync(); 
+                    
+                    Console.WriteLine("[DEBUG] Flask response: " + responseBody);
+                    _logger.LogInformation($"[DEBUG] Flask response: {responseBody}");
+
                     dynamic jsonResp = JsonConvert.DeserializeObject(responseBody);
-                    ttdPath = jsonResp.fileUrl;
+                    ttdPath = jsonResp?.url ?? jsonResp?.fileUrl ?? jsonResp?.path ?? "";
 
                     // Simpan ke MasterTTD
                     var newTTD = new MasterTTD

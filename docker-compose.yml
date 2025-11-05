@@ -17,6 +17,8 @@ services:
       - ./wwwroot/FotoPasienBaru:/app/wwwroot/FotoPasienBaru
       - ./wwwroot/QRCodePasienBaru:/app/wwwroot/QRCodePasienBaru
       - ./wwwroot/scanktp:/app/wwwroot/scanktp
+      # - ./wwwroot/TTDUser:/app/wwwroot/TTDUser
+      # - ./wwwroot/TTDIGD:/app/wwwroot/TTDIGD
 
   postgres-container:
     image: postgres:13

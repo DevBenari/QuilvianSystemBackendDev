@@ -232,7 +232,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                     var responseBody = await flaskResponse.Content.ReadAsStringAsync();
                     dynamic jsonResp = JsonConvert.DeserializeObject(responseBody);
-                    ttdPath = jsonResp.fileUrl;
+                    ttdPath = jsonResp?.url ?? jsonResp?.fileUrl ?? jsonResp?.path ?? "";
 
                     // Simpan ke MasterTTD
                     var newTTD = new MasterTTD
@@ -376,7 +376,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                     var responseBody = await flaskResponse.Content.ReadAsStringAsync();
                     dynamic jsonResp = JsonConvert.DeserializeObject(responseBody);
-                    var ttdPath = jsonResp.fileUrl;
+                    var ttdPath = jsonResp?.url ?? jsonResp?.fileUrl ?? jsonResp?.path ?? "";
 
                     // Simpan ke MasterTTD
                     var newTTD = new MasterTTD

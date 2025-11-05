@@ -213,7 +213,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     var responseBody = await flaskResponse.Content.ReadAsStringAsync();
                     // Anggap Flask balikin JSON {"fileUrl": "/uploads/TTDUser/namafile.jpg"}
                     dynamic jsonResp = JsonConvert.DeserializeObject(responseBody);
-                    ttdPath = jsonResp.fileUrl;
+                    ttdPath = jsonResp?.url ?? jsonResp?.fileUrl ?? jsonResp?.path ?? "";
 
                     // Simpan ke MasterTTD
                     var newTTD = new MasterTTD
@@ -349,7 +349,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                     var responseBody = await flaskResponse.Content.ReadAsStringAsync();
                     dynamic jsonResp = JsonConvert.DeserializeObject(responseBody);
-                    ttdPath = jsonResp.fileUrl;
+                    ttdPath = jsonResp?.url ?? jsonResp?.fileUrl ?? jsonResp?.path ?? "";
 
                     // Update MasterTTD
                     var masterTTD = _applicationDbContext.MasterTTDs.FirstOrDefault(t => t.TTDId == existing.TTDId);
