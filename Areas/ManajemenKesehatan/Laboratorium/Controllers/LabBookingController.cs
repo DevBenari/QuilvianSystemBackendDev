@@ -140,6 +140,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              b.TglPemeriksaan,
                              b.TglPenyerahanSampling,
                              b.TglBooking,
+                             b.StatusPemeriksaan,
                              b.KelasId,
                              lb.PemeriksaanLabId,
                              lp.NamaPemeriksaan,
@@ -579,8 +580,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              b.PasienId,
                              p.NamaLengkap,
                              p.NoRekamMedis,
+                             b.TglPemeriksaan,
                              b.TglPenyerahanSampling,
                              b.TglBooking,
+                             b.StatusPemeriksaan,
                              b.KelasId,
                              lb.PemeriksaanLabId,
                              lp.NamaPemeriksaan,
@@ -715,18 +718,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
         [HttpGet("pagedv2")]
         public IActionResult Pagedv2(
-    int page = 1,
-    int perPage = 10,
-    Guid? kunjunganid = null,
-    string? namaLab = null,
-    string? orderBy = "CreateDateTime",
-    string? sortDirection = "desc",
-    [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-    DateTime? startDate = null,
-    [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-    DateTime? endDate = null,
-    [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
-        {
+            int page = 1,
+            int perPage = 10,
+            Guid? kunjunganid = null,
+            string? namaLab = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+            DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+            DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+                {
             var baseQuery = from b in _applicationDbContext.LabBookings
                             join u in _applicationDbContext.UserActives on b.CreateBy equals u.UserActiveId into uGroup
                             from u in uGroup.DefaultIfEmpty()
@@ -773,6 +776,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                 b.DiagnosaAwal,
                                 b.HemodialisaKe,
                                 b.SuratJaminanPath,
+                                b.StatusPemeriksaan,
                                 AsuransiId = (Guid?)b.AsuransiId,
                                 AsuransiNama = a.NamaAsuransi ?? null,
                                 DokterId = (Guid?)b.DokterId,
@@ -868,6 +872,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     g.First().TglPemeriksaan,
                     g.First().TglBooking,
                     g.First().TglPenyerahanSampling,
+                    g.First().StatusPemeriksaan,
                     g.First().AsuransiId,
                     g.First().AsuransiNama,
                     g.First().DokterId,
