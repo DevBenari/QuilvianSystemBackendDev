@@ -33,5 +33,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Models
         public DateTime? TglSelesai { get; set; }
         public bool? IsTerverifikasi {get; set; }
         public string? TipeTindakan { get; set; }
+        public string? TipeOperasi { get; set; }
+        public TimeOnly? JamPerpanjangan { get; set; }
+        public decimal? BiayaPerpanjangan { get; set; }
+        public Guid? KamarRecoveryId {  get; set; }
+        public Guid? TipeAnastesiId { get; set; }
+        public Guid? TipeASAId { get; set; }
+        public string? KelompokPasienAnastesi { get; set; }
+
     }
 }

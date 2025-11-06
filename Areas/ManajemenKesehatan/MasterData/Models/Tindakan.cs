@@ -12,6 +12,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public Guid TindakanId { get; set; }
         public string KodeTindakan { get; set; }
         public string NamaTindakan { get; set; }
+        public string? UnitAsal {  get; set; }
         public bool? IsRawatInap {  get; set; }
         
     }

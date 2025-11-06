@@ -3,41 +3,39 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controllers
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class RuangBedahBookingController : Controller
+    public class OperasiJenisController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<RuangBedahBookingController> _logger;
+        private readonly ILogger<OperasiJenisController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public RuangBedahBookingController(
+        public OperasiJenisController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<RuangBedahBookingController> logger,
+            ILogger<OperasiJenisController> logger,
             IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
@@ -55,7 +53,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = (from a in _applicationDbContext.RuangBedahBookings
+            var query = (from a in _applicationDbContext.OperasiJeniss
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
                          where a.IsDelete == false || a.IsDelete == null
@@ -64,40 +62,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
-                             a.BookingRuanganBedahId,
-                             a.KunjunganId,
-                             a.PasienId,
-                             a.TglOperasi,
-                             a.WaktuOperasi,
-                             a.RuangTindakan,
-                             a.DiagnosaDokter1,
-                             a.DiagnosaDokter2,
-                             a.DiagnosaDokter3,
-                             a.DiagnosaDokter4,
-                             a.DiagnosaDokter5,
-                             a.BeratBadan,
-                             a.DokterOperator1,
-                             a.DokterOperator2,
-                             a.DokterOperator3,
-                             a.DokterOperator4,
-                             a.DokterOperator5,
-                             a.RencanaTindakanOperasi,
-                             a.JenisAnastesi,
-                             a.TypeOK,
-                             a.PenandaanLokasiOperasi,
-                             a.isSuratIzinOperasi,
-                             a.isBedahBersalin,
+                             a.JenisOperasiId,
+                             a.NamaJenisOperasi,
                              a.Keterangan,
-                             a.IsTerverifikasi,
-                             a.TglSelesai,
-                             a.TipeTindakan,
-                             a.TipeOperasi,
-                             a.JamPerpanjangan,
-                             a.BiayaPerpanjangan,
-                             a.KamarRecoveryId,
-                             a.TipeAnastesiId,
-                             a.TipeASAId,
-                             a.KelompokPasienAnastesi,
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -133,7 +100,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.RuangBedahBookings.Find(id);
+            var listdata = _applicationDbContext.OperasiJeniss.Find(id);
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -146,8 +113,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
             });
         }
 
+
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] RuangBedahBookingViewModel vm)
+        public async Task<IActionResult> Create([FromBody] OperasiJenisViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -177,56 +145,28 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                 var userActiveId = getUserActive.UserActiveId;
 
                 //// **Cek Duplikasi**
-                bool isDuplicate = await _applicationDbContext.RuangBedahBookings
-                                    .AnyAsync(c => c.KunjunganId == vm.KunjunganId && c.IsDelete==false);
+                bool isDuplicate = await _applicationDbContext.OperasiJeniss
+                                    .AnyAsync(c => c.NamaJenisOperasi.ToLower().Trim()
+                                    == vm.NamaJenisOperasi.ToLower().Trim());
 
                 if (isDuplicate)
                 {
-                    return Conflict(new { message = "Kunjungan ini telah booking ruang bedah" });
+                    return Conflict(new { message = "Jenis Operasi ini telah tersedia" });
                 }
 
                 // **Buat Data Baru**
-                var data = new RuangBedahBooking
+                var data = new OperasiJenis
                 {
-                    BookingRuanganBedahId = Guid.NewGuid(),
-                    KunjunganId = vm.KunjunganId,
-                    PasienId = vm.PasienId,
-                    TglOperasi = vm.TglOperasi,
-                    WaktuOperasi = vm.WaktuOperasi,
-                    RuangTindakan = vm.RuangTindakan,
-                    DiagnosaDokter1 = vm.DiagnosaDokter1,
-                    DiagnosaDokter2 = vm.DiagnosaDokter2,
-                    DiagnosaDokter3 = vm.DiagnosaDokter3,
-                    DiagnosaDokter4 = vm.DiagnosaDokter4,
-                    DiagnosaDokter5 = vm.DiagnosaDokter5,
-                    BeratBadan = vm.BeratBadan,
-                    DokterOperator1 = vm.DokterOperator1,
-                    DokterOperator2 = vm.DokterOperator2,
-                    DokterOperator3 = vm.DokterOperator3,
-                    DokterOperator4 = vm.DokterOperator4,
-                    DokterOperator5 = vm.DokterOperator5,
-                    RencanaTindakanOperasi = vm.RencanaTindakanOperasi,
-                    JenisAnastesi = vm.JenisAnastesi,
-                    TypeOK = vm.TypeOK,
-                    PenandaanLokasiOperasi = vm.PenandaanLokasiOperasi,
-                    isBedahBersalin = vm.isBedahBersalin,
-                    isSuratIzinOperasi = false,
+                    JenisOperasiId = Guid.NewGuid(),
+                    NamaJenisOperasi = vm.NamaJenisOperasi,
                     Keterangan = vm.Keterangan,
-                    TipeTindakan = vm.TipeTindakan,
-                    IsTerverifikasi = false,
-                    TipeOperasi = vm.TipeOperasi,
-                    JamPerpanjangan = vm.JamPerpanjangan,
-                    BiayaPerpanjangan = vm.BiayaPerpanjangan,
-                    KamarRecoveryId = vm.KamarRecoveryId,
-                    TipeAnastesiId = vm.TipeAnastesiId,
-                    TipeASAId = vm.TipeASAId,
-                    KelompokPasienAnastesi = vm.KelompokPasienAnastesi,
+
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
 
                 // **Simpan ke Database**
-                _applicationDbContext.RuangBedahBookings.Add(data);
+                _applicationDbContext.OperasiJeniss.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -249,7 +189,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] RuangBedahBookingViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] OperasiJenisViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -259,7 +199,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
             try
             {
                 // **Cek koneksi ke database**
-                if (!_applicationDbContext.Database.CanConnect())
+                if (!await _applicationDbContext.Database.CanConnectAsync())
                 {
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
                 }
@@ -271,58 +211,40 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
                 if (getUserActive == null)
                 {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
-                // **Cek apakah data ada**
-                var existingData = await _applicationDbContext.RuangBedahBookings
-                                        .FirstOrDefaultAsync(c => c.BookingRuanganBedahId == id && (c.IsDelete == false || c.IsDelete == null));
-
-                if (existingData == null)
+                // **Cari Data**
+                var data = await _applicationDbContext.OperasiJeniss.FindAsync(id);
+                if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
-                // **Update field yang diubah**
-                existingData.KunjunganId = vm.KunjunganId;
-                existingData.PasienId = vm.PasienId;
-                existingData.TglOperasi = vm.TglOperasi;
-                existingData.WaktuOperasi = vm.WaktuOperasi;
-                existingData.RuangTindakan = vm.RuangTindakan;
-                existingData.DiagnosaDokter1 = vm.DiagnosaDokter1;
-                existingData.DiagnosaDokter2 = vm.DiagnosaDokter2;
-                existingData.DiagnosaDokter3 = vm.DiagnosaDokter3;
-                existingData.DiagnosaDokter4 = vm.DiagnosaDokter4;
-                existingData.DiagnosaDokter5 = vm.DiagnosaDokter5;
-                existingData.BeratBadan = vm.BeratBadan;
-                existingData.DokterOperator1 = vm.DokterOperator1;
-                existingData.DokterOperator2 = vm.DokterOperator2;
-                existingData.DokterOperator3 = vm.DokterOperator3;
-                existingData.DokterOperator4 = vm.DokterOperator4;
-                existingData.DokterOperator5 = vm.DokterOperator5;
-                existingData.RencanaTindakanOperasi = vm.RencanaTindakanOperasi;
-                existingData.JenisAnastesi = vm.JenisAnastesi;
-                existingData.TypeOK = vm.TypeOK;
-                existingData.PenandaanLokasiOperasi = vm.PenandaanLokasiOperasi;
-                existingData.isBedahBersalin = vm.isBedahBersalin;
-                existingData.TipeTindakan = vm.TipeTindakan;
-                existingData.TipeOperasi = vm.TipeOperasi;
-                existingData.JamPerpanjangan = vm.JamPerpanjangan;
-                existingData.BiayaPerpanjangan = vm.BiayaPerpanjangan;
-                existingData.KamarRecoveryId = vm.KamarRecoveryId;
-                existingData.TipeAnastesiId = vm.TipeAnastesiId;
-                existingData.TipeASAId = vm.TipeASAId;
-                existingData.KelompokPasienAnastesi = vm.KelompokPasienAnastesi;
-                existingData.Keterangan = vm.Keterangan;
+                //// **Cek Duplikasi**
+                bool isDuplicate = await _applicationDbContext.OperasiJeniss
+                                    .AnyAsync(c => c.NamaJenisOperasi.ToLower().Trim()
+                                    == vm.NamaJenisOperasi.ToLower().Trim() &&
+                                    c.JenisOperasiId != id);
 
-                existingData.UpdateBy = userActiveId;
-                existingData.UpdateDateTime = DateTimeOffset.UtcNow;
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Jenis Operasi ini telah tersedia" });
+                }
 
-                // **Simpan ke Database**
+                // **Update Data**
+                data.NamaJenisOperasi = vm.NamaJenisOperasi;
+                data.Keterangan = vm.Keterangan;
+
+                data.UpdateBy = userActiveId;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
+
+                _applicationDbContext.OperasiJeniss.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -331,12 +253,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                 }
                 else
                 {
-                    return StatusCode(500, new { message = "Tidak ada perubahan yang disimpan ke database." });
+                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
                 }
             }
             catch (DbUpdateException dbEx)
             {
-                return StatusCode(500, new { message = $"Gagal menyimpan perubahan: {dbEx.InnerException?.Message}" });
+                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
             }
             catch (Exception ex)
             {
@@ -344,95 +266,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
             }
         }
 
-        [HttpPut("{id}/is-IzinOperasi")]
-        public async Task<IActionResult> UpdateIzinOperasi(Guid id, [FromBody] bool request)
-        {
-            var data = await _applicationDbContext.RuangBedahBookings.FindAsync(id);
-            if (data == null)
-                return NotFound(new { message = "Resep tidak ditemukan." });
-
-            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(EmailLogin))
-                return Unauthorized(new { message = "User tidak terautentikasi!" });
-
-            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
-            var userId = user?.UserActiveId ?? Guid.Empty;
-
-            data.isSuratIzinOperasi = request;
-            data.UpdateDateTime = DateTimeOffset.UtcNow;
-            data.UpdateBy = userId;
-            await _applicationDbContext.SaveChangesAsync();
-
-            // Notifikasi signalR
-            //await _hubContext.Clients.All.SendAsync("isCancelledChanged", new
-            //{
-            //    Action = "updateIsCancelled",
-            //    ResepId = id,
-            //    IsCancelled = request.IsCancelled
-            //});
-
-            return Ok(new { message = "Status izin operasi berhasil diperbarui." });
-        }
-
-        [HttpPut("{id}/Verifikasi-Operasi")]
-        public async Task<IActionResult> UpdateVerifikasiOP(Guid id, [FromBody] bool request)
-        {
-            var data = await _applicationDbContext.RuangBedahBookings.FindAsync(id);
-            if (data == null)
-                return NotFound(new { message = "Resep tidak ditemukan." });
-
-            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(EmailLogin))
-                return Unauthorized(new { message = "User tidak terautentikasi!" });
-
-            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
-            var userId = user?.UserActiveId ?? Guid.Empty;
-
-            data.IsTerverifikasi = request;
-            data.UpdateDateTime = DateTimeOffset.UtcNow;
-            data.UpdateBy = userId;
-            await _applicationDbContext.SaveChangesAsync();
-
-            // Notifikasi signalR
-            //await _hubContext.Clients.All.SendAsync("isCancelledChanged", new
-            //{
-            //    Action = "updateIsCancelled",
-            //    ResepId = id,
-            //    IsCancelled = request.IsCancelled
-            //});
-
-            return Ok(new { message = "Status verifikasi operasi berhasil diperbarui." });
-        }
-
-        [HttpPut("{id}/Tanggal-Selesai-Operasi")]
-        public async Task<IActionResult> UpdateTglSelesaiOP(Guid id, [FromBody] DateTime request)
-        {
-            var data = await _applicationDbContext.RuangBedahBookings.FindAsync(id);
-            if (data == null)
-                return NotFound(new { message = "Resep tidak ditemukan." });
-
-            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(EmailLogin))
-                return Unauthorized(new { message = "User tidak terautentikasi!" });
-
-            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
-            var userId = user?.UserActiveId ?? Guid.Empty;
-
-            data.TglSelesai = request;
-            data.UpdateDateTime = DateTimeOffset.UtcNow;
-            data.UpdateBy = userId;
-            await _applicationDbContext.SaveChangesAsync();
-
-            // Notifikasi signalR
-            //await _hubContext.Clients.All.SendAsync("isCancelledChanged", new
-            //{
-            //    Action = "updateIsCancelled",
-            //    ResepId = id,
-            //    IsCancelled = request.IsCancelled
-            //});
-
-            return Ok(new { message = "Tanggal selesai operasi berhasil diperbarui." });
-        }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
@@ -461,7 +294,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.RuangBedahBookings.FindAsync(id);
+                var data = await _applicationDbContext.OperasiJeniss.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -473,7 +306,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
 
                 data.IsDelete = true;
 
-                _applicationDbContext.RuangBedahBookings.Update(data);
+                _applicationDbContext.OperasiJeniss.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -495,12 +328,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
             }
         }
 
-
         [HttpGet("paged")]
         public IActionResult Paged(
          int page = 1,
          int perPage = 10,
-         Guid? kunjunganId = null,
+         string? search = null,
          string? orderBy = "CreateDateTime",
          string? sortDirection = "desc",
          [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -508,10 +340,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
          [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
                         DateTime? endDate = null,
          [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
-        {
+                {
 
             // Query data
-            var query = (from a in _applicationDbContext.RuangBedahBookings
+            var query = (from a in _applicationDbContext.OperasiJeniss
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
                          where a.IsDelete == false || a.IsDelete == null
@@ -520,55 +352,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
-                             a.BookingRuanganBedahId,
-                             a.KunjunganId,
-                             a.PasienId,
-                             a.TglOperasi,
-                             a.WaktuOperasi,
-                             a.RuangTindakan,
-                             a.DiagnosaDokter1,
-                             a.DiagnosaDokter2,
-                             a.DiagnosaDokter3,
-                             a.DiagnosaDokter4,
-                             a.DiagnosaDokter5,
-                             a.BeratBadan,
-                             a.DokterOperator1,
-                             a.DokterOperator2,
-                             a.DokterOperator3,
-                             a.DokterOperator4,
-                             a.DokterOperator5,
-                             a.RencanaTindakanOperasi,
-                             a.JenisAnastesi,
-                             a.TypeOK,
-                             a.PenandaanLokasiOperasi,
-                             a.isSuratIzinOperasi,
-                             a.isBedahBersalin,
+                             a.JenisOperasiId,
+                             a.NamaJenisOperasi,
                              a.Keterangan,
-                             a.IsTerverifikasi,
-                             a.TglSelesai,
-                             a.TipeTindakan,
-                             a.TipeOperasi,
-                             a.JamPerpanjangan,
-                             a.BiayaPerpanjangan,
-                             a.KamarRecoveryId,
-                             a.TipeAnastesiId,
-                             a.TipeASAId,
-                             a.KelompokPasienAnastesi,
                          });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-            //if (!string.IsNullOrWhiteSpace(search))
-            //{
-            //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-            //    query = query.Where(u =>
-            //        EF.Functions.ILike(u.NamaDiskon, search)
-            //    );
-            //}
-
-            // filter bedasarkan kunjungan id
-            if (kunjunganId.HasValue )
+            if (!string.IsNullOrWhiteSpace(search))
             {
-                query = query.Where(u=>u.KunjunganId == kunjunganId.Value);
+                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+                query = query.Where(u =>
+                    EF.Functions.ILike(u.NamaJenisOperasi, search)
+                );
             }
 
             //// **Filter berdasarkan tanggal**
@@ -637,12 +432,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
+                    "NamaJenisOperasi" => query.OrderByDescending(u => u.NamaJenisOperasi),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
                     "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
                     "CreateByName" => query.OrderBy(u => u.CreateByName),
+                    "NamaJenisOperasi" => query.OrderBy(u => u.NamaJenisOperasi),
                     _ => query.OrderBy(u => u.CreateDateTime)
                 };
 
@@ -670,7 +467,5 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                 }
             });
         }
-
-
     }
 }

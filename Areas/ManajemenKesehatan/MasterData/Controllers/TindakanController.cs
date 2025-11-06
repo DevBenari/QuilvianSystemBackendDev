@@ -68,6 +68,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 t.KodeTindakan,
                                 t.NamaTindakan,
                                 t.IsRawatInap,
+                                t.UnitAsal,
                                 CreateByName = u != null ? u.FullName : null,
                                 t.CreateDateTime
                             };
@@ -151,6 +152,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     t.KodeTindakan,
                     t.NamaTindakan,
                     t.IsRawatInap,
+                    t.UnitAsal,
                     t.CreateByName,
                     t.CreateDateTime,
 
@@ -225,6 +227,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         t.KodeTindakan,
                         t.NamaTindakan,
                         t.IsRawatInap,
+                        t.UnitAsal,
                         t.CreateDateTime,
                         t.CreateBy,
                         CreateByName = u != null ? u.FullName : null
@@ -283,6 +286,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     tindakan.KodeTindakan,
                     tindakan.NamaTindakan,
                     tindakan.IsRawatInap,
+                    tindakan.UnitAsal,
                     tindakan.CreateDateTime,
                     tindakan.CreateBy,
                     tindakan.CreateByName,
@@ -384,6 +388,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     CreateDateTime = dateNow,
                     CreateBy = userActiveId,
                     KodeTindakan = kode,
+                    UnitAsal = vm.UnitAsal,
                     NamaTindakan = vm.NamaTindakan,
                     IsRawatInap = vm.IsRawatInap,
                 };
@@ -445,6 +450,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 data.NamaTindakan = vm.NamaTindakan;
                 data.IsRawatInap = vm.IsRawatInap;
+                data.UnitAsal = vm.UnitAsal;
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTime.UtcNow;
 
@@ -615,6 +621,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         t.KodeTindakan,
                         t.NamaTindakan,
                         t.IsRawatInap,
+                        t.UnitAsal,
                         t.CreateDateTime,
                         t.CreateBy,
                         CreateByName = _applicationDbContext.UserActives
@@ -683,6 +690,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     t.KodeTindakan,
                     t.NamaTindakan,
                     t.IsRawatInap,
+                    t.UnitAsal,
                     t.CreateDateTime,
                     t.CreateBy,
                     t.CreateByName,
