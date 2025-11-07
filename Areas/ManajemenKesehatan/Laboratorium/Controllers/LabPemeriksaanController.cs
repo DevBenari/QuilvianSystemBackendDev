@@ -495,6 +495,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         int perPage = 10,
         Guid? KategoriPemeriksaanId = null,
         Guid? Labid = null,
+        Guid? kelasId = null,
         string? search = null,
         string? kodePemeriksaan = null,
         string? namaLab = null,
@@ -590,6 +591,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 if (Labid.HasValue)
                     query = query.Where(u => u.LabId == Labid);
 
+
                 // 🔹 Filter tanggal
                 if (startDate.HasValue && endDate.HasValue)
                 {
@@ -645,6 +647,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                             query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
                             break;
                     }
+                }
+
+                // filter based on kelas id
+                if (kelasId.HasValue)
+                {
+                    var pemeriksaanIdsByKelas = allTarifKelas
+                        .Where(t => t.KelasId == kelasId.Value)
+                        .Select(t => t.PemeriksaanLabId)
+                        .Distinct()
+                        .ToList();
+
+                    query = query.Where(u => pemeriksaanIdsByKelas.Contains(u.PemeriksaanLabId));
                 }
 
                 // 🔹 Sorting
