@@ -185,6 +185,32 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                     return Conflict(new { message = "Kunjungan ini telah booking ruang bedah" });
                 }
 
+                // ==========================================================
+                // ✅ Generate Nomor Order
+                // ==========================================================
+                // Prefix: 3 huruf, tergantung dari isBedahBersalin
+                string prefix = (bool)vm.isBedahBersalin ? "OBS" : "BED"; // OBS = Obstetri, BED = Bedah umum
+                var today = DateTime.UtcNow.Date;
+                string datePart = today.ToString("yyyyMMdd");
+
+                // Cari order terakhir hari ini dengan prefix sesuai
+                var lastOrderToday = await _applicationDbContext.RuangBedahBookings
+                    .Where(x => x.CreateDateTime.Date == today && x.NoOrder.StartsWith(prefix))
+                    .OrderByDescending(x => x.NoOrder)
+                    .FirstOrDefaultAsync();
+
+                int nextNumber = 1;
+
+                if (lastOrderToday != null)
+                {
+                    // Format: BED202511070001 → ambil angka terakhir
+                    string lastNumberPart = lastOrderToday.NoOrder.Substring(prefix.Length + 8); // lewati prefix + tanggal (8)
+                    if (int.TryParse(lastNumberPart, out int lastNum))
+                        nextNumber = lastNum + 1;
+                }
+
+                string noOrder = $"{prefix}{datePart}{nextNumber:D4}";
+
                 // **Buat Data Baru**
                 var data = new RuangBedahBooking
                 {
@@ -221,6 +247,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                     TipeAnastesiId = vm.TipeAnastesiId,
                     TipeASAId = vm.TipeASAId,
                     KelompokPasienAnastesi = vm.KelompokPasienAnastesi,
+                    PetugasId = vm.PetugasId,
+                    NoOrder = noOrder,
+
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };

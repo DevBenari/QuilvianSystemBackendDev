@@ -157,7 +157,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.NamaAsuransi,
                              b.HemodialisaKe,
                              NamaLab = l.NamaLab ?? null,
-                             b.SuratJaminanPath,
+                             AlasanPembatalan = lb.AlasanPembatalan ?? null,
+                             TTDPembatalanPath =lb.TTDPembatalanPath ?? null,
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -207,245 +208,186 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromForm] LabBookingViewModel vm) // pakai FromForm biar bisa upload file
+        public async Task<IActionResult> Create([FromBody] LabBookingViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
-            {
                 return BadRequest(new { message = "Data tidak valid." });
-            }
 
             try
             {
-                if (!_applicationDbContext.Database.CanConnect())
-                {
-                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
-                }
-
-                // ✅ Ambil user aktif dari JWT
+                // ======================================
+                // 🔐 Ambil user aktif dari JWT
+                // ======================================
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
 
-                var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
+                var getUserActive = _applicationDbContext.UserActives
+                    .FirstOrDefault(u => u.Email == emailLogin);
                 if (getUserActive == null)
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
 
                 var userActiveId = getUserActive.UserActiveId;
 
-                // ==================================================
-                // ✅ PROSES UPLOAD SURAT JAMINAN
-                // ==================================================
-                string? suratJaminanPath = null;
-
-                if (vm.SuratJaminan != null && vm.SuratJaminan.Length > 0)
-                {
-                    var maxSize = 2 * 1024 * 1024; // maksimal 2MB
-                    var allowedExtensions = new List<string> { ".jpg", ".jpeg", ".png", ".pdf" };
-                    var fileExtension = Path.GetExtension(vm.SuratJaminan.FileName).ToLower();
-
-                    if (vm.SuratJaminan.Length > maxSize)
-                        return BadRequest(new { message = "Ukuran file terlalu besar! Maksimal 2MB." });
-
-                    if (!allowedExtensions.Contains(fileExtension))
-                        return BadRequest(new { message = "Format file tidak valid! Gunakan JPG, PNG, atau PDF." });
-
-                    // Nama file unik
-                    var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
-                    var safeFileName = $"{vm.PasienId}_{safeTime}_SuratJaminan{fileExtension}";
-
-                    // Folder tujuan
-                    var uploadFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "SuratJaminan");
-
-                    if (!Directory.Exists(uploadFolder))
-                        Directory.CreateDirectory(uploadFolder);
-
-                    var filePath = Path.Combine(uploadFolder, safeFileName);
-
-                    using (var stream = new FileStream(filePath, FileMode.Create))
-                    {
-                        await vm.SuratJaminan.CopyToAsync(stream);
-                    }
-
-                    // Simpan path relatif (misal untuk disajikan via API)
-                    suratJaminanPath = $"/SuratJaminan/{safeFileName}{vm.PasienId}";
-                }
-
-                // ==================================================
-                // ✅ BUAT DATA LAB BOOKING
-                // ==================================================
-                var data = new LabBooking
+                // ======================================
+                // ✅ Simpan ke Database
+                // ======================================
+                var entity = new LabBooking
                 {
                     BookingLabId = Guid.NewGuid(),
                     KunjunganId = vm.KunjunganId,
                     PasienId = vm.PasienId,
                     AsuransiId = vm.AsuransiId,
                     TglPenyerahanSampling = vm.TglPenyerahanSampling,
-                    TglBooking = vm.TglBooking ?? DateTime.UtcNow,
+                    TglBooking = vm.TglBooking,
                     TglPemeriksaan = vm.TglPemeriksaan,
                     KelasId = vm.KelasId,
                     DokterId = vm.DokterId,
-                    DiagnosaAwal = vm.DiagnosaAwal,
                     Keterangan = vm.Keterangan,
-                    IsCito = vm.IsCito ?? false,
+                    IsCito = vm.IsCito,
+                    DiagnosaAwal = vm.DiagnosaAwal,
+                    StatusPemeriksaan = vm.StatusPemeriksaan,
                     DokterKonsulenId = vm.DokterKonsulenId,
                     TerapisId = vm.TerapisId,
-                    StatusPemeriksaan = vm.StatusPemeriksaan ?? "Menunggu",
-                    SuratJaminanPath = suratJaminanPath, // simpan path hasil upload
                     HemodialisaKe = vm.HemodialisaKe,
+                    NomorSuratJaminan = vm.NomorSuratJaminan,
+                    CatatanJaminan = vm.CatatanJaminan,
                     CreateBy = userActiveId,
-                    CreateDateTime = DateTimeOffset.UtcNow
+                    CreateDateTime = DateTime.UtcNow,
+                    IsDelete = false
                 };
 
-                _applicationDbContext.LabBookings.Add(data);
+                _applicationDbContext.LabBookings.Add(entity);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
                 {
                     return Created("", new
                     {
-                        message = "Tambah Data Booking Lab Berhasil || 201 Created",
-                        data.BookingLabId,
-                        data.SuratJaminanPath
+                        message = "Tambah Data Berhasil || 201 Created",
+                        data = new
+                        {
+                            entity.BookingLabId,
+                            entity.NoOrder,
+                            entity.NomorSuratJaminan,
+                            entity.CatatanJaminan,
+                            entity.TglBooking,
+                            entity.IsCito,
+                            entity.CreateDateTime
+                        }
                     });
                 }
 
-                return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
+                return StatusCode(500, new { message = "Gagal menyimpan data ke database." });
             }
             catch (DbUpdateException dbEx)
             {
-                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+                return StatusCode(500, new { message = $"Kesalahan database: {dbEx.InnerException?.Message}" });
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error saat menambahkan booking lab");
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
 
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromForm] LabBookingViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] LabBookingViewModel vm)
         {
+            if (id == Guid.Empty)
+                return BadRequest(new { message = "Parameter ID tidak valid." });
+
             if (vm == null || !ModelState.IsValid)
-            {
                 return BadRequest(new { message = "Data tidak valid." });
-            }
 
             try
             {
-                if (!_applicationDbContext.Database.CanConnect())
-                {
-                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
-                }
-
-                // 🔹 Ambil data lama dari database
-                var existing = await _applicationDbContext.LabBookings.FindAsync(id);
-                if (existing == null)
-                {
-                    return NotFound(new { message = "Data Booking Lab tidak ditemukan." });
-                }
-
-                // 🔹 Ambil user aktif dari JWT
+                // ======================================
+                // 🔐 Ambil user aktif dari JWT
+                // ======================================
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
 
-                var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
+                var getUserActive = _applicationDbContext.UserActives
+                    .FirstOrDefault(u => u.Email == emailLogin);
                 if (getUserActive == null)
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
 
                 var userActiveId = getUserActive.UserActiveId;
 
-                // ==================================================
-                // ✅ PROSES UPLOAD SURAT JAMINAN (Baru)
-                // ==================================================
-                string? suratJaminanPath = existing.SuratJaminanPath;
+                // ======================================
+                // 🔎 Cek apakah data booking ada
+                // ======================================
+                var entity = await _applicationDbContext.LabBookings
+                    .FirstOrDefaultAsync(b => b.BookingLabId == id && (b.IsDelete == false || b.IsDelete == null));
 
-                if (vm.SuratJaminan != null && vm.SuratJaminan.Length > 0)
-                {
-                    var maxSize = 2 * 1024 * 1024; // 2MB
-                    var allowedExtensions = new List<string> { ".jpg", ".jpeg", ".png", ".pdf" };
-                    var fileExtension = Path.GetExtension(vm.SuratJaminan.FileName).ToLower();
+                if (entity == null)
+                    return NotFound(new { message = "Data Booking Lab tidak ditemukan. || 404 Not Found" });
 
-                    if (vm.SuratJaminan.Length > maxSize)
-                        return BadRequest(new { message = "Ukuran file terlalu besar! Maksimal 2MB." });
+                // ======================================
+                // ⚙️ Update nilai field
+                // ======================================
+                entity.KunjunganId = vm.KunjunganId;
+                entity.PasienId = vm.PasienId;
+                entity.AsuransiId = vm.AsuransiId;
+                entity.TglPenyerahanSampling = vm.TglPenyerahanSampling;
+                entity.TglBooking = vm.TglBooking;
+                entity.TglPemeriksaan = vm.TglPemeriksaan;
+                entity.KelasId = vm.KelasId;
+                entity.DokterId = vm.DokterId;
+                entity.Keterangan = vm.Keterangan;
+                entity.IsCito = vm.IsCito;
+                entity.DiagnosaAwal = vm.DiagnosaAwal;
+                entity.StatusPemeriksaan = vm.StatusPemeriksaan;
+                entity.DokterKonsulenId = vm.DokterKonsulenId;
+                entity.TerapisId = vm.TerapisId;
+                entity.HemodialisaKe = vm.HemodialisaKe;
+                entity.NomorSuratJaminan = vm.NomorSuratJaminan;
+                entity.CatatanJaminan = vm.CatatanJaminan;
 
-                    if (!allowedExtensions.Contains(fileExtension))
-                        return BadRequest(new { message = "Format file tidak valid! Gunakan JPG, PNG, atau PDF." });
 
-                    // 🔸 Hapus file lama jika ada
-                    if (!string.IsNullOrEmpty(existing.SuratJaminanPath))
-                    {
-                        var oldPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", existing.SuratJaminanPath.TrimStart('/'));
-                        if (System.IO.File.Exists(oldPath))
-                            System.IO.File.Delete(oldPath);
-                    }
+                // ======================================
+                // 🕒 Update metadata
+                // ======================================
+                entity.UpdateBy = userActiveId;
+                entity.UpdateDateTime = DateTime.UtcNow;
 
-                    // 🔸 Upload file baru
-                    var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
-                    var safeFileName = $"{vm.PasienId}_{safeTime}_SuratJaminan{fileExtension}";
-
-                    var uploadFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "SuratJaminan");
-                    if (!Directory.Exists(uploadFolder))
-                        Directory.CreateDirectory(uploadFolder);
-
-                    var filePath = Path.Combine(uploadFolder, safeFileName);
-                    using (var stream = new FileStream(filePath, FileMode.Create))
-                    {
-                        await vm.SuratJaminan.CopyToAsync(stream);
-                    }
-
-                    suratJaminanPath = $"/SuratJaminan/{safeFileName}{existing.PasienId}";
-                }
-
-                // ==================================================
-                // ✅ UPDATE DATA BOOKING LAB
-                // ==================================================
-                existing.KunjunganId = vm.KunjunganId ?? existing.KunjunganId;
-                existing.PasienId = vm.PasienId ?? existing.PasienId;
-                existing.AsuransiId = vm.AsuransiId ?? existing.AsuransiId;
-                existing.TglPenyerahanSampling = vm.TglPenyerahanSampling ?? existing.TglPenyerahanSampling;
-                existing.TglBooking = vm.TglBooking ?? existing.TglBooking;
-                existing.TglPemeriksaan = vm.TglPemeriksaan ?? existing.TglPemeriksaan;
-                existing.KelasId = vm.KelasId ?? existing.KelasId;
-                existing.DokterId = vm.DokterId ?? existing.DokterId;
-                existing.DiagnosaAwal = vm.DiagnosaAwal ?? existing.DiagnosaAwal;
-                existing.Keterangan = vm.Keterangan ?? existing.Keterangan;
-                existing.IsCito = vm.IsCito ?? existing.IsCito;
-                existing.DokterKonsulenId = vm.DokterKonsulenId ?? existing.DokterKonsulenId;
-                existing.TerapisId = vm.TerapisId ?? existing.TerapisId;
-                existing.StatusPemeriksaan = vm.StatusPemeriksaan ?? existing.StatusPemeriksaan;
-                existing.SuratJaminanPath = suratJaminanPath;
-                existing.HemodialisaKe = vm.HemodialisaKe ?? existing.HemodialisaKe;
-                existing.UpdateBy = userActiveId;
-                existing.UpdateDateTime = DateTimeOffset.UtcNow;
-
-                _applicationDbContext.LabBookings.Update(existing);
+                _applicationDbContext.LabBookings.Update(entity);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
                 {
                     return Ok(new
                     {
-                        message = "Update Data Booking Lab Berhasil || 200 OK",
+                        message = "Data berhasil diperbarui. || 200 OK",
                         data = new
                         {
-                            existing.BookingLabId,
-                            existing.SuratJaminanPath
+                            entity.BookingLabId,
+                            entity.NoOrder,
+                            entity.NomorSuratJaminan,
+                            entity.CatatanJaminan,
+                            entity.TglBooking,
+                            entity.IsCito,
+                            entity.UpdateDateTime
                         }
                     });
                 }
 
-                return StatusCode(500, new { message = "Tidak ada perubahan yang disimpan." });
+                return StatusCode(500, new { message = "Gagal memperbarui data ke database." });
             }
             catch (DbUpdateException dbEx)
             {
-                return StatusCode(500, new { message = $"Gagal update data: {dbEx.InnerException?.Message}" });
+                return StatusCode(500, new { message = $"Kesalahan database: {dbEx.InnerException?.Message}" });
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error saat memperbarui booking lab");
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
@@ -510,214 +452,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
         [HttpGet("paged")]
         public IActionResult Paged(
-        int page = 1,
-        int perPage = 10,
-        Guid? kunjunganid = null,
-        string? namaLab = null,
-        string? orderBy = "CreateDateTime",
-        string? sortDirection = "desc",
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                        DateTime? startDate = null,
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                        DateTime? endDate = null,
-        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
-        {
-
-            var query = (from b in _applicationDbContext.LabBookings
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on b.CreateBy equals u.UserActiveId
-
-                         // join ke lab booking detail
-                         join lb in _applicationDbContext.LabBookingDetails
-                         on b.BookingLabId equals lb.BookingLabId into labBookings
-                         from lb in labBookings.DefaultIfEmpty()
-
-                             // join ke lab
-                         join l in _applicationDbContext.Labs
-                         on lb.LabId equals l.LabId into labGroup
-                         from l in labGroup.DefaultIfEmpty()
-
-                             // join ke lab pemeriksaan
-                         join lp in _applicationDbContext.LabPemeriksaans
-                         on lb.PemeriksaanLabId equals lp.PemeriksaanLabId into lpGroup
-                         from lp in lpGroup.DefaultIfEmpty()
-
-                             // join ke kunjungan
-                         join k in _applicationDbContext.Kunjungans
-                         on b.KunjunganId equals k.KunjunganID into kGroup
-                         from k in kGroup.DefaultIfEmpty()
-
-                             // join ke asuransi
-                         join a in _applicationDbContext.Asuransis
-                         on b.AsuransiId equals a.AsuransiId into aGroup
-                         from a in aGroup.DefaultIfEmpty()
-
-                             // join ke pasien baru
-                         join p in _applicationDbContext.PendaftaranPasienBarus
-                         on b.PasienId equals p.PendaftaranPasienBaruId into pGroup
-                         from p in pGroup.DefaultIfEmpty()
-
-                             //join ke dokter
-                         join d1 in _applicationDbContext.Dokters
-                         on b.DokterId equals d1.DokterId into d1Group
-                         from d1 in d1Group.DefaultIfEmpty()
-
-                             // join ke dokter konsulen
-                         join d2 in _applicationDbContext.Dokters
-                         on b.DokterKonsulenId equals d2.DokterId into d2Group
-                         from d2 in d2Group.DefaultIfEmpty()
-
-                         where b.IsDelete == false || b.IsDelete == null
-                         select new
-                         {
-                             b.CreateDateTime,
-                             b.CreateBy,
-                             CreateByName = u.FullName,
-                             b.BookingLabId,
-                             b.KunjunganId,
-                             k.AsalKunjungan,
-                             k.TipePasien,
-                             b.PasienId,
-                             p.NamaLengkap,
-                             p.NoRekamMedis,
-                             b.TglPemeriksaan,
-                             b.TglPenyerahanSampling,
-                             b.TglBooking,
-                             b.StatusPemeriksaan,
-                             b.KelasId,
-                             lb.PemeriksaanLabId,
-                             lp.NamaPemeriksaan,
-                             lp.HargaPemeriksaan,
-                             b.DokterId,
-                             NamaDokter = d1.NmDokter,
-                             b.Keterangan,
-                             b.IsCito,
-                             b.DiagnosaAwal,
-                             b.DokterKonsulenId,
-                             DokterKonsulen = d2.NmDokter,
-                             b.TerapisId,
-                             b.AsuransiId,
-                             a.NamaAsuransi,
-                             b.HemodialisaKe,
-                             NamaLab = l.NamaLab ?? null,
-                             b.SuratJaminanPath,
-                         });
-            // filter berdasarkan search
-            if (!string.IsNullOrWhiteSpace(namaLab))
-            {
-                namaLab = $"%{namaLab.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-                query = query.Where(u =>
-                    EF.Functions.ILike(u.NamaLab, namaLab)
-                );
-            }
-            // filter berdasarkan kunjunganId
-            if (kunjunganid.HasValue)
-            {
-                query = query.Where(u=> u.KunjunganId == kunjunganid.Value);
-            }
-
-            //// **Filter berdasarkan tanggal**
-            if (startDate.HasValue && endDate.HasValue)
-            {
-                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
-                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
-
-                query = query.Where(u =>
-                    u.CreateDateTime >= startUtc &&
-                    u.CreateDateTime <= endUtc);
-            }
-
-            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
-            if (periode.HasValue)
-            {
-                DateTime today = DateTime.UtcNow.Date;
-
-                switch (periode)
-                {
-                    case PeriodeFilter.Today:
-                        query = query.Where(u => u.CreateDateTime.Date == today);
-                        break;
-                    case PeriodeFilter.ThisWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date <= today
-                        );
-                        break;
-                    case PeriodeFilter.LastWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)
-                        );
-                        break;
-                    case PeriodeFilter.ThisMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month &&
-                            u.CreateDateTime.Year == today.Year
-                        );
-                        break;
-                    case PeriodeFilter.LastMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month - 1 &&
-                            u.CreateDateTime.Year == today.Year
-                        );
-                        break;
-                    case PeriodeFilter.ThisYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
-                        break;
-                    case PeriodeFilter.LastYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
-                        break;
-                    case PeriodeFilter.Last3Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
-                        break;
-                    case PeriodeFilter.Last6Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
-                        break;
-                }
-            }
-
-            // Sorting Data dengan cara yang lebih aman
-            query = sortDirection?.ToLower() == "desc"
-                ? orderBy switch
-                {
-                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    _ => query.OrderByDescending(u => u.CreateDateTime)
-                }
-                : orderBy switch
-                {
-                    "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    _ => query.OrderBy(u => u.CreateDateTime)
-                };
-
-            // Pagination
-            var totalRows = query.Count();
-            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
-
-            if (rows.Count == 0 && page > totalPages)
-            {
-                return NotFound(new { message = "Page not found." });
-            }
-
-            return Ok(new
-            {
-                status = "success",
-                message = "Data retrieved successfully",
-                data = new
-                {
-                    Rows = rows,
-                    TotalRows = totalRows,
-                    CurrentPage = page,
-                    PerPage = perPage,
-                    TotalPages = totalPages
-                }
-            });
-        }
-
-        [HttpGet("pagedv2")]
-        public IActionResult Pagedv2(
             int page = 1,
             int perPage = 10,
             Guid? kunjunganid = null,
@@ -775,7 +509,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                 b.IsCito,
                                 b.DiagnosaAwal,
                                 b.HemodialisaKe,
-                                b.SuratJaminanPath,
                                 b.StatusPemeriksaan,
                                 AsuransiId = (Guid?)b.AsuransiId,
                                 AsuransiNama = a.NamaAsuransi ?? null,
@@ -793,8 +526,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                 PemeriksaanLabId = (Guid?)lb.PemeriksaanLabId,
                                 PemeriksaanNama = lp.NamaPemeriksaan,
                                 HargaPemeriksaan = (decimal?)(lp.HargaPemeriksaan ?? 0),
-                                NamaLab = l.NamaLab ?? null
-
+                                NamaLab = l.NamaLab ?? null,
+                                AlasanPembatalan = lb.AlasanPembatalan ?? null,
+                                TTDPembatalanPath = lb.TTDPembatalanPath ?? null,
                             };
 
             // 🔍 Filter nama lab
@@ -878,7 +612,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     g.First().DokterId,
                     g.First().DokterNama,
                     g.First().DokterKonsulen,
-                    g.First().SuratJaminanPath,
                     g.First().AsalKunjungan,
                     g.First().TipePasien,
                     g.First().IsCito,
@@ -896,7 +629,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         d.PemeriksaanLabId,
                         d.PemeriksaanNama,
                         d.HargaPemeriksaan,
-                        d.NamaLab
+                        d.NamaLab,
+                        d.AlasanPembatalan,
+                        d.TTDPembatalanPath,
                     }).ToList()
                 });
 

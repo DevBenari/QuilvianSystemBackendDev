@@ -40,6 +40,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Models
         public Guid? TipeAnastesiId { get; set; }
         public Guid? TipeASAId { get; set; }
         public string? KelompokPasienAnastesi { get; set; }
-
+        public List<Guid>? PetugasId { get; set; } = new List<Guid>();
+        public string? NoOrder {  get; set; }
     }
 }

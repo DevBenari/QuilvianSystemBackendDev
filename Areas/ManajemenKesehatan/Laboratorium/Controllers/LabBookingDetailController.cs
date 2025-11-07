@@ -27,6 +27,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly string _uploadUrl;
 
         private readonly ILogger<LabBookingDetailController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
@@ -36,13 +37,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ILogger<LabBookingDetailController> logger,
-            IWebHostEnvironment webHostEnvironment)
+            IWebHostEnvironment webHostEnvironment,
+            IConfiguration configuration)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+            _uploadUrl = configuration["FileStorage:UploadUrl"];
+
         }
 
         [HttpGet]
@@ -104,6 +108,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              d.SpecimenJenisId,
                              d.SpecimenMethodId,
                              d.AsalSpecimenId,
+                             d.AlasanPembatalan,
+                             d.TTDPembatalanPath,
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -197,7 +203,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                       d.AsalSpecimenId,
                                       d.CreateBy,
                                       CreateByName = u.FullName ?? "(Tidak diketahui)",
-                                      d.CreateDateTime
+                                      d.CreateDateTime,                             
+                                      d.AlasanPembatalan,
+                                      d.TTDPembatalanPath,
                                   })
                                   .FirstOrDefaultAsync();
 
@@ -263,8 +271,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 if (lab == null)
                     return NotFound(new { message = "Lab dengan ID tersebut tidak ditemukan." });
 
-                // Pastikan tabel Labs punya kolom KodeLab atau LabCode
-                var labPrefix = lab.KodeKategori?.Trim().ToUpper() ?? "UNK";
+                // Ambil prefix dari KodeKategori tanpa "LAB"
+                var kodeKategori = lab.KodeKategori?.Trim().ToUpper() ?? "UNK";
+                string labPrefix;
+
+                // Jika diawali "LAB", ambil 3 huruf setelahnya
+                if (kodeKategori.StartsWith("LAB") && kodeKategori.Length > 3)
+                {
+                    labPrefix = kodeKategori.Substring(3);
+                    // Jika lebih dari 3 huruf, ambil hanya 3 pertama
+                    labPrefix = labPrefix.Length > 3 ? labPrefix.Substring(0, 3) : labPrefix;
+                }
+                else
+                {
+                    // Jika tidak diawali "LAB", ambil 3 huruf pertama saja
+                    labPrefix = kodeKategori.Length > 3 ? kodeKategori.Substring(0, 3) : kodeKategori;
+                }
 
                 // ==========================================================
                 // ✅ Generate nomor order harian berdasarkan prefix
@@ -284,7 +306,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         nextNumber = lastNum + 1;
                 }
 
-                string newNoOrder = $"{labPrefix}{nextNumber:D4}";
+                string newNoOrder = $"{labPrefix}{today}{nextNumber:D4}";
+
 
                 // **Buat Data Baru**
                 var data = new LabBookingDetail
@@ -338,6 +361,119 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             {
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
+        }
+
+        [HttpPut("Batal/{id}")]
+        public async Task<IActionResult> BatalBooking(Guid id, [FromForm] LabBookingDetailBatalVM vm)
+        {
+            if (vm == null)
+                return BadRequest(new { message = "Data pembatalan tidak valid." });
+
+            // 🔍 Ambil data booking berdasarkan ID
+            var booking = await _applicationDbContext.LabBookingDetails
+                .FirstOrDefaultAsync(b => b.DetailBookingLabId == id);
+
+            if (booking == null)
+                return NotFound(new { message = "Data booking tidak ditemukan." });
+
+            // 🔐 Ambil user dari JWT Claims
+            var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(emailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
+            if (getUserActive == null)
+                return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+
+            var userActiveId = getUserActive.UserActiveId;
+
+            // ==================================================
+            // ✅ PROSES UPLOAD TTD PEMBATALAN
+            // ==================================================
+            string ttdPath = "";
+
+            if (vm.TTDPembatalan != null && vm.TTDPembatalan.Length > 0)
+            {
+                var maxSize = 1 * 1024 * 1024; // Maksimal 1 MB
+                var allowedExtensions = new List<string> { ".jpg", ".jpeg" };
+                var fileExtension = Path.GetExtension(vm.TTDPembatalan.FileName).ToLower();
+
+                if (vm.TTDPembatalan.Length > maxSize)
+                    return BadRequest(new { message = "Ukuran file tanda tangan terlalu besar! Maksimal 1MB." });
+
+                if (!allowedExtensions.Contains(fileExtension))
+                    return BadRequest(new { message = "Format tanda tangan tidak valid! Gunakan JPG atau JPEG." });
+
+                // Buat nama file unik
+                var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
+                var ttdFileName = $"{getUserActive.FullName}_{safeTime}_TTDBatal{fileExtension}";
+
+                // 📤 Upload ke server Flask
+                using var client = new HttpClient();
+                using var ms = new MemoryStream();
+                await vm.TTDPembatalan.CopyToAsync(ms);
+                ms.Position = 0;
+
+                var content = new MultipartFormDataContent {
+                {
+                    new StreamContent(ms) {
+                        Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.TTDPembatalan.ContentType) }
+                    },
+                    "file", ttdFileName
+                },
+                { new StringContent("TTDPembatalan"), "folderTarget" }
+                    };
+
+                HttpResponseMessage flaskResponse;
+                try
+                {
+                    flaskResponse = await client.PostAsync(_uploadUrl, content);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Gagal koneksi ke server Flask untuk upload TTD pembatalan.");
+                    return StatusCode(500, new { message = "Tidak dapat terhubung ke server Flask untuk upload tanda tangan." });
+                }
+
+                if (!flaskResponse.IsSuccessStatusCode)
+                    return StatusCode(500, new { message = "Gagal upload tanda tangan ke server Flask." });
+
+                var responseBody = await flaskResponse.Content.ReadAsStringAsync();
+
+                // Asumsi Flask response seperti:
+                // {"fileUrl": "/uploads/TTDPembatalan/nama_file.jpg"}
+                dynamic jsonResp = JsonConvert.DeserializeObject(responseBody);
+                ttdPath = jsonResp?.url ?? jsonResp?.fileUrl ?? jsonResp?.path ?? "";
+
+                if (string.IsNullOrEmpty(ttdPath))
+                    return StatusCode(500, new { message = "Gagal mendapatkan path TTD dari server Flask." });
+            }
+            else
+            {
+                return BadRequest(new { message = "Tanda tangan pembatalan harus diisi." });
+            }
+
+            // ==================================================
+            // ✅ UPDATE DATA BOOKING MENJADI DIBATALKAN
+            // ==================================================
+            booking.AlasanPembatalan = vm.AlasanPembatalan;
+            booking.TTDPembatalanPath = ttdPath;
+            booking.UpdateBy = userActiveId;
+            booking.UpdateDateTime = DateTimeOffset.UtcNow;
+
+            _applicationDbContext.LabBookingDetails.Update(booking);
+            await _applicationDbContext.SaveChangesAsync();
+
+            // ==================================================
+            // ✅ RESPONSE
+            // ==================================================
+            return Ok(new
+            {
+                message = "Booking lab berhasil dibatalkan.",
+                bookingId = booking.DetailBookingLabId,
+                alasan = booking.AlasanPembatalan,
+                ttdUrl = ttdPath
+            });
         }
 
         [HttpPut("{id}")]
@@ -564,6 +700,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              d.SpecimenJenisId,
                              d.SpecimenMethodId,
                              d.AsalSpecimenId,
+                             d.AlasanPembatalan,
+                             d.TTDPembatalanPath,
                          });
 
             // filter kunjungan id
