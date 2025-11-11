@@ -135,6 +135,8 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<AnastesiTipe> AnastesiTipes { get; set; }
         public DbSet<ASATipe> ASATipes { get; set; }
         public DbSet<OperasiJenis> OperasiJeniss { get; set; }
+        public DbSet<StockDarah> StockDarahs { get; set; }
+        public DbSet<PenerimaanDarah> PenerimaanDarahs { get; set; }
         #endregion
 
         #region Areas Keuangan
