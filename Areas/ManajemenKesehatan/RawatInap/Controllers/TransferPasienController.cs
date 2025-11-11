@@ -236,7 +236,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             }
         }
 
-
         [HttpPost]
         [RequestSizeLimit(10_000_000)] // 10 MB
         [RequestFormLimits(MultipartBodyLengthLimit = 10_000_000)]
@@ -247,27 +246,28 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
             try
             {
-                // ✅ Cek koneksi ke database
+                // ✅ Cek koneksi DB
                 if (!_applicationDbContext.Database.CanConnect())
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
 
-                // ✅ Ambil user aktif dari JWT
+                // ✅ Ambil user dari JWT
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
 
-                var getUserActive = await _applicationDbContext.UserActives.FirstOrDefaultAsync(u => u.Email == emailLogin);
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
                 if (getUserActive == null)
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
 
                 var userActiveId = getUserActive.UserActiveId;
 
                 // ==================================================
-                // 🔹 FUNGSI HELPER UPLOAD FILE KE SERVER FLASK
+                // 🔹 Fungsi Upload ke Flask (tanpa menunggu balikan)
                 // ==================================================
-                async Task<(string? fileUrl, Guid? ttdId)> UploadTTDAsync(IFormFile? file, string prefix, string folderTarget)
+                async Task<(string? filePath, Guid? ttdId, string? fileName)> UploadTTDAsync(IFormFile? file, string prefix, string folderTarget)
                 {
-                    if (file == null || file.Length == 0) return (null, null);
+                    if (file == null || file.Length == 0) return (null, null, null);
 
                     var maxSize = 1 * 1024 * 1024; // 1MB
                     var allowedExtensions = new[] { ".jpg", ".jpeg" };
@@ -279,9 +279,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     if (!allowedExtensions.Contains(ext))
                         throw new Exception($"Format file {prefix} tidak valid! Gunakan JPG atau JPEG.");
 
+                    // 🔧 Nama file unik
                     var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
                     var fileName = $"{getUserActive.FullName}_{safeTime}_{prefix}{ext}";
+                    var filePath = $"/{folderTarget}/{fileName}"; // 🔹 path konsisten seperti pendaftaran
 
+                    // 📤 Kirim file ke server Flask
                     using var client = new HttpClient();
                     using var ms = new MemoryStream();
                     await file.CopyToAsync(ms);
@@ -289,24 +292,27 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                     using var content = new MultipartFormDataContent
             {
-                { new StreamContent(ms) { Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType) } }, "file", fileName },
+                {
+                    new StreamContent(ms)
+                    {
+                        Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType) }
+                    },
+                    "file",
+                    fileName
+                },
                 { new StringContent(folderTarget), "folderTarget" }
             };
 
                     var response = await client.PostAsync(_uploadUrl, content);
                     if (!response.IsSuccessStatusCode)
-                        throw new Exception($"Gagal upload file {prefix} ke server Flask.");
+                        throw new Exception($"Gagal upload file {prefix} ke server Flask (Status: {response.StatusCode}).");
 
-                    var body = await response.Content.ReadAsStringAsync();
-                    dynamic json = JsonConvert.DeserializeObject(body);
-                    string fileUrl = json.fileUrl;
-
-                    // Simpan ke MasterTTD
+                    // 💾 Simpan record TTD ke database
                     var newTTD = new MasterTTD
                     {
                         TTDId = Guid.NewGuid(),
                         UserActiveId = userActiveId,
-                        TTDPath = fileUrl,
+                        TTDPath = filePath,
                         CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = userActiveId
                     };
@@ -314,18 +320,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     _applicationDbContext.MasterTTDs.Add(newTTD);
                     await _applicationDbContext.SaveChangesAsync();
 
-                    return (fileUrl, newTTD.TTDId);
+                    return (filePath, newTTD.TTDId, fileName);
                 }
 
                 // ==================================================
-                // ✅ UPLOAD 3 FILE TTD
+                // ✅ Upload ketiga TTD
                 // ==================================================
-                var (menyerahkanPath, menyerahkanId) = await UploadTTDAsync(vm.TTDMenyerahkan, "TTDMenyerahkan", "TTDUser");
-                var (mengetahuiPath, mengetahuiId) = await UploadTTDAsync(vm.TTDMengetahui, "TTDMengetahui", "TTDUser");
-                var (penerimaPath, penerimaId) = await UploadTTDAsync(vm.TTDPenerima, "TTDPenerima", "TTDUser");
+                var (menyerahkanPath, menyerahkanId, _) = await UploadTTDAsync(vm.TTDMenyerahkan, "TTDMenyerahkan", "TTDUser");
+                var (mengetahuiPath, mengetahuiId, _) = await UploadTTDAsync(vm.TTDMengetahui, "TTDMengetahui", "TTDUser");
+                var (penerimaPath, penerimaId, _) = await UploadTTDAsync(vm.TTDPenerima, "TTDPenerima", "TTDUser");
 
                 // ==================================================
-                // ✅ BUAT DATA TRANSFER PASIEN
+                // ✅ Simpan ke tabel TransferPasien
                 // ==================================================
                 var data = new TransferPasien
                 {
@@ -369,7 +375,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
-                    return Created("", new { message = "Tambah Data Transfer Pasien Berhasil || 201 Created" });
+                    return Created("", new
+                    {
+                        message = "Tambah Data Transfer Pasien Berhasil || 201 Created",
+                        menyerahkanPath,
+                        mengetahuiPath,
+                        penerimaPath
+                    });
 
                 return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
             }
@@ -382,6 +394,153 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
+
+        //[HttpPost]
+        //[RequestSizeLimit(10_000_000)] // 10 MB
+        //[RequestFormLimits(MultipartBodyLengthLimit = 10_000_000)]
+        //public async Task<IActionResult> Create([FromForm] TransferPasienViewModel vm)
+        //{
+        //    if (vm == null || !ModelState.IsValid)
+        //        return BadRequest(new { message = "Data tidak valid." });
+
+        //    try
+        //    {
+        //        // ✅ Cek koneksi ke database
+        //        if (!_applicationDbContext.Database.CanConnect())
+        //            return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+
+        //        // ✅ Ambil user aktif dari JWT
+        //        var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        //        if (string.IsNullOrEmpty(emailLogin))
+        //            return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+        //        var getUserActive = await _applicationDbContext.UserActives.FirstOrDefaultAsync(u => u.Email == emailLogin);
+        //        if (getUserActive == null)
+        //            return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+
+        //        var userActiveId = getUserActive.UserActiveId;
+
+        //        // ==================================================
+        //        // 🔹 FUNGSI HELPER UPLOAD FILE KE SERVER FLASK
+        //        // ==================================================
+        //        async Task<(string? fileUrl, Guid? ttdId)> UploadTTDAsync(IFormFile? file, string prefix, string folderTarget)
+        //        {
+        //            if (file == null || file.Length == 0) return (null, null);
+
+        //            var maxSize = 1 * 1024 * 1024; // 1MB
+        //            var allowedExtensions = new[] { ".jpg", ".jpeg" };
+        //            var ext = Path.GetExtension(file.FileName).ToLower();
+
+        //            if (file.Length > maxSize)
+        //                throw new Exception($"Ukuran file {prefix} terlalu besar! Maksimal 1MB.");
+
+        //            if (!allowedExtensions.Contains(ext))
+        //                throw new Exception($"Format file {prefix} tidak valid! Gunakan JPG atau JPEG.");
+
+        //            var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
+        //            var fileName = $"{getUserActive.FullName}_{safeTime}_{prefix}{ext}";
+
+        //            using var client = new HttpClient();
+        //            using var ms = new MemoryStream();
+        //            await file.CopyToAsync(ms);
+        //            ms.Position = 0;
+
+        //            using var content = new MultipartFormDataContent
+        //    {
+        //        { new StreamContent(ms) { Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType) } }, "file", fileName },
+        //        { new StringContent(folderTarget), "folderTarget" }
+        //    };
+
+        //            var response = await client.PostAsync(_uploadUrl, content);
+        //            if (!response.IsSuccessStatusCode)
+        //                throw new Exception($"Gagal upload file {prefix} ke server Flask.");
+
+        //            var body = await response.Content.ReadAsStringAsync();
+        //            dynamic json = JsonConvert.DeserializeObject(body);
+        //            string fileUrl = json.fileUrl;
+
+        //            // Simpan ke MasterTTD
+        //            var newTTD = new MasterTTD
+        //            {
+        //                TTDId = Guid.NewGuid(),
+        //                UserActiveId = userActiveId,
+        //                TTDPath = fileUrl,
+        //                CreateDateTime = DateTimeOffset.UtcNow,
+        //                CreateBy = userActiveId
+        //            };
+
+        //            _applicationDbContext.MasterTTDs.Add(newTTD);
+        //            await _applicationDbContext.SaveChangesAsync();
+
+        //            return (fileUrl, newTTD.TTDId);
+        //        }
+
+        //        // ==================================================
+        //        // ✅ UPLOAD 3 FILE TTD
+        //        // ==================================================
+        //        var (menyerahkanPath, menyerahkanId) = await UploadTTDAsync(vm.TTDMenyerahkan, "TTDMenyerahkan", "TTDUser");
+        //        var (mengetahuiPath, mengetahuiId) = await UploadTTDAsync(vm.TTDMengetahui, "TTDMengetahui", "TTDUser");
+        //        var (penerimaPath, penerimaId) = await UploadTTDAsync(vm.TTDPenerima, "TTDPenerima", "TTDUser");
+
+        //        // ==================================================
+        //        // ✅ BUAT DATA TRANSFER PASIEN
+        //        // ==================================================
+        //        var data = new TransferPasien
+        //        {
+        //            TransferPasienId = Guid.NewGuid(),
+        //            KunjunganId = vm.KunjunganId,
+        //            KamarId = vm.KamarId,
+        //            DiagnosaUtama = vm.DiagnosaUtama,
+        //            DiagnosaSekunder = vm.DiagnosaSekunder,
+        //            DokterId1 = vm.DokterId1,
+        //            DokterId2 = vm.DokterId2,
+        //            DokterId3 = vm.DokterId3,
+        //            IndikasiRanap = vm.IndikasiRanap,
+        //            IsAlergic = vm.IsAlergic ?? false,
+        //            AlergicOf = vm.AlergicOf,
+        //            AlasanPindahPasien = vm.AlasanPindahPasien,
+        //            TglPindah = vm.TglPindah,
+        //            PengawasanHarianId = vm.PengawasanHarianId,
+        //            ObservasiCairanId = vm.ObservasiCairanId,
+        //            IndikatorPengkajianId = vm.IndikatorPengkajianId,
+        //            PemberianObatId = vm.PemberianObatId,
+        //            TotalScoreAldrete = vm.TotalScoreAldrete,
+        //            TotalScoreSteward = vm.TotalScoreSteward,
+        //            IsICU = vm.IsICU ?? false,
+        //            BarangDiserahkan = vm.BarangDiserahkan,
+        //            IntervensiPerawat = vm.IntervensiPerawat,
+        //            PlanningTindakan = vm.PlanningTindakan,
+
+        //            TTDMenyerahkanId = menyerahkanId,
+        //            TTDMenyerahkanPath = menyerahkanPath,
+        //            TTDMengetahuiId = mengetahuiId,
+        //            TTDMengetahuiPath = mengetahuiPath,
+        //            TTDPenerimaId = penerimaId,
+        //            TTDPenerimaPath = penerimaPath,
+
+        //            Keterangan = vm.Keterangan,
+        //            CreateBy = userActiveId,
+        //            CreateDateTime = DateTimeOffset.UtcNow
+        //        };
+
+        //        _applicationDbContext.TransferPasiens.Add(data);
+        //        int result = await _applicationDbContext.SaveChangesAsync();
+
+        //        if (result > 0)
+        //            return Created("", new { message = "Tambah Data Transfer Pasien Berhasil || 201 Created" });
+
+        //        return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
+        //    }
+        //    catch (DbUpdateException dbEx)
+        //    {
+        //        return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+        //    }
+        //}
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
