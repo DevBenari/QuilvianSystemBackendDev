@@ -148,7 +148,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 //// **Cek Duplikasi**
                 bool isDuplicate = _applicationDbContext.PPNs
-                                    .Any(c => c.Persentase == vm.Persentase);
+                                    .Any(c => c.Persentase == vm.Persentase && c.IsDelete == false);
 
                 if (isDuplicate)
                 {

@@ -146,7 +146,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 //// **Cek Duplikasi**
                 bool isDuplicate = await _applicationDbContext.ItemKategoris
                                     .AnyAsync(c => c.NamaKategoriItem.ToLower().Trim()
-                                    == vm.NamaKategoriItem.ToLower().Trim());
+                                    == vm.NamaKategoriItem.ToLower().Trim() && c.IsDelete == false);
 
                 if (isDuplicate)
                 {
@@ -226,7 +226,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 bool isDuplicate = await _applicationDbContext.ItemKategoris
                     .AnyAsync(c => c.NamaKategoriItem.ToLower().Trim()
-                    == vm.NamaKategoriItem.ToLower().Trim() && c.KategoriItemId != id);
+                    == vm.NamaKategoriItem.ToLower().Trim() && c.KategoriItemId != id && c.IsDelete == false);
 
                 if (isDuplicate)
                 {

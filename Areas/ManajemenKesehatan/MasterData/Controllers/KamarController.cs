@@ -163,7 +163,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 //// **Cek Duplikasi**
                 bool isDuplicate = _applicationDbContext.Kamars
-                                    .Any(c => c.NamaKamar == vm.NamaKamar);
+                                    .Any(c => c.NamaKamar == vm.NamaKamar && c.IsDelete == false);
 
                 if (isDuplicate)
                 {

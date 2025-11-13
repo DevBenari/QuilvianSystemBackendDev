@@ -266,7 +266,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                 // **Cek duplikasi**
                 bool isDuplicate = _applicationDbContext.CttPemberianObats
-                    .Any(c => c.KunjunganId == vm.KunjunganId && (c.RacikanId == vm.RacikanId || c.ObatId == vm.ObatId));
+                    .Any(c => c.KunjunganId == vm.KunjunganId && (c.RacikanId == vm.RacikanId || c.ObatId == vm.ObatId) && c.IsDelete == false);
 
                 if (isDuplicate)
                     return Conflict(new { message = "Catatan pemberian obat ini sudah ada." });

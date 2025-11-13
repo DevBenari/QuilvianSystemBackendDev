@@ -145,7 +145,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                 ////// **Cek Duplikasi**
                 bool isDuplicate = await _applicationDbContext.TopikEdukasis
-                                    .AnyAsync(c => c.NamaTopik.ToLower() == vm.NamaTopik.ToLower());
+                                    .AnyAsync(c => c.NamaTopik.ToLower().Trim() == vm.NamaTopik.ToLower().Trim()
+                                    && c.IsDelete == false);
 
                 if (isDuplicate)
                 {
@@ -224,7 +225,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                 bool isDuplicate = await _applicationDbContext.TopikEdukasis
                     .AnyAsync(c => c.NamaTopik.ToLower() == vm.NamaTopik.ToLower() 
-                    && c.TopikEdukasiId != id);
+                    && c.TopikEdukasiId != id && c.IsDelete == false);
 
                 if (isDuplicate)
                 {

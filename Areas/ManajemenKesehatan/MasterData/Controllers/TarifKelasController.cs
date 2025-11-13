@@ -157,7 +157,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 bool isDuplicate = _applicationDbContext.TarifKelass
                     .Any(t => t.TindakanId == vm.TindakanId &&
-                              t.KelasId == vm.KelasId);
+                              t.KelasId == vm.KelasId
+                              && t.IsDelete == false);
 
                 if (isDuplicate)
                 {
@@ -273,7 +274,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 bool isDuplicate = _applicationDbContext.TarifKelass
                 .Any(t => t.TindakanId == vm.TindakanId &&
-                          t.KelasId == vm.KelasId);
+                          t.KelasId == vm.KelasId
+                          && t.IsDelete == false);
 
                 if (isDuplicate)
                 {

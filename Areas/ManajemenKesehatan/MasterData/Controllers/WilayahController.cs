@@ -396,7 +396,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Cek Duplikasi
                 var isDuplicate = _applicationDbContext.Provinsis
-                    .Any(c => c.KodeProvinsi == kode && c.NamaProvinsi == vm.NamaProvinsi);
+                    .Any(c => c.KodeProvinsi == kode && c.NamaProvinsi == vm.NamaProvinsi && c.IsDelete == false);
 
                 if (isDuplicate)
                 {
@@ -491,7 +491,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Cek Duplikasi
                 var isDuplicate = _applicationDbContext.KabupatenKotas
-                    .Any(c => c.KodeKabupatenKota == kode && c.NamaKabupatenKota == vm.NamaKabupatenKota && c.ProvinsiId == vm.ProvinsiId);
+                    .Any(c => c.KodeKabupatenKota == kode && c.NamaKabupatenKota == vm.NamaKabupatenKota && c.ProvinsiId == vm.ProvinsiId
+                    && c.IsDelete == false);
 
                 if (isDuplicate)
                 {
@@ -586,7 +587,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Cek Duplikasi
                 var isDuplicate = _applicationDbContext.Kecamatans
-                    .Any(c => c.KodeKecamatan == kode && c.NamaKecamatan == vm.NamaKecamatan && c.KabupatenKotaId == vm.KabupatenKotaId);
+                    .Any(c => c.KodeKecamatan == kode && c.NamaKecamatan == vm.NamaKecamatan 
+                    && c.KabupatenKotaId == vm.KabupatenKotaId && c.IsDelete == false);
 
                 if (isDuplicate)
                 {
@@ -681,7 +683,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Cek Duplikasi
                 var isDuplicate = _applicationDbContext.Kelurahans
-                    .Any(c => c.KodeKelurahan == kode && c.NamaKelurahan == vm.NamaKelurahan && c.KecamatanId == vm.KecamatanId);
+                    .Any(c => c.KodeKelurahan == kode && 
+                    c.NamaKelurahan == vm.NamaKelurahan && 
+                    c.KecamatanId == vm.KecamatanId
+                    && c.IsDelete == false);
 
                 if (isDuplicate)
                 {
@@ -1814,7 +1819,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Cek Duplikasi
                 var isDuplicate = _applicationDbContext.KodePoss
-                    .Any(c => c.UniqueKodePos == kode);
+                    .Any(c => c.UniqueKodePos == kode && c.IsDelete == false);
 
                 if (ModelState.IsValid)
                 {

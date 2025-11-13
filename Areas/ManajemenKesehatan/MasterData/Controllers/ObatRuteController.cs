@@ -145,7 +145,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 //// **Cek Duplikasi**
                 bool isDuplicate = await _applicationDbContext.ObatRutes
-                                    .AnyAsync(c => c.RuteObat == vm.RuteObat);
+                                    .AnyAsync(c => c.RuteObat == vm.RuteObat && c.IsDelete == false);
 
                 if (isDuplicate)
                 {

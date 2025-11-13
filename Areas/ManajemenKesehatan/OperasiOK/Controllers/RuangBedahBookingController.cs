@@ -316,6 +316,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
+                bool isDuplicate = await _applicationDbContext.RuangBedahBookings
+                    .AnyAsync(c => c.KunjunganId == vm.KunjunganId &&c.BookingRuanganBedahId!=id && c.IsDelete == false);
+
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Kunjungan ini telah booking ruang bedah" });
+                }
+
                 // **Update field yang diubah**
                 existingData.KunjunganId = vm.KunjunganId;
                 existingData.PasienId = vm.PasienId;

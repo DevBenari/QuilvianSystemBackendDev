@@ -375,7 +375,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 bool isDuplicate = _applicationDbContext.Tindakans
-                    .Any(c => c.KodeTindakan == kode && c.NamaTindakan.ToLower() == vm.NamaTindakan.ToLower());
+                    .Any(c => c.KodeTindakan == kode && c.NamaTindakan.ToLower() == vm.NamaTindakan.ToLower() && c.IsDelete == false);
 
                 if (isDuplicate)
                 {
@@ -441,7 +441,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 bool isDuplicate = await _applicationDbContext.Tindakans
-                    .AnyAsync(c => c.NamaTindakan.ToLower() == vm.NamaTindakan.ToLower() && c.TindakanId != id);
+                    .AnyAsync(c => c.NamaTindakan.ToLower() == vm.NamaTindakan.ToLower() && c.TindakanId != id
+                    && c.IsDelete == false);
 
                 if (isDuplicate)
                 {

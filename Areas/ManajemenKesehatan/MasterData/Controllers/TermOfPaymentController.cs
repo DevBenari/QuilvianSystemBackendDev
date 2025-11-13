@@ -159,7 +159,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Cek Duplikasi
                 var isDuplicate = _applicationDbContext.TermOfPayments
-                    .Any(c => c.TermOfPaymentCode == kode && c.TermOfPaymentName == vm.TermOfPaymentName);
+                    .Any(c => c.TermOfPaymentCode == kode && c.TermOfPaymentName == vm.TermOfPaymentName && c.IsDelete == false);
 
                 if (isDuplicate)
                 {

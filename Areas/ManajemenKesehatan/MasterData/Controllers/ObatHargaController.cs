@@ -190,7 +190,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 bool isDuplicate = await _applicationDbContext.ObatHargas
                     .AnyAsync(x => x.ItemId == vm.ItemId &&
                                    x.AwalEfektif <= vm.AkhirEfektif &&
-                                   x.AkhirEfektif >= vm.AwalEfektif);
+                                   x.AkhirEfektif >= vm.AwalEfektif && c.IsDelete == false);
 
                 if (isDuplicate)
                     return Conflict(new { message = "Sudah ada data harga aktif untuk periode tersebut." });

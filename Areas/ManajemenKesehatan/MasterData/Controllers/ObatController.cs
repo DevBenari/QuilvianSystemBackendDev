@@ -266,7 +266,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 bool isDuplicate = _applicationDbContext.Obats
-                    .Any(c => c.ObatCode == kode && c.ObatName.ToLower() == vm.ObatName.ToLower());
+                    .Any(c => c.ObatCode == kode && c.ObatName.ToLower() == vm.ObatName.ToLower() && c.IsDelete == false);
 
                 if (isDuplicate)
                 {
@@ -361,7 +361,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 bool isDuplicate = await _applicationDbContext.Obats
-                    .AnyAsync(c => c.ObatName.ToLower() == vm.ObatName.ToLower() && c.ObatId != id);
+                    .AnyAsync(c => c.ObatName.ToLower() == vm.ObatName.ToLower() && c.ObatId != id && c.IsDelete == false);
 
                 if (isDuplicate)
                 {

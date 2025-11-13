@@ -121,7 +121,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // **Cek Duplikasi**
                 bool isDuplicate = _applicationDbContext.TindakanPolis
-                    .Any(c => c.TindakanId == vm.TindakanId && c.PoliId == vm.PoliId);
+                    .Any(c => c.TindakanId == vm.TindakanId && c.PoliId == vm.PoliId && c.IsDelete == false);
 
                 if (isDuplicate)
                 {
