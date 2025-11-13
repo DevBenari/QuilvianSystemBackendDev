@@ -7,36 +7,37 @@ using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class ObatHargaController : Controller
+    public class OperasiTindakanController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<ObatHargaController> _logger;
+        private readonly ILogger<OperasiTindakanController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public ObatHargaController(
+        public OperasiTindakanController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<ObatHargaController> logger,
+            ILogger<OperasiTindakanController> logger,
             IWebHostEnvironment webHostEnvironment)
-                {
+        {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
@@ -52,36 +53,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = (
-            from a in _applicationDbContext.ObatHargas
-            join u in _applicationDbContext.UserActives
-                on a.CreateBy equals u.UserActiveId into userGroup
-            from u in userGroup.DefaultIfEmpty()
-
-            join i in _applicationDbContext.Items
-                on a.ItemId equals i.ItemId into itemGroup
-            from i in itemGroup.DefaultIfEmpty()
-
-            where a.IsDelete == false || a.IsDelete == null
-            orderby a.CreateDateTime descending
-            select new
-            {
-                a.CreateDateTime,
-                a.CreateBy,
-                CreateByName = u.FullName,
-                a.HargaObatId,
-                a.ItemId,
-                i.NamaItem,
-                i.KodeItem,
-                a.Currency,
-                a.HargaHNA,
-                a.HargaHTE,
-                a.IsTermasukPajak,
-                a.AwalEfektif,
-                a.AkhirEfektif,
-                a.Keterangan
-            });
-
+            var query = (from a in _applicationDbContext.OperasiTindakans
+                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
+                         on a.CreateBy equals u.UserActiveId
+                         where a.IsDelete == false || a.IsDelete == null
+                         select new
+                         {
+                             a.CreateDateTime,
+                             a.CreateBy,
+                             CreateByName = u.FullName,
+                             a.TindakanOperasiId,
+                             a.TindakanId,
+                             a.JenisOperasiId,
+                             a.TipeOperasiId,
+                             a.Keterangan,
+                         }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
             var totalRows = query.Count();
@@ -116,115 +102,83 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            try
+            var listdata = _applicationDbContext.OperasiTindakans.Find(id);
+            if (listdata == null)
             {
-                var data =(
-            from a in _applicationDbContext.ObatHargas
-            join u in _applicationDbContext.UserActives
-                on a.CreateBy equals u.UserActiveId into userGroup
-            from u in userGroup.DefaultIfEmpty()
+                return NotFound(new { message = "Data tidak ditemukan." });
+            }
 
-            join i in _applicationDbContext.Items
-                on a.ItemId equals i.ItemId into itemGroup
-            from i in itemGroup.DefaultIfEmpty()
-
-            where (a.IsDelete == false || a.IsDelete == null) && a.HargaObatId == id
-            orderby a.CreateDateTime descending
-            select new
+            return Ok(new
             {
-                a.CreateDateTime,
-                a.CreateBy,
-                CreateByName = u.FullName,
-                a.HargaObatId,
-                a.ItemId,
-                i.NamaItem,
-                i.KodeItem,
-                a.Currency,
-                a.HargaHNA,
-                a.HargaHTE,
-                a.IsTermasukPajak,
-                a.AwalEfektif,
-                a.AkhirEfektif,
-                a.Keterangan
+                message = "Ditemukan || 200 OK",
+                data = listdata
             });
-                if (data == null)
-                    return NotFound(new { message = "Data Harga Obat tidak ditemukan || 404 Not Found" });
-
-                return Ok(new
-                {
-                    message = "Berhasil || 200 OK",
-                    data
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
-            }
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] HargaObatViewModel vm)
+        public async Task<IActionResult> Create([FromBody] OperasiTindakanViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
+            {
                 return BadRequest(new { message = "Data tidak valid." });
+            }
 
             try
             {
+                // **Cek koneksi ke database**
                 if (!_applicationDbContext.Database.CanConnect())
+                {
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+                }
 
-                // ✅ Ambil User dari JWT
+                // **Ambil User ID dari JWT Claims**
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
+                {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
 
-                var getUserActive = await _applicationDbContext.UserActives
-                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
-
+                var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
                 if (getUserActive == null)
+                {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-
+                }
                 var userActiveId = getUserActive.UserActiveId;
 
-                // ✅ Cek duplikasi harga aktif untuk ItemId
-                bool isDuplicate = await _applicationDbContext.ObatHargas
-                    .AnyAsync(x => x.ItemId == vm.ItemId &&
-                                   x.AwalEfektif <= vm.AkhirEfektif &&
-                                   x.AkhirEfektif >= vm.AwalEfektif && x.IsDelete == false);
+                //// **Cek Duplikasi**
+                //bool isDuplicate = await _applicationDbContext.OperasiTindakans
+                //                    .AnyAsync(c => c.NamaDiskon == vm.NamaDiskon && c.IsDelete == false);
 
-                if (isDuplicate)
-                    return Conflict(new { message = "Sudah ada data harga aktif untuk periode tersebut." });
+                //if (isDuplicate)
+                //{
+                //    return Conflict(new { message = "Nama diskon ini telah tersedia" });
+                //}
 
-                // ✅ Buat data baru
-                var data = new ObatHarga
+                // **Buat Data Baru**
+                var data = new OperasiTindakan
                 {
-                    HargaObatId = Guid.NewGuid(),
-                    ItemId = vm.ItemId,
-                    Currency = vm.Currency ?? "IDR",
-                    HargaHNA = vm.HargaHNA,
-                    HargaHTE = vm.HargaHTE,
-                    IsTermasukPajak = vm.IsTermasukPajak ?? false,
-                    AwalEfektif = vm.AwalEfektif ?? DateTime.UtcNow,
-                    AkhirEfektif = vm.AkhirEfektif,
+                    TindakanOperasiId = Guid.NewGuid(),
+                    TindakanId = vm.TindakanId,
+                    TipeOperasiId = vm.TipeOperasiId,
+                    JenisOperasiId = vm.JenisOperasiId,
                     Keterangan = vm.Keterangan,
 
                     CreateBy = userActiveId,
-                    CreateDateTime = DateTimeOffset.UtcNow
+                    CreateDateTime = DateTimeOffset.UtcNow,
                 };
 
-                _applicationDbContext.ObatHargas.Add(data);
+                // **Simpan ke Database**
+                _applicationDbContext.OperasiTindakans.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
                 {
-                    return Created("", new
-                    {
-                        message = "Tambah Data Harga Obat Berhasil || 201 Created",
-                        data.HargaObatId
-                    });
+                    return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
                 }
-
-                return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
+                else
+                {
+                    return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
+                }
             }
             catch (DbUpdateException dbEx)
             {
@@ -237,52 +191,67 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] HargaObatViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] OperasiTindakanViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
+            {
                 return BadRequest(new { message = "Data tidak valid." });
+            }
 
             try
             {
-                var data = await _applicationDbContext.ObatHargas.FindAsync(id);
-                if (data == null)
-                    return NotFound(new { message = $"Data dengan ID {id} tidak ditemukan." });
+                // **Cek koneksi ke database**
+                if (!await _applicationDbContext.Database.CanConnectAsync())
+                {
+                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+                }
 
-                // ✅ Ambil user login
+                // **Ambil User ID dari JWT Claims**
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
+                {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
 
                 var getUserActive = await _applicationDbContext.UserActives
                     .FirstOrDefaultAsync(u => u.Email == emailLogin);
                 if (getUserActive == null)
+                {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-
+                }
                 var userActiveId = getUserActive.UserActiveId;
 
-                // ✅ Update data
-                data.ItemId = vm.ItemId;
-                data.Currency = vm.Currency ?? data.Currency;
-                data.HargaHNA = vm.HargaHNA ?? data.HargaHNA;
-                data.HargaHTE = vm.HargaHTE ?? data.HargaHTE;
-                data.IsTermasukPajak = vm.IsTermasukPajak ?? data.IsTermasukPajak;
-                data.AwalEfektif = vm.AwalEfektif ?? data.AwalEfektif;
-                data.AkhirEfektif = vm.AkhirEfektif ?? data.AkhirEfektif;
-                data.Keterangan = vm.Keterangan ?? data.Keterangan;
+                // **Cari Data**
+                var data = await _applicationDbContext.OperasiTindakans.FindAsync(id);
+                if (data == null)
+                {
+                    return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                // **Update Data**
+                data.TindakanId = vm.TindakanId;
+                data.JenisOperasiId = vm.JenisOperasiId;
+                data.TipeOperasiId = vm.TipeOperasiId;
+                data.Keterangan = vm.Keterangan;
+
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.ObatHargas.Update(data);
+                _applicationDbContext.OperasiTindakans.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
-                    return Ok(new { message = "Update Harga Obat Berhasil || 200 OK", data.HargaObatId });
-
-                return StatusCode(500, new { message = "Tidak ada perubahan yang disimpan." });
+                {
+                    return Ok(new { message = "Update Data Berhasil || 200 OK" });
+                }
+                else
+                {
+                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
+                }
             }
             catch (DbUpdateException dbEx)
             {
-                return StatusCode(500, new { message = $"Gagal memperbarui data: {dbEx.InnerException?.Message}" });
+                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
             }
             catch (Exception ex)
             {
@@ -317,7 +286,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.ObatHargas.FindAsync(id);
+                var data = await _applicationDbContext.OperasiTindakans.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -329,7 +298,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 data.IsDelete = true;
 
-                _applicationDbContext.ObatHargas.Update(data);
+                _applicationDbContext.OperasiTindakans.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -365,35 +334,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         {
 
             // Query data
-            var query = (
-            from a in _applicationDbContext.ObatHargas
-            join u in _applicationDbContext.UserActives
-                on a.CreateBy equals u.UserActiveId into userGroup
-            from u in userGroup.DefaultIfEmpty()
-
-            join i in _applicationDbContext.Items
-                on a.ItemId equals i.ItemId into itemGroup
-            from i in itemGroup.DefaultIfEmpty()
-
-            where a.IsDelete == false || a.IsDelete == null
-            orderby a.CreateDateTime descending
-            select new
-            {
-                a.CreateDateTime,
-                a.CreateBy,
-                CreateByName = u.FullName,
-                a.HargaObatId,
-                a.ItemId,
-                i.NamaItem,
-                i.KodeItem,
-                a.Currency,
-                a.HargaHNA,
-                a.HargaHTE,
-                a.IsTermasukPajak,
-                a.AwalEfektif,
-                a.AkhirEfektif,
-                a.Keterangan
-            });
+            var query = (from a in _applicationDbContext.OperasiTindakans
+                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
+                         on a.CreateBy equals u.UserActiveId
+                         where a.IsDelete == false || a.IsDelete == null
+                         select new
+                         {
+                             a.CreateDateTime,
+                             a.CreateBy,
+                             CreateByName = u.FullName,
+                             a.TindakanOperasiId,
+                             a.TindakanId,
+                             a.JenisOperasiId,
+                             a.TipeOperasiId,
+                             a.Keterangan,
+                         });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             //if (!string.IsNullOrWhiteSpace(search))
@@ -503,7 +458,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
             });
         }
-
 
     }
 }

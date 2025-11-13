@@ -144,7 +144,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // **Cek Duplikasi**
                 var isDuplicate = _applicationDbContext.Kelass
-                    .Any(t => t.NamaKelas.ToLower().Trim() == vm.NamaKelas.ToLower().Trim() && t.KodeKelas == vm.KodeKelas && c.IsDelete == false);
+                    .Any(t => t.NamaKelas.ToLower().Trim() == vm.NamaKelas.ToLower().Trim() && t.KodeKelas == vm.KodeKelas && t.IsDelete == false);
 
                 if (isDuplicate)
                 {
@@ -289,7 +289,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 // **Cek Duplikasi**
                 var isDuplicate = await _applicationDbContext.Kelass
                     .AnyAsync(t => t.NamaKelas.ToLower().Trim() == vm.NamaKelas.ToLower().Trim() 
-                    && t.KelasId != id && c.IsDelete == false);
+                    && t.KelasId != id && t.IsDelete == false);
                 if (isDuplicate)
                 {
                     return Conflict(new { message = "Kelas dengan nama tersebut sudah ada!" });
