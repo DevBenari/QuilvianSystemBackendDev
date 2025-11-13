@@ -149,7 +149,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 //cek duplikasi
                 bool isDuplicate = await _applicationDbContext.ASATipes
                     .AnyAsync(c => c.NamaTipeASA.ToLower().Trim()
-                    == vm.NamaTipeASA.ToLower().Trim());
+                    == vm.NamaTipeASA.ToLower().Trim() && c.IsDelete == false);
 
                 if (isDuplicate)
                 {

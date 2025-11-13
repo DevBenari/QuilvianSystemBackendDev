@@ -270,13 +270,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 var userActiveId = getUserActive.UserActiveId;
 
                 //// **Cek Duplikasi**
-                //bool isDuplicate = _applicationDbContext.Diskons
-                //                    .Any(c => c.NamaDiskon == vm.NamaDiskon);
+                bool isDuplicate = await _applicationDbContext.LabPemeriksaans
+                                    .AnyAsync(c => c.NamaPemeriksaan.ToLower().Trim()
+                                    == vm.NamaPemeriksaan.ToLower().Trim() && c.IsDelete == false);
 
-                //if (isDuplicate)
-                //{
-                //    return Conflict(new { message = "Nama benefit ini telah tersedia" });
-                //}
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Nama benefit ini telah tersedia" });
+                }
 
                 // **Buat Data Baru**
                 var data = new LabPemeriksaan

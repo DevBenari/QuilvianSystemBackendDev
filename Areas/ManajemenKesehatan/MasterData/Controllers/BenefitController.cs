@@ -147,7 +147,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 //// **Cek Duplikasi**
                 bool isDuplicate = _applicationDbContext.Benefits
-                                    .Any(c => c.NamaBenefit == vm.NamaBenefit);
+                                    .Any(c => c.NamaBenefit == vm.NamaBenefit && c.IsDelete == false);
 
                 if (isDuplicate)
                 {

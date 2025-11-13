@@ -146,7 +146,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 //// **Cek Duplikasi**
                 bool isDuplicate = await _applicationDbContext.Labs
-                                    .AnyAsync(c => c.KodeKategori.ToLower() == vm.KodeKategori.ToLower());
+                                    .AnyAsync(c => c.KodeKategori.ToLower() == vm.KodeKategori.ToLower() && c.IsDelete == false);
 
                 if (isDuplicate)
                 {

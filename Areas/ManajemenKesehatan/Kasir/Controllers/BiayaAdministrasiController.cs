@@ -147,7 +147,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
                 //// **Cek Duplikasi**
                 bool isDuplicate = _applicationDbContext.BiayaAdministrasis
-                                    .Any(c => c.NamaBiayaAdministrasi == vm.NamaBiayaAdministrasi);
+                                    .Any(c => c.NamaBiayaAdministrasi == vm.NamaBiayaAdministrasi && c.IsDelete == false);
 
                 if (isDuplicate)
                 {

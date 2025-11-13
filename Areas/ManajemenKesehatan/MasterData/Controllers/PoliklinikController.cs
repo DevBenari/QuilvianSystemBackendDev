@@ -215,7 +215,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Cek duplikasi
                 bool isDuplicate = _applicationDbContext.Polikliniks
-                    .Any(c => c.KodePoliklinik == kodePoliklinik && c.NamaPoliklinik == vm.NamaPoliklinik);
+                    .Any(c => c.KodePoliklinik == kodePoliklinik && c.NamaPoliklinik == vm.NamaPoliklinik && c.IsDelete == false);
 
                 if (isDuplicate)
                     return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
@@ -278,7 +278,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
                 // cek duplikasi
                 var isDuplicate = _applicationDbContext.Polikliniks
-                    .Any(c => c.PoliklinikId != id && c.NamaPoliklinik == vm.NamaPoliklinik);
+                    .Any(c => c.PoliklinikId != id && c.NamaPoliklinik == vm.NamaPoliklinik && c.IsDelete == false);
                 if (isDuplicate)
                 {
                     return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });

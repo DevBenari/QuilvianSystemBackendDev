@@ -151,7 +151,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
                 //// **Cek Duplikasi**
                 bool isDuplicate = await _applicationDbContext.Diskons
-                                    .AnyAsync(c => c.NamaDiskon == vm.NamaDiskon);
+                                    .AnyAsync(c => c.NamaDiskon == vm.NamaDiskon && c.IsDelete==false);
 
                 if (isDuplicate)
                 {

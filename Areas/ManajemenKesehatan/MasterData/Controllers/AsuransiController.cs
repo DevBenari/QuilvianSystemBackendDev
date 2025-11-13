@@ -195,7 +195,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // cek duplikasi
                 var isDuplicate = _applicationDbContext.Asuransis
-                    .Any(c => c.KodeAsuransi == kode && c.NamaAsuransi == vm.NamaAsuransi);
+                    .Any(c => c.KodeAsuransi == kode && c.NamaAsuransi == vm.NamaAsuransi && c.IsDelete == false);
 
                 if (isDuplicate)
                 {

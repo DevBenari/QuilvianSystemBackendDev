@@ -149,7 +149,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 //// **Cek Duplikasi**
                 bool isDuplicate = await _applicationDbContext.Darahs
-                    .AnyAsync(c => c.KodeKomponenDarah.ToLower() == vm.KodeKomponenDarah.ToLower());
+                    .AnyAsync(c => c.KodeKomponenDarah.ToLower() == vm.KodeKomponenDarah.ToLower() && c.IsDelete == false);
                 if (isDuplicate)
                 {
                     return Conflict(new { message = "Kode komponen Darah ini telah tersedia" });

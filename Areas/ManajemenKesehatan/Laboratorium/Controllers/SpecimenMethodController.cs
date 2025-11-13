@@ -176,7 +176,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 // ✅ Cek duplikasi kode (harus unik)
                 bool isDuplicate = await _applicationDbContext.SpecimenMethods
-                    .AnyAsync(m => m.KodeSpecimenMethod.ToLower() == newKode.ToLower());
+                    .AnyAsync(m => m.KodeSpecimenMethod.ToLower().Trim() == newKode.ToLower().Trim()
+                    && m.IsDelete == false);
 
                 if (isDuplicate)
                 {
