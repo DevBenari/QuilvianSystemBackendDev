@@ -96,7 +96,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              d.JenisSpecimen,
                              d.LokasiSpecimen,
                              d.KeteranganKlinik,
-                             d.PerkiraanPenyakit,
                              d.PenyakitSebelumnya,
                              d.PenggunaanFiksasi,
                              d.JenisPemeriksaanGC,
@@ -110,6 +109,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              d.AsalSpecimenId,
                              d.AlasanPembatalan,
                              d.TTDPembatalanPath,
+                             d.StatusPemeriksaan,
+                             d.TanggalSelesai,
+                             d.StatusVerifikasi,
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -189,7 +191,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                       d.JenisSpecimen,
                                       d.LokasiSpecimen,
                                       d.KeteranganKlinik,
-                                      d.PerkiraanPenyakit,
                                       d.PenyakitSebelumnya,
                                       d.PenggunaanFiksasi,
                                       d.JenisPemeriksaanGC,
@@ -206,6 +207,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                       d.CreateDateTime,                             
                                       d.AlasanPembatalan,
                                       d.TTDPembatalanPath,
+                                      d.StatusPemeriksaan,
+                                      d.TanggalSelesai,
+                                      d.StatusVerifikasi,
                                   })
                                   .FirstOrDefaultAsync();
 
@@ -322,7 +326,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     JenisSpecimen = vm.JenisSpecimen,
                     LokasiSpecimen = vm.LokasiSpecimen,
                     KeteranganKlinik = vm.KeteranganKlinik,
-                    PerkiraanPenyakit = vm.PerkiraanPenyakit,
                     PenyakitSebelumnya = vm.PenyakitSebelumnya,
                     PenggunaanFiksasi = vm.PenggunaanFiksasi,
                     JenisPemeriksaanGC = vm.JenisPemeriksaanGC,
@@ -335,6 +338,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     SpecimenMethodId = vm.SpecimenMethodId,
                     SpecimenJenisId = vm.SpecimenJenisId,
                     NoOrder = newNoOrder,
+                    StatusPemeriksaan = vm.StatusPemeriksaan,
+                    StatusVerifikasi = vm.StatusVerifikasi,
+                    TanggalSelesai = vm.TanggalSelesai,
 
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
@@ -534,7 +540,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 existingData.JenisSpecimen = vm.JenisSpecimen;
                 existingData.LokasiSpecimen = vm.LokasiSpecimen;
                 existingData.KeteranganKlinik = vm.KeteranganKlinik;
-                existingData.PerkiraanPenyakit = vm.PerkiraanPenyakit;
                 existingData.PenyakitSebelumnya = vm.PenyakitSebelumnya;
                 existingData.PenggunaanFiksasi = vm.PenggunaanFiksasi;
                 existingData.JenisPemeriksaanGC = vm.JenisPemeriksaanGC;
@@ -546,6 +551,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 existingData.SpecimenJenisId = vm.SpecimenJenisId;
                 existingData.SpecimenMethodId = vm.SpecimenMethodId;
                 existingData.AsalSpecimenId = vm.AsalSpecimenId;
+                existingData.StatusPemeriksaan = vm.StatusPemeriksaan;
+                existingData.TanggalSelesai = vm.TanggalSelesai;
+                existingData.StatusPemeriksaan = vm.StatusPemeriksaan;
 
                 existingData.UpdateBy = userActiveId;
                 existingData.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -688,7 +696,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              d.JenisSpecimen,
                              d.LokasiSpecimen,
                              d.KeteranganKlinik,
-                             d.PerkiraanPenyakit,
                              d.PenyakitSebelumnya,
                              d.PenggunaanFiksasi,
                              d.JenisPemeriksaanGC,
@@ -702,6 +709,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              d.AsalSpecimenId,
                              d.AlasanPembatalan,
                              d.TTDPembatalanPath,
+                             d.StatusPemeriksaan,
+                             d.TanggalSelesai,
+                             d.StatusVerifikasi,
                          });
 
             // filter kunjungan id

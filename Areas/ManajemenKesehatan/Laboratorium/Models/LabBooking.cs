@@ -26,5 +26,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public string? NomorSuratJaminan{get; set;}
         public string? CatatanJaminan {  get; set; }
         public string? NoOrder {  get; set; }
+        public string? NoLab {  get; set; }
+        public string? NoPA { get; set; }
+        public bool? StatusBookingLab { get; set; }
     }
 }

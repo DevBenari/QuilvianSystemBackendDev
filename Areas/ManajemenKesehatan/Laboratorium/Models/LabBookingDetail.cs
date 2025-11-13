@@ -19,7 +19,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public string? JenisSpecimen { get; set; } // Biopsi / Operasi / Kerokan / Cairan Tubuh, dll
         public string? LokasiSpecimen { get; set; } // Lokasi pengambilan specimen
         public string? KeteranganKlinik { get; set; } // Catatan klinis
-        public string? PerkiraanPenyakit { get; set; } // Diagnosa atau dugaan penyakit
         public string? PenyakitSebelumnya { get; set; } // Riwayat penyakit sebelumnya
         public string? PenggunaanFiksasi { get; set; } // Bahan atau metode fiksasi yang digunakan
         public string? JenisPemeriksaanGC { get; set; } // GC = Gynaecological Cytology
@@ -29,6 +28,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public string? MasaHaidTerakhir { get; set; } // Informasi masa haid terakhir (jika relevan)
         public string? Diagnosa {  get; set; }
         public string? NoOrder { get; set; }
+        public string? StatusPemeriksaan {  get; set; }
+        public DateTime? TanggalSelesai { get; set; }
+        public bool? StatusVerifikasi { get; set; }
         public string? AlasanPembatalan {  get; set; }
         public string? TTDPembatalanPath { get; set; }
     }

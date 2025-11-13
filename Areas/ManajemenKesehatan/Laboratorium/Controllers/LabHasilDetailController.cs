@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using System.Security.Claims;
+using Microsoft.AspNet.SignalR.Client.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
@@ -74,6 +75,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.HasilLabManual,
                              a.HasilLabAI,
                              a.JumlahFilm,
+                             a.KeadaanSpecimen,
+                             a.AnalisId,
+                             a.IsDefinitif,
+                             a.IsDuplu,
+                             a.HasilMakroskopik,
+                             a.HasilMikroskopik,
+                             a.KesimpulanHasil,
+                             a.NilaiNormal,
+                             a.BloodVolume,
+                             a.SputumVolume,
+                             a.UrineVolume,
+                             a.PusVolume,
+                             a.StoolVolume,
+                             a.JaringanVolume,
+                             a.BodyFluidVolume,
+                             a.PetugasSpecimenId,
                              a.Keterangan,
                          }).OrderByDescending(a => a.CreateDateTime);
 
@@ -228,7 +245,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     HasilLabManual = vm.HasilLabManual,
                     HasilLabAI = vm.HasilLabAI,
                     JumlahFilm = vm.JumlahFilm,
+                    KeadaanSpecimen = vm.KeadaanSpecimen,
+                    AnalisId = vm.AnalisId,
+                    IsDefinitif = vm.IsDefinitif,
+                    IsDuplu = vm.IsDuplu,
+                    HasilMakroskopik = vm.HasilMakroskopik,
+                    HasilMikroskopik = vm.HasilMikroskopik,
+                    KesimpulanHasil = vm.KesimpulanHasil,
+                    NilaiNormal = vm.NilaiNormal,
+                    BloodVolume = vm.BloodVolume,
+                    SputumVolume = vm.SputumVolume,
+                    UrineVolume = vm.UrineVolume,
+                    PusVolume = vm.PusVolume,
+                    StoolVolume = vm.StoolVolume,
+                    JaringanVolume = vm.JaringanVolume,
+                    BodyFluidVolume = vm.BodyFluidVolume,
+                    PetugasSpecimenId = vm.PetugasSpecimenId,
                     Keterangan = vm.Keterangan,
+
                     CreateBy = userActiveId,
                     CreateDateTime = DateTime.UtcNow,
                 };
@@ -346,6 +380,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 data.HasilLabManual = vm.HasilLabManual;
                 data.HasilLabAI = vm.HasilLabAI;
                 data.JumlahFilm = vm.JumlahFilm;
+                data.KeadaanSpecimen = vm.KeadaanSpecimen;
+                data.AnalisId = vm.AnalisId;
+                data.IsDefinitif = vm.IsDefinitif;
+                data.IsDuplu = vm.IsDuplu;
+                data.HasilMakroskopik = vm.HasilMakroskopik;
+                data.HasilMikroskopik = vm.HasilMikroskopik;
+                data.KesimpulanHasil = vm.KesimpulanHasil;
+                data.NilaiNormal = vm.NilaiNormal;
+                data.BloodVolume = vm.BloodVolume;
+                data.SputumVolume = vm.SputumVolume;
+                data.UrineVolume = vm.UrineVolume;
+                data.PusVolume = vm.PusVolume;
+                data.StoolVolume = vm.StoolVolume;
+                data.JaringanVolume = vm.JaringanVolume;
+                data.BodyFluidVolume = vm.BodyFluidVolume;
+                data.PetugasSpecimenId = vm.PetugasSpecimenId;
                 data.Keterangan = vm.Keterangan;
                 data.UpdateBy = getUserActive.UserActiveId;
                 data.UpdateDateTime = DateTime.UtcNow;
@@ -479,6 +529,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.HasilLabManual,
                              a.HasilLabAI,
                              a.JumlahFilm,
+                             a.KeadaanSpecimen,
+                             a.AnalisId,
+                             a.IsDefinitif,
+                             a.IsDuplu,
+                             a.HasilMakroskopik,
+                             a.HasilMikroskopik,
+                             a.KesimpulanHasil,
+                             a.NilaiNormal,
+                             a.BloodVolume,
+                             a.SputumVolume,
+                             a.UrineVolume,
+                             a.PusVolume,
+                             a.StoolVolume,
+                             a.JaringanVolume,
+                             a.BodyFluidVolume,
+                             a.PetugasSpecimenId,
                              a.Keterangan,
                          });
 
