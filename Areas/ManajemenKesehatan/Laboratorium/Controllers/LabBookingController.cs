@@ -227,6 +227,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                 join lp in _applicationDbContext.LabPemeriksaans on lb.PemeriksaanLabId equals lp.PemeriksaanLabId into lpGroup
                                 from lp in lpGroup.DefaultIfEmpty()
 
+                                join po in _applicationDbContext.Polikliniks on k.PoliklinikId equals po.PoliklinikId into poGroup
+                                from po in poGroup.DefaultIfEmpty()
+
                                 where (b.IsDelete == false || b.IsDelete == null)
                                       && b.BookingLabId == id
                                 select new
@@ -234,6 +237,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                     // Header
                                     b.BookingLabId,
                                     KunjunganId = (Guid?)b.KunjunganId,
+                                    PoliId = (Guid?)po.PoliklinikId,
+                                    NamaPoli = po.NamaPoliklinik ?? null,
                                     PasienId = (Guid?)b.PasienId,
                                     PasienNama = p.NamaLengkap,
                                     p.NoRekamMedis,
@@ -280,6 +285,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     {
                         BookingLabId = g.Key,
                         g.First().KunjunganId,
+                        g.First().PoliId,
+                        g.First().NamaPoli,
                         g.First().PasienId,
                         g.First().PasienNama,
                         g.First().NoRekamMedis,
@@ -696,12 +703,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                             join lp in _applicationDbContext.LabPemeriksaans on lb.PemeriksaanLabId equals lp.PemeriksaanLabId into lpGroup
                             from lp in lpGroup.DefaultIfEmpty()
 
+                            join po in _applicationDbContext.Polikliniks on k.PoliklinikId equals po.PoliklinikId into poGroup
+                            from po in poGroup.DefaultIfEmpty()
+
                             where b.IsDelete == false || b.IsDelete == null
                             select new
                             {
                                 // Header
                                 b.BookingLabId,
                                 KunjunganId = (Guid?)b.KunjunganId,
+                                AsalKunjungan = k != null ? k.AsalKunjungan : null,
+                                PoliId = (Guid?)po.PoliklinikId,
+                                NamaPoli = po.NamaPoliklinik ?? null,
                                 PasienId = (Guid?)b.PasienId,
                                 PasienNama = p.NamaLengkap,
                                 p.NoRekamMedis,
@@ -720,10 +733,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                 DokterNama = d1.NmDokter ?? null,
                                 DokterKonsulenId = b.DokterKonsulenId ?? null,
                                 DokterKonsulen = d2.NmDokter ?? null,
-                                AsalKunjungan = k != null ? k.AsalKunjungan : null,
                                 TipePasien = k != null ? k.TipePasien : null,
                                 b.CreateBy,
                                 CreateByName = u.FullName,
+                             
                                 b.CreateDateTime,
 
                                 // Detail
@@ -805,6 +818,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     // Header
                     BookingLabId = g.Key,
                     g.First().KunjunganId,
+                    g.First().PoliId,
+                    g.First().NamaPoli,
                     g.First().PasienId,
                     g.First().PasienNama,
                     g.First().NoRekamMedis,

@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using Microsoft.AspNet.SignalR.Client.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
@@ -6,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Controllers;
@@ -102,20 +104,83 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(Guid id)
+        public async Task<IActionResult> GetByIdAsync(Guid id)
         {
-            var listdata = _applicationDbContext.IGDTriages.Find(id);
-            if (listdata == null)
+            try
             {
-                return NotFound(new { message = "Data tidak ditemukan." });
-            }
+                // ✅ Query utama join langsung (tanpa N+1)
+                var baseQuery = from t in _applicationDbContext.IGDTriages
+                                join d in _applicationDbContext.IGDTriageDetails
+                                    on t.TriageId equals d.TriageId into detailGroup
+                                from d in detailGroup.DefaultIfEmpty()
+                                where (t.IsDelete == false || t.IsDelete == null)
+                                      && t.TriageId == id
+                                select new
+                                {
+                                    TriageId = (Guid?)t.TriageId,
+                                    KunjunganId = (Guid?)t.KunjunganId,
+                                    t.KeluhanUtama,
+                                    t.DiteruskanKepada,
+                                    t.Keterangan,
+                                    DetailIndikatorId = (Guid?)d.IndikatorPengkajianId,
+                                    DetailKeterangan = d != null ? d.Keterangan : null,
+                                    DetailCreateTime = (DateTimeOffset?)d.CreateDateTime,
+                                    t.CreateBy,
+                                    CreateDateTime = (DateTimeOffset?)t.CreateDateTime
+                                };
 
-            return Ok(new
+                // 🔹 Eksekusi query ke memory dulu (EF tidak bisa GroupBy langsung dengan DefaultIfEmpty)
+                var data = await baseQuery.ToListAsync();
+
+                if (data == null || data.Count == 0)
+                {
+                    return NotFound(new { message = "Data tidak ditemukan untuk ID tersebut." });
+                }
+
+                // 🔹 Grouping detail (1 Triage -> banyak detail)
+                var result = data
+                    .GroupBy(x => new
+                    {
+                        x.TriageId,
+                        x.KunjunganId,
+                        x.KeluhanUtama,
+                        x.DiteruskanKepada,
+                        x.Keterangan,
+                        x.CreateBy,
+                        x.CreateDateTime
+                    })
+                    .Select(g => new
+                    {
+                        g.Key.TriageId,
+                        g.Key.KunjunganId,
+                        g.Key.KeluhanUtama,
+                        g.Key.DiteruskanKepada,
+                        g.Key.Keterangan,
+                        g.Key.CreateBy,
+                        CreateDateTime = g.Key.CreateDateTime ?? DateTimeOffset.MinValue,
+                        Details = g
+                            .Where(x => x.DetailIndikatorId != null)
+                            .Select(x => new
+                            {
+                                IndikatorPengkajianId = x.DetailIndikatorId,
+                                Keterangan = x.DetailKeterangan
+                            }).ToList()
+                    })
+                    .FirstOrDefault();
+
+                return Ok(new
+                {
+                    status = "success",
+                    message = "Data retrieved successfully",
+                    data = result
+                });
+            }
+            catch (Exception ex)
             {
-                message = "Ditemukan || 200 OK",
-                data = listdata
-            });
+                return StatusCode(500, new { message = $"Terjadi kesalahan: {ex.Message}" });
+            }
         }
+
 
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] IGDTriageViewModel vm)
@@ -171,6 +236,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 };
                 // **Simpan ke Database**
                 _applicationDbContext.IGDTriages.Add(data);
+                // 💾 Simpan data detail triage
+                // =============================
+                if (vm.Details != null && vm.Details.Count > 0)
+                {
+                    foreach (var detail in vm.Details)
+                    {
+                        var detailEntity = new IGDTriageDetail
+                        {
+                            DetailTriageId = Guid.NewGuid(),
+                            TriageId = data.TriageId,
+                            IndikatorPengkajianId = detail.IndikatorPengkajianId,
+                            Keterangan = detail.Keterangan,
+                            CreateDateTime = DateTimeOffset.UtcNow,
+                            CreateBy = userActiveId,
+                            IsDelete = false
+                        };
+
+                        _applicationDbContext.IGDTriageDetails.Add(detailEntity);
+                    }
+                }
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -323,7 +408,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
         }
 
         [HttpGet("paged")]
-        public IActionResult Paged(
+        public async Task<IActionResult> PagedAsync(
             int page = 1,
             int perPage = 10,
             Guid? kunjunganId = null,
@@ -336,23 +421,60 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
             [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
 
-            // Query data
-            var query = (from a in _applicationDbContext.IGDTriages
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false || a.IsDelete == null
-                         select new
-                         {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = u.FullName,
-                             a.TriageId,
-                             a.KunjunganId,
-                             a.KeluhanUtama,
-                             a.DiteruskanKepada,
-                             a.WaktuMasuk,
-                             a.Keterangan,
-                         });
+            // Query join langsung, tanpa subquery
+            var baseQuery = from t in _applicationDbContext.IGDTriages
+                            join d in _applicationDbContext.IGDTriageDetails
+                                on t.TriageId equals d.TriageId into detailGroup
+                            from d in detailGroup.DefaultIfEmpty()
+                            where (t.IsDelete == false || t.IsDelete == null)
+                            select new
+                            {
+                                TriageId = (Guid?)t.TriageId, // 🩹 cast ke nullable
+                                KunjunganId = (Guid?)t.KunjunganId, // 🩹 cast ke nullable
+                                t.KeluhanUtama,
+                                t.DiteruskanKepada,
+                                t.Keterangan,
+                                DetailIndikatorId = (Guid?)d.IndikatorPengkajianId, // 🩹 cast ke nullable
+                                DetailKeterangan = d != null ? d.Keterangan : null,
+                                DetailCreateTime = (DateTimeOffset?)d.CreateDateTime, // 🩹 nullable timestamp
+                                t.CreateBy,
+                                CreateDateTime = (DateTimeOffset?)t.CreateDateTime // 🩹 nullable timestamp
+                            };
+
+
+            var grouped = await baseQuery
+                .OrderByDescending(x => x.CreateDateTime)
+                .ToListAsync();
+
+            // Grouping di memory (karena EF belum bisa langsung GroupBy-to-List dengan navigation)
+            var result = grouped
+                .GroupBy(x => new
+                {
+                    x.TriageId,
+                    x.KunjunganId,
+                    x.KeluhanUtama,
+                    x.DiteruskanKepada,
+                    x.Keterangan,
+                    x.CreateBy,
+                    x.CreateDateTime,
+                })
+                .Select(g => new
+                {
+                    g.Key.TriageId,
+                    g.Key.KunjunganId,
+                    g.Key.KeluhanUtama,
+                    g.Key.DiteruskanKepada,
+                    g.Key.Keterangan,
+                    g.Key.CreateBy,
+                    CreateDateTime = g.Key.CreateDateTime ?? DateTimeOffset.MinValue,
+                    Details = g
+                        .Where(x => x.DetailIndikatorId != null)
+                        .Select(x => new
+                        {
+                            IndikatorPengkajianId = x.DetailIndikatorId,
+                            Keterangan = x.DetailKeterangan
+                        }).ToList()
+                }).AsQueryable();
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             //if (!string.IsNullOrWhiteSpace(search))
@@ -366,7 +488,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
             // filter berdasarkan kunjungan id
             if (kunjunganId.HasValue)
             {
-                query = query.Where(u => u.KunjunganId == kunjunganId.Value);
+                result = result.Where(u => u.KunjunganId == kunjunganId.Value);
             }
 
             //// **Filter berdasarkan tanggal**
@@ -375,7 +497,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
                 DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
 
-                query = query.Where(u =>
+                result = result.Where(u =>
                     u.CreateDateTime >= startUtc &&
                     u.CreateDateTime <= endUtc);
             }
@@ -388,66 +510,64 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 switch (periode)
                 {
                     case PeriodeFilter.Today:
-                        query = query.Where(u => u.CreateDateTime.Date == today);
+                        result = result.Where(u => u.CreateDateTime.Date == today);
                         break;
                     case PeriodeFilter.ThisWeek:
-                        query = query.Where(u =>
+                        result = result.Where(u =>
                             u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
                             u.CreateDateTime.Date <= today
                         );
                         break;
                     case PeriodeFilter.LastWeek:
-                        query = query.Where(u =>
+                        result = result.Where(u =>
                             u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
                             u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)
                         );
                         break;
                     case PeriodeFilter.ThisMonth:
-                        query = query.Where(u =>
+                        result = result.Where(u =>
                             u.CreateDateTime.Month == today.Month &&
                             u.CreateDateTime.Year == today.Year
                         );
                         break;
                     case PeriodeFilter.LastMonth:
-                        query = query.Where(u =>
+                        result = result.Where(u =>
                             u.CreateDateTime.Month == today.Month - 1 &&
                             u.CreateDateTime.Year == today.Year
                         );
                         break;
                     case PeriodeFilter.ThisYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
+                        result = result.Where(u => u.CreateDateTime.Year == today.Year);
                         break;
                     case PeriodeFilter.LastYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
+                        result = result.Where(u => u.CreateDateTime.Year == today.Year - 1);
                         break;
                     case PeriodeFilter.Last3Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
+                        result = result.Where(u => u.CreateDateTime >= today.AddMonths(-3));
                         break;
                     case PeriodeFilter.Last6Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
+                        result = result.Where(u => u.CreateDateTime >= today.AddMonths(-6));
                         break;
                 }
             }
 
             // Sorting Data dengan cara yang lebih aman
-            query = sortDirection?.ToLower() == "desc"
+            result = sortDirection?.ToLower() == "desc"
                 ? orderBy switch
                 {
-                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    _ => query.OrderByDescending(u => u.CreateDateTime)
+                    "CreateDateTime" => result.OrderByDescending(u => u.CreateDateTime),
+                    _ => result.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
-                    "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    _ => query.OrderBy(u => u.CreateDateTime)
+                    "CreateDateTime" => result.OrderBy(u => u.CreateDateTime),
+                    _ => result.OrderBy(u => u.CreateDateTime)
                 };
 
             // Pagination
-            var totalRows = query.Count();
+            var totalRows = result.Count();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
+            var rows = result.Skip((page - 1) * perPage).Take(perPage).ToList();
 
             if (rows.Count == 0 && page > totalPages)
             {

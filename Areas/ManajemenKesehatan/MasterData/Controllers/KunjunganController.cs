@@ -862,22 +862,30 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
             try
             {
-                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(emailLogin))
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(EmailLogin))
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
 
-                var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
-                var userActiveId = getUserActive?.UserActiveId ?? Guid.Empty;
+                var GetUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+                var UserActiveId = GetUserActive?.UserActiveId ?? Guid.Empty;
 
-                var existingKunjungan = await _applicationDbContext.Kunjungans.FindAsync(id);
-                if (existingKunjungan == null)
-                    return NotFound(new { message = "Data kunjungan tidak ditemukan!" });
+                var existing = await _applicationDbContext.Kunjungans
+                    .FirstOrDefaultAsync(k => k.KunjunganID == id && (k.IsDelete == false || k.IsDelete == null));
 
-                // Validasi tipe pasien
+                if (existing == null)
+                    return NotFound(new { message = "Data kunjungan tidak ditemukan." });
+
+                // ========================================
+                // 🩺 Validasi tipe pasien
+                // ========================================
                 if (!new[] { "Rujukan", "Umum" }.Contains(request.TipePasien, StringComparer.OrdinalIgnoreCase))
                     return BadRequest(new { message = "Tipe pasien tidak valid. Gunakan hanya 'Rujukan' atau 'Umum'." });
 
-                var inputJenis = string.IsNullOrWhiteSpace(request.JenisKunjungan) || request.JenisKunjungan.Equals("string", StringComparison.OrdinalIgnoreCase)
+                // ========================================
+                // 🏥 Validasi jenis kunjungan
+                // ========================================
+                var inputJenis = string.IsNullOrWhiteSpace(request.JenisKunjungan) ||
+                                 request.JenisKunjungan.Equals("string", StringComparison.OrdinalIgnoreCase)
                     ? "Rawat Jalan"
                     : request.JenisKunjungan;
 
@@ -885,131 +893,157 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return BadRequest(new { message = "Jenis kunjungan tidak valid. Gunakan hanya 'Rawat Inap' atau 'Rawat Jalan'." });
 
                 string kodeJenis = inputJenis == "Rawat Inap" ? "IP" : "OP";
-
-                // Ambil kode antrean dari tabel Poliklinik
-                var kodePoli = _applicationDbContext.Polikliniks
-                    .Where(p => p.PoliklinikId == request.PoliklinikId)
-                    .Select(p => p.KodeAntreanPoli)
-                    .FirstOrDefault();
-
-                if (string.IsNullOrEmpty(kodePoli))
-                    return BadRequest(new { message = "Kode antrean poli tidak ditemukan untuk poliklinik ini!" });
-
-                // Hitung nomor antrian hari ini berdasarkan Poliklinik
                 var today = DateTime.UtcNow.Date;
 
-                var jumlahAntrianHariIni = _applicationDbContext.Kunjungans
-                    .Count(k => k.PoliklinikId == request.PoliklinikId
-                                && k.CreateDateTime.Date == today
-                                && !k.IsDelete);
+                // ========================================
+                // 🔎 Cek kunjungan aktif duplikat
+                // ========================================
+                bool isAlreadyRegistered = false;
 
-                int nomorAntrian = jumlahAntrianHariIni + 1;
-                string nomorAntrianFormatted = $"{kodePoli}{nomorAntrian:000}";
-
-                // Hitung jumlah kunjungan berdasarkan poliklinik hari ini
-                //var allKunjunganPasien = _applicationDbContext.Kunjungans
-                //    .Where(k => k.PoliklinikId == request.PoliklinikId && k.CreateDateTime.Date == today && !k.IsDelete)
-                //    .ToList();
-
-                //List<KunjunganRiwayat> jumlahKunjungan = new()
-                //{
-                //    new KunjunganRiwayat
-                //    {
-                //        Jenis = "IP",
-                //        Jumlah = allKunjunganPasien
-                //            .Where(k => !string.IsNullOrEmpty(k.JumlahKunjungan))
-                //            .SelectMany(k => JsonSerializer.Deserialize<List<KunjunganRiwayat>>(k.JumlahKunjungan) ?? new List<KunjunganRiwayat>())
-                //            .Where(k => k.Jenis == "IP")
-                //            .Sum(k => k.Jumlah)
-                //    },
-                //    new KunjunganRiwayat
-                //    {
-                //        Jenis = "OP",
-                //        Jumlah = allKunjunganPasien
-                //            .Where(k => !string.IsNullOrEmpty(k.JumlahKunjungan))
-                //            .SelectMany(k => JsonSerializer.Deserialize<List<KunjunganRiwayat>>(k.JumlahKunjungan) ?? new List<KunjunganRiwayat>())
-                //            .Where(k => k.Jenis == "OP")
-                //            .Sum(k => k.Jumlah)
-                //    }
-                //};
-
-                //var currentJenis = jumlahKunjungan.FirstOrDefault(k => k.Jenis == kodeJenis);
-                //if (currentJenis != null)
-                //    currentJenis.Jumlah += 1;
-                //else
-                //    jumlahKunjungan.Add(new KunjunganRiwayat { Jenis = kodeJenis, Jumlah = 1 });
-
-                // Update semua field
-                existingKunjungan.PasienId = request.PasienId;
-                existingKunjungan.DokterId = request.DokterId;
-                existingKunjungan.PoliklinikId = request.PoliklinikId;
-                existingKunjungan.AsuransiId = request.AsuransiId;
-                existingKunjungan.NoRekamMedis = request.NoRekamMedis;
-                existingKunjungan.TipePasien = request.TipePasien;
-                existingKunjungan.TipePembayaran = request.TipePembayaran;
-
-                existingKunjungan.JenisKunjungan = kodeJenis;
-                existingKunjungan.Antrian = nomorAntrianFormatted;
-                existingKunjungan.AsalKunjungan = request.AsalKunjungan;
-
-                // ttg rawat inap
-                //existingKunjungan.TglMasukRanap = request.TglMasukRanapParsed;
-                //existingKunjungan.TglKeluarRanap = request.TglKeluarRanapParsed;
-                //existingKunjungan.DokterDPJId = request.DokterDPJId;
-                //existingKunjungan.KamarId = request.KamarId;
-                //existingKunjungan.BedId = request.BedId;
-                //existingKunjungan.StatusRanap = request.StatusRanap;
-                //existingKunjungan.AlasanKeluar = request.AlasanKeluar;
-                //existingKunjungan.ReferensiKunjunganId = request.ReferensiKunjunganId;
-
-                existingKunjungan.UpdateDateTime = DateTimeOffset.UtcNow;
-                existingKunjungan.UpdateBy = userActiveId;
-
-                // Simpan nilai jenis kunjungan lama untuk deteksi perubahan
-                var jenisKunjunganLama = existingKunjungan.JenisKunjungan;
-                // Update billing "Biaya Admin" jika ada dan jenis kunjungan berubah
-                if (!string.Equals(jenisKunjunganLama, kodeJenis, StringComparison.OrdinalIgnoreCase))
+                if (kodeJenis == "OP")
                 {
-                    var existingBilling = await _applicationDbContext.Billings
-                        .FirstOrDefaultAsync(b => b.KunjunganId == existingKunjungan.KunjunganID && b.BillingKode == "Biaya Admin");
+                    isAlreadyRegistered = _applicationDbContext.Kunjungans.Any(k =>
+                        k.PasienId == request.PasienId &&
+                        k.PoliklinikId == request.PoliklinikId &&
+                        k.KunjunganID != id &&
+                        !k.IsDelete &&
+                        k.IsFinished == false &&
+                        k.JenisKunjungan == "OP" &&
+                        k.CreateDateTime.Date == today);
+                }
+                else if (kodeJenis == "IP")
+                {
+                    isAlreadyRegistered = _applicationDbContext.Kunjungans.Any(k =>
+                        k.PasienId == request.PasienId &&
+                        k.KunjunganID != id &&
+                        !k.IsDelete &&
+                        k.IsFinished == false &&
+                        k.JenisKunjungan == "IP");
+                }
 
-                    if (existingBilling != null)
+                if (isAlreadyRegistered)
+                    return BadRequest(new { message = "Pasien sudah terdaftar untuk kunjungan aktif yang belum selesai." });
+
+                // ========================================
+                // 🩺 Penentuan nomor antrean
+                // ========================================
+                string nomorAntrianFormatted = existing.Antrian; // default: pakai antrean lama
+                string kodePoli = null;
+
+                // Hanya generate antrean baru jika AsalKunjungan bukan IGD
+                if (!string.Equals(request.AsalKunjungan?.Trim(), "igd", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (request.PoliklinikId == null || request.PoliklinikId == Guid.Empty)
+                        return BadRequest(new { message = "Poliklinik wajib dipilih untuk kunjungan non-IGD." });
+
+                    kodePoli = _applicationDbContext.Polikliniks
+                        .Where(p => p.PoliklinikId == request.PoliklinikId)
+                        .Select(p => p.KodeAntreanPoli)
+                        .FirstOrDefault();
+
+                    if (string.IsNullOrEmpty(kodePoli))
+                        return BadRequest(new { message = "Kode antrean poli tidak ditemukan untuk poliklinik ini!" });
+
+                    var jumlahAntrianHariIni = _applicationDbContext.Kunjungans
+                        .Count(k => k.PoliklinikId == request.PoliklinikId &&
+                                    k.CreateDateTime.Date == today &&
+                                    !k.IsDelete);
+
+                    int nomorAntrian = jumlahAntrianHariIni + 1;
+                    nomorAntrianFormatted = $"{kodePoli}{nomorAntrian:000}";
+                }
+                else
+                {
+                    nomorAntrianFormatted = null; // IGD tidak pakai antrean
+                }
+
+                // ========================================
+                // 💾 Update data kunjungan
+                // ========================================
+                existing.PasienId = request.PasienId;
+                existing.DokterId = request.DokterId;
+                existing.PoliklinikId = request.PoliklinikId;
+                existing.AsuransiId = request.AsuransiId;
+                existing.JenisKunjungan = kodeJenis;
+                existing.NoRekamMedis = request.NoRekamMedis;
+                existing.TipePasien = request.TipePasien;
+                existing.TipePembayaran = request.TipePembayaran;
+                existing.AsalKunjungan = request.AsalKunjungan;
+                existing.Antrian = nomorAntrianFormatted;
+                existing.UpdateDateTime = DateTimeOffset.UtcNow;
+                existing.UpdateBy = UserActiveId;
+
+                _applicationDbContext.Kunjungans.Update(existing);
+
+                // ========================================
+                // 💰 Update atau tambahkan biaya administrasi
+                // ========================================
+                var biayaAdmin = await _applicationDbContext.BiayaAdministrasis
+                    .Where(b => b.BiayaAdministrasiKode == kodeJenis)
+                    .FirstOrDefaultAsync();
+
+                if (biayaAdmin != null)
+                {
+                    var existingBill = await _applicationDbContext.Billings
+                        .FirstOrDefaultAsync(b => b.KunjunganId == existing.KunjunganID && b.JenisBilling == "Biaya Admin");
+
+                    if (existingBill != null)
                     {
-                        var biayaAdmin = await _applicationDbContext.BiayaAdministrasis
-                            .FirstOrDefaultAsync(b => b.BiayaAdministrasiKode == kodeJenis);
-
-                        if (biayaAdmin != null)
+                        existingBill.ItemId = biayaAdmin.BiayaAdministrasiId;
+                        existingBill.NamaItem = biayaAdmin.NamaBiayaAdministrasi;
+                        existingBill.HargaItem = biayaAdmin.NominalBiayaAdministrasi;
+                        existingBill.SubTotalItem = biayaAdmin.NominalBiayaAdministrasi;
+                        existingBill.UpdateDateTime = DateTimeOffset.UtcNow;
+                        existingBill.UpdateBy = UserActiveId;
+                        _applicationDbContext.Billings.Update(existingBill);
+                    }
+                    else
+                    {
+                        var newBill = new Billing
                         {
-                            existingBilling.ItemId = biayaAdmin.BiayaAdministrasiId;
-                            existingBilling.NamaItem = biayaAdmin.NamaBiayaAdministrasi;
-                            existingBilling.HargaItem = biayaAdmin.NominalBiayaAdministrasi;
-                            existingBilling.SubTotalItem = biayaAdmin.NominalBiayaAdministrasi;
-                            existingBilling.BillingDate = DateTime.UtcNow;
-                        }
+                            BillingId = Guid.NewGuid(),
+                            KunjunganId = existing.KunjunganID,
+                            ItemId = biayaAdmin.BiayaAdministrasiId,
+                            NamaItem = biayaAdmin.NamaBiayaAdministrasi,
+                            HargaItem = biayaAdmin.NominalBiayaAdministrasi,
+                            QtyItem = 1,
+                            SubTotalItem = biayaAdmin.NominalBiayaAdministrasi,
+                            BillingKode = "001",
+                            JenisBilling = "Biaya Admin",
+                            BillingDate = DateTime.UtcNow,
+                            CreateDateTime = DateTimeOffset.UtcNow,
+                            CreateBy = UserActiveId
+                        };
+                        _applicationDbContext.Billings.Add(newBill);
                     }
                 }
 
                 await _applicationDbContext.SaveChangesAsync();
-                await _hubContext.Clients.All.SendAsync("KunjunganChanged", new
+
+                // ========================================
+                // 🔔 Kirim notifikasi SignalR
+                // ========================================
+                await _hubContext.Clients.All.SendAsync("Kunjungan diupdate", new
                 {
                     action = "update",
-                    kunjunganId = existingKunjungan.KunjunganID,
-                    pasienId = request.PasienId,
-                    dokterId = request.DokterId,
+                    kunjunganId = existing.KunjunganID,
+                    pasienId = existing.PasienId,
+                    dokterId = existing.DokterId,
                     NomorAntrian = nomorAntrianFormatted
                 });
 
                 return Ok(new
                 {
-                    message = "Data kunjungan berhasil diperbarui.",
+                    message = "Kunjungan berhasil diperbarui.",
                     data = new
                     {
-                        request.PasienId,
-                        request.DokterId,
-                        request.PoliklinikId,
-                        existingKunjungan.KunjunganID,
+                        existing.KunjunganID,
+                        existing.PasienId,
+                        existing.DokterId,
+                        existing.PoliklinikId,
+                        existing.AsuransiId,
                         JenisKunjungan = inputJenis,
-                        NomorAntrian = nomorAntrianFormatted
+                        NomorAntrian = nomorAntrianFormatted ?? "Tanpa antrean (IGD)"
                     }
                 });
             }
