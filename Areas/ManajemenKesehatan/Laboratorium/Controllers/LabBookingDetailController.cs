@@ -236,67 +236,42 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         public async Task<IActionResult> Create([FromBody] LabBookingDetailViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
-            {
                 return BadRequest(new { message = "Data tidak valid." });
-            }
 
             try
             {
-                // **Cek koneksi ke database**
                 if (!_applicationDbContext.Database.CanConnect())
-                {
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
-                }
 
-                // **Ambil User ID dari JWT Claims**
+                // 🔹 Ambil user login
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
-                {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
-                }
 
                 var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
                 if (getUserActive == null)
-                {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-                }
+
                 var userActiveId = getUserActive.UserActiveId;
 
                 // ==========================================================
-                // ✅ Ambil kode lab dinamis dari tabel Labs
+                // ✅ Ambil data lab untuk generate NoOrder
                 // ==========================================================
                 if (vm.LabId == null)
                     return BadRequest(new { message = "LabId wajib diisi untuk menentukan NoOrder." });
 
-                var lab = await _applicationDbContext.Labs
-                    .AsNoTracking()
+                var lab = await _applicationDbContext.Labs.AsNoTracking()
                     .FirstOrDefaultAsync(l => l.LabId == vm.LabId);
 
                 if (lab == null)
                     return NotFound(new { message = "Lab dengan ID tersebut tidak ditemukan." });
 
-                // Ambil prefix dari KodeKategori tanpa "LAB"
                 var kodeKategori = lab.KodeKategori?.Trim().ToUpper() ?? "UNK";
-                string labPrefix;
+                string labPrefix = kodeKategori.StartsWith("LAB") && kodeKategori.Length > 3
+                    ? kodeKategori.Substring(3, Math.Min(3, kodeKategori.Length - 3))
+                    : kodeKategori.Length > 3 ? kodeKategori.Substring(0, 3) : kodeKategori;
 
-                // Jika diawali "LAB", ambil 3 huruf setelahnya
-                if (kodeKategori.StartsWith("LAB") && kodeKategori.Length > 3)
-                {
-                    labPrefix = kodeKategori.Substring(3);
-                    // Jika lebih dari 3 huruf, ambil hanya 3 pertama
-                    labPrefix = labPrefix.Length > 3 ? labPrefix.Substring(0, 3) : labPrefix;
-                }
-                else
-                {
-                    // Jika tidak diawali "LAB", ambil 3 huruf pertama saja
-                    labPrefix = kodeKategori.Length > 3 ? kodeKategori.Substring(0, 3) : kodeKategori;
-                }
-
-                // ==========================================================
-                // ✅ Generate nomor order harian berdasarkan prefix
-                // ==========================================================
                 var today = DateTime.UtcNow.Date;
-
                 var lastOrderToday = await _applicationDbContext.LabBookingDetails
                     .Where(d => d.CreateDateTime.Date == today && d.NoOrder.StartsWith(labPrefix))
                     .OrderByDescending(d => d.NoOrder)
@@ -310,10 +285,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         nextNumber = lastNum + 1;
                 }
 
-                string newNoOrder = $"{labPrefix}{today}{nextNumber:D4}";
+                string newNoOrder = $"{labPrefix}{today:yyyyMMdd}{nextNumber:D4}";
 
-
-                // **Buat Data Baru**
+                // ==========================================================
+                // ✅ Buat data baru LabBookingDetail
+                // ==========================================================
                 var data = new LabBookingDetail
                 {
                     DetailBookingLabId = Guid.NewGuid(),
@@ -321,7 +297,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     PasienId = vm.PasienId,
                     PemeriksaanLabId = vm.PemeriksaanLabId,
                     LabId = vm.LabId,
-
                     KategoriPatologiAnatomi = vm.KategoriPatologiAnatomi,
                     JenisSpecimen = vm.JenisSpecimen,
                     LokasiSpecimen = vm.LokasiSpecimen,
@@ -341,23 +316,55 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     StatusPemeriksaan = vm.StatusPemeriksaan,
                     StatusVerifikasi = vm.StatusVerifikasi,
                     TanggalSelesai = vm.TanggalSelesai,
-
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
 
-                // **Simpan ke Database**
                 _applicationDbContext.LabBookingDetails.Add(data);
-                int result = await _applicationDbContext.SaveChangesAsync();
+                await _applicationDbContext.SaveChangesAsync();
 
-                if (result > 0)
+                // ==========================================================
+                // ✅ Tambahkan otomatis ke Billing
+                // ==========================================================
+                if (vm.PemeriksaanLabId != null && vm.BookingLabId != null)
                 {
-                    return Created("", new { message = "Tambah Data Detail Booking Lab Berhasil || 201 Created" });
+                    var pemeriksaan = await _applicationDbContext.LabPemeriksaans
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(p => p.PemeriksaanLabId == vm.PemeriksaanLabId);
+
+                    if (pemeriksaan != null)
+                    {
+                        var billing = new Billing
+                        {
+                            BillingId = Guid.NewGuid(),
+                            KunjunganId = vm.KunjunganId ?? Guid.Empty, // jika dikirim dari ViewModel
+                            ItemId = pemeriksaan.PemeriksaanLabId,
+                            NamaItem = pemeriksaan.NamaPemeriksaan,
+                            HargaItem = pemeriksaan.HargaPemeriksaan ?? 0,
+                            QtyItem = 1,
+                            SubTotalItem = pemeriksaan.HargaPemeriksaan ?? 0,
+                            BillingKode = "LAB",
+                            JenisBilling = "Pemeriksaan Lab",
+                            BillingDate = DateTime.UtcNow,
+                            CreateBy = userActiveId,
+                            CreateDateTime = DateTimeOffset.UtcNow,
+                            Keterangan = $"Booking Lab ({newNoOrder})"
+                        };
+
+                        _applicationDbContext.Billings.Add(billing);
+                        await _applicationDbContext.SaveChangesAsync();
+                    }
                 }
-                else
+
+                return Created("", new
                 {
-                    return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
-                }
+                    message = "Tambah Data Detail Booking Lab & Billing Berhasil || 201 Created",
+                    data = new
+                    {
+                        data.DetailBookingLabId,
+                        data.NoOrder
+                    }
+                });
             }
             catch (DbUpdateException dbEx)
             {
@@ -369,13 +376,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             }
         }
 
+
         [HttpPut("Batal/{id}")]
         public async Task<IActionResult> BatalBooking(Guid id, [FromForm] LabBookingDetailBatalVM vm)
         {
             if (vm == null)
                 return BadRequest(new { message = "Data pembatalan tidak valid." });
 
-            // 🔍 Ambil data booking berdasarkan ID
             var booking = await _applicationDbContext.LabBookingDetails
                 .FirstOrDefaultAsync(b => b.DetailBookingLabId == id);
 
@@ -400,7 +407,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
             if (vm.TTDPembatalan != null && vm.TTDPembatalan.Length > 0)
             {
-                var maxSize = 1 * 1024 * 1024; // Maksimal 1 MB
+                var maxSize = 1 * 1024 * 1024; // 1 MB
                 var allowedExtensions = new List<string> { ".jpg", ".jpeg" };
                 var fileExtension = Path.GetExtension(vm.TTDPembatalan.FileName).ToLower();
 
@@ -410,25 +417,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 if (!allowedExtensions.Contains(fileExtension))
                     return BadRequest(new { message = "Format tanda tangan tidak valid! Gunakan JPG atau JPEG." });
 
-                // Buat nama file unik
                 var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
                 var ttdFileName = $"{getUserActive.FullName}_{safeTime}_TTDBatal{fileExtension}";
 
-                // 📤 Upload ke server Flask
                 using var client = new HttpClient();
                 using var ms = new MemoryStream();
                 await vm.TTDPembatalan.CopyToAsync(ms);
                 ms.Position = 0;
 
                 var content = new MultipartFormDataContent {
-                {
-                    new StreamContent(ms) {
-                        Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.TTDPembatalan.ContentType) }
-                    },
-                    "file", ttdFileName
+            {
+                new StreamContent(ms) {
+                    Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.TTDPembatalan.ContentType) }
                 },
-                { new StringContent("TTDPembatalan"), "folderTarget" }
-                    };
+                "file", ttdFileName
+            },
+            { new StringContent("TTDPembatalan"), "folderTarget" }
+        };
 
                 HttpResponseMessage flaskResponse;
                 try
@@ -445,9 +450,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     return StatusCode(500, new { message = "Gagal upload tanda tangan ke server Flask." });
 
                 var responseBody = await flaskResponse.Content.ReadAsStringAsync();
-
-                // Asumsi Flask response seperti:
-                // {"fileUrl": "/uploads/TTDPembatalan/nama_file.jpg"}
                 dynamic jsonResp = JsonConvert.DeserializeObject(responseBody);
                 ttdPath = jsonResp?.url ?? jsonResp?.fileUrl ?? jsonResp?.path ?? "";
 
@@ -468,6 +470,31 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             booking.UpdateDateTime = DateTimeOffset.UtcNow;
 
             _applicationDbContext.LabBookingDetails.Update(booking);
+
+            // ==================================================
+            // ✅ SOFT DELETE BILLING YANG TERKAIT PEMERIKSAAN LAB
+            // ==================================================
+            if (booking.PemeriksaanLabId != null)
+            {
+                var relatedBillings = await _applicationDbContext.Billings
+                    .Where(b => b.ItemId == booking.PemeriksaanLabId
+                             && b.JenisBilling == "Pemeriksaan Lab"
+                             && (b.IsDelete == false || b.IsDelete == null))
+                    .ToListAsync();
+
+                if (relatedBillings.Any())
+                {
+                    foreach (var bill in relatedBillings)
+                    {
+                        bill.IsDelete = true;
+                        bill.UpdateBy = userActiveId;
+                        bill.UpdateDateTime = DateTimeOffset.UtcNow;
+                    }
+
+                    _applicationDbContext.Billings.UpdateRange(relatedBillings);
+                }
+            }
+
             await _applicationDbContext.SaveChangesAsync();
 
             // ==================================================
@@ -475,62 +502,85 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             // ==================================================
             return Ok(new
             {
-                message = "Booking lab berhasil dibatalkan.",
+                message = "Booking lab berhasil dibatalkan dan billing terkait telah dihapus (soft delete).",
                 bookingId = booking.DetailBookingLabId,
                 alasan = booking.AlasanPembatalan,
                 ttdUrl = ttdPath
             });
         }
 
+
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] LabBookingDetailViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
-            {
                 return BadRequest(new { message = "Data tidak valid." });
-            }
 
             try
             {
-                // **Cek koneksi ke database**
+                // ==========================================================
+                // 🔐 Validasi koneksi database dan user login
+                // ==========================================================
                 if (!_applicationDbContext.Database.CanConnect())
-                {
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
-                }
 
-                // **Ambil User ID dari JWT Claims**
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
-                {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
-                }
 
-                var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
                 if (getUserActive == null)
-                {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-                }
+
                 var userActiveId = getUserActive.UserActiveId;
 
-                // **Cari data berdasarkan ID**
-                var existingData = await _applicationDbContext.LabBookingDetails.FindAsync(id);
+                // ==========================================================
+                // 🔍 Cari data detail booking berdasarkan ID
+                // ==========================================================
+                var existingData = await _applicationDbContext.LabBookingDetails
+                    .FirstOrDefaultAsync(d => d.DetailBookingLabId == id);
+
                 if (existingData == null)
-                {
                     return NotFound(new { message = "Data detail booking lab tidak ditemukan." });
+
+                // ==========================================================
+                // ✅ Generate NoOrder jika LabId berubah
+                // ==========================================================
+                string newNoOrder = existingData.NoOrder; // default: tetap
+                if (vm.LabId != existingData.LabId && vm.LabId != null)
+                {
+                    var lab = await _applicationDbContext.Labs.AsNoTracking()
+                        .FirstOrDefaultAsync(l => l.LabId == vm.LabId);
+
+                    if (lab == null)
+                        return NotFound(new { message = "Lab dengan ID tersebut tidak ditemukan." });
+
+                    var kodeKategori = lab.KodeKategori?.Trim().ToUpper() ?? "UNK";
+                    string labPrefix = kodeKategori.StartsWith("LAB") && kodeKategori.Length > 3
+                        ? kodeKategori.Substring(3, Math.Min(3, kodeKategori.Length - 3))
+                        : kodeKategori.Length > 3 ? kodeKategori.Substring(0, 3) : kodeKategori;
+
+                    var today = DateTime.UtcNow.Date;
+                    var lastOrderToday = await _applicationDbContext.LabBookingDetails
+                        .Where(d => d.CreateDateTime.Date == today && d.NoOrder.StartsWith(labPrefix))
+                        .OrderByDescending(d => d.NoOrder)
+                        .FirstOrDefaultAsync();
+
+                    int nextNumber = 1;
+                    if (lastOrderToday != null && lastOrderToday.NoOrder.Length >= labPrefix.Length + 4)
+                    {
+                        string lastNumStr = lastOrderToday.NoOrder.Substring(labPrefix.Length);
+                        if (int.TryParse(lastNumStr, out int lastNum))
+                            nextNumber = lastNum + 1;
+                    }
+
+                    newNoOrder = $"{labPrefix}{today:yyyyMMdd}{nextNumber:D4}";
                 }
 
-                // **(Opsional) Cek duplikasi jika diperlukan**
-                // bool isDuplicate = _applicationDbContext.DetailBookingLabs
-                //     .Any(d => d.BookingLabId == vm.BookingLabId &&
-                //               d.PemeriksaanLabId == vm.PemeriksaanLabId &&
-                //               d.DetailBookingLabId != id);
-                //
-                // if (isDuplicate)
-                // {
-                //     return Conflict(new { message = "Pemeriksaan ini sudah ada untuk booking lab tersebut." });
-                // }
-
-                // **Update field data**
+                // ==========================================================
+                // ✅ Update field dari ViewModel
+                // ==========================================================
                 existingData.BookingLabId = vm.BookingLabId;
                 existingData.PasienId = vm.PasienId;
                 existingData.PemeriksaanLabId = vm.PemeriksaanLabId;
@@ -553,22 +603,82 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 existingData.AsalSpecimenId = vm.AsalSpecimenId;
                 existingData.StatusPemeriksaan = vm.StatusPemeriksaan;
                 existingData.TanggalSelesai = vm.TanggalSelesai;
-                existingData.StatusPemeriksaan = vm.StatusPemeriksaan;
+                existingData.NoOrder = newNoOrder;
 
                 existingData.UpdateBy = userActiveId;
                 existingData.UpdateDateTime = DateTimeOffset.UtcNow;
 
                 _applicationDbContext.LabBookingDetails.Update(existingData);
-                int result = await _applicationDbContext.SaveChangesAsync();
+                await _applicationDbContext.SaveChangesAsync();
 
-                if (result > 0)
+                // ==========================================================
+                // ✅ Sinkronisasi Billing Pemeriksaan Lab
+                // ==========================================================
+                if (vm.PemeriksaanLabId != null)
                 {
-                    return Ok(new { message = "Update Data Detail Booking Lab Berhasil || 200 OK" });
+                    var pemeriksaan = await _applicationDbContext.LabPemeriksaans
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(p => p.PemeriksaanLabId == vm.PemeriksaanLabId);
+
+                    if (pemeriksaan != null)
+                    {
+                        // Cek apakah sudah ada billing untuk pemeriksaan ini
+                        var existingBilling = await _applicationDbContext.Billings
+                            .FirstOrDefaultAsync(b => b.ItemId == vm.PemeriksaanLabId
+                                                   && b.JenisBilling == "Pemeriksaan Lab"
+                                                   && (b.IsDelete == false || b.IsDelete == null));
+
+                        if (existingBilling == null)
+                        {
+                            // Tambah billing baru
+                            var billing = new Billing
+                            {
+                                BillingId = Guid.NewGuid(),
+                                KunjunganId = vm.KunjunganId ?? Guid.Empty,
+                                ItemId = pemeriksaan.PemeriksaanLabId,
+                                NamaItem = pemeriksaan.NamaPemeriksaan,
+                                HargaItem = pemeriksaan.HargaPemeriksaan ?? 0,
+                                QtyItem = 1,
+                                SubTotalItem = pemeriksaan.HargaPemeriksaan ?? 0,
+                                BillingKode = "LAB",
+                                JenisBilling = "Pemeriksaan Lab",
+                                BillingDate = DateTime.UtcNow,
+                                CreateBy = userActiveId,
+                                CreateDateTime = DateTimeOffset.UtcNow,
+                                StatusPengambilan = false,
+                                Keterangan = $"Otomatis dari Update Booking Lab ({newNoOrder})"
+                            };
+
+                            _applicationDbContext.Billings.Add(billing);
+                        }
+                        else
+                        {
+                            // Update billing lama (jika harga atau nama berubah)
+                            existingBilling.NamaItem = pemeriksaan.NamaPemeriksaan;
+                            existingBilling.HargaItem = pemeriksaan.HargaPemeriksaan ?? existingBilling.HargaItem;
+                            existingBilling.SubTotalItem = existingBilling.HargaItem * (existingBilling.QtyItem ?? 1);
+                            existingBilling.UpdateBy = userActiveId;
+                            existingBilling.UpdateDateTime = DateTimeOffset.UtcNow;
+
+                            _applicationDbContext.Billings.Update(existingBilling);
+                        }
+
+                        await _applicationDbContext.SaveChangesAsync();
+                    }
                 }
-                else
+
+                // ==========================================================
+                // ✅ RESPONSE
+                // ==========================================================
+                return Ok(new
                 {
-                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui di database." });
-                }
+                    message = "Update Data Detail Booking Lab & Billing Berhasil || 200 OK",
+                    data = new
+                    {
+                        existingData.DetailBookingLabId,
+                        existingData.NoOrder
+                    }
+                });
             }
             catch (DbUpdateException dbEx)
             {
@@ -579,6 +689,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)

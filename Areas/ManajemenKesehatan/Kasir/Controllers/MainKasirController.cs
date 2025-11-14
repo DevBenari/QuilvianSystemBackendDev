@@ -333,13 +333,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 .Select(mk => mk.KunjunganId)
                 .FirstOrDefaultAsync();
 
-            // Validasi apakah KunjunganId ditemukan
             if (kunjunganId == Guid.Empty)
-            {
                 return NotFound(new { message = "Kunjungan tidak ditemukan untuk KasirId ini." });
-            }
 
-            // Ambil billing berdasarkan KunjunganId
             var billings = await _applicationDbContext.Billings
                 .Where(b => b.KunjunganId == kunjunganId)
                 .ToListAsync();
@@ -387,6 +383,30 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 {
                     var first = group.First();
 
+                    // ✅ Ambil semua billing lab terkait kunjungan ini
+                    var billingLabs = billings
+                        .Where(b => b.JenisBilling == "Pemeriksaan Lab" && b.KunjunganId == first.k.KunjunganID)
+                        .ToList();
+
+                    // ✅ Ambil daftar pemeriksaan lab dari tabel LabBookingDetails + LabPemeriksaans
+                    var daftarPemeriksaanLab = (
+                        from lbd in _applicationDbContext.LabBookingDetails
+                        join lp in _applicationDbContext.LabPemeriksaans on lbd.PemeriksaanLabId equals lp.PemeriksaanLabId
+                        where lbd.BookingLabId != null && lbd.PasienId == first.k.PasienId
+                        select new
+                        {
+                            lbd.DetailBookingLabId,
+                            lbd.BookingLabId,
+                            lp.PemeriksaanLabId,
+                            lp.NamaPemeriksaan,
+                            lp.HargaPemeriksaan,
+                            Qty = 1,
+                            Subtotal = lp.HargaPemeriksaan,
+                            StatusPemeriksaan = lbd.StatusPemeriksaan,
+                            Billing = billingLabs.FirstOrDefault(b => b.ItemId == lp.PemeriksaanLabId)
+                        }
+                    ).ToList();
+
                     return new
                     {
                         KasirId = first.kasir?.KasirId ?? Guid.Empty,
@@ -416,6 +436,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         first.kasir?.CreateBy,
                         first.kasir?.CreateDateTime,
 
+                        // ✅ Tambahkan daftar pemeriksaan lab
+                        DaftarPemeriksaanLab = daftarPemeriksaanLab
+                            .Select(x => new
+                            {
+                                x.PemeriksaanLabId,
+                                x.NamaPemeriksaan,
+                                Harga = x.HargaPemeriksaan,
+                                x.Qty,
+                                x.Subtotal,
+                                BillingId = x.Billing?.BillingId,
+                                BillingKode = x.Billing?.BillingKode,
+                                x.StatusPemeriksaan
+                            }).ToList(),
+
+                        // ✅ Total biaya pemeriksaan lab
+                        TotalPemeriksaanLab = (decimal)Math.Ceiling(
+                            daftarPemeriksaanLab.Sum(x => x.Subtotal ?? 0)
+                        ),
+
+                        // ✅ Data obat & tindakan tetap seperti sebelumnya
                         DaftarObat = group
                             .Where(x => x.dr != null && (x.dr.IsRacikan == false || x.dr.IsRacikan == null) && x.o != null)
                             .Select(x => new
@@ -428,91 +468,27 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                                 x.dr.Qty,
                                 x.dr.Signa,
                                 x.dr.SignaTambahan,
-                                StatusCoverObat = x.dr.StatusCoverObat,
-                                StatusPengambilanObat = x.dr.StatusPengambilanObat
-                            }).ToList(),
-
-                        DaftarObatRacikan = group
-                            .Where(x => x.dr != null && x.dr.IsRacikan == true && x.rc != null)
-                            .GroupBy(x => x.dr.RacikanId)
-                            .Select(g =>
-                            {
-                                var item = g.First();
-                                var komposisi = g
-                                    .Where(x => x.rd != null)
-                                    .Select(x => new
-                                    {
-                                        x.rd.ObatId,
-                                        NamaObat = x.oRacikan.ObatName ?? "-",
-                                        Qty = x.rd.QtyUsed ?? 0,
-                                        KomposisiDosis = x.rd.KomposisiDosis ?? 0
-                                    }).Distinct();
-
-                                var billing = billings.FirstOrDefault(b =>
-                                    b.JenisBilling == "Obat" && b.ItemId == item.dr.RacikanId);
-
-                                return new
-                                {
-                                    item.r.ResepId,
-                                    item.dr.RacikanId,
-                                    NamaRacikan = item.rc.NamaRacikan,
-                                    item.rc.KodeRacikan,
-                                    Qty = billing?.QtyItem,
-                                    Harga = billing?.HargaItem,
-                                    Subtotal = billing?.SubTotalItem,
-                                    Signa = item.dr.Signa,
-                                    SignaTambahan = item.dr.SignaTambahan,
-                                    StatusPengambilanObat = item.dr.StatusPengambilanObat,
-                                    Komposisi = komposisi
-                                };
+                                x.dr.StatusCoverObat,
+                                x.dr.StatusPengambilanObat
                             }).ToList(),
 
                         DaftarTindakan = group
                             .Where(x => x.to != null && x.t != null)
-                            .GroupBy(x => x.to.TindakanKunjunganId)
-                            .Select(g =>
+                            .Select(x => new
                             {
-                                var item = g.First();
-                                var billing = billings.FirstOrDefault(b =>
-                                    b.JenisBilling == "Tindakan" && b.ItemId == item.to.TindakanId);
-
-                                return new
-                                {
-                                    item.to.TindakanId,
-                                    BillingId = billing?.BillingId,
-                                    billing?.BillingKode,
-                                    item.t.NamaTindakan,
-                                    QtyTindakan = billing?.QtyItem,
-                                    HargaTindakan = item.to.Total,
-                                    StatusCoverTindakan = first.a != null &&
-                                        _applicationDbContext.TindakanAsuransis.Any(y =>
-                                            y.TindakanId == item.to.TindakanId && y.AsuransiId == first.a.AsuransiId)
-                                };
+                                x.t.TindakanId,
+                                x.t.NamaTindakan,
+                                x.to.Total
                             }).ToList(),
 
                         TotalObat = (decimal)Math.Ceiling(
-                            (decimal)group
-                                .Where(x => x.dr != null && x.o != null)
+                            (decimal)group.Where(x => x.dr != null && x.o != null)
                                 .DistinctBy(x => x.dr.DetailResepId)
-                                .Sum(x => x.dr.Qty * x.o.HTEPrice)
-                        ),
-
-                        TotalObatRacikan = (decimal)Math.Ceiling(
-                            group
-                                .Where(x => x.dr != null && x.dr.IsRacikan == true && x.rc != null)
-                                .GroupBy(x => x.dr.RacikanId)
-                                .Select(g =>
-                                {
-                                    var billing = billings.FirstOrDefault(b =>
-                                        b.JenisBilling == "Obat" && b.ItemId == g.Key);
-                                    return billing?.SubTotalItem ?? 0;
-                                })
-                                .Sum()
+                                .Sum(x => (x.dr.Qty * x.o.HTEPrice))
                         ),
 
                         TotalTindakan = (decimal)Math.Ceiling(
-                            group
-                                .Where(x => x.to != null && x.t != null)
+                            group.Where(x => x.to != null && x.t != null)
                                 .DistinctBy(x => x.to.TindakanKunjunganId)
                                 .Sum(x => (x.to.Quantity ?? 0) * (x.to.Total ?? 0))
                         )
@@ -520,211 +496,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 }).FirstOrDefault();
 
             if (kasirData == null)
-            {
                 return NotFound(new { message = "Data billing kasir tidak ditemukan untuk MainKasirId ini." });
-            }
 
             return Ok(new { status = "success", data = kasirData });
         }
-        //{
-        //    var listdata = _applicationDbContext.MainKasirs.Find(id);
-        //    if (listdata == null)
-        //    {
-        //        return NotFound(new { message = "Data tidak ditemukan." });
-        //    }
 
-        //    var query =
-        //                    // INNER JOIN Kunjungan dengan PendaftaranPasienBaru
-        //                    from k in _applicationDbContext.Kunjungans
-        //                    join p in _applicationDbContext.PendaftaranPasienBarus on k.PasienId equals p.PendaftaranPasienBaruId
-
-        //                    // LEFT JOIN Asuransi
-        //                    join a in _applicationDbContext.Asuransis on k.AsuransiId equals a.AsuransiId into asuransiTempGroup
-        //                    from a in asuransiTempGroup.DefaultIfEmpty()
-
-        //                        // LEFT JOIN AsuransiPasien (pastikan k.PasienId dapat dikonversi ke string jika ap.PasienId string)
-        //                    join ap in _applicationDbContext.AsuransiPasiens on p.PendaftaranPasienBaruId.ToString() equals ap.PasienId into asuransiPasienGroup
-        //                    from ap in asuransiPasienGroup.DefaultIfEmpty()
-
-        //                        // INNER JOIN Kunjungan ke tabel Dokter dan Poliklinik
-        //                    join d in _applicationDbContext.Dokters on k.DokterId equals d.DokterId
-        //                    join poli in _applicationDbContext.Polikliniks on k.PoliklinikId equals poli.PoliklinikId
-
-        //                    // LEFT JOIN Reseps (filter IsDelete di sini)
-        //                    join r in _applicationDbContext.Reseps.Where(resep => !resep.IsDelete) on k.KunjunganID equals r.KunjunganId into resepGroup
-        //                    from r in resepGroup.DefaultIfEmpty() // Penting: DefaultIfEmpty untuk LEFT JOIN
-
-        //                        // LEFT JOIN DetailResep (filter IsDelete di sini)
-        //                    join dr in _applicationDbContext.DetailReseps.Where(detail => !detail.IsDelete) on r.ResepId equals dr.ResepId into detailResepGroup
-        //                    from dr in detailResepGroup.DefaultIfEmpty()
-
-        //                        // LEFT JOIN Obat
-        //                        // Perhatikan: o.ObatId harus non-null untuk join. Jika dr null, o juga akan null.
-        //                    join o in _applicationDbContext.Obats on dr.ObatId equals o.ObatId into obatGroup
-        //                    from o in obatGroup.DefaultIfEmpty()
-
-        //                        // LEFT JOIN TindakanKunjungan
-        //                    join to in _applicationDbContext.TindakanKunjungans on k.KunjunganID equals to.KunjunganId into tindakanGroup
-        //                    from to in tindakanGroup.DefaultIfEmpty()
-
-        //                        // LEFT JOIN Tindakan
-        //                        // Perhatikan: t.TindakanId harus non-null untuk join. Jika to null, t juga akan null.
-        //                    join t in _applicationDbContext.Tindakans on to.TindakanId equals t.TindakanId into tindakanMasterGroup
-        //                    from t in tindakanMasterGroup.DefaultIfEmpty()
-
-        //                        // LEFT JOIN BiayaAdministrasi
-        //                        // Perhatikan: adm.BiayaAdministrasiKode harus non-null untuk join. Jika k.JenisKunjungan null, adm juga akan null.
-        //                    join adm in _applicationDbContext.BiayaAdministrasis on k.JenisKunjungan equals adm.BiayaAdministrasiKode into admGroup
-        //                    from adm in admGroup.DefaultIfEmpty()
-
-        //                        // LEFT JOIN ke tabel Kasir (MainKasir)
-        //                    join kasir in _applicationDbContext.MainKasirs on k.KunjunganID equals kasir.KunjunganId into kasirGroup
-        //                    from kasir in kasirGroup.DefaultIfEmpty()
-
-        //                        // LEFT JOIN ke tabel Diskon
-        //                        //join dsk in _applicationDbContext.Diskons on kasir.DiskonId equals dsk.DiskonId into diskonGroup
-        //                        //from dsk in diskonGroup.DefaultIfEmpty()
-
-        //                        // left join MainKasirDetails
-        //                    join dk in _applicationDbContext.MainKasirDetails on kasir.KasirId equals dk.MainKasirId into MainKasirDetailsGroup
-        //                    from dk in MainKasirDetailsGroup.DefaultIfEmpty()
-
-        //                        // LEFT JOIN ke tabel Metode Pembayaran
-        //                    join mp in _applicationDbContext.MetodePembayarans on dk.MetodePembayaranId equals mp.MetodePembayaranId into metodeGroup
-        //                    from mp in metodeGroup.DefaultIfEmpty()
-
-        //                    where kasir.KasirId == id && !k.IsDelete
-        //                    select new
-        //                    {
-        //                        k,
-        //                        p,
-        //                        a,
-        //                        ap,
-        //                        d,
-        //                        poli,
-        //                        r,
-        //                        dr,
-        //                        o,
-        //                        to,
-        //                        t,
-        //                        adm,
-        //                        kasir,
-        //                        //dsk,
-        //                        dk,
-        //                        mp
-        //                    };
-
-        //    var result = await query.ToListAsync();
-
-        //    var kasirData = result.GroupBy(x => x.k.KunjunganID) // Grouping by KunjunganID
-        //        .Select(group =>
-        //        {
-        //            var firstItem = group.First(); // Ambil satu item dari grup untuk data Kunjungan, Pasien, dll.
-
-        //            return new
-        //            {
-        //                KasirId = firstItem.kasir?.KasirId ?? Guid.Empty, // Gunakan Guid.Empty jika kasir null
-        //                firstItem.k.KunjunganID,
-        //                firstItem.k.JenisKunjungan,
-        //                NoRegistrasi = firstItem.k.Antrian,
-        //                firstItem.k.TipePembayaran,
-        //                TglRegistrasi = firstItem.k.CreateDateTime.ToString("dddd, dd MMMM yyyy", new CultureInfo("id-ID")), // Tambahkan tahun
-        //                firstItem.k.PasienId,
-        //                NoRM = firstItem.p?.NoRekamMedis ?? "-",
-        //                NamaPasien = firstItem.p?.NamaLengkap ?? "-",
-        //                UmurPasien = HitungUmurLengkap(firstItem.p?.TanggalLahir),
-        //                NoPasien = firstItem.p?.NoPasien ?? "-",
-        //                firstItem.p?.JenisKelamin,
-        //                firstItem.k.AsuransiId,
-        //                NamaPerusahaan = firstItem.a?.NamaAsuransi ?? null, // NamaAsuransi akan null jika tidak ada asuransi
-        //                NoPolis = firstItem.ap?.NoPolis ?? "-",
-        //                firstItem.k.DokterId,
-        //                NamaDokter = firstItem.d?.NmDokter ?? "-",
-        //                firstItem.k.PoliklinikId,
-        //                NamaPoliklinik = firstItem.poli?.NamaPoliklinik ?? "-",
-        //                firstItem.adm?.BiayaAdministrasiId,
-        //                firstItem.adm?.NominalBiayaAdministrasi,
-        //                PaymentMethodId = firstItem.mp?.MetodePembayaranId,
-        //                PaymentMethodName = firstItem.mp?.NamaMetode ?? "-",
-        //                //DiskonId = firstItem.dsk?.DiskonId,
-        //                //NamaDiskon = firstItem.dsk?.NamaDiskon ?? "-",
-        //                //NilaiDiskon = firstItem.dsk?.NominalDiskon ?? 0,
-        //                //PersenanDiskon = firstItem.dsk?.PersenDiskon ?? 0,
-        //                firstItem.k?.IsFinishedKasir,
-
-        //                firstItem.kasir?.CreateBy,
-        //                firstItem.kasir?.CreateDateTime,
-
-        //                // Koleksi untuk item yang bisa banyak (Resep, Obat, Tindakan)
-        //                DaftarResepObat = group
-        //                    .Where(x => x.dr != null && x.o != null) // Filter hanya yang punya DetailResep dan Obat
-        //                    .Select(x => new
-        //                    {
-        //                        x.r.ResepId, // ResepId dari resep utama
-        //                        x.dr.DetailResepId,
-        //                        x.dr.ObatId,
-        //                        x.dr?.JumlahIteratur,
-        //                        NamaObat = x.o.ObatName,
-        //                        x.dr.Qty,
-        //                        x.dr.IsIteratur,
-        //                        TglMulaiIteratur = x.dr.TglMulaiIteratur.HasValue ? x.dr.TglMulaiIteratur.Value.ToString("yyyy-MM-dd") : null,
-        //                        MasaAktifIteratur = x.dr.MasaAktifIteratur.HasValue ? x.dr.MasaAktifIteratur.Value.ToString("yyyy-MM-dd") : null,
-        //                        x.dr.JarakPenebusan,
-        //                        HargaObat = x.o.HargaJual,
-        //                        x.o.JumlahSatuan,
-        //                        StatusCoverObat = x.dr?.StatusCoverObat ?? false,
-        //                        TotalBiayaObat = x.dr?.TotalHargaObat ?? x.dr?.Qty * x.o.HargaJual // Hitung total jika tidak ada TotalHargaObat
-        //                    }).Distinct().ToList(), // Gunakan Distinct untuk menghindari duplikasi dalam daftar obat
-
-        //                DaftarTindakan = group
-        //                    .Where(x => x.to != null && x.t != null) // Filter hanya yang punya TindakanKunjungan dan Tindakan
-        //                    .Select(x => new
-        //                    {
-        //                        x.to.TindakanId, // TindakanId dari TindakanKunjungan
-        //                        x.t.NamaTindakan,
-        //                        QtyTindakan = x.to.Quantity,
-        //                        HargaTindakan = x.to.Total,
-        //                        StatusCoverTindakan = x.to != null && x.t != null && firstItem.a != null
-        //                            ? _applicationDbContext.TindakanAsuransis.Any(y => y.TindakanId == x.to.TindakanId && y.AsuransiId == firstItem.a.AsuransiId)
-        //                            : false
-        //                    }).Distinct().ToList(), // Gunakan Distinct untuk menghindari duplikasi dalam daftar tindakan
-
-
-        //                // TOTAL TAGIHAN (Obat + Tindakan)
-        //                TotalObat = group
-        //                    .Where(x => x.dr != null && x.o != null)
-        //                    .DistinctBy(x => x.dr.DetailResepId)
-        //                    .Sum(x => x.dr.Qty * x.o.HargaJual),
-        //                TotalTindakan = group
-        //                    .Where(x => x.to != null && x.t != null)
-        //                    .DistinctBy(x => x.to.TindakanKunjunganId)
-        //                    .Sum(x => x.to.Quantity * (x.to.Total ?? 0)),
-        //                TotalTagihan = group
-        //                    // Total Obat
-        //                    .Where(x => x.dr != null && x.o != null)
-        //                    .DistinctBy(x => x.dr.DetailResepId)
-        //                    .Sum(x => x.dr.Qty * x.o.HargaJual)
-        //                    +
-
-        //                    // Total Tindakan
-        //                    group
-        //                    .Where(x => x.to != null && x.t != null)
-        //                    .DistinctBy(x => x.to.TindakanKunjunganId)
-        //                    .Sum(x => x.to.Quantity * (x.to.Total ?? 0))
-
-        //                    +
-        //                    (firstItem.adm?.NominalBiayaAdministrasi ?? 0), // Tambahkan biaya administrasi jika ada
-        //            };
-
-        //        }).ToList();
-
-        //    if (!kasirData.Any())
-        //    {
-        //        return NotFound(new { message = "Data billing kasir untuk kunjungan ini tidak ditemukan. || 404 Not Found" });
-        //    }
-
-        //    return Ok(new { status = "success", data = kasirData });
-        //}
 
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] MainKasirViewModel vm)
