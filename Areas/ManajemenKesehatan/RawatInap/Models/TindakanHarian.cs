@@ -7,7 +7,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models
     {
         [Key]
         public Guid TindakanHarianId { get; set; }   // Generate Otomatis
-        public Guid? TindakanPerawatId { get; set; }  // Relasi ke tabel perawat
+        public List<Guid>? TindakanPerawatId { get; set; }
         public Guid? KunjunganId { get; set; }        // Relasi ke tabel kunjungan
         public Guid? PasienId { get; set; }           // Relasi ke tabel pendaftaran pasien baru
         public DateTime? TglTindakanHarian { get; set; }   // Tanggal tindakan

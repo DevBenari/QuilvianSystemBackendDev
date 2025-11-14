@@ -2,7 +2,7 @@
 {
     public class TindakanHarianViewModel
     {
-        public Guid? TindakanPerawatId { get; set; }  // Relasi ke tabel perawat
+        public List<Guid>? TindakanPerawatId { get; set; }
         public Guid? KunjunganId { get; set; }        // Relasi ke tabel kunjungan
         public Guid? PasienId { get; set; }           // Relasi ke tabel pendaftaran pasien baru
         public string? TglTindakanHarian { get; set; }   // Tanggal tindakan

@@ -1116,7 +1116,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("SubLevelId");
 
-                    b.ToTable("SubLevels");
+                    b.ToTable("SubLevels", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.HRD.Pengajuan.Models.CounterOffer", b =>
@@ -1545,7 +1545,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("ResignId");
 
-                    b.ToTable("PengajuanResigns");
+                    b.ToTable("PengajuanResigns", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.HRD.Pengajuan.Models.PengajuanTiketing", b =>
@@ -1675,7 +1675,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("DetailPenerimaanUnitId");
 
-                    b.ToTable("DetailPenerimaanUnits");
+                    b.ToTable("DetailPenerimaanUnits", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models.DetailPermintaanUnit", b =>
@@ -1725,7 +1725,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("DetailPermintaanUnitId");
 
-                    b.ToTable("DetailPermintaanUnits");
+                    b.ToTable("DetailPermintaanUnits", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models.FarmasiRJ", b =>
@@ -1837,7 +1837,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("LogPeracikanPenerimaanId");
 
-                    b.ToTable("LogRacikPenerimaans");
+                    b.ToTable("LogRacikPenerimaans", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models.ObatReturn", b =>
@@ -1984,7 +1984,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("PenerimaanUnitId");
 
-                    b.ToTable("PenerimaanUnits");
+                    b.ToTable("PenerimaanUnits", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models.PermintaanUnit", b =>
@@ -2034,7 +2034,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("PermintaanUnitId");
 
-                    b.ToTable("PermintaanUnits");
+                    b.ToTable("PermintaanUnits", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models.Racikan", b =>
@@ -2675,7 +2675,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("ResepTemplateDetailId");
 
-                    b.ToTable("ResepTemplateDetails");
+                    b.ToTable("ResepTemplateDetails", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models.StockBatch", b =>
@@ -2719,7 +2719,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("StockBatchId");
 
-                    b.ToTable("StockBatchs");
+                    b.ToTable("StockBatchs", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models.StockKartu", b =>
@@ -2784,7 +2784,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("KartuStockId");
 
-                    b.ToTable("StockKartus");
+                    b.ToTable("StockKartus", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Models.IGDAssessmentAwal", b =>
@@ -2843,7 +2843,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("AssessmentAwalIGD");
 
-                    b.ToTable("IGDAssessmentAwals");
+                    b.ToTable("IGDAssessmentAwals", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Models.IGDPasienDetail", b =>
@@ -2893,7 +2893,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("DetailPasienIGDId");
 
-                    b.ToTable("IGDPasienDetails");
+                    b.ToTable("IGDPasienDetails", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Models.IGDTindakanDetail", b =>
@@ -2943,7 +2943,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("DetailTindakanIGDId");
 
-                    b.ToTable("IGDTindakanDetails");
+                    b.ToTable("IGDTindakanDetails", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Models.IGDTriage", b =>
@@ -2990,7 +2990,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("TriageId");
 
-                    b.ToTable("IGDTriages");
+                    b.ToTable("IGDTriages", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Models.IGDTriageDetail", b =>
@@ -3031,7 +3031,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("DetailTriageId");
 
-                    b.ToTable("IGDTriageDetails");
+                    b.ToTable("IGDTriageDetails", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models.BiayaAdministrasi", b =>
@@ -3514,7 +3514,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("BankDarahId");
 
-                    b.ToTable("DarahPermintaans");
+                    b.ToTable("DarahPermintaans", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models.Lab", b =>
@@ -3650,7 +3650,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("BookingLabId");
 
-                    b.ToTable("LabBookings");
+                    b.ToTable("LabBookings", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models.LabBookingDetail", b =>
@@ -3757,7 +3757,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("DetailBookingLabId");
 
-                    b.ToTable("LabBookingDetails");
+                    b.ToTable("LabBookingDetails", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models.LabHasil", b =>
@@ -3804,7 +3804,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("HasilLabId");
 
-                    b.ToTable("LabHasils");
+                    b.ToTable("LabHasils", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models.LabHasilDetail", b =>
@@ -3914,7 +3914,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("DetailHasilLabId");
 
-                    b.ToTable("LabHasilDetails");
+                    b.ToTable("LabHasilDetails", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models.LabKategoriPemeriksaan", b =>
@@ -3958,7 +3958,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("KategoriPemeriksaanId");
 
-                    b.ToTable("LabKategoriPemeriksaans");
+                    b.ToTable("LabKategoriPemeriksaans", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models.LabPemeriksaan", b =>
@@ -4005,7 +4005,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("PemeriksaanLabId");
 
-                    b.ToTable("LabPemeriksaans");
+                    b.ToTable("LabPemeriksaans", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models.PemeriksaanAsuransi", b =>
@@ -4046,7 +4046,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("PemeriksaanAsuransiId");
 
-                    b.ToTable("PemeriksaanAsuransis");
+                    b.ToTable("PemeriksaanAsuransis", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models.SpecimenAsal", b =>
@@ -4131,7 +4131,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("JenisSpecimenId");
 
-                    b.ToTable("SpecimenJeniss");
+                    b.ToTable("SpecimenJeniss", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models.SpecimenMethod", b =>
@@ -4178,7 +4178,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("SpecimenMethodId");
 
-                    b.ToTable("SpecimenMethods");
+                    b.ToTable("SpecimenMethods", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Agama", b =>
@@ -4467,7 +4467,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("BedId");
 
-                    b.ToTable("Beds");
+                    b.ToTable("Beds", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Benefit", b =>
@@ -5107,7 +5107,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("DetailPlanningId");
 
-                    b.ToTable("DetailPlannings");
+                    b.ToTable("DetailPlannings", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Discount", b =>
@@ -5307,7 +5307,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("DokterPoliId");
 
-                    b.ToTable("DokterPolis");
+                    b.ToTable("DokterPolis", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.FasilitasPasien", b =>
@@ -5481,7 +5481,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("GudangUnitId");
 
-                    b.ToTable("GudangUnits");
+                    b.ToTable("GudangUnits", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.ICD10", b =>
@@ -5572,7 +5572,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("ICDPlanningId");
 
-                    b.ToTable("ICDPlannings");
+                    b.ToTable("ICDPlannings", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Identitas", b =>
@@ -5703,7 +5703,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("ItemId");
 
-                    b.ToTable("Items");
+                    b.ToTable("Items", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.ItemKategori", b =>
@@ -5935,7 +5935,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("KamarId");
 
-                    b.ToTable("Kamars");
+                    b.ToTable("Kamars", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.KamarAsuransi", b =>
@@ -7485,7 +7485,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("PenerimaanDarahId");
 
-                    b.ToTable("PenerimaanDarahs");
+                    b.ToTable("PenerimaanDarahs", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Peralatan", b =>
@@ -8118,7 +8118,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("SOAPPlanningId");
 
-                    b.ToTable("SOAPPlannings");
+                    b.ToTable("SOAPPlannings", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.StockDarah", b =>
@@ -8189,7 +8189,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("StockDarahId");
 
-                    b.ToTable("StockDarahs");
+                    b.ToTable("StockDarahs", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.SubPoli", b =>
@@ -8309,7 +8309,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("SukuId");
 
-                    b.ToTable("Sukus");
+                    b.ToTable("Sukus", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Supplier", b =>
@@ -8625,7 +8625,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("TindakanKunjunganId");
 
-                    b.ToTable("TindakanKunjungans");
+                    b.ToTable("TindakanKunjungans", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.TindakanPerawat", b =>
@@ -8666,7 +8666,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("TindakanPerawatId");
 
-                    b.ToTable("TindakanPerawats");
+                    b.ToTable("TindakanPerawats", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.TindakanPoli", b =>
@@ -8972,7 +8972,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("TindakanOperasiId");
 
-                    b.ToTable("OperasiTindakans");
+                    b.ToTable("OperasiTindakans", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Models.PraOperasi", b =>
@@ -9103,7 +9103,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("PraOperasiId");
 
-                    b.ToTable("PraOperasis");
+                    b.ToTable("PraOperasis", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Models.RuangBedahBooking", b =>
@@ -9240,7 +9240,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("BookingRuanganBedahId");
 
-                    b.ToTable("RuangBedahBookings");
+                    b.ToTable("RuangBedahBookings", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Models.RuangBedahBookingDetail", b =>
@@ -9293,7 +9293,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("DetailBookingBedahId");
 
-                    b.ToTable("RuangBedahBookingDetails");
+                    b.ToTable("RuangBedahBookingDetails", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models.PendaftaranPasien", b =>
@@ -9805,7 +9805,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("PendaftaranPasienOptikId");
 
-                    b.ToTable("PendaftaranPasienOptiks");
+                    b.ToTable("PendaftaranPasienOptiks", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models.PendaftaranPasienRadiologi", b =>
@@ -10222,7 +10222,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("AsesmenEdukasiId");
 
-                    b.ToTable("AssesmentEdukasis");
+                    b.ToTable("AssesmentEdukasis", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.AssesmentEdukasiDetail", b =>
@@ -10299,7 +10299,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("DetailAsesmenEdukasiId");
 
-                    b.ToTable("AssesmentEdukasiDetails");
+                    b.ToTable("AssesmentEdukasiDetails", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.BookingBedRanap", b =>
@@ -10408,7 +10408,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("CatatanDietId");
 
-                    b.ToTable("CatatanDiets");
+                    b.ToTable("CatatanDiets", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.CatatanESO", b =>
@@ -10476,7 +10476,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("ESOId");
 
-                    b.ToTable("CatatanESOs");
+                    b.ToTable("CatatanESOs", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.ChecklistItem", b =>
@@ -10523,7 +10523,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("ChecklistItemId");
 
-                    b.ToTable("ChecklistItems");
+                    b.ToTable("ChecklistItems", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.ChecklistResponse", b =>
@@ -10573,7 +10573,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("ChecklistResponseId");
 
-                    b.ToTable("ChecklistResponses");
+                    b.ToTable("ChecklistResponses", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.ChecklistTemplate", b =>
@@ -10676,7 +10676,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("CttPemberianObatId");
 
-                    b.ToTable("CttPemberianObats");
+                    b.ToTable("CttPemberianObats", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.DetailKetergantungan", b =>
@@ -10723,7 +10723,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("DetKetergantunganId");
 
-                    b.ToTable("DetailKetergantungans");
+                    b.ToTable("DetailKetergantungans", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.EvaluasiAwal", b =>
@@ -10803,7 +10803,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("EvaluasiAwalId");
 
-                    b.ToTable("EvaluasiAwals");
+                    b.ToTable("EvaluasiAwals", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.EvaluasiAwalDetail", b =>
@@ -10847,7 +10847,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("DetailEvaluasiAwalId");
 
-                    b.ToTable("EvaluasiAwalDetails");
+                    b.ToTable("EvaluasiAwalDetails", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.Indikator", b =>
@@ -10885,7 +10885,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("IndikatorId");
 
-                    b.ToTable("Indikators");
+                    b.ToTable("Indikators", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.IndikatorPengkajian", b =>
@@ -10929,7 +10929,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("IndikatorPengkajianId");
 
-                    b.ToTable("IndikatorPengkajians");
+                    b.ToTable("IndikatorPengkajians", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.IndikatorScore", b =>
@@ -10973,7 +10973,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("IndikatorScoreId");
 
-                    b.ToTable("IndikatorScores");
+                    b.ToTable("IndikatorScores", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.KajianPasien", b =>
@@ -11151,7 +11151,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("ObservasiCairanId");
 
-                    b.ToTable("ObservasiCairans");
+                    b.ToTable("ObservasiCairans", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.ObservasiCairanWsd", b =>
@@ -11355,7 +11355,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("PengawasanHarianId");
 
-                    b.ToTable("PengawasanHarians");
+                    b.ToTable("PengawasanHarians", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.PengkajianEliminasi", b =>
@@ -11414,7 +11414,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("EliminasiId");
 
-                    b.ToTable("PengkajianEliminasis");
+                    b.ToTable("PengkajianEliminasis", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.PengkajianKetergantungan", b =>
@@ -11485,7 +11485,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("KetergantunganId");
 
-                    b.ToTable("PengkajianKetergantungans");
+                    b.ToTable("PengkajianKetergantungans", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.PengkajianKulit", b =>
@@ -11536,7 +11536,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("IntegritasKulitId");
 
-                    b.ToTable("PengkajianKulits");
+                    b.ToTable("PengkajianKulits", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.PengkajianPerawat", b =>
@@ -11607,7 +11607,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("PengkajianPerawatId");
 
-                    b.ToTable("PengkajianPerawats");
+                    b.ToTable("PengkajianPerawats", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.PengkajianPernapasan", b =>
@@ -11690,7 +11690,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("PernapasanId");
 
-                    b.ToTable("PengkajianPernapasans");
+                    b.ToTable("PengkajianPernapasans", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.PenilaianResikoJatuhDetail", b =>
@@ -11734,7 +11734,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("DetailResikoJatuhId");
 
-                    b.ToTable("PenilaianResikoJatuhDetails");
+                    b.ToTable("PenilaianResikoJatuhDetails", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.PerawatIntervensi", b =>
@@ -11778,7 +11778,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("IntervensiId");
 
-                    b.ToTable("PerawatIntervensis");
+                    b.ToTable("PerawatIntervensis", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.PerawatObjective", b =>
@@ -11910,7 +11910,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("ResikoJatuhId");
 
-                    b.ToTable("ResikoJatuhs");
+                    b.ToTable("ResikoJatuhs", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.ResumePulang", b =>
@@ -12023,7 +12023,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("ResumeMedisId");
 
-                    b.ToTable("ResumePulangs");
+                    b.ToTable("ResumePulangs", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.ResumePulangDetail", b =>
@@ -12127,7 +12127,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("DetResumePulangId");
 
-                    b.ToTable("ResumePulangDetails");
+                    b.ToTable("ResumePulangDetails", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.SDKIDiagnosa", b =>
@@ -12411,7 +12411,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("SDKIObservasiId");
 
-                    b.ToTable("SDKIObservasis");
+                    b.ToTable("SDKIObservasis", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.SDKITeraupetik", b =>
@@ -12532,7 +12532,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("SkriningNutrisiId");
 
-                    b.ToTable("SkriningNutrisis");
+                    b.ToTable("SkriningNutrisis", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.SlidingScale", b =>
@@ -12588,7 +12588,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("SlidingScaleId");
 
-                    b.ToTable("SlidingScales");
+                    b.ToTable("SlidingScales", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.SuratPengantarRawatInap", b =>
@@ -12644,7 +12644,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("SuratPengantarRawatInapId");
 
-                    b.ToTable("SuratPengantarRawatInaps");
+                    b.ToTable("SuratPengantarRawatInaps", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.TindakanHarian", b =>
@@ -12700,7 +12700,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("TindakanHarianId");
 
-                    b.ToTable("TindakanHarians");
+                    b.ToTable("TindakanHarians", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.TopikEdukasi", b =>
@@ -12857,7 +12857,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("TransferPasienId");
 
-                    b.ToTable("TransferPasiens");
+                    b.ToTable("TransferPasiens", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.TransferPasienDetail", b =>
@@ -12913,7 +12913,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("DetailTransferPasienId");
 
-                    b.ToTable("TransferPasienDetails");
+                    b.ToTable("TransferPasienDetails", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.VisitDokter", b =>
@@ -12966,7 +12966,7 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("VisitDokterId");
 
-                    b.ToTable("VisitDokters");
+                    b.ToTable("VisitDokters", (string)null);
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Models.ApplicationUser", b =>
