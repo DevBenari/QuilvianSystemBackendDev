@@ -299,6 +299,17 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<IGDPasienDetail> IGDPasienDetails { get; set; }
         public DbSet<IGDTindakanDetail> IGDTindakanDetails { get;set; } 
         public DbSet<IGDAssessmentAwal> IGDAssessmentAwals { get;set; } 
+        public DbSet<Nosokomial> Nosokomials { get; set; }
+        public DbSet<PindahRuangan> PindahRuangans { get; set; }
+        public DbSet<InfeksiADP> InfeksiADPs { get; set; }
+        public DbSet<InfeksiLO> InfeksiLOs { get; set; }
+        public DbSet<InfeksiSK> InfeksiSKs { get; set; }
+        public DbSet<InfeksiTD> InfeksiTDs { get; set; }
+        public DbSet<InfeksiDetail> InfeksiDetails { get; set; }
+        public DbSet<UlkusDebitus> UlkusDebituss { get; set; }
+        public DbSet<Pneumonia> Pneumonias { get; set; }
+        public DbSet<KulturDarah> KulturDarahs { get; set; }
+
         #endregion
     }
 }
