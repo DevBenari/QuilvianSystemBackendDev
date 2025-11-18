@@ -455,6 +455,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         public async Task<IActionResult> PagedAsync(
             int page = 1,
             int perPage = 10,
+            Guid? kunjunganId = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -600,6 +601,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     .Where(tp => a.TindakanPerawatId != null && a.TindakanPerawatId.Contains((Guid)tp.TindakanPerawatId))
                     .ToList()
             });
+
+            // filter based on kunjungan id
+            if (kunjunganId.HasValue)
+            {
+                result = result.Where(u=>u.KunjunganId == kunjunganId.Value);
+            }
 
             // ===============================================================
             // 🔹 Step 8. Return hasil
