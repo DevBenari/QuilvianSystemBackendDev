@@ -7,7 +7,7 @@
         public Guid? PemeriksaanLabId { get; set; } // Relasi ke tabel Pemeriksaan Lab
         public Guid? LabId { get; set; } // Relasi ke tabel Lab
         public Guid? SpecimenJenisId { get; set; }
-        public Guid? SpecimenMethodId { get; set; }
+        public List<Guid>? SpecimenMethodId { get; set; }
         public Guid? AsalSpecimenId { get; set; }
         public Guid? KunjunganId { get; set; }
         public string? KategoriPatologiAnatomi { get; set; } // Histological / Cytology / Non Gynae Cytology
@@ -26,5 +26,6 @@
         public string? StatusPemeriksaan { get; set; }
         public DateTime? TanggalSelesai { get; set; }
         public bool? StatusVerifikasi { get; set; }
+        public string? AlasanPembatalan {  get; set; }
     }
 }

@@ -131,6 +131,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              b.CreateBy,
                              CreateByName = u.FullName,
                              b.BookingLabId,
+                             b.NomorSuratJaminan,
                              b.KunjunganId,
                              k.AsalKunjungan,
                              k.TipePasien,
@@ -162,6 +163,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              b.NoLab,
                              b.NoPA,
                              b.StatusBookingLab,
+                             b.CatatanJaminan,
+                             b.StatusPembayaran
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -241,6 +244,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                     NamaPoli = po.NamaPoliklinik ?? null,
                                     PasienId = (Guid?)b.PasienId,
                                     PasienNama = p.NamaLengkap,
+                                    b.NomorSuratJaminan,
+                                    b.StatusBookingLab,
+                                    b.CatatanJaminan,
+                                    b.StatusPembayaran,
                                     p.NoRekamMedis,
                                     b.TglPemeriksaan,
                                     b.TglBooking,
@@ -290,9 +297,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         g.First().PasienId,
                         g.First().PasienNama,
                         g.First().NoRekamMedis,
+                        g.First().NomorSuratJaminan,
                         g.First().TglPemeriksaan,
                         g.First().TglBooking,
                         g.First().TglPenyerahanSampling,
+                        g.First().StatusBookingLab,
+                        g.First().CatatanJaminan,
+                        g.First().StatusPembayaran,
                         g.First().StatusPemeriksaan,
                         g.First().AsuransiId,
                         g.First().AsuransiNama,
@@ -384,6 +395,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     NoLab = vm.NoLab,
                     NoPA = vm.NoPA,
                     StatusBookingLab = vm.StatusBookingLab,
+                    AlasanPembatalan = vm.AlasanPembatalan,
+
                     CreateBy = userActiveId,
                     CreateDateTime = DateTime.UtcNow,
                     IsDelete = false
@@ -422,7 +435,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
-
 
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] LabBookingViewModel vm)
@@ -599,6 +611,84 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             }
         }
 
+        [HttpPut("StatusPembayaranLab/{id}")]
+        public async Task<IActionResult> StatusPembayaranLab(Guid id, [FromBody] string status)
+        {
+            if (id == Guid.Empty)
+                return BadRequest(new { message = "Parameter ID tidak valid." });
+
+            if (status == null || !ModelState.IsValid)
+                return BadRequest(new { message = "Data tidak valid." });
+
+            try
+            {
+                // ======================================
+                // 🔐 Ambil user aktif dari JWT
+                // ======================================
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin))
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+                var getUserActive = _applicationDbContext.UserActives
+                    .FirstOrDefault(u => u.Email == emailLogin);
+                if (getUserActive == null)
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+
+                var userActiveId = getUserActive.UserActiveId;
+
+                // ======================================
+                // 🔎 Cek apakah data booking ada
+                // ======================================
+                var entity = await _applicationDbContext.LabBookings
+                    .FirstOrDefaultAsync(b => b.BookingLabId == id && (b.IsDelete == false || b.IsDelete == null));
+
+                if (entity == null)
+                    return NotFound(new { message = "Data Booking Lab tidak ditemukan. || 404 Not Found" });
+
+                // ======================================
+                // ⚙️ Update nilai field
+                // ======================================
+                entity.StatusPembayaran = status;
+
+                // ======================================
+                // 🕒 Update metadata
+                // ======================================
+                entity.UpdateBy = userActiveId;
+                entity.UpdateDateTime = DateTime.UtcNow;
+
+                _applicationDbContext.LabBookings.Update(entity);
+                int result = await _applicationDbContext.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    return Ok(new
+                    {
+                        message = "Data berhasil diperbarui. || 200 OK",
+                        data = new
+                        {
+                            entity.BookingLabId,
+                            entity.NoOrder,
+                            entity.NomorSuratJaminan,
+                            entity.CatatanJaminan,
+                            entity.TglBooking,
+                            entity.IsCito,
+                            entity.UpdateDateTime
+                        }
+                    });
+                }
+
+                return StatusCode(500, new { message = "Gagal memperbarui data ke database." });
+            }
+            catch (DbUpdateException dbEx)
+            {
+                return StatusCode(500, new { message = $"Kesalahan database: {dbEx.InnerException?.Message}" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saat memperbarui booking lab");
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
@@ -718,6 +808,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                 PasienId = (Guid?)b.PasienId,
                                 PasienNama = p.NamaLengkap,
                                 p.NoRekamMedis,
+                                b.NomorSuratJaminan,
                                 b.TglPemeriksaan,
                                 b.TglBooking,
                                 b.TglPenyerahanSampling,
@@ -736,7 +827,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                 TipePasien = k != null ? k.TipePasien : null,
                                 b.CreateBy,
                                 CreateByName = u.FullName,
-                             
+                                b.StatusBookingLab,
+                                b.CatatanJaminan,
+                                b.StatusPembayaran,
                                 b.CreateDateTime,
 
                                 // Detail
@@ -822,7 +915,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     g.First().NamaPoli,
                     g.First().PasienId,
                     g.First().PasienNama,
+                    g.First().NomorSuratJaminan,
                     g.First().NoRekamMedis,
+                    g.First().StatusBookingLab,
+                    g.First().StatusPembayaran,
+                    g.First().CatatanJaminan,
                     g.First().TglPemeriksaan,
                     g.First().TglBooking,
                     g.First().TglPenyerahanSampling,
