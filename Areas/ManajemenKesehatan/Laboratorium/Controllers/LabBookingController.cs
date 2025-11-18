@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.ViewModels;
@@ -686,6 +687,146 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error saat memperbarui booking lab");
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+        
+        [HttpPut("BatalLabBooking/{id}")]
+        [RequestSizeLimit(10_000_000)]
+        [RequestFormLimits(MultipartBodyLengthLimit = 10_000_000)]
+        public async Task<IActionResult> BatalLabBooking(
+        Guid id,
+        [FromForm] LabBookingDetailBatalVM vm)
+        {
+            if (vm == null || !ModelState.IsValid)
+                return BadRequest(new { message = "Data tidak valid." });
+
+            try
+            {
+                // 🔍 Cek koneksi database
+                if (!_applicationDbContext.Database.CanConnect())
+                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+
+                // 🔍 Ambil user dari JWT
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin))
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+
+                if (getUserActive == null)
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+
+                var userActiveId = getUserActive.UserActiveId;
+
+
+                // ==========================================================
+                // 🔍 Ambil LabBooking (HEADER saja)
+                // ==========================================================
+                var booking = await _applicationDbContext.LabBookings
+                    .FirstOrDefaultAsync(x => x.BookingLabId == id);
+
+                if (booking == null)
+                    return NotFound(new { message = "Lab Booking tidak ditemukan." });
+
+
+                // ==========================================================
+                // 🔧 Upload TTD Pembatalan
+                // ==========================================================
+                async Task<(string? filePath, Guid? ttdId)> UploadTTDAsync(IFormFile? file)
+                {
+                    if (file == null || file.Length == 0) return (null, null);
+
+                    var allowedExtensions = new[] { ".jpg", ".jpeg" };
+                    var ext = Path.GetExtension(file.FileName).ToLower();
+
+                    if (!allowedExtensions.Contains(ext))
+                        throw new Exception("Format TTD tidak valid! Gunakan JPG atau JPEG.");
+
+                    if (file.Length > 1 * 1024 * 1024)
+                        throw new Exception("Ukuran file TTD terlalu besar! Maksimal 1MB.");
+
+                    var timestamp = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
+                    var fileName = $"{getUserActive.FullName}_{timestamp}_TTDPembatalan{ext}";
+                    var filePath = $"/TTDUser/{fileName}";
+
+                    // Upload ke Flask
+                    using var client = new HttpClient();
+                    using var ms = new MemoryStream();
+                    await file.CopyToAsync(ms);
+                    ms.Position = 0;
+
+                    using var content = new MultipartFormDataContent
+            {
+                {
+                    new StreamContent(ms)
+                    {
+                        Headers =
+                        {
+                            ContentType =
+                                new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType)
+                        }
+                    },
+                    "file",
+                    fileName
+                },
+                { new StringContent("TTDUser"), "folderTarget" }
+            };
+
+                    var response = await client.PostAsync(_uploadUrl, content);
+                    if (!response.IsSuccessStatusCode)
+                        throw new Exception("Gagal upload TTD ke server Flask.");
+
+                    // Simpan metadata ke database
+                    var newTTD = new MasterTTD
+                    {
+                        TTDId = Guid.NewGuid(),
+                        UserActiveId = userActiveId,
+                        TTDPath = filePath,
+                        CreateDateTime = DateTimeOffset.UtcNow,
+                        CreateBy = userActiveId
+                    };
+
+                    _applicationDbContext.MasterTTDs.Add(newTTD);
+                    await _applicationDbContext.SaveChangesAsync();
+
+                    return (filePath, newTTD.TTDId);
+                }
+
+
+                string? ttdPath = null;
+                Guid? ttdId = null;
+
+                if (vm.TTDPembatalan != null)
+                    (ttdPath, ttdId) = await UploadTTDAsync(vm.TTDPembatalan);
+
+
+                // ==========================================================
+                // 🔄 UPDATE HEADER LAB BOOKING SAJA
+                // ==========================================================
+                booking.AlasanPembatalan = vm.AlasanPembatalan;
+                booking.TTDPathPembatalan = ttdPath;
+                booking.UpdateBy = userActiveId;
+                booking.UpdateDateTime = DateTimeOffset.UtcNow;
+
+
+                int result = await _applicationDbContext.SaveChangesAsync();
+
+                if (result > 0)
+                    return Ok(new
+                    {
+                        message = "Pembatalan Lab Booking berhasil.",
+                    });
+
+                return StatusCode(500, new { message = "Gagal menyimpan data ke database." });
+            }
+            catch (DbUpdateException dbEx)
+            {
+                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+            }
+            catch (Exception ex)
+            {
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }

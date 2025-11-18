@@ -605,14 +605,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
         [HttpGet("paged")]
         public async Task<IActionResult> GetPagedTransferPasien(
-    int page = 1,
-    int perPage = 10,
-    string? search = null,
-    Guid? kunjunganId = null,
-    string? orderBy = "CreateDateTime",
-    string? sortDirection = "desc",
-    DateTime? startDate = null,
-    DateTime? endDate = null)
+        int page = 1,
+        int perPage = 10,
+        string? search = null,
+        Guid? kunjunganId = null,
+        string? orderBy = "CreateDateTime",
+        string? sortDirection = "desc",
+        DateTime? startDate = null,
+        DateTime? endDate = null)
         {
             try
             {
