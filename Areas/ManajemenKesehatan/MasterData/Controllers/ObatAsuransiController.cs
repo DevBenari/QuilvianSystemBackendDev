@@ -122,7 +122,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Cek jika sudah ada hubungan antara Obat dan Asuransi yang sama
                 var isDuplicate = await _applicationDbContext.ObatAsuransis
-                    .AnyAsync(oa => oa.ObatId == obatAsuransi.ObatId && oa.AsuransiId == obatAsuransi.AsuransiId);
+                    .AnyAsync(oa => oa.ObatId == obatAsuransi.ObatId && oa.AsuransiId == obatAsuransi.AsuransiId && oa.IsDelete == false);
 
                 if (isDuplicate)
                 {
@@ -170,6 +170,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
+                // Cek jika sudah ada hubungan antara Obat dan Asuransi yang sama
+                var isDuplicate = await _applicationDbContext.ObatAsuransis
+                    .AnyAsync(oa => oa.ObatId == obatAsuransi.ObatId && oa.AsuransiId == obatAsuransi.AsuransiId && oa.IsDelete == false
+                    && oa.ObatAsuransiId != id);
+
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Data sudah ada || 409 Conflict Data" });
+                }
                 // Update data
                 data.ObatId = obatAsuransi.ObatId;
                 data.AsuransiId = obatAsuransi.AsuransiId;

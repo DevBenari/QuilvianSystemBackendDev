@@ -142,7 +142,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Cek jika sudah ada data yang sama berdasarkan KodeBentukObat
                 var isDuplicate = await _applicationDbContext.BentukObats
-                    .AnyAsync(b => b.KodeBentukSatuan == KodeBentukObat);
+                    .AnyAsync(b => b.NamaBentukSatuan.ToLower().Trim() == bentukObatViewModel.NamaBentukSatuan.ToLower().Trim());
 
                 if (isDuplicate)
                 {

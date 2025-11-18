@@ -146,8 +146,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 //// **Cek Duplikasi**
-                bool isDuplicate = _applicationDbContext.Benefits
-                                    .Any(c => c.NamaBenefit == vm.NamaBenefit && c.IsDelete == false);
+                bool isDuplicate = await _applicationDbContext.Benefits
+                                    .AnyAsync(c => c.NamaBenefit.ToLower().Trim() == vm.NamaBenefit.ToLower().Trim() && c.IsDelete == false);
 
                 if (isDuplicate)
                 {

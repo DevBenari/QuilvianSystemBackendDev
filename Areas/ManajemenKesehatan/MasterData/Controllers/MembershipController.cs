@@ -145,8 +145,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 //// **Cek Duplikasi**
-                bool isDuplicate = _applicationDbContext.Membership
-                                    .Any(c => c.NamaMembership == vm.NamaMembership);
+                bool isDuplicate = await _applicationDbContext.Membership
+                                    .AnyAsync(c => c.NamaMembership.ToLower().Trim() == vm.NamaMembership.ToLower().Trim() && c.IsDelete == false);
 
                 if (isDuplicate)
                 {
@@ -226,6 +226,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                //// **Cek Duplikasi**
+                bool isDuplicate = await _applicationDbContext.Membership
+                                    .AnyAsync(c => c.NamaMembership.ToLower().Trim() == vm.NamaMembership.ToLower().Trim() 
+                                    && c.IsDelete == false && c.MembershipId != id);
+
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Nama membership telah tersedia" });
                 }
 
                 // **Update Data**

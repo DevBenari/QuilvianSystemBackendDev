@@ -164,7 +164,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Cek Duplikasi
                 var isDuplicate = _applicationDbContext.GolonganDarahs
-                    .Any(c => c.KodeGolonganDarah == kode && c.NamaGolonganDarah == vm.NamaGolonganDarah);
+                    .Any(c =>c.NamaGolonganDarah.ToLower().Trim() == vm.NamaGolonganDarah.ToLower().Trim());
 
                 if (isDuplicate)
                 {

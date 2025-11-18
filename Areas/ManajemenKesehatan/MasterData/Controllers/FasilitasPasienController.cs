@@ -154,8 +154,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // Cek Duplikasi
-                var isDuplicate = _context.FasilitasPasiens
-                    .Any(c => c.KodeFasilitas == kode);
+                var isDuplicate = await _context.FasilitasPasiens
+                    .AnyAsync(c => c.NamaFasilitasPasien.ToLower().Trim() == vm.NamaFasilitasPasien.ToLower().Trim());
 
                 if (ModelState.IsValid)
                 {

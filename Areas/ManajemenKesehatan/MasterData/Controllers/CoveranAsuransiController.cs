@@ -171,13 +171,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // cek duplikasi
-                var isDuplicate = _applicationDbContext.CoveranAsuransis
-                    .Any(c => c.KodeCoveranAsuransi == kode);
+                //var isDuplicate = _applicationDbContext.CoveranAsuransis
+                //    .Any(c => c.KodeCoveranAsuransi == kode);
 
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
-                }
+                //if (isDuplicate)
+                //{
+                //    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
+                //}
 
                 // Validate ModelState
                 if (ModelState.IsValid)

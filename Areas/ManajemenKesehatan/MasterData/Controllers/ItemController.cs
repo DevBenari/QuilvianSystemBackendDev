@@ -150,7 +150,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // ✅ Validasi duplikasi nama item
                 bool isDuplicate = await _applicationDbContext.Items
-                    .AnyAsync(x => x.NamaItem!.ToLower() == vm.NamaItem!.ToLower());
+                    .AnyAsync(x => x.NamaItem.ToLower() == vm.NamaItem.ToLower() && x.IsDelete==false);
 
                 if (isDuplicate)
                 {
@@ -236,6 +236,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 var userActiveId = getUserActive.UserActiveId;
+
+                // Cek Duplikasi
+                var isDuplicate = await _applicationDbContext.Items
+                    .AnyAsync(c => c.NamaItem.ToLower().Trim() == vm.NamaItem.ToLower().Trim() && c.ItemId != id && c.IsDelete == false);
+
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
+                }
 
                 // ✅ Update data (gunakan null-coalescing agar tidak menimpa nilai dengan null)
                 data.KodeItem = vm.KodeItem ?? data.KodeItem;
