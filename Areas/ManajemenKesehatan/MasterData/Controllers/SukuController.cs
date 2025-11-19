@@ -154,8 +154,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // Cek Duplikasi
-                var isDuplicate = _context.Sukus
-                    .Any(c => c.KodeSuku == kode);
+                bool isDuplicate = await _context.Sukus
+                    .AnyAsync(c => c.NamaSuku.ToLower().Trim() == vm.NamaSuku.ToLower().Trim() && !c.IsDelete);
+                if (isDuplicate) {
+                    return Conflict(new { message = "Nama suku ini telah ada" });
+                }
 
                 if (ModelState.IsValid)
                 {
@@ -210,6 +213,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 if (string.IsNullOrEmpty(EmailLogin))
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                // Cek Duplikasi
+                bool isDuplicate = await _context.Sukus
+                    .AnyAsync(c => c.NamaSuku.ToLower().Trim() == vm.NamaSuku.ToLower().Trim() && !c.IsDelete && c.SukuId != id);
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Nama suku ini telah ada" });
                 }
 
                 // cari data

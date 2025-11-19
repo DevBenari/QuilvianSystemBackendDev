@@ -145,7 +145,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 //// **Cek Duplikasi**
                 bool isDuplicate = await _applicationDbContext.ObatRutes
-                                    .AnyAsync(c => c.RuteObat == vm.RuteObat && c.IsDelete == false);
+                                    .AnyAsync(c => c.RuteObat.ToLower().Trim() == vm.RuteObat.ToLower().Trim() && c.IsDelete == false);
 
                 if (isDuplicate)
                 {
@@ -221,6 +221,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                //// **Cek Duplikasi**
+                bool isDuplicate = await _applicationDbContext.ObatRutes
+                                    .AnyAsync(c => c.RuteObat.ToLower().Trim() == vm.RuteObat.ToLower().Trim() 
+                                    && c.IsDelete == false && c.RuteObatId!= id);
+
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Nama rute obat ini telah tersedia" });
                 }
 
                 // **Update Data**

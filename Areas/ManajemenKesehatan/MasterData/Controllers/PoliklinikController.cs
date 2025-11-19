@@ -215,7 +215,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Cek duplikasi
                 bool isDuplicate = _applicationDbContext.Polikliniks
-                    .Any(c => c.KodePoliklinik == kodePoliklinik && c.NamaPoliklinik == vm.NamaPoliklinik && c.IsDelete == false);
+                    .Any(c => c.NamaPoliklinik.ToLower().Trim() == vm.NamaPoliklinik.ToLower().Trim() 
+                    && c.IsDelete == false );
 
                 if (isDuplicate)
                     return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
