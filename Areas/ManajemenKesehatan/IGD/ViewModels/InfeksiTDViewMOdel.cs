@@ -9,5 +9,6 @@
         public decimal? Jumlah { get; set; }
         public DateTime? TglPencatatan { get; set; }
         public string? Keterangan { get; set; }
+        public List<InfeksiDetailViewModel> Details { get; set; }
     }
 }

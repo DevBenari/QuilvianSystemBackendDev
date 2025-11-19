@@ -124,43 +124,31 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
         public async Task<IActionResult> Create([FromBody] InfeksiADPViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
-            {
                 return BadRequest(new { message = "Data tidak valid." });
-            }
+
+            using var transaction = await _applicationDbContext.Database.BeginTransactionAsync();
 
             try
             {
-                // **Cek koneksi ke database**
-                if (!_applicationDbContext.Database.CanConnect())
-                {
-                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
-                }
-
-                // **Ambil User ID dari JWT Claims**
+                // ===========================
+                // 🔹 Ambil User Login
+                // ===========================
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(emailLogin))
-                {
+                if (emailLogin == null)
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
-                }
 
-                var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
-                if (getUserActive == null)
-                {
+                var user = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(x => x.Email == emailLogin);
+
+                if (user == null)
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-                }
-                var userActiveId = getUserActive.UserActiveId;
 
-                //// **Cek Duplikasi**
-                //bool isDuplicate = await _applicationDbContext.Diskons
-                //                    .AnyAsync(c => c.NamaDiskon == vm.NamaDiskon && c.IsDelete == false);
+                var userActiveId = user.UserActiveId;
 
-                //if (isDuplicate)
-                //{
-                //    return Conflict(new { message = "Nama diskon ini telah tersedia" });
-                //}
-
-                // **Buat Data Baru**
-                var data = new InfeksiADP
+                // ===========================
+                // 🔹 Create parent : InfeksiADP
+                // ===========================
+                var infeksiADP = new InfeksiADP
                 {
                     InfeksiADPId = Guid.NewGuid(),
                     KunjunganId = vm.KunjunganId,
@@ -168,34 +156,87 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                     IsInfusVenaPerifer = vm.IsInfusVenaPerifer,
                     IsCVP = vm.IsCVP,
                     IsKateterDarah = vm.IsKateterDarah,
-                    HasilLabHB = vm.HasilLabHB,
                     HasilLabLeokosit = vm.HasilLabLeokosit,
+                    HasilLabHB = vm.HasilLabHB,
                     TglPencatatan = vm.TglPencatatan,
                     Keterangan = vm.Keterangan,
-                    
+
                     CreateBy = userActiveId,
-                    CreateDateTime = DateTimeOffset.UtcNow,
+                    CreateDateTime = DateTimeOffset.UtcNow
                 };
 
-                // **Simpan ke Database**
-                _applicationDbContext.InfeksiADPs.Add(data);
-                int result = await _applicationDbContext.SaveChangesAsync();
+                _applicationDbContext.InfeksiADPs.Add(infeksiADP);
+                await _applicationDbContext.SaveChangesAsync();
 
-                if (result > 0)
+                // ===========================
+                // 🔹 Insert Child : InfeksiDetail
+                // ===========================
+                if (vm.Details != null && vm.Details.Any())
                 {
-                    return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
+                    foreach (var d in vm.Details)
+                    {
+                        // Hitung HariKe dari DB
+                        int hariKe = await _applicationDbContext.InfeksiDetails
+                            .CountAsync(x => x.InfeksiId == infeksiADP.InfeksiADPId
+                                             && x.KunjunganId == vm.KunjunganId) + 1;
+
+                        // Ambil suhu vital sign terbaru
+                        var vital = await _applicationDbContext.VitalSigns
+                            .Where(v => v.KunjunganId == vm.KunjunganId)
+                            .OrderByDescending(v => v.CreateDateTime)
+                            .FirstOrDefaultAsync();
+
+                        decimal? suhu = vital?.Suhu;
+
+                        var detail = new InfeksiDetail
+                        {
+                            DetailInfeksiId = Guid.NewGuid(),
+                            InfeksiId = infeksiADP.InfeksiADPId,
+                            KunjunganId = vm.KunjunganId,
+                            PasienId = vm.PasienId,
+
+                            HariKe = hariKe,
+                            LokasiReaksi = d.LokasiReaksi,
+                            TglMulaiReaksi = d.TglMulaiReaksi,
+                            TglAkhirReaksi = d.TglAkhirReaksi,
+                            Nyeri = d.Nyeri,
+                            Merah = d.Merah,
+                            Bengkak = d.Bengkak,
+                            PUS = d.PUS,
+                            Menggigil = d.Menggigil,
+                            IsDemam = d.IsDemam ?? suhu >= 38,  // fallback dari suhu vital sign
+                            Drainase = d.Drainase,
+                            Perforasi = d.Perforasi,
+                            Fistula = d.Fistula,
+                            NyeriSupraPublik = d.NyeriSupraPublik,
+                            NyeriSaatBerkemih = d.NyeriSaatBerkemih,
+                            PasangDCKe = d.PasangDCKe,
+                            AnyangAnyangan = d.AnyangAnyangan,
+                            Gatal = d.Gatal,
+                            Keterangan = d.Keterangan,
+
+                            CreateBy = userActiveId,
+                            CreateDateTime = DateTimeOffset.UtcNow
+                        };
+
+                        _applicationDbContext.InfeksiDetails.Add(detail);
+                    }
+
+                    await _applicationDbContext.SaveChangesAsync();
                 }
-                else
+
+                await transaction.CommitAsync();
+
+                return Ok(new
                 {
-                    return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
-                }
-            }
-            catch (DbUpdateException dbEx)
-            {
-                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+                    message = "Tambah Data Infeksi ADP + Detail berhasil",
+                    InfeksiADPId = infeksiADP.InfeksiADPId,
+                    JumlahDetail = vm.Details?.Count ?? 0
+                });
             }
             catch (Exception ex)
             {
+                await transaction.RollbackAsync();
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
@@ -204,92 +245,133 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
         public async Task<IActionResult> Update(Guid id, [FromBody] InfeksiADPViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
-            {
                 return BadRequest(new { message = "Data tidak valid." });
-            }
+
+            using var transaction = await _applicationDbContext.Database.BeginTransactionAsync();
 
             try
             {
-                // **Cek koneksi ke database**
-                if (!_applicationDbContext.Database.CanConnect())
-                {
-                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
-                }
-
-                // **Ambil User ID dari JWT Claims**
+                // ===============================
+                // 🔹 Ambil user login
+                // ===============================
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(emailLogin))
-                {
+                if (emailLogin == null)
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
-                }
 
-                var getUserActive = await _applicationDbContext.UserActives
-                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
-                if (getUserActive == null)
-                {
+                var user = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(x => x.Email == emailLogin);
+
+                if (user == null)
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-                }
 
-                var userActiveId = getUserActive.UserActiveId;
+                var userActiveId = user.UserActiveId;
 
-                // **Cari Data Lama Berdasarkan ID**
-                var data = await _applicationDbContext.InfeksiADPs
+                // ===============================
+                // 🔹 Ambil data ADP dari DB
+                // ===============================
+                var adp = await _applicationDbContext.InfeksiADPs
                     .FirstOrDefaultAsync(x => x.InfeksiADPId == id && (x.IsDelete == false || x.IsDelete == null));
 
-                if (data == null)
+                if (adp == null)
+                    return NotFound(new { message = "Data Infeksi ADP tidak ditemukan" });
+
+                // ===============================
+                // 🔹 Update parent ADP
+                // ===============================
+                adp.KunjunganId = vm.KunjunganId;
+                adp.PasienId = vm.PasienId;
+                adp.IsInfusVenaPerifer = vm.IsInfusVenaPerifer;
+                adp.IsCVP = vm.IsCVP;
+                adp.IsKateterDarah = vm.IsKateterDarah;
+                adp.HasilLabLeokosit = vm.HasilLabLeokosit;
+                adp.HasilLabHB = vm.HasilLabHB;
+                adp.TglPencatatan = vm.TglPencatatan;
+                adp.Keterangan = vm.Keterangan;
+
+                adp.UpdateBy = userActiveId;
+                adp.UpdateDateTime = DateTimeOffset.UtcNow;
+
+                await _applicationDbContext.SaveChangesAsync();
+
+                // ===============================
+                // 🔹 Hapus semua detail lama
+                // ===============================
+                var oldDetails = _applicationDbContext.InfeksiDetails
+                    .Where(x => x.InfeksiId == id);
+
+                _applicationDbContext.InfeksiDetails.RemoveRange(oldDetails);
+                await _applicationDbContext.SaveChangesAsync();
+
+                // ===============================
+                // 🔹 Tambahkan detail baru
+                // ===============================
+                if (vm.Details != null && vm.Details.Any())
                 {
-                    return NotFound(new { message = $"Data dengan ID {id} tidak ditemukan." });
-                }
-
-                // **Update Data**
-                data.KunjunganId = vm.KunjunganId ?? data.KunjunganId;
-                data.PasienId = vm.PasienId ?? data.PasienId;
-                data.IsInfusVenaPerifer = vm.IsInfusVenaPerifer ?? data.IsInfusVenaPerifer;
-                data.IsCVP = vm.IsCVP ?? data.IsCVP;
-                data.IsKateterDarah = vm.IsKateterDarah ?? data.IsKateterDarah;
-                data.HasilLabHB = vm.HasilLabHB ?? data.HasilLabHB;
-                data.HasilLabLeokosit = vm.HasilLabLeokosit ?? data.HasilLabLeokosit;
-                data.TglPencatatan = vm.TglPencatatan ?? data.TglPencatatan;
-                data.Keterangan = vm.Keterangan ?? data.Keterangan;
-
-                data.UpdateBy = userActiveId;
-                data.UpdateDateTime = DateTimeOffset.UtcNow;
-
-                // **Simpan ke Database**
-                _applicationDbContext.InfeksiADPs.Update(data);
-                int result = await _applicationDbContext.SaveChangesAsync();
-
-                if (result > 0)
-                {
-                    return Ok(new
+                    foreach (var d in vm.Details)
                     {
-                        message = "Update Data Berhasil || 200 OK",
-                        data = new
+                        // Hitung HariKe berdasarkan Kunjungan & Infeksi
+                        int hariKe = await _applicationDbContext.InfeksiDetails
+                            .CountAsync(x => x.KunjunganId == vm.KunjunganId &&
+                                             x.InfeksiId == id) + 1;
+
+                        // Ambil suhu vital sign terbaru
+                        var vital = await _applicationDbContext.VitalSigns
+                            .Where(v => v.KunjunganId == vm.KunjunganId)
+                            .OrderByDescending(v => v.CreateDateTime)
+                            .FirstOrDefaultAsync();
+
+                        decimal? suhu = vital?.Suhu;
+
+                        var detail = new InfeksiDetail
                         {
-                            data.InfeksiADPId,
-                            data.KunjunganId,
-                            data.PasienId,
-                            data.IsInfusVenaPerifer,
-                            data.IsCVP,
-                            data.IsKateterDarah,
-                            data.HasilLabHB,
-                            data.HasilLabLeokosit,
-                            data.TglPencatatan,
-                            data.Keterangan
-                        }
-                    });
+                            DetailInfeksiId = Guid.NewGuid(),
+                            InfeksiId = id,
+                            KunjunganId = vm.KunjunganId,
+                            PasienId = vm.PasienId,
+
+                            HariKe = hariKe,
+
+                            LokasiReaksi = d.LokasiReaksi,
+                            TglMulaiReaksi = d.TglMulaiReaksi,
+                            TglAkhirReaksi = d.TglAkhirReaksi,
+                            Nyeri = d.Nyeri,
+                            Merah = d.Merah,
+                            Bengkak = d.Bengkak,
+                            PUS = d.PUS,
+                            Menggigil = d.Menggigil,
+                            IsDemam = d.IsDemam ?? (suhu >= 38),
+                            Drainase = d.Drainase,
+                            Perforasi = d.Perforasi,
+                            Fistula = d.Fistula,
+                            NyeriSupraPublik = d.NyeriSupraPublik,
+                            NyeriSaatBerkemih = d.NyeriSaatBerkemih,
+                            PasangDCKe = d.PasangDCKe,
+                            AnyangAnyangan = d.AnyangAnyangan,
+                            Gatal = d.Gatal,
+                            Keterangan = d.Keterangan,
+
+                            CreateBy = userActiveId,
+                            CreateDateTime = DateTimeOffset.UtcNow
+                        };
+
+                        _applicationDbContext.InfeksiDetails.Add(detail);
+                    }
+
+                    await _applicationDbContext.SaveChangesAsync();
                 }
-                else
+
+                await transaction.CommitAsync();
+
+                return Ok(new
                 {
-                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui di database." });
-                }
-            }
-            catch (DbUpdateException dbEx)
-            {
-                return StatusCode(500, new { message = $"Gagal update data: {dbEx.InnerException?.Message}" });
+                    message = "Update Data Infeksi ADP + Detail berhasil",
+                    InfeksiADPId = id,
+                    JumlahDetailBaru = vm.Details?.Count ?? 0
+                });
             }
             catch (Exception ex)
             {
+                await transaction.RollbackAsync();
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }

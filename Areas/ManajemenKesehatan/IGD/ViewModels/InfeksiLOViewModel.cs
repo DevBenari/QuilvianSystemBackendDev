@@ -16,5 +16,6 @@
         public string? HasilLabHB { get; set; }  // Nilai lab Hb
         public DateTime? TglPencatatan { get; set; }  // Waktu pencatatan form
         public string? Keterangan { get; set; }  // Catatan tambahan
+        public List<InfeksiDetailViewModel>? Details { get; set; }
     }
 }

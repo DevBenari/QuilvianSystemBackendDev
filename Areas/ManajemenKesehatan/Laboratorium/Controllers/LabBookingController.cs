@@ -897,6 +897,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             int page = 1,
             int perPage = 10,
             Guid? kunjunganid = null,
+            Guid? LabBookingId = null,
             string? namaLab = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
@@ -983,57 +984,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                 TTDPembatalanPath = lb.TTDPembatalanPath ?? null,
                             };
 
-            // 🔍 Filter nama lab
-            if (!string.IsNullOrWhiteSpace(namaLab))
-            {
-                var pattern = $"%{namaLab.ToLower()}%";
-                baseQuery = baseQuery.Where(u => EF.Functions.ILike(u.NamaLab, pattern));
-            }
-
-            // 🔍 Filter kunjungan
-            if (kunjunganid.HasValue)
-                baseQuery = baseQuery.Where(u => u.KunjunganId == kunjunganid.Value);
-
-            // 🔍 Filter tanggal
-            if (startDate.HasValue && endDate.HasValue)
-            {
-                var startUtc = startDate.Value.Date.ToUniversalTime();
-                var endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
-                baseQuery = baseQuery.Where(u => u.CreateDateTime >= startUtc && u.CreateDateTime <= endUtc);
-            }
-
-            // 🔍 Filter periode
-            if (periode.HasValue)
-            {
-                DateTime today = DateTime.UtcNow.Date;
-                switch (periode)
-                {
-                    case PeriodeFilter.Today:
-                        baseQuery = baseQuery.Where(u => u.CreateDateTime.Date == today);
-                        break;
-                    case PeriodeFilter.ThisWeek:
-                        baseQuery = baseQuery.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date <= today);
-                        break;
-                    case PeriodeFilter.LastWeek:
-                        baseQuery = baseQuery.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek));
-                        break;
-                    case PeriodeFilter.ThisMonth:
-                        baseQuery = baseQuery.Where(u => u.CreateDateTime.Month == today.Month && u.CreateDateTime.Year == today.Year);
-                        break;
-                    case PeriodeFilter.LastMonth:
-                        var lastMonth = today.AddMonths(-1);
-                        baseQuery = baseQuery.Where(u => u.CreateDateTime.Month == lastMonth.Month && u.CreateDateTime.Year == lastMonth.Year);
-                        break;
-                    case PeriodeFilter.Last3Months:
-                        baseQuery = baseQuery.Where(u => u.CreateDateTime >= today.AddMonths(-3));
-                        break;
-                }
-            }
-
             // Sorting
             baseQuery = sortDirection?.ToLower() == "desc"
                 ? baseQuery.OrderByDescending(u => u.CreateDateTime)
@@ -1093,6 +1043,84 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         d.TTDPembatalanPath,
                     }).ToList()
                 });
+
+
+            // 🔍 Filter nama lab
+            if (!string.IsNullOrWhiteSpace(namaLab))
+            {
+                var nama = namaLab.ToLower();
+                grouped = grouped.Where(u =>
+                    u.Details.Any(d => (d.NamaLab ?? "").ToLower().Contains(nama) ||
+                                       (d.PemeriksaanNama ?? "").ToLower().Contains(nama))
+                );
+            }
+
+            // 🔍 Filter kunjungan
+            if (kunjunganid.HasValue)
+                grouped = grouped.Where(u => u.KunjunganId == kunjunganid.Value);
+
+            // 🔍 Filter booking ID
+            if (LabBookingId.HasValue)
+                grouped = grouped.Where(u => u.BookingLabId == LabBookingId.Value);
+
+            // 🔍 Filter tanggal (berdasarkan CreateDateTime)
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                var start = startDate.Value.Date;
+                var end = endDate.Value.Date.AddDays(1).AddTicks(-1);
+                grouped = grouped.Where(u => u.CreateDateTime >= start && u.CreateDateTime <= end);
+            }
+
+            // 🔍 Filter Periode
+            if (periode.HasValue)
+            {
+                DateTime today = DateTime.UtcNow.Date;
+
+                switch (periode)
+                {
+                    case PeriodeFilter.Today:
+                        grouped = grouped.Where(u => u.CreateDateTime.Date == today);
+                        break;
+
+                    case PeriodeFilter.ThisWeek:
+                        var weekStart = today.AddDays(-(int)today.DayOfWeek);
+                        grouped = grouped.Where(u =>
+                            u.CreateDateTime.Date >= weekStart &&
+                            u.CreateDateTime.Date <= today
+                        );
+                        break;
+
+                    case PeriodeFilter.LastWeek:
+                        var lastWeekStart = today.AddDays(-7 - (int)today.DayOfWeek);
+                        var lastWeekEnd = today.AddDays(-(int)today.DayOfWeek).AddSeconds(-1);
+                        grouped = grouped.Where(u =>
+                            u.CreateDateTime.Date >= lastWeekStart &&
+                            u.CreateDateTime.Date <= lastWeekEnd
+                        );
+                        break;
+
+                    case PeriodeFilter.ThisMonth:
+                        grouped = grouped.Where(u =>
+                            u.CreateDateTime.Month == today.Month &&
+                            u.CreateDateTime.Year == today.Year
+                        );
+                        break;
+
+                    case PeriodeFilter.LastMonth:
+                        var lastMonth = today.AddMonths(-1);
+                        grouped = grouped.Where(u =>
+                            u.CreateDateTime.Month == lastMonth.Month &&
+                            u.CreateDateTime.Year == lastMonth.Year
+                        );
+                        break;
+
+                    case PeriodeFilter.Last3Months:
+                        grouped = grouped.Where(u =>
+                            u.CreateDateTime >= today.AddMonths(-3)
+                        );
+                        break;
+                }
+            }
 
             // Pagination manual
             var totalRows = grouped.Count();

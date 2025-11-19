@@ -13,5 +13,6 @@
         public string? HasilBiakanUrin2 { get; set; } // Hasil pemeriksaan biakan urin kedua
         public DateTime? TglPencatatan { get; set; } // Waktu pencatatan form
         public string? Keterangan { get; set; } // Catatan tambahan
+        public List<InfeksiDetailViewModel> Details { get; set; }
     }
 }

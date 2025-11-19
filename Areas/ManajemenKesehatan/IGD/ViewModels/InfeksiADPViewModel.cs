@@ -11,5 +11,6 @@
         public string? HasilLabHB { get; set; }
         public DateTime? TglPencatatan { get; set; }
         public string? Keterangan { get; set; }
+        public List<InfeksiDetailViewModel> Details { get; set; }
     }
 }
