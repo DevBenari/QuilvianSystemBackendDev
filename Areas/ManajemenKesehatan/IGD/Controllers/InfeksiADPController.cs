@@ -416,6 +416,25 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 data.IsDelete = true;
 
                 _applicationDbContext.InfeksiADPs.Update(data);
+
+                // ================================
+                // 🔹 Soft Delete Semua Detail
+                // ================================
+                var details = await _applicationDbContext.InfeksiDetails
+                    .Where(d => d.InfeksiId == id && (d.IsDelete == false || d.IsDelete == null))
+                    .ToListAsync();
+
+                if (details.Any())
+                {
+                    foreach (var d in details)
+                    {
+                        d.DeleteBy = userActiveId;
+                        d.DeleteDateTime = DateTimeOffset.UtcNow;
+                        d.IsDelete = true;
+                    }
+
+                    _applicationDbContext.InfeksiDetails.UpdateRange(details);
+                }
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -438,156 +457,163 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
         }
 
         [HttpGet("paged")]
-        public IActionResult Paged(
-        int page = 1,
-        int perPage = 10,
-        Guid? kunjunganId = null,
-        string? orderBy = "CreateDateTime",
-        string? sortDirection = "desc",
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                        DateTime? startDate = null,
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                        DateTime? endDate = null,
-        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        public async Task<IActionResult> Paged(
+            int page = 1,
+            int perPage = 10,
+            Guid? kunjunganId = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+        DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+        DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
+            if (page <= 0) page = 1;
+            if (perPage <= 0) perPage = 10;
 
-            // Query data
-            var query = (from a in _applicationDbContext.InfeksiADPs
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false || a.IsDelete == null
-                         orderby a.CreateDateTime descending
-                         select new
-                         {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = u.FullName,
-                             a.InfeksiADPId,
-                             a.KunjunganId,
-                             a.PasienId,
-                             a.IsInfusVenaPerifer,
-                             a.IsCVP,
-                             a.IsKateterDarah,
-                             a.HasilLabHB,
-                             a.HasilLabLeokosit,
-                             a.TglPencatatan,
-                             a.Keterangan,
-                         });
+            // === 1. Base Query (all columns) ===
+            var query = _applicationDbContext.InfeksiADPs
+                .AsNoTracking()
+                .Where(a => a.IsDelete == false || a.IsDelete == null)
+                .AsQueryable();
 
-            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-            //if (!string.IsNullOrWhiteSpace(search))
-            //{
-            //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-            //    query = query.Where(u =>
-            //        EF.Functions.ILike(u.NamaDiskon, search)
-            //    );
-            //}
-
+            // === 2. Filters (DB side) ===
             if (kunjunganId.HasValue)
-            {
-                query = query.Where(u=> u.KunjunganId == kunjunganId.Value);
-            }
+                query = query.Where(a => a.KunjunganId == kunjunganId.Value);
 
-            //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
             {
-                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
-                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+                var startUtc = startDate.Value.Date.ToUniversalTime();
+                var endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
 
-                query = query.Where(u =>
-                    u.CreateDateTime >= startUtc &&
-                    u.CreateDateTime <= endUtc);
+                query = query.Where(a => a.CreateDateTime >= startUtc && a.CreateDateTime <= endUtc);
             }
 
-            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
             if (periode.HasValue)
             {
                 DateTime today = DateTime.UtcNow.Date;
+                DateTime startPeriod;
+                DateTime endPeriod = today.AddDays(1).AddTicks(-1);
 
-                switch (periode)
+                switch (periode.Value)
                 {
                     case PeriodeFilter.Today:
-                        query = query.Where(u => u.CreateDateTime.Date == today);
+                        startPeriod = today;
                         break;
                     case PeriodeFilter.ThisWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date <= today
-                        );
+                        startPeriod = today.AddDays(-(int)today.DayOfWeek);
                         break;
                     case PeriodeFilter.LastWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)
-                        );
+                        startPeriod = today.AddDays(-7 - (int)today.DayOfWeek);
+                        endPeriod = today.AddDays(-(int)today.DayOfWeek).AddTicks(-1);
                         break;
                     case PeriodeFilter.ThisMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month &&
-                            u.CreateDateTime.Year == today.Year
-                        );
+                        startPeriod = new DateTime(today.Year, today.Month, 1);
                         break;
                     case PeriodeFilter.LastMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month - 1 &&
-                            u.CreateDateTime.Year == today.Year
-                        );
+                        var lastMonth = today.AddMonths(-1);
+                        startPeriod = new DateTime(lastMonth.Year, lastMonth.Month, 1);
+                        endPeriod = new DateTime(lastMonth.Year, lastMonth.Month,
+                            DateTime.DaysInMonth(lastMonth.Year, lastMonth.Month)).AddDays(1).AddTicks(-1);
                         break;
                     case PeriodeFilter.ThisYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
+                        startPeriod = new DateTime(today.Year, 1, 1);
                         break;
                     case PeriodeFilter.LastYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
+                        startPeriod = new DateTime(today.Year - 1, 1, 1);
+                        endPeriod = new DateTime(today.Year - 1, 12, 31).AddDays(1).AddTicks(-1);
                         break;
                     case PeriodeFilter.Last3Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
+                        startPeriod = today.AddMonths(-3);
                         break;
                     case PeriodeFilter.Last6Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
+                        startPeriod = today.AddMonths(-6);
+                        break;
+                    default:
+                        startPeriod = DateTime.MinValue;
                         break;
                 }
+
+                var startUtc = startPeriod.Date.ToUniversalTime();
+                var endUtc = endPeriod.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+                query = query.Where(a => a.CreateDateTime >= startUtc && a.CreateDateTime <= endUtc);
             }
 
-            // Sorting Data dengan cara yang lebih aman
-            query = sortDirection?.ToLower() == "desc"
-                ? orderBy switch
-                {
-                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    _ => query.OrderByDescending(u => u.CreateDateTime)
-                }
-                : orderBy switch
-                {
-                    "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    _ => query.OrderBy(u => u.CreateDateTime)
-                };
+            // === 3. Sorting (DB side) ===
+            bool desc = sortDirection?.ToLower() == "desc";
 
-            // Pagination
-            var totalRows = query.Count();
-            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
-
-            if (rows.Count == 0 && page > totalPages)
+            query = (orderBy, desc) switch
             {
-                return NotFound(new { message = "Page not found." });
+
+                ("CreateDateTime", true) => query.OrderByDescending(a => a.CreateDateTime),
+                ("CreateDateTime", false) => query.OrderBy(a => a.CreateDateTime),
+                _ => desc ? query.OrderByDescending(a => a.CreateDateTime)
+                         : query.OrderBy(a => a.CreateDateTime)
+            };
+
+            // === 4. Count BEFORE paging ===
+            var filteredTotal = await query.CountAsync();
+
+            if (filteredTotal == 0)
+            {
+                return Ok(new
+                {
+                    status = "success",
+                    message = "Data retrieved",
+                    data = new
+                    {
+                        Rows = new List<object>(),
+                        TotalRows = 0,
+                        CurrentPage = page,
+                        PerPage = perPage,
+                        TotalPages = 0
+                    }
+                });
             }
 
+            // === 5. Apply paging (only once) ===
+            var parents = await query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToListAsync(); // all columns included here
+
+            // === 6. Fetch details for these parents ===
+            var parentIds = parents.Select(x => x.InfeksiADPId).ToList();
+
+            var details = await _applicationDbContext.InfeksiDetails
+                .AsNoTracking()
+                .Where(d => parentIds.Contains((Guid)d.InfeksiId))
+                .OrderBy(d => d.CreateDateTime)
+                .ToListAsync();
+
+            var detailLookup = details.GroupBy(d => d.InfeksiId)
+                                      .ToDictionary(g => g.Key, g => g.ToList());
+
+            // === 7. Merge parents + details ===
+            var final = parents.Select(p => new
+            {
+                Rows = p, // BERISI SEMUA KOLOM INFEKSIADP
+                Details = detailLookup.ContainsKey(p.InfeksiADPId)
+                    ? detailLookup[p.InfeksiADPId]
+                    : new List<InfeksiDetail>()
+            }).ToList();
+
+            // === 8. Response ===
             return Ok(new
             {
                 status = "success",
-                message = "Data retrieved successfully",
+                message = "Data retrieved",
                 data = new
                 {
-                    Rows = rows,
-                    TotalRows = totalRows,
+                    Rows = final,
+                    TotalRows = filteredTotal,
                     CurrentPage = page,
                     PerPage = perPage,
-                    TotalPages = totalPages
+                    TotalPages = (int)Math.Ceiling(filteredTotal / (double)perPage)
                 }
             });
         }
-
 
 
     }

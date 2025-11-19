@@ -253,7 +253,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] InfeksiTDViewMOdel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] InfeksiADPViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
@@ -279,34 +279,36 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
 
                 // ===========================
-                // 🔹 Ambil Parent InfeksiTD
+                // 🔹 Ambil Parent ADP
                 // ===========================
-                var infeksi = await _applicationDbContext.InfeksiTDs
-                    .FirstOrDefaultAsync(x => x.InfeksiTransfusiId == id);
+                var adp = await _applicationDbContext.InfeksiADPs
+                    .FirstOrDefaultAsync(x => x.InfeksiADPId == id && (x.IsDelete == false || x.IsDelete == null));
 
-                if (infeksi == null)
-                    return NotFound(new { message = "Data Infeksi TD tidak ditemukan!" });
+                if (adp == null)
+                    return NotFound(new { message = "Data Infeksi ADP tidak ditemukan" });
 
 
                 // ===========================
-                // 🔹 Update Parent
+                // 🔹 Update Parent ADP
                 // ===========================
-                infeksi.KunjunganId = vm.KunjunganId;
-                infeksi.PasienId = vm.PasienId;
-                infeksi.TglTransfusi = vm.TglTransfusi;
-                infeksi.JenisTransfusi = vm.JenisTransfusi;
-                infeksi.Jumlah = vm.Jumlah;
-                infeksi.TglPencatatan = vm.TglPencatatan;
-                infeksi.Keterangan = vm.Keterangan;
+                adp.KunjunganId = vm.KunjunganId;
+                adp.PasienId = vm.PasienId;
+                adp.IsInfusVenaPerifer = vm.IsInfusVenaPerifer;
+                adp.IsCVP = vm.IsCVP;
+                adp.IsKateterDarah = vm.IsKateterDarah;
+                adp.HasilLabLeokosit = vm.HasilLabLeokosit;
+                adp.HasilLabHB = vm.HasilLabHB;
+                adp.TglPencatatan = vm.TglPencatatan;
+                adp.Keterangan = vm.Keterangan;
 
-                infeksi.UpdateBy = userActiveId;
-                infeksi.UpdateDateTime = DateTimeOffset.UtcNow;
+                adp.UpdateBy = userActiveId;
+                adp.UpdateDateTime = DateTimeOffset.UtcNow;
 
                 await _applicationDbContext.SaveChangesAsync();
 
 
                 // ===========================
-                // 🔹 Ambil semua detail lama
+                // 🔹 Ambil Detail Lama
                 // ===========================
                 var existingDetails = await _applicationDbContext.InfeksiDetails
                     .Where(x => x.InfeksiId == id)
@@ -314,25 +316,25 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
 
                 // ===========================
-                // 🔹 UPDATE DETAIL LAMA SAJA
+                // 🔹 Update Detail (TIDAK HAPUS, TIDAK ADD)
                 // ===========================
                 if (vm.Details != null && vm.Details.Any())
                 {
                     foreach (var d in vm.Details)
                     {
-                        // ❗ Jika tidak punya DetailInfeksiId → SKIP (Karena tidak boleh tambah baru)
-                        if (d.InfeksiId == null)
+                        // Jika tidak ada DetailInfeksiId → abaikan
+                        if (d.InfeksiId == null || d.InfeksiId == Guid.Empty)
                             continue;
 
                         var existing = existingDetails
                             .FirstOrDefault(x => x.InfeksiId == id);
 
-                        // ❗ Jika detail lama tidak ditemukan → SKIP
+                        // Detail tidak ditemukan → skip
                         if (existing == null)
                             continue;
 
                         // ===========================
-                        // 🔹 Ambil suhu vital sign terbaru
+                        // 🔹 Update vital sign (IsDemam)
                         // ===========================
                         var vital = await _applicationDbContext.VitalSigns
                             .Where(v => v.KunjunganId == vm.KunjunganId)
@@ -342,8 +344,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                         decimal? suhu = vital?.Suhu;
 
                         // ===========================
-                        // 🔹 UPDATE DETAIL
+                        // 🔹 Update detail existing
                         // ===========================
+                        existing.HariKe = d.HariKe;
                         existing.LokasiReaksi = d.LokasiReaksi;
                         existing.TglMulaiReaksi = d.TglMulaiReaksi;
                         existing.TglAkhirReaksi = d.TglAkhirReaksi;
@@ -352,9 +355,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                         existing.Bengkak = d.Bengkak;
                         existing.PUS = d.PUS;
                         existing.Menggigil = d.Menggigil;
-                        existing.IsDemam = d.IsDemam ?? suhu >= 38;
-                        existing.HariKe = d.HariKe;
-
+                        existing.IsDemam = d.IsDemam ?? (suhu >= 38);
                         existing.Drainase = d.Drainase;
                         existing.Perforasi = d.Perforasi;
                         existing.Fistula = d.Fistula;
@@ -374,13 +375,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
 
                 // ===========================
-                // 🔹 Commit
+                // 🔹 Commit Transaksi
                 // ===========================
                 await transaction.CommitAsync();
 
                 return Ok(new
                 {
-                    message = "Update Infeksi TD + Detail berhasil",
+                    message = "Update Infeksi ADP + Detail berhasil (tanpa delete/add)",
+                    InfeksiADPId = id
                 });
             }
             catch (Exception ex)
@@ -389,6 +391,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
 
 
         [HttpDelete("{id}")]
@@ -431,6 +434,25 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 data.IsDelete = true;
 
                 _applicationDbContext.InfeksiTDs.Update(data);
+
+                // ================================
+                // 🔹 Soft Delete Semua Detail
+                // ================================
+                var details = await _applicationDbContext.InfeksiDetails
+                    .Where(d => d.InfeksiId == id && (d.IsDelete == false || d.IsDelete == null))
+                    .ToListAsync();
+
+                if (details.Any())
+                {
+                    foreach (var d in details)
+                    {
+                        d.DeleteBy = userActiveId;
+                        d.DeleteDateTime = DateTimeOffset.UtcNow;
+                        d.IsDelete = true;
+                    }
+
+                    _applicationDbContext.InfeksiDetails.UpdateRange(details);
+                }
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -453,92 +475,130 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
         }
 
         [HttpGet("paged")]
-        public IActionResult Paged(
-            int page = 1,
-            int perPage = 10,
-            Guid? kunjunganId = null,
-            string? orderBy = "CreateDateTime",
-            string? sortDirection = "desc",
-            [FromQuery] DateTime? startDate = null,
-            [FromQuery] DateTime? endDate = null,
-            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        public async Task<IActionResult> Paged(
+           int page = 1,
+           int perPage = 10,
+           Guid? kunjunganId = null,
+           string? orderBy = "CreateDateTime",
+           string? sortDirection = "desc",
+           [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+    DateTime? startDate = null,
+           [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+    DateTime? endDate = null,
+           [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
-            // ===================================================
-            // 1) BASE QUERY (Parent Only)
-            // ===================================================
-            var baseQuery =
-                from a in _applicationDbContext.InfeksiTDs
-                join u in _applicationDbContext.UserActives
-                    on a.CreateBy equals u.UserActiveId into userJoin
-                from u in userJoin.DefaultIfEmpty()
+            if (page <= 0) page = 1;
+            if (perPage <= 0) perPage = 10;
 
-                where a.IsDelete == false || a.IsDelete == null
+            // ============================================================
+            // 1. BASE QUERY (no projection, include all columns)
+            // ============================================================
+            var query = _applicationDbContext.InfeksiTDs
+                .AsNoTracking()
+                .Where(a => a.IsDelete == false || a.IsDelete == null)
+                .AsQueryable();
 
-                select new
-                {
-                    a.InfeksiTransfusiId,
-                    a.CreateDateTime,
-                    a.CreateBy,
-                    CreateByName = u.FullName,
-                    a.KunjunganId,
-                    a.PasienId,
-                    a.TglTransfusi,
-                    a.JenisTransfusi,
-                    a.Jumlah,
-                    a.TglPencatatan,
-                    a.Keterangan
-                };
-
-            // ===================================================
-            // 2) SQL FILTERING (Parent-level only)
-            // ===================================================
+            // ============================================================
+            // 2. FILTERS (DB SIDE)
+            // ============================================================
             if (kunjunganId.HasValue)
-                baseQuery = baseQuery.Where(x => x.KunjunganId == kunjunganId);
+                query = query.Where(a => a.KunjunganId == kunjunganId.Value);
 
             if (startDate.HasValue && endDate.HasValue)
             {
                 var startUtc = startDate.Value.Date.ToUniversalTime();
                 var endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
 
-                baseQuery = baseQuery.Where(x =>
-                    x.CreateDateTime >= startUtc &&
-                    x.CreateDateTime <= endUtc);
+                query = query.Where(a => a.CreateDateTime >= startUtc && a.CreateDateTime <= endUtc);
             }
 
-            // ===================================================
-            // 3) SQL SORTING
-            // ===================================================
-            var sorted = sortDirection?.ToLower() == "desc"
-                ? orderBy switch
+            if (periode.HasValue)
+            {
+                DateTime today = DateTime.UtcNow.Date;
+                DateTime startPeriod;
+                DateTime endPeriod = today.AddDays(1).AddTicks(-1);
+
+                switch (periode.Value)
                 {
-                    "CreateDateTime" => baseQuery.OrderBy(u => u.CreateDateTime),
-                    "CreateByName" => baseQuery.OrderByDescending(x => x.CreateByName),
-                    _ => baseQuery.OrderByDescending(x => x.CreateDateTime)
-                    
+                    case PeriodeFilter.Today:
+                        startPeriod = today;
+                        break;
+
+                    case PeriodeFilter.ThisWeek:
+                        startPeriod = today.AddDays(-(int)today.DayOfWeek);
+                        break;
+
+                    case PeriodeFilter.LastWeek:
+                        startPeriod = today.AddDays(-7 - (int)today.DayOfWeek);
+                        endPeriod = today.AddDays(-(int)today.DayOfWeek).AddTicks(-1);
+                        break;
+
+                    case PeriodeFilter.ThisMonth:
+                        startPeriod = new DateTime(today.Year, today.Month, 1);
+                        break;
+
+                    case PeriodeFilter.LastMonth:
+                        var lastMonth = today.AddMonths(-1);
+                        startPeriod = new DateTime(lastMonth.Year, lastMonth.Month, 1);
+                        endPeriod = new DateTime(lastMonth.Year, lastMonth.Month,
+                            DateTime.DaysInMonth(lastMonth.Year, lastMonth.Month))
+                            .AddDays(1).AddTicks(-1);
+                        break;
+
+                    case PeriodeFilter.ThisYear:
+                        startPeriod = new DateTime(today.Year, 1, 1);
+                        break;
+
+                    case PeriodeFilter.LastYear:
+                        startPeriod = new DateTime(today.Year - 1, 1, 1);
+                        endPeriod = new DateTime(today.Year - 1, 12, 31)
+                            .AddDays(1).AddTicks(-1);
+                        break;
+
+                    case PeriodeFilter.Last3Months:
+                        startPeriod = today.AddMonths(-3);
+                        break;
+
+                    case PeriodeFilter.Last6Months:
+                        startPeriod = today.AddMonths(-6);
+                        break;
+
+                    default:
+                        startPeriod = DateTime.MinValue;
+                        break;
                 }
-                : orderBy switch
-                {
-                    "CreateDateTime" => baseQuery.OrderBy(u => u.CreateDateTime),
-                    "CreateByName" => baseQuery.OrderBy(x => x.CreateByName),
-                    _ => baseQuery.OrderBy(x => x.CreateDateTime)
-                };
 
-            // ===================================================
-            // 4) PAGING PARENT (NO DETAIL HERE)
-            // ===================================================
-            var totalRows = sorted.Count();
+                var startUtc = startPeriod.ToUniversalTime();
+                var endUtc = endPeriod.ToUniversalTime();
 
-            var parentRows = sorted
-                .Skip((page - 1) * perPage)
-                .Take(perPage)
-                .ToList();
+                query = query.Where(a => a.CreateDateTime >= startUtc && a.CreateDateTime <= endUtc);
+            }
 
-            if (!parentRows.Any())
+            // ============================================================
+            // 3. SORTING (DB SIDE)
+            // ============================================================
+            bool desc = sortDirection?.ToLower() == "desc";
+
+            query = (orderBy, desc) switch
+            {
+                ("CreateDateTime", true) => query.OrderByDescending(a => a.CreateDateTime),
+                ("CreateDateTime", false) => query.OrderBy(a => a.CreateDateTime),
+
+                _ => desc ? query.OrderByDescending(a => a.CreateDateTime)
+                          : query.OrderBy(a => a.CreateDateTime)
+            };
+
+            // ============================================================
+            // 4. COUNT BEFORE PAGING
+            // ============================================================
+            var totalRows = await query.CountAsync();
+
+            if (totalRows == 0)
             {
                 return Ok(new
                 {
                     status = "success",
-                    message = "Data retrieved successfully",
+                    message = "Data retrieved",
                     data = new
                     {
                         Rows = new List<object>(),
@@ -550,163 +610,58 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 });
             }
 
-            // ===================================================
-            // 5) LOAD DETAIL SEKALIGUS (No N+1 Query)
-            // ===================================================
-            var parentIds = parentRows.Select(x => x.InfeksiTransfusiId).ToList();
-
-            var details = _applicationDbContext.InfeksiDetails
-                .Where(d => parentIds.Contains((Guid)d.InfeksiId))
-                .OrderBy(d => d.CreateDateTime)
-                .ToList();
-
-            // ===================================================
-            // 6) MERGE PARENT + DETAIL (In Memory)
-            // ===================================================
-            var merged = parentRows.Select(p => new
-            {
-                p.InfeksiTransfusiId,
-                p.CreateDateTime,
-                p.CreateBy,
-                p.CreateByName,
-                p.KunjunganId,
-                p.PasienId,
-                p.TglTransfusi,
-                p.JenisTransfusi,
-                p.Jumlah,
-                p.TglPencatatan,
-                p.Keterangan,
-
-                Details = details
-                    .Where(d => d.InfeksiId == p.InfeksiTransfusiId)
-                    .Select(d => new
-                    {
-                        d.DetailInfeksiId,
-                        d.HariKe,
-                        d.LokasiReaksi,
-                        d.TglMulaiReaksi,
-                        d.TglAkhirReaksi,
-                        d.Nyeri,
-                        d.Merah,
-                        d.Bengkak,
-                        d.PUS,
-                        d.Menggigil,
-                        d.IsDemam,
-                        d.Drainase,
-                        d.Perforasi,
-                        d.Fistula,
-                        d.NyeriSupraPublik,
-                        d.NyeriSaatBerkemih,
-                        d.PasangDCKe,
-                        d.AnyangAnyangan,
-                        d.Gatal,
-                        d.Keterangan,
-                        d.CreateDateTime
-                    })
-                    .ToList()
-            }).ToList();
-
-            // ===================================================
-            // 7) MEMORY FILTERING (AFTER MERGE)
-            // ===================================================
-            if (kunjunganId.HasValue)
-                merged = merged.Where(x => x.KunjunganId == kunjunganId).ToList();
-
-            if (startDate.HasValue && endDate.HasValue)
-            {
-                var startUtc = startDate.Value.Date.ToUniversalTime();
-                var endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
-
-                merged = merged
-                    .Where(x => x.CreateDateTime >= startUtc && x.CreateDateTime <= endUtc)
-                    .ToList();
-            }
-
-            if (periode.HasValue)
-            {
-                DateTime today = DateTime.UtcNow.Date;
-
-                switch (periode)
-                {
-                    case PeriodeFilter.Today:
-                        merged = merged.Where(x => x.CreateDateTime.Date == today).ToList();
-                        break;
-
-                    case PeriodeFilter.ThisWeek:
-                        merged = merged.Where(x =>
-                            x.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
-                            x.CreateDateTime.Date <= today).ToList();
-                        break;
-
-                    case PeriodeFilter.LastWeek:
-                        merged = merged.Where(x =>
-                            x.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                            x.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)).ToList();
-                        break;
-
-                    case PeriodeFilter.ThisMonth:
-                        merged = merged.Where(x =>
-                            x.CreateDateTime.Month == today.Month &&
-                            x.CreateDateTime.Year == today.Year).ToList();
-                        break;
-
-                    case PeriodeFilter.LastMonth:
-                        merged = merged.Where(x =>
-                            x.CreateDateTime.Month == today.Month - 1 &&
-                            x.CreateDateTime.Year == today.Year).ToList();
-                        break;
-
-                    case PeriodeFilter.ThisYear:
-                        merged = merged.Where(x =>
-                            x.CreateDateTime.Year == today.Year).ToList();
-                        break;
-
-                    case PeriodeFilter.LastYear:
-                        merged = merged.Where(x =>
-                            x.CreateDateTime.Year == today.Year - 1).ToList();
-                        break;
-
-                    case PeriodeFilter.Last3Months:
-                        merged = merged.Where(x =>
-                            x.CreateDateTime >= today.AddMonths(-3)).ToList();
-                        break;
-
-                    case PeriodeFilter.Last6Months:
-                        merged = merged.Where(x =>
-                            x.CreateDateTime >= today.AddMonths(-6)).ToList();
-                        break;
-                }
-            }
-
-            // ===================================================
-            // 8) FINAL PAGING AFTER MERGE
-            // ===================================================
-            var filteredTotal = merged.Count;
-
-            var finalPaged = merged
+            // ============================================================
+            // 5. APPLY PAGING (ONCE)
+            // ============================================================
+            var parents = await query
                 .Skip((page - 1) * perPage)
                 .Take(perPage)
-                .ToList();
+                .ToListAsync();
 
-            var totalPages = (int)Math.Ceiling(filteredTotal / (double)perPage);
+            // ============================================================
+            // 6. FETCH DETAILS (SINGLE QUERY)
+            // ============================================================
+            var parentIds = parents.Select(x => x.InfeksiTransfusiId).ToList();
 
-            // ===================================================
-            // 9) RETURN RESPONSE
-            // ===================================================
+            var details = await _applicationDbContext.InfeksiDetails
+                .AsNoTracking()
+                .Where(d => parentIds.Contains((Guid)d.InfeksiId))
+                .OrderBy(d => d.CreateDateTime)
+                .ToListAsync();
+
+            var lookup = details
+                .GroupBy(d => d.InfeksiId)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            // ============================================================
+            // 7. MERGE PARENT + DETAIL
+            // ============================================================
+            var final = parents.Select(p => new
+            {
+                Rows = p, // ALL COLUMNS INFIKSITD
+                Details = lookup.ContainsKey(p.InfeksiTransfusiId)
+                    ? lookup[p.InfeksiTransfusiId]
+                    : new List<InfeksiDetail>()
+            }).ToList();
+
+            // ============================================================
+            // 8. RESPONSE
+            // ============================================================
             return Ok(new
             {
                 status = "success",
-                message = "Data retrieved successfully",
+                message = "Data retrieved",
                 data = new
                 {
-                    Rows = finalPaged,
-                    TotalRows = filteredTotal,
+                    Rows = final,
+                    TotalRows = totalRows,
                     CurrentPage = page,
                     PerPage = perPage,
-                    TotalPages = totalPages
+                    TotalPages = (int)Math.Ceiling(totalRows / (double)perPage)
                 }
             });
         }
+
 
     }
 }
