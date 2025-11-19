@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Linq;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
@@ -15,6 +16,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 {
@@ -177,9 +179,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                     foreach (var d in vm.Details)
                     {
                         // 🔹 Hitung Hari Ke otomatis
-                        int hariKe = await _applicationDbContext.InfeksiDetails
-                            .CountAsync(x => x.InfeksiId == infeksiId
-                                             && x.KunjunganId == vm.KunjunganId) + 1;
+                        //int hariKe = await _applicationDbContext.InfeksiDetails
+                        //    .CountAsync(x => x.KunjunganId == vm.KunjunganId) + 1;
 
                         // 🔹 Ambil suhu vital sign terbaru
                         var vital = await _applicationDbContext.VitalSigns
@@ -196,7 +197,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                             KunjunganId = vm.KunjunganId,
                             PasienId = vm.PasienId,
 
-                            HariKe = hariKe,
+                            HariKe = d.HariKe,
 
                             LokasiReaksi = d.LokasiReaksi,
                             TglMulaiReaksi = d.TglMulaiReaksi,
@@ -252,8 +253,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
 
         [HttpPut("{id}")]
-        [HttpPut("{infeksiTDId:guid}")]
-        public async Task<IActionResult> Update(Guid infeksiTDId, [FromBody] InfeksiTDViewMOdel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] InfeksiTDViewMOdel vm)
         {
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
@@ -279,17 +279,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
 
                 // ===========================
-                // 🔹 Ambil Parent
+                // 🔹 Ambil Parent InfeksiTD
                 // ===========================
                 var infeksi = await _applicationDbContext.InfeksiTDs
-                    .FirstOrDefaultAsync(x => x.InfeksiTransfusiId == infeksiTDId);
+                    .FirstOrDefaultAsync(x => x.InfeksiTransfusiId == id);
 
                 if (infeksi == null)
                     return NotFound(new { message = "Data Infeksi TD tidak ditemukan!" });
 
 
                 // ===========================
-                // 🔹 Update Parent InfeksiTD
+                // 🔹 Update Parent
                 // ===========================
                 infeksi.KunjunganId = vm.KunjunganId;
                 infeksi.PasienId = vm.PasienId;
@@ -306,29 +306,34 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
 
                 // ===========================
-                // 🔹 Hapus Detail Lama
+                // 🔹 Ambil semua detail lama
                 // ===========================
-                var oldDetails = await _applicationDbContext.InfeksiDetails
-                    .Where(x => x.InfeksiId == infeksiTDId)
+                var existingDetails = await _applicationDbContext.InfeksiDetails
+                    .Where(x => x.InfeksiId == id)
                     .ToListAsync();
 
-                if (oldDetails.Any())
-                {
-                    _applicationDbContext.InfeksiDetails.RemoveRange(oldDetails);
-                    await _applicationDbContext.SaveChangesAsync();
-                }
-
 
                 // ===========================
-                // 🔹 Insert Ulang Detail Baru
+                // 🔹 UPDATE DETAIL LAMA SAJA
                 // ===========================
                 if (vm.Details != null && vm.Details.Any())
                 {
-                    int hariKe = 1;
-
                     foreach (var d in vm.Details)
                     {
-                        // Ambil suhu vital sign terbaru
+                        // ❗ Jika tidak punya DetailInfeksiId → SKIP (Karena tidak boleh tambah baru)
+                        if (d.InfeksiId == null)
+                            continue;
+
+                        var existing = existingDetails
+                            .FirstOrDefault(x => x.InfeksiId == id);
+
+                        // ❗ Jika detail lama tidak ditemukan → SKIP
+                        if (existing == null)
+                            continue;
+
+                        // ===========================
+                        // 🔹 Ambil suhu vital sign terbaru
+                        // ===========================
                         var vital = await _applicationDbContext.VitalSigns
                             .Where(v => v.KunjunganId == vm.KunjunganId)
                             .OrderByDescending(v => v.CreateDateTime)
@@ -336,39 +341,32 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
                         decimal? suhu = vital?.Suhu;
 
-                        var detail = new InfeksiDetail
-                        {
-                            DetailInfeksiId = Guid.NewGuid(),
-                            InfeksiId = infeksiTDId,
-                            KunjunganId = vm.KunjunganId,
-                            PasienId = vm.PasienId,
+                        // ===========================
+                        // 🔹 UPDATE DETAIL
+                        // ===========================
+                        existing.LokasiReaksi = d.LokasiReaksi;
+                        existing.TglMulaiReaksi = d.TglMulaiReaksi;
+                        existing.TglAkhirReaksi = d.TglAkhirReaksi;
+                        existing.Nyeri = d.Nyeri;
+                        existing.Merah = d.Merah;
+                        existing.Bengkak = d.Bengkak;
+                        existing.PUS = d.PUS;
+                        existing.Menggigil = d.Menggigil;
+                        existing.IsDemam = d.IsDemam ?? suhu >= 38;
+                        existing.HariKe = d.HariKe;
 
-                            HariKe = hariKe++,
+                        existing.Drainase = d.Drainase;
+                        existing.Perforasi = d.Perforasi;
+                        existing.Fistula = d.Fistula;
+                        existing.NyeriSupraPublik = d.NyeriSupraPublik;
+                        existing.NyeriSaatBerkemih = d.NyeriSaatBerkemih;
+                        existing.PasangDCKe = d.PasangDCKe;
+                        existing.AnyangAnyangan = d.AnyangAnyangan;
+                        existing.Gatal = d.Gatal;
+                        existing.Keterangan = d.Keterangan;
 
-                            LokasiReaksi = d.LokasiReaksi,
-                            TglMulaiReaksi = d.TglMulaiReaksi,
-                            TglAkhirReaksi = d.TglAkhirReaksi,
-                            Nyeri = d.Nyeri,
-                            Merah = d.Merah,
-                            Bengkak = d.Bengkak,
-                            PUS = d.PUS,
-                            Menggigil = d.Menggigil,
-                            IsDemam = d.IsDemam ?? suhu >= 38,
-                            Drainase = d.Drainase,
-                            Perforasi = d.Perforasi,
-                            Fistula = d.Fistula,
-                            NyeriSupraPublik = d.NyeriSupraPublik,
-                            NyeriSaatBerkemih = d.NyeriSaatBerkemih,
-                            PasangDCKe = d.PasangDCKe,
-                            AnyangAnyangan = d.AnyangAnyangan,
-                            Gatal = d.Gatal,
-                            Keterangan = d.Keterangan,
-
-                            CreateBy = userActiveId,
-                            CreateDateTime = DateTimeOffset.UtcNow
-                        };
-
-                        await _applicationDbContext.InfeksiDetails.AddAsync(detail);
+                        existing.UpdateBy = userActiveId;
+                        existing.UpdateDateTime = DateTimeOffset.UtcNow;
                     }
 
                     await _applicationDbContext.SaveChangesAsync();
@@ -376,26 +374,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
 
                 // ===========================
-                // 🔹 Commit Transaction
+                // 🔹 Commit
                 // ===========================
                 await transaction.CommitAsync();
 
                 return Ok(new
                 {
                     message = "Update Infeksi TD + Detail berhasil",
-                    InfeksiTDId = infeksiTDId,
-                    JumlahDetailBaru = vm.Details?.Count ?? 0
                 });
             }
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
-                return StatusCode(500, new
-                {
-                    message = $"Terjadi kesalahan internal: {ex.Message}"
-                });
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
@@ -460,65 +454,174 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
         [HttpGet("paged")]
         public IActionResult Paged(
-        int page = 1,
-        int perPage = 10,
-        Guid? kunjunganId = null,
-        string? orderBy = "CreateDateTime",
-        string? sortDirection = "desc",
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                        DateTime? startDate = null,
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                        DateTime? endDate = null,
-        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+            int page = 1,
+            int perPage = 10,
+            Guid? kunjunganId = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery] DateTime? startDate = null,
+            [FromQuery] DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
+            // ===================================================
+            // 1) BASE QUERY (Parent Only)
+            // ===================================================
+            var baseQuery =
+                from a in _applicationDbContext.InfeksiTDs
+                join u in _applicationDbContext.UserActives
+                    on a.CreateBy equals u.UserActiveId into userJoin
+                from u in userJoin.DefaultIfEmpty()
 
-            // Query data
-            var query = (from a in _applicationDbContext.InfeksiTDs
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false || a.IsDelete == null
-                         select new
-                         {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = u.FullName,
-                             a.InfeksiTransfusiId,
-                             a.KunjunganId,
-                             a.PasienId,
-                             a.TglTransfusi,
-                             a.JenisTransfusi,
-                             a.Jumlah,
-                             a.TglPencatatan,
-                             a.Keterangan,
-                         });
+                where a.IsDelete == false || a.IsDelete == null
 
-            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-            //if (!string.IsNullOrWhiteSpace(search))
-            //{
-            //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-            //    query = query.Where(u =>
-            //        EF.Functions.ILike(u.NamaDiskon, search)
-            //    );
-            //}
+                select new
+                {
+                    a.InfeksiTransfusiId,
+                    a.CreateDateTime,
+                    a.CreateBy,
+                    CreateByName = u.FullName,
+                    a.KunjunganId,
+                    a.PasienId,
+                    a.TglTransfusi,
+                    a.JenisTransfusi,
+                    a.Jumlah,
+                    a.TglPencatatan,
+                    a.Keterangan
+                };
 
-            // filter based on kunjungan id
+            // ===================================================
+            // 2) SQL FILTERING (Parent-level only)
+            // ===================================================
             if (kunjunganId.HasValue)
-            {
-                query = query.Where(u=>u.KunjunganId == kunjunganId.Value);
-            }
+                baseQuery = baseQuery.Where(x => x.KunjunganId == kunjunganId);
 
-            //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
             {
-                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
-                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+                var startUtc = startDate.Value.Date.ToUniversalTime();
+                var endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
 
-                query = query.Where(u =>
-                    u.CreateDateTime >= startUtc &&
-                    u.CreateDateTime <= endUtc);
+                baseQuery = baseQuery.Where(x =>
+                    x.CreateDateTime >= startUtc &&
+                    x.CreateDateTime <= endUtc);
             }
 
-            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
+            // ===================================================
+            // 3) SQL SORTING
+            // ===================================================
+            var sorted = sortDirection?.ToLower() == "desc"
+                ? orderBy switch
+                {
+                    "CreateDateTime" => baseQuery.OrderBy(u => u.CreateDateTime),
+                    "CreateByName" => baseQuery.OrderByDescending(x => x.CreateByName),
+                    _ => baseQuery.OrderByDescending(x => x.CreateDateTime)
+                    
+                }
+                : orderBy switch
+                {
+                    "CreateDateTime" => baseQuery.OrderBy(u => u.CreateDateTime),
+                    "CreateByName" => baseQuery.OrderBy(x => x.CreateByName),
+                    _ => baseQuery.OrderBy(x => x.CreateDateTime)
+                };
+
+            // ===================================================
+            // 4) PAGING PARENT (NO DETAIL HERE)
+            // ===================================================
+            var totalRows = sorted.Count();
+
+            var parentRows = sorted
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToList();
+
+            if (!parentRows.Any())
+            {
+                return Ok(new
+                {
+                    status = "success",
+                    message = "Data retrieved successfully",
+                    data = new
+                    {
+                        Rows = new List<object>(),
+                        TotalRows = 0,
+                        CurrentPage = page,
+                        PerPage = perPage,
+                        TotalPages = 0
+                    }
+                });
+            }
+
+            // ===================================================
+            // 5) LOAD DETAIL SEKALIGUS (No N+1 Query)
+            // ===================================================
+            var parentIds = parentRows.Select(x => x.InfeksiTransfusiId).ToList();
+
+            var details = _applicationDbContext.InfeksiDetails
+                .Where(d => parentIds.Contains((Guid)d.InfeksiId))
+                .OrderBy(d => d.CreateDateTime)
+                .ToList();
+
+            // ===================================================
+            // 6) MERGE PARENT + DETAIL (In Memory)
+            // ===================================================
+            var merged = parentRows.Select(p => new
+            {
+                p.InfeksiTransfusiId,
+                p.CreateDateTime,
+                p.CreateBy,
+                p.CreateByName,
+                p.KunjunganId,
+                p.PasienId,
+                p.TglTransfusi,
+                p.JenisTransfusi,
+                p.Jumlah,
+                p.TglPencatatan,
+                p.Keterangan,
+
+                Details = details
+                    .Where(d => d.InfeksiId == p.InfeksiTransfusiId)
+                    .Select(d => new
+                    {
+                        d.DetailInfeksiId,
+                        d.HariKe,
+                        d.LokasiReaksi,
+                        d.TglMulaiReaksi,
+                        d.TglAkhirReaksi,
+                        d.Nyeri,
+                        d.Merah,
+                        d.Bengkak,
+                        d.PUS,
+                        d.Menggigil,
+                        d.IsDemam,
+                        d.Drainase,
+                        d.Perforasi,
+                        d.Fistula,
+                        d.NyeriSupraPublik,
+                        d.NyeriSaatBerkemih,
+                        d.PasangDCKe,
+                        d.AnyangAnyangan,
+                        d.Gatal,
+                        d.Keterangan,
+                        d.CreateDateTime
+                    })
+                    .ToList()
+            }).ToList();
+
+            // ===================================================
+            // 7) MEMORY FILTERING (AFTER MERGE)
+            // ===================================================
+            if (kunjunganId.HasValue)
+                merged = merged.Where(x => x.KunjunganId == kunjunganId).ToList();
+
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                var startUtc = startDate.Value.Date.ToUniversalTime();
+                var endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+
+                merged = merged
+                    .Where(x => x.CreateDateTime >= startUtc && x.CreateDateTime <= endUtc)
+                    .ToList();
+            }
+
             if (periode.HasValue)
             {
                 DateTime today = DateTime.UtcNow.Date;
@@ -526,85 +629,84 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 switch (periode)
                 {
                     case PeriodeFilter.Today:
-                        query = query.Where(u => u.CreateDateTime.Date == today);
+                        merged = merged.Where(x => x.CreateDateTime.Date == today).ToList();
                         break;
+
                     case PeriodeFilter.ThisWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date <= today
-                        );
+                        merged = merged.Where(x =>
+                            x.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
+                            x.CreateDateTime.Date <= today).ToList();
                         break;
+
                     case PeriodeFilter.LastWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)
-                        );
+                        merged = merged.Where(x =>
+                            x.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
+                            x.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)).ToList();
                         break;
+
                     case PeriodeFilter.ThisMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month &&
-                            u.CreateDateTime.Year == today.Year
-                        );
+                        merged = merged.Where(x =>
+                            x.CreateDateTime.Month == today.Month &&
+                            x.CreateDateTime.Year == today.Year).ToList();
                         break;
+
                     case PeriodeFilter.LastMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month - 1 &&
-                            u.CreateDateTime.Year == today.Year
-                        );
+                        merged = merged.Where(x =>
+                            x.CreateDateTime.Month == today.Month - 1 &&
+                            x.CreateDateTime.Year == today.Year).ToList();
                         break;
+
                     case PeriodeFilter.ThisYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
+                        merged = merged.Where(x =>
+                            x.CreateDateTime.Year == today.Year).ToList();
                         break;
+
                     case PeriodeFilter.LastYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
+                        merged = merged.Where(x =>
+                            x.CreateDateTime.Year == today.Year - 1).ToList();
                         break;
+
                     case PeriodeFilter.Last3Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
+                        merged = merged.Where(x =>
+                            x.CreateDateTime >= today.AddMonths(-3)).ToList();
                         break;
+
                     case PeriodeFilter.Last6Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
+                        merged = merged.Where(x =>
+                            x.CreateDateTime >= today.AddMonths(-6)).ToList();
                         break;
                 }
             }
 
-            // Sorting Data dengan cara yang lebih aman
-            query = sortDirection?.ToLower() == "desc"
-                ? orderBy switch
-                {
-                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    _ => query.OrderByDescending(u => u.CreateDateTime)
-                }
-                : orderBy switch
-                {
-                    "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    _ => query.OrderBy(u => u.CreateDateTime)
-                };
+            // ===================================================
+            // 8) FINAL PAGING AFTER MERGE
+            // ===================================================
+            var filteredTotal = merged.Count;
 
-            // Pagination
-            var totalRows = query.Count();
-            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
+            var finalPaged = merged
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToList();
 
-            if (rows.Count == 0 && page > totalPages)
-            {
-                return NotFound(new { message = "Page not found." });
-            }
+            var totalPages = (int)Math.Ceiling(filteredTotal / (double)perPage);
 
+            // ===================================================
+            // 9) RETURN RESPONSE
+            // ===================================================
             return Ok(new
             {
                 status = "success",
                 message = "Data retrieved successfully",
                 data = new
                 {
-                    Rows = rows,
-                    TotalRows = totalRows,
+                    Rows = finalPaged,
+                    TotalRows = filteredTotal,
                     CurrentPage = page,
                     PerPage = perPage,
                     TotalPages = totalPages
                 }
             });
         }
+
     }
 }

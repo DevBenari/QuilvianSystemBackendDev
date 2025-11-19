@@ -192,8 +192,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                         // 🔹 Hitung Hari Ke Otomatis
                         // ===========================
                         int hariKe = await _applicationDbContext.InfeksiDetails
-                            .CountAsync(x => x.InfeksiId == infeksiId
-                                             && x.KunjunganId == vm.KunjunganId) + 1;
+                            .CountAsync(x =>x.KunjunganId == vm.KunjunganId) + 1;
 
                         // ===========================
                         // 🔹 Ambil suhu vital sign terbaru
@@ -259,7 +258,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
         }
 
 
-        [HttpPut("{infeksiId:guid}")]
+        [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid infeksiId, [FromBody] InfeksiLOViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
@@ -338,10 +337,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 // ===========================
                 if (vm.Details != null && vm.Details.Any())
                 {
-                    int hariCounter = 1;
 
                     foreach (var d in vm.Details)
                     {
+                        // 🔹 Hitung Hari Ke otomatis
+                        int hariKe = await _applicationDbContext.InfeksiDetails
+                            .CountAsync(x => x.InfeksiId == infeksiId
+                                             && x.KunjunganId == vm.KunjunganId) + 1;
+
                         // 🔹 Ambil suhu terbaru
                         var vital = await _applicationDbContext.VitalSigns
                             .Where(v => v.KunjunganId == vm.KunjunganId)
@@ -357,7 +360,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                             KunjunganId = vm.KunjunganId,
                             PasienId = vm.PasienId,
 
-                            HariKe = hariCounter++,
+                            HariKe = hariKe,
 
                             LokasiReaksi = d.LokasiReaksi,
                             TglMulaiReaksi = d.TglMulaiReaksi,

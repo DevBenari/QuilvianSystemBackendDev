@@ -324,6 +324,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
         public IActionResult Paged(
         int page = 1,
         int perPage = 10,
+        Guid? jenisOPId = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -358,6 +359,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
             //        EF.Functions.ILike(u.NamaDiskon, search)
             //    );
             //}
+
+            // filyer based on jenis operasi id
+            if (jenisOPId.HasValue)
+            {
+                query = query.Where(u=>u.JenisOperasiId == jenisOPId.Value);
+            }
 
             //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
