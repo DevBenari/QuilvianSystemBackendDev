@@ -1063,16 +1063,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
             [FromQuery] DateTime? startDate = null,
-            [FromQuery] DateTime? endDate = null,
-            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+            [FromQuery] DateTime? endDate = null)
         {
-            // =========================================================
-            // 1) FILTER PARENT SAJA (NO JOIN) → SUPER FAST
-            // =========================================================
+            // BASE QUERY parent
             var parentQuery = _applicationDbContext.LabBookings
                 .Where(b => b.IsDelete == false || b.IsDelete == null)
                 .AsQueryable();
 
+            // Filter sederhana
             if (kunjunganId.HasValue)
                 parentQuery = parentQuery.Where(b => b.KunjunganId == kunjunganId.Value);
 
@@ -1086,15 +1084,31 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 parentQuery = parentQuery.Where(b => b.CreateDateTime >= start && b.CreateDateTime <= end);
             }
 
-            // SORTING
+            // Jika ada filter namaLab → lakukan filter di SQL (JOIN)
+            if (!string.IsNullOrWhiteSpace(namaLab))
+            {
+                var nl = namaLab.ToLower().Trim();
+
+                parentQuery =
+                    from b in parentQuery
+                    join d in _applicationDbContext.LabBookingDetails on b.BookingLabId equals d.BookingLabId
+                    join lab in _applicationDbContext.Labs on d.LabId equals lab.LabId
+                    where lab.NamaLab.ToLower().Trim().Contains(nl)
+                    select b;
+
+                // Distinct penting karena join bisa mengulang baris parent
+                parentQuery = parentQuery.Distinct();
+            }
+
+            // Hitung total rows SETELAH semua filter
+            int totalRows = parentQuery.Count();
+
+            // Sorting by parent create date
             parentQuery = sortDirection?.ToLower() == "desc"
                 ? parentQuery.OrderByDescending(b => b.CreateDateTime)
                 : parentQuery.OrderBy(b => b.CreateDateTime);
 
-            // COUNT
-            var totalRows = parentQuery.Count();
-
-            // PAGING → hanya ambil primary key
+            // Ambil parentIds hasil paging
             var pagedParentIds = parentQuery
                 .Skip((page - 1) * perPage)
                 .Take(perPage)
@@ -1108,10 +1122,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     data = new { Rows = new List<object>(), TotalRows = 0 }
                 });
 
-            // =========================================================
-            // 2) JOIN FULL, TETAPI HANYA UNTUK ROW PAGE TERSEBUT
-            // =========================================================
-            var parentsWithJoin =
+            // LOAD PARENT DENGAN JOIN (SQL masih optimal)
+            var parents =
                 (from b in _applicationDbContext.LabBookings
                  join u in _applicationDbContext.UserActives on b.CreateBy equals u.UserActiveId into uGroup
                  from u in uGroup.DefaultIfEmpty()
@@ -1131,6 +1143,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                  join po in _applicationDbContext.Polikliniks on k.PoliklinikId equals po.PoliklinikId into poGroup
                  from po in poGroup.DefaultIfEmpty()
 
+                 join kl in _applicationDbContext.Kelass on b.KelasId equals kl.KelasId into klGroup
+                 from kl in klGroup.DefaultIfEmpty()
+
                  where pagedParentIds.Contains(b.BookingLabId)
                  select new
                  {
@@ -1140,58 +1155,47 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      p.NamaLengkap,
                      p.NoRekamMedis,
                      b.AsuransiId,
-                     AsuransiNama = a.NamaAsuransi,
+                     AsuransiNama = a.NamaAsuransi ?? null,
                      b.DokterId,
-                     DokterNama = d1.NmDokter,
-                     PoliNama = po.NamaPoliklinik,
+                     DokterNama = d1.NmDokter ?? null,
+                     PoliNama = po.NamaPoliklinik ?? null,
                      b.TglPemeriksaan,
                      b.TglBooking,
+                     b.AlasanPembatalan,
+                     b.StatusBookingLab,
+                     b.StatusPembayaran,
+                     b.KelasId,
+                     NamaKelas = kl.NamaKelas ?? null,
+                     b.HemodialisaKe,
                      b.CreateDateTime
                  }).ToList();
 
-            // =========================================================
-            // 3) LOAD DETAIL SEKALI QUERY
-            // =========================================================
-            var details = (
-                from d in _applicationDbContext.LabBookingDetails
-                join lab in _applicationDbContext.Labs on d.LabId equals lab.LabId into labGroup
-                from lab in labGroup.DefaultIfEmpty()
+            // LOAD DETAIL untuk parentIds
+            var details =
+                (from d in _applicationDbContext.LabBookingDetails
+                 join lab in _applicationDbContext.Labs on d.LabId equals lab.LabId into labGroup
+                 from lab in labGroup.DefaultIfEmpty()
 
-                join lp in _applicationDbContext.LabPemeriksaans on d.PemeriksaanLabId equals lp.PemeriksaanLabId into lpGroup
-                from lp in lpGroup.DefaultIfEmpty()
+                 join lp in _applicationDbContext.LabPemeriksaans on d.PemeriksaanLabId equals lp.PemeriksaanLabId into lpGroup
+                 from lp in lpGroup.DefaultIfEmpty()
 
-                where pagedParentIds.Contains((Guid)d.BookingLabId)
-                select new
-                {
-                    d.BookingLabId,
-                    d.DetailBookingLabId,
-                    d.PemeriksaanLabId,
-                    PemeriksaanNama = lp.NamaPemeriksaan,
-                    lp.HargaPemeriksaan,
-                    NamaLab = lab.NamaLab
-                }).ToList();
+                 where pagedParentIds.Contains((Guid)d.BookingLabId)
+                 select new
+                 {
+                     d.BookingLabId,
+                     d.DetailBookingLabId,
+                     d.PemeriksaanLabId,
+                     PemeriksaanNama = lp.NamaPemeriksaan,
+                     lp.HargaPemeriksaan,
+                     NamaLab = lab.NamaLab
+                 }).ToList();
 
-            // =========================================================
-            // 4) MERGE
-            // =========================================================
-            var merged = parentsWithJoin
-                .Select(x => new
-                {
-                    Parent = x,
-                    Details = details.Where(d => d.BookingLabId == x.BookingLabId).ToList()
-                })
-                .ToList();
-
-            // OPSIONAL FILTER namaLab
-            if (!string.IsNullOrWhiteSpace(namaLab))
+            // MERGE parent + detail
+            var merged = parents.Select(x => new
             {
-                var lower = namaLab.ToLower();
-                merged = merged.Where(x =>
-                    x.Details.Any(d =>
-                        (d.NamaLab ?? "").ToLower().Contains(lower) ||
-                        (d.PemeriksaanNama ?? "").ToLower().Contains(lower)
-                    )).ToList();
-            }
+                Parent = x,
+                Details = details.Where(d => d.BookingLabId == x.BookingLabId).ToList()
+            }).ToList();
 
             return Ok(new
             {
@@ -1206,6 +1210,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 }
             });
         }
+
         //{
         //    // =========================================================
         //    // 1) QUERY PARENT ONLY (tanpa join detail)
