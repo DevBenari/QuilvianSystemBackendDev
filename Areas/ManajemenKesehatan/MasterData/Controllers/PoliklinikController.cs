@@ -375,6 +375,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             var query = from a in _applicationDbContext.Polikliniks
                         join u in _applicationDbContext.UserActives
                         on a.CreateBy equals u.UserActiveId
+
+                        // join ke dokter poli
+                        join dp in _applicationDbContext.DokterPolis
+                        on a.PoliklinikId equals dp.PoliId into dpGroup
+                        from dp in dpGroup.DefaultIfEmpty()
+
+                        // join ke dokter
+                        join d in _applicationDbContext.Dokters
+                        on dp.DokterId equals d.DokterId into dGroup
+                        from d in dGroup.DefaultIfEmpty()
+
                         where a.IsDelete == false
                         select new
                         {
@@ -385,6 +396,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             KodePoliklinik = a.KodePoliklinik,
                             NamaPoliklinik = a.NamaPoliklinik,
                             KepalaPoliklinik = a.KepalaPoliklinik,
+                            NamaDokter = d.NmDokter ?? null,
                             Ruang = a.Ruang,
                             Telepon = a.Telepon,
                             Email = a.Email,
@@ -404,7 +416,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             {
                 search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
-                    EF.Functions.ILike(u.KodePoliklinik, search) ||
+                    EF.Functions.ILike(u.NamaDokter, search) ||
                     EF.Functions.ILike(u.NamaPoliklinik, search)
                 );
             }

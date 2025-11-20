@@ -341,7 +341,7 @@ namespace QuilvianSystemBackendDev.Repositories
 
         #endregion
 
-        #region
+        #region HemodialisaDD
         public DbSet<HemodialisaHasil> HemodialisaHasils { get; set; }
         public DbSet<MonitoringHD> MonitoringHDs { get; set; }
         #endregion

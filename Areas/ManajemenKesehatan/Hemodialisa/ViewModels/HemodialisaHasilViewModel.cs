@@ -32,6 +32,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.ViewMode
         // ================================
         public string? TTDAksesVaskuler { get; set; }
         public string? TTDPPJA { get; set; }
+        public IFormFile? TTDAksesVaskulerFile { get; set; }
+        public IFormFile? TTDPPJAFile { get; set; }
 
         // ================================
         // OTHER GUIDS
@@ -55,5 +57,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.ViewMode
 
         // Dictionary LaporanNaCl → value pakai TimeOnly
         public Dictionary<string, LaporanNaCLEntry>? LaporanNaCl { get; set; }
+
+        public List<MonitoringHDViewModel>? Details { get; set; }
     }
 }

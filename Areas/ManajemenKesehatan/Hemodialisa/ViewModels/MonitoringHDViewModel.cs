@@ -23,7 +23,6 @@
         public string? Keluhan { get; set; }
         public string? Terapi { get; set; }
         public string? Keterangan { get; set; }
-
-        public List<HemodialisaHasilViewModel>? Details { get; set; }
+        
     }
 }

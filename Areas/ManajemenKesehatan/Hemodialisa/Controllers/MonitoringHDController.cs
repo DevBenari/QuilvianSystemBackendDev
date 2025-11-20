@@ -4,9 +4,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.Controll
 {
     public class MonitoringHDController : Controller
     {
-        public IActionResult Index()
-        {
-            return View();
-        }
+
     }
 }
