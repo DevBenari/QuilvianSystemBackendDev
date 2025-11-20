@@ -153,50 +153,46 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
         public async Task<IActionResult> Create([FromBody] RuangBedahBookingViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
-            {
                 return BadRequest(new { message = "Data tidak valid." });
-            }
+
+            using var transaction = await _applicationDbContext.Database.BeginTransactionAsync();
 
             try
             {
-                // **Cek koneksi ke database**
-                if (!_applicationDbContext.Database.CanConnect())
-                {
-                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
-                }
-
-                // **Ambil User ID dari JWT Claims**
+                // ================================
+                // ✔ Ambil User Login
+                // ================================
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(emailLogin))
-                {
-                    return Unauthorized(new { message = "User tidak terautentikasi!" });
-                }
 
-                var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
+                if (string.IsNullOrEmpty(emailLogin))
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+
                 if (getUserActive == null)
-                {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-                }
+
                 var userActiveId = getUserActive.UserActiveId;
 
-                //// **Cek Duplikasi**
+                // set today
+                var today = DateTime.UtcNow.Date;
+                // ================================
+                // ✔ Cek Duplikasi Booking
+                // ================================
                 bool isDuplicate = await _applicationDbContext.RuangBedahBookings
-                                    .AnyAsync(c => c.KunjunganId == vm.KunjunganId && c.IsDelete==false);
+                    .AnyAsync(c => c.KunjunganId == vm.KunjunganId && c.IsDelete == false && c.CreateDateTime==today);
 
                 if (isDuplicate)
-                {
-                    return Conflict(new { message = "Kunjungan ini telah booking ruang bedah" });
-                }
+                    return Conflict(new { message = "Kunjungan ini telah booking ruang bedah untuk hari ini" });
 
-                // ==========================================================
-                // ✅ Generate Nomor Order
-                // ==========================================================
-                // Prefix: 3 huruf, tergantung dari isBedahBersalin
-                string prefix = (bool)vm.isBedahBersalin ? "OBS" : "BED"; // OBS = Obstetri, BED = Bedah umum
-                var today = DateTime.UtcNow.Date;
+
+                // ================================
+                // ✔ Generate NoOrder
+                // ================================
+                string prefix = (bool)vm.isBedahBersalin ? "OBS" : "BED";
                 string datePart = today.ToString("yyyyMMdd");
 
-                // Cari order terakhir hari ini dengan prefix sesuai
                 var lastOrderToday = await _applicationDbContext.RuangBedahBookings
                     .Where(x => x.CreateDateTime.Date == today && x.NoOrder.StartsWith(prefix))
                     .OrderByDescending(x => x.NoOrder)
@@ -206,18 +202,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
 
                 if (lastOrderToday != null)
                 {
-                    // Format: BED202511070001 → ambil angka terakhir
-                    string lastNumberPart = lastOrderToday.NoOrder.Substring(prefix.Length + 8); // lewati prefix + tanggal (8)
+                    string lastNumberPart = lastOrderToday.NoOrder.Substring(prefix.Length + 8);
                     if (int.TryParse(lastNumberPart, out int lastNum))
                         nextNumber = lastNum + 1;
                 }
 
                 string noOrder = $"{prefix}{datePart}{nextNumber:D4}";
 
-                // **Buat Data Baru**
-                var data = new RuangBedahBooking
+
+                // ================================
+                // ✔ Insert Parent
+                // ================================
+                var parentId = Guid.NewGuid();
+
+                var parent = new RuangBedahBooking
                 {
-                    BookingRuanganBedahId = Guid.NewGuid(),
+                    BookingRuanganBedahId = parentId,
                     KunjunganId = vm.KunjunganId,
                     PasienId = vm.PasienId,
                     TglOperasi = vm.TglOperasi,
@@ -242,7 +242,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                     isSuratIzinOperasi = false,
                     Keterangan = vm.Keterangan,
                     TipeTindakan = vm.TipeTindakan,
-                    IsTerverifikasi = false,
                     TipeOperasi = vm.TipeOperasi,
                     JamPerpanjangan = vm.JamPerpanjangan,
                     BiayaPerpanjangan = vm.BiayaPerpanjangan,
@@ -258,134 +257,196 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
 
-                // **Simpan ke Database**
-                _applicationDbContext.RuangBedahBookings.Add(data);
-                int result = await _applicationDbContext.SaveChangesAsync();
+                await _applicationDbContext.RuangBedahBookings.AddAsync(parent);
+                await _applicationDbContext.SaveChangesAsync();
 
-                if (result > 0)
+
+                // ================================
+                // ✔ Insert Child (Details)
+                // ================================
+                if (vm.Details != null && vm.Details.Any())
                 {
-                    return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
+                    List<RuangBedahBookingDetail> detailList = new();
+
+                    foreach (var d in vm.Details)
+                    {
+                        var detail = new RuangBedahBookingDetail
+                        {
+                            DetailBookingBedahId = Guid.NewGuid(),
+                            BookingRuanganBedahId = parentId,
+                            JenisOperasiId = d.JenisOperasiId,
+                            TindakanId = d.TindakanId,       // ← ARRAY<Guid>
+                            UserActiveId = d.UserActiveId,   // ← ARRAY<Guid>
+                            PersentaseTindakan = d.PersentaseTindakan,
+                            DiskonDokter = d.DiskonDokter,
+                            Keterangan = d.Keterangan,
+                            CreateBy = userActiveId,
+                            CreateDateTime = DateTimeOffset.UtcNow
+                        };
+
+                        detailList.Add(detail);
+                    }
+
+                    await _applicationDbContext.RuangBedahBookingDetails.AddRangeAsync(detailList);
+                    await _applicationDbContext.SaveChangesAsync();
                 }
-                else
+
+
+                // ================================
+                // ✔ Commit Transaction
+                // ================================
+                await transaction.CommitAsync();
+
+
+                // ================================
+                // ✔ Response Output
+                // ================================
+                return Ok(new
                 {
-                    return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
-                }
-            }
-            catch (DbUpdateException dbEx)
-            {
-                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+                    message = "Booking ruang bedah + detail berhasil ditambahkan",
+                    BookingRuanganBedahId = parentId,
+                    NoOrder = noOrder,
+                    JumlahDetail = vm.Details?.Count ?? 0
+                });
             }
             catch (Exception ex)
             {
+                await transaction.RollbackAsync();
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
 
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] RuangBedahBookingViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
-            {
                 return BadRequest(new { message = "Data tidak valid." });
-            }
+
+            using var transaction = await _applicationDbContext.Database.BeginTransactionAsync();
 
             try
             {
-                // **Cek koneksi ke database**
-                if (!_applicationDbContext.Database.CanConnect())
-                {
-                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
-                }
-
-                // **Ambil User ID dari JWT Claims**
+                // ================================
+                // ✔ Ambil User Login
+                // ================================
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(emailLogin))
-                {
-                    return Unauthorized(new { message = "User tidak terautentikasi!" });
-                }
 
-                var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
+                if (string.IsNullOrEmpty(emailLogin))
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+
                 if (getUserActive == null)
-                {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-                }
+
                 var userActiveId = getUserActive.UserActiveId;
 
-                // **Cek apakah data ada**
-                var existingData = await _applicationDbContext.RuangBedahBookings
-                                        .FirstOrDefaultAsync(c => c.BookingRuanganBedahId == id && (c.IsDelete == false || c.IsDelete == null));
 
-                if (existingData == null)
+                // ================================
+                // ✔ Ambil Parent
+                // ================================
+                var parent = await _applicationDbContext.RuangBedahBookings
+                    .FirstOrDefaultAsync(x => x.BookingRuanganBedahId == id && x.IsDelete == false);
+
+                if (parent == null)
+                    return NotFound(new { message = "Data Booking Ruang Bedah tidak ditemukan!" });
+
+
+                // ================================
+                // ✔ Update Parent
+                // ================================
+                parent.KunjunganId = vm.KunjunganId;
+                parent.PasienId = vm.PasienId;
+                parent.TglOperasi = vm.TglOperasi;
+                parent.WaktuOperasi = vm.WaktuOperasi;
+                parent.RuangTindakan = vm.RuangTindakan;
+                parent.DiagnosaDokter1 = vm.DiagnosaDokter1;
+                parent.DiagnosaDokter2 = vm.DiagnosaDokter2;
+                parent.DiagnosaDokter3 = vm.DiagnosaDokter3;
+                parent.DiagnosaDokter4 = vm.DiagnosaDokter4;
+                parent.DiagnosaDokter5 = vm.DiagnosaDokter5;
+                parent.BeratBadan = vm.BeratBadan;
+                parent.DokterOperator1 = vm.DokterOperator1;
+                parent.DokterOperator2 = vm.DokterOperator2;
+                parent.DokterOperator3 = vm.DokterOperator3;
+                parent.DokterOperator4 = vm.DokterOperator4;
+                parent.DokterOperator5 = vm.DokterOperator5;
+                parent.RencanaTindakanOperasi = vm.RencanaTindakanOperasi;
+                parent.JenisAnastesi = vm.JenisAnastesi;
+                parent.TypeOK = vm.TypeOK;
+                parent.PenandaanLokasiOperasi = vm.PenandaanLokasiOperasi;
+                parent.isBedahBersalin = vm.isBedahBersalin;
+                parent.Keterangan = vm.Keterangan;
+                parent.TipeTindakan = vm.TipeTindakan;
+                parent.TipeOperasi = vm.TipeOperasi;
+                parent.JamPerpanjangan = vm.JamPerpanjangan;
+                parent.BiayaPerpanjangan = vm.BiayaPerpanjangan;
+                parent.KamarRecoveryId = vm.KamarRecoveryId;
+                parent.TipeAnastesiId = vm.TipeAnastesiId;
+                parent.TipeASAId = vm.TipeASAId;
+                parent.KelompokPasienAnastesi = vm.KelompokPasienAnastesi;
+                parent.PetugasId = vm.PetugasId;
+                parent.StatusOperasi = vm.StatusOperasi;
+
+                parent.UpdateBy = userActiveId;
+                parent.UpdateDateTime = DateTimeOffset.UtcNow;
+
+                await _applicationDbContext.SaveChangesAsync();
+
+
+                // ================================
+                // ✔ Update Detail Tanpa Tambah/Hapus
+                // ================================
+                if (vm.Details != null && vm.Details.Any())
                 {
-                    return NotFound(new { message = "Data tidak ditemukan." });
+                    foreach (var d in vm.Details)
+                    {
+                        var detail = await _applicationDbContext.RuangBedahBookingDetails
+                            .FirstOrDefaultAsync(x => x.DetailBookingBedahId == d.DetailBookingBedahId);
+
+                        if (detail == null)
+                            return BadRequest(new
+                            {
+                                message = $"Detail dengan ID {d.DetailBookingBedahId} tidak ditemukan!"
+                            });
+
+                        // Update detail
+                        detail.JenisOperasiId = d.JenisOperasiId;
+                        detail.TindakanId = d.TindakanId;
+                        detail.UserActiveId = d.UserActiveId;
+                        detail.PersentaseTindakan = d.PersentaseTindakan;
+                        detail.DiskonDokter = d.DiskonDokter;
+                        detail.Keterangan = d.Keterangan;
+
+                        detail.UpdateBy = userActiveId;
+                        detail.UpdateDateTime = DateTimeOffset.UtcNow;
+                    }
+
+                    await _applicationDbContext.SaveChangesAsync();
                 }
 
-                bool isDuplicate = await _applicationDbContext.RuangBedahBookings
-                    .AnyAsync(c => c.KunjunganId == vm.KunjunganId &&c.BookingRuanganBedahId!=id && c.IsDelete == false);
 
-                if (isDuplicate)
+                // ================================
+                // ✔ Commit Transaction
+                // ================================
+                await transaction.CommitAsync();
+
+                return Ok(new
                 {
-                    return Conflict(new { message = "Kunjungan ini telah booking ruang bedah" });
-                }
-
-                // **Update field yang diubah**
-                existingData.KunjunganId = vm.KunjunganId;
-                existingData.PasienId = vm.PasienId;
-                existingData.TglOperasi = vm.TglOperasi;
-                existingData.WaktuOperasi = vm.WaktuOperasi;
-                existingData.RuangTindakan = vm.RuangTindakan;
-                existingData.DiagnosaDokter1 = vm.DiagnosaDokter1;
-                existingData.DiagnosaDokter2 = vm.DiagnosaDokter2;
-                existingData.DiagnosaDokter3 = vm.DiagnosaDokter3;
-                existingData.DiagnosaDokter4 = vm.DiagnosaDokter4;
-                existingData.DiagnosaDokter5 = vm.DiagnosaDokter5;
-                existingData.BeratBadan = vm.BeratBadan;
-                existingData.DokterOperator1 = vm.DokterOperator1;
-                existingData.DokterOperator2 = vm.DokterOperator2;
-                existingData.DokterOperator3 = vm.DokterOperator3;
-                existingData.DokterOperator4 = vm.DokterOperator4;
-                existingData.DokterOperator5 = vm.DokterOperator5;
-                existingData.RencanaTindakanOperasi = vm.RencanaTindakanOperasi;
-                existingData.JenisAnastesi = vm.JenisAnastesi;
-                existingData.TypeOK = vm.TypeOK;
-                existingData.PenandaanLokasiOperasi = vm.PenandaanLokasiOperasi;
-                existingData.isBedahBersalin = vm.isBedahBersalin;
-                existingData.TipeTindakan = vm.TipeTindakan;
-                existingData.TipeOperasi = vm.TipeOperasi;
-                existingData.JamPerpanjangan = vm.JamPerpanjangan;
-                existingData.BiayaPerpanjangan = vm.BiayaPerpanjangan;
-                existingData.KamarRecoveryId = vm.KamarRecoveryId;
-                existingData.TipeAnastesiId = vm.TipeAnastesiId;
-                existingData.TipeASAId = vm.TipeASAId;
-                existingData.KelompokPasienAnastesi = vm.KelompokPasienAnastesi;
-                existingData.PetugasId = vm.PetugasId;
-                existingData.StatusOperasi = vm.StatusOperasi;
-                existingData.Keterangan = vm.Keterangan;
-
-                existingData.UpdateBy = userActiveId;
-                existingData.UpdateDateTime = DateTimeOffset.UtcNow;
-
-                // **Simpan ke Database**
-                int result = await _applicationDbContext.SaveChangesAsync();
-
-                if (result > 0)
-                {
-                    return Ok(new { message = "Update Data Berhasil || 200 OK" });
-                }
-                else
-                {
-                    return StatusCode(500, new { message = "Tidak ada perubahan yang disimpan ke database." });
-                }
-            }
-            catch (DbUpdateException dbEx)
-            {
-                return StatusCode(500, new { message = $"Gagal menyimpan perubahan: {dbEx.InnerException?.Message}" });
+                    message = "Update Booking Ruang Bedah + Detail berhasil",
+                    BookingRuanganBedahId = id,
+                    JumlahDetailDiupdate = vm.Details?.Count ?? 0
+                });
             }
             catch (Exception ex)
             {
+                await transaction.RollbackAsync();
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
 
         [HttpPut("{id}/is-IzinOperasi")]
         public async Task<IActionResult> UpdateIzinOperasi(Guid id, [FromBody] bool request)

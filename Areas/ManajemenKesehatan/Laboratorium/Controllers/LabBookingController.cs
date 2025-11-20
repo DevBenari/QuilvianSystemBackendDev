@@ -166,7 +166,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              b.NoPA,
                              b.StatusBookingLab,
                              b.CatatanJaminan,
-                             b.StatusPembayaran
+                             b.StatusPembayaran,
+                             b.ProsesBooking,
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -398,6 +399,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     NoPA = vm.NoPA,
                     StatusBookingLab = vm.StatusBookingLab,
                     AlasanPembatalan = vm.AlasanPembatalan,
+                    ProsesBooking = vm.ProsesBooking,
 
                     CreateBy = userActiveId,
                     CreateDateTime = DateTime.UtcNow,
@@ -691,7 +693,165 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
-        
+
+        [HttpPut("ProsesBookingLab/{id}")]
+        public async Task<IActionResult> ProsesBookingLab(Guid id, [FromBody] string status)
+        {
+            if (id == Guid.Empty)
+                return BadRequest(new { message = "Parameter ID tidak valid." });
+
+            if (status == null || !ModelState.IsValid)
+                return BadRequest(new { message = "Data tidak valid." });
+
+            try
+            {
+                // ======================================
+                // 🔐 Ambil user aktif dari JWT
+                // ======================================
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin))
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+                var getUserActive = _applicationDbContext.UserActives
+                    .FirstOrDefault(u => u.Email == emailLogin);
+                if (getUserActive == null)
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+
+                var userActiveId = getUserActive.UserActiveId;
+
+                // ======================================
+                // 🔎 Cek apakah data booking ada
+                // ======================================
+                var entity = await _applicationDbContext.LabBookings
+                    .FirstOrDefaultAsync(b => b.BookingLabId == id && (b.IsDelete == false || b.IsDelete == null));
+
+                if (entity == null)
+                    return NotFound(new { message = "Data Booking Lab tidak ditemukan. || 404 Not Found" });
+
+                // ======================================
+                // ⚙️ Update nilai field
+                // ======================================
+                entity.ProsesBooking = status;
+
+                // ======================================
+                // 🕒 Update metadata
+                // ======================================
+                entity.UpdateBy = userActiveId;
+                entity.UpdateDateTime = DateTime.UtcNow;
+
+                _applicationDbContext.LabBookings.Update(entity);
+                int result = await _applicationDbContext.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    return Ok(new
+                    {
+                        message = "Data berhasil diperbarui. || 200 OK",
+                        data = new
+                        {
+                            entity.BookingLabId,
+                            entity.NoOrder,
+                            entity.NomorSuratJaminan,
+                            entity.CatatanJaminan,
+                            entity.TglBooking,
+                            entity.IsCito,
+                            entity.UpdateDateTime
+                        }
+                    });
+                }
+
+                return StatusCode(500, new { message = "Gagal memperbarui data ke database." });
+            }
+            catch (DbUpdateException dbEx)
+            {
+                return StatusCode(500, new { message = $"Kesalahan database: {dbEx.InnerException?.Message}" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saat memperbarui booking lab");
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
+        [HttpPut("StatusBookingLab/{id}")]
+        public async Task<IActionResult> StatusBookingLab(Guid id, [FromBody] bool status)
+        {
+            if (id == Guid.Empty)
+                return BadRequest(new { message = "Parameter ID tidak valid." });
+
+            if (status == null || !ModelState.IsValid)
+                return BadRequest(new { message = "Data tidak valid." });
+
+            try
+            {
+                // ======================================
+                // 🔐 Ambil user aktif dari JWT
+                // ======================================
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin))
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+                var getUserActive = _applicationDbContext.UserActives
+                    .FirstOrDefault(u => u.Email == emailLogin);
+                if (getUserActive == null)
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+
+                var userActiveId = getUserActive.UserActiveId;
+
+                // ======================================
+                // 🔎 Cek apakah data booking ada
+                // ======================================
+                var entity = await _applicationDbContext.LabBookings
+                    .FirstOrDefaultAsync(b => b.BookingLabId == id && (b.IsDelete == false || b.IsDelete == null));
+
+                if (entity == null)
+                    return NotFound(new { message = "Data Booking Lab tidak ditemukan. || 404 Not Found" });
+
+                // ======================================
+                // ⚙️ Update nilai field
+                // ======================================
+                entity.StatusBookingLab = status;
+
+                // ======================================
+                // 🕒 Update metadata
+                // ======================================
+                entity.UpdateBy = userActiveId;
+                entity.UpdateDateTime = DateTime.UtcNow;
+
+                _applicationDbContext.LabBookings.Update(entity);
+                int result = await _applicationDbContext.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    return Ok(new
+                    {
+                        message = "Data berhasil diperbarui. || 200 OK",
+                        data = new
+                        {
+                            entity.BookingLabId,
+                            entity.NoOrder,
+                            entity.NomorSuratJaminan,
+                            entity.CatatanJaminan,
+                            entity.TglBooking,
+                            entity.IsCito,
+                            entity.UpdateDateTime
+                        }
+                    });
+                }
+
+                return StatusCode(500, new { message = "Gagal memperbarui data ke database." });
+            }
+            catch (DbUpdateException dbEx)
+            {
+                return StatusCode(500, new { message = $"Kesalahan database: {dbEx.InnerException?.Message}" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saat memperbarui booking lab");
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
         [HttpPut("BatalLabBooking/{id}")]
         [RequestSizeLimit(10_000_000)]
         [RequestFormLimits(MultipartBodyLengthLimit = 10_000_000)]

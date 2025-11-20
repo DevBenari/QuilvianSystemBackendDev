@@ -32,5 +32,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public string? StatusPembayaran { get; set; }
         public string? AlasanPembatalan { get; set; }
         public string? TTDPathPembatalan { get; set; }
+        public string? ProsesBooking {  get; set; }
     }
 }
