@@ -281,6 +281,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                     NamaLab = l.NamaLab ?? null,
                                     AlasanPembatalan = lb.AlasanPembatalan ?? null,
                                     TTDPembatalanPath = lb.TTDPembatalanPath ?? null,
+                                    IsDeleteLBD = lb.IsDelete
                                 };
 
                 var rawData = baseQuery.ToList();
@@ -324,7 +325,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         g.First().CreateByName,
                         g.First().CreateDateTime,
 
-                        Details = g.Where(d => d.LabBookingDetailId != null).Select(d => new
+                        Details = g.Where(d => d.LabBookingDetailId != null && !d.IsDeleteLBD).Select(d => new
                         {
                             d.LabBookingDetailId,
                             d.PemeriksaanLabId,
@@ -1179,7 +1180,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                  join lp in _applicationDbContext.LabPemeriksaans on d.PemeriksaanLabId equals lp.PemeriksaanLabId into lpGroup
                  from lp in lpGroup.DefaultIfEmpty()
 
-                 where pagedParentIds.Contains((Guid)d.BookingLabId)
+                 where pagedParentIds.Contains((Guid)d.BookingLabId) && !d.IsDelete
                  select new
                  {
                      d.BookingLabId,
