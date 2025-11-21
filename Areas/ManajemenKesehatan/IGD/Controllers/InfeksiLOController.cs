@@ -490,123 +490,107 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
             Guid? kunjunganId = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
-            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
             DateTime? startDate = null,
-            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
             DateTime? endDate = null,
             [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
             if (page <= 0) page = 1;
             if (perPage <= 0) perPage = 10;
 
-            // === 1. Base Query (all parent columns) ===
+            // ======================================================
+            // 1) BASE QUERY
+            // ======================================================
             var query = _applicationDbContext.InfeksiLOs
                 .AsNoTracking()
-                .Where(a => a.IsDelete == false || a.IsDelete == null)
-                .AsQueryable();
+                .Where(x => x.IsDelete == false || x.IsDelete == null);
 
-            // === 2. DB Side Filtering ===
+            // filter kunjungan
             if (kunjunganId.HasValue)
-                query = query.Where(a => a.KunjunganId == kunjunganId.Value);
+                query = query.Where(x => x.KunjunganId == kunjunganId.Value);
 
-            // Filter Tanggal
+            // filter tanggal
             if (startDate.HasValue && endDate.HasValue)
             {
-                var startUtc = startDate.Value.Date.ToUniversalTime();
-                var endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
-
-                query = query.Where(a =>
-                    a.CreateDateTime >= startUtc &&
-                    a.CreateDateTime <= endUtc);
+                var s = startDate.Value.Date.ToUniversalTime();
+                var e = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+                query = query.Where(x => x.CreateDateTime >= s && x.CreateDateTime <= e);
             }
 
-            // Filter Periode (Today, ThisWeek, ThisMonth, etc)
+            // filter periode
             if (periode.HasValue)
             {
                 DateTime today = DateTime.UtcNow.Date;
-                DateTime startPeriod;
-                DateTime endPeriod = today.AddDays(1).AddTicks(-1);
+                DateTime start;
+                DateTime end = today.AddDays(1).AddTicks(-1);
 
                 switch (periode)
                 {
                     case PeriodeFilter.Today:
-                        startPeriod = today;
+                        start = today;
                         break;
-
                     case PeriodeFilter.ThisWeek:
-                        startPeriod = today.AddDays(-(int)today.DayOfWeek);
+                        start = today.AddDays(-(int)today.DayOfWeek);
                         break;
-
                     case PeriodeFilter.LastWeek:
-                        startPeriod = today.AddDays(-7 - (int)today.DayOfWeek);
-                        endPeriod = today.AddDays(-(int)today.DayOfWeek).AddTicks(-1);
+                        start = today.AddDays(-7 - (int)today.DayOfWeek);
+                        end = today.AddDays(-(int)today.DayOfWeek).AddTicks(-1);
                         break;
-
                     case PeriodeFilter.ThisMonth:
-                        startPeriod = new DateTime(today.Year, today.Month, 1);
+                        start = new DateTime(today.Year, today.Month, 1);
                         break;
-
                     case PeriodeFilter.LastMonth:
-                        var lastMonth = today.AddMonths(-1);
-                        startPeriod = new DateTime(lastMonth.Year, lastMonth.Month, 1);
-                        endPeriod = new DateTime(lastMonth.Year, lastMonth.Month,
-                            DateTime.DaysInMonth(lastMonth.Year, lastMonth.Month)).AddDays(1).AddTicks(-1);
+                        var last = today.AddMonths(-1);
+                        start = new DateTime(last.Year, last.Month, 1);
+                        end = new DateTime(last.Year, last.Month,
+                                DateTime.DaysInMonth(last.Year, last.Month)).AddDays(1).AddTicks(-1);
                         break;
-
                     case PeriodeFilter.ThisYear:
-                        startPeriod = new DateTime(today.Year, 1, 1);
+                        start = new DateTime(today.Year, 1, 1);
                         break;
-
                     case PeriodeFilter.LastYear:
-                        startPeriod = new DateTime(today.Year - 1, 1, 1);
-                        endPeriod = new DateTime(today.Year - 1, 12, 31).AddDays(1).AddTicks(-1);
+                        start = new DateTime(today.Year - 1, 1, 1);
+                        end = new DateTime(today.Year - 1, 12, 31).AddDays(1).AddTicks(-1);
                         break;
-
                     case PeriodeFilter.Last3Months:
-                        startPeriod = today.AddMonths(-3);
+                        start = today.AddMonths(-3);
                         break;
-
                     case PeriodeFilter.Last6Months:
-                        startPeriod = today.AddMonths(-6);
+                        start = today.AddMonths(-6);
                         break;
-
                     default:
-                        startPeriod = DateTime.MinValue;
+                        start = DateTime.MinValue;
                         break;
                 }
 
-                var startUtc = startPeriod.ToUniversalTime();
-                var endUtcFinal = endPeriod.ToUniversalTime();
-
-                query = query.Where(a =>
-                    a.CreateDateTime >= startUtc &&
-                    a.CreateDateTime <= endUtcFinal);
+                query = query.Where(x =>
+                    x.CreateDateTime >= start.ToUniversalTime() &&
+                    x.CreateDateTime <= end.ToUniversalTime());
             }
 
-            // === 3. Sorting ===
+            // sort
             bool desc = sortDirection?.ToLower() == "desc";
 
             query = (orderBy, desc) switch
             {
-                ("CreateDateTime", true) => query.OrderByDescending(a => a.CreateDateTime),
-                ("CreateDateTime", false) => query.OrderBy(a => a.CreateDateTime),
-
-                ("CreateByName", true) => query.OrderByDescending(a => a.CreateBy),
-                ("CreateByName", false) => query.OrderBy(a => a.CreateBy),
-
-                _ => desc ? query.OrderByDescending(a => a.CreateDateTime)
-                         : query.OrderBy(a => a.CreateDateTime)
+                ("CreateDateTime", true) => query.OrderByDescending(x => x.CreateDateTime),
+                ("CreateDateTime", false) => query.OrderBy(x => x.CreateDateTime),
+                _ => desc ? query.OrderByDescending(x => x.CreateDateTime)
+                          : query.OrderBy(x => x.CreateDateTime)
             };
 
-            // === 4. Count Before Paging ===
-            var filteredTotal = await query.CountAsync();
+            // count
+            var total = await query.CountAsync();
 
-            if (filteredTotal == 0)
+            var parents = await query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToListAsync();
+
+            if (!parents.Any())
             {
                 return Ok(new
                 {
                     status = "success",
-                    message = "Data retrieved successfully",
                     data = new
                     {
                         Rows = new List<object>(),
@@ -618,35 +602,97 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 });
             }
 
-            // === 5. Apply Paging ===
-            var parents = await query
-                .Skip((page - 1) * perPage)
-                .Take(perPage)
+            // ======================================================
+            // 2) JOIN RUANG BEDAH BOOKING (Tanpa N+1)
+            // ======================================================
+            var parentIds = parents.Select(p => p.KunjunganId).ToList();
+
+            var bookings = await _applicationDbContext.RuangBedahBookings
+                .AsNoTracking()
+                .Where(b => parentIds.Contains(b.KunjunganId))
                 .ToListAsync();
 
-            // === 6. Fetch InfeksiDetail ===
-            var parentIds = parents.Select(x => x.InfeksiLOId).ToList();
+            var bookingLookup = bookings
+                .ToDictionary(b => b.KunjunganId, b => b);
+
+            // ======================================================
+            // 3) JOIN DOKTER OPERATOR 1
+            // ======================================================
+            var dokterIds = bookings
+                .Where(b => b.DokterOperator1 != null)
+                .Select(b => b.DokterOperator1.Value)
+                .Distinct()
+                .ToList();
+
+            var dokterList = await _applicationDbContext.UserActives
+                .AsNoTracking()
+                .Where(d => dokterIds.Contains(d.UserActiveId))
+                .ToListAsync();
+
+            var dokterLookup = dokterList.ToDictionary(d => d.UserActiveId, d => d.FullName);
+
+            // ======================================================
+            // 4) JOIN DETAIL INFKSI LO
+            // ======================================================
+            var infeksiIds = parents.Select(p => p.InfeksiLOId).ToList();
 
             var details = await _applicationDbContext.InfeksiDetails
                 .AsNoTracking()
-                .Where(d => parentIds.Contains((Guid)d.InfeksiId))
-                .OrderBy(d => d.CreateDateTime)
+                .Where(d => infeksiIds.Contains((Guid)d.InfeksiId))
                 .ToListAsync();
 
             var detailLookup = details
                 .GroupBy(d => d.InfeksiId)
                 .ToDictionary(g => g.Key, g => g.ToList());
 
-            // === 7. Merge Parent + Details ===
-            var final = parents.Select(p => new
+            // ======================================================
+            // 5) MERGE DATA
+            // ======================================================
+            var final = parents.Select(p =>
             {
-                Rows = p, // semua kolom InfeksiLO lengkap
-                Details = detailLookup.ContainsKey(p.InfeksiLOId)
-                    ? detailLookup[p.InfeksiLOId]
-                    : new List<InfeksiDetail>()
-            }).ToList();
+                bookingLookup.TryGetValue(p.KunjunganId ?? Guid.Empty, out var booking);
 
-            // === 8. Return Response ===
+                var dokterOperator1 = booking != null &&
+                                      booking.DokterOperator1.HasValue &&
+                                      dokterLookup.ContainsKey(booking.DokterOperator1.Value)
+                                      ? dokterLookup[booking.DokterOperator1.Value]
+                                      : null;
+
+                // itung jam perpanjangan
+                int totalMinutes = 0;
+
+                if (booking != null)
+                {
+                    // Lama operasi berdasarkan WaktuOperasi (interval)
+                    if (booking.WaktuOperasi.HasValue)
+                        totalMinutes += (int)booking.WaktuOperasi.Value.TotalMinutes;
+
+                    // Tambahan jam operasi (TimeOnly)
+                    if (booking.JamPerpanjangan.HasValue)
+                    {
+                        var jp = booking.JamPerpanjangan.Value;
+                        totalMinutes += (jp.Hour * 60) + jp.Minute;
+                    }
+                }
+
+                return new
+                {
+                    Parent = p,
+                    Details = detailLookup.ContainsKey(p.InfeksiLOId)
+                                ? detailLookup[p.InfeksiLOId]
+                                : new List<InfeksiDetail>(),
+
+                    Operasi = new
+                    {
+                        TindakanOperasi = booking?.RencanaTindakanOperasi,
+                        KamarOperasi = booking?.RuangTindakan,
+                        TanggalOperasi = booking?.TglOperasi,
+                        DokterOperator1 = dokterOperator1,
+                        LamaOperasiMenit = totalMinutes
+                    }
+                };
+            });
+
             return Ok(new
             {
                 status = "success",
@@ -654,10 +700,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 data = new
                 {
                     Rows = final,
-                    TotalRows = filteredTotal,
+                    TotalRows = total,
                     CurrentPage = page,
                     PerPage = perPage,
-                    TotalPages = (int)Math.Ceiling(filteredTotal / (double)perPage)
+                    TotalPages = (int)Math.Ceiling(total / (double)perPage)
                 }
             });
         }
