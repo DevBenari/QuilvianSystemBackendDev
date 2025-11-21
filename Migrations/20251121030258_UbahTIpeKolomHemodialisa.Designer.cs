@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -12,9 +13,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251121030258_UbahTIpeKolomHemodialisa")]
+    partial class UbahTIpeKolomHemodialisa
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -3863,7 +3865,7 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<DateTimeOffset>("DeleteDateTime")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid?>("IndicatorPengkajianId")
+                    b.Property<Guid?>("IndicatorScoreId")
                         .HasColumnType("uuid");
 
                     b.Property<bool>("IsDelete")
@@ -7997,9 +7999,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<DateTimeOffset>("DeleteDateTime")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("Ekstremitas")
-                        .HasColumnType("text");
-
                     b.Property<string>("FallRisk")
                         .HasColumnType("text");
 
@@ -8051,9 +8050,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<bool?>("IsInteraksiSosial")
                         .HasColumnType("boolean");
 
-                    b.Property<string>("IsKonjungtiva")
-                        .HasColumnType("text");
-
                     b.Property<bool?>("IsMenggunakanPenopang")
                         .HasColumnType("boolean");
 
@@ -8083,9 +8079,6 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.Property<bool?>("IsTubuhTidakSeimbang")
                         .HasColumnType("boolean");
-
-                    b.Property<string>("KeadaanUmum")
-                        .HasColumnType("text");
 
                     b.Property<string>("KeluhanTambahan")
                         .HasColumnType("text");
@@ -9696,15 +9689,6 @@ namespace QuilvianSystemBackendDev.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<decimal?>("BBKering")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("BBPostHD")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("BBPreHD")
-                        .HasColumnType("numeric");
-
                     b.Property<decimal?>("BMI")
                         .HasColumnType("numeric");
 
@@ -9738,9 +9722,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<bool?>("IsNadiTeraba")
                         .HasColumnType("boolean");
 
-                    b.Property<bool?>("IsRegularNadi")
-                        .HasColumnType("boolean");
-
                     b.Property<string>("Kesadaran")
                         .HasColumnType("text");
 
@@ -9759,26 +9740,14 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("OksigenTambahan")
                         .HasColumnType("text");
 
-                    b.Property<decimal?>("PenambahanBBHD")
-                        .HasColumnType("numeric");
-
                     b.Property<decimal?>("PenggunaanOksigen")
                         .HasColumnType("numeric");
-
-                    b.Property<decimal?>("PenguranganBBHD")
-                        .HasColumnType("numeric");
-
-                    b.Property<string>("PolaNapas")
-                        .HasColumnType("text");
 
                     b.Property<int?>("RR")
                         .HasColumnType("integer");
 
                     b.Property<Guid?>("RanapId")
                         .HasColumnType("uuid");
-
-                    b.Property<decimal?>("Respirasi")
-                        .HasColumnType("numeric");
 
                     b.Property<decimal?>("SaturasiOksigen")
                         .HasColumnType("numeric");

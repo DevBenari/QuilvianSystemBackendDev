@@ -11,8 +11,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.ViewMode
         public int? NoMesin { get; set; }
         public int? HemodialisaKe { get; set; }
         public string? TipeDializer { get; set; }
-        public TimeSpan? JamMulai { get; set; }
-        public TimeSpan? JamAkhir { get; set; }
+        public TimeOnly? JamMulai { get; set; }
+        public TimeOnly? JamAkhir { get; set; }
 
         public string? AksesVaskuler { get; set; }
         public string? JenisHemodialisa { get; set; }
@@ -27,13 +27,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.ViewMode
 
         public string? PenyulitHD { get; set; }
 
-        // ================================
-        // FILE UPLOADS (Stored as string path)
-        // ================================
-        public string? TTDAksesVaskuler { get; set; }
-        public string? TTDPPJA { get; set; }
-        public IFormFile? TTDAksesVaskulerFile { get; set; }
-        public IFormFile? TTDPPJAFile { get; set; }
+        //// ================================
+        //// FILE UPLOADS (Stored as string path)
+        //// ================================
+        //public string? TTDAksesVaskuler { get; set; }
+        //public string? TTDPPJA { get; set; }
+        //public IFormFile? TTDAksesVaskulerFile { get; set; }
+        //public IFormFile? TTDPPJAFile { get; set; }
 
         // ================================
         // OTHER GUIDS

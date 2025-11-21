@@ -6,7 +6,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.Models
     [NotMapped]
     public class LaporanNaCLEntry
     {
-        public TimeOnly? Jam { get; set; }
+        public string? Jam { get; set; }
         public decimal? JumlahNaCl { get; set; }
     }
 }

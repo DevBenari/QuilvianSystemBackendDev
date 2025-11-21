@@ -70,7 +70,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                              a.TglDekubitus,
                              a.AsalDekubitus,
                              a.NamaTempatDekubitus,
-                             a.IndicatorScoreId,
+                             a.IndicatorPengkajianId,
                              a.TglPencatatan,
                              a.LokasiUlkusDekubitus,
                              a.Keterangan,
@@ -172,7 +172,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                     TglDekubitus = vm.TglDekubitus,
                     AsalDekubitus = vm.AsalDekubitus,
                     NamaTempatDekubitus = vm.NamaTempatDekubitus,
-                    IndicatorScoreId = vm.IndicatorScoreId,
+                    IndicatorPengkajianId = vm.IndicatorPengkajianId,
                     TglPencatatan = vm.TglPencatatan,
                     LokasiUlkusDekubitus = vm.LokasiUlkusDekubitus,
                     Keterangan = vm.Keterangan,
@@ -247,7 +247,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 data.TglDekubitus = vm.TglDekubitus;
                 data.AsalDekubitus = vm.AsalDekubitus;
                 data.NamaTempatDekubitus = vm.NamaTempatDekubitus;
-                data.IndicatorScoreId = vm.IndicatorScoreId;
+                data.IndicatorPengkajianId = vm.IndicatorPengkajianId;
                 data.TglPencatatan = vm.TglPencatatan;
                 data.LokasiUlkusDekubitus = vm.LokasiUlkusDekubitus;
                 data.Keterangan = vm.Keterangan;
@@ -365,7 +365,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                              a.TglDekubitus,
                              a.AsalDekubitus,
                              a.NamaTempatDekubitus,
-                             a.IndicatorScoreId,
+                             a.IndicatorPengkajianId,
                              a.TglPencatatan,
                              a.LokasiUlkusDekubitus,
                              a.Keterangan,

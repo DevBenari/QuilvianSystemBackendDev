@@ -14,7 +14,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Models
         public DateTime? TglDekubitus { get; set; }          // Tanggal kejadian dekubitus
         public string? AsalDekubitus { get; set; }           // Asal atau penyebab dekubitus
         public string? NamaTempatDekubitus { get; set; }     // Nama bagian tubuh yang terkena
-        public Guid? IndicatorScoreId { get; set; }          // Relasi ke tabel skor indikator (misalnya Braden Score)
+        public Guid? IndicatorPengkajianId { get; set; }          // Relasi ke tabel skor indikator (misalnya Braden Score)
         public DateTime? TglPencatatan { get; set; }         // Waktu pencatatan form
         public string? LokasiUlkusDekubitus { get; set; }    // Lokasi luka dekubitus
         public string? Keterangan { get; set; }              // Catatan tambahan

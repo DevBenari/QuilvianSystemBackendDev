@@ -31,7 +31,16 @@ builder.Services.Configure<Microsoft.AspNetCore.Mvc.JsonOptions>(options =>
     options.JsonSerializerOptions.Converters.Add(new DateOnlyJsonConverter());
     options.JsonSerializerOptions.Converters.Add(new TimeOnlyJsonConverter());
     options.JsonSerializerOptions.Converters.Add(new NullableDateOnlyJsonConverter());
+    options.JsonSerializerOptions.PropertyNamingPolicy = null; // ❗ penting
+    options.JsonSerializerOptions.DictionaryKeyPolicy = null;
 });
+
+builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =>
+{
+    options.SerializerOptions.Converters.Add(new TimeOnlyJsonConverter());
+    options.SerializerOptions.Converters.Add(new NullableTimeOnlyJsonConverter());
+});
+
 
 // Tambahkan layanan CORS
 builder.Services.AddCors(options =>

@@ -14,8 +14,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.Models
         public int? NoMesin { get; set; }
         public int? HemodialisaKe { get; set; }
         public string? TipeDializer { get; set; }
-        public TimeSpan? JamMulai { get; set; }
-        public TimeSpan? JamAkhir { get; set; }
+        public TimeOnly? JamMulai { get; set; }
+        public TimeOnly? JamAkhir { get; set; }
 
         public string? AksesVaskuler { get; set; }
         public string? JenisHemodialisa { get; set; }

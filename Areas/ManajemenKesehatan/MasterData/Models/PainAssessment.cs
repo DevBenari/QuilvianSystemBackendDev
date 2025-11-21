@@ -93,5 +93,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public bool? IsMenggunakanPenopang {  get; set; }
         public string? KeluhanTambahan { get; set; }
         public bool? IsFarmakologi {  get; set; }
+        public string? KeadaanUmum {  get; set; }
+        public string?IsKonjungtiva { get; set; }
+        public string? Ekstremitas {  get; set; }
     }
 }

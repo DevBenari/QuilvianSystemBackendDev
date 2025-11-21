@@ -36,8 +36,12 @@ namespace QuilvianSystemBackendDev.Repositories
 
             var jsonOptions = new JsonSerializerOptions
             {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                WriteIndented = false
+                PropertyNamingPolicy = null,   // ❗ jangan camelCase
+                //Converters =
+                //{
+                //    new TimeOnlyEfConverter(),
+                //    new NullableTimeOnlyEfConverter()
+                //}
             };
 
             modelBuilder.Entity<HemodialisaHasil>()
