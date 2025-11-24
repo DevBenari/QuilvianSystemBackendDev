@@ -14,6 +14,11 @@
         public string? TempatTinggal { get; set; }
         public string? GangguanFungsional { get; set; }
         public string? NilaiKepercayaan { get; set; }
+        public DateTime? MensPertama { get; set; }
+        public DateTime? MensTerakhir { get; set; }
+        public decimal? Minum { get; set; }
+        public string? TipeImunisasi { get; set; }
+        public DateTime? TanggalImunisasiLanjutan { get; set; }
         public string? Keterangan { get; set; }
     }
 }

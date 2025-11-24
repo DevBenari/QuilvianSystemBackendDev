@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System;
+using System.Globalization;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
@@ -91,6 +92,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.TempatTinggal,
                              a.GangguanFungsional,
                              a.NilaiKepercayaan,
+                             a.MensPertama,
+                             a.MensTerakhir,
+                             a.Minum,
+                             a.TipeImunisasi,
+                             a.TanggalImunisasiLanjutan,
                              a.Keterangan,
 
                          }).OrderByDescending(a => a.CreateDateTime);
@@ -197,6 +203,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     TempatTinggal = vm.TempatTinggal,
                     GangguanFungsional = vm.GangguanFungsional,
                     NilaiKepercayaan = vm.NilaiKepercayaan,
+                    MensPertama = vm.MensPertama,
+                    MensTerakhir = vm.MensTerakhir,
+                    Minum = vm.Minum,
+                    TipeImunisasi = vm.TipeImunisasi,
+                    TanggalImunisasiLanjutan = vm.TanggalImunisasiLanjutan,
                     Keterangan = vm.Keterangan,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
@@ -281,6 +292,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 data.TempatTinggal = vm.TempatTinggal;
                 data.GangguanFungsional = vm.GangguanFungsional;
                 data.NilaiKepercayaan = vm.NilaiKepercayaan;
+                data.MensPertama = vm.MensPertama;
+                    data.MensTerakhir = vm.MensTerakhir;
+                    data.Minum = vm.Minum;
+                    data.TipeImunisasi = vm.TipeImunisasi;
+                    data.TanggalImunisasiLanjutan = vm.TanggalImunisasiLanjutan;
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
@@ -408,6 +424,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.TempatTinggal,
                              a.GangguanFungsional,
                              a.NilaiKepercayaan,
+                             a.MensPertama,
+                             a.MensTerakhir,
+                             a.Minum,
+                             a.TipeImunisasi,
+                             a.TanggalImunisasiLanjutan,
                              a.Keterangan,
 
                          });

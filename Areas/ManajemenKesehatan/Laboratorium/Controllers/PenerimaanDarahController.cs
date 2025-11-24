@@ -1,17 +1,18 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
-using QuilvianSystemBackendDev.Repositories;
-using Microsoft.AspNetCore.Cors;
-using System.Security.Claims;
-using Microsoft.AspNetCore.Identity;
-using QuilvianSystemBackendDev.Models;
-using Swashbuckle.AspNetCore.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
+using QuilvianSystemBackendDev.Models;
+using QuilvianSystemBackendDev.Repositories;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Controllers
 {
@@ -41,6 +42,27 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             _logger = logger;
             _env = env;
         }
+
+        private async Task<string> GenerateBatchCode()
+        {
+            // Ambil batch terakhir dari DB (urut Descending)
+            var lastBatch = await _context.StockBatchs
+                .OrderByDescending(b => b.KodeBatch)
+                .Select(b => b.KodeBatch)
+                .FirstOrDefaultAsync();
+
+            int nextNumber = 1;
+
+            if (!string.IsNullOrEmpty(lastBatch) && lastBatch.StartsWith("BATCH-"))
+            {
+                string numberPart = lastBatch.Replace("BATCH-", "");
+                if (int.TryParse(numberPart, out int lastNumber))
+                    nextNumber = lastNumber + 1;
+            }
+
+            return $"BATCH-{nextNumber.ToString("D3")}";
+        }
+
 
         [HttpGet]
         public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
@@ -144,16 +166,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] PenerimaanDarahViewModel vm)
+        public async Task<IActionResult> CreateFull([FromBody] PenerimaanDarahViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
 
+            using var trx = await _context.Database.BeginTransactionAsync();
             try
             {
-                if (!_context.Database.CanConnect())
-                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
-
+                // =============================
+                // AMBIL USER LOGIN
+                // =============================
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
@@ -162,10 +185,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 if (user == null)
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
 
-                // === Generate Kode Penerimaan ===
+
+                // =============================
+                // 1️⃣ INSERT PENERIMAAN DARAH
+                // =============================
                 string kodeBaru = await GenerateKodePenerimaan((DateTime)vm.TglPenerimaan);
 
-                var data = new PenerimaanDarah
+                var penerimaan = new PenerimaanDarah
                 {
                     PenerimaanDarahId = Guid.NewGuid(),
                     KodePenerimaan = kodeBaru,
@@ -178,21 +204,124 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     DarahDetailId = vm.DarahDetailId,
                     JumlahKantong = vm.JumlahKantong,
                     Keterangan = vm.Keterangan,
-                    
                     CreateBy = user.UserActiveId,
                     CreateDateTime = DateTime.UtcNow
                 };
 
-                _context.PenerimaanDarahs.Add(data);
+                _context.PenerimaanDarahs.Add(penerimaan);
                 await _context.SaveChangesAsync();
 
-                return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
+
+
+                // ===============================================================
+                // 2️⃣ PROSES STOCK DARAH (Insert atau Update)
+                // ===============================================================
+                foreach (var item in vm.StockDarah)
+                {
+                    var existing = _context.StockDarahs
+                        .FirstOrDefault(s =>
+                            s.DarahDetailId == item.DarahDetailId &&
+                            s.SupplierId == item.SupplierId && !s.IsDelete);
+
+                    if (existing == null)
+                    {
+                        // ====================
+                        // INSERT STOCK DARAH
+                        // ====================
+                        var newStock = new StockDarah
+                        {
+                            StockDarahId = Guid.NewGuid(),
+                            DarahDetailId = item.DarahDetailId,
+                            TipeKomponenId = item.TipeKomponenId,
+                            Rhesus = item.Rhesus,
+                            Golongan = item.Golongan,
+                            Wacc = item.Wacc,
+                            JumlahKantong = item.JumlahKantong,
+                            Amount = item.Amount,
+                            JumlahExpired = item.JumlahExpired,
+                            TglExpired = item.TglExpired,
+                            SisaStock = item.SisaStock,
+                            MinStock = item.MinStock,
+                            StatusStock = item.StatusStock,
+                            Keterangan = item.Keterangan,
+                            SupplierId = item.SupplierId,
+                            CreateBy = user.UserActiveId,
+                            CreateDateTime = DateTime.UtcNow
+                        };
+                        _context.StockDarahs.Add(newStock);
+                    }
+                    else
+                    {
+                        // ====================
+                        // UPDATE STOCK DARAH
+                        // ====================
+                        existing.JumlahKantong += item.JumlahKantong ?? 0;
+                        existing.SisaStock += item.SisaStock ?? 0;
+
+                        if (item.TglExpired != null && item.TglExpired > existing.TglExpired)
+                            existing.TglExpired = item.TglExpired;
+
+                        if (item.Amount != null)
+                            existing.Amount += item.Amount;
+
+                        if (item.JumlahExpired != null)
+                            existing.JumlahExpired += item.JumlahExpired;
+
+                        existing.Keterangan = item.Keterangan ?? existing.Keterangan;
+
+                        _context.StockDarahs.Update(existing);
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+
+
+
+                // ===============================================================
+                // 3️⃣ INSERT STOCK BATCH
+                // ===============================================================
+
+                foreach (var batch in vm.StockBatch)
+                {    
+                    // Generate kode batch otomatis
+                    string batchCode = await GenerateBatchCode();
+
+                    var newBatch = new StockBatch
+                    {
+                        StockBatchId = Guid.NewGuid(),
+                        KodeBatch = batchCode,
+                        ItemId = vm.DarahDetailId,
+                        SupplierId = batch.SupplierId,
+                        ExpiredDate = batch.ExpiredDate,
+                        Keterangan = batch.Keterangan,
+                        CreateBy = user.UserActiveId,
+                        CreateDateTime = DateTime.UtcNow
+                    };
+
+                    _context.StockBatchs.Add(newBatch);
+                }
+
+                await _context.SaveChangesAsync();
+
+
+
+                // ===============================================================
+                // COMMIT TRANSACTION
+                // ===============================================================
+                await trx.CommitAsync();
+
+                return Created("", new
+                {
+                    message = "Penerimaan darah, stock darah, dan batch berhasil disimpan (201 Created)"
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+                await trx.RollbackAsync();
+                return StatusCode(500, new { message = $"Kesalahan internal: {ex.Message}" });
             }
         }
+
 
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] PenerimaanDarahViewModel vm)
@@ -278,97 +407,249 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
-        
+
         // GET /paged
         [HttpGet("paged")]
-        public async Task<IActionResult> GetPaged(
-            int page = 1,
-            int perPage = 10,
-            string? search = null,
-            string? orderBy = "CreateDateTime",
-            string? sortDirection = "desc",
-            DateTime? startDate = null,
-            DateTime? endDate = null
-        )
+        public IActionResult Paged(
+        int page = 1,
+        int perPage = 10,
+        DateTime? startDate = null,
+        DateTime? endDate = null,
+        string? search = null)
         {
-            try
-            {
-                if (!await _context.Database.CanConnectAsync())
-                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
-
-                var query = from p in _context.PenerimaanDarahs
-                            join u in _context.UserActives on p.CreateBy equals u.UserActiveId
-                            where p.IsDelete == false
-                            select new
-                            {
-                                p.PenerimaanDarahId,
-                                p.KodePenerimaan,
-                                p.TglPenerimaan,
-                                p.TglFaktur,
-                                p.NoFaktur,
-                                p.NoPO,
-                                p.SupplierId,
-                                p.PenerimaId,
-                                p.JumlahKantong,
-                                p.DarahDetailId,
-                                p.Keterangan,
-                                p.CreateDateTime,
-                                CreateByName = u.FullName
-                            };
-
-                // Search
-                if (!string.IsNullOrWhiteSpace(search))
+            // ============================
+            // 1️⃣ QUERY PARENT (PenerimaanDarah)
+            // ============================
+            var query =
+                from p in _context.PenerimaanDarahs
+                join s in _context.Suppliers on p.SupplierId equals s.SupplierId into sJoin
+                from sup in sJoin.DefaultIfEmpty()
+                where p.IsDelete == null || p.IsDelete == false
+                select new
                 {
-                    search = $"%{search.ToLower()}%";
-                    query = query.Where(p =>
-                        EF.Functions.ILike(p.NoPO, search)
-                    );
-                }
-
-                // Filter tanggal
-                if (startDate.HasValue && endDate.HasValue)
-                {
-                    var startUtc = startDate.Value.Date.ToUniversalTime();
-                    var endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
-                    query = query.Where(p => p.CreateDateTime >= startUtc && p.CreateDateTime <= endUtc);
-                }
-
-                // Sorting
-                var sortCol = orderBy?.ToLower() ?? "createdatetime";
-                bool isDesc = sortDirection?.ToLower() == "desc";
-
-                query = sortCol switch
-                {
-                    "NoPO" => isDesc ? query.OrderByDescending(x => x.NoPO) : query.OrderBy(x => x.NoPO),
-                    _ => isDesc ? query.OrderByDescending(x => x.CreateDateTime) : query.OrderBy(x => x.CreateDateTime)
+                    p.PenerimaanDarahId,
+                    p.KodePenerimaan,
+                    p.TglPenerimaan,
+                    p.TglFaktur,
+                    p.NoFaktur,
+                    p.NoPO,
+                    p.SupplierId,
+                    SupplierNama = sup.SupplierName,
+                    p.PenerimaId,
+                    p.DarahDetailId,
+                    p.JumlahKantong,
+                    p.Keterangan,
+                    p.CreateDateTime
                 };
 
-                int totalRows = await query.CountAsync();
-                int totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-                var rows = await query.Skip((page - 1) * perPage).Take(perPage).ToListAsync();
+            // ============================
+            // 2️⃣ FILTER DATE
+            // ============================
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                var start = startDate.Value.Date;
+                var end = endDate.Value.Date.AddDays(1).AddTicks(-1);
 
-                if (!rows.Any())
-                    return NotFound(new { message = "Page not found or no data available." });
+                query = query.Where(x =>
+                    x.TglPenerimaan >= start &&
+                    x.TglPenerimaan <= end);
+            }
 
+            // ============================
+            // 3️⃣ SEARCH
+            // ============================
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var sLower = search.ToLower();
+                query = query.Where(x =>
+                    x.NoFaktur.ToLower().Contains(sLower) ||
+                    x.KodePenerimaan.ToLower().Contains(sLower));
+            }
+
+            // ============================
+            // 4️⃣ TOTAL & PAGING
+            // ============================
+            int totalRows = query.Count();
+
+            var pagedParents = query
+                .OrderByDescending(x => x.CreateDateTime)
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToList();
+
+            if (!pagedParents.Any())
+            {
                 return Ok(new
                 {
                     status = "success",
-                    message = "Data retrieved successfully",
-                    data = new
-                    {
-                        Rows = rows,
-                        TotalRows = totalRows,
-                        CurrentPage = page,
-                        PerPage = perPage,
-                        TotalPages = totalPages
-                    }
+                    data = new { Rows = new List<object>(), TotalRows = 0 }
                 });
             }
-            catch (Exception ex)
+
+            var parentIds = pagedParents.Select(x => x.PenerimaanDarahId).ToList();
+
+
+            // ============================
+            // 5️⃣ LOAD STOCK DARAH SEKALI SAJA
+            // ============================
+            var stockDarah =
+                _context.StockDarahs
+                .Where(sd => parentIds.Contains((Guid)sd.DarahDetailId))
+                .Select(sd => new
+                {
+                    sd.DarahDetailId,
+                    sd.TipeKomponenId,
+                    sd.Rhesus,
+                    sd.Golongan,
+                    sd.JumlahKantong,
+                    sd.Amount,
+                    sd.JumlahExpired,
+                    sd.TglExpired,
+                    sd.SisaStock,
+                    sd.MinStock,
+                    sd.StatusStock,
+                    sd.Keterangan,
+                    sd.SupplierId
+                }).ToList();
+
+            // ============================
+            // 6️⃣ LOAD STOCK BATCH
+            // ============================
+            var stockBatch =
+                _context.StockBatchs
+                .Where(sb => parentIds.Contains((Guid)sb.ItemId))
+                .Select(sb => new
+                {
+                    sb.StockBatchId,
+                    sb.KodeBatch,
+                    sb.ItemId,
+                    sb.SupplierId,
+                    sb.ExpiredDate,
+                    sb.Keterangan
+                }).ToList();
+
+
+            // ============================
+            // 7️⃣ MERGE DATA
+            // ============================
+            var merged = pagedParents.Select(parent => new
             {
-                _logger.LogError(ex, "Error in GetPaged PenerimaanDarah");
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
-            }
+                Penerimaan = parent,
+                StockDarah = stockDarah
+                    .Where(s => s.DarahDetailId == parent.DarahDetailId)
+                    .ToList(),
+                StockBatch = stockBatch
+                    .Where(b => b.ItemId == parent.DarahDetailId)
+                    .ToList()
+            });
+
+            // ============================
+            // 8️⃣ RESPONSE
+            // ============================
+            return Ok(new
+            {
+                status = "success",
+                message = "Data retrieved successfully",
+                data = new
+                {
+                    Rows = merged,
+                    TotalRows = totalRows,
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalPages = (int)Math.Ceiling(totalRows / (double)perPage),
+                }
+            });
         }
+
+        //[HttpGet("paged")]
+        //public async Task<IActionResult> GetPaged(
+        //    int page = 1,
+        //    int perPage = 10,
+        //    string? search = null,
+        //    string? orderBy = "CreateDateTime",
+        //    string? sortDirection = "desc",
+        //    DateTime? startDate = null,
+        //    DateTime? endDate = null
+        //)
+        //{
+        //    try
+        //    {
+        //        if (!await _context.Database.CanConnectAsync())
+        //            return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+
+        //        var query = from p in _context.PenerimaanDarahs
+        //                    join u in _context.UserActives on p.CreateBy equals u.UserActiveId
+        //                    where p.IsDelete == false
+        //                    select new
+        //                    {
+        //                        p.PenerimaanDarahId,
+        //                        p.KodePenerimaan,
+        //                        p.TglPenerimaan,
+        //                        p.TglFaktur,
+        //                        p.NoFaktur,
+        //                        p.NoPO,
+        //                        p.SupplierId,
+        //                        p.PenerimaId,
+        //                        p.JumlahKantong,
+        //                        p.DarahDetailId,
+        //                        p.Keterangan,
+        //                        p.CreateDateTime,
+        //                        CreateByName = u.FullName
+        //                    };
+
+        //        // Search
+        //        if (!string.IsNullOrWhiteSpace(search))
+        //        {
+        //            search = $"%{search.ToLower()}%";
+        //            query = query.Where(p =>
+        //                EF.Functions.ILike(p.NoPO, search)
+        //            );
+        //        }
+
+        //        // Filter tanggal
+        //        if (startDate.HasValue && endDate.HasValue)
+        //        {
+        //            var startUtc = startDate.Value.Date.ToUniversalTime();
+        //            var endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+        //            query = query.Where(p => p.CreateDateTime >= startUtc && p.CreateDateTime <= endUtc);
+        //        }
+
+        //        // Sorting
+        //        var sortCol = orderBy?.ToLower() ?? "createdatetime";
+        //        bool isDesc = sortDirection?.ToLower() == "desc";
+
+        //        query = sortCol switch
+        //        {
+        //            "NoPO" => isDesc ? query.OrderByDescending(x => x.NoPO) : query.OrderBy(x => x.NoPO),
+        //            _ => isDesc ? query.OrderByDescending(x => x.CreateDateTime) : query.OrderBy(x => x.CreateDateTime)
+        //        };
+
+        //        int totalRows = await query.CountAsync();
+        //        int totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+        //        var rows = await query.Skip((page - 1) * perPage).Take(perPage).ToListAsync();
+
+        //        if (!rows.Any())
+        //            return NotFound(new { message = "Page not found or no data available." });
+
+        //        return Ok(new
+        //        {
+        //            status = "success",
+        //            message = "Data retrieved successfully",
+        //            data = new
+        //            {
+        //                Rows = rows,
+        //                TotalRows = totalRows,
+        //                CurrentPage = page,
+        //                PerPage = perPage,
+        //                TotalPages = totalPages
+        //            }
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Error in GetPaged PenerimaanDarah");
+        //        return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+        //    }
+        //}
     }
 }

@@ -1,10 +1,13 @@
-﻿namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
 {
     public class StockDarah
     {
+        [Key]
         public Guid StockDarahId { get; set; }
-        public Guid DarahDetailId { get; set; }
-        public Guid TipeKomponenId { get; set; }
+        public Guid? DarahDetailId { get; set; }
+        public Guid? TipeKomponenId { get; set; }
         public string? Rhesus { get; set; }
         public string? Golongan { get; set; }
         public decimal? Wacc { get; set; }

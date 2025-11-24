@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Linq;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
@@ -602,94 +603,83 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
 
         [HttpGet("paged")]
         public IActionResult Paged(
-         int page = 1,
-         int perPage = 10,
-         Guid? kunjunganId = null,
-         string? orderBy = "CreateDateTime",
-         string? sortDirection = "desc",
-         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                        DateTime? startDate = null,
-         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                        DateTime? endDate = null,
-         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+             int page = 1,
+             int perPage = 10,
+             Guid? kunjunganId = null,
+             string? orderBy = "CreateDateTime",
+             string? sortDirection = "desc",
+             DateTime? startDate = null,
+             DateTime? endDate = null,
+             PeriodeFilter? periode = null)
         {
+            // ============================
+            // 1️⃣ QUERY PARENT
+            // ============================
+            var parentQuery =
+                from a in _applicationDbContext.RuangBedahBookings
+                join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId into uGroup
+                from u in uGroup.DefaultIfEmpty()
+                where (a.IsDelete == false || a.IsDelete == null)
+                select new
+                {
+                    a.BookingRuanganBedahId,
+                    a.CreateDateTime,
+                    a.CreateBy,
+                    CreateByName = u.FullName,
+                    a.KunjunganId,
+                    a.PasienId,
+                    a.TglOperasi,
+                    a.WaktuOperasi,
+                    a.RuangTindakan,
+                    a.DiagnosaDokter1,
+                    a.DiagnosaDokter2,
+                    a.DiagnosaDokter3,
+                    a.DiagnosaDokter4,
+                    a.DiagnosaDokter5,
+                    a.BeratBadan,
+                    a.DokterOperator1,
+                    a.DokterOperator2,
+                    a.DokterOperator3,
+                    a.DokterOperator4,
+                    a.DokterOperator5,
+                    a.RencanaTindakanOperasi,
+                    a.JenisAnastesi,
+                    a.TypeOK,
+                    a.PenandaanLokasiOperasi,
+                    a.isSuratIzinOperasi,
+                    a.isBedahBersalin,
+                    a.Keterangan,
+                    a.IsTerverifikasi,
+                    a.TglSelesai,
+                    a.TipeTindakan,
+                    a.TipeOperasi,
+                    a.JamPerpanjangan,
+                    a.BiayaPerpanjangan,
+                    a.KamarRecoveryId,
+                    a.TipeAnastesiId,
+                    a.TipeASAId,
+                    a.KelompokPasienAnastesi,
+                    a.PetugasId,
+                    a.NoOrder,
+                    a.StatusOperasi
+                };
 
-            // Query data
-            var query = (from a in _applicationDbContext.RuangBedahBookings
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false || a.IsDelete == null
-                         select new
-                         {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = u.FullName,
-                             a.BookingRuanganBedahId,
-                             a.KunjunganId,
-                             a.PasienId,
-                             a.TglOperasi,
-                             a.WaktuOperasi,
-                             a.RuangTindakan,
-                             a.DiagnosaDokter1,
-                             a.DiagnosaDokter2,
-                             a.DiagnosaDokter3,
-                             a.DiagnosaDokter4,
-                             a.DiagnosaDokter5,
-                             a.BeratBadan,
-                             a.DokterOperator1,
-                             a.DokterOperator2,
-                             a.DokterOperator3,
-                             a.DokterOperator4,
-                             a.DokterOperator5,
-                             a.RencanaTindakanOperasi,
-                             a.JenisAnastesi,
-                             a.TypeOK,
-                             a.PenandaanLokasiOperasi,
-                             a.isSuratIzinOperasi,
-                             a.isBedahBersalin,
-                             a.Keterangan,
-                             a.IsTerverifikasi,
-                             a.TglSelesai,
-                             a.TipeTindakan,
-                             a.TipeOperasi,
-                             a.JamPerpanjangan,
-                             a.BiayaPerpanjangan,
-                             a.KamarRecoveryId,
-                             a.TipeAnastesiId,
-                             a.TipeASAId,
-                             a.KelompokPasienAnastesi,
-                             a.PetugasId,
-                             a.NoOrder,
-                             a.StatusOperasi,
-                         });
+            // ============================
+            // 2️⃣ FILTER
+            // ============================
 
-            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-            //if (!string.IsNullOrWhiteSpace(search))
-            //{
-            //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-            //    query = query.Where(u =>
-            //        EF.Functions.ILike(u.NamaDiskon, search)
-            //    );
-            //}
+            if (kunjunganId.HasValue)
+                parentQuery = parentQuery.Where(x => x.KunjunganId == kunjunganId.Value);
 
-            // filter bedasarkan kunjungan id
-            if (kunjunganId.HasValue )
-            {
-                query = query.Where(u=>u.KunjunganId == kunjunganId.Value);
-            }
-
-            //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
             {
                 DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
                 DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
-
-                query = query.Where(u =>
-                    u.CreateDateTime >= startUtc &&
-                    u.CreateDateTime <= endUtc);
+                parentQuery = parentQuery.Where(x =>
+                    x.CreateDateTime >= startUtc &&
+                    x.CreateDateTime <= endUtc);
             }
 
-            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
             if (periode.HasValue)
             {
                 DateTime today = DateTime.UtcNow.Date;
@@ -697,79 +687,88 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                 switch (periode)
                 {
                     case PeriodeFilter.Today:
-                        query = query.Where(u => u.CreateDateTime.Date == today);
+                        parentQuery = parentQuery.Where(u => u.CreateDateTime.Date == today);
                         break;
                     case PeriodeFilter.ThisWeek:
-                        query = query.Where(u =>
+                        parentQuery = parentQuery.Where(u =>
                             u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date <= today
-                        );
-                        break;
-                    case PeriodeFilter.LastWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)
-                        );
-                        break;
-                    case PeriodeFilter.ThisMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month &&
-                            u.CreateDateTime.Year == today.Year
-                        );
-                        break;
-                    case PeriodeFilter.LastMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month - 1 &&
-                            u.CreateDateTime.Year == today.Year
-                        );
-                        break;
-                    case PeriodeFilter.ThisYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
-                        break;
-                    case PeriodeFilter.LastYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
-                        break;
-                    case PeriodeFilter.Last3Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
-                        break;
-                    case PeriodeFilter.Last6Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
+                            u.CreateDateTime.Date <= today);
                         break;
                 }
             }
 
-            // Sorting Data dengan cara yang lebih aman
-            query = sortDirection?.ToLower() == "desc"
+            // ============================
+            // 3️⃣ SORT
+            // ============================
+            parentQuery = sortDirection?.ToLower() == "desc"
                 ? orderBy switch
                 {
-                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    _ => query.OrderByDescending(u => u.CreateDateTime)
+                    "CreateByName" => parentQuery.OrderByDescending(x => x.CreateByName),
+                    _ => parentQuery.OrderByDescending(x => x.CreateDateTime)
                 }
                 : orderBy switch
                 {
-                    "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    _ => query.OrderBy(u => u.CreateDateTime)
+                    "CreateByName" => parentQuery.OrderBy(x => x.CreateByName),
+                    _ => parentQuery.OrderBy(x => x.CreateDateTime)
                 };
 
-            // Pagination
-            var totalRows = query.Count();
-            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
+            // ============================
+            // 4️⃣ PAGING PARENT
+            // ============================
+            int totalRows = parentQuery.Count();
+            int totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
 
-            if (rows.Count == 0 && page > totalPages)
+            var pagedParents = parentQuery
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToList();
+
+            if (!pagedParents.Any())
+                return Ok(new
+                {
+                    status = "success",
+                    data = new { Rows = new List<object>(), TotalRows = 0 }
+                });
+
+            var parentIds = pagedParents.Select(x => x.BookingRuanganBedahId).ToList();
+
+            // ============================
+            // 5️⃣ LOAD DETAIL SEKALI SAJA (ANTI-N+1)
+            // ============================
+            var details =
+                (from d in _applicationDbContext.RuangBedahBookingDetails
+                 where parentIds.Contains((Guid)d.BookingRuanganBedahId)
+                 select new
+                 {
+                     d.DetailBookingBedahId,
+                     d.BookingRuanganBedahId,
+                     d.JenisOperasiId,
+                     d.TindakanId,
+                     d.UserActiveId,
+                     d.PersentaseTindakan,
+                     d.DiskonDokter,
+                     d.Keterangan
+                 }).ToList();
+
+            // ============================
+            // 6️⃣ MERGE PARENT + DETAIL
+            // ============================
+            var merged = pagedParents.Select(p => new
             {
-                return NotFound(new { message = "Page not found." });
-            }
+                Parent = p,
+                Details = details.Where(d => d.BookingRuanganBedahId == p.BookingRuanganBedahId).ToList()
+            });
 
+            // ============================
+            // 7️⃣ RETURN
+            // ============================
             return Ok(new
             {
                 status = "success",
                 message = "Data retrieved successfully",
                 data = new
                 {
-                    Rows = rows,
+                    Rows = merged,
                     TotalRows = totalRows,
                     CurrentPage = page,
                     PerPage = perPage,
@@ -777,6 +776,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                 }
             });
         }
+
 
 
     }
