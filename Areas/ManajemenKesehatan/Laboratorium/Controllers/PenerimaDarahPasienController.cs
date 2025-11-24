@@ -1,36 +1,33 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
-using QuilvianSystemBackendDev.Repositories;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
-using Microsoft.AspNetCore.Cors;
-using System.Security.Claims;
-using Microsoft.AspNetCore.Identity;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.ViewModels;
 using QuilvianSystemBackendDev.Models;
-using Swashbuckle.AspNetCore.Annotations;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Repositories;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class PenerimaanDarahController : Controller
+    public class PenerimaDarahPasienController : Controller
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-        private readonly ILogger<PenerimaanDarahController> _logger;
+        private readonly ILogger<PenerimaDarahPasienController> _logger;
         private readonly IWebHostEnvironment _env;
 
-        public PenerimaanDarahController(
+        public PenerimaDarahPasienController(
             ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<PenerimaanDarahController> logger,
+            ILogger<PenerimaDarahPasienController> logger,
             IWebHostEnvironment env
         )
         {
@@ -47,13 +44,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            var query = from p in _context.PenerimaanDarahs
+            var query = from p in _context.PenerimaDarahPasiens
                         join u in _context.UserActives on p.CreateBy equals u.UserActiveId
                         where p.IsDelete == false
                         orderby p.CreateDateTime descending
                         select new
                         {
-                            p.PenerimaanDarahId,
+                            p.PenerimaanDarahPasienId,
                             p.PasienId,
                             p.GolonganDarahId,
                             p.Rhesus,
@@ -91,7 +88,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var data = await _context.PenerimaanDarahs.FindAsync(id);
+            var data = await _context.PenerimaDarahPasiens.FindAsync(id);
             if (data == null)
                 return NotFound(new { message = "Data tidak ditemukan." });
 
@@ -99,7 +96,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] PenerimaanDarahViewModel vm)
+        public async Task<IActionResult> Create([FromBody] PenerimaDarahPasienViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
@@ -117,9 +114,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 if (user == null)
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
 
-                var data = new PenerimaanDarah
+                var data = new PenerimaDarahPasien
                 {
-                    PenerimaanDarahId = Guid.NewGuid(),
+                    PenerimaanDarahPasienId = Guid.NewGuid(),
                     PasienId = vm.PasienId,
                     GolonganDarahId = vm.GolonganDarahId,
                     Rhesus = vm.Rhesus,
@@ -132,7 +129,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     CreateDateTime = DateTime.UtcNow
                 };
 
-                _context.PenerimaanDarahs.Add(data);
+                _context.PenerimaDarahPasiens.Add(data);
                 await _context.SaveChangesAsync();
 
                 return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
@@ -144,14 +141,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] PenerimaanDarahViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] PenerimaDarahPasienViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
 
             try
             {
-                var data = await _context.PenerimaanDarahs.FindAsync(id);
+                var data = await _context.PenerimaDarahPasiens.FindAsync(id);
                 if (data == null)
                     return NotFound(new { message = "Data tidak ditemukan." });
 
@@ -166,10 +163,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.TglMasuk = vm.TglMasuk;
                 data.TglExpired = vm.TglExpired;
                 data.Keterangan = vm.Keterangan;
-                data.UpdateBy = user?.UserActiveId;
+                data.UpdateBy = (Guid)(user?.UserActiveId);
                 data.UpdateDateTime = DateTime.UtcNow;
 
-                _context.PenerimaanDarahs.Update(data);
+                _context.PenerimaDarahPasiens.Update(data);
                 await _context.SaveChangesAsync();
 
                 return Ok(new { message = "Update Data Berhasil || 200 OK" });
@@ -185,7 +182,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         {
             try
             {
-                var data = await _context.PenerimaanDarahs.FindAsync(id);
+                var data = await _context.PenerimaDarahPasiens.FindAsync(id);
                 if (data == null)
                     return NotFound(new { message = "Data tidak ditemukan." });
 
@@ -193,10 +190,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var user = _context.UserActives.FirstOrDefault(u => u.Email == emailLogin);
 
                 data.IsDelete = true;
-                data.DeleteBy = user?.UserActiveId;
+                data.DeleteBy = (Guid)(user?.UserActiveId);
                 data.DeleteDateTime = DateTime.UtcNow;
 
-                _context.PenerimaanDarahs.Update(data);
+                _context.PenerimaDarahPasiens.Update(data);
                 await _context.SaveChangesAsync();
 
                 return Ok(new { message = "Data berhasil dihapus (soft delete) || 200 OK" });
@@ -206,7 +203,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
-        // GET /paged
+
+
         [HttpGet("paged")]
         public async Task<IActionResult> GetPaged(
             int page = 1,
@@ -216,19 +214,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             string? sortDirection = "desc",
             DateTime? startDate = null,
             DateTime? endDate = null
-        )
+)
         {
             try
             {
                 if (!await _context.Database.CanConnectAsync())
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
 
-                var query = from p in _context.PenerimaanDarahs
+                var query = from p in _context.PenerimaDarahPasiens
                             join u in _context.UserActives on p.CreateBy equals u.UserActiveId
                             where p.IsDelete == false
                             select new
                             {
-                                p.PenerimaanDarahId,
+                                p.PenerimaanDarahPasienId,
                                 p.PasienId,
                                 p.GolonganDarahId,
                                 p.Rhesus,
@@ -299,5 +297,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
+
     }
 }

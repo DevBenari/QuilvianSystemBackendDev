@@ -2,7 +2,7 @@
 {
     public class StockDarahViewModel
     {
-        public Guid GolonganDarahId { get; set; }
+        public Guid DarahDetailId { get; set; }
         public Guid TipeKomponenId { get; set; }
         public string? Rhesus { get; set; }
         public string? Golongan { get; set; }

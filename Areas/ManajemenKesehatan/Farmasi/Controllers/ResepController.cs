@@ -315,7 +315,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                     join o in _applicationDbContext.Obats.AsNoTracking()
                                         on d.ObatId equals o.ObatId into obatJoin
                                     from o in obatJoin.DefaultIfEmpty()
-                                    where d.ResepId == resep.ResepId && (d.IsRacikan == false || d.IsRacikan == null)
+                                    where d.ResepId == resep.ResepId && (d.IsRacikan == false || d.IsRacikan == null) && (!d.IsDelete)
                                     select new
                                     {
                                         d.DetailResepId,
@@ -355,7 +355,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             var daftarRacikan = await (from d in _applicationDbContext.DetailReseps.AsNoTracking()
                                        join ra in _applicationDbContext.Racikans.AsNoTracking()
                                            on d.RacikanId equals ra.RacikanId
-                                       where d.ResepId == resep.ResepId && d.IsRacikan == true
+                                       where d.ResepId == resep.ResepId && d.IsRacikan == true && (!d.IsDelete)
                                        select new
                                        {
                                            ra.RacikanId,
@@ -388,7 +388,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             var racikanDetails = await (from rd in _applicationDbContext.RacikanDetails.AsNoTracking()
                                         join ob in _applicationDbContext.Obats.AsNoTracking()
                                             on rd.ObatId equals ob.ObatId
-                                        where racikanIds.Contains((Guid)rd.RacikanId)
+                                        where racikanIds.Contains((Guid)rd.RacikanId) && (!rd.IsDelete)
                                         select new
                                         {
                                             rd.RacikanId,
@@ -2083,7 +2083,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             // Ambil detail obat batch
             var daftarObat = await (from d in _applicationDbContext.DetailReseps.AsNoTracking()
                                     join o in _applicationDbContext.Obats.AsNoTracking() on d.ObatId equals o.ObatId
-                                    where resepIds.Contains((Guid)d.ResepId) && (d.IsRacikan == false || d.IsRacikan == null)
+                                    where resepIds.Contains((Guid)d.ResepId) && (d.IsRacikan == false || d.IsRacikan == null) && (!d.IsDelete)
                                     select new
                                     {
                                         d.ResepId,
@@ -2125,7 +2125,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             // Ambil racikan batch
             var daftarRacikan = await (from d in _applicationDbContext.DetailReseps.AsNoTracking()
                                        join ra in _applicationDbContext.Racikans.AsNoTracking() on d.RacikanId equals ra.RacikanId
-                                       where resepIds.Contains((Guid)d.ResepId) && d.IsRacikan == true
+                                       where resepIds.Contains((Guid)d.ResepId) && d.IsRacikan == true && (!d.IsDelete)
                                        select new
                                        {
                                            d.ResepId,
@@ -2157,7 +2157,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             // Ambil racikan detail batch
             var daftarRacikanDetail = await (from rd in _applicationDbContext.RacikanDetails.AsNoTracking()
                                              join ob in _applicationDbContext.Obats.AsNoTracking() on rd.ObatId equals ob.ObatId
-                                             where racikanIds.Contains((Guid)rd.RacikanId)
+                                             where racikanIds.Contains((Guid)rd.RacikanId) && (!rd.IsDelete)
                                              select new
                                              {
                                                  rd.RacikanId,

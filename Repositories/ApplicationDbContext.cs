@@ -324,6 +324,8 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<PemeriksaanAsuransi> PemeriksaanAsuransis { get; set; }
         public DbSet<LabHasil> LabHasils { get; set; }
         public DbSet<LabHasilDetail> LabHasilDetails { get; set; }
+        public DbSet<PenerimaDarahPasien> PenerimaDarahPasiens { get; set; }
+        public DbSet<DarahDetail> DarahDetails { get; set; }
         #endregion
 
         #region IGD

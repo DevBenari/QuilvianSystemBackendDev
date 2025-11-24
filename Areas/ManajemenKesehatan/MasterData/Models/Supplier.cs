@@ -12,6 +12,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string SupplierCode { get; set; }
         public string SupplierName { get; set; }
         public string ContactPerson { get; set; }
+        public string? KhususUnit { get; set; }
         public Guid? TermOfPaymentId { get; set; }
         public string? TermOfPaymentName { get; set; }
         public int Ppn { get; set; }

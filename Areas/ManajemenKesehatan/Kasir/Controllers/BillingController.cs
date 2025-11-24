@@ -309,6 +309,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         first.k.CreateDateTime,
                         first.k.TipePembayaran,
                         first.a?.NamaAsuransi,
+                        first.r?.ResepId,
                         DaftarPemeriksaanLab = daftarPemeriksaanLab,
                         DaftarObat = daftarObat,
                         DaftarTindakan = daftarTindakan,

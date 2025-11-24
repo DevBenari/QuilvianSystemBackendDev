@@ -3,35 +3,35 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Repositories;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using Microsoft.AspNetCore.Cors;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
 using QuilvianSystemBackendDev.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using Swashbuckle.AspNetCore.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class StockDarahController : Controller
+    public class PenerimaanDarahController : Controller
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-        private readonly ILogger<StockDarahController> _logger;
+        private readonly ILogger<PenerimaanDarahController> _logger;
         private readonly IWebHostEnvironment _env;
 
-        public StockDarahController(
+        public PenerimaanDarahController(
             ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<StockDarahController> logger,
+            ILogger<PenerimaanDarahController> logger,
             IWebHostEnvironment env
         )
         {
@@ -48,28 +48,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            var query = from s in _context.StockDarahs
-                        join g in _context.UserActives on s.CreateBy equals g.UserActiveId
-                        where s.IsDelete == false
-                        orderby s.CreateDateTime descending
+            var query = from p in _context.PenerimaanDarahs
+                        join u in _context.UserActives on p.CreateBy equals u.UserActiveId
+                        where p.IsDelete == false
+                        orderby p.CreateDateTime descending
                         select new
                         {
-                            s.StockDarahId,
-                            s.DarahDetailId,
-                            s.TipeKomponenId,
-                            s.Rhesus,
-                            s.Golongan,
-                            s.Wacc,
-                            s.JumlahKantong,
-                            s.Amount,
-                            s.JumlahExpired,
-                            s.TglExpired,
-                            s.SisaStock,
-                            s.MinStock,
-                            s.StatusStock,
-                            s.Keterangan,
-                            s.CreateDateTime,
-                            CreateByName = g.FullName
+                            p.PenerimaanDarahId,
+                            p.KodePenerimaan,
+                            p.TglPenerimaan,
+                            p.TglFaktur,
+                            p.NoFaktur,
+                            p.NoPO,
+                            p.SupplierId,
+                            p.PenerimaId,
+                            p.JumlahKantong,
+                            p.DarahDetailId,
+                            p.Keterangan,
+                            
+                            p.CreateDateTime,
+                            CreateByName = u.FullName
                         };
 
             var totalRows = query.Count();
@@ -97,15 +95,56 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var data = await _context.StockDarahs.FindAsync(id);
+            var data = await _context.PenerimaanDarahs.FindAsync(id);
             if (data == null)
                 return NotFound(new { message = "Data tidak ditemukan." });
 
             return Ok(new { message = "Ditemukan || 200 OK", data });
         }
 
+        private async Task<string> GenerateKodePenerimaan(DateTime tglPenerimaan)
+        {
+            // Format tanggal PDR: ddMMyyyyHHmm
+            string dateCode = tglPenerimaan.ToString("ddMMyyyyHHmm");
+
+            // Ambil semua kode pada tanggal yang sama (hanya tanggal, jam tidak dihitung)
+            DateTime start = tglPenerimaan.Date;
+            DateTime end = tglPenerimaan.Date.AddDays(1).AddTicks(-1);
+
+            var existingCodes = await _context.PenerimaanDarahs
+                .Where(x => x.TglPenerimaan >= start && x.TglPenerimaan <= end)
+                .Select(x => x.KodePenerimaan)
+                .ToListAsync();
+
+            // Cari nomor terakhir untuk tanggal ini
+            int nextNumber = 1;
+
+            if (existingCodes.Any())
+            {
+                var numbers = existingCodes
+                    .Select(code =>
+                    {
+                        var parts = code.Split('-');
+                        if (parts.Length == 3 && int.TryParse(parts[2], out int num))
+                            return num;
+                        return 0;
+                    })
+                    .Where(n => n > 0)
+                    .ToList();
+
+                if (numbers.Any())
+                    nextNumber = numbers.Max() + 1;
+            }
+
+            // Format running number menjadi 3 digit
+            string numberFormatted = nextNumber.ToString("D3");
+
+            return $"PDR-{dateCode}-{numberFormatted}";
+        }
+
+
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] StockDarahViewModel vm)
+        public async Task<IActionResult> Create([FromBody] PenerimaanDarahViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
@@ -123,27 +162,28 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 if (user == null)
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
 
-                var data = new StockDarah
+                // === Generate Kode Penerimaan ===
+                string kodeBaru = await GenerateKodePenerimaan((DateTime)vm.TglPenerimaan);
+
+                var data = new PenerimaanDarah
                 {
-                    StockDarahId = Guid.NewGuid(),
+                    PenerimaanDarahId = Guid.NewGuid(),
+                    KodePenerimaan = kodeBaru,
+                    TglPenerimaan = vm.TglPenerimaan,
+                    TglFaktur = vm.TglFaktur,
+                    NoFaktur = vm.NoFaktur,
+                    NoPO = vm.NoPO,
+                    SupplierId = vm.SupplierId,
+                    PenerimaId = vm.PenerimaId,
                     DarahDetailId = vm.DarahDetailId,
-                    TipeKomponenId = vm.TipeKomponenId,
-                    Rhesus = vm.Rhesus,
-                    Golongan = vm.Golongan,
-                    Wacc = vm.Wacc,
                     JumlahKantong = vm.JumlahKantong,
-                    Amount = vm.Amount,
-                    JumlahExpired = vm.JumlahExpired,
-                    TglExpired = vm.TglExpired,
-                    SisaStock = vm.SisaStock,
-                    MinStock = vm.MinStock,
-                    StatusStock = vm.StatusStock,
                     Keterangan = vm.Keterangan,
+                    
                     CreateBy = user.UserActiveId,
                     CreateDateTime = DateTime.UtcNow
                 };
 
-                _context.StockDarahs.Add(data);
+                _context.PenerimaanDarahs.Add(data);
                 await _context.SaveChangesAsync();
 
                 return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
@@ -155,40 +195,55 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] StockDarahViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] PenerimaanDarahViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
 
             try
             {
-                var data = await _context.StockDarahs.FindAsync(id);
+                var data = await _context.PenerimaanDarahs
+                    .FirstOrDefaultAsync(x => x.PenerimaanDarahId == id && (x.IsDelete == false || x.IsDelete == null));
+
                 if (data == null)
                     return NotFound(new { message = "Data tidak ditemukan." });
 
+                // Ambil user login
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 var user = _context.UserActives.FirstOrDefault(u => u.Email == emailLogin);
 
+                if (user == null)
+                    return Unauthorized(new { message = "User aktif tidak ditemukan." });
+
+                bool needNewKode = data.TglPenerimaan.Value.Date != vm.TglPenerimaan.Value.Date;
+
+                // Update data
+                data.TglPenerimaan = vm.TglPenerimaan;
+                data.TglFaktur = vm.TglFaktur;
+                data.NoFaktur = vm.NoFaktur;
+                data.NoPO = vm.NoPO;
+                data.SupplierId = vm.SupplierId;
+                data.PenerimaId = vm.PenerimaId;
                 data.DarahDetailId = vm.DarahDetailId;
-                data.TipeKomponenId = vm.TipeKomponenId;
-                data.Rhesus = vm.Rhesus;
-                data.Golongan = vm.Golongan;
-                data.Wacc = vm.Wacc;
                 data.JumlahKantong = vm.JumlahKantong;
-                data.Amount = vm.Amount;
-                data.JumlahExpired = vm.JumlahExpired;
-                data.TglExpired = vm.TglExpired;
-                data.SisaStock = vm.SisaStock;
-                data.MinStock = vm.MinStock;
-                data.StatusStock = vm.StatusStock;
                 data.Keterangan = vm.Keterangan;
-                data.UpdateBy = user?.UserActiveId;
+
+                // Jika tanggal berubah → generate kode baru
+                if (needNewKode)
+                {
+                    data.KodePenerimaan = await GenerateKodePenerimaan((DateTime)vm.TglPenerimaan);
+                }
+
+                data.UpdateBy = user.UserActiveId;
                 data.UpdateDateTime = DateTime.UtcNow;
 
-                _context.StockDarahs.Update(data);
                 await _context.SaveChangesAsync();
 
-                return Ok(new { message = "Update Data Berhasil || 200 OK" });
+                return Ok(new
+                {
+                    message = "Update Data Berhasil",
+                    kodeBaru = data.KodePenerimaan
+                });
             }
             catch (Exception ex)
             {
@@ -196,12 +251,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
             try
             {
-                var data = await _context.StockDarahs.FindAsync(id);
+                var data = await _context.PenerimaanDarahs.FindAsync(id);
                 if (data == null)
                     return NotFound(new { message = "Data tidak ditemukan." });
 
@@ -209,10 +265,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var user = _context.UserActives.FirstOrDefault(u => u.Email == emailLogin);
 
                 data.IsDelete = true;
-                data.DeleteBy = user?.UserActiveId;
+                data.DeleteBy = (Guid)(user?.UserActiveId);
                 data.DeleteDateTime = DateTime.UtcNow;
 
-                _context.StockDarahs.Update(data);
+                _context.PenerimaanDarahs.Update(data);
                 await _context.SaveChangesAsync();
 
                 return Ok(new { message = "Data berhasil dihapus (soft delete) || 200 OK" });
@@ -222,6 +278,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+        
         // GET /paged
         [HttpGet("paged")]
         public async Task<IActionResult> GetPaged(
@@ -239,26 +296,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 if (!await _context.Database.CanConnectAsync())
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
 
-                var query = from s in _context.StockDarahs
-                            join u in _context.UserActives on s.CreateBy equals u.UserActiveId
-                            where s.IsDelete == false
+                var query = from p in _context.PenerimaanDarahs
+                            join u in _context.UserActives on p.CreateBy equals u.UserActiveId
+                            where p.IsDelete == false
                             select new
                             {
-                                s.StockDarahId,
-                                s.DarahDetailId,
-                                s.TipeKomponenId,
-                                s.Rhesus,
-                                s.Golongan,
-                                s.Wacc,
-                                s.JumlahKantong,
-                                s.Amount,
-                                s.JumlahExpired,
-                                s.TglExpired,
-                                s.SisaStock,
-                                s.MinStock,
-                                s.StatusStock,
-                                s.Keterangan,
-                                s.CreateDateTime,
+                                p.PenerimaanDarahId,
+                                p.KodePenerimaan,
+                                p.TglPenerimaan,
+                                p.TglFaktur,
+                                p.NoFaktur,
+                                p.NoPO,
+                                p.SupplierId,
+                                p.PenerimaId,
+                                p.JumlahKantong,
+                                p.DarahDetailId,
+                                p.Keterangan,
+                                p.CreateDateTime,
                                 CreateByName = u.FullName
                             };
 
@@ -266,11 +320,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 if (!string.IsNullOrWhiteSpace(search))
                 {
                     search = $"%{search.ToLower()}%";
-                    query = query.Where(s =>
-                        EF.Functions.ILike(s.Golongan, search) ||
-                        EF.Functions.ILike(s.Rhesus, search) ||
-                        EF.Functions.ILike(s.StatusStock, search) ||
-                        EF.Functions.ILike(s.Keterangan, search)
+                    query = query.Where(p =>
+                        EF.Functions.ILike(p.NoPO, search)
                     );
                 }
 
@@ -279,18 +330,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     var startUtc = startDate.Value.Date.ToUniversalTime();
                     var endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
-                    query = query.Where(s => s.CreateDateTime >= startUtc && s.CreateDateTime <= endUtc);
+                    query = query.Where(p => p.CreateDateTime >= startUtc && p.CreateDateTime <= endUtc);
                 }
 
-                // Sorting dinamis
+                // Sorting
                 var sortCol = orderBy?.ToLower() ?? "createdatetime";
                 bool isDesc = sortDirection?.ToLower() == "desc";
 
                 query = sortCol switch
                 {
-                    "golongan" => isDesc ? query.OrderByDescending(x => x.Golongan) : query.OrderBy(x => x.Golongan),
-                    "rhesus" => isDesc ? query.OrderByDescending(x => x.Rhesus) : query.OrderBy(x => x.Rhesus),
-                    "jumlahkantong" => isDesc ? query.OrderByDescending(x => x.JumlahKantong) : query.OrderBy(x => x.JumlahKantong),
+                    "NoPO" => isDesc ? query.OrderByDescending(x => x.NoPO) : query.OrderBy(x => x.NoPO),
                     _ => isDesc ? query.OrderByDescending(x => x.CreateDateTime) : query.OrderBy(x => x.CreateDateTime)
                 };
 
@@ -317,7 +366,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in GetPaged StockDarah");
+                _logger.LogError(ex, "Error in GetPaged PenerimaanDarah");
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }

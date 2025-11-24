@@ -1,7 +1,12 @@
-﻿namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels
+﻿using System.ComponentModel.DataAnnotations;
+using QuilvianSystemBackendDev.Models;
+
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
 {
-    public class PenerimaanDarahViewModel
+    public class PenerimaDarahPasien:UserActivity
     {
+        [Key]
+        public Guid PenerimaanDarahPasienId { get; set; }
         public Guid PasienId { get; set; }
         public Guid GolonganDarahId { get; set; }
         public string? Rhesus { get; set; }
@@ -11,5 +16,4 @@
         public DateTime? TglExpired { get; set; }
         public string? Keterangan { get; set; }
     }
-
 }

@@ -1060,6 +1060,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             int perPage = 10,
             Guid? kunjunganId = null,
             Guid? labBookingId = null,
+            Guid? labId = null,
             string? namaLab = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
@@ -1098,6 +1099,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     select b;
 
                 // Distinct penting karena join bisa mengulang baris parent
+                parentQuery = parentQuery.Distinct();
+            }
+
+            // filter based on lab id
+            if (labId.HasValue)
+            {
+                parentQuery =
+                    from b in parentQuery
+                    join d in _applicationDbContext.LabBookingDetails on b.BookingLabId equals d.BookingLabId
+                    where d.LabId == labId.Value
+                    select b;
+
                 parentQuery = parentQuery.Distinct();
             }
 
@@ -1147,7 +1160,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                  join kl in _applicationDbContext.Kelass on b.KelasId equals kl.KelasId into klGroup
                  from kl in klGroup.DefaultIfEmpty()
 
-                 where pagedParentIds.Contains(b.BookingLabId)
+                 where pagedParentIds.Contains(b.BookingLabId) && !b.IsDelete
                  select new
                  {
                      b.BookingLabId,
@@ -1168,6 +1181,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      b.KelasId,
                      NamaKelas = kl.NamaKelas ?? null,
                      b.HemodialisaKe,
+                     b.StatusPemeriksaan,
+                     b.NomorSuratJaminan,
+                     b.DokterKonsulenId,
+                     b.DiagnosaAwal,
+                     b.Keterangan,
+                     b.TTDPathPembatalan,
                      b.CreateDateTime
                  }).ToList();
 

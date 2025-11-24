@@ -3,7 +3,7 @@
     public class StockDarah
     {
         public Guid StockDarahId { get; set; }
-        public Guid GolonganDarahId { get; set; }
+        public Guid DarahDetailId { get; set; }
         public Guid TipeKomponenId { get; set; }
         public string? Rhesus { get; set; }
         public string? Golongan { get; set; }
@@ -16,6 +16,7 @@
         public decimal? MinStock { get; set; }
         public string? StatusStock { get; set; }
         public string? Keterangan { get; set; }
+        public Guid? SupplierId { get; set; }
 
         // Common audit fields
         public Guid? CreateBy { get; set; }

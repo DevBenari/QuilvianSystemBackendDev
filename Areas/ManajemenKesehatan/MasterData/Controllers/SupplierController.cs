@@ -72,6 +72,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             Note = a.Note,
                             IsPKS = a.IsPKS,
                             IsActive = a.IsActive,
+                            a.KhususUnit
                         };
 
             // Hitung total data sebelum paginasi
@@ -198,6 +199,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         Note = vm.Note,
                         IsPKS = vm.IsPKS,
                         IsActive = vm.IsActive,
+                        KhususUnit = vm.KhususUnit,
                         CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = UserActiveId
                     };
@@ -270,6 +272,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.Note = vm.Note;
                 data.IsPKS = vm.IsPKS;
                 data.IsActive = vm.IsActive;
+                data.KhususUnit = vm.KhususUnit;
 
                 data.UpdateBy = UserActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -362,6 +365,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             Note = a.Note,
                             IsPKS = a.IsPKS,
                             IsActive = a.IsActive,
+                            a.KhususUnit
                         };
 
             // Filter berdasarkan search
