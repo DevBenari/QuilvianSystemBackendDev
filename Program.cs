@@ -248,7 +248,6 @@ app.MapHub<NosokomialHub>("/hubs/nosokomial");
 app.MapHub<LabBookingHub>("/hubs/labbooking");
 app.MapHub<LabBookingDetailHub>("/hubs/labbookingdetail");
 
-
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
