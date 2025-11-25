@@ -1251,31 +1251,25 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
 
 
-        [HttpGet("paged/{labId}")]
-        public async Task<IActionResult> Paged2(
-        [FromRoute] Guid labId,               // WAJIB
-        int page = 1,
-        int perPage = 10,
-        Guid? kunjunganId = null,
-        Guid? labBookingId = null,
-        //string? namaLab = null,
-        string? orderBy = "CreateDateTime",
-        string? sortDirection = "desc",
-        [FromQuery] DateTime? startDate = null,
-        [FromQuery] DateTime? endDate = null)
+        [HttpGet("pagedRadiologi")]
+        public async Task<IActionResult> Paged2Radiologi(
+            int page = 1,
+            int perPage = 10,
+            Guid? kunjunganId = null,
+            Guid? labBookingId = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery] DateTime? startDate = null,
+            [FromQuery] DateTime? endDate = null)
         {
-            // Validasi labId wajib
-            if (labId == Guid.Empty)
-                return BadRequest(new { message = "labId wajib diisi!" });
-
             // =============================
-            // 1️⃣ BASE QUERY (parent only)
+            // 1️⃣ BASE QUERY
             // =============================
             var parentQuery = _applicationDbContext.LabBookings
                 .Where(b => !b.IsDelete)
                 .AsQueryable();
 
-            // Filter umum
+            // Filters umum
             if (kunjunganId.HasValue)
                 parentQuery = parentQuery.Where(b => b.KunjunganId == kunjunganId.Value);
 
@@ -1289,28 +1283,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 parentQuery = parentQuery.Where(b => b.CreateDateTime >= start && b.CreateDateTime <= end);
             }
 
-            // Filter nama lab
-            //if (!string.IsNullOrWhiteSpace(namaLab))
-            //{
-            //    var nl = namaLab.Trim().ToLower();
-
-            //    parentQuery =
-            //        from b in parentQuery
-            //        join d in _applicationDbContext.LabBookingDetails on b.BookingLabId equals d.BookingLabId
-            //        join lab in _applicationDbContext.Labs on d.LabId equals lab.LabId
-            //        where lab.NamaLab.ToLower().Contains(nl)
-            //        select b;
-
-            //    parentQuery = parentQuery.Distinct();
-            //}
-
             // =============================
-            // 2️⃣ FILTER LAB ID (ROUTE) – WAJIB
+            // 2️⃣ HARDCORE → HANYA Radiologi 
             // =============================
             parentQuery =
                 from b in parentQuery
                 join d in _applicationDbContext.LabBookingDetails on b.BookingLabId equals d.BookingLabId
-                where d.LabId == labId
+                join lab in _applicationDbContext.Labs on d.LabId equals lab.LabId
+                where lab.NamaLab.ToLower() == "radiologi"
                 select b;
 
             parentQuery = parentQuery.Distinct();
@@ -1324,19 +1304,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             // 4️⃣ SORTING
             // =============================
             parentQuery = sortDirection?.ToLower() == "desc"
-                ? orderBy switch
-                {
-                    "CreateDateTime" => parentQuery.OrderByDescending(b => b.CreateDateTime),
-                    _ => parentQuery.OrderByDescending(b => b.CreateDateTime)
-                }
-                : orderBy switch
-                {
-                    "CreateDateTime" => parentQuery.OrderBy(b => b.CreateDateTime),
-                    _ => parentQuery.OrderBy(b => b.CreateDateTime)
-                };
+                ? parentQuery.OrderByDescending(b => b.CreateDateTime)
+                : parentQuery.OrderBy(b => b.CreateDateTime);
 
             // =============================
-            // 5️⃣ PAGING (ambil parent IDs)
+            // 5️⃣ PAGING
             // =============================
             var pagedParentIds = await parentQuery
                 .Skip((page - 1) * perPage)
@@ -1352,7 +1324,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 });
 
             // =============================
-            // 6️⃣ LOAD PARENTS DATA (join)
+            // 6️⃣ LOAD PARENT DATA
             // =============================
             var parents = await
                 (from b in _applicationDbContext.LabBookings
@@ -1391,14 +1363,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      NamaKelas = kl.NamaKelas,
                      b.TglPemeriksaan,
                      b.TglBooking,
-                     b.AlasanPembatalan,
                      b.StatusBookingLab,
                      b.StatusPembayaran,
                      b.CreateDateTime
                  }).ToListAsync();
 
             // =============================
-            // 7️⃣ LOAD DETAILS
+            // 7️⃣ LOAD DETAIL
             // =============================
             var details = await
                 (from d in _applicationDbContext.LabBookingDetails
@@ -1408,19 +1379,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                  join lp in _applicationDbContext.LabPemeriksaans on d.PemeriksaanLabId equals lp.PemeriksaanLabId into lpJoin
                  from lp in lpJoin.DefaultIfEmpty()
 
-                 where pagedParentIds.Contains((Guid)d.BookingLabId) && !d.IsDelete
+                 where pagedParentIds.Contains((Guid)d.BookingLabId) &&
+                       lab.NamaLab.ToLower() == "radiologi"
                  select new
                  {
                      d.BookingLabId,
                      d.DetailBookingLabId,
-                     d.PemeriksaanLabId,
-                     PemeriksaanNama = lp.NamaPemeriksaan,
+                     NamaPemeriksaan = lp.NamaPemeriksaan,
                      lp.HargaPemeriksaan,
-                     NamaLab = lab.NamaLab
+                     Lab = lab.NamaLab
                  }).ToListAsync();
 
             // =============================
-            // 8️⃣ MERGE PARENT + DETAIL
+            // 8️⃣ MERGE
             // =============================
             var merged = parents.Select(x => new
             {
@@ -1429,12 +1400,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             });
 
             // =============================
-            // 9️⃣ RETURN RESPONSE
+            // 9️⃣ RETURN
             // =============================
             return Ok(new
             {
                 status = "success",
-                message = "Data retrieved successfully",
+                message = "Data Radiologi retrieved successfully",
                 data = new
                 {
                     Rows = merged,
@@ -1445,6 +1416,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 }
             });
         }
+
 
     }
 }
