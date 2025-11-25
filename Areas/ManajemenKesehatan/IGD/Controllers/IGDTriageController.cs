@@ -4,10 +4,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Controllers;
@@ -33,19 +36,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
         private readonly ILogger<IGDTriageController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly IHubContext<IGDTriageHub> _hubContext;
 
         public IGDTriageController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ILogger<IGDTriageController> logger,
-            IWebHostEnvironment webHostEnvironment)
+            IWebHostEnvironment webHostEnvironment,
+            IHubContext<IGDTriageHub> hubContext)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+            _hubContext = hubContext;
         }
 
         [HttpGet]
@@ -234,6 +240,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
+
                 // **Simpan ke Database**
                 _applicationDbContext.IGDTriages.Add(data);
                 // 💾 Simpan data detail triage
@@ -257,7 +264,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                     }
                 }
                 int result = await _applicationDbContext.SaveChangesAsync();
-
+                await _hubContext.Clients.All.SendAsync("Triage Created", new
+                {
+                    Action = "create",
+                    TriageId = data.TriageId
+                });
                 if (result > 0)
                 {
                     return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
@@ -327,6 +338,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 _applicationDbContext.IGDTriages.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
+
+                await _hubContext.Clients.All.SendAsync("Triage Changed", new
+                {
+                    Action = "change",
+                    TriageId = data.TriageId
+                });
                 if (result > 0)
                 {
                     return Ok(new { message = "Update Data Berhasil || 200 OK" });

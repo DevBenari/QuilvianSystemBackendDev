@@ -5,9 +5,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
@@ -29,6 +31,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
         private readonly ILogger<IGDAssessmentAwalController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly string _uploadUrl;
+        private readonly IHubContext<IGDAssessmentAwalHub> _hubContext;
 
         public IGDAssessmentAwalController(
             ApplicationDbContext applicationDbContext,
@@ -36,7 +39,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
             SignInManager<ApplicationUser> signInManager,
             ILogger<IGDAssessmentAwalController> logger,
             IWebHostEnvironment webHostEnvironment,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IHubContext<IGDAssessmentAwalHub> hubContext)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
@@ -44,6 +48,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
             _uploadUrl = configuration["FileStorage:UploadUrl"];
+            _hubContext = hubContext;
         }
 
         // ====================== GET ALL ======================
@@ -203,6 +208,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 _applicationDbContext.IGDAssessmentAwals.Add(data);
                 await _applicationDbContext.SaveChangesAsync();
 
+                await _hubContext.Clients.All.SendAsync("IGD Assessment awal Created", new
+                {
+                    Action = "create",
+                    data = data.AssessmentAwalIGD
+                });
+
                 return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
             }
             catch (Exception ex)
@@ -274,6 +285,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
             _applicationDbContext.IGDAssessmentAwals.Update(existing);
             await _applicationDbContext.SaveChangesAsync();
+
+            await _hubContext.Clients.All.SendAsync("IGD assessment awal changed", new
+            {
+                Action = "create",
+                id = existing.AssessmentAwalIGD
+            });
 
             return Ok(new { message = "Update Data Berhasil || 200 OK" });
         }

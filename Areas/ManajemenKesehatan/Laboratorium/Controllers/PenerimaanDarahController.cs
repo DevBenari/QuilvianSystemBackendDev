@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Linq;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
@@ -486,7 +487,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 });
             }
 
-            var parentIds = pagedParents.Select(x => x.PenerimaanDarahId).ToList();
+            var detailIds = pagedParents
+                .Where(x => x.DarahDetailId != null)
+                .Select(x => (Guid)x.DarahDetailId)
+                .ToList();
 
 
             // ============================
@@ -494,7 +498,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             // ============================
             var stockDarah =
                 _context.StockDarahs
-                .Where(sd => parentIds.Contains((Guid)sd.DarahDetailId))
+                .Where(sd => detailIds.Contains((Guid)sd.DarahDetailId))
                 .Select(sd => new
                 {
                     sd.DarahDetailId,
@@ -517,7 +521,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             // ============================
             var stockBatch =
                 _context.StockBatchs
-                .Where(sb => parentIds.Contains((Guid)sb.ItemId))
+                .Where(sb => detailIds.Contains((Guid)sb.ItemId))
                 .Select(sb => new
                 {
                     sb.StockBatchId,

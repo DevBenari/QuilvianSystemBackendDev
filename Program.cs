@@ -7,6 +7,8 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.HubSignalR;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.HubSignalR;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Services;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
@@ -219,12 +221,32 @@ builder.Services.AddSignalR();
 var app = builder.Build();
 
 // Konfigurasi SignalR
+// signal R kunjungan
 app.MapHub<KunjunganHub>("/hubs/kunjungan");
-app.MapHub<ResepHub>("/hubs/resep");
 app.MapHub<VitalSignHub>("/hubs/vitalsign");
 app.MapHub<SOAPHub>("/hubs/soap");
 app.MapHub<PainAssesmentHub>("/hubs/painassessment");
+
+// signal R farmasi
+app.MapHub<ResepHub>("/hubs/resep");
+app.MapHub<ResepDetailHub>("/hubs/resepdetail");
+app.MapHub<DetailPenerimaanHub>("/hubs/detailpenerimaan");
+app.MapHub<DetailPermintaanHub>("/hubs/detailpermintaan");
+app.MapHub<PenerimaanUnitHub>("/hubs/penerimaanunit");
+app.MapHub<PermintaanUnitHub>("/hubs/permintaanunit");
+
+// signal R Ranap
 app.MapHub<SuratPengantarRanapHub>("/hubs/suratpengantarranap");
+
+// signal R IGD
+app.MapHub<IGDTriageHub>("/hubs/IGDtriage");
+app.MapHub<PindahRuanganHub>("/hubs/pindahruangan");
+app.MapHub<IGDAssessmentAwalHub>("/hubs/IGDassessmentawal");
+app.MapHub<NosokomialHub>("/hubs/nosokomial");
+
+// signal R Laboratorium
+app.MapHub<LabBookingHub>("/hubs/labbooking");
+app.MapHub<LabBookingDetailHub>("/hubs/labbookingdetail");
 
 
 // Configure the HTTP request pipeline.

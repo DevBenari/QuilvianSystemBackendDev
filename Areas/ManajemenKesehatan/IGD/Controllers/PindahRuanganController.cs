@@ -3,9 +3,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
@@ -30,19 +32,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
         private readonly ILogger<PindahRuanganController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly IHubContext<PindahRuanganHub> _hubContext;
 
         public PindahRuanganController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ILogger<PindahRuanganController> logger,
-            IWebHostEnvironment webHostEnvironment)
+            IWebHostEnvironment webHostEnvironment,
+            IHubContext<PindahRuanganHub> hubContext)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+            _hubContext = hubContext;
         }
 
         [HttpGet]
@@ -172,6 +177,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 _applicationDbContext.PindahRuangans.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
+                await _hubContext.Clients.All.SendAsync("Pindah ruangan Created", new
+                {
+                    Action = "create",
+                    PindahRuanganId = data.PindahRuanganId
+                });
+
                 if (result > 0)
                 {
                     return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
@@ -245,6 +256,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 // **Simpan ke Database**
                 _applicationDbContext.PindahRuangans.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
+
+                await _hubContext.Clients.All.SendAsync("Pindah ruangan changed", new
+                {
+                    Action = "changed",
+                    data = data.PindahRuanganId
+                });
 
                 if (result > 0)
                 {

@@ -3,10 +3,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
@@ -30,6 +32,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
         private readonly ILogger<NosokomialController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly IHubContext<NosokomialHub> _hubContext;
 
         public NosokomialController(
             ApplicationDbContext applicationDbContext,
@@ -37,14 +40,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
             SignInManager<ApplicationUser> signInManager,
             ILogger<NosokomialController> logger,
             IWebHostEnvironment webHostEnvironment,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IHubContext<NosokomialHub> hubContext)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
-            _uploadUrl = configuration["FileStorage:UploadUrl"]; ;
+            _uploadUrl = configuration["FileStorage:UploadUrl"];
+            _hubContext = hubContext;
         }
 
         [HttpGet]
@@ -258,6 +263,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 _applicationDbContext.Nosokomials.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
+                await _hubContext.Clients.All.SendAsync("Nosokomia Created", new
+                {
+                    Action = "create",
+                    id = data.NosokomialId
+                });
+
                 if (result > 0)
                 {
                     return Created("", new
@@ -418,6 +429,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
                 _applicationDbContext.Nosokomials.Update(data);
                 int resultSave = await _applicationDbContext.SaveChangesAsync();
+
+                await _hubContext.Clients.All.SendAsync("Nosokomial changed", new
+                {
+                    Action = "changed",
+                    id = data.NosokomialId
+                });
 
                 if (resultSave > 0)
                 {

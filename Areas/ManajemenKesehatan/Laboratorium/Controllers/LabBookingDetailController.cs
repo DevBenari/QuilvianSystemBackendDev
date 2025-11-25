@@ -3,12 +3,14 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
@@ -28,6 +30,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly string _uploadUrl;
+        private readonly IHubContext<LabBookingDetailHub> _hubContext;
 
         private readonly ILogger<LabBookingDetailController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
@@ -38,7 +41,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             SignInManager<ApplicationUser> signInManager,
             ILogger<LabBookingDetailController> logger,
             IWebHostEnvironment webHostEnvironment,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IHubContext<LabBookingDetailHub> hubContext)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
@@ -46,7 +50,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
             _uploadUrl = configuration["FileStorage:UploadUrl"];
-
+            _hubContext = hubContext;
         }
 
         [HttpGet]
@@ -355,6 +359,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         await _applicationDbContext.SaveChangesAsync();
                     }
                 }
+
+                await _hubContext.Clients.All.SendAsync("Lab booking detail created", new
+                {
+                    Action = "create",
+                    Id = data.DetailBookingLabId
+                });
 
                 return Created("", new
                 {
@@ -670,6 +680,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 // ==========================================================
                 // ✅ RESPONSE
                 // ==========================================================
+                await _hubContext.Clients.All.SendAsync("Lab booking detail changed", new
+                {
+                    Action = "create",
+                    id = existingData.DetailBookingLabId
+                });
                 return Ok(new
                 {
                     message = "Update Data Detail Booking Lab & Billing Berhasil || 200 OK",

@@ -5,11 +5,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
@@ -32,6 +34,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
         private readonly ILogger<LabBookingController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly IHubContext<LabBookingHub> _hubContext;
 
         public LabBookingController(
             ApplicationDbContext applicationDbContext,
@@ -39,7 +42,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             SignInManager<ApplicationUser> signInManager,
             ILogger<LabBookingController> logger,
             IWebHostEnvironment webHostEnvironment,
-            IConfiguration configuration
+            IConfiguration configuration,
+            IHubContext<LabBookingHub> hubContext
             )
         {
             _applicationDbContext = applicationDbContext;
@@ -48,6 +52,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
             _uploadUrl = configuration["FileStorage:UploadUrl"];
+            _hubContext = hubContext;
         }
         private DateTime? TryParseTanggalToUtc(string tanggal)
         {
@@ -412,6 +417,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 if (result > 0)
                 {
+                    await _hubContext.Clients.All.SendAsync("Lab booking Created", new
+                    {
+                        Action = "create",
+                        id = entity.BookingLabId
+                    });
+
                     return Created("", new
                     {
                         message = "Tambah Data Berhasil || 201 Created",
@@ -508,6 +519,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 if (result > 0)
                 {
+                    await _hubContext.Clients.All.SendAsync("Lab booking changed", new
+                    {
+                        Action = "changed",
+                        TriageId = entity.BookingLabId
+                    });
+
                     return Ok(new
                     {
                         message = "Data berhasil diperbarui. || 200 OK",
