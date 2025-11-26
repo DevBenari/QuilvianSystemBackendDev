@@ -356,6 +356,8 @@ namespace QuilvianSystemBackendDev.Repositories
 
         #region Gizi
         public DbSet<GiziDiagnosa> GiziDiagnosas {  get; set; }
+        public DbSet<GiziEvaluasi> GiziEvaluasis {  get; set; }
+        public DbSet<GiziAssessment> GiziAssessments {  get; set; }
         #endregion
     }
 }

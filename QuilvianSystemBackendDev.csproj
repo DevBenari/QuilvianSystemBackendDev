@@ -51,6 +51,7 @@
  
   <ItemGroup>
     <Folder Include=".github\workflows\" />
+    <Folder Include="Areas\ManajemenKesehatan\Hemodialisa\HubSignalR\" />
     <Folder Include="Areas\ManajemenKesehatan\RawatJalan\Controllers\" />
     <Folder Include="Areas\ManajemenKesehatan\RawatJalan\Models\" />
     <Folder Include="Areas\ManajemenKesehatan\RawatJalan\ViewModels\" />

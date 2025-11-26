@@ -94,6 +94,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     a.WaktuTindakanHarian,
                     a.ShiftTime,
                     a.NamaPerawat,
+                    a.Diagnosa,
                     a.Keterangan,
                     a.CreateDateTime,
                     a.CreateBy,
@@ -132,6 +133,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 a.TglTindakanHarian,
                 a.WaktuTindakanHarian,
                 a.ShiftTime,
+                a.Diagnosa,
                 a.NamaPerawat,
                 a.Keterangan,
                 a.CreateDateTime,
@@ -185,6 +187,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     a.WaktuTindakanHarian,
                     a.ShiftTime,
                     a.NamaPerawat,
+                    a.Diagnosa,
                     a.Keterangan,
                     a.CreateDateTime,
                     a.CreateBy,
@@ -222,6 +225,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 tindakanHarian.WaktuTindakanHarian,
                 tindakanHarian.ShiftTime,
                 tindakanHarian.NamaPerawat,
+                tindakanHarian.Diagnosa,
                 tindakanHarian.Keterangan,
                 tindakanHarian.CreateDateTime,
                 tindakanHarian.CreateBy,
@@ -288,6 +292,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     WaktuTindakanHarian = vm.WaktuTindakanHarian,
                     ShiftTime = vm.ShiftTime,
                     NamaPerawat = vm.NamaPerawat,
+                    Diagnosa = vm.Diagnosa,
                     Keterangan = vm.Keterangan,
                     
                     CreateBy = userActiveId,
@@ -363,6 +368,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 data.WaktuTindakanHarian = vm.WaktuTindakanHarian;
                 data.ShiftTime = vm.ShiftTime;
                 data.NamaPerawat = vm.NamaPerawat;
+                data.Diagnosa = vm.Diagnosa;
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
@@ -485,6 +491,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     a.WaktuTindakanHarian,
                     a.ShiftTime,
                     a.NamaPerawat,
+                    a.Diagnosa,
                     a.Keterangan,
                     a.CreateDateTime,
                     a.CreateBy,
@@ -593,6 +600,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 a.WaktuTindakanHarian,
                 a.ShiftTime,
                 a.NamaPerawat,
+                a.Diagnosa,
                 a.Keterangan,
                 a.CreateDateTime,
                 a.CreateBy,

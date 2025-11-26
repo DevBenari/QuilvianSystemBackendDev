@@ -114,47 +114,90 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
         {
             try
             {
-                // ✅ Query utama join langsung (tanpa N+1)
+                // Query untuk data dasar dari IGDTriage dan IGDTriageDetails
                 var baseQuery = from t in _applicationDbContext.IGDTriages
+                                join u in _applicationDbContext.UserActives.DefaultIfEmpty()
+                                on t.CreateBy equals u.UserActiveId
                                 join d in _applicationDbContext.IGDTriageDetails
-                                    on t.TriageId equals d.TriageId into detailGroup
+                                on t.TriageId equals d.TriageId into detailGroup
                                 from d in detailGroup.DefaultIfEmpty()
-                                where (t.IsDelete == false || t.IsDelete == null)
-                                      && t.TriageId == id
+                                where (t.IsDelete == false || t.IsDelete == null) && t.TriageId == id
                                 select new
                                 {
-                                    TriageId = (Guid?)t.TriageId,
-                                    KunjunganId = (Guid?)t.KunjunganId,
+                                    TriageId = t.TriageId,
+                                    KunjunganId = t.KunjunganId,
                                     t.KeluhanUtama,
                                     t.DiteruskanKepada,
                                     t.Keterangan,
-                                    DetailIndikatorId = (Guid?)d.IndikatorPengkajianId,
-                                    DetailKeterangan = d != null ? d.Keterangan : null,
-                                    DetailCreateTime = (DateTimeOffset?)d.CreateDateTime,
-                                    t.CreateBy,
-                                    CreateDateTime = (DateTimeOffset?)t.CreateDateTime
+                                    DetailIndikatorId = d.IndikatorPengkajianId,
+                                    DetailKeterangan = d.Keterangan,
+                                    DetailCreateTime = d.CreateDateTime,
+                                    CreateBy = u.FullName,
+                                    CreateDateTime = t.CreateDateTime
                                 };
 
-                // 🔹 Eksekusi query ke memory dulu (EF tidak bisa GroupBy langsung dengan DefaultIfEmpty)
-                var data = await baseQuery.ToListAsync();
+                var result = await baseQuery.ToListAsync();
 
-                if (data == null || data.Count == 0)
+                if (result == null || !result.Any())
                 {
-                    return NotFound(new { message = "Data tidak ditemukan untuk ID tersebut." });
+                    return NotFound(new { message = $"Data dengan TriageId {id} tidak ditemukan." });
                 }
 
-                // 🔹 Grouping detail (1 Triage -> banyak detail)
-                var result = data
-                    .GroupBy(x => new
-                    {
-                        x.TriageId,
-                        x.KunjunganId,
-                        x.KeluhanUtama,
-                        x.DiteruskanKepada,
-                        x.Keterangan,
-                        x.CreateBy,
-                        x.CreateDateTime
-                    })
+                // Query untuk Indikator Pengkajian, Indikator, dan IndikatorScore
+                var indikatorQuery = from a in _applicationDbContext.IndikatorPengkajians
+                                     join u in _applicationDbContext.UserActives.DefaultIfEmpty()
+                                     on a.CreateBy equals u.UserActiveId
+                                     join i in _applicationDbContext.Indikators
+                                     on a.IndikatorId equals i.IndikatorId into iGroup
+                                     from i in iGroup.DefaultIfEmpty()
+                                     join s in _applicationDbContext.IndikatorScores
+                                     on a.IndikatorScoreId equals s.IndikatorScoreId into sGroup
+                                     from s in sGroup.DefaultIfEmpty()
+                                     where a.IsDelete == false || a.IsDelete == null
+                                     select new
+                                     {
+                                         a.IndikatorPengkajianId,
+                                         a.IndikatorId,
+                                         i.NamaIndikator,
+                                         a.IndikatorScoreId,
+                                         s.NamaIndikatorScore,
+                                         s.ScoreIndikator,
+                                         s.WarnaIndikator,
+                                         a.Keterangan
+                                     };
+
+                // Gabungkan data hasil IGDTriage dengan indikator dan skor indikator
+                var joinedData = from t in result
+                                 join ind in indikatorQuery
+                                     on t.DetailIndikatorId equals ind.IndikatorPengkajianId // Matching on IndikatorPengkajianId
+                                 select new
+                                 {
+                                     t.TriageId,
+                                     t.KunjunganId,
+                                     t.KeluhanUtama,
+                                     t.DiteruskanKepada,
+                                     t.Keterangan,
+                                     t.CreateBy,
+                                     t.CreateDateTime,
+                                     IndikatorPengkajian = ind,
+                                     Details = new[]
+                                     {
+                                 new
+                                 {
+                                     ind.IndikatorPengkajianId,
+                                     ind.NamaIndikator,
+                                     ind.IndikatorScoreId,
+                                     ind.NamaIndikatorScore,
+                                     ind.ScoreIndikator,
+                                     ind.WarnaIndikator,
+                                     ind.Keterangan
+                                 }
+                             }
+                                 };
+
+                // Tidak melakukan grouping yang bisa membatasi banyaknya details yang ditampilkan
+                var groupedResult = joinedData
+                    .GroupBy(x => new { x.TriageId, x.KunjunganId, x.KeluhanUtama, x.DiteruskanKepada, x.Keterangan, x.CreateBy, x.CreateDateTime })
                     .Select(g => new
                     {
                         g.Key.TriageId,
@@ -163,29 +206,38 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                         g.Key.DiteruskanKepada,
                         g.Key.Keterangan,
                         g.Key.CreateBy,
-                        CreateDateTime = g.Key.CreateDateTime ?? DateTimeOffset.MinValue,
-                        Details = g
-                            .Where(x => x.DetailIndikatorId != null)
-                            .Select(x => new
-                            {
-                                IndikatorPengkajianId = x.DetailIndikatorId,
-                                Keterangan = x.DetailKeterangan
-                            }).ToList()
-                    })
-                    .FirstOrDefault();
+                        CreateDateTime = g.Key.CreateDateTime,
+                        Details = g.Select(x => new
+                        {
+                            x.IndikatorPengkajian.IndikatorPengkajianId,
+                            x.IndikatorPengkajian.NamaIndikator,
+                            x.IndikatorPengkajian.IndikatorScoreId,
+                            x.IndikatorPengkajian.NamaIndikatorScore,
+                            x.IndikatorPengkajian.ScoreIndikator,
+                            x.IndikatorPengkajian.WarnaIndikator,
+                            x.IndikatorPengkajian.Keterangan
+                        }).ToList()
+                    }).FirstOrDefault();
+
+                if (groupedResult == null)
+                {
+                    return NotFound(new { message = $"Data dengan TriageId {id} tidak ditemukan." });
+                }
 
                 return Ok(new
                 {
                     status = "success",
                     message = "Data retrieved successfully",
-                    data = result
+                    data = groupedResult
                 });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = $"Terjadi kesalahan: {ex.Message}" });
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
+
 
 
         [HttpPost]
@@ -431,50 +483,142 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
             Guid? kunjunganId = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
-            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                                    DateTime? startDate = null,
-            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                                    DateTime? endDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? endDate = null,
             [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
-
-            // Query join langsung, tanpa subquery
+            // Query untuk data dasar dari IGDTriage dan IGDTriageDetails
             var baseQuery = from t in _applicationDbContext.IGDTriages
+                            join u in _applicationDbContext.UserActives.DefaultIfEmpty()
+                            on t.CreateBy equals u.UserActiveId
                             join d in _applicationDbContext.IGDTriageDetails
-                                on t.TriageId equals d.TriageId into detailGroup
+                            on t.TriageId equals d.TriageId into detailGroup
                             from d in detailGroup.DefaultIfEmpty()
                             where (t.IsDelete == false || t.IsDelete == null)
                             select new
                             {
-                                TriageId = (Guid?)t.TriageId, // 🩹 cast ke nullable
-                                KunjunganId = (Guid?)t.KunjunganId, // 🩹 cast ke nullable
+                                TriageId = t.TriageId,
+                                KunjunganId = t.KunjunganId,
                                 t.KeluhanUtama,
                                 t.DiteruskanKepada,
                                 t.Keterangan,
-                                DetailIndikatorId = (Guid?)d.IndikatorPengkajianId, // 🩹 cast ke nullable
-                                DetailKeterangan = d != null ? d.Keterangan : null,
-                                DetailCreateTime = (DateTimeOffset?)d.CreateDateTime, // 🩹 nullable timestamp
-                                t.CreateBy,
-                                CreateDateTime = (DateTimeOffset?)t.CreateDateTime // 🩹 nullable timestamp
+                                DetailIndikatorId = d.IndikatorPengkajianId,
+                                DetailKeterangan = d.Keterangan,
+                                DetailCreateTime = d.CreateDateTime,
+                                CreateBy = u.FullName,
+                                CreateDateTime = t.CreateDateTime
                             };
 
+            // Filtering berdasarkan kunjunganId, startDate, dan endDate
+            if (kunjunganId.HasValue)
+            {
+                baseQuery = baseQuery.Where(u => u.KunjunganId == kunjunganId.Value);
+            }
 
-            var grouped = await baseQuery
-                .OrderByDescending(x => x.CreateDateTime)
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
+                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+                baseQuery = baseQuery.Where(u => u.CreateDateTime >= startUtc && u.CreateDateTime <= endUtc);
+            }
+
+            // Filter berdasarkan periode
+            if (periode.HasValue)
+            {
+                DateTime today = DateTime.UtcNow.Date;
+
+                switch (periode)
+                {
+                    case PeriodeFilter.Today:
+                        baseQuery = baseQuery.Where(u => u.CreateDateTime.Date == today);
+                        break;
+                    case PeriodeFilter.ThisWeek:
+                        baseQuery = baseQuery.Where(u => u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) && u.CreateDateTime.Date <= today);
+                        break;
+                    case PeriodeFilter.LastWeek:
+                        baseQuery = baseQuery.Where(u => u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) && u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek));
+                        break;
+                    case PeriodeFilter.ThisMonth:
+                        baseQuery = baseQuery.Where(u => u.CreateDateTime.Month == today.Month && u.CreateDateTime.Year == today.Year);
+                        break;
+                    case PeriodeFilter.LastMonth:
+                        baseQuery = baseQuery.Where(u => u.CreateDateTime.Month == today.Month - 1 && u.CreateDateTime.Year == today.Year);
+                        break;
+                    case PeriodeFilter.ThisYear:
+                        baseQuery = baseQuery.Where(u => u.CreateDateTime.Year == today.Year);
+                        break;
+                    case PeriodeFilter.LastYear:
+                        baseQuery = baseQuery.Where(u => u.CreateDateTime.Year == today.Year - 1);
+                        break;
+                    case PeriodeFilter.Last3Months:
+                        baseQuery = baseQuery.Where(u => u.CreateDateTime >= today.AddMonths(-3));
+                        break;
+                    case PeriodeFilter.Last6Months:
+                        baseQuery = baseQuery.Where(u => u.CreateDateTime >= today.AddMonths(-6));
+                        break;
+                }
+            }
+
+            // Sorting Data
+            var sortedQuery = sortDirection?.ToLower() == "desc"
+                ? baseQuery.OrderByDescending(u => u.CreateDateTime)
+                : baseQuery.OrderBy(u => u.CreateDateTime);
+
+            // Pagination
+            var totalRows = await sortedQuery.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+            var rows = await sortedQuery
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
                 .ToListAsync();
 
-            // Grouping di memory (karena EF belum bisa langsung GroupBy-to-List dengan navigation)
-            var result = grouped
-                .GroupBy(x => new
-                {
-                    x.TriageId,
-                    x.KunjunganId,
-                    x.KeluhanUtama,
-                    x.DiteruskanKepada,
-                    x.Keterangan,
-                    x.CreateBy,
-                    x.CreateDateTime,
-                })
+            if (rows.Count == 0)
+            {
+                return NotFound(new { message = "Data not found." });
+            }
+
+            // --- Query untuk Indikator Pengkajian, Indikator, dan IndikatorScore ---
+            var indikatorQuery = from a in _applicationDbContext.IndikatorPengkajians
+                                 join u in _applicationDbContext.UserActives.DefaultIfEmpty()
+                                 on a.CreateBy equals u.UserActiveId
+                                 join i in _applicationDbContext.Indikators
+                                 on a.IndikatorId equals i.IndikatorId into iGroup
+                                 from i in iGroup.DefaultIfEmpty()
+                                 join s in _applicationDbContext.IndikatorScores
+                                 on a.IndikatorScoreId equals s.IndikatorScoreId into sGroup
+                                 from s in sGroup.DefaultIfEmpty()
+                                 where a.IsDelete == false || a.IsDelete == null
+                                 select new
+                                 {
+                                     a.IndikatorPengkajianId,
+                                     a.IndikatorId,
+                                     i.NamaIndikator,
+                                     a.IndikatorScoreId,
+                                     s.NamaIndikatorScore,
+                                     s.ScoreIndikator,
+                                     s.WarnaIndikator,
+                                     a.Keterangan
+                                 };
+
+            // Gabungkan data hasil IGDTriage dengan indikator dan skor indikator
+            var joinedData = from t in rows
+                             join ind in indikatorQuery
+                                 on t.DetailIndikatorId equals ind.IndikatorPengkajianId // Matching on IndikatorPengkajianId
+                             select new
+                             {
+                                 t.TriageId,
+                                 t.KunjunganId,
+                                 t.KeluhanUtama,
+                                 t.DiteruskanKepada,
+                                 t.Keterangan,
+                                 t.CreateBy,
+                                 t.CreateDateTime,
+                                 IndikatorPengkajian = ind,
+                             };
+
+            // --- Grouping berdasarkan TriageId untuk mendapatkan data seperti yang Anda inginkan ---
+            var groupedResult = joinedData
+                .GroupBy(x => new { x.TriageId, x.KunjunganId, x.KeluhanUtama, x.DiteruskanKepada, x.Keterangan, x.CreateBy, x.CreateDateTime })
                 .Select(g => new
                 {
                     g.Key.TriageId,
@@ -483,113 +627,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                     g.Key.DiteruskanKepada,
                     g.Key.Keterangan,
                     g.Key.CreateBy,
-                    CreateDateTime = g.Key.CreateDateTime ?? DateTimeOffset.MinValue,
+                    CreateDateTime = g.Key.CreateDateTime ,
                     Details = g
-                        .Where(x => x.DetailIndikatorId != null)
                         .Select(x => new
                         {
-                            IndikatorPengkajianId = x.DetailIndikatorId,
-                            Keterangan = x.DetailKeterangan
+                            x.IndikatorPengkajian.IndikatorPengkajianId,
+                            x.IndikatorPengkajian.NamaIndikator,
+                            x.IndikatorPengkajian.IndikatorScoreId,
+                            x.IndikatorPengkajian.NamaIndikatorScore,
+                            x.IndikatorPengkajian.ScoreIndikator,
+                            x.IndikatorPengkajian.WarnaIndikator,
+                            x.IndikatorPengkajian.Keterangan
                         }).ToList()
-                }).AsQueryable();
-
-            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-            //if (!string.IsNullOrWhiteSpace(search))
-            //{
-            //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-            //    query = query.Where(u =>
-            //        EF.Functions.ILike(u.NamaDiskon, search)
-            //    );
-            //}
-
-            // filter berdasarkan kunjungan id
-            if (kunjunganId.HasValue)
-            {
-                result = result.Where(u => u.KunjunganId == kunjunganId.Value);
-            }
-
-            //// **Filter berdasarkan tanggal**
-            if (startDate.HasValue && endDate.HasValue)
-            {
-                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
-                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
-
-                result = result.Where(u =>
-                    u.CreateDateTime >= startUtc &&
-                    u.CreateDateTime <= endUtc);
-            }
-
-            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
-            if (periode.HasValue)
-            {
-                DateTime today = DateTime.UtcNow.Date;
-
-                switch (periode)
-                {
-                    case PeriodeFilter.Today:
-                        result = result.Where(u => u.CreateDateTime.Date == today);
-                        break;
-                    case PeriodeFilter.ThisWeek:
-                        result = result.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date <= today
-                        );
-                        break;
-                    case PeriodeFilter.LastWeek:
-                        result = result.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)
-                        );
-                        break;
-                    case PeriodeFilter.ThisMonth:
-                        result = result.Where(u =>
-                            u.CreateDateTime.Month == today.Month &&
-                            u.CreateDateTime.Year == today.Year
-                        );
-                        break;
-                    case PeriodeFilter.LastMonth:
-                        result = result.Where(u =>
-                            u.CreateDateTime.Month == today.Month - 1 &&
-                            u.CreateDateTime.Year == today.Year
-                        );
-                        break;
-                    case PeriodeFilter.ThisYear:
-                        result = result.Where(u => u.CreateDateTime.Year == today.Year);
-                        break;
-                    case PeriodeFilter.LastYear:
-                        result = result.Where(u => u.CreateDateTime.Year == today.Year - 1);
-                        break;
-                    case PeriodeFilter.Last3Months:
-                        result = result.Where(u => u.CreateDateTime >= today.AddMonths(-3));
-                        break;
-                    case PeriodeFilter.Last6Months:
-                        result = result.Where(u => u.CreateDateTime >= today.AddMonths(-6));
-                        break;
-                }
-            }
-
-            // Sorting Data dengan cara yang lebih aman
-            result = sortDirection?.ToLower() == "desc"
-                ? orderBy switch
-                {
-                    "CreateDateTime" => result.OrderByDescending(u => u.CreateDateTime),
-                    _ => result.OrderByDescending(u => u.CreateDateTime)
-                }
-                : orderBy switch
-                {
-                    "CreateDateTime" => result.OrderBy(u => u.CreateDateTime),
-                    _ => result.OrderBy(u => u.CreateDateTime)
-                };
-
-            // Pagination
-            var totalRows = result.Count();
-            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-            var rows = result.Skip((page - 1) * perPage).Take(perPage).ToList();
-
-            if (rows.Count == 0 && page > totalPages)
-            {
-                return NotFound(new { message = "Page not found." });
-            }
+                }).ToList();
 
             return Ok(new
             {
@@ -597,7 +647,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 message = "Data retrieved successfully",
                 data = new
                 {
-                    Rows = rows,
+                    Rows = groupedResult,
                     TotalRows = totalRows,
                     CurrentPage = page,
                     PerPage = perPage,
@@ -605,5 +655,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 }
             });
         }
+
+
+
+
+
+
     }
 }

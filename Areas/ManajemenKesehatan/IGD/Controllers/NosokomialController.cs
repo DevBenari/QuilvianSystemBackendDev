@@ -458,6 +458,147 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
             }
         }
 
+        [HttpPut("update-ttd-kepalaruangan/{id}")]
+        [RequestSizeLimit(10_000_000)] // 10 MB
+        [RequestFormLimits(MultipartBodyLengthLimit = 10_000_000)]
+        public async Task<IActionResult> UpdateTTDKepalaRuangan(Guid id, [FromForm] UpdateTTDKepalaRuanganVM vm)
+        {
+            if (vm == null )
+                return BadRequest(new { message = "File TTD Kepala Ruangan tidak ditemukan." });
+
+            try
+            {
+                // ✅ Cek koneksi DB
+                if (!_applicationDbContext.Database.CanConnect())
+                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+
+                // ✅ Ambil user dari JWT
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin))
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+                if (getUserActive == null)
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+
+                var userActiveId = getUserActive.UserActiveId;
+
+                // ✅ Cari data yang akan diupdate
+                var data = await _applicationDbContext.Nosokomials
+                    .FirstOrDefaultAsync(n => n.NosokomialId == id && (n.IsDelete == false || n.IsDelete == null));
+
+                if (data == null)
+                    return NotFound(new { message = $"Data Nosokomial dengan ID {id} tidak ditemukan." });
+
+                // ==================================================
+                // 🔹 Fungsi Upload TTD ke Flask
+                // ==================================================
+                async Task<(string? filePath, Guid? ttdId, string? fileName)> UploadTTDAsync(IFormFile file, string prefix, string folderTarget)
+                {
+                    if (file == null || file.Length == 0) return (null, null, null);
+
+                    var maxSize = 1 * 1024 * 1024; // 1MB
+                    var allowedExtensions = new[] { ".jpg", ".jpeg" };
+                    var ext = Path.GetExtension(file.FileName).ToLower();
+
+                    if (file.Length > maxSize)
+                        throw new Exception($"Ukuran file {prefix} terlalu besar! Maksimal 1MB.");
+
+                    if (!allowedExtensions.Contains(ext))
+                        throw new Exception($"Format file {prefix} tidak valid! Gunakan JPG atau JPEG.");
+
+                    var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
+                    var fileName = $"{getUserActive.FullName}_{safeTime}_{prefix}{ext}";
+                    var filePath = $"/{folderTarget}/{fileName}";
+
+                    using var client = new HttpClient();
+                    using var ms = new MemoryStream();
+                    await file.CopyToAsync(ms);
+                    ms.Position = 0;
+
+                    using var content = new MultipartFormDataContent
+            {
+                {
+                    new StreamContent(ms)
+                    {
+                        Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType) }
+                    },
+                    "file",
+                    fileName
+                },
+                { new StringContent(folderTarget), "folderTarget" }
+            };
+
+                    var response = await client.PostAsync(_uploadUrl, content);
+                    if (!response.IsSuccessStatusCode)
+                        throw new Exception($"Gagal upload file {prefix} ke server Flask (Status: {response.StatusCode}).");
+
+                    // 💾 Simpan metadata ke MasterTTD
+                    var newTTD = new MasterTTD
+                    {
+                        TTDId = Guid.NewGuid(),
+                        UserActiveId = userActiveId,
+                        TTDPath = filePath,
+                        CreateDateTime = DateTimeOffset.UtcNow,
+                        CreateBy = userActiveId
+                    };
+
+                    _applicationDbContext.MasterTTDs.Add(newTTD);
+                    await _applicationDbContext.SaveChangesAsync();
+
+                    return (filePath, newTTD.TTDId, fileName);
+                }
+
+                // ==================================================
+                // ✅ Upload ulang tanda tangan Kepala Ruangan
+                // ==================================================
+                string? ttdKepalaPath = data.TTDKepalaRuangan;
+
+                if (vm != null)
+                {
+                    var result = await UploadTTDAsync(vm.TTDKepalaRuanganFile, "TTDKepalaRuangan", "TTDUser");
+                    ttdKepalaPath = result.filePath;
+                }
+
+                // ==================================================
+                // ✅ Update data Nosokomial (hanya TTD Kepala Ruangan)
+                // ==================================================
+                data.TTDKepalaRuangan = ttdKepalaPath;
+                data.UpdateBy = userActiveId;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
+
+                _applicationDbContext.Nosokomials.Update(data);
+                int resultSave = await _applicationDbContext.SaveChangesAsync();
+
+                // Kirim notifikasi via SignalR
+                await _hubContext.Clients.All.SendAsync("Nosokomial changed", new
+                {
+                    Action = "changed",
+                    id = data.NosokomialId
+                });
+
+                if (resultSave > 0)
+                {
+                    return Ok(new
+                    {
+                        message = "Update TTD Kepala Ruangan Berhasil || 200 OK",
+                        ttdKepalaPath
+                    });
+                }
+
+                return StatusCode(500, new { message = "Data tidak berhasil diperbarui di database." });
+            }
+            catch (DbUpdateException dbEx)
+            {
+                return StatusCode(500, new { message = $"Gagal update data: {dbEx.InnerException?.Message}" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
@@ -523,6 +664,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
         public IActionResult Paged(
         int page = 1,
         int perPage = 10,
+        Guid? kunjunganId = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -573,7 +715,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
             //    );
             //}
 
-                             //// **Filter berdasarkan tanggal**
+            // filter based on kunjungan id 
+            if (kunjunganId.HasValue)
+            {
+                query = query.Where(u=>u.KunjunganId == kunjunganId.Value);
+            }
+
+            //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
             {
                 DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();

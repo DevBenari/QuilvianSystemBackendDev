@@ -201,7 +201,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     // ✅ Pemeriksaan Lab (Billing Lab)
                     // ================================================================
                     var daftarPemeriksaanLab = group
-                        .Where(x => x.lp != null)
+                        .Where(x => x.lp != null && !x.lp.IsDelete)
                         .GroupBy(x => x.lp.PemeriksaanLabId)
                         .Select(g =>
                         {
@@ -228,7 +228,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     // ✅ Daftar Obat (non racikan)
                     // ================================================================
                     var daftarObat = group
-                        .Where(x => x.dr != null && x.o != null && (x.dr.IsRacikan == false || x.dr.IsRacikan == null))
+                        .Where(x => x.dr != null && x.o != null && (x.dr.IsRacikan == false || x.dr.IsRacikan == null) && !x.dr.IsDelete)
                         .GroupBy(x => x.dr.DetailResepId)
                         .Select(g =>
                         {
@@ -237,6 +237,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
                             return new
                             {
+                                ResepId = item.dr.ResepId,
                                 item.dr.ObatId,
                                 item.o.ObatName,
                                 Qty = billing?.QtyItem ?? item.dr.Qty,
@@ -256,7 +257,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     // ✅ Daftar Tindakan
                     // ================================================================
                     var daftarTindakan = group
-                        .Where(x => x.to != null && x.t != null)
+                        .Where(x => x.to != null && x.t != null && !x.to.IsDelete)
                         .GroupBy(x => x.to.TindakanKunjunganId)
                         .Select(g =>
                         {

@@ -10,5 +10,6 @@
         public string? ShiftTime { get; set; }       // Pagi / Siang / Malam
         public string? Keterangan { get; set; }      // Catatan tambahan
         public string? NamaPerawat { get; set; }     // Nama perawat
+        public string? Diagnosa { get; set; }
     }
 }
