@@ -4,10 +4,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
@@ -28,13 +30,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly ILogger<PenerimaanDarahController> _logger;
         private readonly IWebHostEnvironment _env;
+        private readonly IHubContext<PenerimaanDarahHub> _hubContext;
 
         public PenerimaanDarahController(
             ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ILogger<PenerimaanDarahController> logger,
-            IWebHostEnvironment env
+            IWebHostEnvironment env,
+            IHubContext<PenerimaanDarahHub> hubContext
         )
         {
             _context = context;
@@ -42,6 +46,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             _signInManager = signInManager;
             _logger = logger;
             _env = env;
+            _hubContext = hubContext;                   
         }
 
         private async Task<string> GenerateBatchCode()
@@ -311,10 +316,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 // ===============================================================
                 await trx.CommitAsync();
 
+                await _hubContext.Clients.All.SendAsync("Penerimaan Darah Created", new
+                {
+                    Action = "create",
+                    id = penerimaan.PenerimaanDarahId
+                });
+
                 return Created("", new
                 {
                     message = "Penerimaan darah, stock darah, dan batch berhasil disimpan (201 Created)"
                 });
+
+
             }
             catch (Exception ex)
             {
@@ -368,6 +381,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 data.UpdateDateTime = DateTime.UtcNow;
 
                 await _context.SaveChangesAsync();
+
+                await _hubContext.Clients.All.SendAsync("Penerimaan Darah changed", new
+                {
+                    Action = "changed",
+                    id = data.PenerimaanDarahId
+                });
 
                 return Ok(new
                 {

@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.ViewModels;
 using QuilvianSystemBackendDev.Models;
@@ -22,13 +24,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly ILogger<PenerimaDarahPasienController> _logger;
         private readonly IWebHostEnvironment _env;
+        private readonly IHubContext<PenerimaanDarahPasienHub> _hubContext;
 
         public PenerimaDarahPasienController(
             ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ILogger<PenerimaDarahPasienController> logger,
-            IWebHostEnvironment env
+            IWebHostEnvironment env,
+            IHubContext<PenerimaanDarahPasienHub> hubContext
         )
         {
             _context = context;
@@ -36,6 +40,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             _signInManager = signInManager;
             _logger = logger;
             _env = env;
+            _hubContext = hubContext;
         }
 
         [HttpGet]
@@ -132,6 +137,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 _context.PenerimaDarahPasiens.Add(data);
                 await _context.SaveChangesAsync();
 
+                await _hubContext.Clients.All.SendAsync("Penerimaan Darah pasien Created", new
+                {
+                    Action = "create",
+                    id = data.PenerimaanDarahPasienId
+                });
+
                 return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
             }
             catch (Exception ex)
@@ -168,6 +179,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 _context.PenerimaDarahPasiens.Update(data);
                 await _context.SaveChangesAsync();
+
+                await _hubContext.Clients.All.SendAsync("Penerimaan Darah pasien Changed", new
+                {
+                    Action = "changed",
+                    id = data.PenerimaanDarahPasienId
+                });
 
                 return Ok(new { message = "Update Data Berhasil || 200 OK" });
             }
