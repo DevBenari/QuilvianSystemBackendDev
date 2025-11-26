@@ -38,5 +38,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public decimal? PenguranganBBHD { get; set; }
         public decimal? PenambahanBBHD { get; set; }
         public decimal? BBKering {  get; set; }
+        public decimal? LingkarLenganAtas {  get; set; }
     }
 }

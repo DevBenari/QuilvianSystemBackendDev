@@ -188,7 +188,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.BBPostHD,
                             a.PenambahanBBHD,
                             a.PenguranganBBHD,
-                            a.BBKering
+                            a.BBKering,
+                            a.LingkarLenganAtas
                         }).ToList();
 
             if (!data.Any())
@@ -293,6 +294,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     PenguranganBBHD = vm.BBPreHD - vm.BBPostHD,
                     PenambahanBBHD =  vm.BBPostHD - vm.BBPreHD,
                     BBKering = vm.BBKering,
+                    LingkarLenganAtas = vm.LingkarLenganAtas,
 
                     CreateBy = createBy,
                     CreateDateTime = DateTimeOffset.UtcNow
@@ -430,6 +432,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     data.PenguranganBBHD = vm.BBPreHD - vm.BBPostHD;
                     data.PenambahanBBHD = vm.BBPostHD - vm.BBPreHD;
                     data.BBKering = vm.BBKering;
+                data.LingkarLenganAtas = vm.LingkarLenganAtas;
 
                 data.UpdateBy = modifyBy;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -747,7 +750,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 a.BBPostHD,
                                 a.PenambahanBBHD,
                                 a.PenguranganBBHD,
-                                a.BBKering
+                                a.BBKering,
+                                a.LingkarLenganAtas
                             };
 
                 //**Filter berdasarkan search(Perbaikan agar bisa mencari 1 huruf)**

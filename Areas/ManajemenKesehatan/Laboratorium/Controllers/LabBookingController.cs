@@ -1523,6 +1523,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                  {
                      b.BookingLabId,
                      b.KunjunganId,
+                     k.AsalKunjungan,
                      b.PasienId,
                      p.NamaLengkap,
                      p.NoRekamMedis,
