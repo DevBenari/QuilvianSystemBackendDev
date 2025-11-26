@@ -7,6 +7,7 @@ using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.HRD.Pengajuan.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Gizi.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
@@ -288,6 +289,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<AssesmentEdukasiDetail> AssesmentEdukasiDetails { get; set; }
         public DbSet<ResikoJatuh> ResikoJatuhs { get; set; }
         public DbSet<PenilaianResikoJatuhDetail> PenilaianResikoJatuhDetails { get; set; }
+        public DbSet<CatatanPerawat> CatatanPerawats { get; set; }
         #endregion
 
         #region Farmasi
@@ -350,6 +352,10 @@ namespace QuilvianSystemBackendDev.Repositories
         #region HemodialisaDD
         public DbSet<HemodialisaHasil> HemodialisaHasils { get; set; }
         public DbSet<MonitoringHD> MonitoringHDs { get; set; }
+        #endregion
+
+        #region Gizi
+        public DbSet<GiziDiagnosa> GiziDiagnosas {  get; set; }
         #endregion
     }
 }
