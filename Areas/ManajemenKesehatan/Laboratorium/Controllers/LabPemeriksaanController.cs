@@ -51,99 +51,115 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         {
             try
             {
-                // 🔹 1️⃣ Ambil semua data utama (Lab Pemeriksaan + Kategori + Lab + User)
+                // 🔹 Hitung offset (paging)
+                int skip = (page - 1) * perPage;
+
+                // 🔹 Query data utama pemeriksaan
                 var mainData = await (
                     from a in _applicationDbContext.LabPemeriksaans
                     join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId into userGroup
                     from u in userGroup.DefaultIfEmpty()
+
                     join k in _applicationDbContext.LabKategoriPemeriksaans on a.KategoriPemeriksaanId equals k.KategoriPemeriksaanId into kategoriGroup
                     from k in kategoriGroup.DefaultIfEmpty()
+
                     join l in _applicationDbContext.Labs on k.LabId equals l.LabId into labGroup
                     from l in labGroup.DefaultIfEmpty()
+
                     where a.IsDelete == false || a.IsDelete == null
-                    select new
+
+                    orderby a.CreateDateTime descending
+
+                    select new 
                     {
-                        a.PemeriksaanLabId,
-                        a.NamaPemeriksaan,
-                        a.HargaPemeriksaan,
-                        a.KodePemeriksaan,
-                        a.Keterangan,
-                        a.CreateDateTime,
-                        a.CreateBy,
+                        PemeriksaanLabId = a.PemeriksaanLabId,
+                        NamaPemeriksaan = a.NamaPemeriksaan,
+                        HargaPemeriksaan = a.HargaPemeriksaan,
+                        KodePemeriksaan = a.KodePemeriksaan,
+                        Keterangan = a.Keterangan,
+                        CreateDateTime = a.CreateDateTime,
+                        CreateBy = a.CreateBy,
                         CreateByName = u != null ? u.FullName : null,
+
                         KategoriPemeriksaanId = a.KategoriPemeriksaanId,
                         NamaKategori = k != null ? k.NamaKategori : null,
                         KodeKategoriPemeriksaan = k != null ? k.KodeKategori : null,
-                        LabId = l != null ? l.LabId : (Guid?)null,
+
+                        LabId = l != null ? l.LabId : null,
                         NamaLab = l != null ? l.NamaLab : null,
-                        KodeLab = l != null ? l.KodeKategori : null
+                        KodeLab = l != null ? l.KodeKategori : null,
+                        TarifKelas = new List<object>()
+
                     }
-                ).OrderByDescending(x => x.CreateDateTime)
-                 .ToListAsync();
+                )
+                .Skip(skip)
+                .Take(perPage)
+                .ToListAsync();
 
                 if (!mainData.Any())
                 {
-                    return NotFound(new { message = "Belum ada data Lab Pemeriksaan yang tersedia. || 404 Not Found" });
+                    return NotFound(new { message = "Belum ada data Lab Pemeriksaan. || 404 Not Found" });
                 }
 
-                // 🔹 2️⃣ Ambil semua TarifKelas sekaligus (hanya satu query)
-                var allTarifKelas = await (
+                // 🔹 Ambil list PemeriksaanLabId
+                var pemeriksaanIds = mainData.Select(x => x.PemeriksaanLabId).ToList();
+
+                // 🔹 Ambil semua tarif kelas sekaligus (1 query)
+                var tarifKelas = await (
                     from tk in _applicationDbContext.TarifKelass
                     join kl in _applicationDbContext.Kelass on tk.KelasId equals kl.KelasId
-                    select new
+                    where pemeriksaanIds.Contains((Guid)tk.PemeriksaanLabId)
+                    select new 
                     {
-                        tk.PemeriksaanLabId,
-                        tk.KelasId,
-                        tk.TarifKelasId,
-                        tk.TarifDokter,
-                        tk.TarifRs,
-                        tk.TarifJp,
-                        tk.TarifBahp,
-                        tk.TarifLain,
-                        tk.TarifTotal,
-                        tk.KSO,
-                        NamaKelas = kl.NamaKelas
+                        TarifKelasId = tk.TarifKelasId,
+                        KelasId = tk.KelasId,
+                        NamaKelas = kl.NamaKelas,
+
+                        TarifDokter = tk.TarifDokter,
+                        TarifRs = tk.TarifRs,
+                        TarifJp = tk.TarifJp,
+                        TarifBahp = tk.TarifBahp,
+                        TarifLain = tk.TarifLain,
+                        TarifTotal = tk.TarifTotal,
+                        KSO = tk.KSO,
+
+                        // mapping PM Lab Id
+                        PemeriksaanLabId = tk.PemeriksaanLabId
                     }
                 ).ToListAsync();
 
-                // 🔹 3️⃣ Gabungkan TarifKelas dengan Pemeriksaan berdasarkan PemeriksaanLabId
-                var result = mainData.Select(r => new
+                // 🔹 Gabungkan tarif kelas ke pemeriksaan
+                foreach (var item in mainData)
                 {
-                    r.PemeriksaanLabId,
-                    r.NamaPemeriksaan,
-                    r.HargaPemeriksaan,
-                    r.KodePemeriksaan,
-                    r.Keterangan,
-                    r.CreateDateTime,
-                    r.CreateBy,
-                    r.CreateByName,
-                    r.KategoriPemeriksaanId,
-                    r.NamaKategori,
-                    r.KodeKategoriPemeriksaan,
-                    r.LabId,
-                    r.NamaLab,
-                    r.KodeLab,
+                    var tk = tarifKelas
+                        .Where(x => x.PemeriksaanLabId == item.PemeriksaanLabId)
+                        .Cast<object>()
+                        .ToList();
 
-                    // 🔹 Ambil semua tarif kelas yang cocok
-                    TarifKelas = allTarifKelas
-                        .Where(t => t.PemeriksaanLabId == r.PemeriksaanLabId)
-                        .ToList()
-                }).ToList();
+                    item.TarifKelas.AddRange(tk);
+                }
 
-                // ✅ Return hasil akhir
+                // 🔹 Total data (tanpa paging)
+                int totalData = await _applicationDbContext.LabPemeriksaans
+                    .CountAsync(a => a.IsDelete == false || a.IsDelete == null);
+
                 return Ok(new
                 {
                     status = "success",
                     message = "Data retrieved successfully",
-                    total = result.Count,
-                    data = result
+                    page,
+                    perPage,
+                    totalData,
+                    totalFiltered = mainData.Count,
+                    data = mainData
                 });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+                return StatusCode(500, new { message = $"Internal Server Error: {ex.Message}" });
             }
         }
+
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetLabPemeriksaanById(Guid id)
