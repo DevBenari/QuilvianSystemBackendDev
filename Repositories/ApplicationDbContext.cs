@@ -214,6 +214,8 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<JenisUser> JenisUsers { get; set; }
         public DbSet<JenisPembayaran> JenisPembayarans { get; set; }
         public DbSet<Pembayaran> Pembayarans { get; set; }
+        public DbSet<Fingerprint> Fingerprints { get; set; }
+
 
         #endregion
 

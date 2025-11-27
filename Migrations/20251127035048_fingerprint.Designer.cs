@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -12,9 +13,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251127035048_fingerprint")]
+    partial class fingerprint
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -3041,204 +3043,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.HasKey("EvaluasiGiziId");
 
                     b.ToTable("GiziEvaluasis");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Gizi.Models.GiziKonsultasi", b =>
-                {
-                    b.Property<Guid?>("KonsultasiGiziId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("CreateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("DeleteBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("DeleteDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Diagnosa")
-                        .HasColumnType("text");
-
-                    b.Property<string>("DiagnosaHasil")
-                        .HasColumnType("text");
-
-                    b.Property<Guid?>("DokterKonsulenId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("DokterPerujukId")
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("IsDelete")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Keterangan")
-                        .HasColumnType("text");
-
-                    b.Property<Guid?>("KunjunganId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("PasienId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("TglKonsultasi")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<List<Guid>>("TindakanId")
-                        .HasColumnType("uuid[]");
-
-                    b.Property<Guid>("UpdateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("UpdateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("KonsultasiGiziId");
-
-                    b.ToTable("GiziKonsultasis");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Gizi.Models.Recall", b =>
-                {
-                    b.Property<Guid>("RecallId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("AnjuranDiet")
-                        .HasColumnType("text");
-
-                    b.Property<string>("CatatanPerawat")
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("CreateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("DeleteBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("DeleteDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("DietesienId")
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("IsDelete")
-                        .HasColumnType("boolean");
-
-                    b.Property<Guid?>("KunjunganId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("PasienId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("SikapPasienDiet")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("TglRecall")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("UpdateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("UpdateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("RecallId");
-
-                    b.ToTable("Recalls");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Gizi.Models.RecallDetail", b =>
-                {
-                    b.Property<Guid>("DetailRecallId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal?>("BanyakGR")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("BanyakUTR")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("CA")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("CHO")
-                        .HasColumnType("numeric");
-
-                    b.Property<Guid>("CreateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("DeleteBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("DeleteDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<decimal?>("FE")
-                        .HasColumnType("numeric");
-
-                    b.Property<bool>("IsDelete")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool?>("IsRDA")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool?>("IsRataRataHarian")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool?>("IsSelingan")
-                        .HasColumnType("boolean");
-
-                    b.Property<decimal?>("KAL")
-                        .HasColumnType("numeric");
-
-                    b.Property<string>("Keterangan")
-                        .HasColumnType("text");
-
-                    b.Property<decimal?>("Lemak")
-                        .HasColumnType("numeric");
-
-                    b.Property<string>("MakananSelingan")
-                        .HasColumnType("text");
-
-                    b.Property<decimal?>("Protein")
-                        .HasColumnType("numeric");
-
-                    b.Property<Guid>("RecallId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("UpdateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("UpdateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<decimal?>("VitA")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("VitB1")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("VitC")
-                        .HasColumnType("numeric");
-
-                    b.Property<string>("WaktuMakanan")
-                        .HasColumnType("text");
-
-                    b.HasKey("DetailRecallId");
-
-                    b.ToTable("RecallDetails");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.Models.HemodialisaHasil", b =>
