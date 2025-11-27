@@ -163,8 +163,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // Cek Duplikasi
-                var isDuplicate = _applicationDbContext.Identitass
-                    .Any(c => c.KodeIdentitas == kode && c.JenisIdentitas == vm.JenisIdentitas);
+                var isDuplicate = await _applicationDbContext.Identitass
+                    .AnyAsync(c =>c.JenisIdentitas.ToLower().Trim() == vm.JenisIdentitas.ToLower().Trim());
 
                 if (isDuplicate)
                 {
@@ -228,6 +228,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                // Cek Duplikasi
+                var isDuplicate = await _applicationDbContext.Identitass
+                    .AnyAsync(c => c.JenisIdentitas.ToLower().Trim() == vm.JenisIdentitas.ToLower().Trim() && c.IdentitasId != id);
+
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
                 }
 
                 // **Update Data Pasien**

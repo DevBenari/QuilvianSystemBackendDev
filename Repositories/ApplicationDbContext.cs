@@ -1,20 +1,22 @@
-﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+﻿using System.Text.Json;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
 using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers;
 using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models;
-using QuilvianSystemBackendDev.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
 using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.HRD.Pengajuan.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Gizi.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Models;
-using NuGet.Packaging.Core;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
+using QuilvianSystemBackendDev.Models;
 
 namespace QuilvianSystemBackendDev.Repositories
 {
@@ -27,6 +29,37 @@ namespace QuilvianSystemBackendDev.Repositories
             {
                 optionsBuilder.UseNpgsql("Host=160.20.104.98;Port=5432;Database=QuilvianSystemBackendDev;Username=sa;Password=Admin@1234;");
             }
+        }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            var jsonOptions = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = null,   // ❗ jangan camelCase
+                //Converters =
+                //{
+                //    new TimeOnlyEfConverter(),
+                //    new NullableTimeOnlyEfConverter()
+                //}
+            };
+
+            modelBuilder.Entity<HemodialisaHasil>()
+                .Property(x => x.LaporanNaCl)
+                .HasColumnType("jsonb")
+                .HasConversion(
+                    v => JsonSerializer.Serialize(v, jsonOptions),
+                    v => JsonSerializer.Deserialize<Dictionary<string, LaporanNaCLEntry>>(v, jsonOptions)
+                );
+
+            modelBuilder.Entity<HemodialisaHasil>()
+                .Property(x => x.UF)
+                .HasColumnType("jsonb")
+                .HasConversion(
+                    v => JsonSerializer.Serialize(v, jsonOptions),
+                    v => JsonSerializer.Deserialize<Dictionary<string, decimal>>(v, jsonOptions)
+                );
         }
 
         public DbSet<UserActive> UserActives { get; set; }
@@ -258,6 +291,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<AssesmentEdukasiDetail> AssesmentEdukasiDetails { get; set; }
         public DbSet<ResikoJatuh> ResikoJatuhs { get; set; }
         public DbSet<PenilaianResikoJatuhDetail> PenilaianResikoJatuhDetails { get; set; }
+        public DbSet<CatatanPerawat> CatatanPerawats { get; set; }
         #endregion
 
         #region Farmasi
@@ -294,6 +328,8 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<PemeriksaanAsuransi> PemeriksaanAsuransis { get; set; }
         public DbSet<LabHasil> LabHasils { get; set; }
         public DbSet<LabHasilDetail> LabHasilDetails { get; set; }
+        public DbSet<PenerimaDarahPasien> PenerimaDarahPasiens { get; set; }
+        public DbSet<DarahDetail> DarahDetails { get; set; }
         #endregion
 
         #region IGD
@@ -302,6 +338,28 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<IGDPasienDetail> IGDPasienDetails { get; set; }
         public DbSet<IGDTindakanDetail> IGDTindakanDetails { get;set; } 
         public DbSet<IGDAssessmentAwal> IGDAssessmentAwals { get;set; } 
+        public DbSet<Nosokomial> Nosokomials { get; set; }
+        public DbSet<PindahRuangan> PindahRuangans { get; set; }
+        public DbSet<InfeksiADP> InfeksiADPs { get; set; }
+        public DbSet<InfeksiLO> InfeksiLOs { get; set; }
+        public DbSet<InfeksiSK> InfeksiSKs { get; set; }
+        public DbSet<InfeksiTD> InfeksiTDs { get; set; }
+        public DbSet<InfeksiDetail> InfeksiDetails { get; set; }
+        public DbSet<UlkusDebitus> UlkusDebituss { get; set; }
+        public DbSet<Pneumonia> Pneumonias { get; set; }
+        public DbSet<KulturDarah> KulturDarahs { get; set; }
+
+        #endregion
+
+        #region HemodialisaDD
+        public DbSet<HemodialisaHasil> HemodialisaHasils { get; set; }
+        public DbSet<MonitoringHD> MonitoringHDs { get; set; }
+        #endregion
+
+        #region Gizi
+        public DbSet<GiziDiagnosa> GiziDiagnosas {  get; set; }
+        public DbSet<GiziEvaluasi> GiziEvaluasis {  get; set; }
+        public DbSet<GiziAssessment> GiziAssessments {  get; set; }
         #endregion
     }
 }

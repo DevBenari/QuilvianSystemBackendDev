@@ -110,7 +110,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.IsTubuhTidakSeimbang,
                             a.IsMenggunakanPenopang,
                             a.KeluhanTambahan,
-                            a.IsFarmakologi
+                            a.IsFarmakologi,
+                            a.KeadaanUmum,
+                            a.IsKonjungtiva,
+                            a.Ekstremitas
 
                         }).OrderByDescending(a => a.CreateDateTime); ;
 
@@ -219,7 +222,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.IsTubuhTidakSeimbang,
                             a.IsMenggunakanPenopang,
                             a.KeluhanTambahan,
-                            a.IsFarmakologi
+                            a.IsFarmakologi,
+                            a.KeadaanUmum,
+                            a.IsKonjungtiva,
+                            a.Ekstremitas
                         }).ToList();
 
             if (!data.Any())
@@ -339,6 +345,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     IsMenggunakanPenopang = vm.IsMenggunakanPenopang,
                     KeluhanTambahan = vm.KeluhanTambahan,
                     IsFarmakologi = vm.IsFarmakologi,
+                    KeadaanUmum = vm.KeadaanUmum,
+                    IsKonjungtiva = vm.IsKonjungtiva,
+                    Ekstremitas = vm.Ekstremitas
                 };
 
                 _applicationDbContext.PainAssessments.Add(data);
@@ -484,6 +493,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.IsMenggunakanPenopang = vm.IsMenggunakanPenopang;
                 data.KeluhanTambahan = vm.KeluhanTambahan;
                 data.IsFarmakologi = vm.IsFarmakologi;
+                data.KeadaanUmum = vm.KeadaanUmum;
+                data.IsKonjungtiva = vm.IsKonjungtiva;
+                data.Ekstremitas = vm.Ekstremitas;
 
                 data.UpdateBy = modifyBy;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -855,7 +867,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 a.IsTubuhTidakSeimbang,
                                 a.IsMenggunakanPenopang,
                                 a.KeluhanTambahan,
-                                a.IsFarmakologi
+                                a.IsFarmakologi,
+                                a.KeadaanUmum,
+                                a.IsKonjungtiva,
+                                a.Ekstremitas
                             };
 
                 // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**

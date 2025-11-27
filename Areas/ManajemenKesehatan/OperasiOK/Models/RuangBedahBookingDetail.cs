@@ -9,11 +9,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Models
         public Guid DetailBookingBedahId { get; set; }            // Generate Otomatis
         public Guid? BookingRuanganBedahId { get; set; }           // Relasi ke Booking Ruangan Bedah
         public Guid? JenisOperasiId { get; set; }                  // Relasi ke Jenis Operasi
-        public Guid? TindakanId { get; set; }                      // Relasi ke Tindakan
-
+        public List<Guid>? TindakanId { get; set; } = new List<Guid>();                   // Relasi ke Tindakan
         // Menampung banyak UserId (dokter, asisten, perawat, dsb)
         public List<Guid>? UserActiveId { get; set; } = new List<Guid>();
-
         public decimal? PersentaseTindakan { get; set; }           // Dalam Persentase
         public decimal? DiskonDokter { get; set; }                 // Dalam Persentase
         public string? Keterangan { get; set; }

@@ -1,18 +1,21 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using System.Text;
+using System.Text.Json;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.HubSignalR;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.HubSignalR;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Services;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.HubSignalR;
+using QuilvianSystemBackendDev.Helpers;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
-using System.Text;
-using QuilvianSystemBackendDev.Helpers;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.HubSignalR;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,7 +34,16 @@ builder.Services.Configure<Microsoft.AspNetCore.Mvc.JsonOptions>(options =>
     options.JsonSerializerOptions.Converters.Add(new DateOnlyJsonConverter());
     options.JsonSerializerOptions.Converters.Add(new TimeOnlyJsonConverter());
     options.JsonSerializerOptions.Converters.Add(new NullableDateOnlyJsonConverter());
+    options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase; // ❗ penting
+    options.JsonSerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.CamelCase;
 });
+
+builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =>
+{
+    options.SerializerOptions.Converters.Add(new TimeOnlyJsonConverter());
+    options.SerializerOptions.Converters.Add(new NullableTimeOnlyJsonConverter());
+});
+
 
 // Tambahkan layanan CORS
 builder.Services.AddCors(options =>
@@ -209,13 +221,32 @@ builder.Services.AddSignalR();
 var app = builder.Build();
 
 // Konfigurasi SignalR
+// signal R kunjungan
 app.MapHub<KunjunganHub>("/hubs/kunjungan");
-app.MapHub<ResepHub>("/hubs/resep");
 app.MapHub<VitalSignHub>("/hubs/vitalsign");
 app.MapHub<SOAPHub>("/hubs/soap");
 app.MapHub<PainAssesmentHub>("/hubs/painassessment");
+
+// signal R farmasi
+app.MapHub<ResepHub>("/hubs/resep");
+app.MapHub<ResepDetailHub>("/hubs/resepdetail");
+app.MapHub<DetailPenerimaanHub>("/hubs/detailpenerimaan");
+app.MapHub<DetailPermintaanHub>("/hubs/detailpermintaan");
+app.MapHub<PenerimaanUnitHub>("/hubs/penerimaanunit");
+app.MapHub<PermintaanUnitHub>("/hubs/permintaanunit");
+
+// signal R Ranap
 app.MapHub<SuratPengantarRanapHub>("/hubs/suratpengantarranap");
 
+// signal R IGD
+app.MapHub<IGDTriageHub>("/hubs/IGDtriage");
+app.MapHub<PindahRuanganHub>("/hubs/pindahruangan");
+app.MapHub<IGDAssessmentAwalHub>("/hubs/IGDassessmentawal");
+app.MapHub<NosokomialHub>("/hubs/nosokomial");
+
+// signal R Laboratorium
+app.MapHub<LabBookingHub>("/hubs/labbooking");
+app.MapHub<LabBookingDetailHub>("/hubs/labbookingdetail");
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

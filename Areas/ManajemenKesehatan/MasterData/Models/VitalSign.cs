@@ -30,5 +30,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? FrekuensiMonitoring {  get; set; }
         public string? Kesadaran {  get; set; }
         public bool? IsNadiTeraba {  get; set; }
+        public bool? IsRegularNadi {  get; set; }
+        public decimal? Respirasi {  get; set; }
+        public string? PolaNapas {  get; set; }
+        public decimal? BBPreHD { get; set; }
+        public decimal? BBPostHD { get;set; }
+        public decimal? PenguranganBBHD { get; set; }
+        public decimal? PenambahanBBHD { get; set; }
+        public decimal? BBKering {  get; set; }
+        public decimal? LingkarLenganAtas {  get; set; }
+        public Guid? PengkajianScoreId { get; set; }
+        public decimal? ScoreGizi {  get; set; }
     }
 }

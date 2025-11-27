@@ -164,7 +164,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // **Cek Duplikasi**
                 bool isDuplicate = _applicationDbContext.TipeUsers
-                                    .Any(c => c.NamaTipeUser.ToLower() == tu.NamaTipeUser.Trim().ToLower());
+                                    .Any(c => c.NamaTipeUser.ToLower().Trim() == tu.NamaTipeUser.Trim().ToLower() && !c.IsDelete);
 
                 if (isDuplicate)
                 {
@@ -245,7 +245,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Cek duplikasi nama tipe user lain (kecuali data ini sendiri)
                 bool isDuplicate = _applicationDbContext.TipeUsers
-                    .Any(c => c.NamaTipeUser.ToLower() == tu.NamaTipeUser.Trim().ToLower() && c.TipeUserId != id);
+                    .Any(c => c.NamaTipeUser.ToLower() == tu.NamaTipeUser.Trim().ToLower() && c.TipeUserId != id && !c.IsDelete);
 
                 if (isDuplicate)
                 {

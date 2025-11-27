@@ -4,12 +4,14 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
@@ -31,19 +33,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
         private readonly ILogger<DarahPermintaanController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly IHubContext<DarahPermintaanHub> _hubContext;
 
         public DarahPermintaanController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ILogger<DarahPermintaanController> logger,
-            IWebHostEnvironment webHostEnvironment)
+            IWebHostEnvironment webHostEnvironment,
+            IHubContext<DarahPermintaanHub> hubContext)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+            _hubContext = hubContext;
         }
         private DateTime? TryParseTanggalToUtc(string tanggal)
         {
@@ -408,6 +413,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 _applicationDbContext.DarahPermintaans.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
+                await _hubContext.Clients.All.SendAsync("Permintaan Darah Created", new
+                {
+                    Action = "create",
+                    id = data.BankDarahId
+                });
+
                 if (result > 0)
                 {
                     return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
@@ -484,6 +495,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 _applicationDbContext.DarahPermintaans.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
+
+                await _hubContext.Clients.All.SendAsync("Permintaan Darah Changed", new
+                {
+                    Action = "changed",
+                    id = data.BankDarahId
+                });
 
                 if (result > 0)
                 {

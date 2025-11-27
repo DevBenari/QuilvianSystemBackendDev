@@ -90,7 +90,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              CreateByName = u.FullName,
                              a.StockBatchId,
                              a.KodeBatch,
-                             a.ObatId,
+                             a.ItemId,
                              a.ExpiredDate,
                              a.Keterangan,
                          }).OrderByDescending(a => a.CreateDateTime);
@@ -185,7 +185,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 {
                     StockBatchId = Guid.NewGuid(),
                     KodeBatch = vm.KodeBatch,
-                    ObatId = vm.ObatId,
+                    ItemId = vm.ItemId,
                     ExpiredDate = vm.ExpiredDate,
                     Keterangan = vm.Keterangan,
 
@@ -254,7 +254,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
                 // **Update Data**
                 data.KodeBatch = vm.KodeBatch;
-                data.ObatId = vm.ObatId;
+                data.ItemId = vm.ItemId;
                 data.ExpiredDate = vm.ExpiredDate;
                 data.Keterangan = vm.Keterangan;
 
@@ -370,7 +370,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              CreateByName = u.FullName,
                              a.StockBatchId,
                              a.KodeBatch,
-                             a.ObatId,
+                             a.ItemId,
                              a.ExpiredDate,
                              a.Keterangan,
                          });
@@ -387,7 +387,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             // filter berdasarkan kunjungan id
             if (obatId.HasValue)
             {
-                query = query.Where(u => u.ObatId == obatId.Value);
+                query = query.Where(u => u.ItemId == obatId.Value);
             }
 
             //// **Filter berdasarkan tanggal**

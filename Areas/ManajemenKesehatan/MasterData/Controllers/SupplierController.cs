@@ -72,6 +72,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             Note = a.Note,
                             IsPKS = a.IsPKS,
                             IsActive = a.IsActive,
+                            a.KhususUnit
                         };
 
             // Hitung total data sebelum paginasi
@@ -171,7 +172,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Cek Duplikasi
                 var isDuplicate = _applicationDbContext.Suppliers
-                    .Any(c => c.SupplierCode == kode && c.SupplierName == vm.SupplierName && c.IsDelete == false);
+                    .Any(c => c.SupplierName.ToLower().Trim() == vm.SupplierName.ToLower().Trim() && c.IsDelete == false);
 
                 if (isDuplicate)
                 {
@@ -198,6 +199,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         Note = vm.Note,
                         IsPKS = vm.IsPKS,
                         IsActive = vm.IsActive,
+                        KhususUnit = vm.KhususUnit,
                         CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = UserActiveId
                     };
@@ -248,6 +250,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
+                // Cek Duplikasi
+                var isDuplicate = _applicationDbContext.Suppliers
+                    .Any(c => c.SupplierName.ToLower().Trim() == vm.SupplierName.ToLower().Trim() && c.IsDelete == false && c.SupplierId!=id);
+
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
+                }
+
                 // **Update Data Pasien**
                 data.SupplierName = vm.SupplierName;
                 data.ContactPerson = vm.ContactPerson;
@@ -261,6 +272,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.Note = vm.Note;
                 data.IsPKS = vm.IsPKS;
                 data.IsActive = vm.IsActive;
+                data.KhususUnit = vm.KhususUnit;
 
                 data.UpdateBy = UserActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -353,6 +365,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             Note = a.Note,
                             IsPKS = a.IsPKS,
                             IsActive = a.IsActive,
+                            a.KhususUnit
                         };
 
             // Filter berdasarkan search

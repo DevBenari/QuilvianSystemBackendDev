@@ -186,6 +186,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         ps.NamaKontakDarurat,
                         ps.NoTeleponDarurat,
                         ps.Email,
+                        AlamatDomisili = ps != null ? ps.AlamatDomisili :null,
+                        AlamatDarurat = ps != null ? ps.AlamatDarurat : null,
+                        AlamatIdentitas = ps != null ? ps.AlamatIdentitas : null,
                         Umur = ps != null ? HitungUmurLengkap(ps.TanggalLahir) : null,
                         a.NoRekamMedis,
                         a.TipePasien,
@@ -199,6 +202,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.IsPresent,
                         a.Antrian,
                         a.IsFinishedKasir,
+                        TglMasukKunjungan = a.TglMasuk,
+                        a.CaraMasukRS,
+                        a.KondisiKeluar,
                         d.NmDokter,
                         gambardokter = !string.IsNullOrEmpty(d.FotoName)
                             ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
@@ -258,6 +264,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         r.NamaKontakDarurat,
                         r.NoTeleponDarurat,
                         r.Email,
+                        r.AlamatIdentitas,
+                        r.AlamatDomisili,
+                        r.AlamatDarurat,
                         r.Umur,
                         r.NoRekamMedis,
                         r.TipePasien,
@@ -270,6 +279,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         r.IsScreening,
                         r.IsPresent,
                         r.Antrian,
+                        TglMasukKunjungan = r.TglMasuk,
+                        r.CaraMasukRS,
+                        r.KondisiKeluar,
                         r.IsFinishedKasir,
                         r.NmDokter,
                         r.gambardokter,
@@ -415,6 +427,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         ps.NamaKontakDarurat,
                         ps.NoTeleponDarurat,
                         ps.Email,
+                        AlamatDomisili = ps != null ? ps.AlamatDomisili : null,
+                        AlamatDarurat = ps != null ? ps.AlamatDarurat : null,
+                        AlamatIdentitas = ps != null ? ps.AlamatIdentitas : null,
                         Umur = ps != null ? HitungUmurLengkap(ps.TanggalLahir) : null,
                         a.NoRekamMedis,
                         a.TipePasien,
@@ -427,6 +442,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.IsScreening,
                         a.IsPresent,
                         a.Antrian,
+                        TglMasukKunjungan = a.TglMasuk,
+                        a.CaraMasukRS,
+                        a.KondisiKeluar,
                         a.IsFinishedKasir,
                         gambardokter = !string.IsNullOrEmpty(d.FotoName)
                             ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
@@ -616,7 +634,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     IsPresent = true,
                     IsFinishedKasir = false,
                     Antrian = nomorAntrianFormatted, // null jika IGD
-                    AsalKunjungan = request.AsalKunjungan
+                    AsalKunjungan = request.AsalKunjungan,
+                    TglMasuk = request.TglMasuk,
+                    CaraMasukRS = request.CaraMasukRS,
+                    KondisiKeluar = request.KondisiKeluar,
                 };
 
                 _applicationDbContext.Kunjungans.Add(newKunjungan);
@@ -970,6 +991,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 existing.TipePembayaran = request.TipePembayaran;
                 existing.AsalKunjungan = request.AsalKunjungan;
                 existing.Antrian = nomorAntrianFormatted;
+                existing.TglMasuk = request.TglMasuk;
+                existing.CaraMasukRS = request.CaraMasukRS;
+                existing.KondisiKeluar = request.KondisiKeluar;
                 existing.UpdateDateTime = DateTimeOffset.UtcNow;
                 existing.UpdateBy = UserActiveId;
 
@@ -1359,6 +1383,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         ps.NamaKontakDarurat,
                         ps.NoTeleponDarurat,
                         ps.Email,
+                        AlamatDomisili = ps != null ? ps.AlamatDomisili : null,
+                        AlamatDarurat = ps != null ? ps.AlamatDarurat : null,
+                        AlamatIdentitas = ps != null ? ps.AlamatIdentitas : null,
                         Umur = ps != null ? HitungUmurLengkap(ps.TanggalLahir) : null,
                         a.NoRekamMedis,
                         a.TipePasien,
@@ -1371,6 +1398,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.IsScreening,
                         a.IsPresent,
                         a.Antrian,
+                        TglMasukKunjungan = a.TglMasuk,
+                        a.CaraMasukRS,
+                        a.KondisiKeluar,
                         a.IsFinishedKasir,
                         d.NmDokter,
                         gambardokter = !string.IsNullOrEmpty(d.FotoName)
@@ -1515,6 +1545,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         r.NoTeleponDarurat,
                         r.Email,
                         r.Umur,
+                        r.AlamatDarurat,
+                        r.AlamatDomisili,
+                        r.AlamatIdentitas,
                         r.NoRekamMedis,
                         r.TipePasien,
                         r.TipePembayaran,
@@ -1525,6 +1558,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         r.IsFinished,
                         r.IsScreening,
                         r.IsPresent,
+                        TglMasukKunjungan = r.TglMasuk,
+                        r.CaraMasukRS,
+                        r.KondisiKeluar,
                         r.Antrian,
                         r.IsFinishedKasir,
                         r.NmDokter,

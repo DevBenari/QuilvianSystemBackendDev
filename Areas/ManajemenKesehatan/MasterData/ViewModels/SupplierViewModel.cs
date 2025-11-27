@@ -6,6 +6,7 @@
         public string ContactPerson { get; set; }
         public Guid? TermOfPaymentId { get; set; }
         public string? TermOfPaymentName { get; set; }
+        public string? KhususUnit { get; set; }
         public int Ppn { get; set; }
         public string Address { get; set; }
         public string? City { get; set; }

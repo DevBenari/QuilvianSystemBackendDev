@@ -142,7 +142,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Cek jika sudah ada data yang sama berdasarkan KodeKandungan
                 var isDuplicate = await _applicationDbContext.Kandungans
-                    .AnyAsync(k => k.KodeKandungan == KodeKandungan && k.IsDelete == false);
+                    .AnyAsync(k => k.NamaKandungan.ToLower().Trim() == kandunganViewModel.NamaKandungan.ToLower().Trim() && k.IsDelete == false);
 
                 if (isDuplicate)
                 {

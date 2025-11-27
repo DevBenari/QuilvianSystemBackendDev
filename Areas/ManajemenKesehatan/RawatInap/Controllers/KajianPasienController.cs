@@ -9,6 +9,7 @@ using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.ViewModels;
@@ -92,12 +93,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                                 a.EdukasiKepada,
                                 a.Keterangan,
                                 a.TglKajian,
+                                a.TglTindakLanjut,
+                                a.IndikasiTindakLanjut,
+                                a.KamarId,
+                                a.NamaTempat,
+                                a.PenyampaianEdukasi,
                                 a.CreateBy,
                                 a.CreateDateTime,
                                 a.KajianUtamaPengkajian,
                                 a.CurrentMedicationId,
                                 CreateByName = u.FullName,
-                                k.NoRekamMedis
+                                k.NoRekamMedis,
                             };
 
             var totalRows = await baseQuery.CountAsync();
@@ -181,6 +187,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 x.TglKajian,
                 x.KajianUtamaPengkajian,
                 x.CurrentMedicationId,
+                x.TglTindakLanjut,
+                x.IndikasiTindakLanjut,
+                x.KamarId,
+                x.NamaTempat,
+                x.PenyampaianEdukasi,
                 // 🔹 List Pain Assessment (semua record terkait)
                 PainAssessments = painLookup[x.KunjunganId].ToList(),
                 // 🔹 Info surat pengantar (ambil 1 saja karena jarang multiple)
@@ -383,6 +394,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     EdukasiKepada = vm.EdukasiKepada,
                     Keterangan = vm.Keterangan,
                     TglKajian = DateTime.UtcNow, // Atau gunakan TglKajian dari VM jika ada
+                    TglTindakLanjut = vm.TglTindakLanjut,
+                    IndikasiTindakLanjut = vm.IndikasiTindakLanjut,
+                    KamarId = vm.KamarId,
+                    NamaTempat = vm.NamaTempat,
+                    PenyampaianEdukasi = vm.PenyampaianEdukasi,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow
                 };
@@ -474,7 +490,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 data.EdukasiKepada = vm.EdukasiKepada;
                 data.Keterangan = vm.Keterangan;
                 data.TglKajian = DateTime.UtcNow; // Atau gunakan TglKajian dari VM jika ada
-
+                data.TglTindakLanjut = vm.TglTindakLanjut;
+                    data.IndikasiTindakLanjut = vm.IndikasiTindakLanjut;
+                    data.KamarId = vm.KamarId;
+                    data.NamaTempat = vm.NamaTempat;
+                    data.PenyampaianEdukasi = vm.PenyampaianEdukasi;
 
 
                 data.UpdateBy = userActiveId;
@@ -626,6 +646,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.TglKajian,
                              a.KajianUtamaPengkajian,
                              a.CurrentMedicationId,
+                             a.TglTindakLanjut,
+                             a.IndikasiTindakLanjut,
+                             a.KamarId,
+                             a.NamaTempat,
+                             a.PenyampaianEdukasi,
 
                              // info pain assessment
                              pa.InheritedDisease,

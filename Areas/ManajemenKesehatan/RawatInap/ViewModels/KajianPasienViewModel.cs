@@ -28,5 +28,10 @@
         public DateTime? TglKajian { get; set; }
         public string? KajianUtamaPengkajian { get; set; }
         public Guid? CurrentMedicationId { get; set; }
+        public DateTime? TglTindakLanjut { get; set; }
+        public string? IndikasiTindakLanjut { get; set; }
+        public Guid? KamarId { get; set; }
+        public string? NamaTempat { get; set; }
+        public string? PenyampaianEdukasi { get; set; }
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Linq;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
@@ -98,6 +99,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                              a.TipeAnastesiId,
                              a.TipeASAId,
                              a.KelompokPasienAnastesi,
+                             a.PetugasId,
+                             a.NoOrder,
+                             a.StatusOperasi,
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -150,50 +154,46 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
         public async Task<IActionResult> Create([FromBody] RuangBedahBookingViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
-            {
                 return BadRequest(new { message = "Data tidak valid." });
-            }
+
+            using var transaction = await _applicationDbContext.Database.BeginTransactionAsync();
 
             try
             {
-                // **Cek koneksi ke database**
-                if (!_applicationDbContext.Database.CanConnect())
-                {
-                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
-                }
-
-                // **Ambil User ID dari JWT Claims**
+                // ================================
+                // ✔ Ambil User Login
+                // ================================
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(emailLogin))
-                {
-                    return Unauthorized(new { message = "User tidak terautentikasi!" });
-                }
 
-                var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
+                if (string.IsNullOrEmpty(emailLogin))
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+
                 if (getUserActive == null)
-                {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-                }
+
                 var userActiveId = getUserActive.UserActiveId;
 
-                //// **Cek Duplikasi**
+                // set today
+                var today = DateTime.UtcNow.Date;
+                // ================================
+                // ✔ Cek Duplikasi Booking
+                // ================================
                 bool isDuplicate = await _applicationDbContext.RuangBedahBookings
-                                    .AnyAsync(c => c.KunjunganId == vm.KunjunganId && c.IsDelete==false);
+                    .AnyAsync(c => c.KunjunganId == vm.KunjunganId && c.IsDelete == false && c.CreateDateTime==today);
 
                 if (isDuplicate)
-                {
-                    return Conflict(new { message = "Kunjungan ini telah booking ruang bedah" });
-                }
+                    return Conflict(new { message = "Kunjungan ini telah booking ruang bedah untuk hari ini" });
 
-                // ==========================================================
-                // ✅ Generate Nomor Order
-                // ==========================================================
-                // Prefix: 3 huruf, tergantung dari isBedahBersalin
-                string prefix = (bool)vm.isBedahBersalin ? "OBS" : "BED"; // OBS = Obstetri, BED = Bedah umum
-                var today = DateTime.UtcNow.Date;
+
+                // ================================
+                // ✔ Generate NoOrder
+                // ================================
+                string prefix = (bool)vm.isBedahBersalin ? "OBS" : "BED";
                 string datePart = today.ToString("yyyyMMdd");
 
-                // Cari order terakhir hari ini dengan prefix sesuai
                 var lastOrderToday = await _applicationDbContext.RuangBedahBookings
                     .Where(x => x.CreateDateTime.Date == today && x.NoOrder.StartsWith(prefix))
                     .OrderByDescending(x => x.NoOrder)
@@ -203,18 +203,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
 
                 if (lastOrderToday != null)
                 {
-                    // Format: BED202511070001 → ambil angka terakhir
-                    string lastNumberPart = lastOrderToday.NoOrder.Substring(prefix.Length + 8); // lewati prefix + tanggal (8)
+                    string lastNumberPart = lastOrderToday.NoOrder.Substring(prefix.Length + 8);
                     if (int.TryParse(lastNumberPart, out int lastNum))
                         nextNumber = lastNum + 1;
                 }
 
                 string noOrder = $"{prefix}{datePart}{nextNumber:D4}";
 
-                // **Buat Data Baru**
-                var data = new RuangBedahBooking
+
+                // ================================
+                // ✔ Insert Parent
+                // ================================
+                var parentId = Guid.NewGuid();
+
+                var parent = new RuangBedahBooking
                 {
-                    BookingRuanganBedahId = Guid.NewGuid(),
+                    BookingRuanganBedahId = parentId,
                     KunjunganId = vm.KunjunganId,
                     PasienId = vm.PasienId,
                     TglOperasi = vm.TglOperasi,
@@ -239,7 +243,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                     isSuratIzinOperasi = false,
                     Keterangan = vm.Keterangan,
                     TipeTindakan = vm.TipeTindakan,
-                    IsTerverifikasi = false,
                     TipeOperasi = vm.TipeOperasi,
                     JamPerpanjangan = vm.JamPerpanjangan,
                     BiayaPerpanjangan = vm.BiayaPerpanjangan,
@@ -249,137 +252,202 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                     KelompokPasienAnastesi = vm.KelompokPasienAnastesi,
                     PetugasId = vm.PetugasId,
                     NoOrder = noOrder,
+                    StatusOperasi = vm.StatusOperasi,
 
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
 
-                // **Simpan ke Database**
-                _applicationDbContext.RuangBedahBookings.Add(data);
-                int result = await _applicationDbContext.SaveChangesAsync();
+                await _applicationDbContext.RuangBedahBookings.AddAsync(parent);
+                await _applicationDbContext.SaveChangesAsync();
 
-                if (result > 0)
+
+                // ================================
+                // ✔ Insert Child (Details)
+                // ================================
+                if (vm.Details != null && vm.Details.Any())
                 {
-                    return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
+                    List<RuangBedahBookingDetail> detailList = new();
+
+                    foreach (var d in vm.Details)
+                    {
+                        var detail = new RuangBedahBookingDetail
+                        {
+                            DetailBookingBedahId = Guid.NewGuid(),
+                            BookingRuanganBedahId = parentId,
+                            JenisOperasiId = d.JenisOperasiId,
+                            TindakanId = d.TindakanId,       // ← ARRAY<Guid>
+                            UserActiveId = d.UserActiveId,   // ← ARRAY<Guid>
+                            PersentaseTindakan = d.PersentaseTindakan,
+                            DiskonDokter = d.DiskonDokter,
+                            Keterangan = d.Keterangan,
+                            CreateBy = userActiveId,
+                            CreateDateTime = DateTimeOffset.UtcNow
+                        };
+
+                        detailList.Add(detail);
+                    }
+
+                    await _applicationDbContext.RuangBedahBookingDetails.AddRangeAsync(detailList);
+                    await _applicationDbContext.SaveChangesAsync();
                 }
-                else
+
+
+                // ================================
+                // ✔ Commit Transaction
+                // ================================
+                await transaction.CommitAsync();
+
+
+                // ================================
+                // ✔ Response Output
+                // ================================
+                return Ok(new
                 {
-                    return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
-                }
-            }
-            catch (DbUpdateException dbEx)
-            {
-                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+                    message = "Booking ruang bedah + detail berhasil ditambahkan",
+                    BookingRuanganBedahId = parentId,
+                    NoOrder = noOrder,
+                    JumlahDetail = vm.Details?.Count ?? 0
+                });
             }
             catch (Exception ex)
             {
+                await transaction.RollbackAsync();
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
 
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] RuangBedahBookingViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
-            {
                 return BadRequest(new { message = "Data tidak valid." });
-            }
+
+            using var transaction = await _applicationDbContext.Database.BeginTransactionAsync();
 
             try
             {
-                // **Cek koneksi ke database**
-                if (!_applicationDbContext.Database.CanConnect())
-                {
-                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
-                }
-
-                // **Ambil User ID dari JWT Claims**
+                // ================================
+                // ✔ Ambil User Login
+                // ================================
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(emailLogin))
-                {
-                    return Unauthorized(new { message = "User tidak terautentikasi!" });
-                }
 
-                var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
+                if (string.IsNullOrEmpty(emailLogin))
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+
                 if (getUserActive == null)
-                {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-                }
+
                 var userActiveId = getUserActive.UserActiveId;
 
-                // **Cek apakah data ada**
-                var existingData = await _applicationDbContext.RuangBedahBookings
-                                        .FirstOrDefaultAsync(c => c.BookingRuanganBedahId == id && (c.IsDelete == false || c.IsDelete == null));
 
-                if (existingData == null)
+                // ================================
+                // ✔ Ambil Parent
+                // ================================
+                var parent = await _applicationDbContext.RuangBedahBookings
+                    .FirstOrDefaultAsync(x => x.BookingRuanganBedahId == id && x.IsDelete == false);
+
+                if (parent == null)
+                    return NotFound(new { message = "Data Booking Ruang Bedah tidak ditemukan!" });
+
+
+                // ================================
+                // ✔ Update Parent
+                // ================================
+                parent.KunjunganId = vm.KunjunganId;
+                parent.PasienId = vm.PasienId;
+                parent.TglOperasi = vm.TglOperasi;
+                parent.WaktuOperasi = vm.WaktuOperasi;
+                parent.RuangTindakan = vm.RuangTindakan;
+                parent.DiagnosaDokter1 = vm.DiagnosaDokter1;
+                parent.DiagnosaDokter2 = vm.DiagnosaDokter2;
+                parent.DiagnosaDokter3 = vm.DiagnosaDokter3;
+                parent.DiagnosaDokter4 = vm.DiagnosaDokter4;
+                parent.DiagnosaDokter5 = vm.DiagnosaDokter5;
+                parent.BeratBadan = vm.BeratBadan;
+                parent.DokterOperator1 = vm.DokterOperator1;
+                parent.DokterOperator2 = vm.DokterOperator2;
+                parent.DokterOperator3 = vm.DokterOperator3;
+                parent.DokterOperator4 = vm.DokterOperator4;
+                parent.DokterOperator5 = vm.DokterOperator5;
+                parent.RencanaTindakanOperasi = vm.RencanaTindakanOperasi;
+                parent.JenisAnastesi = vm.JenisAnastesi;
+                parent.TypeOK = vm.TypeOK;
+                parent.PenandaanLokasiOperasi = vm.PenandaanLokasiOperasi;
+                parent.isBedahBersalin = vm.isBedahBersalin;
+                parent.Keterangan = vm.Keterangan;
+                parent.TipeTindakan = vm.TipeTindakan;
+                parent.TipeOperasi = vm.TipeOperasi;
+                parent.JamPerpanjangan = vm.JamPerpanjangan;
+                parent.BiayaPerpanjangan = vm.BiayaPerpanjangan;
+                parent.KamarRecoveryId = vm.KamarRecoveryId;
+                parent.TipeAnastesiId = vm.TipeAnastesiId;
+                parent.TipeASAId = vm.TipeASAId;
+                parent.KelompokPasienAnastesi = vm.KelompokPasienAnastesi;
+                parent.PetugasId = vm.PetugasId;
+                parent.StatusOperasi = vm.StatusOperasi;
+
+                parent.UpdateBy = userActiveId;
+                parent.UpdateDateTime = DateTimeOffset.UtcNow;
+
+                await _applicationDbContext.SaveChangesAsync();
+
+
+                // ================================
+                // ✔ Update Detail Tanpa Tambah/Hapus
+                // ================================
+                if (vm.Details != null && vm.Details.Any())
                 {
-                    return NotFound(new { message = "Data tidak ditemukan." });
+                    foreach (var d in vm.Details)
+                    {
+                        var detail = await _applicationDbContext.RuangBedahBookingDetails
+                            .FirstOrDefaultAsync(x => x.DetailBookingBedahId == d.DetailBookingBedahId);
+
+                        if (detail == null)
+                            return BadRequest(new
+                            {
+                                message = $"Detail dengan ID {d.DetailBookingBedahId} tidak ditemukan!"
+                            });
+
+                        // Update detail
+                        detail.JenisOperasiId = d.JenisOperasiId;
+                        detail.TindakanId = d.TindakanId;
+                        detail.UserActiveId = d.UserActiveId;
+                        detail.PersentaseTindakan = d.PersentaseTindakan;
+                        detail.DiskonDokter = d.DiskonDokter;
+                        detail.Keterangan = d.Keterangan;
+
+                        detail.UpdateBy = userActiveId;
+                        detail.UpdateDateTime = DateTimeOffset.UtcNow;
+                    }
+
+                    await _applicationDbContext.SaveChangesAsync();
                 }
 
-                bool isDuplicate = await _applicationDbContext.RuangBedahBookings
-                    .AnyAsync(c => c.KunjunganId == vm.KunjunganId &&c.BookingRuanganBedahId!=id && c.IsDelete == false);
 
-                if (isDuplicate)
+                // ================================
+                // ✔ Commit Transaction
+                // ================================
+                await transaction.CommitAsync();
+
+                return Ok(new
                 {
-                    return Conflict(new { message = "Kunjungan ini telah booking ruang bedah" });
-                }
-
-                // **Update field yang diubah**
-                existingData.KunjunganId = vm.KunjunganId;
-                existingData.PasienId = vm.PasienId;
-                existingData.TglOperasi = vm.TglOperasi;
-                existingData.WaktuOperasi = vm.WaktuOperasi;
-                existingData.RuangTindakan = vm.RuangTindakan;
-                existingData.DiagnosaDokter1 = vm.DiagnosaDokter1;
-                existingData.DiagnosaDokter2 = vm.DiagnosaDokter2;
-                existingData.DiagnosaDokter3 = vm.DiagnosaDokter3;
-                existingData.DiagnosaDokter4 = vm.DiagnosaDokter4;
-                existingData.DiagnosaDokter5 = vm.DiagnosaDokter5;
-                existingData.BeratBadan = vm.BeratBadan;
-                existingData.DokterOperator1 = vm.DokterOperator1;
-                existingData.DokterOperator2 = vm.DokterOperator2;
-                existingData.DokterOperator3 = vm.DokterOperator3;
-                existingData.DokterOperator4 = vm.DokterOperator4;
-                existingData.DokterOperator5 = vm.DokterOperator5;
-                existingData.RencanaTindakanOperasi = vm.RencanaTindakanOperasi;
-                existingData.JenisAnastesi = vm.JenisAnastesi;
-                existingData.TypeOK = vm.TypeOK;
-                existingData.PenandaanLokasiOperasi = vm.PenandaanLokasiOperasi;
-                existingData.isBedahBersalin = vm.isBedahBersalin;
-                existingData.TipeTindakan = vm.TipeTindakan;
-                existingData.TipeOperasi = vm.TipeOperasi;
-                existingData.JamPerpanjangan = vm.JamPerpanjangan;
-                existingData.BiayaPerpanjangan = vm.BiayaPerpanjangan;
-                existingData.KamarRecoveryId = vm.KamarRecoveryId;
-                existingData.TipeAnastesiId = vm.TipeAnastesiId;
-                existingData.TipeASAId = vm.TipeASAId;
-                existingData.KelompokPasienAnastesi = vm.KelompokPasienAnastesi;
-                existingData.Keterangan = vm.Keterangan;
-
-                existingData.UpdateBy = userActiveId;
-                existingData.UpdateDateTime = DateTimeOffset.UtcNow;
-
-                // **Simpan ke Database**
-                int result = await _applicationDbContext.SaveChangesAsync();
-
-                if (result > 0)
-                {
-                    return Ok(new { message = "Update Data Berhasil || 200 OK" });
-                }
-                else
-                {
-                    return StatusCode(500, new { message = "Tidak ada perubahan yang disimpan ke database." });
-                }
-            }
-            catch (DbUpdateException dbEx)
-            {
-                return StatusCode(500, new { message = $"Gagal menyimpan perubahan: {dbEx.InnerException?.Message}" });
+                    message = "Update Booking Ruang Bedah + Detail berhasil",
+                    BookingRuanganBedahId = id,
+                    JumlahDetailDiupdate = vm.Details?.Count ?? 0
+                });
             }
             catch (Exception ex)
             {
+                await transaction.RollbackAsync();
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
 
         [HttpPut("{id}/is-IzinOperasi")]
         public async Task<IActionResult> UpdateIzinOperasi(Guid id, [FromBody] bool request)
@@ -535,91 +603,83 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
 
         [HttpGet("paged")]
         public IActionResult Paged(
-         int page = 1,
-         int perPage = 10,
-         Guid? kunjunganId = null,
-         string? orderBy = "CreateDateTime",
-         string? sortDirection = "desc",
-         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                        DateTime? startDate = null,
-         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                        DateTime? endDate = null,
-         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+             int page = 1,
+             int perPage = 10,
+             Guid? kunjunganId = null,
+             string? orderBy = "CreateDateTime",
+             string? sortDirection = "desc",
+             DateTime? startDate = null,
+             DateTime? endDate = null,
+             PeriodeFilter? periode = null)
         {
+            // ============================
+            // 1️⃣ QUERY PARENT
+            // ============================
+            var parentQuery =
+                from a in _applicationDbContext.RuangBedahBookings
+                join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId into uGroup
+                from u in uGroup.DefaultIfEmpty()
+                where (a.IsDelete == false || a.IsDelete == null)
+                select new
+                {
+                    a.BookingRuanganBedahId,
+                    a.CreateDateTime,
+                    a.CreateBy,
+                    CreateByName = u.FullName,
+                    a.KunjunganId,
+                    a.PasienId,
+                    a.TglOperasi,
+                    a.WaktuOperasi,
+                    a.RuangTindakan,
+                    a.DiagnosaDokter1,
+                    a.DiagnosaDokter2,
+                    a.DiagnosaDokter3,
+                    a.DiagnosaDokter4,
+                    a.DiagnosaDokter5,
+                    a.BeratBadan,
+                    a.DokterOperator1,
+                    a.DokterOperator2,
+                    a.DokterOperator3,
+                    a.DokterOperator4,
+                    a.DokterOperator5,
+                    a.RencanaTindakanOperasi,
+                    a.JenisAnastesi,
+                    a.TypeOK,
+                    a.PenandaanLokasiOperasi,
+                    a.isSuratIzinOperasi,
+                    a.isBedahBersalin,
+                    a.Keterangan,
+                    a.IsTerverifikasi,
+                    a.TglSelesai,
+                    a.TipeTindakan,
+                    a.TipeOperasi,
+                    a.JamPerpanjangan,
+                    a.BiayaPerpanjangan,
+                    a.KamarRecoveryId,
+                    a.TipeAnastesiId,
+                    a.TipeASAId,
+                    a.KelompokPasienAnastesi,
+                    a.PetugasId,
+                    a.NoOrder,
+                    a.StatusOperasi
+                };
 
-            // Query data
-            var query = (from a in _applicationDbContext.RuangBedahBookings
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false || a.IsDelete == null
-                         select new
-                         {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = u.FullName,
-                             a.BookingRuanganBedahId,
-                             a.KunjunganId,
-                             a.PasienId,
-                             a.TglOperasi,
-                             a.WaktuOperasi,
-                             a.RuangTindakan,
-                             a.DiagnosaDokter1,
-                             a.DiagnosaDokter2,
-                             a.DiagnosaDokter3,
-                             a.DiagnosaDokter4,
-                             a.DiagnosaDokter5,
-                             a.BeratBadan,
-                             a.DokterOperator1,
-                             a.DokterOperator2,
-                             a.DokterOperator3,
-                             a.DokterOperator4,
-                             a.DokterOperator5,
-                             a.RencanaTindakanOperasi,
-                             a.JenisAnastesi,
-                             a.TypeOK,
-                             a.PenandaanLokasiOperasi,
-                             a.isSuratIzinOperasi,
-                             a.isBedahBersalin,
-                             a.Keterangan,
-                             a.IsTerverifikasi,
-                             a.TglSelesai,
-                             a.TipeTindakan,
-                             a.TipeOperasi,
-                             a.JamPerpanjangan,
-                             a.BiayaPerpanjangan,
-                             a.KamarRecoveryId,
-                             a.TipeAnastesiId,
-                             a.TipeASAId,
-                             a.KelompokPasienAnastesi,
-                         });
+            // ============================
+            // 2️⃣ FILTER
+            // ============================
 
-            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-            //if (!string.IsNullOrWhiteSpace(search))
-            //{
-            //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-            //    query = query.Where(u =>
-            //        EF.Functions.ILike(u.NamaDiskon, search)
-            //    );
-            //}
+            if (kunjunganId.HasValue)
+                parentQuery = parentQuery.Where(x => x.KunjunganId == kunjunganId.Value);
 
-            // filter bedasarkan kunjungan id
-            if (kunjunganId.HasValue )
-            {
-                query = query.Where(u=>u.KunjunganId == kunjunganId.Value);
-            }
-
-            //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
             {
                 DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
                 DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
-
-                query = query.Where(u =>
-                    u.CreateDateTime >= startUtc &&
-                    u.CreateDateTime <= endUtc);
+                parentQuery = parentQuery.Where(x =>
+                    x.CreateDateTime >= startUtc &&
+                    x.CreateDateTime <= endUtc);
             }
 
-            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
             if (periode.HasValue)
             {
                 DateTime today = DateTime.UtcNow.Date;
@@ -627,79 +687,88 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                 switch (periode)
                 {
                     case PeriodeFilter.Today:
-                        query = query.Where(u => u.CreateDateTime.Date == today);
+                        parentQuery = parentQuery.Where(u => u.CreateDateTime.Date == today);
                         break;
                     case PeriodeFilter.ThisWeek:
-                        query = query.Where(u =>
+                        parentQuery = parentQuery.Where(u =>
                             u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date <= today
-                        );
-                        break;
-                    case PeriodeFilter.LastWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)
-                        );
-                        break;
-                    case PeriodeFilter.ThisMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month &&
-                            u.CreateDateTime.Year == today.Year
-                        );
-                        break;
-                    case PeriodeFilter.LastMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month - 1 &&
-                            u.CreateDateTime.Year == today.Year
-                        );
-                        break;
-                    case PeriodeFilter.ThisYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
-                        break;
-                    case PeriodeFilter.LastYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
-                        break;
-                    case PeriodeFilter.Last3Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
-                        break;
-                    case PeriodeFilter.Last6Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
+                            u.CreateDateTime.Date <= today);
                         break;
                 }
             }
 
-            // Sorting Data dengan cara yang lebih aman
-            query = sortDirection?.ToLower() == "desc"
+            // ============================
+            // 3️⃣ SORT
+            // ============================
+            parentQuery = sortDirection?.ToLower() == "desc"
                 ? orderBy switch
                 {
-                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    _ => query.OrderByDescending(u => u.CreateDateTime)
+                    "CreateByName" => parentQuery.OrderByDescending(x => x.CreateByName),
+                    _ => parentQuery.OrderByDescending(x => x.CreateDateTime)
                 }
                 : orderBy switch
                 {
-                    "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    _ => query.OrderBy(u => u.CreateDateTime)
+                    "CreateByName" => parentQuery.OrderBy(x => x.CreateByName),
+                    _ => parentQuery.OrderBy(x => x.CreateDateTime)
                 };
 
-            // Pagination
-            var totalRows = query.Count();
-            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
+            // ============================
+            // 4️⃣ PAGING PARENT
+            // ============================
+            int totalRows = parentQuery.Count();
+            int totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
 
-            if (rows.Count == 0 && page > totalPages)
+            var pagedParents = parentQuery
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToList();
+
+            if (!pagedParents.Any())
+                return Ok(new
+                {
+                    status = "success",
+                    data = new { Rows = new List<object>(), TotalRows = 0 }
+                });
+
+            var parentIds = pagedParents.Select(x => x.BookingRuanganBedahId).ToList();
+
+            // ============================
+            // 5️⃣ LOAD DETAIL SEKALI SAJA (ANTI-N+1)
+            // ============================
+            var details =
+                (from d in _applicationDbContext.RuangBedahBookingDetails
+                 where parentIds.Contains((Guid)d.BookingRuanganBedahId)
+                 select new
+                 {
+                     d.DetailBookingBedahId,
+                     d.BookingRuanganBedahId,
+                     d.JenisOperasiId,
+                     d.TindakanId,
+                     d.UserActiveId,
+                     d.PersentaseTindakan,
+                     d.DiskonDokter,
+                     d.Keterangan
+                 }).ToList();
+
+            // ============================
+            // 6️⃣ MERGE PARENT + DETAIL
+            // ============================
+            var merged = pagedParents.Select(p => new
             {
-                return NotFound(new { message = "Page not found." });
-            }
+                Parent = p,
+                Details = details.Where(d => d.BookingRuanganBedahId == p.BookingRuanganBedahId).ToList()
+            });
 
+            // ============================
+            // 7️⃣ RETURN
+            // ============================
             return Ok(new
             {
                 status = "success",
                 message = "Data retrieved successfully",
                 data = new
                 {
-                    Rows = rows,
+                    Rows = merged,
                     TotalRows = totalRows,
                     CurrentPage = page,
                     PerPage = perPage,
@@ -707,6 +776,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                 }
             });
         }
+
 
 
     }

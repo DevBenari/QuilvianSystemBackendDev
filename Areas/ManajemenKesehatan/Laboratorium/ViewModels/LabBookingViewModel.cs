@@ -22,6 +22,11 @@
         public string? NoOrder { get; set; }
         public string? NoLab { get; set; }
         public string? NoPA { get; set; }
-        public bool? StatusBookingLab { get; set; }
+        //public bool? StatusBookingLab { get; set; }
+        public string? AlasanPembatalan { get;set; }
+        public string? ProsesBooking { get; set; }
+        public string? TindakLanjut { get; set; }
+        public string? HasilPenunjangLab { get; set; }
+        public string? AnjuranDiet { get; set; }
     }
 }

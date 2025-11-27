@@ -266,7 +266,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 bool isDuplicate = _applicationDbContext.Obats
-                    .Any(c => c.ObatCode == kode && c.ObatName.ToLower() == vm.ObatName.ToLower() && c.IsDelete == false);
+                    .Any(c => c.ObatName.ToLower() == vm.ObatName.ToLower() && c.IsDelete == false);
 
                 if (isDuplicate)
                 {

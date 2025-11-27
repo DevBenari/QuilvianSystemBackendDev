@@ -55,7 +55,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         select new
                         {
                             s.StockDarahId,
-                            s.GolonganDarahId,
+                            s.DarahDetailId,
                             s.TipeKomponenId,
                             s.Rhesus,
                             s.Golongan,
@@ -126,7 +126,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var data = new StockDarah
                 {
                     StockDarahId = Guid.NewGuid(),
-                    GolonganDarahId = vm.GolonganDarahId,
+                    DarahDetailId = vm.DarahDetailId,
                     TipeKomponenId = vm.TipeKomponenId,
                     Rhesus = vm.Rhesus,
                     Golongan = vm.Golongan,
@@ -169,7 +169,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 var user = _context.UserActives.FirstOrDefault(u => u.Email == emailLogin);
 
-                data.GolonganDarahId = vm.GolonganDarahId;
+                data.DarahDetailId = vm.DarahDetailId;
                 data.TipeKomponenId = vm.TipeKomponenId;
                 data.Rhesus = vm.Rhesus;
                 data.Golongan = vm.Golongan;
@@ -245,7 +245,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             select new
                             {
                                 s.StockDarahId,
-                                s.GolonganDarahId,
+                                s.DarahDetailId,
                                 s.TipeKomponenId,
                                 s.Rhesus,
                                 s.Golongan,

@@ -357,8 +357,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
 
                 // Cek Duplikasi
-                var isDuplicate = _context.Dokters
-                    .Any(c => c.KdDokter == kode && c.NmDokter == vm.NmDokter);
+                var isDuplicate = await _context.Dokters
+                    .AnyAsync(c =>c.NmDokter.ToLower().Trim() == vm.NmDokter.ToLower().Trim() && c.IsDelete==false);
 
                 // **Validasi & Simpan Foto Profil**
                 string fotoPath = null;

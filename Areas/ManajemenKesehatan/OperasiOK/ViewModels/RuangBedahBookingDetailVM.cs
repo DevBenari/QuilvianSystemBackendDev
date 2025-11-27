@@ -5,7 +5,7 @@
         public Guid? DetailBookingBedahId { get; set; }
         public Guid? BookingRuanganBedahId { get; set; }
         public Guid? JenisOperasiId { get; set; }
-        public Guid? TindakanId { get; set; }
+        public List<Guid>? TindakanId { get; set; } = new();
         public List<Guid>? UserActiveId { get; set; } = new();
         public decimal? PersentaseTindakan { get; set; }
         public decimal? DiskonDokter { get; set; }

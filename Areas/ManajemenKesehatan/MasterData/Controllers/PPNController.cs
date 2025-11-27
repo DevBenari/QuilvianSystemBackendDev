@@ -227,6 +227,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
+                //// **Cek Duplikasi**
+                bool isDuplicate = _applicationDbContext.PPNs
+                                    .Any(c => c.Persentase == vm.Persentase && c.IsDelete == false && c.PpnId != id);
+
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Persentase untuk PPN ini telah ada" });
+                }
+
                 // **Update Data**
                 data.Persentase = vm.Persentase;
                 data.IsAktif = vm.IsAktif;

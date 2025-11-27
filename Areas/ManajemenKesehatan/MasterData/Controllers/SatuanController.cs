@@ -142,7 +142,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Cek jika sudah ada data yang sama berdasarkan KodeSatuan
                 var isDuplicate = await _applicationDbContext.Satuans
-                    .AnyAsync(s => s.KodeSatuan == KodeSatuan);
+                    .AnyAsync(s => s.NamaSatuan.ToLower().Trim() == satuanViewModel.NamaSatuan.ToLower().Trim() && !s.IsDelete );
 
                 if (isDuplicate)
                 {
@@ -208,7 +208,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Cek duplikasi berdasarkan NamaSatuan
                 bool isDuplicate = await _applicationDbContext.Satuans
-                    .AnyAsync(b => b.NamaSatuan.ToLower() == bentukObat.NamaSatuan.ToLower() && b.SatuanId != id);
+                    .AnyAsync(b => b.NamaSatuan.ToLower() == bentukObat.NamaSatuan.ToLower() && b.SatuanId != id && !b.IsDelete);
 
                 if (isDuplicate)
                 {
