@@ -14,6 +14,7 @@ using QuilvianSystemBackendDev.Areas.HRD.Pengajuan.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Models;
+using NuGet.Packaging.Core;
 
 namespace QuilvianSystemBackendDev.Repositories
 {
@@ -180,6 +181,8 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<JenisUser> JenisUsers { get; set; }
         public DbSet<JenisPembayaran> JenisPembayarans { get; set; }
         public DbSet<Pembayaran> Pembayarans { get; set; }
+        public DbSet<Fingerprint> Fingerprints { get; set; }
+
 
         #endregion
 
