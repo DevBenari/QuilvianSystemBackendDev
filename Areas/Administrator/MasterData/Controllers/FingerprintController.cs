@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models;
@@ -9,7 +10,8 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    //[Authorize]
+    //[EnableCors("AllowSpecific")]
     public class FingerprintController : Controller
     {
         private readonly ApplicationDbContext _db;
