@@ -36,6 +36,7 @@
         public List<Guid>? PetugasId { get; set; } = new List<Guid>();
         public string? NoOrder { get; set; }
         public string? StatusOperasi { get; set; }
+        public Guid? DepartementId { get; set; }
         public List<RuangBedahBookingDetailVM>? Details { get; set; }
     }
 }

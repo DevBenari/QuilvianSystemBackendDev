@@ -13,6 +13,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MCU.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
@@ -363,6 +364,11 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<GiziKonsultasi> GiziKonsultasis { get; set; }
         public DbSet<Recall> Recalls { get; set; }
         public DbSet<RecallDetail> RecallDetails { get; set; }
+        #endregion
+
+        #region MCU
+        public DbSet<PaketMCU> PaketMCUs { get; set; }
+        public DbSet<ModulMCU> ModulMCUs { get; set; }
         #endregion
     }
 }

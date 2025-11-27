@@ -102,6 +102,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                              a.PetugasId,
                              a.NoOrder,
                              a.StatusOperasi,
+                             a.DepartementId
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -253,6 +254,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                     PetugasId = vm.PetugasId,
                     NoOrder = noOrder,
                     StatusOperasi = vm.StatusOperasi,
+                    DepartementId = vm.DepartementId,
 
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
@@ -390,6 +392,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                 parent.KelompokPasienAnastesi = vm.KelompokPasienAnastesi;
                 parent.PetugasId = vm.PetugasId;
                 parent.StatusOperasi = vm.StatusOperasi;
+                parent.DepartementId = vm.DepartementId;
 
                 parent.UpdateBy = userActiveId;
                 parent.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -661,7 +664,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                     a.KelompokPasienAnastesi,
                     a.PetugasId,
                     a.NoOrder,
-                    a.StatusOperasi
+                    a.StatusOperasi,
+                    a.DepartementId,
                 };
 
             // ============================
