@@ -95,7 +95,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.BBPostHD,
                             a.PenambahanBBHD,
                             a.PenguranganBBHD,
-                            a.BBKering
+                            a.BBKering,
+                            a.PengkajianScoreId,
+                            a.ScoreGizi,
                         }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -189,7 +191,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.PenambahanBBHD,
                             a.PenguranganBBHD,
                             a.BBKering,
-                            a.LingkarLenganAtas
+                            a.LingkarLenganAtas,
+                            a.PengkajianScoreId,
+                            a.ScoreGizi,
                         }).ToList();
 
             if (!data.Any())
@@ -295,6 +299,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     PenambahanBBHD =  vm.BBPostHD - vm.BBPreHD,
                     BBKering = vm.BBKering,
                     LingkarLenganAtas = vm.LingkarLenganAtas,
+                    PengkajianScoreId = vm.PengkajianScoreId,
+                    ScoreGizi = vm.ScoreGizi,
 
                     CreateBy = createBy,
                     CreateDateTime = DateTimeOffset.UtcNow
@@ -425,14 +431,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.IsNadiTeraba = vm.IsNadiTeraba;
                 data.Kesadaran = vm.Kesadaran;
                 data.IsRegularNadi = vm.IsRegularNadi;
-                    data.Respirasi = vm.Respirasi;
-                    data.PolaNapas = vm.PolaNapas;
-                    data.BBPreHD = vm.BBPreHD;
-                    data.BBPostHD = vm.BBPostHD;
-                    data.PenguranganBBHD = vm.BBPreHD - vm.BBPostHD;
-                    data.PenambahanBBHD = vm.BBPostHD - vm.BBPreHD;
-                    data.BBKering = vm.BBKering;
+                data.Respirasi = vm.Respirasi;
+                data.PolaNapas = vm.PolaNapas;
+                data.BBPreHD = vm.BBPreHD;
+                data.BBPostHD = vm.BBPostHD;
+                data.PenguranganBBHD = vm.BBPreHD - vm.BBPostHD;
+                data.PenambahanBBHD = vm.BBPostHD - vm.BBPreHD;
+                data.BBKering = vm.BBKering;
                 data.LingkarLenganAtas = vm.LingkarLenganAtas;
+                data.PengkajianScoreId = vm.PengkajianScoreId;
+                data.ScoreGizi = vm.ScoreGizi;
 
                 data.UpdateBy = modifyBy;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -751,7 +759,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 a.PenambahanBBHD,
                                 a.PenguranganBBHD,
                                 a.BBKering,
-                                a.LingkarLenganAtas
+                                a.LingkarLenganAtas,
+                                a.PengkajianScoreId,
+                                a.ScoreGizi,
                             };
 
                 //**Filter berdasarkan search(Perbaikan agar bisa mencari 1 huruf)**

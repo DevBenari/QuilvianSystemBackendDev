@@ -9,7 +9,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models
         public Guid CatPerawatId { get; set; }
         public Guid? KunjunganId { get; set; }
         public Guid? PasienId { get; set; }
-        public Guid? TindakanId { get; set; }
+        public Guid? PemeriksaanLabId { get; set; }
         public string? CatatanPerawatText {  get; set; }
 
     }

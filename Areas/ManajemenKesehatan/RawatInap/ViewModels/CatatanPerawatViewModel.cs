@@ -4,7 +4,7 @@
     {
         public Guid? KunjunganId { get; set; }
         public Guid? PasienId { get; set; }
-        public Guid? TindakanId { get; set; }
+        public Guid? PemeriksaanLabId { get; set; }
         public string? CatatanPerawatText { get; set; }
     }
 }

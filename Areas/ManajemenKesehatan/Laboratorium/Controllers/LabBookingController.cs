@@ -173,6 +173,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              b.CatatanJaminan,
                              b.StatusPembayaran,
                              b.ProsesBooking,
+                             b.TindakLanjut,
+                             b.HasilPenunjangLab,
+                             b.AnjuranDiet
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -266,6 +269,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                     b.DiagnosaAwal,
                                     b.HemodialisaKe,
                                     b.StatusPemeriksaan,
+                                    b.TindakLanjut,
+                                    b.HasilPenunjangLab,
+                                    b.AnjuranDiet,
                                     AsuransiId = (Guid?)b.AsuransiId,
                                     AsuransiNama = a.NamaAsuransi ?? null,
                                     DokterId = (Guid?)b.DokterId,
@@ -325,6 +331,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         g.First().IsCito,
                         g.First().DiagnosaAwal,
                         g.First().HemodialisaKe,
+                        g.First().TindakLanjut,
+                        g.First().HasilPenunjangLab,
+                        g.First().AnjuranDiet,
                         g.First().Keterangan,
                         g.First().CreateBy,
                         g.First().CreateByName,
@@ -406,7 +415,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     StatusBookingLab = false,
                     AlasanPembatalan = vm.AlasanPembatalan,
                     ProsesBooking = vm.ProsesBooking,
-
+                    TindakLanjut = vm.TindakLanjut,
+                    HasilPenunjangLab = vm.HasilPenunjangLab,
+                    AnjuranDiet = vm.AnjuranDiet,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTime.UtcNow,
                     IsDelete = false
@@ -506,6 +517,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 entity.HemodialisaKe = vm.HemodialisaKe;
                 entity.NomorSuratJaminan = vm.NomorSuratJaminan;
                 entity.CatatanJaminan = vm.CatatanJaminan;
+                entity.TindakLanjut = vm.TindakLanjut;
+                entity.HasilPenunjangLab = vm.HasilPenunjangLab;
+                entity.AnjuranDiet = vm.AnjuranDiet;
 
 
                 // ======================================
@@ -1204,7 +1218,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      b.DiagnosaAwal,
                      b.Keterangan,
                      b.TTDPathPembatalan,
-                     b.CreateDateTime
+                     b.CreateDateTime,
+                     b.TindakLanjut,
+                     b.HasilPenunjangLab,
+                     b.AnjuranDiet,
+                     CreateBy = u.FullName
                  }).ToList();
 
             // LOAD DETAIL untuk parentIds
@@ -1357,15 +1375,30 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      b.PasienId,
                      p.NamaLengkap,
                      p.NoRekamMedis,
-                     AsuransiNama = a.NamaAsuransi,
-                     DokterNama = d1.NmDokter,
-                     PoliNama = po.NamaPoliklinik,
-                     NamaKelas = kl.NamaKelas,
+                     b.AsuransiId,
+                     AsuransiNama = a.NamaAsuransi ?? null,
+                     b.DokterId,
+                     DokterNama = d1.NmDokter ?? null,
+                     PoliNama = po.NamaPoliklinik ?? null,
                      b.TglPemeriksaan,
                      b.TglBooking,
+                     b.AlasanPembatalan,
                      b.StatusBookingLab,
                      b.StatusPembayaran,
-                     b.CreateDateTime
+                     b.KelasId,
+                     NamaKelas = kl.NamaKelas ?? null,
+                     b.HemodialisaKe,
+                     b.StatusPemeriksaan,
+                     b.NomorSuratJaminan,
+                     b.DokterKonsulenId,
+                     b.DiagnosaAwal,
+                     b.Keterangan,
+                     b.TTDPathPembatalan,
+                     b.CreateDateTime,
+                     b.TindakLanjut,
+                     b.HasilPenunjangLab,
+                     b.AnjuranDiet,
+                     CreateBy = u.FullName
                  }).ToListAsync();
 
             // =============================
@@ -1523,19 +1556,33 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                  {
                      b.BookingLabId,
                      b.KunjunganId,
-                     k.AsalKunjungan,
                      b.PasienId,
                      p.NamaLengkap,
                      p.NoRekamMedis,
-                     AsuransiNama = a.NamaAsuransi,
-                     DokterNama = d1.NmDokter,
-                     PoliNama = po.NamaPoliklinik,
-                     NamaKelas = kl.NamaKelas,
+                     b.AsuransiId,
+                     AsuransiNama = a.NamaAsuransi ?? null,
+                     b.DokterId,
+                     DokterNama = d1.NmDokter ?? null,
+                     PoliNama = po.NamaPoliklinik ?? null,
                      b.TglPemeriksaan,
                      b.TglBooking,
+                     b.AlasanPembatalan,
                      b.StatusBookingLab,
                      b.StatusPembayaran,
-                     b.CreateDateTime
+                     b.KelasId,
+                     NamaKelas = kl.NamaKelas ?? null,
+                     b.HemodialisaKe,
+                     b.StatusPemeriksaan,
+                     b.NomorSuratJaminan,
+                     b.DokterKonsulenId,
+                     b.DiagnosaAwal,
+                     b.Keterangan,
+                     b.TTDPathPembatalan,
+                     b.CreateDateTime,
+                     b.TindakLanjut,
+                     b.HasilPenunjangLab,
+                     b.AnjuranDiet,
+                     CreateBy = u.FullName
                  }).ToListAsync();
 
             // =============================

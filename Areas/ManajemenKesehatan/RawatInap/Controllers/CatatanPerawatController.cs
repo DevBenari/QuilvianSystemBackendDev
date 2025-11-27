@@ -66,7 +66,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.CatPerawatId,
                              a.KunjunganId,
                              a.PasienId,
-                             a.TindakanId,
+                             a.PemeriksaanLabId,
                              a.CatatanPerawatText,
                          }).OrderByDescending(a => a.CreateDateTime);
 
@@ -161,7 +161,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     CatPerawatId = Guid.NewGuid(),
                     KunjunganId = vm.KunjunganId,
                     PasienId = vm.PasienId,
-                    TindakanId = vm.TindakanId,
+                    PemeriksaanLabId = vm.PemeriksaanLabId,
                     CatatanPerawatText = vm.CatatanPerawatText,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
@@ -231,7 +231,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 // **Update Data**
                 data.KunjunganId = vm.KunjunganId;
                 data.PasienId = vm.PasienId;
-                data.TindakanId = vm.TindakanId;
+                data.PemeriksaanLabId = vm.PemeriksaanLabId;
                 data.CatatanPerawatText = vm.CatatanPerawatText;
 
                 data.UpdateBy = userActiveId;
@@ -347,7 +347,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.CatPerawatId,
                              a.KunjunganId,
                              a.PasienId,
-                             a.TindakanId,
+                             a.PemeriksaanLabId,
                              a.CatatanPerawatText,
                          });
 
