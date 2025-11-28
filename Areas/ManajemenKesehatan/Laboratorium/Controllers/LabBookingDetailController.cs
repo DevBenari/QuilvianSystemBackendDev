@@ -14,6 +14,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
@@ -29,9 +30,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-        private readonly string _uploadUrl;
+        //private readonly string _uploadUrl;
         private readonly IHubContext<LabBookingDetailHub> _hubContext;
-
+        private readonly ITTDService _ttdService;
         private readonly ILogger<LabBookingDetailController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
@@ -41,7 +42,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             SignInManager<ApplicationUser> signInManager,
             ILogger<LabBookingDetailController> logger,
             IWebHostEnvironment webHostEnvironment,
-            IConfiguration configuration,
+            //IConfiguration configuration,
+            ITTDService ttdService,
             IHubContext<LabBookingDetailHub> hubContext)
         {
             _applicationDbContext = applicationDbContext;
@@ -49,8 +51,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
-            _uploadUrl = configuration["FileStorage:UploadUrl"];
+            //_uploadUrl = configuration["FileStorage:UploadUrl"];
             _hubContext = hubContext;
+            _ttdService = ttdService;
         }
 
         [HttpGet]
@@ -388,7 +391,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
 
         [HttpPut("Batal/{id}")]
-        public async Task<IActionResult> BatalBooking(Guid id, [FromForm] LabBookingDetailBatalVM vm)
+        public async Task<IActionResult> BatalBooking(Guid id, [FromBody] LabBookingDetailBatalVM vm)
         {
             if (vm == null)
                 return BadRequest(new { message = "Data pembatalan tidak valid." });
@@ -413,69 +416,73 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             // ==================================================
             // ✅ PROSES UPLOAD TTD PEMBATALAN
             // ==================================================
-            string ttdPath = "";
+            //    string ttdPath = "";
 
-            if (vm.TTDPembatalan != null && vm.TTDPembatalan.Length > 0)
-            {
-                var maxSize = 1 * 1024 * 1024; // 1 MB
-                var allowedExtensions = new List<string> { ".jpg", ".jpeg" };
-                var fileExtension = Path.GetExtension(vm.TTDPembatalan.FileName).ToLower();
+            //    if (vm.TTDPembatalan != null && vm.TTDPembatalan.Length > 0)
+            //    {
+            //        var maxSize = 1 * 1024 * 1024; // 1 MB
+            //        var allowedExtensions = new List<string> { ".jpg", ".jpeg" };
+            //        var fileExtension = Path.GetExtension(vm.TTDPembatalan.FileName).ToLower();
 
-                if (vm.TTDPembatalan.Length > maxSize)
-                    return BadRequest(new { message = "Ukuran file tanda tangan terlalu besar! Maksimal 1MB." });
+            //        if (vm.TTDPembatalan.Length > maxSize)
+            //            return BadRequest(new { message = "Ukuran file tanda tangan terlalu besar! Maksimal 1MB." });
 
-                if (!allowedExtensions.Contains(fileExtension))
-                    return BadRequest(new { message = "Format tanda tangan tidak valid! Gunakan JPG atau JPEG." });
+            //        if (!allowedExtensions.Contains(fileExtension))
+            //            return BadRequest(new { message = "Format tanda tangan tidak valid! Gunakan JPG atau JPEG." });
 
-                var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
-                var ttdFileName = $"{getUserActive.FullName}_{safeTime}_TTDBatal{fileExtension}";
+            //        var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
+            //        var ttdFileName = $"{getUserActive.FullName}_{safeTime}_TTDBatal{fileExtension}";
 
-                using var client = new HttpClient();
-                using var ms = new MemoryStream();
-                await vm.TTDPembatalan.CopyToAsync(ms);
-                ms.Position = 0;
+            //        using var client = new HttpClient();
+            //        using var ms = new MemoryStream();
+            //        await vm.TTDPembatalan.CopyToAsync(ms);
+            //        ms.Position = 0;
 
-                var content = new MultipartFormDataContent {
-            {
-                new StreamContent(ms) {
-                    Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.TTDPembatalan.ContentType) }
-                },
-                "file", ttdFileName
-            },
-            { new StringContent("TTDPembatalan"), "folderTarget" }
-        };
+            //        var content = new MultipartFormDataContent {
+            //    {
+            //        new StreamContent(ms) {
+            //            Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.TTDPembatalan.ContentType) }
+            //        },
+            //        "file", ttdFileName
+            //    },
+            //    { new StringContent("TTDPembatalan"), "folderTarget" }
+            //};
 
-                HttpResponseMessage flaskResponse;
-                try
-                {
-                    flaskResponse = await client.PostAsync(_uploadUrl, content);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Gagal koneksi ke server Flask untuk upload TTD pembatalan.");
-                    return StatusCode(500, new { message = "Tidak dapat terhubung ke server Flask untuk upload tanda tangan." });
-                }
+            //        HttpResponseMessage flaskResponse;
+            //        try
+            //        {
+            //            flaskResponse = await client.PostAsync(_uploadUrl, content);
+            //        }
+            //        catch (Exception ex)
+            //        {
+            //            _logger.LogError(ex, "Gagal koneksi ke server Flask untuk upload TTD pembatalan.");
+            //            return StatusCode(500, new { message = "Tidak dapat terhubung ke server Flask untuk upload tanda tangan." });
+            //        }
 
-                if (!flaskResponse.IsSuccessStatusCode)
-                    return StatusCode(500, new { message = "Gagal upload tanda tangan ke server Flask." });
+            //        if (!flaskResponse.IsSuccessStatusCode)
+            //            return StatusCode(500, new { message = "Gagal upload tanda tangan ke server Flask." });
 
-                var responseBody = await flaskResponse.Content.ReadAsStringAsync();
-                dynamic jsonResp = JsonConvert.DeserializeObject(responseBody);
-                ttdPath = jsonResp?.url ?? jsonResp?.fileUrl ?? jsonResp?.path ?? "";
+            //        var responseBody = await flaskResponse.Content.ReadAsStringAsync();
+            //        dynamic jsonResp = JsonConvert.DeserializeObject(responseBody);
+            //        ttdPath = jsonResp?.url ?? jsonResp?.fileUrl ?? jsonResp?.path ?? "";
 
-                if (string.IsNullOrEmpty(ttdPath))
-                    return StatusCode(500, new { message = "Gagal mendapatkan path TTD dari server Flask." });
-            }
-            else
-            {
-                return BadRequest(new { message = "Tanda tangan pembatalan harus diisi." });
-            }
+            //        if (string.IsNullOrEmpty(ttdPath))
+            //            return StatusCode(500, new { message = "Gagal mendapatkan path TTD dari server Flask." });
+            //    }
+            //    else
+            //    {
+            //        return BadRequest(new { message = "Tanda tangan pembatalan harus diisi." });
+            //    }
 
             // ==================================================
             // ✅ UPDATE DATA BOOKING MENJADI DIBATALKAN
             // ==================================================
+
+            // cek ttd
+            var ttd = await _ttdService.CheckTTDAsync(userActiveId);
+
             booking.AlasanPembatalan = vm.AlasanPembatalan;
-            booking.TTDPembatalanPath = ttdPath;
+            booking.TTDPembatalanPath = ttd.Path;
             booking.UpdateBy = userActiveId;
             booking.UpdateDateTime = DateTimeOffset.UtcNow;
 
@@ -515,7 +522,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 message = "Booking lab berhasil dibatalkan dan billing terkait telah dihapus (soft delete).",
                 bookingId = booking.DetailBookingLabId,
                 alasan = booking.AlasanPembatalan,
-                ttdUrl = ttdPath
+                TTDId = ttd.TTDId,
             });
         }
 

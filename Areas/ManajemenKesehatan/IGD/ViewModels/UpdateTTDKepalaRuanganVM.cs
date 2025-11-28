@@ -2,6 +2,6 @@
 {
     public class UpdateTTDKepalaRuanganVM
     {
-        public IFormFile? TTDKepalaRuanganFile { get; set; }
+        public Guid? KepalaRuanganId { get; set; }
     }
 }

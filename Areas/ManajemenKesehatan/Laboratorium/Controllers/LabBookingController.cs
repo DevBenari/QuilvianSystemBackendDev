@@ -15,6 +15,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
@@ -30,8 +31,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-        private readonly string _uploadUrl;
-
+        //private readonly string _uploadUrl;
+        private readonly ITTDService _ttdService;
         private readonly ILogger<LabBookingController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly IHubContext<LabBookingHub> _hubContext;
@@ -42,7 +43,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             SignInManager<ApplicationUser> signInManager,
             ILogger<LabBookingController> logger,
             IWebHostEnvironment webHostEnvironment,
-            IConfiguration configuration,
+            //IConfiguration configuration,
+            ITTDService ttDService,
             IHubContext<LabBookingHub> hubContext
             )
         {
@@ -51,8 +53,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
-            _uploadUrl = configuration["FileStorage:UploadUrl"];
+            //_uploadUrl = configuration["FileStorage:UploadUrl"];
             _hubContext = hubContext;
+            _ttdService = ttDService;
         }
         private DateTime? TryParseTanggalToUtc(string tanggal)
         {
@@ -885,11 +888,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         }
 
         [HttpPut("BatalLabBooking/{id}")]
-        [RequestSizeLimit(10_000_000)]
-        [RequestFormLimits(MultipartBodyLengthLimit = 10_000_000)]
+        //[RequestSizeLimit(10_000_000)]
+        //[RequestFormLimits(MultipartBodyLengthLimit = 10_000_000)]
         public async Task<IActionResult> BatalLabBooking(
         Guid id,
-        [FromForm] LabBookingDetailBatalVM vm)
+        [FromBody] LabBookingDetailBatalVM vm)
         {
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
@@ -927,79 +930,85 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 // ==========================================================
                 // 🔧 Upload TTD Pembatalan
                 // ==========================================================
-                async Task<(string? filePath, Guid? ttdId)> UploadTTDAsync(IFormFile? file)
-                {
-                    if (file == null || file.Length == 0) return (null, null);
+                //    async Task<(string? filePath, Guid? ttdId)> UploadTTDAsync(IFormFile? file)
+                //    {
+                //        if (file == null || file.Length == 0) return (null, null);
 
-                    var allowedExtensions = new[] { ".jpg", ".jpeg" };
-                    var ext = Path.GetExtension(file.FileName).ToLower();
+                //        var allowedExtensions = new[] { ".jpg", ".jpeg" };
+                //        var ext = Path.GetExtension(file.FileName).ToLower();
 
-                    if (!allowedExtensions.Contains(ext))
-                        throw new Exception("Format TTD tidak valid! Gunakan JPG atau JPEG.");
+                //        if (!allowedExtensions.Contains(ext))
+                //            throw new Exception("Format TTD tidak valid! Gunakan JPG atau JPEG.");
 
-                    if (file.Length > 1 * 1024 * 1024)
-                        throw new Exception("Ukuran file TTD terlalu besar! Maksimal 1MB.");
+                //        if (file.Length > 1 * 1024 * 1024)
+                //            throw new Exception("Ukuran file TTD terlalu besar! Maksimal 1MB.");
 
-                    var timestamp = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
-                    var fileName = $"{getUserActive.FullName}_{timestamp}_TTDPembatalan{ext}";
-                    var filePath = $"/TTDUser/{fileName}";
+                //        var timestamp = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
+                //        var fileName = $"{getUserActive.FullName}_{timestamp}_TTDPembatalan{ext}";
+                //        var filePath = $"/TTDUser/{fileName}";
 
-                    // Upload ke Flask
-                    using var client = new HttpClient();
-                    using var ms = new MemoryStream();
-                    await file.CopyToAsync(ms);
-                    ms.Position = 0;
+                //        // Upload ke Flask
+                //        using var client = new HttpClient();
+                //        using var ms = new MemoryStream();
+                //        await file.CopyToAsync(ms);
+                //        ms.Position = 0;
 
-                    using var content = new MultipartFormDataContent
-            {
-                {
-                    new StreamContent(ms)
-                    {
-                        Headers =
-                        {
-                            ContentType =
-                                new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType)
-                        }
-                    },
-                    "file",
-                    fileName
-                },
-                { new StringContent("TTDUser"), "folderTarget" }
-            };
+                //        using var content = new MultipartFormDataContent
+                //{
+                //    {
+                //        new StreamContent(ms)
+                //        {
+                //            Headers =
+                //            {
+                //                ContentType =
+                //                    new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType)
+                //            }
+                //        },
+                //        "file",
+                //        fileName
+                //    },
+                //    { new StringContent("TTDUser"), "folderTarget" }
+                //};
 
-                    var response = await client.PostAsync(_uploadUrl, content);
-                    if (!response.IsSuccessStatusCode)
-                        throw new Exception("Gagal upload TTD ke server Flask.");
+                //        var response = await client.PostAsync(_uploadUrl, content);
+                //        if (!response.IsSuccessStatusCode)
+                //            throw new Exception("Gagal upload TTD ke server Flask.");
 
-                    // Simpan metadata ke database
-                    var newTTD = new MasterTTD
-                    {
-                        TTDId = Guid.NewGuid(),
-                        UserActiveId = userActiveId,
-                        TTDPath = filePath,
-                        CreateDateTime = DateTimeOffset.UtcNow,
-                        CreateBy = userActiveId
-                    };
+                //        // Simpan metadata ke database
+                //        var newTTD = new MasterTTD
+                //        {
+                //            TTDId = Guid.NewGuid(),
+                //            UserActiveId = userActiveId,
+                //            TTDPath = filePath,
+                //            CreateDateTime = DateTimeOffset.UtcNow,
+                //            CreateBy = userActiveId
+                //        };
 
-                    _applicationDbContext.MasterTTDs.Add(newTTD);
-                    await _applicationDbContext.SaveChangesAsync();
+                //        _applicationDbContext.MasterTTDs.Add(newTTD);
+                //        await _applicationDbContext.SaveChangesAsync();
 
-                    return (filePath, newTTD.TTDId);
-                }
+                //        return (filePath, newTTD.TTDId);
+                //    }
 
 
-                string? ttdPath = null;
-                Guid? ttdId = null;
+                //    string? ttdPath = null;
+                //    Guid? ttdId = null;
 
-                if (vm.TTDPembatalan != null)
-                    (ttdPath, ttdId) = await UploadTTDAsync(vm.TTDPembatalan);
+                //    if (vm.TTDPembatalan != null)
+                //        (ttdPath, ttdId) = await UploadTTDAsync(vm.TTDPembatalan);
+
 
 
                 // ==========================================================
                 // 🔄 UPDATE HEADER LAB BOOKING SAJA
                 // ==========================================================
+
+                // cek ttd
+                var ttd = await _ttdService.CheckTTDAsync(userActiveId);
+
+
                 booking.AlasanPembatalan = vm.AlasanPembatalan;
-                booking.TTDPathPembatalan = ttdPath;
+                booking.TTDPathPembatalan = ttd.Path;
                 booking.UpdateBy = userActiveId;
                 booking.UpdateDateTime = DateTimeOffset.UtcNow;
 
@@ -1010,6 +1019,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     return Ok(new
                     {
                         message = "Pembatalan Lab Booking berhasil.",
+                        TTDID = ttd.TTDId
                     });
 
                 return StatusCode(500, new { message = "Gagal menyimpan data ke database." });

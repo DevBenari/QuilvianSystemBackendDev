@@ -27,13 +27,13 @@
 
         // 🔹 File Upload (TTD)
         public string? TTDMenyerahkanPath { get; set; } // URL/File Path hasil upload
-        public IFormFile? TTDMenyerahkan { get; set; }
+        public Guid? PetugasMenyerahkanId { get; set; }
 
         public string? TTDMengetahuiPath { get; set; }
-        public IFormFile? TTDMengetahui { get; set; }
+        public Guid? PetugasMengetahuiId { get; set; }
 
         public string? TTDPenerimaPath { get; set; }
-        public IFormFile? TTDPenerima { get; set; }
+        public Guid? PetugasPenerimaId { get; set; }
         public string? Keterangan { get; set; }
     }
 }

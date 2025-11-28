@@ -6,59 +6,43 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
-using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class IGDTindakanDetailController : Controller
+    public class DarahDetailController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-        //private readonly string _uploadUrl;
-        private readonly ITTDService _ttdService;
-        private readonly ILogger<IGDTindakanDetailController> _logger;
+
+        private readonly ILogger<DarahDetailController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public IGDTindakanDetailController(
+        public DarahDetailController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<IGDTindakanDetailController> logger,
-            IWebHostEnvironment webHostEnvironment,
-            IConfiguration configuration,
-            ITTDService ttdService)
+            ILogger<DarahDetailController> logger,
+            IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
-            _ttdService = ttdService;
-            //_uploadUrl = configuration["FileStorage:UploadUrl"];
-
-            //if (string.IsNullOrEmpty(_uploadUrl))
-            //{
-            //    _logger.LogError("Konfigurasi UploadUrl tidak ditemukan di appsettings.json!");
-            //}
-            //else
-            //{
-            //    _logger.LogInformation($"Upload URL berhasil dimuat: {_uploadUrl}");
-            //}
         }
 
         [HttpGet]
@@ -69,7 +53,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = (from a in _applicationDbContext.IGDTindakanDetails
+            var query = (from a in _applicationDbContext.DarahDetails
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
                          where a.IsDelete == false || a.IsDelete == null
@@ -78,12 +62,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
-                             a.DetailTindakanIGDId,
-                             a.KunjunganId,
-                             a.TindakanId,
-                             a.KategoriTindakan,
-                             a.WaktuTindakan,
-                             a.TTDPath,
+                             a.DarahDetailId,
+                             a.GolonganDarahId,
+                             a.DarahId,
+                             a.Rhesus,
                              a.Keterangan,
                          }).OrderByDescending(a => a.CreateDateTime);
 
@@ -120,7 +102,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.IGDTindakanDetails.Find(id);
+            var listdata = _applicationDbContext.DarahDetails.Find(id);
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -133,8 +115,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
             });
         }
 
+
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] IGDTindakanDetailViewModel vm) // FromForm agar bisa menerima file
+        public async Task<IActionResult> Create([FromBody] DarahDetailViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -149,114 +132,54 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
                 }
 
-                // **Ambil user aktif dari JWT**
+                // **Ambil User ID dari JWT Claims**
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
+                {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
 
                 var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
                 if (getUserActive == null)
+                {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-
+                }
                 var userActiveId = getUserActive.UserActiveId;
 
-                //Guid ttdId;
-                //string ttdPath;
+                //// **Cek Duplikasi**
+                //bool isDuplicate = await _applicationDbContext.Diskons
+                //                    .AnyAsync(c => c.NamaDiskon.ToLower().Trim() == vm.NamaDiskon.ToLower().Trim()
+                //                    && c.IsDelete == false);
 
-                //if (vm.TTDFile != null && vm.TTDFile.Length > 0)
+                //if (isDuplicate)
                 //{
-                //    var maxSize = 1 * 1024 * 1024; // max 1MB
-                //    var allowedExtensions = new List<string> { ".jpg", ".jpeg" };
-                //    var fileExtension = Path.GetExtension(vm.TTDFile.FileName).ToLower();
-
-                //    if (vm.TTDFile.Length > maxSize)
-                //        return BadRequest(new { message = "Ukuran file TTD terlalu besar! Maksimal 1MB." });
-
-                //    if (!allowedExtensions.Contains(fileExtension))
-                //        return BadRequest(new { message = "Format TTD tidak valid! Gunakan JPG atau JPEG." });
-
-                //    // Nama file unik
-                //    var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
-                //    var ttdFileName = $"{getUserActive.FullName}_{safeTime}_TindakanIGD{fileExtension}";
-
-                //    // 📤 Upload ke Flask
-                //    using var client = new HttpClient();
-                //    using var ms = new MemoryStream();
-                //    await vm.TTDFile.CopyToAsync(ms);
-                //    ms.Position = 0;
-
-                //    var content = new MultipartFormDataContent
-                //    {
-                //        {
-                //            new StreamContent(ms)
-                //            {
-                //                Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.TTDFile.ContentType) }
-                //            },
-                //            "file", ttdFileName
-                //        },
-                //        { new StringContent("TTDIGD"), "folderTarget" }
-                //    };
-
-                //    // Pastikan _uploadUrl diinisialisasi di controller (misal: "https://yourflaskserver/upload")
-                //    var flaskResponse = await client.PostAsync(_uploadUrl, content);
-
-                //    if (!flaskResponse.IsSuccessStatusCode)
-                //        return StatusCode(500, new { message = "Gagal upload tanda tangan ke server Flask." });
-
-                //    // Ambil URL/path hasil upload dari response Flask
-                //    var responseBody = await flaskResponse.Content.ReadAsStringAsync();
-                //    Console.WriteLine("[DEBUG] Flask response: " + responseBody);
-                //    _logger.LogInformation($"[DEBUG] Flask response: {responseBody}");
-                //    dynamic jsonResp = JsonConvert.DeserializeObject(responseBody);
-                //    ttdPath = jsonResp?.url ?? jsonResp?.fileUrl ?? jsonResp?.path ?? "";
-
-                //    // Simpan ke MasterTTD
-                //    var newTTD = new MasterTTD
-                //    {
-                //        TTDId = Guid.NewGuid(),
-                //        UserActiveId = userActiveId,
-                //        TTDPath = ttdPath,
-                //        CreateDateTime = DateTimeOffset.UtcNow,
-                //        CreateBy = userActiveId
-                //    };
-
-                //    _applicationDbContext.MasterTTDs.Add(newTTD);
-                //    await _applicationDbContext.SaveChangesAsync();
-                //    ttdId = newTTD.TTDId;
-                //}
-                //else
-                //{
-                //    return BadRequest(new { message = "TTD harus diisi." });
+                //    return Conflict(new { message = "Nama diskon ini telah tersedia" });
                 //}
 
-                // cek ttd
-                var ttd = await _ttdService.CheckTTDAsync(userActiveId);
-
-
-                // ==================================================
-                // ✅ BUAT DATA IGD TINDAKAN DETAIL
-                // ==================================================
-                var data = new IGDTindakanDetail
+                // **Buat Data Baru**
+                var data = new DarahDetail
                 {
-                    DetailTindakanIGDId = Guid.NewGuid(),
-                    KunjunganId = vm.KunjunganId,
-                    TindakanId = vm.TindakanId,
+                    DarahDetailId = Guid.NewGuid(),
+                    GolonganDarahId = vm.GolonganDarahId,
+                    DarahId = vm.DarahId,
+                    Rhesus = vm.Rhesus,
                     Keterangan = vm.Keterangan,
-                    KategoriTindakan = vm.KategoriTindakan,
-                    WaktuTindakan = vm.WaktuTindakan,
-                    TTDPath = ttd.Path,
                     CreateBy = userActiveId,
-                    CreateDateTime = DateTimeOffset.UtcNow
+                    CreateDateTime = DateTimeOffset.UtcNow,
                 };
 
-                // Simpan ke database
-                _applicationDbContext.IGDTindakanDetails.Add(data);
+                // **Simpan ke Database**
+                _applicationDbContext.DarahDetails.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
-                    return Created("", new { message = "Tambah Data Berhasil || 201 Created", ttdId = ttd.TTDId});
-
-                return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
+                {
+                    return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
+                }
+                else
+                {
+                    return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
+                }
             }
             catch (DbUpdateException dbEx)
             {
@@ -270,7 +193,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] IGDTindakanDetailViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] DarahDetailViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -279,123 +202,68 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
             try
             {
-                // ✅ Cek koneksi ke database
-                if (!_applicationDbContext.Database.CanConnect())
+                // **Cek koneksi ke database**
+                if (!await _applicationDbContext.Database.CanConnectAsync())
                 {
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
                 }
 
-                // ✅ Ambil user aktif dari JWT
+                // **Ambil User ID dari JWT Claims**
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
+                {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
 
                 var getUserActive = await _applicationDbContext.UserActives
                     .FirstOrDefaultAsync(u => u.Email == emailLogin);
                 if (getUserActive == null)
+                {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-
+                }
                 var userActiveId = getUserActive.UserActiveId;
 
-                // ✅ Ambil data lama dari database
-                var existingData = await _applicationDbContext.IGDTindakanDetails
-                    .FirstOrDefaultAsync(x => x.DetailTindakanIGDId == id);
-
-                if (existingData == null)
+                // **Cari Data**
+                var data = await _applicationDbContext.DarahDetails.FindAsync(id);
+                if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
-                // cek ttd
-                var ttd = await _ttdService.CheckTTDAsync(userActiveId);
+                //// **Cek Duplikasi**
+                //bool isDuplicate = await _applicationDbContext.Diskons
+                //                    .AnyAsync(c => c.NamaDiskon.ToLower().Trim() == vm.NamaDiskon.ToLower().Trim()
+                //                    && c.IsDelete == false && c.DiskonId != id);
 
-
-                //    if (vm.TTDFile != null && vm.TTDFile.Length > 0)
-                //    {
-                //        var maxSize = 1 * 1024 * 1024; // max 1MB
-                //        var allowedExtensions = new List<string> { ".jpg", ".jpeg" };
-                //        var fileExtension = Path.GetExtension(vm.TTDFile.FileName).ToLower();
-
-                //        if (vm.TTDFile.Length > maxSize)
-                //            return BadRequest(new { message = "Ukuran file TTD terlalu besar! Maksimal 1MB." });
-
-                //        if (!allowedExtensions.Contains(fileExtension))
-                //            return BadRequest(new { message = "Format TTD tidak valid! Gunakan JPG atau JPEG." });
-
-                //        // Nama file unik
-                //        var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
-                //        var ttdFileName = $"{getUserActive.FullName}_{safeTime}_TindakanIGD{fileExtension}";
-
-                //        // 📤 Upload ke Flask
-                //        using var client = new HttpClient();
-                //        using var ms = new MemoryStream();
-                //        await vm.TTDFile.CopyToAsync(ms);
-                //        ms.Position = 0;
-
-                //        var content = new MultipartFormDataContent
+                //if (isDuplicate)
                 //{
-                //    {
-                //        new StreamContent(ms)
-                //        {
-                //            Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.TTDFile.ContentType) }
-                //        },
-                //        "file", ttdFileName
-                //    },
-                //    { new StringContent("TTDIGD"), "folderTarget" }
-                //};
+                //    return Conflict(new { message = "Nama diskon ini telah tersedia" });
+                //}
 
-                //        // Pastikan _uploadUrl sudah didefinisikan di controller
-                //        var flaskResponse = await client.PostAsync(_uploadUrl, content);
-                //        if (!flaskResponse.IsSuccessStatusCode)
-                //            return StatusCode(500, new { message = "Gagal upload tanda tangan ke server Flask." });
+                // **Update Data**
+                data.GolonganDarahId = vm.GolonganDarahId;
+                data.Rhesus = vm.Rhesus;
+                data.DarahId = vm.DarahId;
+                data.Keterangan = vm.Keterangan;
 
-                //        // Ambil URL/path hasil upload dari response Flask
+                data.UpdateBy = userActiveId;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                //        var responseBody = await flaskResponse.Content.ReadAsStringAsync(); 
-
-                //        Console.WriteLine("[DEBUG] Flask response: " + responseBody);
-                //        _logger.LogInformation($"[DEBUG] Flask response: {responseBody}");
-
-                //        dynamic jsonResp = JsonConvert.DeserializeObject(responseBody);
-                //        ttdPath = jsonResp?.url ?? jsonResp?.fileUrl ?? jsonResp?.path ?? "";
-
-                //        // Simpan ke MasterTTD
-                //        var newTTD = new MasterTTD
-                //        {
-                //            TTDId = Guid.NewGuid(),
-                //            UserActiveId = userActiveId,
-                //            TTDPath = ttdPath,
-                //            CreateDateTime = DateTimeOffset.UtcNow,
-                //            CreateBy = userActiveId
-                //        };
-
-                //        _applicationDbContext.MasterTTDs.Add(newTTD);
-                //        await _applicationDbContext.SaveChangesAsync();
-                //    }
-
-                // ==================================================
-                // ✅ UPDATE DATA LAMA
-                // ==================================================
-                existingData.KunjunganId = vm.KunjunganId ?? existingData.KunjunganId;
-                existingData.TindakanId = vm.TindakanId ?? existingData.TindakanId;
-                existingData.KategoriTindakan = vm.KategoriTindakan ?? existingData.KategoriTindakan;
-                existingData.WaktuTindakan = vm.WaktuTindakan ?? existingData.WaktuTindakan;
-                existingData.Keterangan = vm.Keterangan ?? existingData.Keterangan;
-                existingData.TTDPath = ttd.Path;
-                existingData.UpdateBy = userActiveId;
-                existingData.UpdateDateTime = DateTimeOffset.UtcNow;
-
-                _applicationDbContext.IGDTindakanDetails.Update(existingData);
+                _applicationDbContext.DarahDetails.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
-                    return Ok(new { message = "Data berhasil diperbarui || 200 OK", ttdId = ttd.TTDId });
-
-                return StatusCode(500, new { message = "Data tidak berhasil diperbarui di database." });
+                {
+                    return Ok(new { message = "Update Data Berhasil || 200 OK" });
+                }
+                else
+                {
+                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
+                }
             }
             catch (DbUpdateException dbEx)
             {
-                return StatusCode(500, new { message = $"Gagal memperbarui data: {dbEx.InnerException?.Message}" });
+                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
             }
             catch (Exception ex)
             {
@@ -430,7 +298,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.IGDTindakanDetails.FindAsync(id);
+                var data = await _applicationDbContext.DarahDetails.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -442,7 +310,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
                 data.IsDelete = true;
 
-                _applicationDbContext.IGDTindakanDetails.Update(data);
+                _applicationDbContext.DarahDetails.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -464,22 +332,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
             }
         }
 
+
         [HttpGet("paged")]
         public IActionResult Paged(
-            int page = 1,
-            int perPage = 10,
-            Guid? kunjunganId = null,
-            string? orderBy = "CreateDateTime",
-            string? sortDirection = "desc",
-            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                            DateTime? startDate = null,
-            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                            DateTime? endDate = null,
-            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        int page = 1,
+        int perPage = 10,
+        Guid? Goldarid = null,
+        string? orderBy = "CreateDateTime",
+        string? sortDirection = "desc",
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+                        DateTime? startDate = null,
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+                        DateTime? endDate = null,
+        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
 
             // Query data
-            var query = (from a in _applicationDbContext.IGDTindakanDetails
+            var query = (from a in _applicationDbContext.DarahDetails
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
                          where a.IsDelete == false || a.IsDelete == null
@@ -488,12 +357,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
-                             a.DetailTindakanIGDId,
-                             a.KunjunganId,
-                             a.TindakanId,
-                             a.KategoriTindakan,
-                             a.WaktuTindakan,
-                             a.TTDPath,
+                             a.DarahDetailId,
+                             a.GolonganDarahId,
+                             a.DarahId,
+                             a.Rhesus,
                              a.Keterangan,
                          });
 
@@ -506,12 +373,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
             //    );
             //}
 
-            // filter based on kunjungan id
-            if (kunjunganId.HasValue)
+            // filter based on golongan darah
+            if (Goldarid.HasValue)
             {
-                query = query.Where(u=>u.KunjunganId == kunjunganId.Value);
+                query = query.Where(u=>u.GolonganDarahId==Goldarid.Value);
             }
-
 
             //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)

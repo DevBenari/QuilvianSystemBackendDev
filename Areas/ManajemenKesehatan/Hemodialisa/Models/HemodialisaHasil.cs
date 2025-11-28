@@ -40,7 +40,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.Models
         // OTHER GUIDS
         // ================================
         public Guid? AksesVaskulerId { get; set; }
-        public Guid? DPPIAId { get; set; }
+        public Guid? DPPJAId { get; set; }
         public Guid? VerifikatorId { get; set; }
 
         // ================================

@@ -32,13 +32,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models
 
         // 🔹 File Upload (TTD)
         public string? TTDMenyerahkanPath { get; set; } // URL/File Path hasil upload
-        public Guid? TTDMenyerahkanId { get; set; }
+        public Guid? PetugasMenyerahkanId { get; set; }
 
         public string? TTDMengetahuiPath { get; set; }
-        public Guid? TTDMengetahuiId { get; set; }
+        public Guid? PetugasMengetahuiId { get; set; }
 
         public string? TTDPenerimaPath { get; set; }
-        public Guid? TTDPenerimaId { get; set; }
+        public Guid? PetugasPenerimaId { get; set; }
         public string? Keterangan { get; set; }
     }
 }

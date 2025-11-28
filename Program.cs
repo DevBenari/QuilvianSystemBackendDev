@@ -14,8 +14,10 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Services;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.HubSignalR;
 using QuilvianSystemBackendDev.Helpers;
+using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
+using QuilvianSystemBackendDev.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -205,6 +207,9 @@ builder.Services.AddSwaggerGen(c =>
 
 // add services untuk menampilkan data role
 builder.Services.AddScoped<serviceMasterData>();
+
+// add service untuk cek ttd e master ttd
+builder.Services.AddScoped<ITTDService, TTDService>();
 
 // Add services to the container.
 builder.Services.AddControllers(options =>

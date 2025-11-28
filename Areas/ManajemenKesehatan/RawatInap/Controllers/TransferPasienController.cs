@@ -9,8 +9,10 @@ using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.ViewModels;
+using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
+using QuilvianSystemBackendDev.Services;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controllers
 {
@@ -23,7 +25,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-        private readonly string _uploadUrl;
+        private readonly ITTDService _ttdService;
         private readonly ILogger<TransferPasienController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
@@ -33,7 +35,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             SignInManager<ApplicationUser> signInManager,
             ILogger<TransferPasienController> logger,
             IWebHostEnvironment webHostEnvironment,
-            IConfiguration configuration
+            ITTDService ttdService
             )
         {
             _applicationDbContext = applicationDbContext;
@@ -41,8 +43,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
-            _uploadUrl = configuration["FileStorage:UploadUrl"];
+            _ttdService = ttdService;
         }
+
+
 
         [HttpGet]
         public async Task<IActionResult> GetAllTransferPasien(int page = 1, int perPage = 10)
@@ -103,11 +107,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                                 t.PlanningTindakan,
 
                                 // 🔹 File Path TTD
-                                t.TTDMenyerahkanId,
+                                t.PetugasMenyerahkanId,
                                 t.TTDMenyerahkanPath,
-                                t.TTDMengetahuiId,
+
+                                t.PetugasMengetahuiId,
                                 t.TTDMengetahuiPath,
-                                t.TTDPenerimaId,
+
+                                t.PetugasPenerimaId,
                                 t.TTDPenerimaPath,
 
                                 t.Keterangan,
@@ -206,11 +212,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                                       t.PlanningTindakan,
 
                                       // 🔹 File Path TTD
-                                      t.TTDMenyerahkanId,
+                                      t.PetugasMenyerahkanId,
                                       t.TTDMenyerahkanPath,
-                                      t.TTDMengetahuiId,
+
+                                      t.PetugasMengetahuiId,
                                       t.TTDMengetahuiPath,
-                                      t.TTDPenerimaId,
+
+                                      t.PetugasPenerimaId,
                                       t.TTDPenerimaPath,
 
                                       t.Keterangan,
@@ -237,9 +245,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         }
 
         [HttpPost]
-        [RequestSizeLimit(10_000_000)] // 10 MB
-        [RequestFormLimits(MultipartBodyLengthLimit = 10_000_000)]
-        public async Task<IActionResult> Create([FromForm] TransferPasienViewModel vm)
+        public async Task<IActionResult> Create([FromBody] TransferPasienViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
@@ -262,73 +268,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                 var userActiveId = getUserActive.UserActiveId;
 
-                // ==================================================
-                // 🔹 Fungsi Upload ke Flask (tanpa menunggu balikan)
-                // ==================================================
-                async Task<(string? filePath, Guid? ttdId, string? fileName)> UploadTTDAsync(IFormFile? file, string prefix, string folderTarget)
-                {
-                    if (file == null || file.Length == 0) return (null, null, null);
+                // cek ttd user
+                var ttdMengetahui = await _ttdService.CheckTTDAsync((Guid)vm.PetugasMengetahuiId);
+                var ttdMenyerahkan = await _ttdService.CheckTTDAsync((Guid)vm.PetugasMenyerahkanId);
+                var ttdPenerima = await _ttdService.CheckTTDAsync((Guid)vm.PetugasPenerimaId);
 
-                    var maxSize = 1 * 1024 * 1024; // 1MB
-                    var allowedExtensions = new[] { ".jpg", ".jpeg" };
-                    var ext = Path.GetExtension(file.FileName).ToLower();
-
-                    if (file.Length > maxSize)
-                        throw new Exception($"Ukuran file {prefix} terlalu besar! Maksimal 1MB.");
-
-                    if (!allowedExtensions.Contains(ext))
-                        throw new Exception($"Format file {prefix} tidak valid! Gunakan JPG atau JPEG.");
-
-                    // 🔧 Nama file unik
-                    var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
-                    var fileName = $"{getUserActive.FullName}_{safeTime}_{prefix}{ext}";
-                    var filePath = $"/{folderTarget}/{fileName}"; // 🔹 path konsisten seperti pendaftaran
-
-                    // 📤 Kirim file ke server Flask
-                    using var client = new HttpClient();
-                    using var ms = new MemoryStream();
-                    await file.CopyToAsync(ms);
-                    ms.Position = 0;
-
-                    using var content = new MultipartFormDataContent
-            {
-                {
-                    new StreamContent(ms)
-                    {
-                        Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType) }
-                    },
-                    "file",
-                    fileName
-                },
-                { new StringContent(folderTarget), "folderTarget" }
-            };
-
-                    var response = await client.PostAsync(_uploadUrl, content);
-                    if (!response.IsSuccessStatusCode)
-                        throw new Exception($"Gagal upload file {prefix} ke server Flask (Status: {response.StatusCode}).");
-
-                    // 💾 Simpan record TTD ke database
-                    var newTTD = new MasterTTD
-                    {
-                        TTDId = Guid.NewGuid(),
-                        UserActiveId = userActiveId,
-                        TTDPath = filePath,
-                        CreateDateTime = DateTimeOffset.UtcNow,
-                        CreateBy = userActiveId
-                    };
-
-                    _applicationDbContext.MasterTTDs.Add(newTTD);
-                    await _applicationDbContext.SaveChangesAsync();
-
-                    return (filePath, newTTD.TTDId, fileName);
-                }
-
-                // ==================================================
-                // ✅ Upload ketiga TTD
-                // ==================================================
-                var (menyerahkanPath, menyerahkanId, _) = await UploadTTDAsync(vm.TTDMenyerahkan, "TTDMenyerahkan", "TTDUser");
-                var (mengetahuiPath, mengetahuiId, _) = await UploadTTDAsync(vm.TTDMengetahui, "TTDMengetahui", "TTDUser");
-                var (penerimaPath, penerimaId, _) = await UploadTTDAsync(vm.TTDPenerima, "TTDPenerima", "TTDUser");
 
                 // ==================================================
                 // ✅ Simpan ke tabel TransferPasien
@@ -359,12 +303,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     IntervensiPerawat = vm.IntervensiPerawat,
                     PlanningTindakan = vm.PlanningTindakan,
 
-                    TTDMenyerahkanId = menyerahkanId,
-                    TTDMenyerahkanPath = menyerahkanPath,
-                    TTDMengetahuiId = mengetahuiId,
-                    TTDMengetahuiPath = mengetahuiPath,
-                    TTDPenerimaId = penerimaId,
-                    TTDPenerimaPath = penerimaPath,
+                    PetugasMenyerahkanId = vm.PetugasMenyerahkanId,
+                    TTDMenyerahkanPath = ttdMenyerahkan.Path,
+
+                    PetugasMengetahuiId = vm.PetugasMengetahuiId,
+                    TTDMengetahuiPath = ttdMengetahui.Path,
+
+                    PetugasPenerimaId = vm.PetugasMengetahuiId,
+                    TTDPenerimaPath = ttdPenerima.Path,
 
                     Keterangan = vm.Keterangan,
                     CreateBy = userActiveId,
@@ -378,9 +324,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     return Created("", new
                     {
                         message = "Tambah Data Transfer Pasien Berhasil || 201 Created",
-                        menyerahkanPath,
-                        mengetahuiPath,
-                        penerimaPath
+                        TTDIdMenyerahkan = ttdMenyerahkan.TTDId,
+                        TTDIdMengetahui = ttdMengetahui.TTDId,
+                        TTDIdPenerima = ttdPenerima.TTDId,
                     });
 
                 return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
@@ -668,12 +614,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                                 t.BarangDiserahkan,
                                 t.IntervensiPerawat,
                                 t.PlanningTindakan,
-                                t.TTDMenyerahkanId,
+
+                                t.PetugasMenyerahkanId,
                                 t.TTDMenyerahkanPath,
-                                t.TTDMengetahuiId,
+
+                                t.PetugasMengetahuiId,
                                 t.TTDMengetahuiPath,
-                                t.TTDPenerimaId,
+
+                                t.PetugasPenerimaId,
                                 t.TTDPenerimaPath,
+
                                 t.Keterangan,
                                 t.CreateDateTime,
                                 CreateByName = u != null ? u.FullName : null

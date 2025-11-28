@@ -13,6 +13,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
@@ -28,8 +29,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-        private readonly string _uploadUrl;
-
+        //private readonly string _uploadUrl;
+        private readonly ITTDService _ttdService;
         private readonly ILogger<NosokomialController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly IHubContext<NosokomialHub> _hubContext;
@@ -40,16 +41,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
             SignInManager<ApplicationUser> signInManager,
             ILogger<NosokomialController> logger,
             IWebHostEnvironment webHostEnvironment,
-            IConfiguration configuration,
-            IHubContext<NosokomialHub> hubContext)
+            //IConfiguration configuration,
+            IHubContext<NosokomialHub> hubContext,
+            ITTDService ttdService)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
-            _uploadUrl = configuration["FileStorage:UploadUrl"];
+            //_uploadUrl = configuration["FileStorage:UploadUrl"];
             _hubContext = hubContext;
+            _ttdService = ttdService;
         }
 
         [HttpGet]
@@ -63,6 +66,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
             var query = (from a in _applicationDbContext.Nosokomials
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
+
+                         // join ke user ac
+                         join kr in _applicationDbContext.UserActives
+                         on a.KepalaRuanganId equals kr.UserActiveId into krGroup
+                         from kr in krGroup.DefaultIfEmpty()
+
+                         join p in _applicationDbContext.UserActives
+                         on a.PerawatId equals p.UserActiveId into pGroup
+                         from p in pGroup.DefaultIfEmpty()
+
                          where a.IsDelete == false || a.IsDelete == null
                          select new
                          {
@@ -87,9 +100,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                              a.DiagnosaAwal,
                              a.DiagnosaAkhir,
                              a.TTDKepalaRuangan,
-                             a.NamaKepalaRuangan,
+                             a.KepalaRuanganId,
+                             NamaKepalaRuangan = kr.FullName ?? null,
                              a.TTDPerawat,
-                             a.NamaPerawat,
+                             a.PerawatId,
+                             NamaPerawat = p.FullName ?? null,
 
                          }).OrderByDescending(a => a.CreateDateTime);
 
@@ -126,7 +141,50 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.Nosokomials.Find(id);
+            var listdata = (from a in _applicationDbContext.Nosokomials
+                            join u in _applicationDbContext.UserActives.DefaultIfEmpty()
+                            on a.CreateBy equals u.UserActiveId
+
+                            // join ke user ac
+                            join kr in _applicationDbContext.UserActives
+                            on a.KepalaRuanganId equals kr.UserActiveId into krGroup
+                            from kr in krGroup.DefaultIfEmpty()
+
+                            join p in _applicationDbContext.UserActives
+                            on a.PerawatId equals p.UserActiveId into pGroup
+                            from p in pGroup.DefaultIfEmpty()
+
+                            where (a.IsDelete == false || a.IsDelete == null) && a.NosokomialId == id
+                            select new
+                            {
+                                a.CreateDateTime,
+                                a.CreateBy,
+                                CreateByName = u.FullName,
+                                a.NosokomialId,
+                                a.KunjunganId,
+                                a.PasienId,
+                                a.TB,
+                                a.BB,
+                                a.CaraMasukRS,
+                                a.TglMasukRs,
+                                a.TglKeluarRs,
+                                a.DokterId1,
+                                a.DokterId2,
+                                a.DokterId3,
+                                a.IPCLN1,
+                                a.IPCLN2,
+                                a.IPCLN3,
+                                a.KondisiKeluar,
+                                a.DiagnosaAwal,
+                                a.DiagnosaAkhir,
+                                a.TTDKepalaRuangan,
+                                a.KepalaRuanganId,
+                                NamaKepalaRuangan = kr.FullName ?? null,
+                                a.TTDPerawat,
+                                a.PerawatId,
+                                NamaPerawat = p.FullName ?? null,
+
+                            });
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -140,9 +198,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
         }
 
         [HttpPost]
-        [RequestSizeLimit(10_000_000)] // 10 MB
-        [RequestFormLimits(MultipartBodyLengthLimit = 10_000_000)]
-        public async Task<IActionResult> Create([FromForm] NosokomialViewModel vm)
+        //[RequestSizeLimit(10_000_000)] // 10 MB
+        //[RequestFormLimits(MultipartBodyLengthLimit = 10_000_000)]
+        public async Task<IActionResult> Create([FromBody] NosokomialViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
@@ -165,70 +223,75 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
                 var userActiveId = getUserActive.UserActiveId;
 
-                // ==================================================
-                // 🔹 Fungsi Upload TTD ke Flask
-                // ==================================================
-                async Task<(string? filePath, Guid? ttdId, string? fileName)> UploadTTDAsync(IFormFile? file, string prefix, string folderTarget)
-                {
-                    if (file == null || file.Length == 0) return (null, null, null);
+                //    // ==================================================
+                //    // 🔹 Fungsi Upload TTD ke Flask
+                //    // ==================================================
+                //    async Task<(string? filePath, Guid? ttdId, string? fileName)> UploadTTDAsync(IFormFile? file, string prefix, string folderTarget)
+                //    {
+                //        if (file == null || file.Length == 0) return (null, null, null);
 
-                    var maxSize = 1 * 1024 * 1024; // 1MB
-                    var allowedExtensions = new[] { ".jpg", ".jpeg" };
-                    var ext = Path.GetExtension(file.FileName).ToLower();
+                //        var maxSize = 1 * 1024 * 1024; // 1MB
+                //        var allowedExtensions = new[] { ".jpg", ".jpeg" };
+                //        var ext = Path.GetExtension(file.FileName).ToLower();
 
-                    if (file.Length > maxSize)
-                        throw new Exception($"Ukuran file {prefix} terlalu besar! Maksimal 1MB.");
+                //        if (file.Length > maxSize)
+                //            throw new Exception($"Ukuran file {prefix} terlalu besar! Maksimal 1MB.");
 
-                    if (!allowedExtensions.Contains(ext))
-                        throw new Exception($"Format file {prefix} tidak valid! Gunakan JPG atau JPEG.");
+                //        if (!allowedExtensions.Contains(ext))
+                //            throw new Exception($"Format file {prefix} tidak valid! Gunakan JPG atau JPEG.");
 
-                    var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
-                    var fileName = $"{getUserActive.FullName}_{safeTime}_{prefix}{ext}";
-                    var filePath = $"/{folderTarget}/{fileName}";
+                //        var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
+                //        var fileName = $"{getUserActive.UserActiveId}_{safeTime}_{prefix}{ext}";
+                //        var filePath = $"/{folderTarget}/{fileName}";
 
-                    using var client = new HttpClient();
-                    using var ms = new MemoryStream();
-                    await file.CopyToAsync(ms);
-                    ms.Position = 0;
+                //        using var client = new HttpClient();
+                //        using var ms = new MemoryStream();
+                //        await file.CopyToAsync(ms);
+                //        ms.Position = 0;
 
-                    using var content = new MultipartFormDataContent
-            {
-                {
-                    new StreamContent(ms)
-                    {
-                        Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType) }
-                    },
-                    "file",
-                    fileName
-                },
-                { new StringContent(folderTarget), "folderTarget" }
-            };
+                //        using var content = new MultipartFormDataContent
+                //{
+                //    {
+                //        new StreamContent(ms)
+                //        {
+                //            Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType) }
+                //        },
+                //        "file",
+                //        fileName
+                //    },
+                //    { new StringContent(folderTarget), "folderTarget" }
+                //};
 
-                    var response = await client.PostAsync(_uploadUrl, content);
-                    if (!response.IsSuccessStatusCode)
-                        throw new Exception($"Gagal upload file {prefix} ke server Flask (Status: {response.StatusCode}).");
+                //        var response = await client.PostAsync(_uploadUrl, content);
+                //        if (!response.IsSuccessStatusCode)
+                //            throw new Exception($"Gagal upload file {prefix} ke server Flask (Status: {response.StatusCode}).");
 
-                    // 💾 Simpan metadata ke MasterTTD
-                    var newTTD = new MasterTTD
-                    {
-                        TTDId = Guid.NewGuid(),
-                        UserActiveId = userActiveId,
-                        TTDPath = filePath,
-                        CreateDateTime = DateTimeOffset.UtcNow,
-                        CreateBy = userActiveId
-                    };
+                //        // 💾 Simpan metadata ke MasterTTD
+                //        var newTTD = new MasterTTD
+                //        {
+                //            TTDId = Guid.NewGuid(),
+                //            UserActiveId = userActiveId,
+                //            TTDPath = filePath,
+                //            CreateDateTime = DateTimeOffset.UtcNow,
+                //            CreateBy = userActiveId
+                //        };
 
-                    _applicationDbContext.MasterTTDs.Add(newTTD);
-                    await _applicationDbContext.SaveChangesAsync();
+                //        _applicationDbContext.MasterTTDs.Add(newTTD);
+                //        await _applicationDbContext.SaveChangesAsync();
 
-                    return (filePath, newTTD.TTDId, fileName);
-                }
+                //        return (filePath, newTTD.TTDId, fileName);
+                //    }
 
-                // ==================================================
-                // ✅ Upload tanda tangan perawat dan kepala ruangan
-                // ==================================================
-                var (ttdPerawatPath, ttdPerawatId, _) = await UploadTTDAsync(vm.TTDPerawat, "TTDPerawat", "TTDUser");
-                var (ttdKepalaPath, ttdKepalaId, _) = await UploadTTDAsync(vm.TTDKepalaRuangan, "TTDKepalaRuangan", "TTDUser");
+                //    // ==================================================
+                //    // ✅ Upload tanda tangan perawat dan kepala ruangan
+                //    // ==================================================
+                //    var (ttdPerawatPath, ttdPerawatId, _) = await UploadTTDAsync(vm.TTDPerawat, "TTDPerawat", "TTDUser");
+                //    var (ttdKepalaPath, ttdKepalaId, _) = await UploadTTDAsync(vm.TTDKepalaRuangan, "TTDKepalaRuangan", "TTDUser");
+
+                // cek ttd
+                var krTTD = await _ttdService.CheckTTDAsync((Guid)vm.KepalaRuanganId);
+                var pTTD = await _ttdService.CheckTTDAsync((Guid)vm.PerawatId);
+
 
                 // ==================================================
                 // ✅ Simpan ke tabel Nosokomial
@@ -252,10 +315,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                     KondisiKeluar = vm.KondisiKeluar,
                     DiagnosaAwal = vm.DiagnosaAwal,
                     DiagnosaAkhir = vm.DiagnosaAkhir,
-                    NamaKepalaRuangan = vm.NamaKepalaRuangan,
-                    NamaPerawat = vm.NamaPerawat,
-                    TTDKepalaRuangan = ttdKepalaPath,
-                    TTDPerawat = ttdPerawatPath,
+                    KepalaRuanganId = vm.KepalaRuanganId,
+                    PerawatId = vm.PerawatId,
+                    TTDKepalaRuangan = krTTD.Path,
+                    TTDPerawat = pTTD.Path,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow
                 };
@@ -266,16 +329,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 await _hubContext.Clients.All.SendAsync("Nosokomia Created", new
                 {
                     Action = "create",
-                    id = data.NosokomialId
-                });
+                    id = data.NosokomialId,
+                }); 
 
                 if (result > 0)
                 {
                     return Created("", new
                     {
                         message = "Tambah Data Nosokomial Berhasil || 201 Created",
-                        ttdPerawatPath,
-                        ttdKepalaPath
+                        TTDKepalaRuanganId = krTTD.TTDId,
+                        TTDPerawatId = pTTD.TTDId,
                     });
                 }
 
@@ -292,9 +355,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
         }
 
         [HttpPut("{id}")]
-        [RequestSizeLimit(10_000_000)] // 10 MB
-        [RequestFormLimits(MultipartBodyLengthLimit = 10_000_000)]
-        public async Task<IActionResult> Update(Guid id, [FromForm] NosokomialViewModel vm)
+        //[RequestSizeLimit(10_000_000)] // 10 MB
+        //[RequestFormLimits(MultipartBodyLengthLimit = 10_000_000)]
+        public async Task<IActionResult> Update(Guid id, [FromBody] NosokomialViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
@@ -324,82 +387,86 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 if (data == null)
                     return NotFound(new { message = $"Data Nosokomial dengan ID {id} tidak ditemukan." });
 
-                // ==================================================
-                // 🔹 Fungsi Upload TTD ke Flask
-                // ==================================================
-                async Task<(string? filePath, Guid? ttdId, string? fileName)> UploadTTDAsync(IFormFile? file, string prefix, string folderTarget)
-                {
-                    if (file == null || file.Length == 0) return (null, null, null);
+                //    // ==================================================
+                //    // 🔹 Fungsi Upload TTD ke Flask
+                //    // ==================================================
+                //    async Task<(string? filePath, Guid? ttdId, string? fileName)> UploadTTDAsync(IFormFile? file, string prefix, string folderTarget)
+                //    {
+                //        if (file == null || file.Length == 0) return (null, null, null);
 
-                    var maxSize = 1 * 1024 * 1024; // 1MB
-                    var allowedExtensions = new[] { ".jpg", ".jpeg" };
-                    var ext = Path.GetExtension(file.FileName).ToLower();
+                //        var maxSize = 1 * 1024 * 1024; // 1MB
+                //        var allowedExtensions = new[] { ".jpg", ".jpeg" };
+                //        var ext = Path.GetExtension(file.FileName).ToLower();
 
-                    if (file.Length > maxSize)
-                        throw new Exception($"Ukuran file {prefix} terlalu besar! Maksimal 1MB.");
+                //        if (file.Length > maxSize)
+                //            throw new Exception($"Ukuran file {prefix} terlalu besar! Maksimal 1MB.");
 
-                    if (!allowedExtensions.Contains(ext))
-                        throw new Exception($"Format file {prefix} tidak valid! Gunakan JPG atau JPEG.");
+                //        if (!allowedExtensions.Contains(ext))
+                //            throw new Exception($"Format file {prefix} tidak valid! Gunakan JPG atau JPEG.");
 
-                    var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
-                    var fileName = $"{getUserActive.FullName}_{safeTime}_{prefix}{ext}";
-                    var filePath = $"/{folderTarget}/{fileName}";
+                //        var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
+                //        var fileName = $"{getUserActive.FullName}_{safeTime}_{prefix}{ext}";
+                //        var filePath = $"/{folderTarget}/{fileName}";
 
-                    using var client = new HttpClient();
-                    using var ms = new MemoryStream();
-                    await file.CopyToAsync(ms);
-                    ms.Position = 0;
+                //        using var client = new HttpClient();
+                //        using var ms = new MemoryStream();
+                //        await file.CopyToAsync(ms);
+                //        ms.Position = 0;
 
-                    using var content = new MultipartFormDataContent
-            {
-                {
-                    new StreamContent(ms)
-                    {
-                        Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType) }
-                    },
-                    "file",
-                    fileName
-                },
-                { new StringContent(folderTarget), "folderTarget" }
-            };
+                //        using var content = new MultipartFormDataContent
+                //{
+                //    {
+                //        new StreamContent(ms)
+                //        {
+                //            Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType) }
+                //        },
+                //        "file",
+                //        fileName
+                //    },
+                //    { new StringContent(folderTarget), "folderTarget" }
+                //};
 
-                    var response = await client.PostAsync(_uploadUrl, content);
-                    if (!response.IsSuccessStatusCode)
-                        throw new Exception($"Gagal upload file {prefix} ke server Flask (Status: {response.StatusCode}).");
+                //        var response = await client.PostAsync(_uploadUrl, content);
+                //        if (!response.IsSuccessStatusCode)
+                //            throw new Exception($"Gagal upload file {prefix} ke server Flask (Status: {response.StatusCode}).");
 
-                    // 💾 Simpan metadata ke MasterTTD
-                    var newTTD = new MasterTTD
-                    {
-                        TTDId = Guid.NewGuid(),
-                        UserActiveId = userActiveId,
-                        TTDPath = filePath,
-                        CreateDateTime = DateTimeOffset.UtcNow,
-                        CreateBy = userActiveId
-                    };
+                //        // 💾 Simpan metadata ke MasterTTD
+                //        var newTTD = new MasterTTD
+                //        {
+                //            TTDId = Guid.NewGuid(),
+                //            UserActiveId = userActiveId,
+                //            TTDPath = filePath,
+                //            CreateDateTime = DateTimeOffset.UtcNow,
+                //            CreateBy = userActiveId
+                //        };
 
-                    _applicationDbContext.MasterTTDs.Add(newTTD);
-                    await _applicationDbContext.SaveChangesAsync();
+                //        _applicationDbContext.MasterTTDs.Add(newTTD);
+                //        await _applicationDbContext.SaveChangesAsync();
 
-                    return (filePath, newTTD.TTDId, fileName);
-                }
+                //        return (filePath, newTTD.TTDId, fileName);
+                //    }
 
-                // ==================================================
-                // ✅ Upload ulang tanda tangan (jika dikirim)
-                // ==================================================
-                string? ttdPerawatPath = data.TTDPerawat;
-                string? ttdKepalaPath = data.TTDKepalaRuangan;
+                //    // ==================================================
+                //    // ✅ Upload ulang tanda tangan (jika dikirim)
+                //    // ==================================================
+                //    string? ttdPerawatPath = data.TTDPerawat;
+                //    string? ttdKepalaPath = data.TTDKepalaRuangan;
 
-                if (vm.TTDPerawat != null)
-                {
-                    var result = await UploadTTDAsync(vm.TTDPerawat, "TTDPerawat", "TTDUser");
-                    ttdPerawatPath = result.filePath;
-                }
+                //    if (vm.TTDPerawat != null)
+                //    {
+                //        var result = await UploadTTDAsync(vm.TTDPerawat, "TTDPerawat", "TTDUser");
+                //        ttdPerawatPath = result.filePath;
+                //    }
 
-                if (vm.TTDKepalaRuangan != null)
-                {
-                    var result = await UploadTTDAsync(vm.TTDKepalaRuangan, "TTDKepalaRuangan", "TTDUser");
-                    ttdKepalaPath = result.filePath;
-                }
+                //    if (vm.TTDKepalaRuangan != null)
+                //    {
+                //        var result = await UploadTTDAsync(vm.TTDKepalaRuangan, "TTDKepalaRuangan", "TTDUser");
+                //        ttdKepalaPath = result.filePath;
+                //    }
+
+                // cek ttd
+                var ttdKR = await _ttdService.CheckTTDAsync((Guid)vm.KepalaRuanganId);
+                var ttdP = await _ttdService.CheckTTDAsync((Guid)vm.PerawatId);
 
                 // ==================================================
                 // ✅ Update data Nosokomial
@@ -420,10 +487,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 data.KondisiKeluar = vm.KondisiKeluar ?? data.KondisiKeluar;
                 data.DiagnosaAwal = vm.DiagnosaAwal ?? data.DiagnosaAwal;
                 data.DiagnosaAkhir = vm.DiagnosaAkhir ?? data.DiagnosaAkhir;
-                data.NamaKepalaRuangan = vm.NamaKepalaRuangan ?? data.NamaKepalaRuangan;
-                data.NamaPerawat = vm.NamaPerawat ?? data.NamaPerawat;
-                data.TTDPerawat = ttdPerawatPath;
-                data.TTDKepalaRuangan = ttdKepalaPath;
+                data.KepalaRuanganId = vm.KepalaRuanganId ?? data.KepalaRuanganId;
+                data.PerawatId = vm.PerawatId ?? data.PerawatId;
+                data.TTDPerawat = ttdKR.Path;
+                data.TTDKepalaRuangan = ttdP.Path;
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
@@ -441,8 +508,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                     return Ok(new
                     {
                         message = "Update Data Nosokomial Berhasil || 200 OK",
-                        ttdPerawatPath,
-                        ttdKepalaPath
+                        TTDKepalaRuanganId = ttdKR.TTDId,
+                        TTDPerawatId = ttdP.TTDId,
                     });
                 }
 
@@ -459,9 +526,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
         }
 
         [HttpPut("update-ttd-kepalaruangan/{id}")]
-        [RequestSizeLimit(10_000_000)] // 10 MB
-        [RequestFormLimits(MultipartBodyLengthLimit = 10_000_000)]
-        public async Task<IActionResult> UpdateTTDKepalaRuangan(Guid id, [FromForm] UpdateTTDKepalaRuanganVM vm)
+        //[RequestSizeLimit(10_000_000)] // 10 MB
+        //[RequestFormLimits(MultipartBodyLengthLimit = 10_000_000)]
+        public async Task<IActionResult> UpdateTTDKepalaRuangan(Guid id, [FromBody] UpdateTTDKepalaRuanganVM vm)
         {
             if (vm == null )
                 return BadRequest(new { message = "File TTD Kepala Ruangan tidak ditemukan." });
@@ -491,80 +558,84 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 if (data == null)
                     return NotFound(new { message = $"Data Nosokomial dengan ID {id} tidak ditemukan." });
 
-                // ==================================================
-                // 🔹 Fungsi Upload TTD ke Flask
-                // ==================================================
-                async Task<(string? filePath, Guid? ttdId, string? fileName)> UploadTTDAsync(IFormFile file, string prefix, string folderTarget)
-                {
-                    if (file == null || file.Length == 0) return (null, null, null);
+                //    // ==================================================
+                //    // 🔹 Fungsi Upload TTD ke Flask
+                //    // ==================================================
+                //    async Task<(string? filePath, Guid? ttdId, string? fileName)> UploadTTDAsync(IFormFile file, string prefix, string folderTarget)
+                //    {
+                //        if (file == null || file.Length == 0) return (null, null, null);
 
-                    var maxSize = 1 * 1024 * 1024; // 1MB
-                    var allowedExtensions = new[] { ".jpg", ".jpeg" };
-                    var ext = Path.GetExtension(file.FileName).ToLower();
+                //        var maxSize = 1 * 1024 * 1024; // 1MB
+                //        var allowedExtensions = new[] { ".jpg", ".jpeg" };
+                //        var ext = Path.GetExtension(file.FileName).ToLower();
 
-                    if (file.Length > maxSize)
-                        throw new Exception($"Ukuran file {prefix} terlalu besar! Maksimal 1MB.");
+                //        if (file.Length > maxSize)
+                //            throw new Exception($"Ukuran file {prefix} terlalu besar! Maksimal 1MB.");
 
-                    if (!allowedExtensions.Contains(ext))
-                        throw new Exception($"Format file {prefix} tidak valid! Gunakan JPG atau JPEG.");
+                //        if (!allowedExtensions.Contains(ext))
+                //            throw new Exception($"Format file {prefix} tidak valid! Gunakan JPG atau JPEG.");
 
-                    var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
-                    var fileName = $"{getUserActive.FullName}_{safeTime}_{prefix}{ext}";
-                    var filePath = $"/{folderTarget}/{fileName}";
+                //        var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
+                //        var fileName = $"{getUserActive.FullName}_{safeTime}_{prefix}{ext}";
+                //        var filePath = $"/{folderTarget}/{fileName}";
 
-                    using var client = new HttpClient();
-                    using var ms = new MemoryStream();
-                    await file.CopyToAsync(ms);
-                    ms.Position = 0;
+                //        using var client = new HttpClient();
+                //        using var ms = new MemoryStream();
+                //        await file.CopyToAsync(ms);
+                //        ms.Position = 0;
 
-                    using var content = new MultipartFormDataContent
-            {
-                {
-                    new StreamContent(ms)
-                    {
-                        Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType) }
-                    },
-                    "file",
-                    fileName
-                },
-                { new StringContent(folderTarget), "folderTarget" }
-            };
+                //        using var content = new MultipartFormDataContent
+                //{
+                //    {
+                //        new StreamContent(ms)
+                //        {
+                //            Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType) }
+                //        },
+                //        "file",
+                //        fileName
+                //    },
+                //    { new StringContent(folderTarget), "folderTarget" }
+                //};
 
-                    var response = await client.PostAsync(_uploadUrl, content);
-                    if (!response.IsSuccessStatusCode)
-                        throw new Exception($"Gagal upload file {prefix} ke server Flask (Status: {response.StatusCode}).");
+                //        var response = await client.PostAsync(_uploadUrl, content);
+                //        if (!response.IsSuccessStatusCode)
+                //            throw new Exception($"Gagal upload file {prefix} ke server Flask (Status: {response.StatusCode}).");
 
-                    // 💾 Simpan metadata ke MasterTTD
-                    var newTTD = new MasterTTD
-                    {
-                        TTDId = Guid.NewGuid(),
-                        UserActiveId = userActiveId,
-                        TTDPath = filePath,
-                        CreateDateTime = DateTimeOffset.UtcNow,
-                        CreateBy = userActiveId
-                    };
+                //        // 💾 Simpan metadata ke MasterTTD
+                //        var newTTD = new MasterTTD
+                //        {
+                //            TTDId = Guid.NewGuid(),
+                //            UserActiveId = userActiveId,
+                //            TTDPath = filePath,
+                //            CreateDateTime = DateTimeOffset.UtcNow,
+                //            CreateBy = userActiveId
+                //        };
 
-                    _applicationDbContext.MasterTTDs.Add(newTTD);
-                    await _applicationDbContext.SaveChangesAsync();
+                //        _applicationDbContext.MasterTTDs.Add(newTTD);
+                //        await _applicationDbContext.SaveChangesAsync();
 
-                    return (filePath, newTTD.TTDId, fileName);
-                }
+                //        return (filePath, newTTD.TTDId, fileName);
+                //    }
 
-                // ==================================================
-                // ✅ Upload ulang tanda tangan Kepala Ruangan
-                // ==================================================
-                string? ttdKepalaPath = data.TTDKepalaRuangan;
+                //    // ==================================================
+                //    // ✅ Upload ulang tanda tangan Kepala Ruangan
+                //    // ==================================================
+                //    string? ttdKepalaPath = data.TTDKepalaRuangan;
 
-                if (vm != null)
-                {
-                    var result = await UploadTTDAsync(vm.TTDKepalaRuanganFile, "TTDKepalaRuangan", "TTDUser");
-                    ttdKepalaPath = result.filePath;
-                }
+                //    if (vm != null)
+                //    {
+                //        var result = await UploadTTDAsync(vm.TTDKepalaRuanganFile, "TTDKepalaRuangan", "TTDUser");
+                //        ttdKepalaPath = result.filePath;
+                //    }
 
                 // ==================================================
                 // ✅ Update data Nosokomial (hanya TTD Kepala Ruangan)
                 // ==================================================
-                data.TTDKepalaRuangan = ttdKepalaPath;
+
+                // cek ttd
+                var ttd = await _ttdService.CheckTTDAsync((Guid)vm.KepalaRuanganId);
+
+                data.TTDKepalaRuangan = ttd.Path;
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
@@ -583,7 +654,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                     return Ok(new
                     {
                         message = "Update TTD Kepala Ruangan Berhasil || 200 OK",
-                        ttdKepalaPath
+                        ttdKepalaRuangan = ttd.TTDId,
                     });
                 }
 
@@ -702,9 +773,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                              a.DiagnosaAwal,
                              a.DiagnosaAkhir,
                              a.TTDKepalaRuangan,
-                             a.NamaKepalaRuangan,
+                             a.KepalaRuanganId,
                              a.TTDPerawat,
-                             a.NamaPerawat,
+                             a.PerawatId,
                          });
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             //if (!string.IsNullOrWhiteSpace(search))

@@ -13,6 +13,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
@@ -30,7 +31,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly ILogger<IGDAssessmentAwalController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
-        private readonly string _uploadUrl;
+        //private readonly string _uploadUrl;
+        private readonly ITTDService _ttdService;
         private readonly IHubContext<IGDAssessmentAwalHub> _hubContext;
 
         public IGDAssessmentAwalController(
@@ -40,15 +42,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
             ILogger<IGDAssessmentAwalController> logger,
             IWebHostEnvironment webHostEnvironment,
             IConfiguration configuration,
-            IHubContext<IGDAssessmentAwalHub> hubContext)
+            IHubContext<IGDAssessmentAwalHub> hubContext,
+            ITTDService ttdService)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
-            _uploadUrl = configuration["FileStorage:UploadUrl"];
+            //_uploadUrl = configuration["FileStorage:UploadUrl"];
             _hubContext = hubContext;
+            _ttdService = ttdService;
         }
 
         // ====================== GET ALL ======================
@@ -74,6 +78,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                             a.DataObjektif,
                             a.KebutuhanTransportasi,
                             a.StatusKehamilan,
+                            a.TTDPerawatId,
                             a.TTDPath,
                             a.CreateDateTime,
                             CreateByName = u.FullName
@@ -119,6 +124,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                                   a.DataObjektif,
                                   a.KebutuhanTransportasi,
                                   a.StatusKehamilan,
+                                  a.TTDPerawatId,
                                   a.TTDPath,
                                   a.CreateDateTime,
                                   CreateByName = u.FullName
@@ -132,7 +138,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
         // ====================== CREATE ======================
         [HttpPost]
-        public async Task<IActionResult> Create([FromForm] IGDAssessmentAwalViewModel vm)
+        public async Task<IActionResult> Create([FromBody] IGDAssessmentAwalViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
@@ -150,44 +156,45 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 if (user == null)
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
 
-                string ttdPath = "";
+                // cek ttd
+                var ttd = await _ttdService.CheckTTDAsync((Guid)vm.TTDPerawatId);
 
                 // ✅ Upload TTD jika ada
-                if (vm.TTDFile != null && vm.TTDFile.Length > 0)
-                {
-                    var maxSize = 1 * 1024 * 1024; // max 1MB
-                    var allowedExt = new List<string> { ".jpg", ".jpeg" };
-                    var ext = Path.GetExtension(vm.TTDFile.FileName).ToLower();
+                //if (vm.TTDFile != null && vm.TTDFile.Length > 0)
+                //{
+                //    var maxSize = 1 * 1024 * 1024; // max 1MB
+                //    var allowedExt = new List<string> { ".jpg", ".jpeg" };
+                //    var ext = Path.GetExtension(vm.TTDFile.FileName).ToLower();
 
-                    if (vm.TTDFile.Length > maxSize)
-                        return BadRequest(new { message = "Ukuran file terlalu besar (maksimal 1MB)." });
+                //    if (vm.TTDFile.Length > maxSize)
+                //        return BadRequest(new { message = "Ukuran file terlalu besar (maksimal 1MB)." });
 
-                    if (!allowedExt.Contains(ext))
-                        return BadRequest(new { message = "Format file tidak valid (harus JPG atau JPEG)." });
+                //    if (!allowedExt.Contains(ext))
+                //        return BadRequest(new { message = "Format file tidak valid (harus JPG atau JPEG)." });
 
-                    var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
-                    var fileName = $"{user.FullName}_{safeTime}_IGDAssessmentAwal{ext}";
+                //    var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
+                //    var fileName = $"{user.FullName}_{safeTime}_IGDAssessmentAwal{ext}";
 
-                    using var client = new HttpClient();
-                    using var ms = new MemoryStream();
-                    await vm.TTDFile.CopyToAsync(ms);
-                    ms.Position = 0;
+                //    using var client = new HttpClient();
+                //    using var ms = new MemoryStream();
+                //    await vm.TTDFile.CopyToAsync(ms);
+                //    ms.Position = 0;
 
-                    var content = new MultipartFormDataContent {
-                        { new StreamContent(ms) {
-                            Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.TTDFile.ContentType) }
-                        }, "file", fileName },
-                        { new StringContent("TTDIGD"), "folderTarget" }
-                    };
+                //    var content = new MultipartFormDataContent {
+                //        { new StreamContent(ms) {
+                //            Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.TTDFile.ContentType) }
+                //        }, "file", fileName },
+                //        { new StringContent("TTDIGD"), "folderTarget" }
+                //    };
 
-                    var response = await client.PostAsync(_uploadUrl, content);
-                    if (!response.IsSuccessStatusCode)
-                        return StatusCode(500, new { message = "Gagal upload tanda tangan ke Flask." });
+                //    var response = await client.PostAsync(_uploadUrl, content);
+                //    if (!response.IsSuccessStatusCode)
+                //        return StatusCode(500, new { message = "Gagal upload tanda tangan ke Flask." });
 
-                    var body = await response.Content.ReadAsStringAsync();
-                    dynamic json = JsonConvert.DeserializeObject(body);
-                    ttdPath = json?.url ?? json?.fileUrl ?? json?.path ?? "";
-                }
+                //    var body = await response.Content.ReadAsStringAsync();
+                //    dynamic json = JsonConvert.DeserializeObject(body);
+                //    ttdPath = json?.url ?? json?.fileUrl ?? json?.path ?? "";
+                //}
 
                 // ✅ Simpan ke database
                 var data = new IGDAssessmentAwal
@@ -200,7 +207,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                     DataObjektif = vm.DataObjektif,
                     KebutuhanTransportasi = vm.KebutuhanTransportasi,
                     StatusKehamilan = vm.StatusKehamilan,
-                    TTDPath = ttdPath,
+                    TTDPerawatId = vm.TTDPerawatId,
+                    TTDPath = ttd.Path,
                     CreateBy = user.UserActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow
                 };
@@ -211,7 +219,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 await _hubContext.Clients.All.SendAsync("IGD Assessment awal Created", new
                 {
                     Action = "create",
-                    data = data.AssessmentAwalIGD
+                    data = data.AssessmentAwalIGD,
+                    ttdId = ttd.TTDId
                 });
 
                 return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
@@ -224,7 +233,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
         // ====================== UPDATE ======================
         [HttpPut("{id}")]
-        public async Task<IActionResult> Edit(Guid id, [FromForm] IGDAssessmentAwalViewModel vm)
+        public async Task<IActionResult> Edit(Guid id, [FromBody] IGDAssessmentAwalViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
@@ -238,38 +247,39 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
             if (user == null)
                 return Unauthorized(new { message = "User aktif tidak ditemukan!" });
 
-            string ttdPath = existing.TTDPath;
+            // cek ttd
+            var ttd = await _ttdService.CheckTTDAsync((Guid)vm.TTDPerawatId);
 
             // ✅ Upload baru jika ada file baru
-            if (vm.TTDFile != null && vm.TTDFile.Length > 0)
-            {
-                var ext = Path.GetExtension(vm.TTDFile.FileName).ToLower();
-                if (ext != ".jpg" && ext != ".jpeg")
-                    return BadRequest(new { message = "Format TTD tidak valid (harus JPG/JPEG)." });
+            //if (vm.TTDFile != null && vm.TTDFile.Length > 0)
+            //{
+            //    var ext = Path.GetExtension(vm.TTDFile.FileName).ToLower();
+            //    if (ext != ".jpg" && ext != ".jpeg")
+            //        return BadRequest(new { message = "Format TTD tidak valid (harus JPG/JPEG)." });
 
-                var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
-                var fileName = $"{user.FullName}_{safeTime}_IGDAssessmentAwal{ext}";
+            //    var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
+            //    var fileName = $"{user.FullName}_{safeTime}_IGDAssessmentAwal{ext}";
 
-                using var client = new HttpClient();
-                using var ms = new MemoryStream();
-                await vm.TTDFile.CopyToAsync(ms);
-                ms.Position = 0;
+            //    using var client = new HttpClient();
+            //    using var ms = new MemoryStream();
+            //    await vm.TTDFile.CopyToAsync(ms);
+            //    ms.Position = 0;
 
-                var content = new MultipartFormDataContent {
-                    { new StreamContent(ms) {
-                        Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.TTDFile.ContentType) }
-                    }, "file", fileName },
-                    { new StringContent("TTDIGD"), "folderTarget" }
-                };
+            //    var content = new MultipartFormDataContent {
+            //        { new StreamContent(ms) {
+            //            Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.TTDFile.ContentType) }
+            //        }, "file", fileName },
+            //        { new StringContent("TTDIGD"), "folderTarget" }
+            //    };
 
-                var response = await client.PostAsync(_uploadUrl, content);
-                if (!response.IsSuccessStatusCode)
-                    return StatusCode(500, new { message = "Gagal upload tanda tangan ke Flask." });
+            //    var response = await client.PostAsync(_uploadUrl, content);
+            //    if (!response.IsSuccessStatusCode)
+            //        return StatusCode(500, new { message = "Gagal upload tanda tangan ke Flask." });
 
-                var body = await response.Content.ReadAsStringAsync();
-                dynamic json = JsonConvert.DeserializeObject(body);
-                ttdPath = json?.url ?? json?.fileUrl ?? json?.path ?? "";
-            }
+            //    var body = await response.Content.ReadAsStringAsync();
+            //    dynamic json = JsonConvert.DeserializeObject(body);
+            //    ttdPath = json?.url ?? json?.fileUrl ?? json?.path ?? "";
+            //}
 
             // ✅ Update field
             existing.KunjunganId = vm.KunjunganId;
@@ -279,7 +289,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
             existing.DataObjektif = vm.DataObjektif;
             existing.KebutuhanTransportasi = vm.KebutuhanTransportasi;
             existing.StatusKehamilan = vm.StatusKehamilan;
-            existing.TTDPath = ttdPath;
+            existing.TTDPerawatId = vm.TTDPerawatId;
+            existing.TTDPath = ttd.Path;
             existing.UpdateBy = user.UserActiveId;
             existing.UpdateDateTime = DateTimeOffset.UtcNow;
 
@@ -289,7 +300,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
             await _hubContext.Clients.All.SendAsync("IGD assessment awal changed", new
             {
                 Action = "create",
-                id = existing.AssessmentAwalIGD
+                id = existing.AssessmentAwalIGD,
+                ttdId = ttd.TTDId
             });
 
             return Ok(new { message = "Update Data Berhasil || 200 OK" });

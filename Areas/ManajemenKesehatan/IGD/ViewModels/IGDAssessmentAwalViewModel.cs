@@ -9,7 +9,7 @@
         public string? DataObjektif { get; set; }
         public string? KebutuhanTransportasi { get; set; }
         public string? StatusKehamilan { get; set; }
-        public IFormFile? TTDFile { get; set; }
-        public string? TTDPath { get; set; }
+        public Guid? TTDPerawatId { get; set; }
+
     }
 }

@@ -108,6 +108,7 @@ namespace QuilvianSystemBackendDev.Controllers
                                 var claims = new[]
                                 {
                                 new Claim(JwtRegisteredClaimNames.Sub, model.Email),
+                                //new Claim(ClaimTypes.NameIdentifier, user.Id),
                                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                                 //new Claim("userId", userActive.UserActiveId.ToString()),
                                 //new Claim("fullName", userActive.FullName ?? ""),

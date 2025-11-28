@@ -24,10 +24,8 @@
         public string? DiagnosaAwal { get; set; }
         public string? DiagnosaAkhir { get; set; }
 
-        public string? NamaKepalaRuangan { get; set; }
-        public IFormFile? TTDKepalaRuangan { get; set; }
+        public Guid? KepalaRuanganId { get; set; }
 
-        public string? NamaPerawat { get; set; }
-        public IFormFile? TTDPerawat { get; set; }
+        public Guid? PerawatId { get; set; }
     }
 }

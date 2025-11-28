@@ -3,6 +3,6 @@
     public class LabBookingBatalViewModel
     {
         public string? AlasanPembatalan { get; set; }
-        public IFormFile? TTDPembatalan { get; set; }
+        //public IFormFile? TTDPembatalan { get; set; }
     }
 }

@@ -14,7 +14,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Models
         public string? DataObjektif {  get; set; }
         public string? KebutuhanTransportasi { get; set; }
         public string? StatusKehamilan {  get; set; }
-        public string? TTDPerawatId { get; set; }
+        public Guid? TTDPerawatId { get; set; }
         public string? TTDPath {  get; set; }
     }
 }

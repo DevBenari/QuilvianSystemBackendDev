@@ -217,7 +217,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                         throw new Exception($"{prefix} harus berupa JPG atau JPEG.");
 
                     var safeTime = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
-                    var fileName = $"{prefix}_{user.FullName}_{safeTime}{ext}";
+                    var fileName = $"{prefix}_{userId}_{safeTime}{ext}";
 
                     using var client = new HttpClient();
                     await using var ms = new MemoryStream();

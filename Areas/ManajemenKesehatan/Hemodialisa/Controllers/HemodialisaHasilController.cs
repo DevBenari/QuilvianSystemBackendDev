@@ -11,6 +11,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 
@@ -25,7 +26,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.Controll
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-
+        private readonly ITTDService _ttdService;
         private readonly ILogger<HemodialisaHasilController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
@@ -34,13 +35,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.Controll
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ILogger<HemodialisaHasilController> logger,
-            IWebHostEnvironment webHostEnvironment)
+            IWebHostEnvironment webHostEnvironment,
+            ITTDService ttdService)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+            _ttdService = ttdService;
         }
 
         [HttpGet("{id}")]
@@ -83,9 +86,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.Controll
                         h.PenyulitHD,
 
                         h.AksesVaskulerId,
-                        h.DPPIAId,
-                        h.VerifikatorId,
+                        h.TTDAksesVaskuler,
 
+                        h.DPPJAId,
+                        h.TTDPPJA,
+
+                        h.VerifikatorId,
                         h.ScoreTotalGizi,
                         h.StatusGizi,
                         h.Keterangan,
@@ -171,6 +177,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.Controll
                 if (userActive == null)
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
 
+                // cek ttd
+                var av = await _ttdService.CheckTTDAsync((Guid)vm.AksesVaskulerId);
+                var ppja = await _ttdService.CheckTTDAsync((Guid)vm.DPPJAId);
+
                 // ================================
                 // Insert PARENT
                 // ================================
@@ -197,13 +207,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.Controll
                     HeparinMaintenance = vm.HeparinMaintenance,
                     HeparinContinue = vm.HeparinContinue,
                     HeparinIntermitten = vm.HeparinIntermitten,
-
                     PenyulitHD = vm.PenyulitHD,
 
                     AksesVaskulerId = vm.AksesVaskulerId,
-                    DPPIAId = vm.DPPIAId,
-                    VerifikatorId = vm.VerifikatorId,
+                    TTDAksesVaskuler = av.Path,
 
+                    DPPJAId = vm.DPPJAId,
+                    TTDPPJA = ppja.Path,
+
+                    VerifikatorId = vm.VerifikatorId,
                     ScoreTotalGizi = vm.ScoreTotalGizi,
                     StatusGizi = vm.StatusGizi,
                     Keterangan = vm.Keterangan,
@@ -261,7 +273,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.Controll
                 {
                     status = "success",
                     message = "Data Hemodialisa + Monitoring berhasil disimpan",
-                    id = parent.HasilHemodialisaId
+                    id = parent.HasilHemodialisaId,
+                    ttdAksesVaskulerID = av.TTDId,
+                    ttdPPJA = ppja.TTDId
                 });
             }
             catch (Exception ex)
@@ -384,6 +398,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.Controll
                 if (userActive == null)
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
 
+                // cek ttd
+                var av = await _ttdService.CheckTTDAsync((Guid)vm.AksesVaskulerId);
+                var ppja = await _ttdService.CheckTTDAsync((Guid)vm.DPPJAId);
+
                 // ==== Update Field Parent ====
                 parent.KunjunganId = vm.KunjunganId;
                 parent.PasienId = vm.PasienId;
@@ -409,7 +427,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.Controll
                 parent.PenyulitHD = vm.PenyulitHD;
 
                 parent.AksesVaskulerId = vm.AksesVaskulerId;
-                parent.DPPIAId = vm.DPPIAId;
+                parent.TTDAksesVaskuler = av.Path;
+
+                parent.DPPJAId = vm.DPPJAId;
+                parent.TTDPPJA = ppja.Path;
+
                 parent.VerifikatorId = vm.VerifikatorId;
 
                 parent.ScoreTotalGizi = vm.ScoreTotalGizi;
@@ -474,7 +496,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.Controll
                 return Ok(new
                 {
                     message = "Update data berhasil",
-                    id = id
+                    id = id,
+                    ttdAksesVaskulerID = av.TTDId,
+                    ttdPPJA = ppja.TTDId
                 });
             }
             catch (Exception ex)
@@ -666,7 +690,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.Controll
             // ==========================================================
             var monitoring = await _applicationDbContext.MonitoringHDs
                 .Where(m => parentIds.Contains(m.HasilHemodialisaId ?? Guid.Empty))
-                .OrderBy(m => m.JamMonitoring)
+                .OrderBy(m => m.CreateDateTime)
                 .ToListAsync();
 
             // MERGE

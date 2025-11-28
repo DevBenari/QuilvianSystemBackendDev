@@ -328,7 +328,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Gizi.Controllers
         public IActionResult Paged(
         int page = 1,
         int perPage = 10,
-        //string? search = null,
+        string? search = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -357,13 +357,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Gizi.Controllers
                          });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-            //if (!string.IsNullOrWhiteSpace(search))
-            //{
-            //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-            //    query = query.Where(u =>
-            //        EF.Functions.ILike(u.NamaDiskon, search)
-            //    );
-            //}
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+                query = query.Where(u =>
+                    EF.Functions.ILike(u.GroupDiagnosa, search)
+                );
+            }
 
             //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
@@ -431,12 +431,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Gizi.Controllers
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
+                    "GroupDiagnosa" => query.OrderByDescending(u => u.GroupDiagnosa),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
                     "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
                     "CreateByName" => query.OrderBy(u => u.CreateByName),
+                    "GroupDiagnosa" => query.OrderBy(u => u.GroupDiagnosa),
                     _ => query.OrderBy(u => u.CreateDateTime)
                 };
 
