@@ -146,52 +146,108 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
             }
         }
 
-
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, [FromForm] MasterTTDVM vm)
         {
             var entity = await _context.Set<MasterTTD>().FindAsync(id);
             if (entity == null)
-                return NotFound();
+                return NotFound(new { message = "Data tidak ditemukan." });
 
-            // Update field data biasa
+            // Update data biasa
             entity.UserActiveId = vm.UserActiveId;
             entity.Keterangan = vm.Keterangan;
             entity.UpdateDateTime = DateTimeOffset.UtcNow;
 
-            // Jika ada file baru, lakukan upload
-            if (vm.TTDPath != null)
+            // ======================================================
+            // ?? Jika ada file baru, upload ke Flask
+            // ======================================================
+            if (vm.TTDPath != null && vm.TTDPath.Length > 0)
             {
-                // Buat folder jika belum ada
-                var uploadFolder = Path.Combine("wwwroot", "TTDUser");
-                if (!Directory.Exists(uploadFolder))
-                    Directory.CreateDirectory(uploadFolder);
+                var allowedExt = new[] { ".jpg", ".jpeg" };
+                var ext = Path.GetExtension(vm.TTDPath.FileName).ToLower();
 
-                // Generate nama file baru
-                var fileName = $"{Guid.NewGuid()}{Path.GetExtension(vm.TTDPath.FileName)}";
-                var filePath = Path.Combine(uploadFolder, fileName);
+                if (!allowedExt.Contains(ext))
+                    return BadRequest(new { message = "Format file harus JPG atau JPEG." });
 
-                // Simpan file ke server
-                using (var stream = new FileStream(filePath, FileMode.Create))
+                var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
+                var fileName = $"{vm.UserActiveId}_{safeTime}{ext}";
+                var folderTarget = "TTDUser";
+                var newFilePath = $"/{folderTarget}/{fileName}";
+
+                // =====================================
+                // ?? Upload File ke Flask
+                // =====================================
+                using var ms = new MemoryStream();
+                await vm.TTDPath.CopyToAsync(ms);
+                ms.Position = 0;
+
+                var contentType = string.IsNullOrWhiteSpace(vm.TTDPath.ContentType)
+                    ? "image/jpeg"
+                    : vm.TTDPath.ContentType;
+
+                var fileContent = new StreamContent(ms);
+                fileContent.Headers.ContentType =
+                    new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+                fileContent.Headers.ContentLength = ms.Length;
+
+                using var content = new MultipartFormDataContent();
+                content.Add(fileContent, "file", fileName);
+                content.Add(new StringContent(folderTarget), "folderTarget");
+
+                using var client = new HttpClient();
+
+                var uploadUrl = $"{_uploadUrl}/upload";
+                var uploadResponse = await client.PostAsync(uploadUrl, content);
+
+                if (!uploadResponse.IsSuccessStatusCode)
                 {
-                    await vm.TTDPath.CopyToAsync(stream);
+                    return StatusCode(500, new
+                    {
+                        message = "Gagal upload file baru ke server Flask.",
+                        status = uploadResponse.StatusCode
+                    });
                 }
 
-                // Hapus file lama jika ada
-                if (!string.IsNullOrEmpty(entity.TTDPath))
+                // =====================================
+                // ??? Hapus file lama dari Flask
+                // =====================================
+                if (!string.IsNullOrWhiteSpace(entity.TTDPath))
                 {
-                    var oldFile = Path.Combine("wwwroot", entity.TTDPath.TrimStart('/'));
-                    if (System.IO.File.Exists(oldFile))
-                        System.IO.File.Delete(oldFile);
+                    try
+                    {
+                        // contoh path: "/TTDUser/xxx.jpg"
+                        var oldPath = entity.TTDPath.TrimStart('/');
+                        var parts = oldPath.Split('/');
+
+                        if (parts.Length >= 2)
+                        {
+                            var oldFolder = parts[0];
+                            var oldFile = parts[1];
+
+                            var deleteUrl = $"{_uploadUrl}/delete?folder={oldFolder}&filename={oldFile}";
+                            var delResponse = await client.DeleteAsync(deleteUrl);
+
+                            if (!delResponse.IsSuccessStatusCode)
+                            {
+                                Console.WriteLine($"[WARNING] Gagal hapus file lama di Flask: {delResponse.StatusCode}");
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("[ERROR] Gagal hapus file lama di Flask: " + ex.Message);
+                    }
                 }
 
-                // Simpan path ke database
-                entity.TTDPath = $"/TTDUser/{fileName}";
+                // Simpan path baru
+                entity.TTDPath = newFilePath;
             }
 
             await _context.SaveChangesAsync();
-            return NoContent();
+
+            return Ok(new { message = "Update berhasil." });
         }
+
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
