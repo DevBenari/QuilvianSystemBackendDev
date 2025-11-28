@@ -32,8 +32,8 @@
         public string? TTDPerawatRuanganPath { get; set; }
 
         //// Penandaan Operasi
-        public string? PenandaanOperasiBag1 { get; set; }
-        public string? PenandaanOperasiBag2 { get; set; }
+        //public string? PenandaanOperasiBag1 { get; set; }
+        //public string? PenandaanOperasiBag2 { get; set; }
 
         // Tanggal-tanggal penting
         public string? TglCatatan { get; set; }

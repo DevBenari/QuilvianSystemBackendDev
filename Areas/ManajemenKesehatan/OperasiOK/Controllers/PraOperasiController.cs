@@ -177,7 +177,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
 
         [HttpPost]
         [Consumes("multipart/form-data")]
-        [RequestSizeLimit(50_000_000)] // 50 MB
+        [RequestSizeLimit(50_000_000)]
         [RequestFormLimits(MultipartBodyLengthLimit = 50_000_000)]
         public async Task<IActionResult> Create([FromForm] PraOperasiViewModel vm)
         {
@@ -193,80 +193,95 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                 if (string.IsNullOrEmpty(emailLogin))
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
 
-                var user = await _applicationDbContext.UserActives.FirstOrDefaultAsync(u => u.Email == emailLogin);
+                var user = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+
                 if (user == null)
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
 
                 var userId = user.UserActiveId;
 
-                // ========================================
-                // 🔹 Fungsi helper upload file
-                // ========================================
-                async Task<(string? fileUrl, Guid? ttdId)> UploadFileAsync(IFormFile? file, string prefix, string folderTarget, bool saveToTTD = false)
+                // -------------------------------------------------------
+                // 🔹 Helper Upload File
+                // -------------------------------------------------------
+                async Task<(string? url, Guid? ttdId)> UploadFileAsync(
+                    IFormFile? file,
+                    string prefix,
+                    string folder,
+                    bool saveToTTD = false
+                )
                 {
-                    if (file == null) return (null, null);
+                    if (file == null || file.Length == 0)
+                        return (null, null);
 
-                    var maxSize = 2 * 1024 * 1024; // 2MB
-                    var allowedExtensions = new[] { ".jpg", ".jpeg" };
+                    var allowedExt = new[] { ".jpg", ".jpeg" };
                     var ext = Path.GetExtension(file.FileName).ToLower();
 
-                    if (file.Length > maxSize)
-                        throw new Exception($"{prefix} terlalu besar! Maksimal 2MB.");
+                    if (!allowedExt.Contains(ext))
+                        throw new Exception($"{prefix} harus JPG atau JPEG.");
 
-                    if (!allowedExtensions.Contains(ext))
-                        throw new Exception($"{prefix} harus berupa JPG atau JPEG.");
+                    if (file.Length > 2 * 1024 * 1024)
+                        throw new Exception($"{prefix} maksimal 2MB.");
 
-                    var safeTime = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
-                    var fileName = $"{prefix}_{userId}_{safeTime}{ext}";
+                    var fileName = $"{prefix}_{userId}_{DateTime.UtcNow:yyyyMMddHHmmss}{ext}";
 
                     using var client = new HttpClient();
                     await using var ms = new MemoryStream();
+
                     await file.CopyToAsync(ms);
                     ms.Position = 0;
 
                     using var content = new MultipartFormDataContent
             {
-                { new StreamContent(ms) { Headers = { ContentType = new MediaTypeHeaderValue(file.ContentType) } }, "file", fileName },
-                { new StringContent(folderTarget), "folderTarget" }
+                { new StreamContent(ms), "file", fileName },
+                { new StringContent(folder), "folderTarget" }
             };
 
                     var response = await client.PostAsync(_uploadUrl, content);
                     if (!response.IsSuccessStatusCode)
-                        throw new Exception($"Gagal upload {prefix} ke server Flask.");
+                        throw new Exception($"Gagal upload {prefix}.");
 
                     var body = await response.Content.ReadAsStringAsync();
                     dynamic json = JsonConvert.DeserializeObject(body);
-                    string fileUrl = json.fileUrl;
+                    string url = json.fileUrl;
 
                     Guid? ttdId = null;
+
                     if (saveToTTD)
                     {
                         var newTTD = new MasterTTD
                         {
                             TTDId = Guid.NewGuid(),
                             UserActiveId = userId,
-                            TTDPath = fileUrl,
+                            TTDPath = url,
                             CreateBy = userId,
                             CreateDateTime = DateTimeOffset.UtcNow
                         };
+
                         _applicationDbContext.MasterTTDs.Add(newTTD);
                         await _applicationDbContext.SaveChangesAsync();
                         ttdId = newTTD.TTDId;
                     }
 
-                    return (fileUrl, ttdId);
+                    return (url, ttdId);
                 }
 
-                // ========================================
-                // 🔹 Upload file satu per satu
-                // ========================================
-                var (ttdPerawatRuanganPath, ttdPerawatRuanganId) = await UploadFileAsync(vm.FileTTDPerawatRuangan, "TTDPerawatRuangan", "TTDUser", saveToTTD: true);
-                var (penandaanBag1Path, _) = await UploadFileAsync(vm.FilePenandaanOperasiBag1, "PenandaanOperasiBag1", "PenandaanOperasi");
-                var (penandaanBag2Path, _) = await UploadFileAsync(vm.FilePenandaanOperasiBag2, "PenandaanOperasiBag2", "PenandaanOperasi");
+                // -------------------------------------------------------
+                // 🔹 Upload 3 file secara paralel (lebih cepat)
+                // -------------------------------------------------------
+                var uploadTTD = UploadFileAsync(vm.FileTTDPerawatRuangan, "TTDPerawatRuangan", "TTDUser", saveToTTD: true);
+                var uploadBag1 = UploadFileAsync(vm.FilePenandaanOperasiBag1, "PenandaanBag1", "PenandaanOperasi");
+                var uploadBag2 = UploadFileAsync(vm.FilePenandaanOperasiBag2, "PenandaanBag2", "PenandaanOperasi");
 
-                // ========================================
-                // 🔹 Simpan data ke PraOperasi
-                // ========================================
+                await Task.WhenAll(uploadTTD, uploadBag1, uploadBag2);
+
+                var (ttdPath, ttdId) = uploadTTD.Result;
+                var (bag1Path, _) = uploadBag1.Result;
+                var (bag2Path, _) = uploadBag2.Result;
+
+                // -------------------------------------------------------
+                // 🔹 Simpan ke DB PraOperasi
+                // -------------------------------------------------------
                 var praOperasi = new PraOperasi
                 {
                     PraOperasiId = Guid.NewGuid(),
@@ -288,11 +303,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                     PerawatBedahId = vm.PerawatBedahId,
                     Keterangan = vm.Keterangan,
 
-                    // 🔹 Hasil Upload
-                    TTDPerawatRuanganId = ttdPerawatRuanganId,
-                    TTDPerawatRuanganPath = ttdPerawatRuanganPath,
-                    PenandaanOperasiBag1 = penandaanBag1Path,
-                    PenandaanOperasiBag2 = penandaanBag2Path,
+                    // Hasil Upload
+                    TTDPerawatRuanganId = ttdId,
+                    TTDPerawatRuanganPath = ttdPath,
+                    PenandaanOperasiBag1 = bag1Path,
+                    PenandaanOperasiBag2 = bag2Path,
 
                     TglCatatan = DateTime.UtcNow,
                     CreateBy = userId,
@@ -300,18 +315,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                 };
 
                 _applicationDbContext.PraOperasis.Add(praOperasi);
-                int result = await _applicationDbContext.SaveChangesAsync();
+                await _applicationDbContext.SaveChangesAsync();
 
-                if (result > 0)
-                    return Created("", new { message = "Berhasil tambah data PraOperasi", praOperasi.PraOperasiId });
-
-                return StatusCode(500, new { message = "Gagal menyimpan ke database." });
+                return Created("", new
+                {
+                    message = "Berhasil tambah PraOperasi",
+                    praOperasi.PraOperasiId,
+                    ttdPath,
+                    bag1Path,
+                    bag2Path
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = $"Terjadi kesalahan: {ex.Message}" });
+                return StatusCode(500, new { message = ex.Message });
             }
         }
+
 
 
         [HttpPut("{id}")]
