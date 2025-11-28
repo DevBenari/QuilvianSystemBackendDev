@@ -1,0 +1,63 @@
+﻿namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.ViewModels
+{
+    public class IGDTindakLanjutViewModel
+    {        // Relasi utama
+        public Guid? KunjunganId { get; set; }
+        public Guid? PasienId { get; set; }
+        public Guid? KamarId { get; set; }
+
+        // Informasi waktu
+        public DateTime? WaktuPindah { get; set; }
+
+        // Tindakan & Status
+        public string? TindakanLanjutan { get; set; }
+        public string? StatusPasien { get; set; }
+        public DateTime? WaktuStatus { get; set; }
+
+        // Kontrol
+        public string? KontrolKe { get; set; }
+        public DateTime? WaktuKontrol { get; set; }
+
+        // Transportasi & Rujukan
+        public string? Transportasi { get; set; }
+        public string? AlasanMenolakDirawat { get; set; }
+        public string? RsRujukan { get; set; }
+        public string? AlasanDirujuk { get; set; }
+
+        // Pemeriksaan Fisik
+        public string? TingkatKesadaran { get; set; }
+        public string? Eyes { get; set; }
+        public string? Motorik { get; set; }
+        public string? Verbal { get; set; }
+        public string? Pupil { get; set; }
+        public string? Reaksi { get; set; }
+
+        // Vital Sign
+        public decimal? Suhu { get; set; }
+        public string? TD { get; set; }    // Tekanan darah bisa string (contoh: 120/80)
+        public decimal? Nadi { get; set; }
+        public decimal? RR { get; set; }
+        public decimal? SPO2 { get; set; }
+
+        // Hasil Pemeriksaan
+        public Guid? HasilLabId { get; set; }
+        public Guid? HasilCTScanId { get; set; }
+        public Guid? HasilEKGId { get; set; }
+        public Guid? HasilRontgenId { get; set; }
+        public Guid? HasilUSGId { get; set; }
+
+        // Lembar Pemeriksaan (lembar upload)
+        public decimal? LembarLab { get; set; }
+        public decimal? LembarCTScan { get; set; }
+        public decimal? LembarEKG { get; set; }
+        public decimal? LembarRontgen { get; set; }
+        public decimal? LembarUSG { get; set; }
+
+        // Petugas
+        public Guid? PerawatIgdId { get; set; }
+        public Guid? PerawatKamarId { get; set; }
+
+        // Keterangan tambahan
+        public string? Keterangan { get; set; }
+    }
+}

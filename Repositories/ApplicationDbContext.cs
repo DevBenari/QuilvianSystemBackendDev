@@ -351,6 +351,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<KulturDarah> KulturDarahs { get; set; }
         public DbSet<IGDObservasi> IGDObservasis { get; set; }
         public DbSet<IGDObservasiDetail> IGDObservasiDetails { get; set; }
+        public DbSet<IGDTindakLanjut> IGDTindakLanjuts { get; set; }
 
         #endregion
 

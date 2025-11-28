@@ -9,7 +9,7 @@
         public string? CairanKeluar { get; set; }          // Cairan keluar
         public decimal? CairanSisa { get; set; }          // Cairan sisa
         public decimal? JumlahUrin { get; set; }          // Jumlah urin
-        public IFormFile? TTDFile { get; set; }
+        public Guid? TTDId { get; set; }
         public string? Keterangan { get; set; }            // Catatan tambahan
     }
 }
