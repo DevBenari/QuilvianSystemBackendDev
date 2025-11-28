@@ -349,12 +349,15 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<UlkusDebitus> UlkusDebituss { get; set; }
         public DbSet<Pneumonia> Pneumonias { get; set; }
         public DbSet<KulturDarah> KulturDarahs { get; set; }
+        public DbSet<IGDObservasi> IGDObservasis { get; set; }
+        public DbSet<IGDObservasiDetail> IGDObservasiDetails { get; set; }
 
         #endregion
 
         #region HemodialisaDD
         public DbSet<HemodialisaHasil> HemodialisaHasils { get; set; }
         public DbSet<MonitoringHD> MonitoringHDs { get; set; }
+
         #endregion
 
         #region Gizi
