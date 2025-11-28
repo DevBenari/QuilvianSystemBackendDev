@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using OpenCvSharp;
 using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.HRD.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Models;
@@ -15,7 +16,15 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
     public class MasterTTDController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
-        public MasterTTDController(ApplicationDbContext context) => _context = context;
+        private readonly string _uploadUrl;
+        public MasterTTDController(
+                ApplicationDbContext context,
+                IConfiguration configuration
+            ) 
+            {
+            _context = context;
+                _uploadUrl = configuration["FileStorage:UploadUrl"];
+            }
 
         [HttpGet]
         public async Task<IActionResult> GetList(int page = 1, int perPage = 10)
@@ -56,32 +65,129 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
             return data;
         }
 
-        [HttpPost]
-        public async Task<ActionResult<MasterTTD>> Create([FromBody] MasterTTDVM vm)
+        [HttpPost("upload")]
+        [RequestSizeLimit(10_000_000)] // 10 MB
+        [RequestFormLimits(MultipartBodyLengthLimit = 10_000_000)]
+        public async Task<IActionResult> UploadTTD([FromForm] MasterTTDVM vm)
         {
-            var entity = new MasterTTD
+            try
             {
-                TTDId = Guid.NewGuid(),
-                UserActiveId = vm.UserActiveId,
-                TTDPath = vm.TTDPath,
-                Keterangan = vm.Keterangan,
-                CreateDateTime = DateTimeOffset.UtcNow
-            };
-            _context.Add(entity);
-            await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetById), new { id = entity.TTDId }, entity);
+                if (vm.TTDPath == null || vm.TTDPath.Length == 0)
+                    return BadRequest(new { message = "File TTD tidak boleh kosong." });
+
+                // Validasi ekstensi
+                var allowedExt = new[] { ".jpg", ".jpeg" };
+                var ext = Path.GetExtension(vm.TTDPath.FileName).ToLower();
+
+                if (!allowedExt.Contains(ext))
+                    return BadRequest(new { message = "Format file harus JPG atau JPEG." });
+
+                var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
+                var fileName = $"{vm.UserActiveId}_{safeTime}{ext}";
+                var folderTarget = "TTDUser"; // folder di Flask
+                var filePath = $"/{folderTarget}/{fileName}";
+
+                // ======================================================
+                // ?? FIX: Siapkan MemoryStream untuk dikirim ke Flask
+                // ======================================================
+                using var ms = new MemoryStream();
+                await vm.TTDPath.CopyToAsync(ms);
+                ms.Position = 0;
+
+                // Gunakan default image/jpeg jika ContentType kosong
+                var contentType = string.IsNullOrWhiteSpace(vm.TTDPath.ContentType)
+                    ? "image/jpeg"
+                    : vm.TTDPath.ContentType;
+
+                var fileContent = new StreamContent(ms);
+                fileContent.Headers.ContentType =
+                    new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+                fileContent.Headers.ContentLength = ms.Length;
+
+                // Multipart form untuk Flask
+                using var content = new MultipartFormDataContent();
+                content.Add(fileContent, "file", fileName);
+                content.Add(new StringContent(folderTarget), "folderTarget");
+
+                // ======================================================
+                // ?? Kirim file ke server Flask
+                // ======================================================
+                using var client = new HttpClient();
+                var response = await client.PostAsync(_uploadUrl, content);
+
+                if (!response.IsSuccessStatusCode)
+                    return StatusCode(500, new { message = $"Gagal upload ke Flask. Status: {response.StatusCode}" });
+
+                // ======================================================
+                // ?? Simpan metadata ke database
+                // ======================================================
+                var entity = new MasterTTD
+                {
+                    TTDId = Guid.NewGuid(),
+                    UserActiveId = vm.UserActiveId,
+                    TTDPath = filePath,  // path di Flask
+                    Keterangan = vm.Keterangan,
+                    CreateDateTime = DateTimeOffset.UtcNow
+                };
+
+                _context.MasterTTDs.Add(entity);
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    message = "Upload TTD berhasil via Flask",
+                    ttdId = entity.TTDId,
+                    ttdPath = entity.TTDPath
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Terjadi kesalahan: " + ex.Message });
+            }
         }
 
+
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] MasterTTDVM vm)
+        public async Task<IActionResult> Update(Guid id, [FromForm] MasterTTDVM vm)
         {
             var entity = await _context.Set<MasterTTD>().FindAsync(id);
-            if (entity == null) return NotFound();
+            if (entity == null)
+                return NotFound();
 
+            // Update field data biasa
             entity.UserActiveId = vm.UserActiveId;
-            entity.TTDPath = vm.TTDPath;
             entity.Keterangan = vm.Keterangan;
             entity.UpdateDateTime = DateTimeOffset.UtcNow;
+
+            // Jika ada file baru, lakukan upload
+            if (vm.TTDPath != null)
+            {
+                // Buat folder jika belum ada
+                var uploadFolder = Path.Combine("wwwroot", "TTDUser");
+                if (!Directory.Exists(uploadFolder))
+                    Directory.CreateDirectory(uploadFolder);
+
+                // Generate nama file baru
+                var fileName = $"{Guid.NewGuid()}{Path.GetExtension(vm.TTDPath.FileName)}";
+                var filePath = Path.Combine(uploadFolder, fileName);
+
+                // Simpan file ke server
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await vm.TTDPath.CopyToAsync(stream);
+                }
+
+                // Hapus file lama jika ada
+                if (!string.IsNullOrEmpty(entity.TTDPath))
+                {
+                    var oldFile = Path.Combine("wwwroot", entity.TTDPath.TrimStart('/'));
+                    if (System.IO.File.Exists(oldFile))
+                        System.IO.File.Delete(oldFile);
+                }
+
+                // Simpan path ke database
+                entity.TTDPath = $"/TTDUser/{fileName}";
+            }
 
             await _context.SaveChangesAsync();
             return NoContent();
@@ -94,13 +200,54 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
                 return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
 
             var data = await _context.Set<MasterTTD>().FindAsync(id);
-            if (data == null) return NotFound(new { message = "Data tidak ditemukan." });
+            if (data == null)
+                return NotFound(new { message = "Data tidak ditemukan." });
 
+            // ================================================
+            // ?? Hapus File di Flask
+            // ================================================
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(data.TTDPath))
+                {
+                    // Contoh: "/TTDUser/abc123.jpg"
+                    var path = data.TTDPath.Replace("\\", "/").TrimStart('/');
+
+                    var split = path.Split('/');
+                    if (split.Length >= 2)
+                    {
+                        var folder = split[0];
+                        var fileName = split[1];
+
+                        using var client = new HttpClient();
+                        var deleteUrl = $"{_uploadUrl}/delete?folder={folder}&filename={fileName}";
+                        var delResponse = await client.DeleteAsync(deleteUrl);
+
+                        // Tidak wajib sukses, tapi kita log saja
+                        if (!delResponse.IsSuccessStatusCode)
+                        {
+                            Console.WriteLine($"[WARNING] Gagal hapus file di Flask: {delResponse.StatusCode}");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[ERROR] Delete Flask Error: " + ex.Message);
+                // Tidak gagal total — tetap lanjut hapus DB
+            }
+
+            // ================================================
+            // ??? Hapus Data di Database
+            // ================================================
             _context.Remove(data);
             var result = await _context.SaveChangesAsync();
-            if (result > 0) return Ok(new { message = "Data berhasil dihapus (hard delete) || 200 OK" });
+
+            if (result > 0)
+                return Ok(new { message = "Data & file berhasil dihapus || 200 OK" });
 
             return StatusCode(500, new { message = "Data tidak berhasil dihapus." });
         }
+
     }
 }

@@ -26,6 +26,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
         // ===========================
         // 1. REGISTER FINGERPRINT
         // ===========================
+
         [HttpPost("register")]
         public async Task<IActionResult> RegisterFingerprint([FromBody] FingerprintRegisterViewModel vm)
         {
