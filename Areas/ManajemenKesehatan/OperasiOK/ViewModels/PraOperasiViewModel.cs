@@ -1,4 +1,6 @@
-﻿namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.ViewModels
+﻿using Microsoft.AspNetCore.Mvc;
+
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.ViewModels
 {
     public class PraOperasiViewModel
     {
@@ -39,8 +41,11 @@
         public string? TglCatatan { get; set; }
 
         //// File upload tanda tangan
-        public IFormFile? FileTTDPerawatRuangan { get; set; }
+        //public IFormFile? FileTTDPerawatRuangan { get; set; }
+        [FromForm]
         public IFormFile? FilePenandaanOperasiBag1 { get; set; }
+
+        [FromForm]
         public IFormFile? FilePenandaanOperasiBag2 { get; set; }
     }
 }

@@ -13,6 +13,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Controllers
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.ViewModels;
+using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
@@ -28,7 +29,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-
+        private readonly ITTDService _ttdService;
         private readonly ILogger<AssessmentEdukasiDetailController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly string _uploadUrl;
@@ -39,7 +40,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             SignInManager<ApplicationUser> signInManager,
             ILogger<AssessmentEdukasiDetailController> logger,
             IWebHostEnvironment webHostEnvironment,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            ITTDService ttdService)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
@@ -47,6 +49,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
             _uploadUrl = configuration["FileStorage:UploadUrl"];
+            _ttdService = ttdService;
         }
 
         private DateTime? TryParseTanggalToUtc(string tanggal)
@@ -170,7 +173,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
         [HttpPost]
         [Consumes("multipart/form-data")]
-        [RequestSizeLimit(50_000_000)] // Maksimal 50 MB
+        [RequestSizeLimit(50_000_000)]
         [RequestFormLimits(MultipartBodyLengthLimit = 50_000_000)]
         public async Task<IActionResult> Create([FromForm] AssessmentEdukasiDetailViewModel vm)
         {
@@ -199,71 +202,58 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 var userId = user.UserActiveId;
 
                 // ===============================
-                // 🔹 Helper untuk upload file JPEG
+                // 🔹 Helper upload file: hanya TTD Wali
                 // ===============================
-                async Task<(string? fileUrl, Guid? ttdId)> UploadFileAsync(IFormFile? file, string prefix, string folderTarget, bool saveToTTD = false)
+                async Task<string?> UploadTTDWaliAsync(IFormFile? file)
                 {
-                    if (file == null) return (null, null);
+                    if (file == null || file.Length == 0)
+                        return null;
 
-                    var maxSize = 2 * 1024 * 1024; // 2 MB
+                    var maxSize = 2 * 1024 * 1024; // 2MB
                     var allowedExtensions = new[] { ".jpg", ".jpeg" };
                     var ext = Path.GetExtension(file.FileName).ToLower();
 
                     if (file.Length > maxSize)
-                        throw new Exception($"{prefix} terlalu besar! Maksimal 2MB.");
+                        throw new Exception("File TTD Wali terlalu besar! Maksimal 2MB.");
 
                     if (!allowedExtensions.Contains(ext))
-                        throw new Exception($"{prefix} harus berupa file JPG atau JPEG.");
+                        throw new Exception("Format file TTD Wali harus JPG atau JPEG.");
 
                     var safeTime = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
-                    var fileName = $"{prefix}_{user.FullName}_{safeTime}{ext}";
+                    var fileName = $"TTDWali_{user.FullName}_{safeTime}{ext}".Replace(" ", "_");
 
                     using var client = new HttpClient();
                     await using var ms = new MemoryStream();
                     await file.CopyToAsync(ms);
                     ms.Position = 0;
 
-                    using var content = new MultipartFormDataContent
+                    var content = new MultipartFormDataContent
             {
                 { new StreamContent(ms) { Headers = { ContentType = new MediaTypeHeaderValue(file.ContentType) } }, "file", fileName },
-                { new StringContent(folderTarget), "folderTarget" }
+                { new StringContent("TTDEdukasi"), "folderTarget" }
             };
 
                     var response = await client.PostAsync(_uploadUrl, content);
                     if (!response.IsSuccessStatusCode)
-                        throw new Exception($"Gagal upload {prefix} ke server Flask.");
+                        throw new Exception("Gagal upload TTD Wali ke server Flask.");
 
                     var body = await response.Content.ReadAsStringAsync();
                     dynamic json = JsonConvert.DeserializeObject(body);
-                    string fileUrl = json.fileUrl;
 
-                    Guid? ttdId = null;
-                    if (saveToTTD)
-                    {
-                        var newTTD = new MasterTTD
-                        {
-                            TTDId = Guid.NewGuid(),
-                            UserActiveId = userId,
-                            TTDPath = fileUrl,
-                            CreateBy = userId,
-                            CreateDateTime = DateTimeOffset.UtcNow
-                        };
-                        _applicationDbContext.MasterTTDs.Add(newTTD);
-                        await _applicationDbContext.SaveChangesAsync();
-                        ttdId = newTTD.TTDId;
-                    }
-
-                    return (fileUrl, ttdId);
+                    return json.fileUrl;
                 }
 
                 // ===============================
-                // 🔹 Upload dua file tanda tangan
+                // 🔹 Upload hanya TTD Wali
                 // ===============================
-                var (ttdWaliPath, ttdWaliId) = await UploadFileAsync(vm.TTDWali, "TTDWali", "TTDUser", saveToTTD: true);
-                var (ttdPerawatPath, ttdPerawatId) = await UploadFileAsync(vm.TTDPerawat, "TTDPerawat", "TTDUser", saveToTTD: true);
+                string? ttdWaliPath = await UploadTTDWaliAsync(vm.TTDWali);
+
+
+                // cek ttd perawat
+                var ttd = await _ttdService.CheckTTDAsync(vm.TTDPerawatId ?? Guid.Empty);
 
                 // ===============================
-                // 🔹 Simpan ke tabel DetailAsesmenEdukasi
+                // 🔹 Simpan data
                 // ===============================
                 var data = new AssesmentEdukasiDetail
                 {
@@ -280,11 +270,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     Keterangan = vm.Keterangan,
                     TglEvaluasiEdukasi = vm.TglEvaluasiEdukasi,
 
-                    // hasil upload
+                    // Hanya upload TTD Wali
                     TTDWaliPath = ttdWaliPath,
-                    TTDWaliId = ttdWaliId,
-                    TTDPerawatPath = ttdPerawatPath,
-                    TTDPerawatId = ttdPerawatId,
+
+                    // Perawat hanya GUID, bukan file
+                    TTDPerawatId = vm.TTDPerawatId,
+                    TTDPerawatPath = ttd.Path,
 
                     CreateBy = userId,
                     CreateDateTime = DateTimeOffset.UtcNow
@@ -294,10 +285,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
-                    return Created("", 
-                        new 
-                        { 
-                            message = "Berhasil menambahkan Detail Asesmen Edukasi", data.DetailAsesmenEdukasiId 
+                    return Created("",
+                        new
+                        {
+                            message = "Berhasil menambahkan Detail Asesmen Edukasi",
+                            id = data.DetailAsesmenEdukasiId,
+                            ttdWaliPath,
+                            ttdPerawatPath = ttd.Path
                         });
 
                 return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
@@ -308,158 +302,147 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             }
         }
 
+
         [HttpPut("{id}")]
         [Consumes("multipart/form-data")]
         [RequestSizeLimit(50_000_000)]
         [RequestFormLimits(MultipartBodyLengthLimit = 50_000_000)]
-        public async Task<IActionResult> Update(Guid id, [FromForm] AssessmentEdukasiDetailViewModel vm)
+        public async Task<IActionResult> Update(Guid id,[FromForm] AssessmentEdukasiDetailViewModel vm)
         {
-            if (vm == null || !ModelState.IsValid)
-                return BadRequest(new { message = "Data tidak valid." });
+            if (vm == null || !vm.DetailAsesmenEdukasiId.HasValue)
+                return BadRequest(new { message = "DetailAsesmenEdukasiId wajib ada." });
 
             try
             {
                 // ===============================
-                // 🔹 Pastikan koneksi database aktif
+                // 🔹 Ambil data dari database
                 // ===============================
-                if (!_applicationDbContext.Database.CanConnect())
-                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+                var entity = await _applicationDbContext.AssesmentEdukasiDetails
+                    .FirstOrDefaultAsync(a => a.DetailAsesmenEdukasiId == id);
+
+                if (entity == null)
+                    return NotFound(new { message = "Data tidak ditemukan." });
 
                 // ===============================
                 // 🔹 Ambil user dari JWT
                 // ===============================
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(emailLogin))
+                if (emailLogin == null)
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
 
-                var user = await _applicationDbContext.UserActives.FirstOrDefaultAsync(u => u.Email == emailLogin);
+                var user = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+
                 if (user == null)
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
 
                 var userId = user.UserActiveId;
 
                 // ===============================
-                // 🔹 Cari data yang akan diupdate
+                // 🔹 Helper Upload TTD Wali
                 // ===============================
-                var existingData = await _applicationDbContext.AssesmentEdukasiDetails
-                    .FirstOrDefaultAsync(x => x.DetailAsesmenEdukasiId == id && (x.IsDelete == false || x.IsDelete == null));
-
-                if (existingData == null)
-                    return NotFound(new { message = "Data tidak ditemukan." });
-
-                // ===============================
-                // 🔹 Helper untuk upload file JPEG
-                // ===============================
-                async Task<(string? fileUrl, Guid? ttdId)> UploadFileAsync(IFormFile? file, string prefix, string folderTarget, bool saveToTTD = false)
+                async Task<string?> UploadTTDWaliAsync(IFormFile? file)
                 {
-                    if (file == null) return (null, null);
+                    if (file == null || file.Length == 0)
+                        return null;
 
                     var maxSize = 2 * 1024 * 1024; // 2MB
                     var allowedExtensions = new[] { ".jpg", ".jpeg" };
                     var ext = Path.GetExtension(file.FileName).ToLower();
 
                     if (file.Length > maxSize)
-                        throw new Exception($"{prefix} terlalu besar! Maksimal 2MB.");
+                        throw new Exception("File TTD Wali terlalu besar! Maksimal 2MB.");
 
                     if (!allowedExtensions.Contains(ext))
-                        throw new Exception($"{prefix} harus berupa file JPG atau JPEG.");
+                        throw new Exception("Format file harus JPG atau JPEG.");
 
                     var safeTime = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
-                    var fileName = $"{prefix}_{user.FullName}_{safeTime}{ext}";
+                    var fileName = $"TTDWali_{entity.DetailAsesmenEdukasiId}_{safeTime}{ext}".Replace(" ", "_");
 
-                    using var client = new HttpClient();
-                    await using var ms = new MemoryStream();
+                    var folderTarget = "TTDEdukasi";
+                    var filePath = $"/{folderTarget}/{fileName}";
+
+                    using var ms = new MemoryStream();
                     await file.CopyToAsync(ms);
                     ms.Position = 0;
 
                     using var content = new MultipartFormDataContent
             {
-                { new StreamContent(ms) { Headers = { ContentType = new MediaTypeHeaderValue(file.ContentType) } }, "file", fileName },
+                {
+                    new StreamContent(ms)
+                    {
+                        Headers =
+                        {
+                            ContentType = new MediaTypeHeaderValue(file.ContentType)
+                        }
+                    },
+                    "file", fileName
+                },
                 { new StringContent(folderTarget), "folderTarget" }
             };
 
+                    using var client = new HttpClient();
                     var response = await client.PostAsync(_uploadUrl, content);
+
                     if (!response.IsSuccessStatusCode)
-                        throw new Exception($"Gagal upload {prefix} ke server Flask.");
+                        throw new Exception("Gagal upload file TTD Wali ke Flask.");
 
                     var body = await response.Content.ReadAsStringAsync();
                     dynamic json = JsonConvert.DeserializeObject(body);
-                    string fileUrl = json.fileUrl;
 
-                    Guid? ttdId = null;
-                    if (saveToTTD)
-                    {
-                        var newTTD = new MasterTTD
-                        {
-                            TTDId = Guid.NewGuid(),
-                            UserActiveId = userId,
-                            TTDPath = fileUrl,
-                            CreateBy = userId,
-                            CreateDateTime = DateTimeOffset.UtcNow
-                        };
-                        _applicationDbContext.MasterTTDs.Add(newTTD);
-                        await _applicationDbContext.SaveChangesAsync();
-                        ttdId = newTTD.TTDId;
-                    }
-
-                    return (fileUrl, ttdId);
+                    return json.fileUrl;
                 }
 
                 // ===============================
-                // 🔹 Upload file baru (jika dikirim)
+                // 🔹 Upload file TTD Wali (jika dikirim)
                 // ===============================
-                var (ttdWaliPath, ttdWaliId) = await UploadFileAsync(vm.TTDWali, "TTDWali", "TTDUser", saveToTTD: true);
-                var (ttdPerawatPath, ttdPerawatId) = await UploadFileAsync(vm.TTDPerawat, "TTDPerawat", "TTDUser", saveToTTD: true);
+                string? newPathTTDWali = await UploadTTDWaliAsync(vm.TTDWali);
+
+                if (newPathTTDWali != null)
+                    entity.TTDWaliPath = newPathTTDWali; // Update path
+                                                         // jika NULL → path lama tetap
 
                 // ===============================
-                // 🔹 Update field satu per satu
+                // 🔹 Update semua field lainnya
                 // ===============================
-                existingData.AsesmenEdukasiId = vm.AsesmenEdukasiId ?? existingData.AsesmenEdukasiId;
-                existingData.TopikEdukasiId = vm.TopikEdukasiId ?? existingData.TopikEdukasiId;
-                existingData.TglDetailAsesmenEdukasi = vm.TglDetailAsesmenEdukasi ?? existingData.TglDetailAsesmenEdukasi;
-                existingData.DurasiWaktu = vm.DurasiWaktu ?? existingData.DurasiWaktu;
-                existingData.NamaWali = vm.NamaWali ?? existingData.NamaWali;
-                existingData.TingkatPemahaman = vm.TingkatPemahaman ?? existingData.TingkatPemahaman;
-                existingData.MetodeEdukasi = vm.MetodeEdukasi ?? existingData.MetodeEdukasi;
-                existingData.SaranaEdukasi = vm.SaranaEdukasi ?? existingData.SaranaEdukasi;
-                existingData.EvaluasiEdukasi = vm.EvaluasiEdukasi ?? existingData.EvaluasiEdukasi;
-                existingData.Keterangan = vm.Keterangan ?? existingData.Keterangan;
-                existingData.TglEvaluasiEdukasi = vm.TglEvaluasiEdukasi ?? existingData.TglEvaluasiEdukasi;
 
-                // 🔹 Jika ada file baru, update path-nya
-                if (!string.IsNullOrEmpty(ttdWaliPath))
+                // cek ttd 
+                var ttd = await _ttdService.CheckTTDAsync(vm.TTDPerawatId ?? Guid.Empty);
+
+                entity.AsesmenEdukasiId = vm.AsesmenEdukasiId;
+                entity.TopikEdukasiId = vm.TopikEdukasiId;
+                entity.TglDetailAsesmenEdukasi = vm.TglDetailAsesmenEdukasi;
+                entity.DurasiWaktu = vm.DurasiWaktu;
+                entity.NamaWali = vm.NamaWali;
+                entity.TingkatPemahaman = vm.TingkatPemahaman;
+                entity.MetodeEdukasi = vm.MetodeEdukasi;
+                entity.SaranaEdukasi = vm.SaranaEdukasi;
+                entity.EvaluasiEdukasi = vm.EvaluasiEdukasi;
+                entity.Keterangan = vm.Keterangan;
+                entity.TglEvaluasiEdukasi = vm.TglEvaluasiEdukasi;
+
+                // TTD Perawat dikirim sebagai GUID (bukan file)
+                entity.TTDPerawatId = vm.TTDPerawatId;
+                entity.TTDPerawatPath = ttd.Path;
+
+                entity.UpdateBy = userId;
+                entity.UpdateDateTime = DateTimeOffset.UtcNow;
+
+                await _applicationDbContext.SaveChangesAsync();
+
+                return Ok(new
                 {
-                    existingData.TTDWaliPath = ttdWaliPath;
-                    existingData.TTDWaliId = ttdWaliId ?? existingData.TTDWaliId;
-
-                }
-
-                if (!string.IsNullOrEmpty(ttdPerawatPath))
-                {
-                    existingData.TTDPerawatPath = ttdPerawatPath;
-                    existingData.TTDPerawatId = ttdPerawatId ?? existingData.TTDPerawatId;
-                }
-
-                // 🔹 Audit info
-                existingData.UpdateBy = userId;
-                existingData.UpdateDateTime = DateTimeOffset.UtcNow;
-
-                // ===============================
-                // 🔹 Simpan perubahan ke database
-                // ===============================
-                _applicationDbContext.AssesmentEdukasiDetails.Update(existingData);
-                int result = await _applicationDbContext.SaveChangesAsync();
-
-                if (result > 0)
-                    return Ok(new { message = "Data berhasil diperbarui || 200 OK", existingData.DetailAsesmenEdukasiId });
-
-                return StatusCode(500, new { message = "Gagal memperbarui data di database." });
+                    message = "Berhasil update Detail Asesmen Edukasi",
+                    id = entity.DetailAsesmenEdukasiId,
+                    ttdWaliPath = entity.TTDWaliPath
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+                return StatusCode(500, new { message = $"Terjadi kesalahan: {ex.Message}" });
             }
         }
+
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)

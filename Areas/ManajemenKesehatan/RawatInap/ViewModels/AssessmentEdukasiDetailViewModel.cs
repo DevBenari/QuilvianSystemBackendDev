@@ -16,10 +16,9 @@
         public string? TingkatPemahaman { get; set; }     // Pemahaman pasien/wali terhadap edukasi
         public string? MetodeEdukasi { get; set; }        // Metode edukasi (lisan, tulisan, demonstrasi)
         public string? SaranaEdukasi { get; set; }        // Sarana yang digunakan (poster, video, leaflet)
-        public Guid? TTDId { get; set; }                  // Relasi ke MasterTTD (jika disimpan di tabel terpisah)
 
         // 🔹 File Upload untuk tanda tangan perawat
-        public IFormFile? TTDPerawat { get; set; }        // File tanda tangan perawat
+        public Guid? TTDPerawatId { get; set; }        // File tanda tangan perawat
         public string? TTDPerawatPath { get; set; }       // Path hasil upload
 
         public string? EvaluasiEdukasi { get; set; }      // Evaluasi hasil edukasi

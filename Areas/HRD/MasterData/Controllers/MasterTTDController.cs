@@ -121,7 +121,16 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
                 // ======================================================
                 // ?? Simpan metadata ke database
                 // ======================================================
-                var entity = new MasterTTD
+
+                // cek duplicate untuk UserActiveId
+                var existingTTD = await _context.MasterTTDs
+                    .FirstOrDefaultAsync(t => t.UserActiveId == vm.UserActiveId && !t.IsDelete);
+                if (existingTTD != null)
+                {
+                    return BadRequest(new { message = "UserActiveId sudah memiliki TTD. Gunakan update jika ingin mengganti TTD." });
+                }
+
+                    var entity = new MasterTTD
                 {
                     TTDId = Guid.NewGuid(),
                     UserActiveId = vm.UserActiveId,
