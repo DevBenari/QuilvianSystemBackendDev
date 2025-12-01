@@ -529,70 +529,69 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             DateTime? startDate = null,
             DateTime? endDate = null,
             [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null,
-            bool? isRawatInap = null)
+            bool? isRawatInap = null,
+            string? poliNama = null
+        )
         {
             try
             {
                 if (page < 1) page = 1;
                 if (perPage < 1) perPage = 10;
 
-                // =========================
-                // 1️⃣ Base Query
-                // =========================
+                // ======================================================
+                // 1. BASE QUERY
+                // ======================================================
                 var query = _applicationDbContext.Tindakans
                     .AsNoTracking()
                     .Where(t => t.IsDelete == false || t.IsDelete == null);
 
-                // Filter rawat inap
                 if (isRawatInap.HasValue)
                     query = query.Where(t => t.IsRawatInap == isRawatInap.Value);
 
-                // Filter by 1 tindakanId
                 if (tindakanId.HasValue)
                     query = query.Where(t => t.TindakanId == tindakanId.Value);
 
-                // Filter by multiple tindakanIds (comma-separated GUIDs)
-                //if (!string.IsNullOrEmpty(tindakanIds))
-                //{
-                //    var idList = tindakanIds
-                //        .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                //        .Select(x => Guid.TryParse(x.Trim(), out var g) ? g : Guid.Empty)
-                //        .Where(g => g != Guid.Empty)
-                //        .ToList();
-
-                //    if (idList.Any())
-                //        query = query.Where(t => idList.Contains(t.TindakanId));
-                //}
-
-
-                // Filter kelasId — hanya ambil tindakan yang punya tarif untuk kelas itu
                 if (kelasId.HasValue)
                 {
                     var kid = kelasId.Value;
                     query = query.Where(t =>
-                        _applicationDbContext.TarifKelass.Any(tk => tk.TindakanId == t.TindakanId && tk.KelasId == kid));
+                        _applicationDbContext.TarifKelass
+                            .Any(tk => tk.TindakanId == t.TindakanId && tk.KelasId == kid));
                 }
 
-                // Filter search
                 if (!string.IsNullOrWhiteSpace(search))
                 {
-                    string searchLower = $"%{search.ToLower()}%";
+                    string s = $"%{search.ToLower()}%";
                     query = query.Where(t =>
-                        EF.Functions.ILike(t.KodeTindakan, searchLower) ||
-                        EF.Functions.ILike(t.NamaTindakan, searchLower));
+                        EF.Functions.ILike(t.KodeTindakan, s) ||
+                        EF.Functions.ILike(t.NamaTindakan, s));
                 }
 
-                // Filter tanggal
                 if (startDate.HasValue && endDate.HasValue)
                 {
-                    DateTimeOffset startUtc = startDate.Value.Date;
-                    DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1);
-                    query = query.Where(t => t.CreateDateTime >= startUtc && t.CreateDateTime <= endUtc);
+                    var start = startDate.Value.Date;
+                    var end = endDate.Value.Date.AddDays(1).AddTicks(-1);
+                    query = query.Where(t => t.CreateDateTime >= start && t.CreateDateTime <= end);
                 }
 
-                // =========================
-                // 2️⃣ Sorting
-                // =========================
+                // ======================================================
+                // 2. FILTER POLI (HANYA TINDAKAN DENGAN POLI TERTENTU)
+                // ======================================================
+                if (!string.IsNullOrWhiteSpace(poliNama))
+                {
+                    var pattern = $"%{poliNama.ToLower()}%";
+
+                    query =
+                        from t in query
+                        join tp in _applicationDbContext.TindakanPolis on t.TindakanId equals tp.TindakanId
+                        join p in _applicationDbContext.Polikliniks on tp.PoliId equals p.PoliklinikId
+                        where EF.Functions.ILike(p.NamaPoliklinik, pattern)
+                        select t;
+                }
+
+                // ======================================================
+                // 3. SORTING
+                // ======================================================
                 query = sortDirection?.ToLower() == "desc"
                     ? orderBy switch
                     {
@@ -607,9 +606,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         _ => query.OrderBy(t => t.CreateDateTime)
                     };
 
-                // =========================
-                // 3️⃣ Paging
-                // =========================
+                // ======================================================
+                // 4. PAGING
+                // ======================================================
                 var totalRows = await query.CountAsync();
                 var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
 
@@ -635,9 +634,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 if (!tindakanList.Any())
                     return NotFound(new { message = "Data tidak ditemukan." });
 
-                // =========================
-                // 4️⃣ Ambil semua relasi dalam satu batch
-                // =========================
+                // ======================================================
+                // 5. LOAD RELATIONS (ASURANSI, POLI, TARIF)
+                // ======================================================
                 var tindakanIds = tindakanList.Select(t => t.TindakanId).ToList();
 
                 var asuransiData = await (
@@ -654,7 +653,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     select new { tp.TindakanId, p.PoliklinikId, p.NamaPoliklinik }
                 ).ToListAsync();
 
-                // ✅ Filter tarif sesuai kelasId (jika diisi)
                 var tarifDataQuery = from tk in _applicationDbContext.TarifKelass
                                      join k in _applicationDbContext.Kelass on tk.KelasId equals k.KelasId
                                      where tindakanIds.Contains((Guid)tk.TindakanId)
@@ -667,7 +665,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                          tk.TarifRs,
                                          tk.TarifJp,
                                          tk.TarifTotal,
-                                         NamaKelas = k.NamaKelas
+                                         k.NamaKelas
                                      };
 
                 if (kelasId.HasValue)
@@ -675,34 +673,50 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 var tarifData = await tarifDataQuery.ToListAsync();
 
-                // =========================
-                // 5️⃣ Buat Lookup (tanpa null issue)
-                // =========================
+                // ======================================================
+                // 6. BUILD LOOKUP
+                // ======================================================
                 var asuransiLookup = asuransiData.ToLookup(x => x.TindakanId);
                 var poliLookup = poliData.ToLookup(x => x.TindakanId);
                 var tarifLookup = tarifData.ToLookup(x => x.TindakanId);
 
-                // =========================
-                // 6️⃣ Gabungkan hasil (tanpa N+1)
-                // =========================
-                var result = tindakanList.Select(t => new
+                // ======================================================
+                // 7. BUILD RESULT (FILTER PoliNames SECARA IN-MEMORY)
+                // ======================================================
+                var result = tindakanList.Select(t =>
                 {
-                    t.TindakanId,
-                    t.KodeTindakan,
-                    t.NamaTindakan,
-                    t.IsRawatInap,
-                    t.UnitAsal,
-                    t.CreateDateTime,
-                    t.CreateBy,
-                    t.CreateByName,
-                    AsuransiNames = asuransiLookup[t.TindakanId].ToList(),
-                    PoliNames = poliLookup[t.TindakanId].ToList(),
-                    TarifKelas = tarifLookup[t.TindakanId].ToList()
+                    var poliItems = poliLookup[t.TindakanId].ToList();
+
+                    if (!string.IsNullOrWhiteSpace(poliNama))
+                    {
+                        // filter in-memory, pakai StringComparison, BUKAN EF.Functions.ILike
+                        poliItems = poliItems
+                            .Where(p => p.NamaPoliklinik != null &&
+                                        p.NamaPoliklinik.Contains(
+                                            poliNama,
+                                            StringComparison.OrdinalIgnoreCase))
+                            .ToList();
+                    }
+
+                    return new
+                    {
+                        t.TindakanId,
+                        t.KodeTindakan,
+                        t.NamaTindakan,
+                        t.IsRawatInap,
+                        t.UnitAsal,
+                        t.CreateDateTime,
+                        t.CreateBy,
+                        t.CreateByName,
+                        AsuransiNames = asuransiLookup[t.TindakanId].ToList(),
+                        PoliNames = poliItems,
+                        TarifKelas = tarifLookup[t.TindakanId].ToList()
+                    };
                 });
 
-                // =========================
-                // 7️⃣ Return response
-                // =========================
+                // ======================================================
+                // 8. RETURN RESPONSE
+                // ======================================================
                 return Ok(new
                 {
                     message = "Berhasil || 200 OK",
@@ -721,6 +735,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
+
+
 
 
 

@@ -201,27 +201,32 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     // ✅ Pemeriksaan Lab (Billing Lab)
                     // ================================================================
                     var daftarPemeriksaanLab = group
-                        .Where(x => x.lp != null && !x.lp.IsDelete)
-                        .GroupBy(x => x.lp.PemeriksaanLabId)
+                        .Where(x =>
+                            x.lbd != null &&
+                            (x.lbd.IsDelete == false || x.lbd.IsDelete == null)
+                        )
+                        .GroupBy(x => x.lbd.DetailBookingLabId)
                         .Select(g =>
                         {
                             var item = g.First();
+
                             var billing = billings.FirstOrDefault(b =>
-                                b.ItemId == item.lp.PemeriksaanLabId && b.JenisBilling == "Pemeriksaan Lab");
+                                b.ItemId == item.lbd.DetailBookingLabId &&
+                                b.JenisBilling == "Pemeriksaan Lab");
 
                             return new
                             {
-                                item.lp.PemeriksaanLabId,
-                                item.lp.NamaPemeriksaan,
-                                item.lp.HargaPemeriksaan,
+                                item.lbd.DetailBookingLabId,
+                                item.lp?.NamaPemeriksaan,
+                                item.lp?.HargaPemeriksaan,
                                 Qty = billing?.QtyItem ?? 1,
-                                Subtotal = billing?.SubTotalItem ?? item.lp.HargaPemeriksaan ?? 0,
+                                Subtotal = billing?.SubTotalItem ?? item.lp?.HargaPemeriksaan ?? 0,
                                 BillingId = billing?.BillingId,
                                 BillingKode = billing?.BillingKode,
                                 StatusPemeriksaan = item.lbd?.StatusPemeriksaan ?? "-"
                             };
-                        }).ToList();
-
+                        })
+                        .ToList();
                     var totalLab = daftarPemeriksaanLab.Sum(x => (decimal?)(x.Subtotal) ?? 0m);
 
                     // ================================================================
