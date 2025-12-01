@@ -1859,6 +1859,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         int perPage = 10,
         Guid? kunjunganId = null,
         Guid? labBookingId = null,
+        string? dokterKonsul =  null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery] DateTime? startDate = null,
@@ -1877,6 +1878,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
             if (labBookingId.HasValue)
                 parentQuery = parentQuery.Where(b => b.BookingLabId == labBookingId.Value);
+            
+            // filter by nama dokter konsulen
+            if (!string.IsNullOrWhiteSpace(dokterKonsul))
+            {
+                string dk = dokterKonsul.ToLower().Trim();
+
+                parentQuery =
+                    (from b in parentQuery
+                     join dr in _applicationDbContext.Dokters on b.DokterKonsulenId equals dr.DokterId
+                     where dr.NmDokter.ToLower().Trim().Contains(dk)
+                     select b)
+                     .Distinct();
+            }
 
             if (startDate.HasValue && endDate.HasValue)
             {
@@ -1945,6 +1959,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                  join d1 in _applicationDbContext.Dokters on b.DokterId equals d1.DokterId into dJoin
                  from d1 in dJoin.DefaultIfEmpty()
 
+                 join d2 in _applicationDbContext.Dokters on b.DokterKonsulenId equals d2.DokterId into d2join
+                 from d2 in d2join.DefaultIfEmpty()
+
                  join po in _applicationDbContext.Polikliniks on k.PoliklinikId equals po.PoliklinikId into poJoin
                  from po in poJoin.DefaultIfEmpty()
 
@@ -1976,6 +1993,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      b.StatusPemeriksaan,
                      b.NomorSuratJaminan,
                      b.DokterKonsulenId,
+                     NamaDokterKonsulen = d2.NmDokter ??null,
                      b.DiagnosaAwal,
                      b.Keterangan,
                      b.TTDPathPembatalan,
