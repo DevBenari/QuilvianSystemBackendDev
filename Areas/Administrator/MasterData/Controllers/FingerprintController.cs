@@ -24,6 +24,41 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
         }
 
         // ===========================
+        // 0. GET ALL FINGERPRINTS
+        // ===========================
+        [HttpGet("all")]
+        public async Task<IActionResult> GetAllFingerprints()
+        {
+            try
+            {
+                var list = await _db.Fingerprints
+                    .Select(x => new
+                    {
+                        x.FingerprintId,
+                        x.UserId,
+                        x.Template,
+                        x.CreateDateTime
+                    })
+                    .ToListAsync();
+
+                if (list == null || list.Count == 0)
+                    return NotFound(new { message = "Tidak ada data fingerprint di database" });
+
+                return Ok(new
+                {
+                    message = "Berhasil mengambil semua data fingerprint",
+                    total = list.Count,
+                    data = list
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting all fingerprints");
+                return StatusCode(500, new { message = ex.Message });
+            }
+        }
+
+        // ===========================
         // 1. REGISTER FINGERPRINT
         // ===========================
 
@@ -126,6 +161,41 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                 message = "Fingerprint ditemukan",
                 data
             });
+        }
+
+        // ===========================
+        // 4. DELETE FINGERPRINT BY USER ID
+        // ===========================
+        [HttpDelete("{userId}")]
+        public async Task<IActionResult> DeleteFingerprint(string userId)
+        {
+            try
+            {
+                var data = await _db.Fingerprints
+                    .FirstOrDefaultAsync(x => x.UserId == userId);
+
+                if (data == null)
+                {
+                    return NotFound(new
+                    {
+                        message = $"Fingerprint dengan UserId '{userId}' tidak ditemukan"
+                    });
+                }
+
+                _db.Fingerprints.Remove(data);
+                await _db.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    message = "Fingerprint berhasil dihapus",
+                    userId = userId
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting fingerprint");
+                return StatusCode(500, new { message = ex.Message });
+            }
         }
 
     }
