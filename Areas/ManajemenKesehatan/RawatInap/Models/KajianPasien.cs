@@ -42,6 +42,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models
         public string? NamaTempat {  get; set; }
         public string? PenyampaianEdukasi { get; set; }
         public string? BahasaDigunakan { get; set; }
+        public bool? IsDaerah {  get; set; }
+        public bool? IsAsing {  get; set; }
         public string? JenisHambatan { get; set; }
 
         // Pemeriksaan DBN (Tidak Ada Kelainan)

@@ -103,6 +103,32 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                                 a.CreateDateTime,
                                 a.KajianUtamaPengkajian,
                                 a.CurrentMedicationId,
+                                a.BahasaDigunakan,
+                                a.JenisHambatan,
+
+                                a.IsDBNKepala,
+                                a.IsDBNMata,
+                                a.IsDBNMulut,
+                                a.IsDBNTHT,
+                                a.IsDBNLeher,
+                                a.IsDBNThorak,
+                                a.IsDBNJantung,
+                                a.IsDBNParu,
+                                a.IsDBNPunggung,
+                                a.IsDBNAbdomen,
+                                a.IsDBNGenital,
+                                a.IsDBNEkstremitas,
+
+                                a.KeadaanKepala,
+                                a.KeadaanLeher,
+                                a.KeadaanMata,
+                                a.KeadaanMulut,
+                                a.KeadaanTHT,
+                                a.KeadaanThorak,
+                                a.KeadaanPunggung,
+                                a.KeadaanEkstremitas,
+                                a.IsAsing,
+                                a.IsDaerah,
                                 CreateByName = u.FullName,
                                 k.NoRekamMedis,
                             };
@@ -193,6 +219,32 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 x.KamarId,
                 x.NamaTempat,
                 x.PenyampaianEdukasi,
+                x.BahasaDigunakan,
+                x.JenisHambatan,
+
+                x.IsDBNKepala,
+                x.IsDBNMata,
+                x.IsDBNMulut,
+                x.IsDBNTHT,
+                x.IsDBNLeher,
+                x.IsDBNThorak,
+                x.IsDBNJantung,
+                x.IsDBNParu,
+                x.IsDBNPunggung,
+                x.IsDBNAbdomen,
+                x.IsDBNGenital,
+                x.IsDBNEkstremitas,
+
+                x.KeadaanKepala,
+                x.KeadaanLeher,
+                x.KeadaanMata,
+                x.KeadaanMulut,
+                x.KeadaanTHT,
+                x.KeadaanThorak,
+                x.KeadaanPunggung,
+                x.KeadaanEkstremitas,
+                x.IsAsing,
+                x.IsDaerah,
                 // 🔹 List Pain Assessment (semua record terkait)
                 PainAssessments = painLookup[x.KunjunganId].ToList(),
                 // 🔹 Info surat pengantar (ambil 1 saja karena jarang multiple)
@@ -403,6 +455,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                     BahasaDigunakan = vm.BahasaDigunakan,
                     JenisHambatan = vm.JenisHambatan,
+                    IsDaerah = vm.IsDaerah,
+                    IsAsing = vm.IsAsing,
 
                     IsDBNKepala = vm.IsDBNKepala,
                     IsDBNMata = vm.IsDBNMata,
@@ -524,7 +578,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 data.PenyampaianEdukasi = vm.PenyampaianEdukasi;
                 data.BahasaDigunakan = vm.BahasaDigunakan;
                 data.JenisHambatan = vm.JenisHambatan;
-
+                data.IsAsing = vm.IsAsing;
+                data.IsDaerah = vm.IsDaerah;
                 data.IsDBNKepala = vm.IsDBNKepala;
                 data.IsDBNMata = vm.IsDBNMata;
                 data.IsDBNMulut = vm.IsDBNMulut;
@@ -537,7 +592,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 data.IsDBNAbdomen = vm.IsDBNAbdomen;
                 data.IsDBNGenital = vm.IsDBNGenital;
                 data.IsDBNEkstremitas = vm.IsDBNEkstremitas;
-
                 data.KeadaanKepala = vm.KeadaanKepala;
                 data.KeadaanLeher = vm.KeadaanLeher;
                 data.KeadaanMata = vm.KeadaanMata;
@@ -546,7 +600,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 data.KeadaanThorak = vm.KeadaanThorak;
                 data.KeadaanPunggung = vm.KeadaanPunggung;
                 data.KeadaanEkstremitas = vm.KeadaanEkstremitas;
-
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -727,6 +780,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.KeadaanThorak,
                              a.KeadaanPunggung,
                              a.KeadaanEkstremitas,
+                             a.IsAsing,
+                             a.IsDaerah,
 
                              // info pain assessment
                              pa.InheritedDisease,

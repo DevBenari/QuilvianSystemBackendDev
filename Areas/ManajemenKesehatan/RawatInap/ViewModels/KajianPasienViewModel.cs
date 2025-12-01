@@ -37,6 +37,8 @@
         public string? JenisHambatan { get; set; }
 
         // Pemeriksaan DBN (Tidak Ada Kelainan)
+        public bool? IsDaerah { get; set; }
+        public bool? IsAsing { get; set; }
         public bool? IsDBNKepala { get; set; }
         public bool? IsDBNMata { get; set; }
         public bool? IsDBNMulut { get; set; }
