@@ -59,5 +59,28 @@
 
         // Keterangan tambahan
         public string? Keterangan { get; set; }
+
+        public string? TindakLanjut { get; set; }
+        public string? KeadaanPasienPulang { get; set; }
+        public string? KesimpulanAkhir { get; set; }
+
+        public TimeOnly? WaktuDipulangkan { get; set; }
+
+        public string? UPF { get; set; }
+        public string? Bangsal { get; set; }
+        public Guid? KelasId { get; set; }
+        public string? IndikasiRanap { get; set; }
+        public TimeOnly? WaktuDirujuk { get; set; }
+        public string? Observasi { get; set; }
+        public string? TempatMeninggal { get; set; }
+        public DateTime? TanggalMeninggal { get; set; }
+        public string? PenyebabMeninggal { get; set; }
+        public string? MobilisasiSaatPulang { get; set; }
+        public bool? IsVisum { get; set; }
+        public decimal? JumlahHariIzin { get; set; }
+        public DateTime? TanggalAwalIzin { get; set; }
+        public DateTime? TanggalAkhirIzin { get; set; }
+        public Guid? TTDPerawatId { get; set; }
+        public Guid? TTDDokterId { get; set; }
     }
 }

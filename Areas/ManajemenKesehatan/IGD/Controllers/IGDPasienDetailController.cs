@@ -68,6 +68,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                              a.JenisEmergency,
                              a.JenisKasus,
                              a.AlasanKeluar,
+                             a.LokasiTrauma,
+                             a.TanggalTrauma,
                              a.Keterangan,
                          }).OrderByDescending(a => a.CreateDateTime);
 
@@ -165,6 +167,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                     JenisEmergency = vm.JenisEmergency,
                     KategoriPenyakit = vm.KategoriPenyakit,
                     AlasanKeluar = vm.AlasanKeluar,
+                    LokasiTrauma = vm.LokasiTrauma,
+                    TanggalTrauma = vm.TanggalTrauma,
                     Keterangan = vm.Keterangan,
                     
                     CreateBy = userActiveId,
@@ -238,6 +242,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 data.JenisKasus = vm.JenisKasus;
                 data.JenisEmergency = vm.JenisEmergency;
                 data.AlasanKeluar= vm.AlasanKeluar;
+                data.LokasiTrauma = vm.LokasiTrauma;
+                data.TanggalTrauma = vm.TanggalTrauma;
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
@@ -356,6 +362,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                              a.JenisEmergency,
                              a.JenisKasus,
                              a.AlasanKeluar,
+                             a.LokasiTrauma,
+                             a.TanggalTrauma,
                              a.Keterangan,
                          });
 

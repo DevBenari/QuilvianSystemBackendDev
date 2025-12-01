@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
@@ -213,8 +214,30 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                     PerawatIgdId = vm.PerawatIgdId,
                     PerawatKamarId = vm.PerawatKamarId,
 
-                    Keterangan = vm.Keterangan,
 
+                    TindakLanjut = vm.TindakLanjut,
+                    KeadaanPasienPulang = vm.KeadaanPasienPulang,
+                    KesimpulanAkhir = vm.KesimpulanAkhir,
+                    WaktuDipulangkan = vm.WaktuDipulangkan,
+                    UPF = vm. UPF,
+                    Bangsal = vm.Bangsal,
+
+                    KelasId = vm.KelasId,
+                    IndikasiRanap = vm.IndikasiRanap,
+                    WaktuDirujuk = vm.WaktuDirujuk,
+                    Observasi = vm.Observasi,
+                    TempatMeninggal = vm.TempatMeninggal,
+                    TanggalMeninggal = vm.TanggalMeninggal,
+                    PenyebabMeninggal =vm.PenyebabMeninggal,
+                    MobilisasiSaatPulang = vm.MobilisasiSaatPulang,
+                    IsVisum = vm.IsVisum,
+                    JumlahHariIzin = vm.JumlahHariIzin,
+                    TanggalAkhirIzin = vm.TanggalAkhirIzin,
+                    TanggalAwalIzin = vm.TanggalAwalIzin,
+                    TTDDokterId = vm.TTDDokterId,
+                    TTDPerawatId = vm.TTDPerawatId,
+
+                    Keterangan = vm.Keterangan,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow
                 };
@@ -316,6 +339,28 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 data.PerawatIgdId = vm.PerawatIgdId;
                 data.PerawatKamarId = vm.PerawatKamarId;
 
+                data.TindakLanjut = vm.TindakLanjut;
+                data.KeadaanPasienPulang = vm.KeadaanPasienPulang;
+                data.KesimpulanAkhir = vm.KesimpulanAkhir;
+                data.WaktuDipulangkan = vm.WaktuDipulangkan;
+                data.UPF = vm.UPF;
+                data.Bangsal = vm.Bangsal;
+
+                data.KelasId = vm.KelasId;
+                data.IndikasiRanap = vm.IndikasiRanap;
+                data.WaktuDirujuk = vm.WaktuDirujuk;
+                data.Observasi = vm.Observasi;
+                data.TempatMeninggal = vm.TempatMeninggal;
+                data.TanggalMeninggal = vm.TanggalMeninggal;
+                data.PenyebabMeninggal = vm.PenyebabMeninggal;
+                data.MobilisasiSaatPulang = vm.MobilisasiSaatPulang;
+                data.IsVisum = vm.IsVisum;
+                data.JumlahHariIzin = vm.JumlahHariIzin;
+                data.TanggalAkhirIzin = vm.TanggalAkhirIzin;
+                data.TanggalAwalIzin = vm.TanggalAwalIzin;
+                data.TTDDokterId = vm.TTDDokterId;
+                data.TTDPerawatId = vm.TTDPerawatId;
+
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
@@ -409,6 +454,28 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
                             a.PerawatIgdId,
                             a.PerawatKamarId,
+
+                            TindakLanjut = a.TindakLanjut,
+                            KeadaanPasienPulang = a.KeadaanPasienPulang,
+                            KesimpulanAkhir = a.KesimpulanAkhir,
+                            WaktuDipulangkan = a.WaktuDipulangkan,
+                            UPF = a.UPF,
+                            Bangsal = a.Bangsal,
+
+                            KelasId = a.KelasId,
+                            IndikasiRanap = a.IndikasiRanap,
+                            WaktuDirujuk = a.WaktuDirujuk,
+                            Observasi = a.Observasi,
+                            TempatMeninggal = a.TempatMeninggal,
+                            TanggalMeninggal = a.TanggalMeninggal,
+                            PenyebabMeninggal = a.PenyebabMeninggal,
+                            MobilisasiSaatPulang = a.MobilisasiSaatPulang,
+                            IsVisum = a.IsVisum,
+                            JumlahHariIzin = a.JumlahHariIzin,
+                            TanggalAkhirIzin = a.TanggalAkhirIzin,
+                            TanggalAwalIzin = a.TanggalAwalIzin,
+                            TTDDokterId = a.TTDDokterId,
+                            TTDPerawatId = a.TTDPerawatId,
                             a.Keterangan,
 
                             a.CreateDateTime,

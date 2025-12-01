@@ -21,6 +21,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Models
         public Guid? DokterId { get; set; }
         public Guid? PerawatId { get; set; }
         public DateTime? TglObservasi { get; set; }
+        public Decimal? ATS {  get; set; }
         public string? Keterangan { get; set; }
     }
 }

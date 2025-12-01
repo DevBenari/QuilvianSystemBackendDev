@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using Humanizer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
@@ -399,6 +400,32 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     KamarId = vm.KamarId,
                     NamaTempat = vm.NamaTempat,
                     PenyampaianEdukasi = vm.PenyampaianEdukasi,
+
+                    BahasaDigunakan = vm.BahasaDigunakan,
+                    JenisHambatan = vm.JenisHambatan,
+
+                    IsDBNKepala = vm.IsDBNKepala,
+                    IsDBNMata = vm.IsDBNMata,
+                    IsDBNMulut = vm.IsDBNMulut,
+                    IsDBNTHT = vm.IsDBNTHT,
+                    IsDBNLeher = vm.IsDBNLeher,
+                    IsDBNThorak = vm.IsDBNThorak,
+                    IsDBNJantung = vm.IsDBNJantung,
+                    IsDBNParu = vm.IsDBNParu,
+                    IsDBNPunggung = vm.IsDBNPunggung,
+                    IsDBNAbdomen = vm.IsDBNAbdomen,
+                    IsDBNGenital = vm.IsDBNGenital,
+                    IsDBNEkstremitas = vm.IsDBNEkstremitas,
+
+                    KeadaanKepala = vm.KeadaanKepala,
+                    KeadaanLeher = vm.KeadaanLeher,
+                    KeadaanMata = vm.KeadaanMata,
+                    KeadaanMulut = vm.KeadaanMulut,
+                    KeadaanTHT = vm.KeadaanTHT,
+                    KeadaanThorak = vm.KeadaanThorak,
+                    KeadaanPunggung = vm.KeadaanPunggung,
+                    KeadaanEkstremitas = vm.KeadaanEkstremitas,
+
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow
                 };
@@ -491,10 +518,34 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 data.Keterangan = vm.Keterangan;
                 data.TglKajian = DateTime.UtcNow; // Atau gunakan TglKajian dari VM jika ada
                 data.TglTindakLanjut = vm.TglTindakLanjut;
-                    data.IndikasiTindakLanjut = vm.IndikasiTindakLanjut;
-                    data.KamarId = vm.KamarId;
-                    data.NamaTempat = vm.NamaTempat;
-                    data.PenyampaianEdukasi = vm.PenyampaianEdukasi;
+                data.IndikasiTindakLanjut = vm.IndikasiTindakLanjut;
+                data.KamarId = vm.KamarId;
+                data.NamaTempat = vm.NamaTempat;
+                data.PenyampaianEdukasi = vm.PenyampaianEdukasi;
+                data.BahasaDigunakan = vm.BahasaDigunakan;
+                data.JenisHambatan = vm.JenisHambatan;
+
+                data.IsDBNKepala = vm.IsDBNKepala;
+                data.IsDBNMata = vm.IsDBNMata;
+                data.IsDBNMulut = vm.IsDBNMulut;
+                data.IsDBNTHT = vm.IsDBNTHT;
+                data.IsDBNLeher = vm.IsDBNLeher;
+                data.IsDBNThorak = vm.IsDBNThorak;
+                data.IsDBNJantung = vm.IsDBNJantung;
+                data.IsDBNParu = vm.IsDBNParu;
+                data.IsDBNPunggung = vm.IsDBNPunggung;
+                data.IsDBNAbdomen = vm.IsDBNAbdomen;
+                data.IsDBNGenital = vm.IsDBNGenital;
+                data.IsDBNEkstremitas = vm.IsDBNEkstremitas;
+
+                data.KeadaanKepala = vm.KeadaanKepala;
+                data.KeadaanLeher = vm.KeadaanLeher;
+                data.KeadaanMata = vm.KeadaanMata;
+                data.KeadaanMulut = vm.KeadaanMulut;
+                data.KeadaanTHT = vm.KeadaanTHT;
+                data.KeadaanThorak = vm.KeadaanThorak;
+                data.KeadaanPunggung = vm.KeadaanPunggung;
+                data.KeadaanEkstremitas = vm.KeadaanEkstremitas;
 
 
                 data.UpdateBy = userActiveId;
@@ -652,6 +703,30 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.KamarId,
                              a.NamaTempat,
                              a.PenyampaianEdukasi,
+                             a.BahasaDigunakan,
+                             a.JenisHambatan,
+
+                             a.IsDBNKepala,
+                             a.IsDBNMata,
+                             a.IsDBNMulut,
+                             a.IsDBNTHT,
+                             a.IsDBNLeher,
+                             a.IsDBNThorak,
+                             a.IsDBNJantung,
+                             a.IsDBNParu,
+                             a.IsDBNPunggung,
+                             a.IsDBNAbdomen,
+                             a.IsDBNGenital,
+                             a.IsDBNEkstremitas,
+
+                             a.KeadaanKepala,
+                             a.KeadaanLeher,
+                             a.KeadaanMata,
+                             a.KeadaanMulut,
+                             a.KeadaanTHT,
+                             a.KeadaanThorak,
+                             a.KeadaanPunggung,
+                             a.KeadaanEkstremitas,
 
                              // info pain assessment
                              pa.InheritedDisease,

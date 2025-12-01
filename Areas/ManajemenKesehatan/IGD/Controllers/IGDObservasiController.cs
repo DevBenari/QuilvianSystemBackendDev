@@ -74,6 +74,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                         h.DokterId,
                         h.PerawatId,
                         h.TglObservasi,
+                        h.ATS,
                         h.Keterangan,
                         h.CreateDateTime,
                         CreateByName = u.FullName
@@ -134,6 +135,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                     header.AlatBantuOksigenasi,
                     header.DokterId,
                     header.PerawatId,
+                    header.ATS,
                     header.TglObservasi,
                     header.Keterangan,
                     header.CreateDateTime,
@@ -302,6 +304,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 data.DokterId = vm.DokterId;
                 data.PerawatId = vm.PerawatId;
                 data.TglObservasi = vm.TglObservasi;
+                data.ATS = vm.ATS;
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
@@ -529,6 +532,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                     h.PerawatId,
                     h.TglObservasi,
                     h.Keterangan,
+                    h.ATS,
                     h.CreateDateTime,
                     CreateByName = u.FullName
                 };
@@ -725,6 +729,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 h.DokterId,
                 h.PerawatId,
                 h.TglObservasi,
+                h.ATS,
                 h.Keterangan,
                 h.CreateDateTime,
                 h.CreateByName,

@@ -17,6 +17,7 @@
         public Guid? PerawatId { get; set; }
         public DateTime? TglObservasi { get; set; }
         public string? Keterangan { get; set; }
+        public Decimal? ATS { get; set; }
 
         public List<IGDObservasiDetailViewModel>? Details { get; set; }
     }

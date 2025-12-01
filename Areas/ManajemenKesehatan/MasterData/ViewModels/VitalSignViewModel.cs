@@ -35,7 +35,7 @@
         public decimal? PenambahanBBHD { get; set; }
         public decimal? BBKering { get; set; }
         public decimal? LingkarLenganAtas { get; set; }
-        public Guid? PengkajianScoreId { get; set; }
+        public List<Guid>? PengkajianScoreId { get; set; }
         public decimal? ScoreGizi { get; set; }
     }
 }

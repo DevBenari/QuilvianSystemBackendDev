@@ -12,6 +12,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
@@ -49,16 +50,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
             _ttdService = ttdService;
-            //_uploadUrl = configuration["FileStorage:UploadUrl"];
-
-            //if (string.IsNullOrEmpty(_uploadUrl))
-            //{
-            //    _logger.LogError("Konfigurasi UploadUrl tidak ditemukan di appsettings.json!");
-            //}
-            //else
-            //{
-            //    _logger.LogInformation($"Upload URL berhasil dimuat: {_uploadUrl}");
-            //}
         }
 
         [HttpGet]
@@ -84,6 +75,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                              a.KategoriTindakan,
                              a.WaktuTindakan,
                              a.TTDPath,
+                             a.HasilSkinTest,
+                             a.HasilTetanusToxoid,
+                             a.HasilMedikamentosa,
+                             a.JumlahAntiTetanusSerum,
+                             a.JalurMedikamentosa,
+                             a.WaktuPengobatan,
+                             a.PerawatId,
+                             a.DokterId,
                              a.Keterangan,
                          }).OrderByDescending(a => a.CreateDateTime);
 
@@ -245,6 +244,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                     KategoriTindakan = vm.KategoriTindakan,
                     WaktuTindakan = vm.WaktuTindakan,
                     TTDPath = ttd.Path,
+                    HasilSkinTest = vm.HasilSkinTest,
+                    HasilMedikamentosa = vm.HasilMedikamentosa,
+                    HasilTetanusToxoid = vm.HasilTetanusToxoid,
+                    JumlahAntiTetanusSerum = vm.JumlahAntiTetanusSerum,
+                    JalurMedikamentosa = vm.JalurMedikamentosa,
+                    WaktuPengobatan = vm.WaktuPengobatan,
+                    PerawatId = vm.PerawatId,
+                    DokterId = vm.DokterId,
+
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow
                 };
@@ -309,70 +317,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 // cek ttd
                 var ttd = await _ttdService.CheckTTDAsync(userActiveId);
 
-
-                //    if (vm.TTDFile != null && vm.TTDFile.Length > 0)
-                //    {
-                //        var maxSize = 1 * 1024 * 1024; // max 1MB
-                //        var allowedExtensions = new List<string> { ".jpg", ".jpeg" };
-                //        var fileExtension = Path.GetExtension(vm.TTDFile.FileName).ToLower();
-
-                //        if (vm.TTDFile.Length > maxSize)
-                //            return BadRequest(new { message = "Ukuran file TTD terlalu besar! Maksimal 1MB." });
-
-                //        if (!allowedExtensions.Contains(fileExtension))
-                //            return BadRequest(new { message = "Format TTD tidak valid! Gunakan JPG atau JPEG." });
-
-                //        // Nama file unik
-                //        var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
-                //        var ttdFileName = $"{getUserActive.FullName}_{safeTime}_TindakanIGD{fileExtension}";
-
-                //        // 📤 Upload ke Flask
-                //        using var client = new HttpClient();
-                //        using var ms = new MemoryStream();
-                //        await vm.TTDFile.CopyToAsync(ms);
-                //        ms.Position = 0;
-
-                //        var content = new MultipartFormDataContent
-                //{
-                //    {
-                //        new StreamContent(ms)
-                //        {
-                //            Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.TTDFile.ContentType) }
-                //        },
-                //        "file", ttdFileName
-                //    },
-                //    { new StringContent("TTDIGD"), "folderTarget" }
-                //};
-
-                //        // Pastikan _uploadUrl sudah didefinisikan di controller
-                //        var flaskResponse = await client.PostAsync(_uploadUrl, content);
-                //        if (!flaskResponse.IsSuccessStatusCode)
-                //            return StatusCode(500, new { message = "Gagal upload tanda tangan ke server Flask." });
-
-                //        // Ambil URL/path hasil upload dari response Flask
-
-                //        var responseBody = await flaskResponse.Content.ReadAsStringAsync(); 
-
-                //        Console.WriteLine("[DEBUG] Flask response: " + responseBody);
-                //        _logger.LogInformation($"[DEBUG] Flask response: {responseBody}");
-
-                //        dynamic jsonResp = JsonConvert.DeserializeObject(responseBody);
-                //        ttdPath = jsonResp?.url ?? jsonResp?.fileUrl ?? jsonResp?.path ?? "";
-
-                //        // Simpan ke MasterTTD
-                //        var newTTD = new MasterTTD
-                //        {
-                //            TTDId = Guid.NewGuid(),
-                //            UserActiveId = userActiveId,
-                //            TTDPath = ttdPath,
-                //            CreateDateTime = DateTimeOffset.UtcNow,
-                //            CreateBy = userActiveId
-                //        };
-
-                //        _applicationDbContext.MasterTTDs.Add(newTTD);
-                //        await _applicationDbContext.SaveChangesAsync();
-                //    }
-
                 // ==================================================
                 // ✅ UPDATE DATA LAMA
                 // ==================================================
@@ -382,6 +326,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 existingData.WaktuTindakan = vm.WaktuTindakan ?? existingData.WaktuTindakan;
                 existingData.Keterangan = vm.Keterangan ?? existingData.Keterangan;
                 existingData.TTDPath = ttd.Path;
+                existingData.HasilSkinTest = vm.HasilSkinTest;
+                    existingData.HasilMedikamentosa = vm.HasilMedikamentosa;
+                    existingData.HasilTetanusToxoid = vm.HasilTetanusToxoid;
+                    existingData.JumlahAntiTetanusSerum = vm.JumlahAntiTetanusSerum;
+                    existingData.JalurMedikamentosa = vm.JalurMedikamentosa;
+                    existingData.WaktuPengobatan = vm.WaktuPengobatan;
+                    existingData.PerawatId = vm.PerawatId;
+                    existingData.DokterId = vm.DokterId;
+
                 existingData.UpdateBy = userActiveId;
                 existingData.UpdateDateTime = DateTimeOffset.UtcNow;
 
@@ -494,6 +447,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                              a.KategoriTindakan,
                              a.WaktuTindakan,
                              a.TTDPath,
+                             a.HasilSkinTest,
+                             a.HasilTetanusToxoid,
+                             a.HasilMedikamentosa,
+                             a.JumlahAntiTetanusSerum,
+                             a.JalurMedikamentosa,
+                             a.WaktuPengobatan,
+                             a.PerawatId,
+                             a.DokterId,
                              a.Keterangan,
                          });
 

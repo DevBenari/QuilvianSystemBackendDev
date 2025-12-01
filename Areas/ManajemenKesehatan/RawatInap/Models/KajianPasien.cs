@@ -41,5 +41,33 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models
         public Guid? KamarId { get; set; }
         public string? NamaTempat {  get; set; }
         public string? PenyampaianEdukasi { get; set; }
+        public string? BahasaDigunakan { get; set; }
+        public string? JenisHambatan { get; set; }
+
+        // Pemeriksaan DBN (Tidak Ada Kelainan)
+        public bool? IsDBNKepala { get; set; }
+        public bool? IsDBNMata { get; set; }
+        public bool? IsDBNMulut { get; set; }
+        public bool? IsDBNTHT { get; set; }
+        public bool? IsDBNLeher { get; set; }
+        public bool? IsDBNThorak { get; set; }
+        public bool? IsDBNJantung { get; set; }
+        public bool? IsDBNParu { get; set; }
+        public bool? IsDBNPunggung { get; set; }
+        public bool? IsDBNAbdomen { get; set; }
+        public bool? IsDBNGenital { get; set; }
+        public bool? IsDBNEkstremitas { get; set; }
+
+        // Parameter kepala & leher dipisah
+        public string? KeadaanKepala { get; set; }
+        public string? KeadaanLeher { get; set; }
+
+        public string? KeadaanMata { get; set; }
+        public string? KeadaanMulut { get; set; }
+        public string? KeadaanTHT { get; set; }
+        public string? KeadaanThorak { get; set; }
+        public string? KeadaanPunggung { get; set; }
+        public string? KeadaanEkstremitas { get; set; }
+
     }
 }
