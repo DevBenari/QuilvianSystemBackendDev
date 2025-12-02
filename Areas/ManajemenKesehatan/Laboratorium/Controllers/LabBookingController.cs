@@ -2056,5 +2056,207 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             });
         }
 
+        [HttpGet("pagedLabMCU")]
+        public async Task<IActionResult> Paged2LabMCU(
+        int page = 1,
+        int perPage = 10,
+        Guid? kunjunganId = null,
+        Guid? labBookingId = null,
+        string? dokterKonsul = null,
+        string? orderBy = "CreateDateTime",
+        string? sortDirection = "desc",
+        [FromQuery] DateTime? startDate = null,
+        [FromQuery] DateTime? endDate = null)
+        {
+            // =============================
+            // 1️⃣ BASE QUERY
+            // =============================
+            var parentQuery = _applicationDbContext.LabBookings
+                .Where(b => (b.IsDelete == false || b.IsDelete == null))
+                .AsQueryable();
+
+            // Filters umum
+            if (kunjunganId.HasValue)
+                parentQuery = parentQuery.Where(b => b.KunjunganId == kunjunganId.Value);
+
+            if (labBookingId.HasValue)
+                parentQuery = parentQuery.Where(b => b.BookingLabId == labBookingId.Value);
+
+            // filter by nama dokter konsulen
+            if (!string.IsNullOrWhiteSpace(dokterKonsul))
+            {
+                string dk = dokterKonsul.ToLower().Trim();
+
+                parentQuery =
+                    (from b in parentQuery
+                     join dr in _applicationDbContext.Dokters on b.DokterKonsulenId equals dr.DokterId
+                     where dr.NmDokter.ToLower().Trim().Contains(dk)
+                     select b)
+                     .Distinct();
+            }
+
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                var start = startDate.Value.Date;
+                var end = endDate.Value.Date.AddDays(1).AddTicks(-1);
+                parentQuery = parentQuery.Where(b => b.CreateDateTime >= start && b.CreateDateTime <= end);
+            }
+
+            // =============================
+            // 2️⃣ HARDCORE → HANYA GIZI 
+            // =============================
+            parentQuery =
+                from b in parentQuery
+                join d in _applicationDbContext.LabBookingDetails on b.BookingLabId equals d.BookingLabId
+                join lab in _applicationDbContext.Labs on d.LabId equals lab.LabId
+                where lab.NamaLab.ToLower().Replace(" ", "") == "mcu"
+                select b;
+
+            parentQuery = parentQuery.Distinct();
+
+            // =============================
+            // 3️⃣ TOTAL rows
+            // =============================
+            int totalRows = await parentQuery.CountAsync();
+
+            // =============================
+            // 4️⃣ SORTING
+            // =============================
+            parentQuery = sortDirection?.ToLower() == "desc"
+                ? parentQuery.OrderByDescending(b => b.CreateDateTime)
+                : parentQuery.OrderBy(b => b.CreateDateTime);
+
+            // =============================
+            // 5️⃣ PAGING
+            // =============================
+            var pagedParentIds = await parentQuery
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .Select(b => b.BookingLabId)
+                .ToListAsync();
+
+            if (!pagedParentIds.Any())
+                return Ok(new
+                {
+                    status = "success",
+                    data = new { Rows = new List<object>(), TotalRows = 0 }
+                });
+
+            // =============================
+            // 6️⃣ LOAD PARENT DATA
+            // =============================
+            var parents = await
+                (from b in _applicationDbContext.LabBookings
+                 join u in _applicationDbContext.UserActives on b.CreateBy equals u.UserActiveId into uJoin
+                 from u in uJoin.DefaultIfEmpty()
+
+                 join k in _applicationDbContext.Kunjungans on b.KunjunganId equals k.KunjunganID into kJoin
+                 from k in kJoin.DefaultIfEmpty()
+
+                 join a in _applicationDbContext.Asuransis on b.AsuransiId equals a.AsuransiId into aJoin
+                 from a in aJoin.DefaultIfEmpty()
+
+                 join p in _applicationDbContext.PendaftaranPasienBarus on b.PasienId equals p.PendaftaranPasienBaruId into pJoin
+                 from p in pJoin.DefaultIfEmpty()
+
+                 join d1 in _applicationDbContext.Dokters on b.DokterId equals d1.DokterId into dJoin
+                 from d1 in dJoin.DefaultIfEmpty()
+
+                 join d2 in _applicationDbContext.Dokters on b.DokterKonsulenId equals d2.DokterId into d2join
+                 from d2 in d2join.DefaultIfEmpty()
+
+                 join po in _applicationDbContext.Polikliniks on k.PoliklinikId equals po.PoliklinikId into poJoin
+                 from po in poJoin.DefaultIfEmpty()
+
+                 join kl in _applicationDbContext.Kelass on b.KelasId equals kl.KelasId into klJoin
+                 from kl in klJoin.DefaultIfEmpty()
+
+                 where pagedParentIds.Contains(b.BookingLabId)
+
+                 select new
+                 {
+                     b.BookingLabId,
+                     b.KunjunganId,
+                     b.PasienId,
+                     p.NamaLengkap,
+                     p.NoRekamMedis,
+                     b.AsuransiId,
+                     AsuransiNama = a.NamaAsuransi ?? null,
+                     b.DokterId,
+                     DokterNama = d1.NmDokter ?? null,
+                     PoliNama = po.NamaPoliklinik ?? null,
+                     b.TglPemeriksaan,
+                     b.TglBooking,
+                     b.AlasanPembatalan,
+                     b.StatusBookingLab,
+                     b.StatusPembayaran,
+                     b.KelasId,
+                     NamaKelas = kl.NamaKelas ?? null,
+                     b.HemodialisaKe,
+                     b.StatusPemeriksaan,
+                     b.NomorSuratJaminan,
+                     b.DokterKonsulenId,
+                     NamaDokterKonsulen = d2.NmDokter ?? null,
+                     b.DiagnosaAwal,
+                     b.Keterangan,
+                     b.TTDPathPembatalan,
+                     b.CreateDateTime,
+                     b.TindakLanjut,
+                     b.HasilPenunjangLab,
+                     b.AnjuranDiet,
+                     b.IsDelete,
+                     CreateBy = u.FullName
+                 }).ToListAsync();
+
+            // =============================
+            // 7️⃣ LOAD DETAIL
+            // =============================
+            var details = await
+                (from d in _applicationDbContext.LabBookingDetails
+                 join lab in _applicationDbContext.Labs on d.LabId equals lab.LabId into labJoin
+                 from lab in labJoin.DefaultIfEmpty()
+
+                 join lp in _applicationDbContext.LabPemeriksaans on d.PemeriksaanLabId equals lp.PemeriksaanLabId into lpJoin
+                 from lp in lpJoin.DefaultIfEmpty()
+
+                 where pagedParentIds.Contains((Guid)d.BookingLabId) &&
+                       lab.NamaLab.ToLower().Replace(" ", "") == "mcu" && (d.IsDelete == false || d.IsDelete == null)
+
+                 select new
+                 {
+                     d.BookingLabId,
+                     d.DetailBookingLabId,
+                     NamaPemeriksaan = lp.NamaPemeriksaan,
+                     lp.HargaPemeriksaan,
+                     Lab = lab.NamaLab,
+                     d.IsDelete
+                 }).ToListAsync();
+
+            // =============================
+            // 8️⃣ MERGE
+            // =============================
+            var merged = parents.Select(x => new
+            {
+                Parent = x,
+                Details = details.Where(d => d.BookingLabId == x.BookingLabId).ToList()
+            });
+
+            // =============================
+            // 9️⃣ RETURN
+            // =============================
+            return Ok(new
+            {
+                status = "success",
+                message = "Data Lab Gizi retrieved successfully",
+                data = new
+                {
+                    Rows = merged,
+                    TotalRows = totalRows,
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalPages = (int)Math.Ceiling(totalRows / (double)perPage)
+                }
+            });
+        }
     }
 }

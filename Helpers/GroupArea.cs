@@ -8,7 +8,12 @@ namespace QuilvianSystemBackendDev.Helpers
         {
             var ns = controller.ControllerType.Namespace ?? "";
 
-            if (ns.Contains(".Areas.ManajemenKesehatan"))
+
+            if (ns.Contains(".Areas.ManajemenKesehatan.MasterData"))
+            {
+                controller.ApiExplorer.GroupName = "master";
+            }
+            else if (ns.Contains(".Areas.ManajemenKesehatan"))
             {
                 controller.ApiExplorer.GroupName = "manajemen_kesehatan";
             }

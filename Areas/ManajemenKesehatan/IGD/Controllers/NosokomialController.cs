@@ -319,6 +319,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                     PerawatId = vm.PerawatId,
                     TTDKepalaRuangan = krTTD.Path,
                     TTDPerawat = pTTD.Path,
+
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow
                 };

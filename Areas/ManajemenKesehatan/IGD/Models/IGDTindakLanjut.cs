@@ -72,13 +72,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Models
         public string? KeadaanPasienPulang { get; set; }
         public string? KesimpulanAkhir { get; set; }
 
-        public TimeOnly? WaktuDipulangkan { get; set; }
+        public DateTime? WaktuDipulangkan { get; set; }
+        public DateTime? WaktuDirujuk { get; set; }
 
         public string? UPF { get; set; }
         public string? Bangsal { get; set; }
         public Guid? KelasId { get; set; }
         public string? IndikasiRanap { get; set; }
-        public TimeOnly? WaktuDirujuk { get; set; }
         public string? Observasi { get; set; }
         public string? TempatMeninggal { get; set; }
         public DateTime? TanggalMeninggal { get; set; }
