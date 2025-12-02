@@ -82,8 +82,7 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
                 if (!allowedExt.Contains(ext))
                     return BadRequest(new { message = "Format file harus JPG atau JPEG." });
 
-                var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
-                var fileName = $"{vm.UserActiveId}_{safeTime}{ext}";
+                var fileName = $"{vm.UserActiveId}{ext}";
                 var folderTarget = "TTDUser"; // folder di Flask
                 var filePath = $"/{folderTarget}/{fileName}";
 
@@ -155,107 +154,107 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
             }
         }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromForm] MasterTTDVM vm)
-        {
-            var entity = await _context.Set<MasterTTD>().FindAsync(id);
-            if (entity == null)
-                return NotFound(new { message = "Data tidak ditemukan." });
+        //[HttpPut("{id}")]
+        //public async Task<IActionResult> Update(Guid id, [FromForm] MasterTTDVM vm)
+        //{
+        //    var entity = await _context.Set<MasterTTD>().FindAsync(id);
+        //    if (entity == null)
+        //        return NotFound(new { message = "Data tidak ditemukan." });
 
-            // Update data biasa
-            entity.UserActiveId = vm.UserActiveId;
-            entity.Keterangan = vm.Keterangan;
-            entity.UpdateDateTime = DateTimeOffset.UtcNow;
+        //    // Update data biasa
+        //    entity.UserActiveId = vm.UserActiveId;
+        //    entity.Keterangan = vm.Keterangan;
+        //    entity.UpdateDateTime = DateTimeOffset.UtcNow;
 
-            // ======================================================
-            // ?? Jika ada file baru, upload ke Flask
-            // ======================================================
-            if (vm.TTDPath != null && vm.TTDPath.Length > 0)
-            {
-                var allowedExt = new[] { ".jpg", ".jpeg" };
-                var ext = Path.GetExtension(vm.TTDPath.FileName).ToLower();
+        //    // ======================================================
+        //    // ?? Jika ada file baru, upload ke Flask
+        //    // ======================================================
+        //    if (vm.TTDPath != null && vm.TTDPath.Length > 0)
+        //    {
+        //        var allowedExt = new[] { ".jpg", ".jpeg" };
+        //        var ext = Path.GetExtension(vm.TTDPath.FileName).ToLower();
 
-                if (!allowedExt.Contains(ext))
-                    return BadRequest(new { message = "Format file harus JPG atau JPEG." });
+        //        if (!allowedExt.Contains(ext))
+        //            return BadRequest(new { message = "Format file harus JPG atau JPEG." });
 
-                var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
-                var fileName = $"{vm.UserActiveId}_{safeTime}{ext}";
-                var folderTarget = "TTDUser";
-                var newFilePath = $"/{folderTarget}/{fileName}";
+        //        var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
+        //        var fileName = $"{vm.UserActiveId}_{safeTime}{ext}";
+        //        var folderTarget = "TTDUser";
+        //        var newFilePath = $"/{folderTarget}/{fileName}";
 
-                // =====================================
-                // ?? Upload File ke Flask
-                // =====================================
-                using var ms = new MemoryStream();
-                await vm.TTDPath.CopyToAsync(ms);
-                ms.Position = 0;
+        //        // =====================================
+        //        // ?? Upload File ke Flask
+        //        // =====================================
+        //        using var ms = new MemoryStream();
+        //        await vm.TTDPath.CopyToAsync(ms);
+        //        ms.Position = 0;
 
-                var contentType = string.IsNullOrWhiteSpace(vm.TTDPath.ContentType)
-                    ? "image/jpeg"
-                    : vm.TTDPath.ContentType;
+        //        var contentType = string.IsNullOrWhiteSpace(vm.TTDPath.ContentType)
+        //            ? "image/jpeg"
+        //            : vm.TTDPath.ContentType;
 
-                var fileContent = new StreamContent(ms);
-                fileContent.Headers.ContentType =
-                    new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
-                fileContent.Headers.ContentLength = ms.Length;
+        //        var fileContent = new StreamContent(ms);
+        //        fileContent.Headers.ContentType =
+        //            new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+        //        fileContent.Headers.ContentLength = ms.Length;
 
-                using var content = new MultipartFormDataContent();
-                content.Add(fileContent, "file", fileName);
-                content.Add(new StringContent(folderTarget), "folderTarget");
+        //        using var content = new MultipartFormDataContent();
+        //        content.Add(fileContent, "file", fileName);
+        //        content.Add(new StringContent(folderTarget), "folderTarget");
 
-                using var client = new HttpClient();
+        //        using var client = new HttpClient();
 
-                var uploadUrl = $"{_uploadUrl}/upload";
-                var uploadResponse = await client.PostAsync(uploadUrl, content);
+        //        var uploadUrl = $"{_uploadUrl}/upload";
+        //        var uploadResponse = await client.PostAsync(uploadUrl, content);
 
-                if (!uploadResponse.IsSuccessStatusCode)
-                {
-                    return StatusCode(500, new
-                    {
-                        message = "Gagal upload file baru ke server Flask.",
-                        status = uploadResponse.StatusCode
-                    });
-                }
+        //        if (!uploadResponse.IsSuccessStatusCode)
+        //        {
+        //            return StatusCode(500, new
+        //            {
+        //                message = "Gagal upload file baru ke server Flask.",
+        //                status = uploadResponse.StatusCode
+        //            });
+        //        }
 
-                // =====================================
-                // ??? Hapus file lama dari Flask
-                // =====================================
-                if (!string.IsNullOrWhiteSpace(entity.TTDPath))
-                {
-                    try
-                    {
-                        // contoh path: "/TTDUser/xxx.jpg"
-                        var oldPath = entity.TTDPath.TrimStart('/');
-                        var parts = oldPath.Split('/');
+        //        // =====================================
+        //        // ??? Hapus file lama dari Flask
+        //        // =====================================
+        //        if (!string.IsNullOrWhiteSpace(entity.TTDPath))
+        //        {
+        //            try
+        //            {
+        //                // contoh path: "/TTDUser/xxx.jpg"
+        //                var oldPath = entity.TTDPath.TrimStart('/');
+        //                var parts = oldPath.Split('/');
 
-                        if (parts.Length >= 2)
-                        {
-                            var oldFolder = parts[0];
-                            var oldFile = parts[1];
+        //                if (parts.Length >= 2)
+        //                {
+        //                    var oldFolder = parts[0];
+        //                    var oldFile = parts[1];
 
-                            var deleteUrl = $"{_uploadUrl}/delete?folder={oldFolder}&filename={oldFile}";
-                            var delResponse = await client.DeleteAsync(deleteUrl);
+        //                    var deleteUrl = $"{_uploadUrl}/delete?folder={oldFolder}&filename={oldFile}";
+        //                    var delResponse = await client.DeleteAsync(deleteUrl);
 
-                            if (!delResponse.IsSuccessStatusCode)
-                            {
-                                Console.WriteLine($"[WARNING] Gagal hapus file lama di Flask: {delResponse.StatusCode}");
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine("[ERROR] Gagal hapus file lama di Flask: " + ex.Message);
-                    }
-                }
+        //                    if (!delResponse.IsSuccessStatusCode)
+        //                    {
+        //                        Console.WriteLine($"[WARNING] Gagal hapus file lama di Flask: {delResponse.StatusCode}");
+        //                    }
+        //                }
+        //            }
+        //            catch (Exception ex)
+        //            {
+        //                Console.WriteLine("[ERROR] Gagal hapus file lama di Flask: " + ex.Message);
+        //            }
+        //        }
 
-                // Simpan path baru
-                entity.TTDPath = newFilePath;
-            }
+        //        // Simpan path baru
+        //        entity.TTDPath = newFilePath;
+        //    }
 
-            await _context.SaveChangesAsync();
+        //    await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Update berhasil." });
-        }
+        //    return Ok(new { message = "Update berhasil." });
+        //}
 
 
         [HttpDelete("{id}")]
