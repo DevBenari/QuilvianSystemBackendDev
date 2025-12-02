@@ -476,7 +476,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         public async Task<IActionResult> PagedObat(
             int page = 1,
             int perPage = 10,
-            string? search = null,
+            string? Nama = null,
             string? kode = null,
             Guid? obatId = null,
             string? orderBy = "CreateDateTime",
@@ -501,14 +501,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 //Filter Berdasarkan Kode
-                //if (!string.IsNullOrWhiteSpace(search))
-                //{
-                //    var s = search.Trim().ToLower();
-                //    query = query.Where(u =>
-                //        u.ObatName.ToLower().Contains(s) || // Filter berdasarkan nama obat yang mengandung string 's'
-                //        u.ObatCode.ToLower().Contains(s)   // Filter berdasarkan kode obat yang mengandung string 's'
-                //    );
-                //}
+                if (!string.IsNullOrWhiteSpace(kode))
+                {
+                    var s = kode.Trim().ToLower();
+                    query = query.Where(u =>
+                        u.ObatCode.ToLower().Contains(s)   // Filter berdasarkan kode obat yang mengandung string 's'
+                    );
+                }
                 //if (!string.IsNullOrWhiteSpace(search))
                 //{
                 //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
@@ -579,12 +578,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
 
                 // 3. Filter berdasarkan search string
-                if (!string.IsNullOrWhiteSpace(search))
+                if (!string.IsNullOrWhiteSpace(Nama))
                 {
-                    search = search.Trim().ToLower();
+                    Nama = Nama.Trim().ToLower();
                     joinedQuery = joinedQuery.Where(u =>
-                        EF.Functions.ILike(u.ObatName, $"%{search}%") ||
-                        EF.Functions.ILike(u.ObatCode, $"%{search}%")
+                        EF.Functions.ILike(u.ObatName, $"%{Nama}%") 
                     );
                 }
 
