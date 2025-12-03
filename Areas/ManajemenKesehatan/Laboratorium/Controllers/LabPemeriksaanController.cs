@@ -608,6 +608,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 if (Labid.HasValue)
                     query = query.Where(u => u.LabId == Labid);
 
+                // filter based on kelas id
+                if (kelasId.HasValue)
+                {
+                    var pemeriksaanIdsByKelas = allTarifKelas
+                        .Where(t => t.KelasId == kelasId.Value)
+                        .Select(t => t.PemeriksaanLabId)
+                        .Distinct()
+                        .ToList();
+
+                    query = query.Where(u => pemeriksaanIdsByKelas.Contains(u.PemeriksaanLabId));
+                }
 
                 // 🔹 Filter tanggal
                 if (startDate.HasValue && endDate.HasValue)
@@ -666,17 +677,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     }
                 }
 
-                // filter based on kelas id
-                if (kelasId.HasValue)
-                {
-                    var pemeriksaanIdsByKelas = allTarifKelas
-                        .Where(t => t.KelasId == kelasId.Value)
-                        .Select(t => t.PemeriksaanLabId)
-                        .Distinct()
-                        .ToList();
-
-                    query = query.Where(u => pemeriksaanIdsByKelas.Contains(u.PemeriksaanLabId));
-                }
 
                 // 🔹 Sorting
                 query = sortDirection?.ToLower() == "desc"
@@ -721,7 +721,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     r.CreateByName,
                     r.Keterangan,
                     TarifKelas = allTarifKelas
-                        .Where(t => t.PemeriksaanLabId == r.PemeriksaanLabId)
+                        .Where(t => t.PemeriksaanLabId == r.PemeriksaanLabId && (!kelasId.HasValue || t.KelasId == kelasId.Value))
                         .ToList()
                 });
 
