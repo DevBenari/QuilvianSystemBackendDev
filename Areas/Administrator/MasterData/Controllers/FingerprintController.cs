@@ -35,6 +35,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                     .Select(x => new
                     {
                         x.FingerprintId,
+                        x.DeviceId,
                         x.UserId,
                         x.Template,
                         x.CreateDateTime
@@ -148,7 +149,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
         // ===========================
         // 3. GET DATA FINGERPRINT USER
         // ===========================
-        [HttpGet("{userId}")]
+        [HttpGet("{DeviceId}")]
         public async Task<IActionResult> GetFingerprint(string userId)
         {
             var data = await _db.Fingerprints.FirstOrDefaultAsync(x => x.UserId == userId);

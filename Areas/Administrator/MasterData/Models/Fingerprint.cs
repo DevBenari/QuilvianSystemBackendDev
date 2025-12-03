@@ -10,6 +10,8 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models
         [Key]
         public Guid FingerprintId { get; set; }
         public string UserId { get; set; }
+        public string DeviceId { get; set; }
         public string Template { get; set; } // template fingerprint base64
+        public string Status { get; set; }
     }
 }
