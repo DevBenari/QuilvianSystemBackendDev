@@ -165,6 +165,47 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
             });
         }
 
+
+        [HttpPut("device-id")]
+        public async Task<IActionResult> UpdateDeviceIdByUserId([FromBody] FingerprintVerifyViewModel request)
+        {
+            try
+            {
+                if (request == null || string.IsNullOrWhiteSpace(request.DeviceId))
+                    return BadRequest(new { message = "UserId dan DeviceId wajib diisi" });
+
+                var fingerprints = await _db.Fingerprints
+                    .Where(x => x.UserId == request.UserId)
+                    .ToListAsync();
+
+                if (fingerprints == null || fingerprints.Count == 0)
+                    return NotFound(new { message = $"Tidak ada data fingerprint untuk UserId {request.UserId}" });
+
+                foreach (var fp in fingerprints)
+                {
+                    fp.DeviceId = request.DeviceId;
+                    // kalau punya kolom UpdateDateTime bisa di-set disini:
+                    // fp.UpdateDateTime = DateTime.Now;
+                }
+
+                await _db.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    message = "Berhasil mengupdate DeviceId fingerprint berdasarkan UserId",
+                    userId = request.UserId,
+                    deviceIdBaru = request.DeviceId,
+                    totalFingerprintDiupdate = fingerprints.Count
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating device id by user id");
+                return StatusCode(500, new { message = ex.Message });
+            }
+        }
+
+
         // ===========================
         // 4. DELETE FINGERPRINT BY USER ID
         // ===========================
