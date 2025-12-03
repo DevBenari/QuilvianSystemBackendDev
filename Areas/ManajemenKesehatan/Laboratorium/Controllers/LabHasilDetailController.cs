@@ -91,6 +91,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.JaringanVolume,
                              a.BodyFluidVolume,
                              a.PetugasSpecimenId,
+                             a.TanggalSpecimen,
+                             a.JamSpecimen,
+                             a.InfoNReff,
                              a.Keterangan,
                          }).OrderByDescending(a => a.CreateDateTime);
 
@@ -261,6 +264,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     JaringanVolume = vm.JaringanVolume,
                     BodyFluidVolume = vm.BodyFluidVolume,
                     PetugasSpecimenId = vm.PetugasSpecimenId,
+                    TanggalSpecimen = vm.TanggalSpecimen,
+                    JamSpecimen = vm.JamSpecimen,
+                    InfoNReff = vm.InfoNReff,
                     Keterangan = vm.Keterangan,
 
                     CreateBy = userActiveId,
@@ -552,6 +558,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.JaringanVolume,
                              a.BodyFluidVolume,
                              a.PetugasSpecimenId,
+                             a.TanggalSpecimen,
+                             a.JamSpecimen,
+                             a.InfoNReff,
                              a.Keterangan,
                          });
 

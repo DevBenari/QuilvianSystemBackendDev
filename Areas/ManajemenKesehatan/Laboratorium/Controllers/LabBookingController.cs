@@ -1454,6 +1454,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     NamaPemeriksaan = lp.NamaPemeriksaan,
                     lp.HargaPemeriksaan,
                     lab = lab.NamaLab,
+                    d.Satuan,
                     d.IsDelete
                 }).ToListAsync();
 
@@ -1636,6 +1637,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      NamaPemeriksaan = lp.NamaPemeriksaan,
                      lp.HargaPemeriksaan,
                      Lab = lab.NamaLab,
+                     d.Satuan,
                      d.IsDelete
                  }).ToListAsync();
 
@@ -1822,6 +1824,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      NamaPemeriksaan = lp.NamaPemeriksaan,
                      lp.HargaPemeriksaan,
                      Lab = lab.NamaLab,
+                     d.Satuan,
                      d.IsDelete
                  }).ToListAsync();
 
@@ -2026,6 +2029,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      NamaPemeriksaan = lp.NamaPemeriksaan,
                      lp.HargaPemeriksaan,
                      Lab = lab.NamaLab,
+                     d.Satuan,
                      d.IsDelete
                  }).ToListAsync();
 
@@ -2229,6 +2233,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      NamaPemeriksaan = lp.NamaPemeriksaan,
                      lp.HargaPemeriksaan,
                      Lab = lab.NamaLab,
+                     d.Satuan,
                      d.IsDelete
                  }).ToListAsync();
 

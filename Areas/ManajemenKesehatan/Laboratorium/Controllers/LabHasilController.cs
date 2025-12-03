@@ -67,6 +67,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.LabId,
                              a.LabBookingId,
                              a.UserActiveId,
+                             a.PenanggungJawabId,
+                             a.PenanggungJawabAnalisId,
+                             a.TanggalPemeriksaan,
                              a.Keterangan,
                          }).OrderByDescending(a => a.CreateDateTime);
 
@@ -164,7 +167,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     LabId =  vm.LabId,
                     LabBookingId = vm.LabBookingId,
                     UserActiveId = vm.UserActiveId,
+                    PenanggungJawabAnalisId = vm.PenanggungJawabId,
+                    PenanggungJawabId = vm.PenanggungJawabId,
+                    TanggalPemeriksaan = vm.TanggalPemeriksaan,
                     Keterangan = vm.Keterangan,
+
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
@@ -235,6 +242,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 data.LabId = vm.LabId;
                 data.LabBookingId = vm.LabBookingId;
                 data.UserActiveId = vm.UserActiveId;
+                data.PenanggungJawabAnalisId = vm.PenanggungJawabId;
+                data.PenanggungJawabId = vm.PenanggungJawabId;
+                data.TanggalPemeriksaan = vm.TanggalPemeriksaan;
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
@@ -352,6 +362,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.LabId,
                              a.LabBookingId,
                              a.UserActiveId,
+                             a.PenanggungJawabId,
+                             a.PenanggungJawabAnalisId,
+                             a.TanggalPemeriksaan,
                              a.Keterangan,
                          });
 

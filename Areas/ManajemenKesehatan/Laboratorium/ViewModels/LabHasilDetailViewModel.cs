@@ -27,6 +27,9 @@
         public decimal? JaringanVolume { get; set; }
         public decimal? BodyFluidVolume { get; set; }
         public Guid? PetugasSpecimenId { get; set; }
+        public DateTime? TanggalSpecimen { get; set; }
+        public TimeOnly? JamSpecimen { get; set; }
+        public string? InfoNReff { get; set; }
         public string? Keterangan { get; set; }
     }
 }

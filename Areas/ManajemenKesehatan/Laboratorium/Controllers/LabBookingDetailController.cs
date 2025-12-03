@@ -97,6 +97,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              b.KunjunganId,
                              d.PemeriksaanLabId,
                              NamaPemeriksaan = p.NamaPemeriksaan ?? "-",
+                             HargaPemeriksaan = p.HargaPemeriksaan ?? null,
                              d.LabId,
                              NamaLab = l.NamaLab ?? "-",
                              d.KategoriPatologiAnatomi,
@@ -119,6 +120,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              d.StatusPemeriksaan,
                              d.TanggalSelesai,
                              d.StatusVerifikasi,
+                             d.Satuan
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -191,6 +193,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                       b.KunjunganId,
                                       d.PemeriksaanLabId,
                                       NamaPemeriksaan = p.NamaPemeriksaan ?? "-",
+                                      HargaPemeriksaan = p.HargaPemeriksaan ?? null,
                                       d.LabId,
                                       NamaLab = l.NamaLab ?? "-",
                                       d.NoOrder,
@@ -217,6 +220,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                       d.StatusPemeriksaan,
                                       d.TanggalSelesai,
                                       d.StatusVerifikasi,
+                                      d.Satuan
                                   })
                                   .FirstOrDefaultAsync();
 
@@ -237,7 +241,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
-
 
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] LabBookingDetailViewModel vm)
@@ -323,6 +326,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     StatusPemeriksaan = vm.StatusPemeriksaan,
                     StatusVerifikasi = vm.StatusVerifikasi,
                     TanggalSelesai = vm.TanggalSelesai,
+                    Satuan = vm.Satuan,
+
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
@@ -388,7 +393,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
-
 
         [HttpPut("Batal/{id}")]
         public async Task<IActionResult> BatalBooking(Guid id, [FromBody] LabBookingDetailBatalVM vm)
@@ -526,7 +530,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             });
         }
 
-
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] LabBookingDetailViewModel vm)
         {
@@ -621,6 +624,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 existingData.StatusPemeriksaan = vm.StatusPemeriksaan;
                 existingData.TanggalSelesai = vm.TanggalSelesai;
                 existingData.NoOrder = newNoOrder;
+                existingData.Satuan = vm.Satuan;
 
                 existingData.UpdateBy = userActiveId;
                 existingData.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -711,7 +715,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
-
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
@@ -823,6 +826,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              b.KunjunganId,
                              d.PemeriksaanLabId,
                              NamaPemeriksaan = p.NamaPemeriksaan ?? "-",
+                             HargaPemeriksaan = p.HargaPemeriksaan ?? null,
                              d.LabId,
                              NamaLab = l.NamaLab ?? "-",
                              d.KategoriPatologiAnatomi,
@@ -845,6 +849,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              d.StatusPemeriksaan,
                              d.TanggalSelesai,
                              d.StatusVerifikasi,
+                             d.Satuan,
                          });
 
             // filter kunjungan id

@@ -28,6 +28,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public string? MasaHaidTerakhir { get; set; } // Informasi masa haid terakhir (jika relevan)
         public string? Diagnosa {  get; set; }
         public string? NoOrder { get; set; }
+        public decimal? Satuan {  get; set; }
         public string? StatusPemeriksaan {  get; set; }
         public DateTime? TanggalSelesai { get; set; }
         public bool? StatusVerifikasi { get; set; }
