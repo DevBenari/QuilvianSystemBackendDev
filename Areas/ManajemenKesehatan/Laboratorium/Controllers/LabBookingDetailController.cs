@@ -281,21 +281,31 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     ? kodeKategori.Substring(3, Math.Min(3, kodeKategori.Length - 3))
                     : kodeKategori.Length > 3 ? kodeKategori.Substring(0, 3) : kodeKategori;
 
-                var today = DateTime.UtcNow.Date;
+                var today = DateTimeOffset.UtcNow.Date;
+                var start = today;
+                var end = today.AddDays(1);
+
                 var lastOrderToday = await _applicationDbContext.LabBookingDetails
-                    .Where(d => d.CreateDateTime.Date == today && d.NoOrder.StartsWith(labPrefix))
+                    .Where(d =>
+                        d.CreateDateTime >= start &&
+                        d.CreateDateTime < end &&
+                        d.NoOrder.StartsWith(labPrefix))
                     .OrderByDescending(d => d.NoOrder)
                     .FirstOrDefaultAsync();
 
                 int nextNumber = 1;
-                if (lastOrderToday != null && lastOrderToday.NoOrder.Length >= labPrefix.Length + 4)
+
+                if (lastOrderToday != null)
                 {
-                    string lastNumStr = lastOrderToday.NoOrder.Substring(labPrefix.Length);
+                    string lastNo = lastOrderToday.NoOrder;
+                    string lastNumStr = lastNo.Substring(lastNo.Length - 4);
+
                     if (int.TryParse(lastNumStr, out int lastNum))
                         nextNumber = lastNum + 1;
                 }
 
                 string newNoOrder = $"{labPrefix}{today:yyyyMMdd}{nextNumber:D4}";
+
 
                 // ==========================================================
                 // ✅ Buat data baru LabBookingDetail
@@ -581,21 +591,31 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         ? kodeKategori.Substring(3, Math.Min(3, kodeKategori.Length - 3))
                         : kodeKategori.Length > 3 ? kodeKategori.Substring(0, 3) : kodeKategori;
 
-                    var today = DateTime.UtcNow.Date;
+                    var today = DateTimeOffset.UtcNow.Date;
+                    var start = today;
+                    var end = today.AddDays(1);
+
                     var lastOrderToday = await _applicationDbContext.LabBookingDetails
-                        .Where(d => d.CreateDateTime.Date == today && d.NoOrder.StartsWith(labPrefix))
+                        .Where(d =>
+                            d.CreateDateTime >= start &&
+                            d.CreateDateTime < end &&
+                            d.NoOrder.StartsWith(labPrefix))
                         .OrderByDescending(d => d.NoOrder)
                         .FirstOrDefaultAsync();
 
                     int nextNumber = 1;
-                    if (lastOrderToday != null && lastOrderToday.NoOrder.Length >= labPrefix.Length + 4)
+
+                    if (lastOrderToday != null)
                     {
-                        string lastNumStr = lastOrderToday.NoOrder.Substring(labPrefix.Length);
+                        string lastNo = lastOrderToday.NoOrder;
+                        string lastNumStr = lastNo.Substring(lastNo.Length - 4);
+
                         if (int.TryParse(lastNumStr, out int lastNum))
                             nextNumber = lastNum + 1;
                     }
 
                     newNoOrder = $"{labPrefix}{today:yyyyMMdd}{nextNumber:D4}";
+
                 }
 
                 // ==========================================================

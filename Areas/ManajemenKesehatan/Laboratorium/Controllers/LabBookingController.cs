@@ -1452,6 +1452,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 {
                     d.BookingLabId,
                     d.DetailBookingLabId,
+                    d.NoOrder,
                     NamaPemeriksaan = lp.NamaPemeriksaan,
                     lp.HargaPemeriksaan,
                     lab = lab.NamaLab,
@@ -1636,6 +1637,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                  {
                      d.BookingLabId,
                      d.DetailBookingLabId,
+                     d.NoOrder,
                      NamaPemeriksaan = lp.NamaPemeriksaan,
                      lp.HargaPemeriksaan,
                      Lab = lab.NamaLab,
@@ -1824,6 +1826,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                  {
                      d.BookingLabId,
                      d.DetailBookingLabId,
+                     d.NoOrder,
                      NamaPemeriksaan = lp.NamaPemeriksaan,
                      lp.HargaPemeriksaan,
                      Lab = lab.NamaLab,
@@ -2030,6 +2033,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                  {
                      d.BookingLabId,
                      d.DetailBookingLabId,
+                     d.NoOrder,
                      NamaPemeriksaan = lp.NamaPemeriksaan,
                      lp.HargaPemeriksaan,
                      Lab = lab.NamaLab,
@@ -2187,7 +2191,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      b.KunjunganId,
                      b.PasienId,
                      p.NamaLengkap,
-                     b.NoOrder,
                      p.NoRekamMedis,
                      b.AsuransiId,
                      AsuransiNama = a.NamaAsuransi ?? null,
@@ -2235,6 +2238,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                  {
                      d.BookingLabId,
                      d.DetailBookingLabId,
+                     d.NoOrder,
                      NamaPemeriksaan = lp.NamaPemeriksaan,
                      lp.HargaPemeriksaan,
                      Lab = lab.NamaLab,
