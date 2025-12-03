@@ -57,10 +57,10 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
             });
         }
 
-        [HttpGet("{id}")]
-        public async Task<ActionResult<MasterTTD>> GetById(Guid id)
+        [HttpGet("{UserActiveId}")]
+        public async Task<ActionResult<MasterTTD>> GetById(Guid UserActiveId)
         {
-            var data = await _context.Set<MasterTTD>().FindAsync(id);
+            var data = await _context.Set<MasterTTD>().FindAsync(UserActiveId);
             if (data == null) return NotFound();
             return data;
         }
