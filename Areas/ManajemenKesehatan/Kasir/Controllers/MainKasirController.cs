@@ -5,11 +5,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using OpenCvSharp;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers;
@@ -32,7 +34,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-
+        private readonly IHubContext<MainKasirHub> _hubContext;
         private readonly ILogger<MainKasirController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
@@ -41,13 +43,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ILogger<MainKasirController> logger,
-            IWebHostEnvironment webHostEnvironment)
+            IWebHostEnvironment webHostEnvironment,
+            IHubContext<MainKasirHub> hubContext)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+            _hubContext = hubContext;
         }
 
         public static string HitungUmurLengkap(DateTime? tanggalLahir)
@@ -587,6 +591,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
                         _applicationDbContext.MainKasirDetails.AddRange(detailEntities);
                         await _applicationDbContext.SaveChangesAsync();
+
+                        await _hubContext.Clients.All.SendAsync("Data pembayaran Created", new
+                        {
+                            Action = "create",
+                            data = data.KasirId,
+                        });
                     }
                     return Ok(new { message = "Data berhasil disimpan || 200 OK" });
                 }
@@ -684,6 +694,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 }
 
                 await _applicationDbContext.SaveChangesAsync();
+                await _hubContext.Clients.All.SendAsync("Data pembayaran Created", new
+                {
+                    Action = "update",
+                    data = existingKasir.KasirId,
+                });
 
                 return Ok(new { message = "Update Data Berhasil || 200 OK" });
             }

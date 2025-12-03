@@ -4,9 +4,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
@@ -26,7 +28,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-
+        private readonly IHubContext<KasirTebusResepHub> _hubContext;
         private readonly ILogger<KasirTebusResepController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
@@ -35,13 +37,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ILogger<KasirTebusResepController> logger,
-            IWebHostEnvironment webHostEnvironment)
+            IWebHostEnvironment webHostEnvironment,
+            IHubContext<KasirTebusResepHub> hubContext)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+            _hubContext = hubContext;
         }
 
         [HttpGet]
@@ -306,6 +310,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
                 if (result > 0)
                 {
+                    await _hubContext.Clients.All.SendAsync("Data pembayaran resep tebus Created", new
+                    {
+                        Action = "create",
+                        data = data.KasirTebusResepId,
+                    });
+
                     return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
                 }
                 else
@@ -373,8 +383,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 _applicationDbContext.KasirTebusReseps.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
+
                 if (result > 0)
                 {
+                    await _hubContext.Clients.All.SendAsync("Data pembayaran resep tebus Update", new
+                    {
+                        Action = "update",
+                        data = data.KasirTebusResepId,
+                    });
+
                     return Ok(new { message = "Update Data Berhasil || 200 OK" });
                 }
                 else

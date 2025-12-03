@@ -4,9 +4,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
@@ -29,6 +31,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.Controll
         private readonly ITTDService _ttdService;
         private readonly ILogger<HemodialisaHasilController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly IHubContext<HemodialisaHasilHub> _hubContext;
 
         public HemodialisaHasilController(
             ApplicationDbContext applicationDbContext,
@@ -36,7 +39,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.Controll
             SignInManager<ApplicationUser> signInManager,
             ILogger<HemodialisaHasilController> logger,
             IWebHostEnvironment webHostEnvironment,
-            ITTDService ttdService)
+            ITTDService ttdService,
+            IHubContext<HemodialisaHasilHub> hubContext)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
@@ -44,6 +48,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.Controll
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
             _ttdService = ttdService;
+            _hubContext = hubContext;
         }
 
         [HttpGet("{id}")]
@@ -269,6 +274,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.Controll
                     await _applicationDbContext.SaveChangesAsync();
                 }
 
+                await _hubContext.Clients.All.SendAsync("Hasil Hemodialisa Created", new
+                {
+                    Action = "create",
+                    data = parent.HasilHemodialisaId,
+                });
+
                 return Ok(new
                 {
                     status = "success",
@@ -322,6 +333,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.Controll
 
             await _applicationDbContext.SaveChangesAsync();
 
+            await _hubContext.Clients.All.SendAsync("Hasil Hemodialisa update", new
+            {
+                Action = "update",
+                data = parent.HasilHemodialisaId,
+            });
+
             return Ok(new
             {
                 status = "success",
@@ -367,6 +384,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.Controll
             _applicationDbContext.Entry(parent).Property(p => p.LaporanNaCl).IsModified = true;
 
             await _applicationDbContext.SaveChangesAsync();
+
+            await _hubContext.Clients.All.SendAsync("Hasil Hemodialisa update", new
+            {
+                Action = "update",
+                data = parent.HasilHemodialisaId,
+            });
 
             return Ok(new
             {
@@ -492,6 +515,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.Controll
                     }
                     await _applicationDbContext.SaveChangesAsync();
                 }
+
+                await _hubContext.Clients.All.SendAsync("Hasil Hemodialisa update", new
+                {
+                    Action = "update",
+                    data = parent.HasilHemodialisaId,
+                });
 
                 return Ok(new
                 {
