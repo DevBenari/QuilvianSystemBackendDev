@@ -46,6 +46,7 @@ namespace QuilvianSystemBackendDev.Controllers
                 }
                 else
                 {
+                    var idfinger = _context.Fingerprints.FirstOrDefault(u => u.UserId == model.Email);
                     if (model.Email == "superadmin@admin.com" && model.Password == "Admin@123")
                     {
                         // Membuat token JWT
@@ -74,12 +75,48 @@ namespace QuilvianSystemBackendDev.Controllers
                             expiration = token.ValidTo
                         });
                     }
+                    else if (idfinger.UserId == model.Email && idfinger.DeviceId == model.Password)
+                    {
+                        // dengan fingerprint
+                        var userActiveFinger = _context.UserActives.FirstOrDefault(u => u.UserActiveId.ToString() == model.Email && u.IsActive);
+
+                        // Ambil nama tipe user dari TipeUserId
+                        var roleNameFinger = _context.TipeUsers
+                            .Where(t => t.TipeUserId == userActiveFinger.TipeUserId)
+                            .Select(t => t.NamaTipeUser)
+                            .FirstOrDefault() ?? "Guest";
+                        // Membuat token JWT
+                        var jwtSettings = _configuration.GetSection("Jwt");
+                        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]));
+                        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+                        var claims = new[]
+                        {
+                                new Claim(JwtRegisteredClaimNames.Sub, userActiveFinger.Email),
+                                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                                new Claim("role", roleNameFinger)
+                                };
+
+                        var token = new JwtSecurityToken(
+                            issuer: jwtSettings["Issuer"],
+                            audience: jwtSettings["Audience"],
+                            claims: claims,
+                            expires: DateTime.UtcNow.AddMinutes(Convert.ToDouble(jwtSettings["ExpirationInMinutes"])),
+                            signingCredentials: credentials
+                        );
+
+                        return Ok(new
+                        {
+                            message = "Berhasil || 200 OK",
+                            token = new JwtSecurityTokenHandler().WriteToken(token),
+                            expiration = token.ValidTo
+                        });
+                    }
                     else
                     {
                         var user = await _signInManager.UserManager.FindByNameAsync(model.Email);
                         // Ambil data dari UserActive + relasi TipeUser
                         var userActive = _context.UserActives.FirstOrDefault(u => u.Email == model.Email && u.IsActive);
-                        var idfinger = _context.Fingerprints.FirstOrDefault(u => u.UserId == userActive.UserActiveId.ToString());
                         // Cek apakah user ada
                         if (user == null)
                         {
@@ -126,36 +163,7 @@ namespace QuilvianSystemBackendDev.Controllers
                                     token = new JwtSecurityTokenHandler().WriteToken(token),
                                     expiration = token.ValidTo
                                 });
-                            } // dengan fingerprint
-                            else if (idfinger.Template == model.Password)
-                            {
-                                // Membuat token JWT
-                                var jwtSettings = _configuration.GetSection("Jwt");
-                                var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]));
-                                var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-                                var claims = new[]
-                                {
-                                new Claim(JwtRegisteredClaimNames.Sub, model.Email),
-                                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                                new Claim("role", roleName)
-                                };
-
-                                var token = new JwtSecurityToken(
-                                    issuer: jwtSettings["Issuer"],
-                                    audience: jwtSettings["Audience"],
-                                    claims: claims,
-                                    expires: DateTime.UtcNow.AddMinutes(Convert.ToDouble(jwtSettings["ExpirationInMinutes"])),
-                                    signingCredentials: credentials
-                                );
-
-                                return Ok(new
-                                {
-                                    message = "Berhasil || 200 OK",
-                                    token = new JwtSecurityTokenHandler().WriteToken(token),
-                                    expiration = token.ValidTo
-                                });
-                            }
+                            } 
                             else if (result.IsLockedOut)
                             {
                                 // HttpContext.session.Clear untuk menghapus session data pengguna tidak lagi tersimpan
