@@ -1948,23 +1948,27 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         //}
         [HttpGet("paged")]
         public async Task<IActionResult> PagedResep(
-        int page = 1,
-        int perPage = 10,
-        string? search = null,
-        Guid? kunjunganid = null,
-        Guid? dokterid = null,
-        string? orderBy = "CreateDateTime",
-        string? sortDirection = "desc",
-        [FromQuery] DateTime? startDate = null,
-        [FromQuery] DateTime? endDate = null,
-        [FromQuery] PeriodeFilter? periode = null,
-        [FromQuery] bool? IsLunas = null,
-        [FromQuery] bool? IsCancelled = null,
-        [FromQuery] bool? StatusPengambilanResep = null)
+            int page = 1,
+            int perPage = 10,
+            string? search = null,
+            Guid? kunjunganid = null,
+            Guid? dokterid = null,
+            string? obatCode = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery] DateTime? startDate = null,
+            [FromQuery] DateTime? endDate = null,
+            [FromQuery] PeriodeFilter? periode = null,
+            [FromQuery] bool? IsLunas = null,
+            [FromQuery] bool? IsCancelled = null,
+            [FromQuery] bool? StatusPengambilanResep = null)
         {
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
+            // ================================
+            // 1️⃣ Base Query
+            // ================================
             var query = from r in _applicationDbContext.Reseps.AsNoTracking()
                         where !r.IsDelete
                         join u in _applicationDbContext.UserActives on r.CreateBy equals u.UserActiveId
@@ -1972,7 +1976,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                         from k in gj.DefaultIfEmpty()
                         select new { Resep = r, User = u, Kunjungan = k };
 
-            // 🔎 Filter by date range
+            // ================================
+            // 2️⃣ Apply All DB Filters
+            // ================================
             if (startDate.HasValue && endDate.HasValue)
             {
                 var startUtc = DateTime.SpecifyKind(startDate.Value.Date, DateTimeKind.Utc);
@@ -1980,23 +1986,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 query = query.Where(q => q.Resep.CreateDateTime >= startUtc && q.Resep.CreateDateTime <= endUtc);
             }
 
-            // 🔎 Boolean filters
             if (IsLunas.HasValue)
                 query = query.Where(q => q.Resep.IsLunas == IsLunas.Value);
+
             if (StatusPengambilanResep.HasValue)
                 query = query.Where(q => q.Resep.StatusPengambilanResep == StatusPengambilanResep.Value);
+
             if (IsCancelled.HasValue)
                 query = query.Where(q => q.Resep.IsCancelled == IsCancelled.Value);
 
-            // 🔎 Filter by KunjunganId
             if (kunjunganid.HasValue)
                 query = query.Where(q => q.Resep.KunjunganId == kunjunganid.Value);
 
-            // filter by dokter id
             if (dokterid.HasValue)
-                query = query.Where(q=> q.Resep.DokterId == dokterid.Value);
+                query = query.Where(q => q.Resep.DokterId == dokterid.Value);
 
-            // 🔎 Periode filter
             if (periode.HasValue)
             {
                 var today = DateTime.UtcNow.Date;
@@ -2005,38 +2009,56 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     case PeriodeFilter.Today:
                         query = query.Where(q => q.Resep.CreateDateTime.Date == today);
                         break;
+
                     case PeriodeFilter.ThisWeek:
                         var startWeek = today.AddDays(-(int)today.DayOfWeek);
-                        query = query.Where(q => q.Resep.CreateDateTime.Date >= startWeek && q.Resep.CreateDateTime.Date <= today);
+                        query = query.Where(q =>
+                            q.Resep.CreateDateTime.Date >= startWeek &&
+                            q.Resep.CreateDateTime.Date <= today);
                         break;
+
                     case PeriodeFilter.LastWeek:
                         var lastWeekStart = today.AddDays(-7 - (int)today.DayOfWeek);
                         var lastWeekEnd = lastWeekStart.AddDays(6);
-                        query = query.Where(q => q.Resep.CreateDateTime.Date >= lastWeekStart && q.Resep.CreateDateTime.Date <= lastWeekEnd);
+                        query = query.Where(q =>
+                            q.Resep.CreateDateTime.Date >= lastWeekStart &&
+                            q.Resep.CreateDateTime.Date <= lastWeekEnd);
                         break;
+
                     case PeriodeFilter.ThisMonth:
-                        query = query.Where(q => q.Resep.CreateDateTime.Month == today.Month && q.Resep.CreateDateTime.Year == today.Year);
+                        query = query.Where(q =>
+                            q.Resep.CreateDateTime.Month == today.Month &&
+                            q.Resep.CreateDateTime.Year == today.Year);
                         break;
+
                     case PeriodeFilter.LastMonth:
                         var lastMonth = today.AddMonths(-1);
-                        query = query.Where(q => q.Resep.CreateDateTime.Month == lastMonth.Month && q.Resep.CreateDateTime.Year == lastMonth.Year);
+                        query = query.Where(q =>
+                            q.Resep.CreateDateTime.Month == lastMonth.Month &&
+                            q.Resep.CreateDateTime.Year == lastMonth.Year);
                         break;
+
                     case PeriodeFilter.ThisYear:
                         query = query.Where(q => q.Resep.CreateDateTime.Year == today.Year);
                         break;
+
                     case PeriodeFilter.LastYear:
                         query = query.Where(q => q.Resep.CreateDateTime.Year == today.Year - 1);
                         break;
+
                     case PeriodeFilter.Last3Months:
                         query = query.Where(q => q.Resep.CreateDateTime >= today.AddMonths(-3));
                         break;
+
                     case PeriodeFilter.Last6Months:
                         query = query.Where(q => q.Resep.CreateDateTime >= today.AddMonths(-6));
                         break;
                 }
             }
 
-            // 🔎 Sorting
+            // ================================
+            // 3️⃣ Sorting (Tetap)
+            // ================================
             query = sortDirection?.ToLower() == "desc"
                 ? orderBy?.ToLower() switch
                 {
@@ -2051,11 +2073,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     _ => query.OrderBy(q => q.Resep.CreateDateTime)
                 };
 
-            // 🔎 Pagination
-            var totalRows = await query.CountAsync();
-            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+            // ================================
+            // 4️⃣ Ambil SEMUA resep setelah FILTER DB (TANPA PAGING)
+            // ================================
+            var resepList = await query.ToListAsync();
 
-            if (totalRows == 0)
+            if (resepList.Count == 0)
             {
                 return Ok(new
                 {
@@ -2072,105 +2095,147 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 });
             }
 
-            // Ambil resep utama per halaman
-            var resepPage = await query
+            var resepIds = resepList.Select(r => r.Resep.ResepId).ToList();
+
+            // ================================
+            // 5️⃣ Ambil detail obat batch
+            // ================================
+            var daftarObat = await (
+                from d in _applicationDbContext.DetailReseps.AsNoTracking()
+                join o in _applicationDbContext.Obats.AsNoTracking() on d.ObatId equals o.ObatId
+                where resepIds.Contains((Guid)d.ResepId)
+                      && (d.IsRacikan == false || d.IsRacikan == null)
+                      && !d.IsDelete
+                select new
+                {
+                    d.ResepId,
+                    d.DetailResepId,
+                    d.ObatId,
+                    o.ObatName,
+                    o.ObatCode,
+                    d.Qty,
+                    d.HargaObat,
+                    d.TotalHargaObat,
+                    d.Signa,
+                    d.SignaTambahan,
+                    d.TakaranDosis,
+                    d.IsIteratur,
+                    d.JumlahIteratur,
+                    d.TglMulaiIteratur,
+                    d.MasaAktifIteratur,
+                    d.JarakPenebusan,
+                    d.StatusCoverObat,
+                    d.StatusPengambilanObat,
+                    d.IsObatDibawaPlg,
+                    d.ObatPagiDiambil,
+                    d.ObatSiangDiambil,
+                    d.ObatMalamDiambil,
+                    d.IsReturn,
+                    d.AlasanReturn,
+                    d.QtyReturn,
+                    d.DikembalikanOleh,
+                    d.IsStopped,
+                    d.CreateBy,
+                    d.CreateDateTime
+                }
+            ).ToListAsync();
+
+            // ================================
+            // 6️⃣ Filter OBATCODE in-memory
+            // ================================
+            if (!string.IsNullOrWhiteSpace(obatCode))
+            {
+                string lower = obatCode.ToLower();
+
+                var resepMatch = daftarObat
+                    .Where(o =>
+                        (o.ObatCode != null && o.ObatCode.ToLower().Contains(lower)) 
+                    )
+                    .Select(o => o.ResepId)
+                    .Distinct()
+                    .ToHashSet();
+
+                resepList = resepList
+                    .Where(r => resepMatch.Contains(r.Resep.ResepId))
+                    .ToList();
+            }
+
+            // ================================
+            // 7️⃣ Hitung totalRows & totalPages SETELAH filter lengkap
+            // ================================
+            var totalRows = resepList.Count;
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            // ================================
+            // 8️⃣ Apply pagination BARU SEKARANG
+            // ================================
+            var resepPage = resepList
                 .Skip((page - 1) * perPage)
                 .Take(perPage)
-                .ToListAsync();
+                .ToList();
 
-            var resepIds = resepPage.Select(r => r.Resep.ResepId).ToList();
+            var resepPageIds = resepPage.Select(r => r.Resep.ResepId).ToList();
 
-            // Ambil detail obat batch
-            var daftarObat = await (from d in _applicationDbContext.DetailReseps.AsNoTracking()
-                                    join o in _applicationDbContext.Obats.AsNoTracking() on d.ObatId equals o.ObatId
-                                    where resepIds.Contains((Guid)d.ResepId) && (d.IsRacikan == false || d.IsRacikan == null) && (!d.IsDelete)
-                                    select new
-                                    {
-                                        d.ResepId,
-                                        d.DetailResepId,
-                                        d.ObatId,
-                                        o.ObatName,
-                                        d.Qty,
-                                        d.HargaObat,
-                                        d.TotalHargaObat,
-                                        d.Signa,
-                                        d.SignaTambahan,
-                                        d.TakaranDosis,
-                                        d.IsIteratur,
-                                        d.JumlahIteratur,
-                                        d.TglMulaiIteratur,
-                                        d.MasaAktifIteratur,
-                                        d.JarakPenebusan,
-                                        d.StatusCoverObat,
-                                        d.StatusPengambilanObat,
-                                        d.JenisObat,
-                                        d.IsRacikan,
-                                        d.StatusDiberikanPasien,
-                                        d.CaraPemakaian,
-                                        d.EstimasiPemberian,
-                                        d.TglStopPemakaian,
-                                        d.IsObatDibawaPlg,
-                                        d.ObatPagiDiambil,
-                                        d.ObatSiangDiambil,
-                                        d.ObatMalamDiambil,
-                                        d.IsReturn,
-                                        d.AlasanReturn,
-                                        d.QtyReturn,
-                                        d.DikembalikanOleh,
-                                        d.IsStopped,
-                                        d.CreateBy,
-                                        d.CreateDateTime
-                                    }).ToListAsync();
-
-            // Ambil racikan batch
-            var daftarRacikan = await (from d in _applicationDbContext.DetailReseps.AsNoTracking()
-                                       join ra in _applicationDbContext.Racikans.AsNoTracking() on d.RacikanId equals ra.RacikanId
-                                       where resepIds.Contains((Guid)d.ResepId) && d.IsRacikan == true && (!d.IsDelete)
-                                       select new
-                                       {
-                                           d.ResepId,
-                                           ra.RacikanId,
-                                           ra.NamaRacikan,
-                                           d.Qty,
-                                           d.Signa,
-                                           d.SignaTambahan,
-                                           d.CaraPemakaian,
-                                           d.EstimasiPemberian,
-                                           d.StatusDiberikanPasien,
-                                           d.TglStopPemakaian,
-                                           d.IsObatDibawaPlg,
-                                           d.ObatPagiDiambil,
-                                           d.ObatSiangDiambil,
-                                           d.ObatMalamDiambil,
-                                           d.IsReturn,
-                                           d.AlasanReturn,
-                                           d.QtyReturn,
-                                           d.DikembalikanOleh,
-                                           d.IsStopped,
-                                           ra.BentukRacikanId,
-                                           ra.CreateBy,
-                                           ra.CreateDateTime
-                                       }).ToListAsync();
+            // ================================
+            // 9️⃣ Ambil data racikan dan racikan detail
+            // ================================
+            var daftarRacikan = await (
+                from d in _applicationDbContext.DetailReseps.AsNoTracking()
+                join ra in _applicationDbContext.Racikans.AsNoTracking() on d.RacikanId equals ra.RacikanId
+                where resepPageIds.Contains((Guid)d.ResepId)
+                      && d.IsRacikan == true
+                      && !d.IsDelete
+                select new
+                {
+                    d.ResepId,
+                    ra.RacikanId,
+                    ra.NamaRacikan,
+                    ra.BentukRacikanId,
+                    d.Qty,
+                    d.Signa,
+                    d.SignaTambahan,
+                    d.CaraPemakaian,
+                    d.EstimasiPemberian,
+                    d.StatusDiberikanPasien,
+                    d.TglStopPemakaian,
+                    d.IsObatDibawaPlg,
+                    d.ObatPagiDiambil,
+                    d.ObatSiangDiambil,
+                    d.ObatMalamDiambil,
+                    d.IsReturn,
+                    d.AlasanReturn,
+                    d.QtyReturn,
+                    d.DikembalikanOleh,
+                    d.IsStopped,
+                    ra.CreateBy,
+                    ra.CreateDateTime
+                }
+            ).ToListAsync();
 
             var racikanIds = daftarRacikan.Select(r => r.RacikanId).Distinct().ToList();
 
-            // Ambil racikan detail batch
-            var daftarRacikanDetail = await (from rd in _applicationDbContext.RacikanDetails.AsNoTracking()
-                                             join ob in _applicationDbContext.Obats.AsNoTracking() on rd.ObatId equals ob.ObatId
-                                             where racikanIds.Contains((Guid)rd.RacikanId) && (!rd.IsDelete)
-                                             select new
-                                             {
-                                                 rd.RacikanId,
-                                                 rd.DetailRacikanId,
-                                                 rd.ObatId,
-                                                 ob.ObatName,
-                                                 rd.QtyUsed,
-                                                 rd.KomposisiDosis,
-                                                 rd.CreateBy,
-                                                 rd.CreateDateTime
-                                             }).ToListAsync();
+            var daftarRacikanDetail = await (
+                from rd in _applicationDbContext.RacikanDetails.AsNoTracking()
+                join ob in _applicationDbContext.Obats.AsNoTracking() on rd.ObatId equals ob.ObatId
+                where racikanIds.Contains((Guid)rd.RacikanId)
+                      && !rd.IsDelete
+                select new
+                {
+                    rd.RacikanId,
+                    rd.DetailRacikanId,
+                    rd.ObatId,
+                    ob.ObatName,
+                    ob.ObatCode,
+                    rd.QtyUsed,
+                    rd.KomposisiDosis,
+                    rd.CreateBy,
+                    rd.CreateDateTime
+                }
+            ).ToListAsync();
 
-            // Gabungkan hasil
+            // ================================
+            // 🔟 Build Output
+            // ================================
             var rows = resepPage.Select(q => new
             {
                 q.Resep.ResepId,
@@ -2198,6 +2263,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 CreateByName = q.User.FullName,
 
                 DaftarObat = daftarObat.Where(d => d.ResepId == q.Resep.ResepId).ToList(),
+
                 DaftarRacikan = daftarRacikan
                     .Where(r => r.ResepId == q.Resep.ResepId)
                     .Select(r => new
@@ -2240,6 +2306,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 }
             });
         }
+
 
 
         [HttpGet("pagedResepNotLunas")]
@@ -2336,11 +2403,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     _ => query.OrderBy(q => q.Resep.CreateDateTime)
                 };
 
-            // 🔎 Pagination
-            var totalRows = await query.CountAsync();
-            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+            var resepList = await query.ToListAsync();
 
-            if (totalRows == 0)
+            if (resepList.Count == 0)
             {
                 return Ok(new
                 {
@@ -2356,13 +2421,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     }
                 });
             }
+            var resepIds = resepList.Select(r => r.Resep.ResepId).ToList();
 
-            var resepPage = await query
-                .Skip((page - 1) * perPage)
-                .Take(perPage)
-                .ToListAsync();
+            // 🔎 Pagination
+            var totalRows =  resepList.Count();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
 
-            var resepIds = resepPage.Select(r => r.Resep.ResepId).ToList();
+            var resepPage = resepList
+            .Skip((page - 1) * perPage)
+            .Take(perPage)
+            .ToList();
 
             // 🔎 Ambil detail obat batch
             var daftarObat = await (from d in _applicationDbContext.DetailReseps.AsNoTracking()

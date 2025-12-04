@@ -1298,7 +1298,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             [FromQuery] bool? isFinishedKasir = null,
             [FromQuery] TipePasienFilter? TipePasien = null,
             [FromQuery] EnumJenisKunjungan? JenisKunjungan = null,
-            [FromQuery] string? AsalKunjungan = null
+            [FromQuery] string? AsalKunjungan = null,
+            [FromQuery] Guid? dokterId = null
         )
         {
             try
@@ -1433,6 +1434,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 if (isFinishedKasir.HasValue) baseQuery = baseQuery.Where(u => u.IsFinishedKasir == isFinishedKasir.Value);
                 if (TipePasien.HasValue) baseQuery = baseQuery.Where(u => u.TipePasien == TipePasien.Value.ToString());
                 if (JenisKunjungan.HasValue) baseQuery = baseQuery.Where(u => u.JenisKunjungan == JenisKunjungan.Value.ToString());
+                if(dokterId.HasValue) baseQuery = baseQuery.Where(u=>u.DokterId == dokterId.Value);
 
                 // ✅ Filter tanggal
                 if (startDate.HasValue && endDate.HasValue)
