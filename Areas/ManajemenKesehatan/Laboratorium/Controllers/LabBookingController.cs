@@ -415,6 +415,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     CatatanJaminan = vm.CatatanJaminan,
                     NoLab = vm.NoLab,
                     NoPA = vm.NoPA,
+                    NoOrder = vm.NoOrder,
                     StatusBookingLab = false,
                     AlasanPembatalan = vm.AlasanPembatalan,
                     ProsesBooking = vm.ProsesBooking,
