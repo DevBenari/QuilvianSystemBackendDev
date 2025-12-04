@@ -58,12 +58,23 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
         }
 
         [HttpGet("{UserActiveId}")]
-        public async Task<ActionResult<MasterTTD>> GetById(Guid UserActiveId)
+        public async Task<IActionResult> GetTtdById(Guid UserActiveId)
         {
-            var data = await _context.Set<MasterTTD>().FindAsync(UserActiveId);
-            if (data == null) return NotFound();
-            return data;
+            var listdata = await _context.MasterTTDs
+                .FirstOrDefaultAsync(x => x.UserActiveId == UserActiveId);
+
+            if (listdata == null)
+            {
+                return NotFound(new { message = "Data tidak ditemukan." });
+            }
+
+            return Ok(new
+            {
+                message = "Ditemukan || 200 OK",
+                data = listdata
+            });
         }
+
 
         [HttpPost("upload")]
         [RequestSizeLimit(10_000_000)] // 10 MB

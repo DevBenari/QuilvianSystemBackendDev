@@ -10,8 +10,8 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    //[Authorize]
-    //[EnableCors("AllowSpecific")]
+    [Authorize]
+    [EnableCors("AllowSpecific")]
     public class FingerprintController : Controller
     {
         private readonly ApplicationDbContext _db;
@@ -31,17 +31,23 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
         {
             try
             {
-                var list = await _db.Fingerprints
-                    .Select(x => new
-                    {
-                        x.FingerprintId,
-                        x.DeviceId,
-                        x.UserId,
-                        x.Template,
-                        x.Status,
-                        x.CreateDateTime
-                    })
-                    .ToListAsync();
+                var list = await (from f in _db.Fingerprints
+                                  join u in _db.UserActives
+                                  on f.UserId equals u.UserActiveId.ToString() into gj
+                                  from subu in gj.DefaultIfEmpty() // left join
+                                  select new
+                                  {
+                                      f.FingerprintId,
+                                      f.DeviceId,
+                                      f.UserId,
+                                      FullName = subu != null ? subu.FullName : null,
+                                      f.Template,
+                                      f.Status,
+                                      f.CreateDateTime
+                                  }).ToListAsync();
+
+                var total = list.Count;
+
 
                 if (list == null || list.Count == 0)
                     return NotFound(new { message = "Tidak ada data fingerprint di database" });
