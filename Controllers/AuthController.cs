@@ -75,7 +75,7 @@ namespace QuilvianSystemBackendDev.Controllers
                             expiration = token.ValidTo
                         });
                     }
-                    else if (idfinger.UserId == model.Email && idfinger.DeviceId == model.Password)
+                    else if (idfinger != null && idfinger.UserId == model.Email && idfinger.DeviceId == model.Password)
                     {
                         // dengan fingerprint
                         var userActiveFinger = _context.UserActives.FirstOrDefault(u => u.UserActiveId.ToString() == model.Email && u.IsActive);
