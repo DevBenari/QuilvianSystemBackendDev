@@ -12,7 +12,6 @@
         public bool IsTepatWaktu { get; set; }
 
         public Guid? PetugasCekFinalId { get; set; }
-        public string? TTDPetugasCekFinal { get; set; }  // Path atau URL
         public string? Keterangan { get; set; }
     }
 }

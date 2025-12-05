@@ -92,6 +92,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     d.ObatId,
                     ObatName = o != null ? o.ObatName : null,
                     o.ObatCode,
+                    KategoriObat = o.KategoriObat ?? null,
                     d.Qty,
                     d.HargaObat,
                     d.TotalHargaObat,
@@ -163,6 +164,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     rd.ObatId,
                     ob.ObatName,
                     ob.ObatCode,
+                    KategoriObat = ob.KategoriObat ?? null,
                     rd.QtyUsed,
                     rd.KomposisiDosis,
                     rd.CreateBy,
@@ -245,11 +247,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 {
                     telaah.Resep?.AntrianResep,
                     telaah.Resep?.TanggalPembuatanResep,
-                    telaah.Resep?.AntrianRegistrasi
+                    telaah.Resep?.AntrianRegistrasi,
+                    DaftarObat = daftarObat,
+                    DaftarRacikan = racikanWithDetail
                 },
 
-                DaftarObat = daftarObat,
-                DaftarRacikan = racikanWithDetail
+
             };
 
             return Ok(result);
@@ -486,7 +489,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         public async Task<IActionResult> Paged(
             int page = 1,
             int perPage = 10,
-            string? search = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
             Guid? kunjunganId = null,
@@ -499,11 +501,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             var query =
                 from a in _applicationDbContext.ResepTelaahs
                 join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId
+
+                join r in _applicationDbContext.Reseps
+                on a.ResepId equals r.ResepId into rGroup
+                from r in rGroup.DefaultIfEmpty()
                 where a.IsDelete == false || a.IsDelete == null
                 select new
                 {
                     a.TelaahResepId,
                     a.ResepId,
+                    r.TanggalPembuatanResep,
+                    r.AntrianRegistrasi,
+                    r.AntrianResep,
                     a.KunjunganId,
                     a.PasienId,
                     a.IsAdministratif,
@@ -527,15 +536,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             // ================================
             if (kunjunganId.HasValue)
                 query = query.Where(x => x.KunjunganId == kunjunganId);
-
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                search = $"%{search.ToLower()}%";
-                query = query.Where(x =>
-                    EF.Functions.ILike(x.CreateByName.ToLower(), search) ||
-                    EF.Functions.ILike(x.Keterangan.ToLower(), search)
-                );
-            }
 
             if (startDate.HasValue && endDate.HasValue)
             {
@@ -603,6 +603,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     d.ObatId,
                     o.ObatName,
                     o.ObatCode,
+                    KategoriObat = o.KategoriObat ?? null,
                     d.Qty,
                     d.Signa,
                     d.SignaTambahan,
@@ -647,6 +648,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     rd.ObatId,
                     o.ObatName,
                     o.ObatCode,
+                    KategoriObat = o.KategoriObat ?? null,
                     rd.QtyUsed,
                     rd.KomposisiDosis
                 }
@@ -667,37 +669,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             {
                 var obatList = allObat.Where(o => o.ResepId == h.ResepId).ToList();
 
-                var racikanDetails = new List<object>();
-
-                if (racikanIds.Any())
-                {
-                    var temp = await (
-                        from rd in _applicationDbContext.RacikanDetails
-                        join ob in _applicationDbContext.Obats on rd.ObatId equals ob.ObatId
-                        where rd.RacikanId.HasValue
-                              && racikanIds.Contains(rd.RacikanId.Value)
-                              && !rd.IsDelete
-                        select new
-                        {
-                            RacikanId = rd.RacikanId.Value,
-                            rd.DetailRacikanId,
-                            rd.ObatId,
-                            ob.ObatName,
-                            ob.ObatCode,
-                            rd.QtyUsed,
-                            rd.KomposisiDosis
-                        }
-                    ).ToListAsync();
-
-                    // Convert anonymous -> object (agar tipe tetap seragam)
-                    racikanDetails = temp.Cast<object>().ToList();
-                }
-
+                var racikanDetails = racikanDetailMap
+                    .Where(x => x.Key != null)
+                    .SelectMany(x => x.Value)
+                    .ToList();
 
                 return new
                 {
                     h.TelaahResepId,
                     h.ResepId,
+                    h.TanggalPembuatanResep,
+                    h.AntrianRegistrasi,
+                    h.AntrianResep,
                     h.KunjunganId,
                     h.PasienId,
                     h.IsAdministratif,
@@ -719,6 +702,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     DaftarRacikan = racikanDetails
                 };
             });
+            var finalData = await Task.WhenAll(finalRows);
 
             // ================================
             // 8️⃣ RETURN
@@ -728,7 +712,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 status = "success",
                 data = new
                 {
-                    Rows = finalRows,
+                    Rows = finalData,
                     TotalRows = totalRows,
                     CurrentPage = page,
                     PerPage = perPage,

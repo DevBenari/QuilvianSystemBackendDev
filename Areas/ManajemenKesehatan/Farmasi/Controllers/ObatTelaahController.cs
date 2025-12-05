@@ -11,6 +11,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
+using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 
@@ -20,57 +21,60 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class ObatSubstitusiController : Controller
+    public class ObatTelaahController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-
-        private readonly ILogger<ObatSubstitusiController> _logger;
+        private readonly ITTDService _ttdService;
+        private readonly ILogger<ObatTelaahController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public ObatSubstitusiController(
+        public ObatTelaahController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<ObatSubstitusiController> logger,
-            IWebHostEnvironment webHostEnvironment)
+            ILogger<ObatTelaahController> logger,
+            IWebHostEnvironment webHostEnvironment,
+            ITTDService ttdServive)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+            _ttdService = ttdServive;
         }
+
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
             // =============================
-            // 1️⃣ AMBIL DATA SUBSTITUSI + USER + RESEP
+            // 1️⃣ GET DATA TELA'AH OBAT + USER + RESEP
             // =============================
 
-            var substitusi = await (
-                from s in _applicationDbContext.ObatSubstitusis
-                join u in _applicationDbContext.UserActives on s.CreateBy equals u.UserActiveId
-                join r in _applicationDbContext.Reseps on s.ResepId equals r.ResepId into rGroup
+            var telaah = await (
+                from t in _applicationDbContext.ObatTelaahs
+                join u in _applicationDbContext.UserActives on t.CreateBy equals u.UserActiveId
+                join r in _applicationDbContext.Reseps on t.ResepId equals r.ResepId into rGroup
                 from r in rGroup.DefaultIfEmpty()
-                where (s.IsDelete == false || s.IsDelete == null) && s.SubstitusiObatId == id
+                where (t.IsDelete == false || t.IsDelete == null) && t.TelaahObatId == id
                 select new
                 {
-                    Substitusi = s,
+                    Telaah = t,
                     UserName = u.FullName,
                     Resep = r
                 }
             ).FirstOrDefaultAsync();
 
-            if (substitusi == null)
-                return NotFound(new { message = "Data substitusi obat tidak ditemukan." });
+            if (telaah == null)
+                return NotFound(new { message = "Data telaah obat tidak ditemukan." });
 
-            Guid resepId = substitusi.Resep?.ResepId ?? Guid.Empty;
+            Guid resepId = telaah.Resep?.ResepId ?? Guid.Empty;
 
             // =============================
-            // 2️⃣ AMBIL OBAT NON–RACIKAN
+            // 2️⃣ GET OBAT NON RACIKAN
             // =============================
 
             var daftarObat = await (
@@ -87,7 +91,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     d.ObatId,
                     ObatName = o.ObatName,
                     o.ObatCode,
-                    KategoriObat = o.KategoriObat ?? null,
+                    KategoriObat = o.KategoriObat,
                     d.Qty,
                     d.Signa,
                     d.SignaTambahan,
@@ -102,7 +106,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             ).ToListAsync();
 
             // =============================
-            // 3️⃣ AMBIL HEADER RACIKAN
+            // 3️⃣ GET HEADER RACIKAN
             // =============================
 
             var daftarRacikan = await (
@@ -130,15 +134,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             var racikanIds = daftarRacikan.Select(r => r.RacikanId).Distinct().ToList();
 
             // =============================
-            // 4️⃣ AMBIL DETAIL KOMPOSISI RACIKAN
+            // 4️⃣ GET KOMPOSISI RACIKAN
             // =============================
 
             var daftarRacikanDetail = await (
                 from rd in _applicationDbContext.RacikanDetails.AsNoTracking()
                 join ob in _applicationDbContext.Obats.AsNoTracking()
                     on rd.ObatId equals ob.ObatId
-                where racikanIds.Contains((Guid)rd.RacikanId) &&
-                      !rd.IsDelete
+                where racikanIds.Contains((Guid)rd.RacikanId) && !rd.IsDelete
                 select new
                 {
                     rd.RacikanId,
@@ -146,14 +149,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     rd.ObatId,
                     ob.ObatName,
                     ob.ObatCode,
-                    KategoriObat = ob.KategoriObat ?? null,
+                    KategoriObat = ob.KategoriObat,
                     rd.QtyUsed,
                     rd.KomposisiDosis
                 }
             ).ToListAsync();
 
             // =============================
-            // 5️⃣ GROUP RACIKAN + DETAIL RACIKAN
+            // 5️⃣ MERGE RACIKAN + DETAIL
             // =============================
 
             var racikanWithDetail = daftarRacikan
@@ -188,29 +191,33 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
             var result = new
             {
-                Substitusi = new
+                TelaahObat = new
                 {
-                    substitusi.Substitusi.SubstitusiObatId,
-                    substitusi.Substitusi.KunjunganId,
-                    substitusi.Substitusi.PasienId,
-                    substitusi.Substitusi.ResepId,
+                    telaah.Telaah.TelaahObatId,
+                    telaah.Telaah.KunjunganId,
+                    telaah.Telaah.PasienId,
+                    telaah.Telaah.ResepId,
 
-                    substitusi.Substitusi.PengambilObatId,
-                    substitusi.Substitusi.PengemasObatId,
-                    substitusi.Substitusi.WaktuAccDokter,
-                    substitusi.Substitusi.DokterAccId,
+                    telaah.Telaah.IsTepatIdentitas,
+                    telaah.Telaah.IsTepatObat,
+                    telaah.Telaah.IsTepatDosis,
+                    telaah.Telaah.IsTepatRute,
+                    telaah.Telaah.IsTepatWaktu,
 
-                    substitusi.Substitusi.Keterangan,
-                    substitusi.Substitusi.CreateDateTime,
-                    CreateBy = substitusi.Substitusi.CreateBy,
-                    CreateByName = substitusi.UserName
+                    telaah.Telaah.PetugasCekFinalId,
+                    telaah.Telaah.TTDPetugasCekFinal,
+                    telaah.Telaah.Keterangan,
+
+                    telaah.Telaah.CreateDateTime,
+                    CreateBy = telaah.Telaah.CreateBy,
+                    CreateByName = telaah.UserName
                 },
 
                 Resep = new
                 {
-                    substitusi.Resep?.AntrianResep,
-                    substitusi.Resep?.TanggalPembuatanResep,
-                    substitusi.Resep?.AntrianRegistrasi,
+                    telaah.Resep?.AntrianResep,
+                    telaah.Resep?.TanggalPembuatanResep,
+                    telaah.Resep?.AntrianRegistrasi,
 
                     DaftarObat = daftarObat,
                     DaftarRacikan = racikanWithDetail
@@ -220,9 +227,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             return Ok(result);
         }
 
-
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] ObatSubstitusiViewModel vm)
+        public async Task<IActionResult> Create([FromBody] ObatTelaahViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -261,17 +267,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 //    return Conflict(new { message = "Nama diskon ini telah tersedia" });
                 //}
 
+                // cek ttd
+                var ttd = await _ttdService.CheckTTDAsync((Guid)vm.PetugasCekFinalId);
+
                 // **Buat Data Baru**
-                var data = new ObatSubstitusi
+                var data = new ObatTelaah
                 {
-                    SubstitusiObatId = Guid.NewGuid(),
+                    TelaahObatId = Guid.NewGuid(),
                     KunjunganId = vm.KunjunganId,
                     PasienId = vm.PasienId,
                     ResepId = vm.ResepId,
-                    PengambilObatId = vm.PengambilObatId,
-                    PengemasObatId = vm.PengemasObatId,
-                    WaktuAccDokter = vm.WaktuAccDokter,
-                    DokterAccId = vm.DokterAccId,
+                    IsTepatIdentitas = vm.IsTepatIdentitas,
+                    IsTepatDosis = vm.IsTepatDosis,
+                    IsTepatObat = vm.IsTepatObat,
+                    IsTepatRute = vm.IsTepatRute,
+                    IsTepatWaktu = vm.IsTepatWaktu,
+                    PetugasCekFinalId = vm.PetugasCekFinalId,
+                    TTDPetugasCekFinal = ttd.Path,
                     Keterangan = vm.Keterangan,
                     
                     CreateBy = userActiveId,
@@ -279,7 +291,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 };
 
                 // **Simpan ke Database**
-                _applicationDbContext.ObatSubstitusis.Add(data);
+                _applicationDbContext.ObatTelaahs.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -301,9 +313,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             }
         }
 
-
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] ObatSubstitusiViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] ObatTelaahViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -334,7 +345,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.ObatSubstitusis.FindAsync(id);
+                var data = await _applicationDbContext.ObatTelaahs.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -350,21 +361,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 //    return Conflict(new { message = "Nama diskon ini telah tersedia" });
                 //}
 
+                // cek ttd
+                var ttd = await _ttdService.CheckTTDAsync((Guid)vm.PetugasCekFinalId);
+
                 // **Update Data**
                 data.KunjunganId = vm.KunjunganId;
-                data.PasienId = vm.PasienId;
-                data.ResepId = vm.ResepId;
-                data.PengambilObatId = vm.PengambilObatId;
-                data.PengemasObatId = vm.PengemasObatId;
-                data.WaktuAccDokter = vm.WaktuAccDokter;
-                data.DokterAccId = vm.DokterAccId;
-                data.Keterangan = vm.Keterangan;
+                    data.PasienId = vm.PasienId;
+                    data.ResepId = vm.ResepId;
+                    data.IsTepatIdentitas = vm.IsTepatIdentitas;
+                    data.IsTepatDosis = vm.IsTepatDosis;
+                    data.IsTepatObat = vm.IsTepatObat;
+                    data.IsTepatRute = vm.IsTepatRute;
+                    data.IsTepatWaktu = vm.IsTepatWaktu;
+                    data.PetugasCekFinalId = vm.PetugasCekFinalId;
+                    data.TTDPetugasCekFinal = ttd.Path;
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.ObatSubstitusis.Update(data);
+                _applicationDbContext.ObatTelaahs.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -413,7 +429,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.ObatSubstitusis.FindAsync(id);
+                var data = await _applicationDbContext.ObatTelaahs.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -425,7 +441,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
                 data.IsDelete = true;
 
-                _applicationDbContext.ObatSubstitusis.Update(data);
+                _applicationDbContext.ObatTelaahs.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -448,42 +464,47 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         }
 
         [HttpGet("paged")]
-        public async Task<IActionResult> PagedSubstitusi(
-            int page = 1,
-            int perPage = 10,
-            Guid? kunjunganId = null,
-            DateTime? startDate = null,
-            DateTime? endDate = null,
-            string? orderBy = "CreateDateTime",
-            string? sortDirection = "desc")
+        public async Task<IActionResult> PagedTelaah(
+    int page = 1,
+    int perPage = 10,
+    Guid? kunjunganId = null,
+    DateTime? startDate = null,
+    DateTime? endDate = null,
+    string? orderBy = "CreateDateTime",
+    string? sortDirection = "desc")
         {
             // ============================
-            // 1️⃣ QUERY HEADER SUBSTITUSI
+            // 1️⃣ QUERY HEADER TELA’AH OBAT
             // ============================
             var query =
-                from s in _applicationDbContext.ObatSubstitusis
-                join u in _applicationDbContext.UserActives on s.CreateBy equals u.UserActiveId
-                join r in _applicationDbContext.Reseps on s.ResepId equals r.ResepId into rGroup
+                from t in _applicationDbContext.ObatTelaahs
+                join u in _applicationDbContext.UserActives on t.CreateBy equals u.UserActiveId
+                join r in _applicationDbContext.Reseps on t.ResepId equals r.ResepId into rGroup
                 from r in rGroup.DefaultIfEmpty()
-                where s.IsDelete == false || s.IsDelete == null
+                where t.IsDelete == false || t.IsDelete == null
                 select new
                 {
-                    s.SubstitusiObatId,
-                    s.KunjunganId,
-                    s.PasienId,
-                    s.ResepId,
-                    s.PengambilObatId,
-                    s.PengemasObatId,
-                    s.DokterAccId,
-                    s.WaktuAccDokter,
-                    s.Keterangan,
+                    t.TelaahObatId,
+                    t.KunjunganId,
+                    t.PasienId,
+                    t.ResepId,
+
+                    t.IsTepatIdentitas,
+                    t.IsTepatObat,
+                    t.IsTepatDosis,
+                    t.IsTepatRute,
+                    t.IsTepatWaktu,
+
+                    t.PetugasCekFinalId,
+                    t.TTDPetugasCekFinal,
+                    t.Keterangan,
 
                     // From resep
                     r.TanggalPembuatanResep,
                     r.AntrianResep,
                     r.AntrianRegistrasi,
 
-                    s.CreateDateTime,
+                    t.CreateDateTime,
                     CreateByName = u.FullName
                 };
 
@@ -500,8 +521,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 query = query.Where(x => x.CreateDateTime >= start && x.CreateDateTime <= end);
             }
 
-            // Sorting
+            // ============================
+            // 3️⃣ SORTING
+            // ============================
             bool desc = sortDirection?.ToLower() == "desc";
+
             query = orderBy switch
             {
                 "CreateByName" => desc ? query.OrderByDescending(x => x.CreateByName) : query.OrderBy(x => x.CreateByName),
@@ -509,7 +533,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             };
 
             // ============================
-            // 3️⃣ PAGINATION
+            // 4️⃣ PAGINATION HEADER
             // ============================
             var totalRows = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
@@ -541,7 +565,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 .ToList();
 
             // ============================
-            // 4️⃣ LOAD OBAT NON-RACIKAN
+            // 5️⃣ LOAD OBAT NON–RACIKAN
             // ============================
             var allObat = await (
                 from d in _applicationDbContext.DetailReseps
@@ -565,7 +589,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             ).ToListAsync();
 
             // ============================
-            // 5️⃣ LOAD RACIKAN HEADER
+            // 6️⃣ LOAD RACIKAN HEADER
             // ============================
             var allRacikan = await (
                 from d in _applicationDbContext.DetailReseps
@@ -587,9 +611,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             var racikanIds = allRacikan.Select(x => x.RacikanId).Distinct().ToList();
 
             // ============================
-            // 6️⃣ LOAD KOMPOSISI RACIKAN
+            // 7️⃣ LOAD KOMPOSISI RACIKAN
             // ============================
-            List<object> allRacikanDetail = new();
+            List<dynamic> allRacikanDetail = new();
 
             if (racikanIds.Any())
             {
@@ -609,11 +633,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     }
                 ).ToListAsync();
 
-                allRacikanDetail = temp.Cast<object>().ToList();
+                allRacikanDetail = temp.Cast<dynamic>().ToList();
             }
 
             var racikanDetailMap = allRacikanDetail
-                .Cast<dynamic>()
                 .GroupBy(x => (Guid)x.RacikanId)
                 .ToDictionary(
                     g => g.Key,
@@ -621,7 +644,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 );
 
             // ============================
-            // 7️⃣ BUILD FINAL ROWS
+            // 8️⃣ BUILD FINAL ROWS
             // ============================
             var finalRows = headerRows.Select(h =>
             {
@@ -645,14 +668,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
                 return new
                 {
-                    h.SubstitusiObatId,
+                    h.TelaahObatId,
                     h.KunjunganId,
                     h.PasienId,
                     h.ResepId,
-                    h.PengambilObatId,
-                    h.PengemasObatId,
-                    h.DokterAccId,
-                    h.WaktuAccDokter,
+
+                    h.IsTepatIdentitas,
+                    h.IsTepatObat,
+                    h.IsTepatDosis,
+                    h.IsTepatRute,
+                    h.IsTepatWaktu,
+
+                    h.PetugasCekFinalId,
+                    h.TTDPetugasCekFinal,
                     h.Keterangan,
 
                     h.TanggalPembuatanResep,
@@ -668,7 +696,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             }).ToList();
 
             // ============================
-            // 8️⃣ RETURN
+            // 9️⃣ RESPONSE
             // ============================
             return Ok(new
             {
@@ -683,7 +711,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 }
             });
         }
-
 
     }
 }

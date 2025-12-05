@@ -305,6 +305,8 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<StockBatch> StockBatchs { get; set; }
         public DbSet<StockKartu> StockKartus { get; set; }
         public DbSet<ResepTelaah> ResepTelaahs { get; set; }
+        public DbSet<ObatSubstitusi> ObatSubstitusis { get; set; }
+        public DbSet<ObatTelaah> ObatTelaahs { get; set; }
 
         #endregion
 
