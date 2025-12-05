@@ -11,6 +11,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
@@ -337,7 +338,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         public IActionResult Paged(
         int page = 1,
         int perPage = 10,
-        string? search = null,
+        [FromQuery] EnumJenisKunjungan? JenisKunjungan = null,
+        [FromQuery] Guid? kunjunganId = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -351,6 +353,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             var query = (from a in _applicationDbContext.LabHasils
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
+
+                         join k in _applicationDbContext.Kunjungans
+                         on a.KunjunganId equals k.KunjunganID into kGroup
+                         from k in kGroup.DefaultIfEmpty()
+
                          where a.IsDelete == false || a.IsDelete == null
                          select new
                          {
@@ -359,6 +366,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              CreateByName = u.FullName,
                              a.HasilLabId,
                              a.KunjunganId,
+                             k.JenisKunjungan,
                              a.LabId,
                              a.LabBookingId,
                              a.UserActiveId,
@@ -376,6 +384,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             //        EF.Functions.ILike(u.NamaDiskon, search)
             //    );
             //}
+
+            // filter based on kunjungan id
+            if (kunjunganId.HasValue)
+            {
+                query = query.Where(u=>u.KunjunganId == kunjunganId.Value);
+            }
+
+            // filter based on jenis kunjungan
+            if (JenisKunjungan.HasValue) query = query.Where(u => u.JenisKunjungan == JenisKunjungan.Value.ToString());
+
 
             //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
