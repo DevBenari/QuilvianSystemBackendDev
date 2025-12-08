@@ -106,17 +106,6 @@ namespace QuilvianSystemBackendDev.Controllers
                             expires: DateTime.UtcNow.AddMinutes(Convert.ToDouble(jwtSettings["ExpirationInMinutes"])),
                             signingCredentials: credentials
                         );
-                        // Update fingerprint
-                        //var fingerprint = await _context.Fingerprints
-                        //    .FirstOrDefaultAsync(f => f.UserId == idfinger.UserId);
-
-                        //if (fingerprint != null)
-                        //{
-                        //    fingerprint.DeviceId = "Logout";
-                        //    fingerprint.Status = "Logout";
-                        //    _context.Fingerprints.Update(fingerprint);
-                        //    await _context.SaveChangesAsync();
-                        //}
                         return Ok(new
                         {
                             message = "Berhasil || 200 OK",
@@ -231,6 +220,17 @@ namespace QuilvianSystemBackendDev.Controllers
             // Cari UserActive berdasarkan IdentityUserId
             var userActive = await _context.UserActives
                 .FirstOrDefaultAsync(x => x.Email == email);
+
+            // Update fingerprint
+            var fingerprint = await _context.Fingerprints
+                .FirstOrDefaultAsync(f => f.UserId == userActive.UserActiveId.ToString());
+
+            if (fingerprint != null)
+            {
+                fingerprint.DeviceId = Guid.NewGuid().ToString();
+                _context.Fingerprints.Update(fingerprint);
+                await _context.SaveChangesAsync();
+            }
             // Karena JWT tidak bisa dihapus dari server, cukup beri respons sukses
             return Ok(new
             {
