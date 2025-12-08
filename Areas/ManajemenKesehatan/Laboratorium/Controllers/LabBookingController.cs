@@ -1290,6 +1290,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             string? namaLab = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null,
             [FromQuery] DateTime? startDate = null,
             [FromQuery] DateTime? endDate = null)
         {
@@ -1307,6 +1308,59 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             // Filter by BookingLabId
             if (labBookingId.HasValue)
                 parentQuery = parentQuery.Where(b => b.BookingLabId == labBookingId.Value);
+
+            // filter periode
+            if (periode.HasValue)
+            {
+                DateTime today = DateTime.UtcNow.Date;
+
+                switch (periode)
+                {
+                    case PeriodeFilter.Today:
+                        parentQuery = parentQuery.Where(u => u.CreateDateTime.Date == today);
+                        break;
+
+                    case PeriodeFilter.ThisWeek:
+                        parentQuery = parentQuery.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
+                            u.CreateDateTime.Date <= today);
+                        break;
+
+                    case PeriodeFilter.LastWeek:
+                        parentQuery = parentQuery.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
+                            u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek));
+                        break;
+
+                    case PeriodeFilter.ThisMonth:
+                        parentQuery = parentQuery.Where(u =>
+                            u.CreateDateTime.Month == today.Month &&
+                            u.CreateDateTime.Year == today.Year);
+                        break;
+
+                    case PeriodeFilter.LastMonth:
+                        parentQuery = parentQuery.Where(u =>
+                            u.CreateDateTime.Month == today.Month - 1 &&
+                            u.CreateDateTime.Year == today.Year);
+                        break;
+
+                    case PeriodeFilter.ThisYear:
+                        parentQuery = parentQuery.Where(u => u.CreateDateTime.Year == today.Year);
+                        break;
+
+                    case PeriodeFilter.LastYear:
+                        parentQuery = parentQuery.Where(u => u.CreateDateTime.Year == today.Year - 1);
+                        break;
+
+                    case PeriodeFilter.Last3Months:
+                        parentQuery = parentQuery.Where(u => u.CreateDateTime >= today.AddMonths(-3));
+                        break;
+
+                    case PeriodeFilter.Last6Months:
+                        parentQuery = parentQuery.Where(u => u.CreateDateTime >= today.AddMonths(-6));
+                        break;
+                }
+            }
 
             // Filter by date (tanpa batas tahun)
             if (startDate.HasValue && endDate.HasValue)
