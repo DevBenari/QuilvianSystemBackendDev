@@ -4,6 +4,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.V4.Pages.Account.Manage.Internal;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -1447,6 +1448,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 join d1 in _applicationDbContext.Dokters on b.DokterId equals d1.DokterId into d1Group
                 from d1 in d1Group.DefaultIfEmpty()
 
+                join d2 in _applicationDbContext.Dokters on b.DokterId equals d2.DokterId into d2Join
+                from d2 in d2Join.DefaultIfEmpty()
+
                 join po in _applicationDbContext.Polikliniks on k.PoliklinikId equals po.PoliklinikId into poGroup
                 from po in poGroup.DefaultIfEmpty()
 
@@ -1478,6 +1482,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     b.StatusPemeriksaan,
                     b.NomorSuratJaminan,
                     b.DokterKonsulenId,
+                    NamaDokterKonsulen = d2.NmDokter ?? null,
                     b.DiagnosaAwal,
                     b.Keterangan,
                     b.TTDPathPembatalan,
@@ -1631,6 +1636,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                  join d1 in _applicationDbContext.Dokters on b.DokterId equals d1.DokterId into dJoin
                  from d1 in dJoin.DefaultIfEmpty()
 
+                 join d2 in _applicationDbContext.Dokters on b.DokterId equals d2.DokterId into d2Join
+                 from d2 in dJoin.DefaultIfEmpty()
+
                  join po in _applicationDbContext.Polikliniks on k.PoliklinikId equals po.PoliklinikId into poJoin
                  from po in poJoin.DefaultIfEmpty()
 
@@ -1643,6 +1651,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                  {
                      b.BookingLabId,
                      b.KunjunganId,
+                     k.AsalKunjungan,
                      b.PasienId,
                      p.NamaLengkap,
                      b.NoOrder,
@@ -1663,6 +1672,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      b.StatusPemeriksaan,
                      b.NomorSuratJaminan,
                      b.DokterKonsulenId,
+                     NamaDokterKonsulen = d2.NmDokter ?? null,
                      b.DiagnosaAwal,
                      b.Keterangan,
                      b.TTDPathPembatalan,
@@ -1736,6 +1746,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         Guid? labBookingId = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
+        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null,
         [FromQuery] DateTime? startDate = null,
         [FromQuery] DateTime? endDate = null)
         {
@@ -1758,6 +1769,59 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 var start = startDate.Value.Date;
                 var end = endDate.Value.Date.AddDays(1).AddTicks(-1);
                 parentQuery = parentQuery.Where(b => b.CreateDateTime >= start && b.CreateDateTime <= end);
+            }
+
+            // filter periode
+            if (periode.HasValue)
+            {
+                DateTime today = DateTime.UtcNow.Date;
+
+                switch (periode)
+                {
+                    case PeriodeFilter.Today:
+                        parentQuery = parentQuery.Where(u => u.CreateDateTime.Date == today);
+                        break;
+
+                    case PeriodeFilter.ThisWeek:
+                        parentQuery = parentQuery.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
+                            u.CreateDateTime.Date <= today);
+                        break;
+
+                    case PeriodeFilter.LastWeek:
+                        parentQuery = parentQuery.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
+                            u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek));
+                        break;
+
+                    case PeriodeFilter.ThisMonth:
+                        parentQuery = parentQuery.Where(u =>
+                            u.CreateDateTime.Month == today.Month &&
+                            u.CreateDateTime.Year == today.Year);
+                        break;
+
+                    case PeriodeFilter.LastMonth:
+                        parentQuery = parentQuery.Where(u =>
+                            u.CreateDateTime.Month == today.Month - 1 &&
+                            u.CreateDateTime.Year == today.Year);
+                        break;
+
+                    case PeriodeFilter.ThisYear:
+                        parentQuery = parentQuery.Where(u => u.CreateDateTime.Year == today.Year);
+                        break;
+
+                    case PeriodeFilter.LastYear:
+                        parentQuery = parentQuery.Where(u => u.CreateDateTime.Year == today.Year - 1);
+                        break;
+
+                    case PeriodeFilter.Last3Months:
+                        parentQuery = parentQuery.Where(u => u.CreateDateTime >= today.AddMonths(-3));
+                        break;
+
+                    case PeriodeFilter.Last6Months:
+                        parentQuery = parentQuery.Where(u => u.CreateDateTime >= today.AddMonths(-6));
+                        break;
+                }
             }
 
             // =============================
@@ -1820,6 +1884,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                  join d1 in _applicationDbContext.Dokters on b.DokterId equals d1.DokterId into dJoin
                  from d1 in dJoin.DefaultIfEmpty()
 
+                 join d2 in _applicationDbContext.Dokters on b.DokterId equals d2.DokterId into d2Join
+                 from d2 in dJoin.DefaultIfEmpty()
+
                  join po in _applicationDbContext.Polikliniks on k.PoliklinikId equals po.PoliklinikId into poJoin
                  from po in poJoin.DefaultIfEmpty()
 
@@ -1832,6 +1899,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                  {
                      b.BookingLabId,
                      b.KunjunganId,
+                     AsalKunjungan = k.AsalKunjungan ?? null,
                      b.PasienId,
                      p.NamaLengkap,
                      b.NoOrder,
@@ -1852,6 +1920,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      b.StatusPemeriksaan,
                      b.NomorSuratJaminan,
                      b.DokterKonsulenId,
+                     NamaDokterKonsulen = d2.NmDokter ?? null,
                      b.DiagnosaAwal,
                      b.Keterangan,
                      b.TTDPathPembatalan,
@@ -1926,6 +1995,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         string? dokterKonsul =  null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
+        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null,
         [FromQuery] DateTime? startDate = null,
         [FromQuery] DateTime? endDate = null)
         {
@@ -1942,7 +2012,60 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
             if (labBookingId.HasValue)
                 parentQuery = parentQuery.Where(b => b.BookingLabId == labBookingId.Value);
-            
+
+            // filter periode
+            if (periode.HasValue)
+            {
+                DateTime today = DateTime.UtcNow.Date;
+
+                switch (periode)
+                {
+                    case PeriodeFilter.Today:
+                        parentQuery = parentQuery.Where(u => u.CreateDateTime.Date == today);
+                        break;
+
+                    case PeriodeFilter.ThisWeek:
+                        parentQuery = parentQuery.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
+                            u.CreateDateTime.Date <= today);
+                        break;
+
+                    case PeriodeFilter.LastWeek:
+                        parentQuery = parentQuery.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
+                            u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek));
+                        break;
+
+                    case PeriodeFilter.ThisMonth:
+                        parentQuery = parentQuery.Where(u =>
+                            u.CreateDateTime.Month == today.Month &&
+                            u.CreateDateTime.Year == today.Year);
+                        break;
+
+                    case PeriodeFilter.LastMonth:
+                        parentQuery = parentQuery.Where(u =>
+                            u.CreateDateTime.Month == today.Month - 1 &&
+                            u.CreateDateTime.Year == today.Year);
+                        break;
+
+                    case PeriodeFilter.ThisYear:
+                        parentQuery = parentQuery.Where(u => u.CreateDateTime.Year == today.Year);
+                        break;
+
+                    case PeriodeFilter.LastYear:
+                        parentQuery = parentQuery.Where(u => u.CreateDateTime.Year == today.Year - 1);
+                        break;
+
+                    case PeriodeFilter.Last3Months:
+                        parentQuery = parentQuery.Where(u => u.CreateDateTime >= today.AddMonths(-3));
+                        break;
+
+                    case PeriodeFilter.Last6Months:
+                        parentQuery = parentQuery.Where(u => u.CreateDateTime >= today.AddMonths(-6));
+                        break;
+                }
+            }
+
             // filter by nama dokter konsulen
             if (!string.IsNullOrWhiteSpace(dokterKonsul))
             {
@@ -2132,6 +2255,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         string? dokterKonsul = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
+        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null,
         [FromQuery] DateTime? startDate = null,
         [FromQuery] DateTime? endDate = null)
         {
@@ -2148,6 +2272,59 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
             if (labBookingId.HasValue)
                 parentQuery = parentQuery.Where(b => b.BookingLabId == labBookingId.Value);
+
+            // filter periode
+            if (periode.HasValue)
+            {
+                DateTime today = DateTime.UtcNow.Date;
+
+                switch (periode)
+                {
+                    case PeriodeFilter.Today:
+                        parentQuery = parentQuery.Where(u => u.CreateDateTime.Date == today);
+                        break;
+
+                    case PeriodeFilter.ThisWeek:
+                        parentQuery = parentQuery.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
+                            u.CreateDateTime.Date <= today);
+                        break;
+
+                    case PeriodeFilter.LastWeek:
+                        parentQuery = parentQuery.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
+                            u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek));
+                        break;
+
+                    case PeriodeFilter.ThisMonth:
+                        parentQuery = parentQuery.Where(u =>
+                            u.CreateDateTime.Month == today.Month &&
+                            u.CreateDateTime.Year == today.Year);
+                        break;
+
+                    case PeriodeFilter.LastMonth:
+                        parentQuery = parentQuery.Where(u =>
+                            u.CreateDateTime.Month == today.Month - 1 &&
+                            u.CreateDateTime.Year == today.Year);
+                        break;
+
+                    case PeriodeFilter.ThisYear:
+                        parentQuery = parentQuery.Where(u => u.CreateDateTime.Year == today.Year);
+                        break;
+
+                    case PeriodeFilter.LastYear:
+                        parentQuery = parentQuery.Where(u => u.CreateDateTime.Year == today.Year - 1);
+                        break;
+
+                    case PeriodeFilter.Last3Months:
+                        parentQuery = parentQuery.Where(u => u.CreateDateTime >= today.AddMonths(-3));
+                        break;
+
+                    case PeriodeFilter.Last6Months:
+                        parentQuery = parentQuery.Where(u => u.CreateDateTime >= today.AddMonths(-6));
+                        break;
+                }
+            }
 
             // filter by nama dokter konsulen
             if (!string.IsNullOrWhiteSpace(dokterKonsul))
