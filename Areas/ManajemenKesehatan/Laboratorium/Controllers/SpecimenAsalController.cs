@@ -58,15 +58,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
 
-                         // join ke specimen jenis
-                         join j in _applicationDbContext.SpecimenJeniss
-                         on a.SpecimenAsalId equals j.AsalSpecimenId into spJenis
-                         from j in spJenis.DefaultIfEmpty()
+                         //// join ke specimen jenis
+                         //join j in _applicationDbContext.SpecimenJeniss
+                         //on a.SpecimenAsalId equals j.AsalSpecimenId into spJenis
+                         //from j in spJenis.DefaultIfEmpty()
 
-                         // join ke specimen method
-                         join m in _applicationDbContext.SpecimenMethods
-                         on a.SpecimenAsalId equals m.AsalSpecimenId into spMethod
-                         from m in spMethod.DefaultIfEmpty()
+                         //// join ke specimen method
+                         //join m in _applicationDbContext.SpecimenMethods
+                         //on a.SpecimenAsalId equals m.AsalSpecimenId into spMethod
+                         //from m in spMethod.DefaultIfEmpty()
 
                          where a.IsDelete == false || a.IsDelete == null
                          select new
@@ -76,10 +76,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              CreateByName = u.FullName,
                              a.SpecimenAsalId,
                              a.AsalSpecimen,
-                             JenisSpecimenId = j != null ? j.JenisSpecimenId : (Guid?)null,
-                             NamaJenisSpecimen = j != null ? j.NamaJenisSpecimen : null,
-                             SpecimenMethodId = m != null ? m.SpecimenMethodId : (Guid?)null,
-                             CaraPengambilanSpecimen = m != null ? m.CaraPengambilanSpecimen : null,
+                             //JenisSpecimenId = j != null ? j.JenisSpecimenId : (Guid?)null,
+                             //NamaJenisSpecimen = j != null ? j.NamaJenisSpecimen : null,
+                             //SpecimenMethodId = m != null ? m.SpecimenMethodId : (Guid?)null,
+                             //CaraPengambilanSpecimen = m != null ? m.CaraPengambilanSpecimen : null,
                              a.KodeAsalSpecimen,
                              a.Keterangan,
                          }).OrderByDescending(a => a.CreateDateTime);
@@ -126,13 +126,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId into userJoin
                     from u in userJoin.DefaultIfEmpty()
 
-                        // ✅ LEFT JOIN ke SpecimenJenis
-                    join j in _applicationDbContext.SpecimenJeniss on a.SpecimenAsalId equals j.AsalSpecimenId into spJenis
-                    from j in spJenis.DefaultIfEmpty()
+                    //    // ✅ LEFT JOIN ke SpecimenJenis
+                    //join j in _applicationDbContext.SpecimenJeniss on a.SpecimenAsalId equals j.AsalSpecimenId into spJenis
+                    //from j in spJenis.DefaultIfEmpty()
 
-                        // ✅ LEFT JOIN ke SpecimenMethod
-                    join m in _applicationDbContext.SpecimenMethods on a.SpecimenAsalId equals m.AsalSpecimenId into spMethod
-                    from m in spMethod.DefaultIfEmpty()
+                    //    // ✅ LEFT JOIN ke SpecimenMethod
+                    //join m in _applicationDbContext.SpecimenMethods on a.SpecimenAsalId equals m.AsalSpecimenId into spMethod
+                    //from m in spMethod.DefaultIfEmpty()
 
                     where a.SpecimenAsalId == id && (a.IsDelete == false || a.IsDelete == null)
                     select new
@@ -146,11 +146,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         CreateByName = u != null ? u.FullName : null,
 
                         // 🔹 Jika tidak ada relasi, akan otomatis null
-                        JenisSpecimenId = j != null ? j.JenisSpecimenId : (Guid?)null,
-                        NamaJenisSpecimen = j != null ? j.NamaJenisSpecimen : null,
+                        //JenisSpecimenId = j != null ? j.JenisSpecimenId : (Guid?)null,
+                        //NamaJenisSpecimen = j != null ? j.NamaJenisSpecimen : null,
 
-                        SpecimenMethodId = m != null ? m.SpecimenMethodId : (Guid?)null,
-                        CaraPengambilanSpecimen = m != null ? m.CaraPengambilanSpecimen : null
+                        //SpecimenMethodId = m != null ? m.SpecimenMethodId : (Guid?)null,
+                        //CaraPengambilanSpecimen = m != null ? m.CaraPengambilanSpecimen : null
                     }
                 ).FirstOrDefaultAsync();
 
@@ -402,14 +402,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                          on a.CreateBy equals u.UserActiveId
 
                          // join ke specimen jenis
-                         join j in _applicationDbContext.SpecimenJeniss
-                         on a.SpecimenAsalId equals j.AsalSpecimenId into spJenis
-                         from j in spJenis.DefaultIfEmpty()
+                         //join j in _applicationDbContext.SpecimenJeniss
+                         //on a.SpecimenAsalId equals j.AsalSpecimenId into spJenis
+                         //from j in spJenis.DefaultIfEmpty()
 
-                             // join ke specimen method
-                         join m in _applicationDbContext.SpecimenMethods
-                         on a.SpecimenAsalId equals m.AsalSpecimenId into spMethod
-                         from m in spMethod.DefaultIfEmpty()
+                         //    // join ke specimen method
+                         //join m in _applicationDbContext.SpecimenMethods
+                         //on a.SpecimenAsalId equals m.AsalSpecimenId into spMethod
+                         //from m in spMethod.DefaultIfEmpty()
 
                          where a.IsDelete == false || a.IsDelete == null
                          select new
@@ -419,10 +419,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              CreateByName = u.FullName,
                              a.SpecimenAsalId,
                              a.AsalSpecimen,
-                             JenisSpecimenId = j != null ? j.JenisSpecimenId : (Guid?)null,
-                             NamaJenisSpecimen = j != null ? j.NamaJenisSpecimen : null,
-                             SpecimenMethodId = m != null ? m.SpecimenMethodId : (Guid?)null,
-                             CaraPengambilanSpecimen = m != null ? m.CaraPengambilanSpecimen : null,
+                             //JenisSpecimenId = j != null ? j.JenisSpecimenId : (Guid?)null,
+                             //NamaJenisSpecimen = j != null ? j.NamaJenisSpecimen : null,
+                             //SpecimenMethodId = m != null ? m.SpecimenMethodId : (Guid?)null,
+                             //CaraPengambilanSpecimen = m != null ? m.CaraPengambilanSpecimen : null,
                              a.KodeAsalSpecimen,
                              a.Keterangan,
                          });
