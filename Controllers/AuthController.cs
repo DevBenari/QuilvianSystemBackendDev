@@ -1,8 +1,10 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNet.SignalR.Client.Http;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using System.IdentityModel.Tokens.Jwt;
@@ -104,7 +106,17 @@ namespace QuilvianSystemBackendDev.Controllers
                             expires: DateTime.UtcNow.AddMinutes(Convert.ToDouble(jwtSettings["ExpirationInMinutes"])),
                             signingCredentials: credentials
                         );
+                        // Update fingerprint
+                        var fingerprint = await _context.Fingerprints
+                            .FirstOrDefaultAsync(f => f.UserId == idfinger.UserId);
 
+                        if (fingerprint != null)
+                        {
+                            fingerprint.DeviceId = "Logout";
+                            fingerprint.Status = "Logout";
+                            _context.Fingerprints.Update(fingerprint);
+                            await _context.SaveChangesAsync();
+                        }
                         return Ok(new
                         {
                             message = "Berhasil || 200 OK",
@@ -215,6 +227,10 @@ namespace QuilvianSystemBackendDev.Controllers
 
             await _userManager.UpdateAsync(user);
 
+            // Update fingerprint status menjadi Logout
+            // Cari UserActive berdasarkan IdentityUserId
+            var userActive = await _context.UserActives
+                .FirstOrDefaultAsync(x => x.Email == email);
             // Karena JWT tidak bisa dihapus dari server, cukup beri respons sukses
             return Ok(new
             {
