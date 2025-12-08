@@ -107,16 +107,16 @@ namespace QuilvianSystemBackendDev.Controllers
                             signingCredentials: credentials
                         );
                         // Update fingerprint
-                        var fingerprint = await _context.Fingerprints
-                            .FirstOrDefaultAsync(f => f.UserId == idfinger.UserId);
+                        //var fingerprint = await _context.Fingerprints
+                        //    .FirstOrDefaultAsync(f => f.UserId == idfinger.UserId);
 
-                        if (fingerprint != null)
-                        {
-                            fingerprint.DeviceId = "Logout";
-                            fingerprint.Status = "Logout";
-                            _context.Fingerprints.Update(fingerprint);
-                            await _context.SaveChangesAsync();
-                        }
+                        //if (fingerprint != null)
+                        //{
+                        //    fingerprint.DeviceId = "Logout";
+                        //    fingerprint.Status = "Logout";
+                        //    _context.Fingerprints.Update(fingerprint);
+                        //    await _context.SaveChangesAsync();
+                        //}
                         return Ok(new
                         {
                             message = "Berhasil || 200 OK",

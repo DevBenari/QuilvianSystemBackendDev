@@ -11,7 +11,6 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models
         public Guid FingerprintId { get; set; }
         public string UserId { get; set; }
         public string DeviceId { get; set; }
-        [Column(TypeName = "text")]
         public string Template { get; set; } // template fingerprint base64
         public string Status { get; set; }
     }
