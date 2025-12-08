@@ -94,6 +94,8 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                         FingerprintId = Guid.NewGuid(),
                         UserId = vm.UserId,
                         Template = vm.Template,
+                        DeviceId = "Akun Baru",  // atau default lain
+                        Status = "Active",             // atau default lain
                         CreateDateTime = DateTime.UtcNow
                     };
 
