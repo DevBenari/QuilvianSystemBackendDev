@@ -289,7 +289,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 //    var (ttdKepalaPath, ttdKepalaId, _) = await UploadTTDAsync(vm.TTDKepalaRuangan, "TTDKepalaRuangan", "TTDUser");
 
                 // cek ttd
-                var krTTD = await _ttdService.CheckTTDAsync((Guid)vm.KepalaRuanganId);
+                //var krTTD = await _ttdService.CheckTTDAsync((Guid)vm.KepalaRuanganId);
                 var pTTD = await _ttdService.CheckTTDAsync((Guid)vm.PerawatId);
 
 
@@ -315,9 +315,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                     KondisiKeluar = vm.KondisiKeluar,
                     DiagnosaAwal = vm.DiagnosaAwal,
                     DiagnosaAkhir = vm.DiagnosaAkhir,
-                    KepalaRuanganId = vm.KepalaRuanganId,
                     PerawatId = vm.PerawatId,
-                    TTDKepalaRuangan = krTTD.Path,
                     TTDPerawat = pTTD.Path,
 
                     CreateBy = userActiveId,
@@ -338,7 +336,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                     return Created("", new
                     {
                         message = "Tambah Data Nosokomial Berhasil || 201 Created",
-                        TTDKepalaRuanganId = krTTD.TTDId,
                         TTDPerawatId = pTTD.TTDId,
                     });
                 }
@@ -466,7 +463,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 //    }
 
                 // cek ttd
-                var ttdKR = await _ttdService.CheckTTDAsync((Guid)vm.KepalaRuanganId);
                 var ttdP = await _ttdService.CheckTTDAsync((Guid)vm.PerawatId);
 
                 // ==================================================
@@ -488,9 +484,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 data.KondisiKeluar = vm.KondisiKeluar ?? data.KondisiKeluar;
                 data.DiagnosaAwal = vm.DiagnosaAwal ?? data.DiagnosaAwal;
                 data.DiagnosaAkhir = vm.DiagnosaAkhir ?? data.DiagnosaAkhir;
-                data.KepalaRuanganId = vm.KepalaRuanganId ?? data.KepalaRuanganId;
                 data.PerawatId = vm.PerawatId ?? data.PerawatId;
-                data.TTDPerawat = ttdKR.Path;
                 data.TTDKepalaRuangan = ttdP.Path;
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -509,7 +503,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                     return Ok(new
                     {
                         message = "Update Data Nosokomial Berhasil || 200 OK",
-                        TTDKepalaRuanganId = ttdKR.TTDId,
                         TTDPerawatId = ttdP.TTDId,
                     });
                 }
@@ -636,6 +629,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 // cek ttd
                 var ttd = await _ttdService.CheckTTDAsync((Guid)vm.KepalaRuanganId);
 
+                data.KepalaRuanganId = vm.KepalaRuanganId;
                 data.TTDKepalaRuangan = ttd.Path;
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -647,7 +641,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 await _hubContext.Clients.All.SendAsync("Nosokomial changed", new
                 {
                     Action = "changed",
-                    id = data.NosokomialId
+                    id = data.NosokomialId,
+                    TTDKepalaRuanganId = data.KepalaRuanganId,
                 });
 
                 if (resultSave > 0)

@@ -23,9 +23,6 @@
         public string? KondisiKeluar { get; set; }
         public string? DiagnosaAwal { get; set; }
         public string? DiagnosaAkhir { get; set; }
-
-        public Guid? KepalaRuanganId { get; set; }
-
         public Guid? PerawatId { get; set; }
     }
 }
