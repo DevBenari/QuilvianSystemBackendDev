@@ -24,6 +24,8 @@ namespace QuilvianSystemBackendDev.Services
             {
                 return new TTDResult
                 {
+                    Path = null,
+                    TTDId = null,
                     HasTTD = false,
                     Message = "Anda belum memiliki tanda tangan. Harap upload tanda tangan terlebih dahulu."
                 };
