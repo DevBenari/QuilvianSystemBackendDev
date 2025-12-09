@@ -321,6 +321,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         int page = 1,
         int perPage = 10,
         string? search = null,
+        string? keterangan=null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -351,8 +352,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             {
                 search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
-                    EF.Functions.ILike(u.NamaTindakanPerawat, search) ||
-                    EF.Functions.ILike(u.Keterangan, search)
+                    EF.Functions.ILike(u.NamaTindakanPerawat, search)
+                );
+            }
+
+            // search keterangan
+            if (!string.IsNullOrWhiteSpace(keterangan))
+            {
+                keterangan = $"%{keterangan.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+                query = query.Where(u =>
+                    EF.Functions.ILike(u.Keterangan, keterangan)
                 );
             }
 
