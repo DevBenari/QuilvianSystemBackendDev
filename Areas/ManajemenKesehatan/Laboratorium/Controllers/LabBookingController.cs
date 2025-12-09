@@ -1637,7 +1637,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                  from d1 in dJoin.DefaultIfEmpty()
 
                  join d2 in _applicationDbContext.Dokters on b.DokterId equals d2.DokterId into d2Join
-                 from d2 in dJoin.DefaultIfEmpty()
+                 from d2 in d2Join.DefaultIfEmpty()
 
                  join po in _applicationDbContext.Polikliniks on k.PoliklinikId equals po.PoliklinikId into poJoin
                  from po in poJoin.DefaultIfEmpty()
@@ -1885,7 +1885,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                  from d1 in dJoin.DefaultIfEmpty()
 
                  join d2 in _applicationDbContext.Dokters on b.DokterId equals d2.DokterId into d2Join
-                 from d2 in dJoin.DefaultIfEmpty()
+                 from d2 in d2Join.DefaultIfEmpty()
 
                  join po in _applicationDbContext.Polikliniks on k.PoliklinikId equals po.PoliklinikId into poJoin
                  from po in poJoin.DefaultIfEmpty()
