@@ -112,6 +112,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     r.IsLunas,
                     r.IsResepPulang,
                     r.RanapId,
+                    r.IsVerifyByDoctor,
                     TanggalPembuatanResepFormatted = r.TanggalPembuatanResep.HasValue ?
                                                       r.TanggalPembuatanResep.Value.ToString("yyyy-MM-dd") : null
                 });
@@ -247,6 +248,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 r.IsLunas,
                 r.RanapId,
                 r.IsResepPulang,
+                r.IsVerifyByDoctor,
                 r.TanggalPembuatanResepFormatted,
 
                 DaftarObat = detailObat.Where(d => d.ResepId == r.ResepId).ToList(),
@@ -453,6 +455,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 resep.IsLunas,
                 resep.RanapId,
                 resep.IsResepPulang,
+                resep.IsVerifyByDoctor,
                 resep.CreateBy,
                 TanggalPembuatanResep = resep.TanggalPembuatanResep?.ToString("yyyy-MM-dd"),
                 DaftarObat = daftarObat,
@@ -510,6 +513,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     StatusPengambilanResep = false,
                     IsCancelled = false,
                     IsLunas = false,
+                    IsVerifyByDoctor = false,
                     TanggalPembuatanResep = DateTime.UtcNow,
                     //RanapId = vm.RanapId,
                     IsResepPulang = vm.IsResepPulang,
@@ -1283,6 +1287,36 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 Action = "updateIsCancelled",
                 ResepId = id,
                 IsCancelled = request.IsCancelled
+            });
+
+            return Ok(new { message = "Status isFinished berhasil diperbarui." });
+        }
+
+        [HttpPut("{id}/is-VerifiedByDokter")]
+        public async Task<IActionResult> UpdateIsVerifiedByDokter(Guid id, [FromBody] bool request)
+        {
+            var data = await _applicationDbContext.Reseps.FindAsync(id);
+            if (data == null)
+                return NotFound(new { message = "Resep tidak ditemukan." });
+
+            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(EmailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var userId = user?.UserActiveId ?? Guid.Empty;
+
+            data.IsVerifyByDoctor = request;
+            data.UpdateDateTime = DateTimeOffset.UtcNow;
+            data.UpdateBy = userId;
+            await _applicationDbContext.SaveChangesAsync();
+
+            // Notifikasi signalR
+            await _hubContext.Clients.All.SendAsync("VerifiedChanged", new
+            {
+                Action = "updateIsCancelled",
+                ResepId = id,
+                IsVerifyByDoctor = request
             });
 
             return Ok(new { message = "Status isFinished berhasil diperbarui." });
