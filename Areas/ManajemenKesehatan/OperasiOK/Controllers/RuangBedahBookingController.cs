@@ -68,6 +68,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                              a.BookingRuanganBedahId,
                              a.KunjunganId,
                              a.PasienId,
+                             a.KelasId,
                              a.TglOperasi,
                              a.WaktuOperasi,
                              a.RuangTindakan,
@@ -222,6 +223,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                     BookingRuanganBedahId = parentId,
                     KunjunganId = vm.KunjunganId,
                     PasienId = vm.PasienId,
+                    KelasId = vm.KelasId,
                     TglOperasi = vm.TglOperasi,
                     WaktuOperasi = vm.WaktuOperasi,
                     RuangTindakan = vm.RuangTindakan,
@@ -362,6 +364,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                 // ================================
                 parent.KunjunganId = vm.KunjunganId;
                 parent.PasienId = vm.PasienId;
+                parent.KelasId = vm.KelasId;
                 parent.TglOperasi = vm.TglOperasi;
                 parent.WaktuOperasi = vm.WaktuOperasi;
                 parent.RuangTindakan = vm.RuangTindakan;
@@ -622,6 +625,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                 from a in _applicationDbContext.RuangBedahBookings
                 join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId into uGroup
                 from u in uGroup.DefaultIfEmpty()
+
                 where (a.IsDelete == false || a.IsDelete == null)
                 select new
                 {
@@ -631,6 +635,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                     CreateByName = u.FullName,
                     a.KunjunganId,
                     a.PasienId,
+                    a.KelasId,
                     a.TglOperasi,
                     a.WaktuOperasi,
                     a.RuangTindakan,
