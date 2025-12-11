@@ -528,7 +528,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         Guid? bedId = null,
         Guid? kamarId = null,
         Guid? kelasId = null,
-        string? orderBy = "CreateDateTime",
+        string? orderBy = "TarifHarian",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
                         DateTime? startDate = null,
@@ -672,14 +672,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             query = sortDirection?.ToLower() == "desc"
                 ? orderBy switch
                 {
-                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
+                    "TarifHarian" => query.OrderByDescending(u => u.TarifHarian),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
-                    "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderBy(u => u.CreateByName),
+                    "TarifHarian" => query.OrderBy(u => u.TarifHarian),
                     _ => query.OrderBy(u => u.CreateDateTime)
                 };
 
