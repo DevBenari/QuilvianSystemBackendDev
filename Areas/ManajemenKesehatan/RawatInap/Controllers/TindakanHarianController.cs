@@ -17,6 +17,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.ViewModels;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controllers
 {
@@ -464,18 +465,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             Guid? kunjunganId = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
-            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTimeOffset? createDate = null,
-            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-            DateTime? startDate = null,
-            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-            DateTime? endDate = null,
+            [FromQuery] DateTimeOffset? createDate = null,
+            string? keterangan = null,
+            [FromQuery] DateTime? startDate = null,
+            [FromQuery] DateTime? endDate = null,
             [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
             // ===============================================================
-            // 🔹 Step 1. Query base: ambil data utama
+            // 🔹 Step 1 — BaseQuery
             // ===============================================================
             var baseQuery =
                 from a in _applicationDbContext.TindakanHarians
@@ -500,18 +500,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 };
 
             // ===============================================================
-            // 🔹 Step 2. Filter berdasarkan tanggal
+            // 🔹 Step 2 — Filter tanggal (range)
             // ===============================================================
             if (startDate.HasValue && endDate.HasValue)
             {
-                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
-                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+                var start = new DateTimeOffset(startDate.Value.Date, TimeSpan.Zero);
+                var end = new DateTimeOffset(endDate.Value.Date.AddDays(1).AddTicks(-1), TimeSpan.Zero);
 
-                baseQuery = baseQuery.Where(u => u.CreateDateTime >= startUtc && u.CreateDateTime <= endUtc);
+                baseQuery = baseQuery.Where(u =>
+                    u.CreateDateTime >= start &&
+                    u.CreateDateTime <= end);
             }
 
             // ===============================================================
-            // 🔹 Step 2B. Filter exact CreateDateTime
+            // 🔹 Step 2B — Filter exact CreateDateTime (per hari)
             // ===============================================================
             if (createDate.HasValue)
             {
@@ -520,41 +522,77 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                 baseQuery = baseQuery.Where(x =>
                     x.CreateDateTime >= dayStart &&
-                    x.CreateDateTime <= dayEnd
-                );
+                    x.CreateDateTime <= dayEnd);
             }
 
             // ===============================================================
-            // 🔹 Step 3. Filter berdasarkan periode (Today, ThisWeek, dll)
+            // 🔹 Step 3 — Filter periode
             // ===============================================================
             if (periode.HasValue)
             {
-                DateTime today = DateTime.UtcNow.Date;
+                var today = DateTime.UtcNow.Date;
 
                 baseQuery = periode switch
                 {
-                    PeriodeFilter.Today => baseQuery.Where(u => u.CreateDateTime.Date == today),
-                    PeriodeFilter.ThisWeek => baseQuery.Where(u =>
-                        u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) && u.CreateDateTime.Date <= today),
-                    PeriodeFilter.LastWeek => baseQuery.Where(u =>
-                        u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                        u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)),
-                    PeriodeFilter.ThisMonth => baseQuery.Where(u =>
-                        u.CreateDateTime.Month == today.Month && u.CreateDateTime.Year == today.Year),
-                    PeriodeFilter.LastMonth => baseQuery.Where(u =>
-                        u.CreateDateTime.Month == today.Month - 1 && u.CreateDateTime.Year == today.Year),
-                    PeriodeFilter.ThisYear => baseQuery.Where(u => u.CreateDateTime.Year == today.Year),
-                    PeriodeFilter.LastYear => baseQuery.Where(u => u.CreateDateTime.Year == today.Year - 1),
-                    PeriodeFilter.Last3Months => baseQuery.Where(u => u.CreateDateTime >= today.AddMonths(-3)),
-                    PeriodeFilter.Last6Months => baseQuery.Where(u => u.CreateDateTime >= today.AddMonths(-6)),
+                    PeriodeFilter.Today =>
+                        baseQuery.Where(u => u.CreateDateTime.Date == today),
+
+                    PeriodeFilter.ThisWeek =>
+                        baseQuery.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
+                            u.CreateDateTime.Date <= today),
+
+                    PeriodeFilter.LastWeek =>
+                        baseQuery.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
+                            u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)),
+
+                    PeriodeFilter.ThisMonth =>
+                        baseQuery.Where(u =>
+                            u.CreateDateTime.Month == today.Month &&
+                            u.CreateDateTime.Year == today.Year),
+
+                    PeriodeFilter.LastMonth =>
+                        baseQuery.Where(u =>
+                            u.CreateDateTime.Month == today.Month - 1 &&
+                            u.CreateDateTime.Year == today.Year),
+
+                    PeriodeFilter.ThisYear =>
+                        baseQuery.Where(u => u.CreateDateTime.Year == today.Year),
+
+                    PeriodeFilter.LastYear =>
+                        baseQuery.Where(u => u.CreateDateTime.Year == today.Year - 1),
+
+                    PeriodeFilter.Last3Months =>
+                        baseQuery.Where(u => u.CreateDateTime >= today.AddMonths(-3)),
+
+                    PeriodeFilter.Last6Months =>
+                        baseQuery.Where(u => u.CreateDateTime >= today.AddMonths(-6)),
+
                     _ => baseQuery
                 };
             }
 
-
+            // ===============================================================
+            // 🔹 Step 4 — Filter berdasarkan KunjunganId (HARUS di SQL!)
+            // ===============================================================
+            if (kunjunganId.HasValue)
+            {
+                baseQuery = baseQuery.Where(u => u.KunjunganId == kunjunganId.Value);
+            }
 
             // ===============================================================
-            // 🔹 Step 4. Sorting (dinamis)
+            // 🔹 Step 5 — Filter berdasarkan keterangan (ILIKE, SQL)
+            // ===============================================================
+            if (!string.IsNullOrWhiteSpace(keterangan))
+            {
+                string pattern = $"%{keterangan.Trim()}%";
+                baseQuery = baseQuery.Where(u =>
+                    EF.Functions.ILike(u.Keterangan ?? "", pattern));
+            }
+
+            // ===============================================================
+            // 🔹 Step 6 — Sorting
             // ===============================================================
             baseQuery = sortDirection?.ToLower() == "desc"
                 ? orderBy switch
@@ -571,7 +609,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 };
 
             // ===============================================================
-            // 🔹 Step 5. Paging (ambil data utama dulu)
+            // 🔹 Step 7 — Paging (SQL)
             // ===============================================================
             var totalRows = await baseQuery.CountAsync();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
@@ -582,10 +620,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 .ToListAsync();
 
             if (!pagedData.Any())
-                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
+                return NotFound(new { message = "Tidak ada data untuk halaman ini." });
 
             // ===============================================================
-            // 🔹 Step 6. Ambil semua ID tindakan perawat unik (sekali saja)
+            // 🔹 Step 8 — Load Tindakan Perawat
             // ===============================================================
             var allTindakanIds = pagedData
                 .Where(x => x.TindakanPerawatId != null)
@@ -593,9 +631,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 .Distinct()
                 .ToList();
 
-            // Ambil nama tindakan dari TindakanPerawats (1x query)
             var tindakanPerawats = await _applicationDbContext.TindakanPerawats
-                .Where(tp => allTindakanIds.Contains((Guid)tp.TindakanPerawatId))
+                .Where(tp => allTindakanIds.Contains(tp.TindakanPerawatId ?? Guid.Empty))
                 .Select(tp => new
                 {
                     tp.TindakanPerawatId,
@@ -606,7 +643,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 .ToListAsync();
 
             // ===============================================================
-            // 🔹 Step 7. Gabungkan hasil di memory
+            // 🔹 Step 9 — Merge hasil
             // ===============================================================
             var result = pagedData.Select(a => new
             {
@@ -623,18 +660,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 a.CreateBy,
                 a.CreateByName,
                 DaftarTindakan = tindakanPerawats
-                    .Where(tp => a.TindakanPerawatId != null && a.TindakanPerawatId.Contains((Guid)tp.TindakanPerawatId))
+                    .Where(tp => a.TindakanPerawatId != null &&
+                                 a.TindakanPerawatId.Contains(tp.TindakanPerawatId!.Value))
                     .ToList()
             });
 
-            // filter based on kunjungan id
-            if (kunjunganId.HasValue)
-            {
-                result = result.Where(u=>u.KunjunganId == kunjunganId.Value);
-            }
-
             // ===============================================================
-            // 🔹 Step 8. Return hasil
+            // 🔹 Step 10 — Return
             // ===============================================================
             return Ok(new
             {
@@ -650,6 +682,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 }
             });
         }
+
 
 
 
