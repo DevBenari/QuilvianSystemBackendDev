@@ -464,6 +464,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             Guid? kunjunganId = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTimeOffset? createDate = null,
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
             DateTime? startDate = null,
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -510,6 +511,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             }
 
             // ===============================================================
+            // 🔹 Step 2B. Filter exact CreateDateTime
+            // ===============================================================
+            if (createDate.HasValue)
+            {
+                var dayStart = createDate.Value.Date;
+                var dayEnd = createDate.Value.Date.AddDays(1).AddTicks(-1);
+
+                baseQuery = baseQuery.Where(x =>
+                    x.CreateDateTime >= dayStart &&
+                    x.CreateDateTime <= dayEnd
+                );
+            }
+
+            // ===============================================================
             // 🔹 Step 3. Filter berdasarkan periode (Today, ThisWeek, dll)
             // ===============================================================
             if (periode.HasValue)
@@ -535,6 +550,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     _ => baseQuery
                 };
             }
+
+
 
             // ===============================================================
             // 🔹 Step 4. Sorting (dinamis)
