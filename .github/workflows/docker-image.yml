@@ -45,7 +45,14 @@ jobs:
           docker rm $CONTAINER_NAME || true
 
           echo "Creating new container (no ports)..."
-          docker run -d --name $CONTAINER_NAME --memory="1g" --memory-swap="1g" --restart unless-stopped $IMAGE_NAME
+          # docker run -d --name $CONTAINER_NAME --memory="1g" --memory-swap="1g" --restart unless-stopped $IMAGE_NAME
+          docker run -d \
+            --name $CONTAINER_NAME \
+            -p 5000:5000 \
+            --memory="1g" \
+            --memory-swap="1g" \
+            --restart unless-stopped \
+            $IMAGE_NAME
 
           echo "Cleaning up unused Docker images..."
           docker system prune -af
