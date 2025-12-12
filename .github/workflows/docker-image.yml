@@ -17,11 +17,11 @@ jobs:
         mkdir -p ~/.ssh
         echo "${{ secrets.SSH_PRIVATE_KEY_BACKEND }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -H ${{ secrets.SSH_IP_BACKEND }} >> ~/.ssh/known_hosts
+        ssh-keyscan -H ${{ secrets.SSH_IP_BACKEND_PRO }} >> ~/.ssh/known_hosts
 
     - name: Deploy to Server
       run: |
-        ssh ${{ secrets.SSH_USER_BACKEND }}@${{ secrets.SSH_IP_BACKEND }} << 'EOF'
+        ssh ${{ secrets.SSH_USER_BACKEND }}@${{ secrets.SSH_IP_BACKEND_PRO }} << 'EOF'
 
           cd ~/QuilvianSta
 
