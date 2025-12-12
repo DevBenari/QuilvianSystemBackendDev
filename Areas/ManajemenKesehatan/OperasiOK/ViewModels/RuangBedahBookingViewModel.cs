@@ -4,6 +4,7 @@
     {
         public Guid? KunjunganId { get; set; }
         public Guid? PasienId { get; set; }
+        public Guid? KelasId { get; set; }
         public DateTime? TglOperasi { get; set; }
         public TimeSpan? WaktuOperasi { get; set; }
         public string? RuangTindakan { get; set; }
@@ -38,5 +39,6 @@
         public string? StatusOperasi { get; set; }
         public Guid? DepartementId { get; set; }
         public List<RuangBedahBookingDetailVM>? Details { get; set; }
+
     }
 }

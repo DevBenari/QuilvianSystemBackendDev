@@ -78,7 +78,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                             a.DataObjektif,
                             a.KebutuhanTransportasi,
                             a.StatusKehamilan,
-                            a.TTDPerawatId,
+                            a.TTDUserId,
                             a.TTDPath,
                             a.Pemeriksaan,
                             a.PathGambarPenandaan,
@@ -130,7 +130,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                                   a.DataObjektif,
                                   a.KebutuhanTransportasi,
                                   a.StatusKehamilan,
-                                  a.TTDPerawatId,
+                                  a.TTDUserId,
                                   a.TTDPath,
                                   a.Pemeriksaan,
                                   a.PathGambarPenandaan,
@@ -171,7 +171,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
 
                 // cek ttd
-                var ttd = await _ttdService.CheckTTDAsync((Guid)vm.TTDPerawatId);
+                var ttd = await _ttdService.CheckTTDAsync(user.UserActiveId);
 
 
                 // ✅ Upload TTD jika ada
@@ -224,7 +224,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                     DataObjektif = vm.DataObjektif,
                     KebutuhanTransportasi = vm.KebutuhanTransportasi,
                     StatusKehamilan = vm.StatusKehamilan,
-                    TTDPerawatId = vm.TTDPerawatId,
+                    TTDUserId = ttd.TTDId,
                     TTDPath = ttd.Path,
                     PathGambarPenandaan = gambarPath,
                     Pemeriksaan = vm.Pemeriksaan,
@@ -274,7 +274,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 return Unauthorized(new { message = "User aktif tidak ditemukan!" });
 
             // cek ttd
-            var ttd = await _ttdService.CheckTTDAsync((Guid)vm.TTDPerawatId);
+            var ttd = await _ttdService.CheckTTDAsync(user.UserActiveId);
 
             // ✅ Upload baru jika ada file baru
             string gambarPath = "";
@@ -316,7 +316,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
             existing.DataObjektif = vm.DataObjektif;
             existing.KebutuhanTransportasi = vm.KebutuhanTransportasi;
             existing.StatusKehamilan = vm.StatusKehamilan;
-            existing.TTDPerawatId = vm.TTDPerawatId;
+            existing.TTDUserId = ttd.TTDId;
             existing.TTDPath = ttd.Path;
             existing.PathGambarPenandaan = gambarPath;
             existing.Pemeriksaan = vm.Pemeriksaan;
@@ -398,6 +398,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                             a.DataObjektif,
                             a.KebutuhanTransportasi,
                             a.StatusKehamilan,
+                            a.TTDUserId,
                             a.TTDPath,
                             a.Pemeriksaan,
                             a.PathGambarPenandaan,

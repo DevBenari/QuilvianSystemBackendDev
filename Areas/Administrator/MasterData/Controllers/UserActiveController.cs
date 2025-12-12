@@ -1224,6 +1224,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
         int perPage = 10,
         string? search = null,
         string? email = null,
+        string? pathTTD = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -1259,6 +1260,12 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                          join gd in _applicationDbContext.GolonganDarahs
                              on a.GolonganDarahId equals gd.GolonganDarahId into golonganJoin
                          from gd in golonganJoin.DefaultIfEmpty()
+
+
+                         join td in _applicationDbContext.MasterTTDs
+                         on a.UserActiveId equals td.UserActiveId into tdJoin
+                         from td in tdJoin.DefaultIfEmpty()
+
 
                          where a.IsDelete == false
 
@@ -1304,6 +1311,8 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                              a.TglMasuk,
                              a.FotoName,
                              a.FotoPath,
+                             TTDId = td != null ? (Guid?)td.TTDId : null,
+                             TTDPath = td != null ? td.TTDPath : null,
                          });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
@@ -1323,6 +1332,12 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
             {
                 email = email.ToLower();
                 query = query.Where(u => u.Email.ToLower() == email);
+            }
+
+            if (!string.IsNullOrWhiteSpace(pathTTD))
+            {
+                pathTTD = $"%{pathTTD.ToLower()}%";
+                query = query.Where(u => EF.Functions.ILike(u.TTDPath,pathTTD));
             }
 
 
