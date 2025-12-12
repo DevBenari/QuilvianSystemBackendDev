@@ -1,8 +1,8 @@
-name: QuilvianSystemBackendDevQuilvianDev
+name: QuilvianSta-Deploy
 on:
   push:
     branches:
-      - QuilvianDev  # Sesuaikan dengan branch utama Anda
+      - QuilvianSta  # Branch utama sekarang
 
 jobs:
   deploy:
@@ -23,17 +23,17 @@ jobs:
       run: |
         ssh ${{ secrets.SSH_USER_BACKEND }}@${{ secrets.SSH_IP_BACKEND }} << 'EOF'
 
-          cd ~/QuilvianSystemBackendDev-QuilvianDev
+          cd ~/QuilvianSta
 
           echo "Resetting local changes..."
-          git reset --hard origin/QuilvianDev
+          git reset --hard origin/QuilvianSta
           git clean -fd
 
           echo "Pulling latest changes..."
-          git pull origin QuilvianDev
+          git pull origin QuilvianSta
 
-          IMAGE_NAME="quilvian-backend-quilviandev"
-          CONTAINER_NAME="quilvian-container-quilviandev"
+          IMAGE_NAME="quilviansta-backend"
+          CONTAINER_NAME="quilviansta-container"
 
           DEPLOY_TIME=$(date +"%A, %d-%m-%Y %H:%M:%S") 
 
@@ -44,14 +44,8 @@ jobs:
           docker stop $CONTAINER_NAME || true
           docker rm $CONTAINER_NAME || true
 
-          echo "Checking if container exists..."
-          if [ "$(docker ps -a -q -f name=$CONTAINER_NAME)" ]; then
-            echo "Container exists, restarting..."
-            docker restart $CONTAINER_NAME
-          else
-            echo "Container does not exist, creating a new one..."
-            docker run -d --name $CONTAINER_NAME -p 80:80 --memory="1g" --memory-swap="1g" --restart unless-stopped $IMAGE_NAME
-          fi
+          echo "Creating new container (no ports)..."
+          docker run -d --name $CONTAINER_NAME --memory="1g" --memory-swap="1g" --restart unless-stopped $IMAGE_NAME
 
           echo "Cleaning up unused Docker images..."
           docker system prune -af
