@@ -54,7 +54,7 @@ jobs:
 
           PUSHER="${{ github.actor }}"
           
-          # Kirim notifikasi ke Telegram setelah update
+          # Kirim notifikasi ke Telegram setelah update tes
           curl -X POST "https://api.telegram.org/bot7630899059:AAFqAUGUB7I5V9VGKXbcmoWmbYWvrdmnje8/sendMessage" \
               -d chat_id=-1002437306112 \
               -d text="✅ Deployment Sukses! 🚀
