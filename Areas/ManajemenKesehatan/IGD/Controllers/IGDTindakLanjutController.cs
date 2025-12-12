@@ -386,7 +386,117 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
             }
         }
 
+        [HttpPut("IGDPulang/{id}")]
+        public async Task<IActionResult> UpdateWaktuPulangIGD(Guid id, [FromBody] DateTime? date)
+        {
+            if (date == null || !ModelState.IsValid)
+                return BadRequest(new { message = "Data tidak valid." });
 
+            try
+            {
+                if (!_applicationDbContext.Database.CanConnect())
+                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+
+                // Ambil user login dari JWT
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin))
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+
+                if (getUserActive == null)
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+
+                var userActiveId = getUserActive.UserActiveId;
+
+                var data = await _applicationDbContext.IGDTindakLanjuts
+                    .FirstOrDefaultAsync(a => a.TindakLanjutIgdId == id && (a.IsDelete == false || a.IsDelete == null));
+
+                if (data == null)
+                    return NotFound(new { message = $"Data Tindak Lanjut IGD dengan ID {id} tidak ditemukan." });
+
+                // --- Update fields ---
+                data.WaktuDipulangkan = date;
+
+                data.UpdateBy = userActiveId;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
+
+                _applicationDbContext.IGDTindakLanjuts.Update(data);
+                int result = await _applicationDbContext.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    return Ok(new
+                    {
+                        message = "Update Data Tindak Lanjut IGD Berhasil || 200 OK",
+                        id = data.TindakLanjutIgdId
+                    });
+                }
+
+                return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
+        [HttpPut("IGDMeninggal/{id}")]
+        public async Task<IActionResult> UpdateWaktuMeninggalIGD(Guid id, [FromBody] DateTime? date)
+        {
+            if (date == null || !ModelState.IsValid)
+                return BadRequest(new { message = "Data tidak valid." });
+
+            try
+            {
+                if (!_applicationDbContext.Database.CanConnect())
+                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+
+                // Ambil user login dari JWT
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin))
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+
+                if (getUserActive == null)
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+
+                var userActiveId = getUserActive.UserActiveId;
+
+                var data = await _applicationDbContext.IGDTindakLanjuts
+                    .FirstOrDefaultAsync(a => a.TindakLanjutIgdId == id && (a.IsDelete == false || a.IsDelete == null));
+
+                if (data == null)
+                    return NotFound(new { message = $"Data Tindak Lanjut IGD dengan ID {id} tidak ditemukan." });
+
+                // --- Update fields ---
+                data.TanggalMeninggal = date;
+
+                data.UpdateBy = userActiveId;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
+
+                _applicationDbContext.IGDTindakLanjuts.Update(data);
+                int result = await _applicationDbContext.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    return Ok(new
+                    {
+                        message = "Update Data Tindak Lanjut IGD Berhasil || 200 OK",
+                        id = data.TindakLanjutIgdId
+                    });
+                }
+
+                return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
 
         [HttpGet("paged")]
         public async Task<IActionResult> PagedAsync(
