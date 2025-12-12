@@ -528,6 +528,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         Guid? bedId = null,
         Guid? kamarId = null,
         Guid? kelasId = null,
+        string? namaKamar = null,
         string? orderBy = "TarifHarian",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -581,13 +582,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                          });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-            //if (!string.IsNullOrWhiteSpace(search))
-            //{
-            //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-            //    query = query.Where(u =>
-            //        EF.Functions.ILike(u.KamarId.ToString(), search)
-            //    );
-            //}
+            if (!string.IsNullOrWhiteSpace(namaKamar))
+            {
+                namaKamar = $"%{namaKamar.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+                query = query.Where(u =>
+                    EF.Functions.ILike(u.NamaKamar, namaKamar)
+                );
+            }
 
             // filter based on bed id 
             if (bedId.HasValue)
