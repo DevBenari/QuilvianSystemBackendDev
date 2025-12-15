@@ -455,6 +455,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     id = entity.DetailAsesmenEdukasiId
                 });
 
+
                 return Ok(new
                 {
                     message = "Berhasil update Detail Asesmen Edukasi",
