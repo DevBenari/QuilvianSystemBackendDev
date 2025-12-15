@@ -96,5 +96,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? KeadaanUmum {  get; set; }
         public string?IsKonjungtiva { get; set; }
         public string? Ekstremitas {  get; set; }
+        public string? SkorSedasi {  get; set; }
     }
 }

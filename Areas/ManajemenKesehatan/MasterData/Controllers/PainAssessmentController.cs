@@ -113,7 +113,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.IsFarmakologi,
                             a.KeadaanUmum,
                             a.IsKonjungtiva,
-                            a.Ekstremitas
+                            a.Ekstremitas,
+                            a.SkorSedasi,
 
                         }).OrderByDescending(a => a.CreateDateTime); ;
 
@@ -225,7 +226,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.IsFarmakologi,
                             a.KeadaanUmum,
                             a.IsKonjungtiva,
-                            a.Ekstremitas
+                            a.Ekstremitas,
+                            a.SkorSedasi,
                         }).ToList();
 
             if (!data.Any())
@@ -347,7 +349,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     IsFarmakologi = vm.IsFarmakologi,
                     KeadaanUmum = vm.KeadaanUmum,
                     IsKonjungtiva = vm.IsKonjungtiva,
-                    Ekstremitas = vm.Ekstremitas
+                    Ekstremitas = vm.Ekstremitas,
+                    SkorSedasi = vm.SkorSedasi,
                 };
 
                 _applicationDbContext.PainAssessments.Add(data);
@@ -496,6 +499,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.KeadaanUmum = vm.KeadaanUmum;
                 data.IsKonjungtiva = vm.IsKonjungtiva;
                 data.Ekstremitas = vm.Ekstremitas;
+                data.SkorSedasi = vm.SkorSedasi;
 
                 data.UpdateBy = modifyBy;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -870,7 +874,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 a.IsFarmakologi,
                                 a.KeadaanUmum,
                                 a.IsKonjungtiva,
-                                a.Ekstremitas
+                                a.Ekstremitas,
+                                a.SkorSedasi
                             };
 
                 // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
