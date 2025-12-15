@@ -441,6 +441,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
         }
 
         [HttpPut("UploadTTDKeluarga/{id}")]
+        [RequestSizeLimit(20_000_000)]
+        [RequestFormLimits(MultipartBodyLengthLimit = 20_000_000)]
         public async Task<IActionResult> UploadTTDKeluarga(Guid id, [FromForm] PraOperasiTTDKeluargaViewModel vm)
         {
             if (vm == null || vm.TTDKeluarga == null || vm.TTDKeluarga.Length == 0)
@@ -649,6 +651,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
         {
             try
             {
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin))
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+                var getUserActive = await _applicationDbContext.UserActives.FirstOrDefaultAsync(u => u.Email == emailLogin);
+                if (getUserActive == null)
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+
+                var userActiveId = getUserActive.UserActiveId;
+
                 // ♻ Ambil data PraOperasi target
                 var entity = await _applicationDbContext.PraOperasis
                     .FirstOrDefaultAsync(p => p.PraOperasiId == id);
