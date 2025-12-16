@@ -44,8 +44,14 @@ jobs:
           docker stop $CONTAINER_NAME || true
           docker rm $CONTAINER_NAME || true
 
-          echo "Creating new container (no ports)..."
-          docker run -d --name $CONTAINER_NAME --memory="1g" --memory-swap="1g" --restart unless-stopped $IMAGE_NAME
+          echo "Checking if container exists..."
+          if [ "$(docker ps -a -q -f name=$CONTAINER_NAME)" ]; then
+            echo "Container exists, restarting..."
+            docker restart $CONTAINER_NAME
+          else
+            echo "Container does not exist, creating a new one..."
+            docker run -d --name $CONTAINER_NAME -p 80:80 --memory="1g" --memory-swap="1g" --restart unless-stopped $IMAGE_NAME
+          fi
 
           echo "Cleaning up unused Docker images..."
           docker system prune -af
@@ -53,7 +59,6 @@ jobs:
           echo "Deployment completed!"
 
           PUSHER="${{ github.actor }}"
-          
           # Kirim notifikasi ke Telegram setelah update tes
           curl -X POST "https://api.telegram.org/bot7630899059:AAFqAUGUB7I5V9VGKXbcmoWmbYWvrdmnje8/sendMessage" \
               -d chat_id=-1002437306112 \
