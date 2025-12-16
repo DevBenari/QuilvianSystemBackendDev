@@ -1006,9 +1006,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 // ==========================================================
 
                 // cek ttd
-                var ttd = await _ttdService.CheckTTDAsync(userActiveId);
+                var ttd = await _ttdService.CheckTTDAsync(vm.TTDPetugasId ?? Guid.Empty);
 
-
+                
                 booking.AlasanPembatalan = vm.AlasanPembatalan;
                 booking.TTDPathPembatalan = ttd.Path;
                 booking.UpdateBy = userActiveId;
