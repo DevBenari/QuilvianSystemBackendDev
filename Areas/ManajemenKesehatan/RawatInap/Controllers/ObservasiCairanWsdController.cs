@@ -111,7 +111,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Observasi.Controller
                 return Unauthorized(new { message = "User tidak ditemukan." });
 
             // cek ttd 
-            var ttd = await _ttdService.CheckTTDAsync(vm.TtdId);
+            var ttd = await _ttdService.CheckTTDAsync(vm.TtdId ?? Guid.Empty);
 
             var entity = new ObservasiCairanWsd
             {
@@ -150,7 +150,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Observasi.Controller
                 return Unauthorized(new { message = "User tidak ditemukan." });
 
             // cek ttd
-            var ttd = await _ttdService.CheckTTDAsync(vm.TtdId);
+            var ttd = await _ttdService.CheckTTDAsync(vm.TtdId ?? Guid.Empty);
 
             item.KunjunganId = vm.KunjunganId;
             item.PasienId = vm.PasienId;
@@ -198,6 +198,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Observasi.Controller
             int page = 1,
             int perPage = 10,
             string? search = null,
+            Guid? kunjunganId = null,
+            Guid? pasienId = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -232,8 +234,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Observasi.Controller
                                     o.CreateDateTime
                                 };
 
-                    // Search
-                    if (!string.IsNullOrWhiteSpace(search))
+                    // filter based on kunjungan id
+                    if (kunjunganId.HasValue )
+                    {
+                        query = query.Where(u=>u.KunjunganId==kunjunganId.Value);
+                    }
+
+                    // filter based on pasien id
+                    if (pasienId.HasValue)
+                    {
+                        query = query.Where(u => u.PasienId == pasienId.Value);
+                    }
+
+                // Search
+                if (!string.IsNullOrWhiteSpace(search))
                     {
                         search = $"%{search.ToLower()}%";
                         query = query.Where(x =>
