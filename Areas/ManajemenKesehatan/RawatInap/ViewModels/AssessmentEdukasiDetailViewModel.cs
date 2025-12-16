@@ -10,7 +10,6 @@
 
         // 🔹 File Upload untuk tanda tangan wali
         public IFormFile? TTDWali { get; set; }           // File tanda tangan wali
-        public string? TTDWaliPath { get; set; }          // Path hasil upload
 
         public string? TingkatPemahaman { get; set; }     // Pemahaman pasien/wali terhadap edukasi
         public string? MetodeEdukasi { get; set; }        // Metode edukasi (lisan, tulisan, demonstrasi)
