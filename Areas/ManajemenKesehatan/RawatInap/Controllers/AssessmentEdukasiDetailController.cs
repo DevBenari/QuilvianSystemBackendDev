@@ -54,6 +54,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             _webHostEnvironment = webHostEnvironment;
             _uploadUrl = configuration["FileStorage:UploadUrl"];
             _ttdService = ttdService;
+            _hubContext = hubContext;
         }
 
         private DateTime? TryParseTanggalToUtc(string tanggal)

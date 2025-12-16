@@ -10,6 +10,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
@@ -224,23 +225,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
             });
         }
 
-
         [HttpPost]
-        //[Consumes("multipart/form-data")]
-        //[RequestSizeLimit(50_000_000)]
-        //[RequestFormLimits(MultipartBodyLengthLimit = 50_000_000)]
-        public async Task<IActionResult> Create([FromBody] PraOperasiViewModel vm)
+        [Consumes("multipart/form-data")]
+        [RequestSizeLimit(20_000_000)]
+        [RequestFormLimits(MultipartBodyLengthLimit = 20_000_000)]
+        public async Task<IActionResult> Create([FromForm] PraOperasiViewModel vm)
         {
-            if (vm == null || !ModelState.IsValid)
+            if (vm == null)
                 return BadRequest(new { message = "Data tidak valid." });
 
             try
             {
-                // Cek koneksi database
-                if (!_applicationDbContext.Database.CanConnect())
+                // =====================================================
+                // 🔹 Cek DB
+                // =====================================================
+                if (!await _applicationDbContext.Database.CanConnectAsync())
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
 
-                // Ambil user login
+                // =====================================================
+                // 🔹 Ambil user login
+                // =====================================================
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
@@ -252,23 +256,83 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
 
                 var userId = user.UserActiveId;
-                var uploaderName = user.FullName ?? "User";
 
-                // -------------------------------------------------------
-                // 🔹 Cek TTD
-                // -------------------------------------------------------
+                // =====================================================
+                // 🔹 Cek TTD Perawat Ruangan
+                // =====================================================
                 var ttd = await _ttdService.CheckTTDAsync((Guid)vm.TTDPerawatRuanganId);
 
-                // -------------------------------------------------------
-                // 🔹 Simpan ke DB PraOperasi
-                // -------------------------------------------------------
+                // =====================================================
+                // 🔹 Generate ID lebih awal (dipakai untuk nama file)
+                // =====================================================
+                var praOperasiId = Guid.NewGuid();
+
+                // =====================================================
+                // 🔹 Helper upload ke Flask (SESUAI KODE KAMU)
+                // =====================================================
+                async Task<string?> UploadToFlaskAsync(IFormFile? file, string prefix)
+                {
+                    if (file == null || file.Length == 0)
+                        return null;
+
+                    var allowedExt = new[] { ".jpg", ".jpeg" };
+                    var ext = Path.GetExtension(file.FileName).ToLower();
+
+                    if (!allowedExt.Contains(ext))
+                        throw new Exception($"{prefix} harus JPG atau JPEG.");
+
+                    if (file.Length > 5 * 1024 * 1024)
+                        throw new Exception($"{prefix} maksimal 5MB.");
+
+                    var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
+                    var fileName = $"{praOperasiId}_{prefix}_{safeTime}{ext}";
+                    var folderTarget = "PenandaanOperasi";
+                    var filePath = $"/{folderTarget}/{fileName}";
+
+                    using var ms = new MemoryStream();
+                    await file.CopyToAsync(ms);
+                    ms.Position = 0;
+
+                    var contentType = string.IsNullOrWhiteSpace(file.ContentType)
+                        ? "image/jpeg"
+                        : file.ContentType;
+
+                    var fileContent = new StreamContent(ms);
+                    fileContent.Headers.ContentType =
+                        new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+
+                    using var form = new MultipartFormDataContent();
+                    form.Add(fileContent, "file", fileName);
+                    form.Add(new StringContent(folderTarget), "folderTarget");
+
+                    using var client = new HttpClient();
+                    var response = await client.PostAsync(_uploadUrl, form);
+
+                    if (!response.IsSuccessStatusCode)
+                        throw new Exception($"Gagal upload {prefix} ke Flask.");
+
+                    return filePath;
+                }
+
+                // =====================================================
+                // 🔹 Upload file BAG1 & BAG2 (PARALEL)
+                // =====================================================
+                var uploadBag1Task = UploadToFlaskAsync(vm.FilePenandaanOperasiBag1, "Bag1");
+                var uploadBag2Task = UploadToFlaskAsync(vm.FilePenandaanOperasiBag2, "Bag2");
+
+                await Task.WhenAll(uploadBag1Task, uploadBag2Task);
+
+                // =====================================================
+                // 🔹 Simpan ke DB
+                // =====================================================
                 var praOperasi = new PraOperasi
                 {
-                    PraOperasiId = Guid.NewGuid(),
+                    PraOperasiId = praOperasiId,
                     KunjunganId = vm.KunjunganId,
                     PasienId = vm.PasienId,
                     PainAssessmentId = vm.PainAssessmentId,
                     VitalSignId = vm.VitalSignId,
+
                     StatusMental = vm.StatusMental,
                     PengobatanSaatIni = vm.PengobatanSaatIni,
                     AlatBantu = vm.AlatBantu,
@@ -276,16 +340,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                     WaktuOperasi = vm.WaktuOperasi,
                     TempatOperasi = vm.TempatOperasi,
                     HasilLab = vm.HasilLab,
+
                     IsBatukFluDemam = vm.IsBatukFluDemam,
                     IsHaid = vm.IsHaid,
+
                     ProsedurOperasi = vm.ProsedurOperasi,
                     TanggalOperasi = TryParseTanggalToUtc(vm.TanggalOperasi),
+
                     PerawatBedahId = vm.PerawatBedahId,
                     Keterangan = vm.Keterangan,
 
                     TTDPerawatRuanganId = vm.TTDPerawatRuanganId,
                     TTDPerawatRuanganPath = ttd.Path,
 
+                    PenandaanOperasiBag1 = uploadBag1Task.Result,
+                    PenandaanOperasiBag2 = uploadBag2Task.Result,
 
                     TglCatatan = DateTime.UtcNow,
                     CreateBy = userId,
@@ -299,6 +368,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                 {
                     message = "Berhasil tambah PraOperasi",
                     praOperasi.PraOperasiId,
+                    praOperasi.PenandaanOperasiBag1,
+                    praOperasi.PenandaanOperasiBag2
                 });
             }
             catch (Exception ex)
@@ -306,6 +377,89 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                 return StatusCode(500, new { message = ex.Message });
             }
         }
+
+
+        //[HttpPost]
+        //[Consumes("multipart/form-data")]
+        //[RequestSizeLimit(50_000_000)]
+        //[RequestFormLimits(MultipartBodyLengthLimit = 50_000_000)]
+        //public async Task<IActionResult> Create([FromBody] PraOperasiViewModel vm)
+        //{
+        //    if (vm == null || !ModelState.IsValid)
+        //        return BadRequest(new { message = "Data tidak valid." });
+
+        //    try
+        //    {
+        //        // Cek koneksi database
+        //        if (!_applicationDbContext.Database.CanConnect())
+        //            return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+
+        //        // Ambil user login
+        //        var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        //        if (string.IsNullOrEmpty(emailLogin))
+        //            return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+        //        var user = await _applicationDbContext.UserActives
+        //            .FirstOrDefaultAsync(u => u.Email == emailLogin);
+
+        //        if (user == null)
+        //            return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+
+        //        var userId = user.UserActiveId;
+        //        var uploaderName = user.FullName ?? "User";
+
+        //        // -------------------------------------------------------
+        //        // 🔹 Cek TTD
+        //        // -------------------------------------------------------
+        //        var ttd = await _ttdService.CheckTTDAsync((Guid)vm.TTDPerawatRuanganId);
+
+        //        // -------------------------------------------------------
+        //        // 🔹 Simpan ke DB PraOperasi
+        //        // -------------------------------------------------------
+        //        var praOperasi = new PraOperasi
+        //        {
+        //            PraOperasiId = Guid.NewGuid(),
+        //            KunjunganId = vm.KunjunganId,
+        //            PasienId = vm.PasienId,
+        //            PainAssessmentId = vm.PainAssessmentId,
+        //            VitalSignId = vm.VitalSignId,
+        //            StatusMental = vm.StatusMental,
+        //            PengobatanSaatIni = vm.PengobatanSaatIni,
+        //            AlatBantu = vm.AlatBantu,
+        //            JenisOperasi = vm.JenisOperasi,
+        //            WaktuOperasi = vm.WaktuOperasi,
+        //            TempatOperasi = vm.TempatOperasi,
+        //            HasilLab = vm.HasilLab,
+        //            IsBatukFluDemam = vm.IsBatukFluDemam,
+        //            IsHaid = vm.IsHaid,
+        //            ProsedurOperasi = vm.ProsedurOperasi,
+        //            TanggalOperasi = TryParseTanggalToUtc(vm.TanggalOperasi),
+        //            PerawatBedahId = vm.PerawatBedahId,
+        //            Keterangan = vm.Keterangan,
+
+        //            TTDPerawatRuanganId = vm.TTDPerawatRuanganId,
+        //            TTDPerawatRuanganPath = ttd.Path,
+
+
+        //            TglCatatan = DateTime.UtcNow,
+        //            CreateBy = userId,
+        //            CreateDateTime = DateTimeOffset.UtcNow
+        //        };
+
+        //        _applicationDbContext.PraOperasis.Add(praOperasi);
+        //        await _applicationDbContext.SaveChangesAsync();
+
+        //        return Created("", new
+        //        {
+        //            message = "Berhasil tambah PraOperasi",
+        //            praOperasi.PraOperasiId,
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, new { message = ex.Message });
+        //    }
+        //}
 
 
         [HttpPut("{id}")]
@@ -476,44 +630,57 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                 }
 
                 // ✅ Proses upload file TTD
-                async Task<string?> UploadFileAsync(IFormFile file, string prefix, string folderTarget)
+                async Task<string?> UploadToFlaskAsync(IFormFile? file, string prefix)
                 {
-                    var maxSize = 1 * 1024 * 1024; // 1MB
-                    var allowedExtensions = new List<string> { ".jpg", ".jpeg" };
-                    var fileExtension = Path.GetExtension(file.FileName).ToLower();
+                    if (file == null || file.Length == 0)
+                        return null;
 
-                    if (file.Length > maxSize)
-                        throw new Exception($"{prefix} terlalu besar! Maksimal 1MB.");
-                    if (!allowedExtensions.Contains(fileExtension))
+                    var allowedExt = new[] { ".jpg", ".jpeg" };
+                    var ext = Path.GetExtension(file.FileName).ToLower();
+
+                    if (!allowedExt.Contains(ext))
                         throw new Exception($"{prefix} harus JPG atau JPEG.");
 
-                    var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
-                    var fileName = $"{prefix}_{getUserActive.FullName}_{safeTime}{fileExtension}";
+                    if (file.Length > 5 * 1024 * 1024)
+                        throw new Exception($"{prefix} maksimal 5MB.");
 
-                    using var client = new HttpClient();
+                    var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
+                    var fileName = $"{praOperasi.PraOperasiId}_{prefix}_{safeTime}{ext}";
+
+                    // 👉 Sesuaikan nama folder dengan kebutuhan kamu
+                    var folderTarget = "TTDKeluargaPasien";
+                    var filePath = $"/{folderTarget}/{fileName}";
+
                     using var ms = new MemoryStream();
                     await file.CopyToAsync(ms);
                     ms.Position = 0;
 
-                    var content = new MultipartFormDataContent {
-                        { new StreamContent(ms) {
-                            Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType) }
-                        }, "file", fileName },
-                        { new StringContent(folderTarget), "folderTarget" }
-                    };
+                    var contentType = string.IsNullOrWhiteSpace(file.ContentType)
+                        ? "image/jpeg"
+                        : file.ContentType;
 
-                    var flaskResponse = await client.PostAsync(_uploadUrl, content);
-                    if (!flaskResponse.IsSuccessStatusCode)
-                        throw new Exception($"Gagal upload {prefix} ke server Flask.");
+                    var fileContent = new StreamContent(ms);
+                    fileContent.Headers.ContentType =
+                        new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
 
-                    var responseBody = await flaskResponse.Content.ReadAsStringAsync();
-                    dynamic jsonResp = JsonConvert.DeserializeObject(responseBody);
-                    return jsonResp.fileUrl;
+                    using var form = new MultipartFormDataContent();
+                    form.Add(fileContent, "file", fileName);
+                    form.Add(new StringContent(folderTarget), "folderTarget");
+
+                    using var client = new HttpClient();
+                    var response = await client.PostAsync(_uploadUrl, form);
+
+                    if (!response.IsSuccessStatusCode)
+                        throw new Exception($"Gagal upload {prefix} ke Flask.");
+
+                    // ⚠ Di sini kita pakai pola yang sama seperti UpdatePenandaan:
+                    //     tidak baca JSON dari Flask, tapi pakai path lokal yang sudah dibentuk
+                    return filePath;
                 }
 
 
                 // Upload file → folder TTDUser
-                var ttdPath = await UploadFileAsync(vm.TTDKeluarga, "TTDKeluarga", "TTDKeluargaPasien");
+                var ttdPath = await UploadToFlaskAsync(vm.TTDKeluarga, "TTDKeluargaPasien");
 
                 // ✅ Update PraOperasi
                 praOperasi.TTDKeluarga = ttdPath;
