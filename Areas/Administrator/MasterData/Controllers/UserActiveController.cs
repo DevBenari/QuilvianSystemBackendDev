@@ -1222,6 +1222,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
         public IActionResult PagedUserActive(
         int page = 1,
         int perPage = 10,
+        Guid? id = null,
         string? search = null,
         string? email = null,
         string? pathTTD = null,
@@ -1315,6 +1316,12 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                              TTDPath = td != null ? td.TTDPath : null,
                          });
 
+            // filter based on user active id
+            if (id.HasValue)
+            {
+                query = query.Where(u=>u.UserActiveId == id.Value);
+            }
+
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             if (!string.IsNullOrWhiteSpace(search))
             {
@@ -1322,7 +1329,6 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                 query = query.Where(u =>
                     EF.Functions.ILike(u.FullName, search) ||
                     EF.Functions.ILike(u.CreateByName, search)  ||
-                    EF.Functions.ILike(u.Email, search) ||
                     EF.Functions.ILike(u.NamaTipeUser, search)
                 );
             }
