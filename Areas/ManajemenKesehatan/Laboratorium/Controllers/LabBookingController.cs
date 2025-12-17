@@ -1501,6 +1501,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     b.HasilPenunjangLab,
                     b.AnjuranDiet,
                     b.IsDelete,
+                    b.IsCito,
                     CreateBy = u.FullName
                 }).ToListAsync();
 
@@ -1692,6 +1693,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      b.HasilPenunjangLab,
                      b.AnjuranDiet,
                      b.IsDelete,
+                     b.IsCito,
                      CreateBy = u.FullName
                  }).ToListAsync();
 
@@ -1941,6 +1943,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      b.HasilPenunjangLab,
                      b.AnjuranDiet,
                      b.IsDelete,
+                     b.IsCito,
                      CreateBy = u.FullName
                  }).ToListAsync();
 
@@ -2203,6 +2206,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      b.HasilPenunjangLab,
                      b.AnjuranDiet,
                      b.IsDelete,
+                     b.IsCito,
                      CreateBy = u.FullName
                  }).ToListAsync();
 
@@ -2463,6 +2467,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      b.HasilPenunjangLab,
                      b.AnjuranDiet,
                      b.IsDelete,
+                     b.IsCito,
                      CreateBy = u.FullName
                  }).ToListAsync();
 
