@@ -1328,6 +1328,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                 search = $"%{search.ToLower()}%"; 
                 query = query.Where(u =>
                     EF.Functions.ILike(u.FullName, search) ||
+                    EF.Functions.ILike(u.Email, search) ||
                     EF.Functions.ILike(u.CreateByName, search)  ||
                     EF.Functions.ILike(u.NamaTipeUser, search)
                 );
