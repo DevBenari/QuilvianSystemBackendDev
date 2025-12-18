@@ -226,7 +226,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                         id = data.MonitoringNyeriId
                     });
 
-                    return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
+                    return Created("", new { message = "Tambah Data Berhasil || 201 Created", id = data.MonitoringNyeriId });
                 }
                 else
                 {
@@ -330,7 +330,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                         id = entity.MonitoringNyeriId
                     });
 
-                    return Ok(new { message = "Update Data Berhasil || 200 OK" });
+                    return Ok(new { message = "Update Data Berhasil || 200 OK", id = entity.MonitoringNyeriId });
                 }
                 else
                 {
