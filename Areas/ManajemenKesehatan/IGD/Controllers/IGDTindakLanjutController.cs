@@ -86,7 +86,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
                                       // Vital Sign
                                       a.Suhu,
-                                      a.TD,
+                                      a.TekananDarahSystolic,
+                                      a.TekananDarahDiastolic,
                                       a.Nadi,
                                       a.RR,
                                       a.SPO2,
@@ -194,7 +195,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                     Reaksi = vm.Reaksi,
 
                     Suhu = vm.Suhu,
-                    TD = vm.TD,
+                    TekananDarahDiastolic = vm.TekananDarahDiastolic,
+                    TekananDarahSystolic = vm.TekananDarahSystolic,
                     Nadi = vm.Nadi,
                     RR = vm.RR,
                     SPO2 = vm.SPO2,
@@ -319,7 +321,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 data.Reaksi = vm.Reaksi;
 
                 data.Suhu = vm.Suhu;
-                data.TD = vm.TD;
+                data.TekananDarahDiastolic = vm.TekananDarahDiastolic;
+                data.TekananDarahSystolic = vm.TekananDarahSystolic;
                 data.Nadi = vm.Nadi;
                 data.RR = vm.RR;
                 data.SPO2 = vm.SPO2;
@@ -543,7 +546,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
                             // Vital Sign
                             a.Suhu,
-                            a.TD,
+                            a.TekananDarahDiastolic,
+                            a.TekananDarahSystolic,
                             a.Nadi,
                             a.RR,
                             a.SPO2,
