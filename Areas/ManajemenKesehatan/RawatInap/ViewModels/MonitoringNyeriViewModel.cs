@@ -16,16 +16,16 @@
         public decimal? Respirasi { get; set; }
         public decimal? Suhu { get; set; }
 
-        public Guid PerawatMonitoringId { get; set; }
+        public Guid? PerawatMonitoringId { get; set; }
         public string? ParafPerawatMonitoring { get; set; }
 
         public DateTime? WaktuIntervensi { get; set; }
-        public Guid ObatId { get; set; }
+        public Guid? ObatId { get; set; }
         public string? Dosis { get; set; }
         public string? Rute { get; set; }
         public string? IntervensiNonFarmakologi { get; set; }
 
-        public Guid PerawatIntervensiId { get; set; }
+        public Guid? PerawatIntervensiId { get; set; }
         public string? ParafPerawatIntervensi { get; set; }
 
         public DateTime? WaktuKajianUlang { get; set; }
