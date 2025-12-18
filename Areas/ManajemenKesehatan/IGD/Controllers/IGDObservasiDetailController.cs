@@ -68,7 +68,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                                 DosisObat = o.TakaranDosis ?? null,
                                 a.GambaranEKG,
                                 a.DCShock,
-                                a.TD,
+                                a.TekananDarahDiastolic,
+                                a.TekananDarahSystolic,
                                 a.RR,
                                 a.Suhu,
                                 a.SPO2,
@@ -138,7 +139,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                     ObatId = vm.ObatId,
                     GambaranEKG = vm.GambaranEKG,
                     DCShock = vm.DCShock,
-                    TD = vm.TD,
+                    TekananDarahDiastolic = vm.TekananDarahDiastolic,
+                    TekananDarahSystolic = vm.TekananDarahSystolic,
                     RR = vm.RR,
                     Suhu = vm.Suhu,
                     SPO2 = vm.SPO2,
@@ -206,7 +208,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 data.ObatId = vm.ObatId;
                 data.GambaranEKG = vm.GambaranEKG;
                 data.DCShock = vm.DCShock;
-                data.TD = vm.TD;
+                data.TekananDarahDiastolic = vm.TekananDarahDiastolic;
+                data.TekananDarahSystolic = vm.TekananDarahSystolic;
                 data.RR = vm.RR;
                 data.Suhu = vm.Suhu;
                 data.SPO2 = vm.SPO2;
