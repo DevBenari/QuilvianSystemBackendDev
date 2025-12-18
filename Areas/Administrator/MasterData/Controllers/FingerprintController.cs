@@ -248,6 +248,5 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                 return StatusCode(500, new { message = ex.Message });
             }
         }
-
     }
 }
