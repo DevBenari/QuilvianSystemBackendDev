@@ -990,14 +990,14 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
         }
 
         [HttpPut("UbahPassword/{userActiveId}")]
-        public async Task<IActionResult> UbahPasswordById(Guid userActiveId, [FromBody] string newPassword)
+        public async Task<IActionResult> UbahPasswordById(Guid userActiveId, [FromBody] UbahPasswordViewModel vm)
         {
             if (userActiveId == Guid.Empty)
             {
                 return BadRequest(new { message = "UserActiveId tidak boleh kosong." });
             }
 
-            if (string.IsNullOrWhiteSpace(newPassword))
+            if (string.IsNullOrWhiteSpace(vm.Password))
             {
                 return BadRequest(new { message = "Password baru harus diisi." });
             }
@@ -1022,7 +1022,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
 
                 // 🔑 Generate token dan ubah password
                 var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-                var result = await _userManager.ResetPasswordAsync(user, token, newPassword);
+                var result = await _userManager.ResetPasswordAsync(user, token, vm.Password);
 
                 if (!result.Succeeded)
                 {
