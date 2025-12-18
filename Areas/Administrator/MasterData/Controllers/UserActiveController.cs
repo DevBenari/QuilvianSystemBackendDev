@@ -990,7 +990,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
         }
 
         [HttpPut("UbahPassword/{userActiveId}")]
-        public async Task<IActionResult> UbahPasswordById(Guid userActiveId, [FromQuery] string newPassword)
+        public async Task<IActionResult> UbahPasswordById(Guid userActiveId, [FromBody] string newPassword)
         {
             if (userActiveId == Guid.Empty)
             {
