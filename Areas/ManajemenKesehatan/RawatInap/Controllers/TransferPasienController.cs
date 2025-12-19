@@ -66,6 +66,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                                 on t.CreateBy equals u.UserActiveId into userGroup
                             from u in userGroup.DefaultIfEmpty()
 
+                            join b in _applicationDbContext.Beds
+                            on t.BedId equals b.BedId into bGroup
+                            from b in bGroup.DefaultIfEmpty()
+
                             join d1 in _applicationDbContext.UserActives
                                 on t.DokterId1 equals d1.UserActiveId into dokter1Group
                             from d1 in dokter1Group.DefaultIfEmpty()
@@ -84,7 +88,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                             {
                                 t.TransferPasienId,
                                 t.KunjunganId,
-                                t.KamarId,
+                                t.BedId,
+                                b.NomorBed,
+                                b.Deskripsi,
                                 t.DiagnosaUtama,
                                 t.DiagnosaSekunder,
                                 DokterUtama = d1 != null ? d1.FullName : null,
@@ -170,6 +176,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                                       on t.CreateBy equals u.UserActiveId into userGroup
                                   from u in userGroup.DefaultIfEmpty()
 
+                                  join b in _applicationDbContext.Beds
+                                    on t.BedId equals b.BedId into bGroup
+                                  from b in bGroup.DefaultIfEmpty()
+
                                       // join Dokter 1, 2, 3 (opsional)
                                   join d1 in _applicationDbContext.UserActives
                                       on t.DokterId1 equals d1.UserActiveId into dokter1Group
@@ -189,7 +199,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                                   {
                                       t.TransferPasienId,
                                       t.KunjunganId,
-                                      t.KamarId,
+                                      t.BedId,
+                                      b.NomorBed,
+                                      b.Deskripsi,
                                       t.DiagnosaUtama,
                                       t.DiagnosaSekunder,
                                       DokterUtama = d1 != null ? d1.FullName : null,
@@ -273,6 +285,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 var ttdMenyerahkan = await _ttdService.CheckTTDAsync((Guid)vm.PetugasMenyerahkanId);
                 var ttdPenerima = await _ttdService.CheckTTDAsync((Guid)vm.PetugasPenerimaId);
 
+                //// **Cek Duplikasi**
+                //var today = DateTime.UtcNow.Date;
+                //bool isDuplicate = await _applicationDbContext.TransferPasiens
+                //                    .AnyAsync(c => c.KunjunganId == vm.KunjunganId && c.CreateDateTime == today
+                //                    && c.IsDelete == false);
+
+                //if (isDuplicate)
+                //{
+                //    return Conflict(new { message = "Kunjungan ini telah melakukan proses transfer pasien" });
+                //}
 
                 // ==================================================
                 // ✅ Simpan ke tabel TransferPasien
@@ -281,7 +303,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 {
                     TransferPasienId = Guid.NewGuid(),
                     KunjunganId = vm.KunjunganId,
-                    KamarId = vm.KamarId,
+                    BedId = vm.BedId,
                     DiagnosaUtama = vm.DiagnosaUtama,
                     DiagnosaSekunder = vm.DiagnosaSekunder,
                     DokterId1 = vm.DokterId1,
@@ -576,6 +598,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                                 on t.CreateBy equals u.UserActiveId into userGroup
                             from u in userGroup.DefaultIfEmpty()
 
+                            join b in _applicationDbContext.Beds
+                                on t.BedId equals b.BedId into bGroup
+                            from b in bGroup.DefaultIfEmpty()
+
                             join d1 in _applicationDbContext.UserActives
                                 on t.DokterId1 equals d1.UserActiveId into dokter1Group
                             from d1 in dokter1Group.DefaultIfEmpty()
@@ -593,7 +619,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                             {
                                 t.TransferPasienId,
                                 t.KunjunganId,
-                                t.KamarId,
+                                t.BedId,
+                                b.NomorBed,
+                                b.Deskripsi,
                                 t.DiagnosaUtama,
                                 t.DiagnosaSekunder,
                                 DokterUtama = d1 != null ? d1.FullName : null,

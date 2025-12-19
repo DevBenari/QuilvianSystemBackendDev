@@ -80,7 +80,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.CairanSisa,
                              a.CairanKeluar,
                              a.JumlahUrin,
-                             a.TTDId,
                              a.TTDPath,
                              a.Keterangan,
 
@@ -238,7 +237,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 //}
 
                 // cek ttd
-                var ttd = await _ttdService.CheckTTDAsync((Guid)vm.TTDId);
+                var ttd = await _ttdService.CheckTTDAsync((Guid)vm.UserActivePerawatId);
                 // **Buat Data Baru**
                 var data = new ObservasiCairan
                 {
@@ -246,12 +245,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     KunjunganId = vm.KunjunganId,
                     PasienId = vm.PasienId,
                     UserActivePerawatId = vm.UserActivePerawatId,
-                    TglObservasi = DateTime.UtcNow,
                     CairanMasuk =vm.CairanMasuk,
                     CairanKeluar = vm.CairanKeluar,
                     CairanSisa = vm.CairanSisa,
                     JumlahUrin = vm.JumlahUrin,
-                    TTDId = vm.TTDId,
+                    TglObservasi = vm.TglObservasi,
                     TTDPath= ttd.Path,
                     Keterangan = vm.Keterangan,
 
@@ -387,7 +385,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 // ==================================================
 
                 // cek ttd
-                var ttd = await _ttdService.CheckTTDAsync((Guid)vm.TTDId);
+                var ttd = await _ttdService.CheckTTDAsync((Guid)vm.UserActivePerawatId);
 
 
                 existing.KunjunganId = vm.KunjunganId;
@@ -397,9 +395,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 existing.CairanKeluar = vm.CairanKeluar;
                 existing.CairanSisa = vm.CairanSisa;
                 existing.JumlahUrin = vm.JumlahUrin;
-                existing.TTDId = vm.TTDId;
                 existing.TTDPath = ttd.Path;
                 existing.Keterangan = vm.Keterangan;
+                existing.TglObservasi = vm.TglObservasi;
                 existing.UpdateBy = userActiveId;
                 existing.UpdateDateTime = DateTimeOffset.UtcNow;
 
@@ -516,7 +514,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.CairanKeluar,
                              a.CairanSisa,
                              a.JumlahUrin,
-                             a.TTDId,
                              a.TTDPath,
                              a.Keterangan,
 

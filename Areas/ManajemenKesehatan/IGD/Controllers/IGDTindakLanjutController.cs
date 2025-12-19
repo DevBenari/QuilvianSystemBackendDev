@@ -49,21 +49,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 var data = await (from a in _applicationDbContext.IGDTindakLanjuts
                                   join u1 in _applicationDbContext.UserActives
                                       on a.CreateBy equals u1.UserActiveId into u1Group
-                                  from createBy in u1Group.DefaultIfEmpty()
+                                  from u1 in u1Group.DefaultIfEmpty()
 
-                                  join u2 in _applicationDbContext.UserActives
-                                      on a.UpdateBy equals u2.UserActiveId into u2Group
-                                  from updateBy in u2Group.DefaultIfEmpty()
-
+                                  join b in _applicationDbContext.Beds
+                                  on a.BedId equals b.BedId into bGroup
+                                  from b in bGroup.DefaultIfEmpty()
                                   where a.TindakLanjutIgdId == id
                                         && (a.IsDelete == false || a.IsDelete == null)
-
                                   select new
                                   {
                                       a.TindakLanjutIgdId,
                                       a.KunjunganId,
                                       a.PasienId,
-                                      a.KamarId,
+                                      a.BedId,
+                                      b.NomorBed,
+                                      b.Deskripsi,
 
                                       a.WaktuPindah,
                                       a.TindakanLanjutan,
@@ -113,11 +113,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
                                       // Audit
                                       a.CreateBy,
-                                      CreateByName = createBy.FullName,
+                                      CreateByName = u1.FullName,
                                       a.CreateDateTime,
 
                                       a.UpdateBy,
-                                      UpdateByName = updateBy.FullName,
+                                      UpdateByName = u1.FullName,
                                       a.UpdateDateTime
                                   }).FirstOrDefaultAsync();
 
@@ -171,7 +171,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
                     KunjunganId = vm.KunjunganId,
                     PasienId = vm.PasienId,
-                    KamarId = vm.KamarId,
+                    BedId = vm.BedId,
 
                     WaktuPindah = vm.WaktuPindah,
 
@@ -297,7 +297,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 // --- Update fields ---
                 data.KunjunganId = vm.KunjunganId;
                 data.PasienId = vm.PasienId;
-                data.KamarId = vm.KamarId;
+                data.BedId = vm.BedId;
 
                 data.WaktuPindah = vm.WaktuPindah;
 
@@ -518,13 +518,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                         join u in _applicationDbContext.UserActives
                             on a.CreateBy equals u.UserActiveId into uGroup
                         from u in uGroup.DefaultIfEmpty()
+
+                        join b in _applicationDbContext.Beds
+                        on a.BedId equals b.BedId into bGroup
+                        from b in bGroup.DefaultIfEmpty()
+
                         where a.IsDelete == false || a.IsDelete == null
                         select new
                         {
                             a.TindakLanjutIgdId,
                             a.KunjunganId,
                             a.PasienId,
-                            a.KamarId,
+                            a.BedId,
+                            b.NomorBed,
+                            b.Deskripsi,
                             a.WaktuPindah,
                             a.TindakanLanjutan,
                             a.StatusPasien,

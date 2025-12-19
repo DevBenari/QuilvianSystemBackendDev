@@ -340,6 +340,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
             int page = 1,
             int perPage = 10,
             Guid? kunjunganId = null,
+            bool? status = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -384,6 +385,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
             if (kunjunganId.HasValue)
             {
                 query = query.Where(u=>u.KunjunganId == kunjunganId.Value);
+            }
+
+            // filter based on status 
+            if (status.HasValue)
+            {
+                query = query.Where(u => u.Status == status.Value);
             }
 
             //// **Filter berdasarkan tanggal**

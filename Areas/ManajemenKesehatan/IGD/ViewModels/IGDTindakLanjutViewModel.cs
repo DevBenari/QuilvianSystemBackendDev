@@ -4,7 +4,7 @@
     {        // Relasi utama
         public Guid? KunjunganId { get; set; }
         public Guid? PasienId { get; set; }
-        public Guid? KamarId { get; set; }
+        public Guid? BedId { get; set; }
 
         // Informasi waktu
         public DateTime? WaktuPindah { get; set; }
