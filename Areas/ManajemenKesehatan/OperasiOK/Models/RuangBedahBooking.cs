@@ -9,6 +9,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Models
         public Guid BookingRuanganBedahId { get; set; } // Generate Otomatis
         public Guid? KunjunganId { get; set; }
         public Guid? PasienId { get; set; }
+        public Guid? KelasId { get; set; }
         public DateTime? TglOperasi { get; set; }
         public TimeSpan? WaktuOperasi { get; set; }
         public string? RuangTindakan { get; set; }

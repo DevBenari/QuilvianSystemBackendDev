@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using QuilvianSystemBackendDev.Models;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
 {
     [Table("MstObatRute", Schema = "public")]
     public class ObatRute : UserActivity

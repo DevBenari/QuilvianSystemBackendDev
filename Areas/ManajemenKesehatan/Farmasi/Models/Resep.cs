@@ -27,5 +27,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
         public DateTime? TanggalPembuatanResep { get; set; }
         public Guid? RanapId { get; set; }
         public bool? IsResepPulang { get; set; }
+        public bool? IsVerifyByDoctor { get; set; }
     }
 }

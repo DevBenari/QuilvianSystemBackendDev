@@ -40,6 +40,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
         public bool? ObatSiangDiambil { get; set; }
         public bool? ObatMalamDiambil { get; set; }
         public bool? IsStopped { get; set; }
+        public bool? IsIntervensiFarmakologi { get; set; }
 
         // buat return obat
         public bool? IsReturn {  get; set; }

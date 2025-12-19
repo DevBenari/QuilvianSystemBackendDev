@@ -414,8 +414,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             // Filter berdasarkan search
             if (!string.IsNullOrWhiteSpace(search))
             {
+                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
-                    u.KodeAsuransi.Contains(search) || u.NamaAsuransi.Contains(search) || u.JenisAsuransi.Contains(search)
+                    EF.Functions.ILike(u.NamaAsuransi, search) ||
+                    EF.Functions.ILike(u.KodeAsuransi, search) ||
+                    EF.Functions.ILike(u.JenisAsuransi, search) ||
+                    EF.Functions.ILike(u.NamaPerusahaanAsuransi, search)
                 );
             }
 

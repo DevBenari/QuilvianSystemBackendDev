@@ -112,6 +112,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     r.IsLunas,
                     r.IsResepPulang,
                     r.RanapId,
+                    r.IsVerifyByDoctor,
                     TanggalPembuatanResepFormatted = r.TanggalPembuatanResep.HasValue ?
                                                       r.TanggalPembuatanResep.Value.ToString("yyyy-MM-dd") : null
                 });
@@ -247,6 +248,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 r.IsLunas,
                 r.RanapId,
                 r.IsResepPulang,
+                r.IsVerifyByDoctor,
                 r.TanggalPembuatanResepFormatted,
 
                 DaftarObat = detailObat.Where(d => d.ResepId == r.ResepId).ToList(),
@@ -315,6 +317,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                     join o in _applicationDbContext.Obats.AsNoTracking()
                                         on d.ObatId equals o.ObatId into obatJoin
                                     from o in obatJoin.DefaultIfEmpty()
+
+                                    join or in _applicationDbContext.ObatRutes.AsNoTracking()
+                                    on o.ObatRuteId equals or.RuteObatId into orJoin
+                                    from or in orJoin.DefaultIfEmpty()
                                     where d.ResepId == resep.ResepId && (d.IsRacikan == false || d.IsRacikan == null) && (!d.IsDelete)
                                     select new
                                     {
@@ -322,6 +328,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                         d.ObatId,
                                         ObatName = o != null ? o.ObatName : null,
                                         KategoriObat = o != null ? o.KategoriObat : null,
+                                        RuteObat = or != null ? or.RuteObat : null,
                                         d.Qty,
                                         d.HargaObat,
                                         d.TotalHargaObat,
@@ -453,6 +460,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 resep.IsLunas,
                 resep.RanapId,
                 resep.IsResepPulang,
+                resep.IsVerifyByDoctor,
                 resep.CreateBy,
                 TanggalPembuatanResep = resep.TanggalPembuatanResep?.ToString("yyyy-MM-dd"),
                 DaftarObat = daftarObat,
@@ -510,6 +518,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     StatusPengambilanResep = false,
                     IsCancelled = false,
                     IsLunas = false,
+                    IsVerifyByDoctor = false,
                     TanggalPembuatanResep = DateTime.UtcNow,
                     //RanapId = vm.RanapId,
                     IsResepPulang = vm.IsResepPulang,
@@ -1283,6 +1292,36 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 Action = "updateIsCancelled",
                 ResepId = id,
                 IsCancelled = request.IsCancelled
+            });
+
+            return Ok(new { message = "Status isFinished berhasil diperbarui." });
+        }
+
+        [HttpPut("{id}/is-VerifiedByDokter")]
+        public async Task<IActionResult> UpdateIsVerifiedByDokter(Guid id, [FromBody] bool request)
+        {
+            var data = await _applicationDbContext.Reseps.FindAsync(id);
+            if (data == null)
+                return NotFound(new { message = "Resep tidak ditemukan." });
+
+            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(EmailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var userId = user?.UserActiveId ?? Guid.Empty;
+
+            data.IsVerifyByDoctor = request;
+            data.UpdateDateTime = DateTimeOffset.UtcNow;
+            data.UpdateBy = userId;
+            await _applicationDbContext.SaveChangesAsync();
+
+            // Notifikasi signalR
+            await _hubContext.Clients.All.SendAsync("VerifiedChanged", new
+            {
+                Action = "updateIsCancelled",
+                ResepId = id,
+                IsVerifyByDoctor = request
             });
 
             return Ok(new { message = "Status isFinished berhasil diperbarui." });
@@ -2105,6 +2144,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             var daftarObat = await (
                 from d in _applicationDbContext.DetailReseps.AsNoTracking()
                 join o in _applicationDbContext.Obats.AsNoTracking() on d.ObatId equals o.ObatId
+
+                join or in _applicationDbContext.ObatRutes.AsNoTracking()
+                    on o.ObatRuteId equals or.RuteObatId into orJoin
+                from or in orJoin.DefaultIfEmpty()
+
                 where resepIds.Contains((Guid)d.ResepId)
                       && (d.IsRacikan == false || d.IsRacikan == null)
                       && !d.IsDelete
@@ -2115,6 +2159,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     d.ObatId,
                     o.ObatName,
                     o.ObatCode,
+                    or.RuteObat,
                     o.KategoriObat,
                     d.Qty,
                     d.HargaObat,
@@ -2439,6 +2484,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             // 🔎 Ambil detail obat batch
             var daftarObat = await (from d in _applicationDbContext.DetailReseps.AsNoTracking()
                                     join o in _applicationDbContext.Obats.AsNoTracking() on d.ObatId equals o.ObatId
+                                    
+                                    join or in _applicationDbContext.ObatRutes.AsNoTracking()
+                                            on o.ObatRuteId equals or.RuteObatId into orJoin
+                                    from or in orJoin.DefaultIfEmpty()
+
                                     where resepIds.Contains((Guid)d.ResepId) && (d.IsRacikan == false || d.IsRacikan == null)
                                     select new
                                     {
@@ -2446,6 +2496,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                         d.DetailResepId,
                                         d.ObatId,
                                         o.ObatName,
+                                        RuteObat = or != null ? or.RuteObat : null,
                                         d.Qty,
                                         d.HargaObat,
                                         d.TotalHargaObat,

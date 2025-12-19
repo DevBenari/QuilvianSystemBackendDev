@@ -76,6 +76,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                              a.KeluhanUtama,
                              a.DiteruskanKepada,
                              a.WaktuMasuk,
+                             a.DikirimKe,
                              a.Keterangan,
                          }).OrderByDescending(a => a.CreateDateTime);
 
@@ -128,6 +129,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                                     KunjunganId = t.KunjunganId,
                                     t.KeluhanUtama,
                                     t.DiteruskanKepada,
+                                    t.DikirimKe,
                                     t.Keterangan,
                                     DetailIndikatorId = d.IndikatorPengkajianId,
                                     DetailKeterangan = d.Keterangan,
@@ -176,6 +178,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                                      t.KunjunganId,
                                      t.KeluhanUtama,
                                      t.DiteruskanKepada,
+                                     t.DikirimKe,
                                      t.Keterangan,
                                      t.CreateBy,
                                      t.CreateDateTime,
@@ -197,13 +200,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
                 // Tidak melakukan grouping yang bisa membatasi banyaknya details yang ditampilkan
                 var groupedResult = joinedData
-                    .GroupBy(x => new { x.TriageId, x.KunjunganId, x.KeluhanUtama, x.DiteruskanKepada, x.Keterangan, x.CreateBy, x.CreateDateTime })
+                    .GroupBy(x => new { x.TriageId, x.KunjunganId, x.KeluhanUtama, x.DiteruskanKepada, x.DikirimKe, x.Keterangan, x.CreateBy, x.CreateDateTime })
                     .Select(g => new
                     {
                         g.Key.TriageId,
                         g.Key.KunjunganId,
                         g.Key.KeluhanUtama,
                         g.Key.DiteruskanKepada,
+                        g.Key.DikirimKe,
                         g.Key.Keterangan,
                         g.Key.CreateBy,
                         CreateDateTime = g.Key.CreateDateTime,
@@ -287,6 +291,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                     KeluhanUtama = vm.KeluhanUtama,
                     DiteruskanKepada = vm.DiteruskanKepada,
                     WaktuMasuk = DateTime.Now,
+                    DikirimKe = vm.DikirimKe,
                     Keterangan = vm.Keterangan,
 
                     CreateBy = userActiveId,
@@ -382,6 +387,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 data.WaktuMasuk = DateTime.Now;
                 data.DiteruskanKepada = vm.DiteruskanKepada;
                 data.KeluhanUtama = vm.KeluhanUtama;
+                data.DikirimKe = vm.DikirimKe;
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
@@ -501,6 +507,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                                 KunjunganId = t.KunjunganId,
                                 t.KeluhanUtama,
                                 t.DiteruskanKepada,
+                                t.DikirimKe,
                                 t.Keterangan,
                                 DetailIndikatorId = d.IndikatorPengkajianId,
                                 DetailKeterangan = d.Keterangan,

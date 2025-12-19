@@ -68,5 +68,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
         public string? KeadaanUmum { get; set; }
         public string? IsKonjungtiva { get; set; }
         public string? Ekstremitas { get; set; }
+        public string? SkorSedasi { get; set; }
     }
 }

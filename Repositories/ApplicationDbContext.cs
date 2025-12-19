@@ -294,6 +294,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<ResikoJatuh> ResikoJatuhs { get; set; }
         public DbSet<PenilaianResikoJatuhDetail> PenilaianResikoJatuhDetails { get; set; }
         public DbSet<CatatanPerawat> CatatanPerawats { get; set; }
+        public DbSet<MonitoringNyeri> MonitoringNyeris { get; set; }
         #endregion
 
         #region Farmasi
@@ -307,6 +308,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<ResepTelaah> ResepTelaahs { get; set; }
         public DbSet<ObatSubstitusi> ObatSubstitusis { get; set; }
         public DbSet<ObatTelaah> ObatTelaahs { get; set; }
+        public DbSet<ObatRuteDetail> ObatRuteDetails { get; set; }
 
         #endregion
 

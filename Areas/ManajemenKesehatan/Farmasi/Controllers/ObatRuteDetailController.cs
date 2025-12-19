@@ -6,36 +6,36 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class ObatRuteController : Controller
+    public class ObatRuteDetailController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<ObatRuteController> _logger;
+        private readonly ILogger<ObatRuteDetailController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public ObatRuteController(
+        public ObatRuteDetailController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<ObatRuteController> logger,
+            ILogger<ObatRuteDetailController> logger,
             IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
@@ -53,7 +53,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = (from a in _applicationDbContext.ObatRutes
+            var query = (from a in _applicationDbContext.ObatRuteDetails
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
                          where a.IsDelete == false || a.IsDelete == null
@@ -62,8 +62,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
+                             a.DetailRuteObatId,
                              a.RuteObatId,
-                             a.RuteObat,
+                             a.NamaSingkat,
+                             a.Kepanjangan,
                              a.Keterangan,
                          }).OrderByDescending(a => a.CreateDateTime);
 
@@ -100,7 +102,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.ObatRutes.Find(id);
+            var listdata = _applicationDbContext.ObatRuteDetails.Find(id);
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -114,7 +116,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] ObatRuteViewModel vm)
+        public async Task<IActionResult> Create([FromBody] ObatRuteDetailViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -144,26 +146,30 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 //// **Cek Duplikasi**
-                bool isDuplicate = await _applicationDbContext.ObatRutes
-                                    .AnyAsync(c => c.RuteObat.ToLower().Trim() == vm.RuteObat.ToLower().Trim() && c.IsDelete == false);
+                //bool isDuplicate = await _applicationDbContext.Diskons
+                //                    .AnyAsync(c => c.NamaDiskon.ToLower().Trim() == vm.NamaDiskon.ToLower().Trim()
+                //                    && c.IsDelete == false);
 
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Nama rute obat ini telah tersedia" });
-                }
+                //if (isDuplicate)
+                //{
+                //    return Conflict(new { message = "Nama diskon ini telah tersedia" });
+                //}
 
                 // **Buat Data Baru**
-                var data = new ObatRute
+                var data = new ObatRuteDetail
                 {
-                    RuteObatId = Guid.NewGuid(),
-                    RuteObat = vm.RuteObat,
+                    DetailRuteObatId = Guid.NewGuid(),
+                    RuteObatId = vm.RuteObatId,
+                    NamaSingkat = vm.NamaSingkat,
+                    Kepanjangan = vm.Kepanjangan,
                     Keterangan = vm.Keterangan,
+  
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
 
                 // **Simpan ke Database**
-                _applicationDbContext.ObatRutes.Add(data);
+                _applicationDbContext.ObatRuteDetails.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -186,7 +192,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] ObatRuteViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] ObatRuteDetailViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -217,30 +223,32 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.ObatRutes.FindAsync(id);
+                var data = await _applicationDbContext.ObatRuteDetails.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
                 //// **Cek Duplikasi**
-                bool isDuplicate = await _applicationDbContext.ObatRutes
-                                    .AnyAsync(c => c.RuteObat.ToLower().Trim() == vm.RuteObat.ToLower().Trim() 
-                                    && c.IsDelete == false && c.RuteObatId!= id);
+                //bool isDuplicate = await _applicationDbContext.Diskons
+                //                    .AnyAsync(c => c.NamaDiskon.ToLower().Trim() == vm.NamaDiskon.ToLower().Trim()
+                //                    && c.IsDelete == false && c.DiskonId != id);
 
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Nama rute obat ini telah tersedia" });
-                }
+                //if (isDuplicate)
+                //{
+                //    return Conflict(new { message = "Nama diskon ini telah tersedia" });
+                //}
 
                 // **Update Data**
-                data.RuteObat = vm.RuteObat;
+                data.RuteObatId = vm.RuteObatId;
+                data.NamaSingkat = vm.NamaSingkat;
+                data.Kepanjangan = vm.Kepanjangan;
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.ObatRutes.Update(data);
+                _applicationDbContext.ObatRuteDetails.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -261,6 +269,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
@@ -289,7 +298,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.ObatRutes.FindAsync(id);
+                var data = await _applicationDbContext.ObatRuteDetails.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -301,7 +310,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 data.IsDelete = true;
 
-                _applicationDbContext.ObatRutes.Update(data);
+                _applicationDbContext.ObatRuteDetails.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -336,10 +345,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
                         DateTime? endDate = null,
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
-        {
+                {
 
             // Query data
-            var query = (from a in _applicationDbContext.ObatRutes
+            var query = (from a in _applicationDbContext.ObatRuteDetails
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
                          where a.IsDelete == false || a.IsDelete == null
@@ -348,8 +357,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
+                             a.DetailRuteObatId,
                              a.RuteObatId,
-                             a.RuteObat,
+                             a.NamaSingkat,
+                             a.Kepanjangan,
                              a.Keterangan,
                          });
 
@@ -358,7 +369,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             {
                 search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
-                    EF.Functions.ILike(u.RuteObat, search)
+                    EF.Functions.ILike(u.NamaSingkat, search) 
                 );
             }
 
@@ -428,14 +439,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "RuteObat" => query.OrderByDescending(u => u.RuteObat),
+                    "NamaSingkat" => query.OrderByDescending(u => u.NamaSingkat),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
                     "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
                     "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    "RuteObat" => query.OrderBy(u => u.RuteObat),
+                    "NamaSingkat" => query.OrderBy(u => u.NamaSingkat),
                     _ => query.OrderBy(u => u.CreateDateTime)
                 };
 
@@ -463,7 +474,5 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
             });
         }
-
-
     }
 }

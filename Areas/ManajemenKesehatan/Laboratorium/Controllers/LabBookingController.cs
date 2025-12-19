@@ -276,6 +276,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                     b.TindakLanjut,
                                     b.HasilPenunjangLab,
                                     b.AnjuranDiet,
+                                    b.TTDPathPembatalan,
+                                    b.PetugasPembatalan,
+                                    AlasanPembatalanLabBooking=b.AlasanPembatalan,
                                     AsuransiId = (Guid?)b.AsuransiId,
                                     AsuransiNama = a.NamaAsuransi ?? null,
                                     DokterId = (Guid?)b.DokterId,
@@ -287,7 +290,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                     b.CreateBy,
                                     CreateByName = u.FullName,
                                     b.CreateDateTime,
-
+                                    
                                     // Detail
                                     LabBookingDetailId = (Guid?)lb.DetailBookingLabId,
                                     PemeriksaanLabId = (Guid?)lb.PemeriksaanLabId,
@@ -339,6 +342,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         g.First().HasilPenunjangLab,
                         g.First().AnjuranDiet,
                         g.First().Keterangan,
+                        g.First().TTDPathPembatalan,
+                        g.First().PetugasPembatalan,
+                        g.First().AlasanPembatalanLabBooking,
                         g.First().CreateBy,
                         g.First().CreateByName,
                         g.First().CreateDateTime,
@@ -1006,11 +1012,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 // ==========================================================
 
                 // cek ttd
-                var ttd = await _ttdService.CheckTTDAsync(userActiveId);
+                var ttd = await _ttdService.CheckTTDAsync(vm.TTDPetugasId ?? Guid.Empty);
 
-
+                var petugas = await _applicationDbContext.UserActives
+                    .FindAsync(vm.TTDPetugasId);
+                
                 booking.AlasanPembatalan = vm.AlasanPembatalan;
                 booking.TTDPathPembatalan = ttd.Path;
+                booking.PetugasPembatalan = petugas?.FullName;
                 booking.UpdateBy = userActiveId;
                 booking.UpdateDateTime = DateTimeOffset.UtcNow;
 
@@ -1448,7 +1457,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 join d1 in _applicationDbContext.Dokters on b.DokterId equals d1.DokterId into d1Group
                 from d1 in d1Group.DefaultIfEmpty()
 
-                join d2 in _applicationDbContext.Dokters on b.DokterId equals d2.DokterId into d2Join
+                join d2 in _applicationDbContext.Dokters on b.DokterKonsulenId equals d2.DokterId into d2Join
                 from d2 in d2Join.DefaultIfEmpty()
 
                 join po in _applicationDbContext.Polikliniks on k.PoliklinikId equals po.PoliklinikId into poGroup
@@ -1485,12 +1494,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     NamaDokterKonsulen = d2.NmDokter ?? null,
                     b.DiagnosaAwal,
                     b.Keterangan,
+                    b.PetugasPembatalan,
                     b.TTDPathPembatalan,
                     b.CreateDateTime,
                     b.TindakLanjut,
                     b.HasilPenunjangLab,
                     b.AnjuranDiet,
                     b.IsDelete,
+                    b.IsCito,
                     CreateBy = u.FullName
                 }).ToListAsync();
 
@@ -1636,7 +1647,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                  join d1 in _applicationDbContext.Dokters on b.DokterId equals d1.DokterId into dJoin
                  from d1 in dJoin.DefaultIfEmpty()
 
-                 join d2 in _applicationDbContext.Dokters on b.DokterId equals d2.DokterId into d2Join
+                 join d2 in _applicationDbContext.Dokters on b.DokterKonsulenId equals d2.DokterId into d2Join
                  from d2 in d2Join.DefaultIfEmpty()
 
                  join po in _applicationDbContext.Polikliniks on k.PoliklinikId equals po.PoliklinikId into poJoin
@@ -1676,11 +1687,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      b.DiagnosaAwal,
                      b.Keterangan,
                      b.TTDPathPembatalan,
+                     b.PetugasPembatalan,
                      b.CreateDateTime,
                      b.TindakLanjut,
                      b.HasilPenunjangLab,
                      b.AnjuranDiet,
                      b.IsDelete,
+                     b.IsCito,
                      CreateBy = u.FullName
                  }).ToListAsync();
 
@@ -1884,7 +1897,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                  join d1 in _applicationDbContext.Dokters on b.DokterId equals d1.DokterId into dJoin
                  from d1 in dJoin.DefaultIfEmpty()
 
-                 join d2 in _applicationDbContext.Dokters on b.DokterId equals d2.DokterId into d2Join
+                 join d2 in _applicationDbContext.Dokters on b.DokterKonsulenId equals d2.DokterId into d2Join
                  from d2 in d2Join.DefaultIfEmpty()
 
                  join po in _applicationDbContext.Polikliniks on k.PoliklinikId equals po.PoliklinikId into poJoin
@@ -1923,12 +1936,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      NamaDokterKonsulen = d2.NmDokter ?? null,
                      b.DiagnosaAwal,
                      b.Keterangan,
+                     b.PetugasPembatalan,
                      b.TTDPathPembatalan,
                      b.CreateDateTime,
                      b.TindakLanjut,
                      b.HasilPenunjangLab,
                      b.AnjuranDiet,
                      b.IsDelete,
+                     b.IsCito,
                      CreateBy = u.FullName
                  }).ToListAsync();
 
@@ -2184,12 +2199,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      NamaDokterKonsulen = d2.NmDokter ??null,
                      b.DiagnosaAwal,
                      b.Keterangan,
+                     b.PetugasPembatalan,
                      b.TTDPathPembatalan,
                      b.CreateDateTime,
                      b.TindakLanjut,
                      b.HasilPenunjangLab,
                      b.AnjuranDiet,
                      b.IsDelete,
+                     b.IsCito,
                      CreateBy = u.FullName
                  }).ToListAsync();
 
@@ -2443,12 +2460,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      NamaDokterKonsulen = d2.NmDokter ?? null,
                      b.DiagnosaAwal,
                      b.Keterangan,
+                     b.PetugasPembatalan,
                      b.TTDPathPembatalan,
                      b.CreateDateTime,
                      b.TindakLanjut,
                      b.HasilPenunjangLab,
                      b.AnjuranDiet,
                      b.IsDelete,
+                     b.IsCito,
                      CreateBy = u.FullName
                  }).ToListAsync();
 
