@@ -12,6 +12,7 @@ using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Models;
@@ -595,15 +596,28 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
-                //// **Cek Duplikasi**
-                //bool isDuplicate = _applicationDbContext.Benefits
-                //                    .Any(c => c.NamaBenefit == vm.NamaBenefit);
+                //// **Cek Obat**
+                var obat = await _applicationDbContext.Obats
+                                    .FirstOrDefaultAsync(c => c.ObatId == vm.ObatId);
 
-                //if (isDuplicate)
-                //{
-                //    return Conflict(new { message = "Nama benefit ini telah tersedia" });
-                //}
+                var qty=0;
+                var signa="";
+                if ((bool)vm.IsIntervensiFarmakologi)
+                {
+                    qty = 1;
+                    signa = "1x1";
+                }
+                else
+                {
+                    qty = (int)vm.Qty;
+                    signa = vm.Signa;
+                }
 
+                // cek data resep
+                var resep = await _applicationDbContext.Reseps.FirstOrDefaultAsync(c=>c.ResepId == vm.ResepId);
+
+                int billingIndex = await _applicationDbContext.Billings
+                .CountAsync(b => b.KunjunganId == resep.KunjunganId && b.JenisBilling.ToLower() == "obat");
                 //if (!DateTime.TryParseExact(vm.TglMulaiIteratur, "yyyy-MM-dd",
                 //    CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsedTglMulaiIteratur))
                 //{
@@ -622,40 +636,65 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
                 // **Buat Data Baru**
                 var data = new ResepDetail
-                {
-                    DetailResepId = Guid.NewGuid(),
-                    ResepId = vm.ResepId,
-                    AsuransiId = vm.AsuransiId,
-                    NamaAsuransi = vm.NamaAsuransi,
-                    ObatId = vm.ObatId,
-                    Qty = vm.Qty,
-                    TakaranDosis = vm.TakaranDosis,
-                    Signa = vm.Signa,
-                    SignaTambahan = vm.SignaTambahan,
-                    JenisObat = vm.JenisObat,
-                    HargaObat = vm.HargaObat,
-                    TotalHargaObat = vm.Qty.HasValue && vm.HargaObat.HasValue ? vm.Qty.Value * vm.HargaObat.Value : 0,
-                    StatusCoverObat = vm.StatusCoverObat,
-                    IsRacikan = vm.IsRacikan, // Tambahkan properti IsRacikan jika diperlukan
-                    //IsIteratur = vm.IsIteratur,
-                    //JumlahIteratur = vm.JumlahIteratur,
-                    //TglMulaiIteratur = parsedTglMulaiIteratur,
-                    //JarakPenebusan = vm.JarakPenebusan,
-                    //MasaAktifIteratur = parsedMasaAktif,
-                    StatusPengambilanObat = false, // Default nilai StatusPengambilanObat
-                    CaraPemakaian = vm.CaraPemakaian,
-                    EstimasiPemberian = vm.EstimasiPemberian,
-                    ObatPagiDiambil =  false,
-                    ObatSiangDiambil = false,
-                    ObatMalamDiambil = false,
-                    IsReturn = false,
-                    TglStopPemakaian = TryParseTanggalToUtc(vm.TglStopPemakaian),
-                    CreateBy = userActiveId,
-                    CreateDateTime = DateTimeOffset.UtcNow,
-                };
+                    {
+                        DetailResepId = Guid.NewGuid(),
+                        ResepId = vm.ResepId,
+                        AsuransiId = vm.AsuransiId,
+                        NamaAsuransi = vm.NamaAsuransi,
+                        ObatId = vm.ObatId,
+                        Qty = qty,
+                        TakaranDosis = obat.TakaranDosis,
+                        Signa = signa,
+                        SignaTambahan = vm.SignaTambahan,
+                        JenisObat = vm.JenisObat,
+                        HargaObat = obat.HTEPrice,
+                        TotalHargaObat = vm.Qty.HasValue && vm.HargaObat.HasValue ? qty * obat.HTEPrice : 0,
+                        StatusCoverObat = vm.StatusCoverObat,
+                        IsRacikan = vm.IsRacikan, // Tambahkan properti IsRacikan jika diperlukan
+                        IsIntervensiFarmakologi = vm.IsIntervensiFarmakologi, //inputan dari front end
+                        //IsIteratur = vm.IsIteratur,
+                        //JumlahIteratur = vm.JumlahIteratur,
+                        //TglMulaiIteratur = parsedTglMulaiIteratur,
+                        //JarakPenebusan = vm.JarakPenebusan,
+                        //MasaAktifIteratur = parsedMasaAktif,
+                        StatusPengambilanObat = false, // Default nilai StatusPengambilanObat
+                        StatusDiberikanPasien = vm.StatusDiberikanPasien,
+                        CaraPemakaian = vm.CaraPemakaian,
+                        EstimasiPemberian = vm.EstimasiPemberian,
+                        IsContinued = vm.IsContinued,
+                        IsObatDibawaPlg = false,
+                        ObatPagiDiambil = false,
+                        ObatSiangDiambil = false,
+                        ObatMalamDiambil = false,
+                        IsReturn = false,
+                        IsStopped = false,
+                        TglStopPemakaian = TryParseTanggalToUtc(vm.TglStopPemakaian),
+                        CreateBy = userActiveId,
+                        CreateDateTime = DateTimeOffset.UtcNow,
+                    };
 
                 // **Simpan ke Database**
                 _applicationDbContext.DetailReseps.Add(data);
+
+                    var billing = new Billing
+                    {
+                            KunjunganId = resep.KunjunganId,
+                            //DiskonId = vm.DiskonId,
+                            BillingDate = DateTime.UtcNow,
+                            BillingKode = $"{billingIndex:D3}",
+                            ItemId = data.ObatId,
+                            NamaItem = obat.ObatName,
+                            HargaItem = obat.HTEPrice,
+                            QtyItem = qty,
+                            SubTotalItem = obat.HTEPrice * qty,
+                            JenisBilling = "Obat",
+                            StatusPengambilan = true,
+                            CreateBy = getUserActive.UserActiveId,
+                            CreateDateTime = DateTimeOffset.UtcNow
+                    };
+
+                _applicationDbContext.Billings.Add(billing);
+
                 int result = await _applicationDbContext.SaveChangesAsync();
                 await _hubContext.Clients.All.SendAsync("ResepDetailCreated", new
                 {

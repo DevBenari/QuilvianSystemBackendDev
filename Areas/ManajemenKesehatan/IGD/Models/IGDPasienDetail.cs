@@ -14,6 +14,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Models
         public string? AlasanKeluar {  get; set; }
         public string? LokasiTrauma {  get; set; }
         public DateTime? TanggalTrauma { get; set; }
+        public bool? Status {  get; set; }
         public string? Keterangan {  get; set; }
     }
 }

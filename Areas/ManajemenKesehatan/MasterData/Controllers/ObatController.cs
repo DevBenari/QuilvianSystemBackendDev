@@ -104,6 +104,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     a.Kategori,
                     a.ItemId,
                     a.ObatRuteId,
+                    RuteObatNama = _applicationDbContext.ObatRutes
+                        .Where(bo => bo.RuteObatId == a.ObatRuteId)
+                        .Select(bo => bo.RuteObat)
+                        .FirstOrDefault(),
                     a.KategoriObat,
                     a.IsControlled,
                 }).OrderByDescending(a => a.CreateDateTime);
@@ -193,6 +197,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     a.Kategori,
                     a.ItemId,
                     a.ObatRuteId,
+                    RuteObatNama = _applicationDbContext.ObatRutes
+                        .Where(bo => bo.RuteObatId == a.ObatRuteId)
+                        .Select(bo => bo.RuteObat)
+                        .FirstOrDefault(),
                     a.KategoriObat,
                     a.IsControlled,
                 })
@@ -524,6 +532,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                   from bo in boJoin.DefaultIfEmpty()
                                   join s in _applicationDbContext.Satuans on a.SatuanId equals s.SatuanId into sJoin
                                   from s in sJoin.DefaultIfEmpty()
+
+                                  join or in _applicationDbContext.ObatRutes.AsNoTracking()
+                                  on a.ObatRuteId equals or.RuteObatId into orJoin
+                                  from or in orJoin.DefaultIfEmpty()
                                   select new
                                   {
                                       a.ObatId,
@@ -554,6 +566,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                       SatuanName = s.NamaSatuan,
                                       a.ItemId,
                                       a.ObatRuteId,
+                                      NamaObatRute=or.RuteObat,
                                       a.KategoriObat,
                                       a.IsControlled
                                   };

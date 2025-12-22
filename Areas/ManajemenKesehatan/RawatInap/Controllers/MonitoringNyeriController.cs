@@ -3,46 +3,51 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.HubSignalR;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.ViewModels;
+using QuilvianSystemBackendDev.Migrations;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class ObatRuteController : Controller
+    public class MonitoringNyeriController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-
-        private readonly ILogger<ObatRuteController> _logger;
+        private readonly IHubContext<MonitoringNyeriHub> _hubContext;
+        private readonly ILogger<MonitoringNyeriController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public ObatRuteController(
+        public MonitoringNyeriController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<ObatRuteController> logger,
-            IWebHostEnvironment webHostEnvironment)
+            ILogger<MonitoringNyeriController> logger,
+            IWebHostEnvironment webHostEnvironment,
+            IHubContext<MonitoringNyeriHub> hubContext)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+            _hubContext = hubContext;
         }
 
         [HttpGet]
@@ -53,19 +58,42 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = (from a in _applicationDbContext.ObatRutes
+            var query = (from x in _applicationDbContext.MonitoringNyeris
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false || a.IsDelete == null
+                         on x.CreateBy equals u.UserActiveId
+                         where x.IsDelete == false || x.IsDelete == null
                          select new
                          {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = u.FullName,
-                             a.RuteObatId,
-                             a.RuteObat,
-                             a.Keterangan,
-                         }).OrderByDescending(a => a.CreateDateTime);
+                             CreateBy = u.FullName,
+                             x.CreateDateTime,
+                             MonitoringNyeriId = x.MonitoringNyeriId,
+                             KunjunganId = x.KunjunganId,
+                             PasienId = x.PasienId,
+                             WaktuMonitoringNyeri = x.WaktuMonitoringNyeri,
+
+                             SkorNyeri = x.SkorNyeri,
+                             SkorSedasi = x.SkorSedasi,
+                             Sistolik = x.Sistolik,
+                             Diastolic = x.Diastolic,
+                             Nadi = x.Nadi,
+                             Respirasi = x.Respirasi,
+                             Suhu = x.Suhu,
+
+                             PerawatMonitoringId = x.PerawatMonitoringId,
+                             ParafPerawatMonitoring = x.ParafPerawatMonitoring,
+
+                             WaktuIntervensi = x.WaktuIntervensi,
+                             ObatId = x.ObatId,
+                             Dosis = x.Dosis,
+                             Rute = x.Rute,
+                             IntervensiNonFarmakologi = x.IntervensiNonFarmakologi,
+
+                             PerawatIntervensiId = x.PerawatIntervensiId,
+                             ParafPerawatIntervensi = x.ParafPerawatIntervensi,
+
+                             WaktuKajianUlang = x.WaktuKajianUlang,
+                             Keterangan = x.Keterangan
+                         }).OrderByDescending(x => x.CreateDateTime);
 
             // Hitung total data sebelum paginasi
             var totalRows = query.Count();
@@ -100,7 +128,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.ObatRutes.Find(id);
+            var listdata = _applicationDbContext.MonitoringNyeris.Find(id);
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -114,7 +142,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] ObatRuteViewModel vm)
+        public async Task<IActionResult> Create([FromBody] MonitoringNyeriViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -144,31 +172,61 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 //// **Cek Duplikasi**
-                bool isDuplicate = await _applicationDbContext.ObatRutes
-                                    .AnyAsync(c => c.RuteObat.ToLower().Trim() == vm.RuteObat.ToLower().Trim() && c.IsDelete == false);
+                //bool isDuplicate = await _applicationDbContext.Diskons
+                //                    .AnyAsync(c => c.NamaDiskon.ToLower().Trim() == vm.NamaDiskon.ToLower().Trim()
+                //                    && c.IsDelete == false);
 
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Nama rute obat ini telah tersedia" });
-                }
+                //if (isDuplicate)
+                //{
+                //    return Conflict(new { message = "Nama diskon ini telah tersedia" });
+                //}
 
                 // **Buat Data Baru**
-                var data = new ObatRute
+                var data = new MonitoringNyeri
                 {
-                    RuteObatId = Guid.NewGuid(),
-                    RuteObat = vm.RuteObat,
+                    MonitoringNyeriId = Guid.NewGuid(),
+                    KunjunganId = vm.KunjunganId,
+                    PasienId = vm.PasienId,
+                    WaktuMonitoringNyeri = vm.WaktuMonitoringNyeri,
+                    SkorNyeri = vm.SkorNyeri,
+                    SkorSedasi = vm.SkorSedasi,
+                    Sistolik = vm.Sistolik,
+                    Diastolic = vm.Diastolic,
+                    Nadi = vm.Nadi,
+                    Respirasi = vm.Respirasi,
+                    Suhu = vm.Suhu,
+
+                    PerawatMonitoringId = vm.PerawatMonitoringId,
+                    ParafPerawatMonitoring = vm.ParafPerawatMonitoring,
+
+                    WaktuIntervensi = vm.WaktuIntervensi,
+                    ObatId = vm.ObatId,
+                    Dosis = vm.Dosis,
+                    Rute = vm.Rute,
+                    IntervensiNonFarmakologi = vm.IntervensiNonFarmakologi,
+
+                    PerawatIntervensiId = vm.PerawatIntervensiId,
+                    ParafPerawatIntervensi = vm.ParafPerawatIntervensi,
+
+                    WaktuKajianUlang = vm.WaktuKajianUlang,
                     Keterangan = vm.Keterangan,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
 
                 // **Simpan ke Database**
-                _applicationDbContext.ObatRutes.Add(data);
+                _applicationDbContext.MonitoringNyeris.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
                 {
-                    return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
+                    await _hubContext.Clients.All.SendAsync("Monitoring Nyeri Created", new
+                    {
+                        Action = "create",
+                        id = data.MonitoringNyeriId
+                    });
+
+                    return Created("", new { message = "Tambah Data Berhasil || 201 Created", id = data.MonitoringNyeriId });
                 }
                 else
                 {
@@ -186,7 +244,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] ObatRuteViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] MonitoringNyeriViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -217,35 +275,62 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.ObatRutes.FindAsync(id);
-                if (data == null)
+                var entity = await _applicationDbContext.MonitoringNyeris.FindAsync(id);
+                if (entity == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
                 //// **Cek Duplikasi**
-                bool isDuplicate = await _applicationDbContext.ObatRutes
-                                    .AnyAsync(c => c.RuteObat.ToLower().Trim() == vm.RuteObat.ToLower().Trim() 
-                                    && c.IsDelete == false && c.RuteObatId!= id);
+                //bool isDuplicate = await _applicationDbContext.Diskons
+                //                    .AnyAsync(c => c.NamaDiskon.ToLower().Trim() == vm.NamaDiskon.ToLower().Trim()
+                //                    && c.IsDelete == false && c.DiskonId != id);
 
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Nama rute obat ini telah tersedia" });
-                }
+                //if (isDuplicate)
+                //{
+                //    return Conflict(new { message = "Nama diskon ini telah tersedia" });
+                //}
 
                 // **Update Data**
-                data.RuteObat = vm.RuteObat;
-                data.Keterangan = vm.Keterangan;
+                entity.WaktuMonitoringNyeri = vm.WaktuMonitoringNyeri;
+                entity.SkorNyeri = vm.SkorNyeri;
+                entity.SkorSedasi = vm.SkorSedasi;
+                entity.Sistolik = vm.Sistolik;
+                entity.Diastolic = vm.Diastolic;
+                entity.Nadi = vm.Nadi;
+                entity.Respirasi = vm.Respirasi;
+                entity.Suhu = vm.Suhu;
 
-                data.UpdateBy = userActiveId;
-                data.UpdateDateTime = DateTimeOffset.UtcNow;
+                entity.PerawatMonitoringId = vm.PerawatMonitoringId;
+                entity.ParafPerawatMonitoring = vm.ParafPerawatMonitoring;
 
-                _applicationDbContext.ObatRutes.Update(data);
+                entity.WaktuIntervensi = vm.WaktuIntervensi;
+                entity.ObatId = vm.ObatId;
+                entity.Dosis = vm.Dosis;
+                entity.Rute = vm.Rute;
+                entity.IntervensiNonFarmakologi = vm.IntervensiNonFarmakologi;
+
+                entity.PerawatIntervensiId = vm.PerawatIntervensiId;
+                entity.ParafPerawatIntervensi = vm.ParafPerawatIntervensi;
+
+                entity.WaktuKajianUlang = vm.WaktuKajianUlang;
+                entity.Keterangan = vm.Keterangan;
+
+                entity.UpdateBy = userActiveId;
+                entity.UpdateDateTime = DateTimeOffset.UtcNow;
+
+                _applicationDbContext.MonitoringNyeris.Update(entity);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
                 {
-                    return Ok(new { message = "Update Data Berhasil || 200 OK" });
+                    await _hubContext.Clients.All.SendAsync("Monitoring Nyeri Updated", new
+                    {
+                        Action = "update",
+                        id = entity.MonitoringNyeriId
+                    });
+
+                    return Ok(new { message = "Update Data Berhasil || 200 OK", id = entity.MonitoringNyeriId });
                 }
                 else
                 {
@@ -289,7 +374,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.ObatRutes.FindAsync(id);
+                var data = await _applicationDbContext.MonitoringNyeris.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -301,7 +386,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 data.IsDelete = true;
 
-                _applicationDbContext.ObatRutes.Update(data);
+                _applicationDbContext.MonitoringNyeris.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -323,12 +408,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-
         [HttpGet("paged")]
         public IActionResult Paged(
         int page = 1,
         int perPage = 10,
-        string? search = null,
+        Guid? kunjunganId = null,
+        Guid? pasienId = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -339,27 +424,69 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         {
 
             // Query data
-            var query = (from a in _applicationDbContext.ObatRutes
+            var query = (from x in _applicationDbContext.MonitoringNyeris
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false || a.IsDelete == null
+                         on x.CreateBy equals u.UserActiveId
+
+                         join o in _applicationDbContext.Obats
+                         on x.ObatId equals o.ObatId into oGroup
+                         from o in oGroup.DefaultIfEmpty()
+
+                         where x.IsDelete == false || x.IsDelete == null
                          select new
                          {
-                             a.CreateDateTime,
-                             a.CreateBy,
                              CreateByName = u.FullName,
-                             a.RuteObatId,
-                             a.RuteObat,
-                             a.Keterangan,
+                             x.CreateDateTime,
+                             MonitoringNyeriId = x.MonitoringNyeriId,
+                             KunjunganId = x.KunjunganId,
+                             PasienId = x.PasienId,
+                             WaktuMonitoringNyeri = x.WaktuMonitoringNyeri,
+
+                             SkorNyeri = x.SkorNyeri,
+                             SkorSedasi = x.SkorSedasi,
+                             Sistolik = x.Sistolik,
+                             Diastolic = x.Diastolic,
+                             Nadi = x.Nadi,
+                             Respirasi = x.Respirasi,
+                             Suhu = x.Suhu,
+
+                             PerawatMonitoringId = x.PerawatMonitoringId,
+                             ParafPerawatMonitoring = x.ParafPerawatMonitoring,
+
+                             WaktuIntervensi = x.WaktuIntervensi,
+                             ObatId = x.ObatId,
+                             NamaObat = o.ObatName,
+                             Dosis = x.Dosis,
+                             Rute = x.Rute,
+                             IntervensiNonFarmakologi = x.IntervensiNonFarmakologi,
+
+                             PerawatIntervensiId = x.PerawatIntervensiId,
+                             ParafPerawatIntervensi = x.ParafPerawatIntervensi,
+
+                             WaktuKajianUlang = x.WaktuKajianUlang,
+                             Keterangan = x.Keterangan
                          });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-            if (!string.IsNullOrWhiteSpace(search))
+            //if (!string.IsNullOrWhiteSpace(search))
+            //{
+            //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+            //    query = query.Where(u =>
+            //        EF.Functions.ILike(u.NamaDiskon, search)
+            //    );
+            //}
+
+            // filter based on kunjungan id
+            if (kunjunganId.HasValue)
             {
-                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-                query = query.Where(u =>
-                    EF.Functions.ILike(u.RuteObat, search)
-                );
+                query = query.Where(u=>u.KunjunganId == kunjunganId.Value);
+            }
+
+
+            // filter based on pasien id 
+            if (pasienId.HasValue)
+            {
+                query = query.Where(u => u.PasienId == pasienId.Value);
             }
 
             //// **Filter berdasarkan tanggal**
@@ -428,14 +555,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "RuteObat" => query.OrderByDescending(u => u.RuteObat),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
                     "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
                     "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    "RuteObat" => query.OrderBy(u => u.RuteObat),
                     _ => query.OrderBy(u => u.CreateDateTime)
                 };
 
@@ -463,7 +588,5 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
             });
         }
-
-
     }
 }

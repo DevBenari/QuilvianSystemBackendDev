@@ -1,4 +1,4 @@
-﻿namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels
+﻿namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels
 {
     public class ObatRuteViewModel
     {

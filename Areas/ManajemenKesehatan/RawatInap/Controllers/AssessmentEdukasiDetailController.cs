@@ -5,12 +5,14 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.ViewModels;
 using QuilvianSystemBackendDev.Interfaces;
@@ -33,6 +35,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         private readonly ILogger<AssessmentEdukasiDetailController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly string _uploadUrl;
+        private readonly IHubContext<AssessmentEdukasiDetailHub> _hubContext;
 
         public AssessmentEdukasiDetailController(
             ApplicationDbContext applicationDbContext,
@@ -41,7 +44,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             ILogger<AssessmentEdukasiDetailController> logger,
             IWebHostEnvironment webHostEnvironment,
             IConfiguration configuration,
-            ITTDService ttdService)
+            ITTDService ttdService,
+            IHubContext<AssessmentEdukasiDetailHub> hubContext)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
@@ -50,6 +54,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             _webHostEnvironment = webHostEnvironment;
             _uploadUrl = configuration["FileStorage:UploadUrl"];
             _ttdService = ttdService;
+            _hubContext = hubContext;
         }
 
         private DateTime? TryParseTanggalToUtc(string tanggal)
@@ -172,7 +177,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         }
 
         [HttpPost]
-        [Consumes("multipart/form-data")]
         [RequestSizeLimit(50_000_000)]
         [RequestFormLimits(MultipartBodyLengthLimit = 50_000_000)]
         public async Task<IActionResult> Create([FromForm] AssessmentEdukasiDetailViewModel vm)
@@ -200,53 +204,62 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
 
                 var userId = user.UserActiveId;
-
+                var detailId = Guid.NewGuid();
                 // ===============================
                 // 🔹 Helper upload file: hanya TTD Wali
                 // ===============================
-                async Task<string?> UploadTTDWaliAsync(IFormFile? file)
+                async Task<string?> UploadToFlaskAsync(IFormFile? file, string prefix)
                 {
                     if (file == null || file.Length == 0)
                         return null;
 
-                    var maxSize = 2 * 1024 * 1024; // 2MB
-                    var allowedExtensions = new[] { ".jpg", ".jpeg" };
+                    var allowedExt = new[] { ".jpg", ".jpeg" };
                     var ext = Path.GetExtension(file.FileName).ToLower();
 
-                    if (file.Length > maxSize)
-                        throw new Exception("File TTD Wali terlalu besar! Maksimal 2MB.");
+                    if (!allowedExt.Contains(ext))
+                        throw new Exception($"{prefix} harus JPG atau JPEG.");
 
-                    if (!allowedExtensions.Contains(ext))
-                        throw new Exception("Format file TTD Wali harus JPG atau JPEG.");
+                    if (file.Length > 5 * 1024 * 1024)
+                        throw new Exception($"{prefix} maksimal 5MB.");
 
-                    var safeTime = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
-                    var fileName = $"TTDWali_{user.FullName}_{safeTime}{ext}".Replace(" ", "_");
+                    var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
+                    var fileName = $"{detailId}_{prefix}_{safeTime}{ext}";
 
-                    using var client = new HttpClient();
-                    await using var ms = new MemoryStream();
+                    // 👉 Sesuaikan nama folder dengan kebutuhan kamu
+                    var folderTarget = "TTDKeluargaPasien";
+                    var filePath = $"/{folderTarget}/{fileName}";
+
+                    using var ms = new MemoryStream();
                     await file.CopyToAsync(ms);
                     ms.Position = 0;
 
-                    var content = new MultipartFormDataContent
-            {
-                { new StreamContent(ms) { Headers = { ContentType = new MediaTypeHeaderValue(file.ContentType) } }, "file", fileName },
-                { new StringContent("TTDEdukasi"), "folderTarget" }
-            };
+                    var contentType = string.IsNullOrWhiteSpace(file.ContentType)
+                        ? "image/jpeg"
+                        : file.ContentType;
 
-                    var response = await client.PostAsync(_uploadUrl, content);
+                    var fileContent = new StreamContent(ms);
+                    fileContent.Headers.ContentType =
+                        new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+
+                    using var form = new MultipartFormDataContent();
+                    form.Add(fileContent, "file", fileName);
+                    form.Add(new StringContent(folderTarget), "folderTarget");
+
+                    using var client = new HttpClient();
+                    var response = await client.PostAsync(_uploadUrl, form);
+
                     if (!response.IsSuccessStatusCode)
-                        throw new Exception("Gagal upload TTD Wali ke server Flask.");
+                        throw new Exception($"Gagal upload {prefix} ke Flask.");
 
-                    var body = await response.Content.ReadAsStringAsync();
-                    dynamic json = JsonConvert.DeserializeObject(body);
-
-                    return json.fileUrl;
+                    // ⚠ Di sini kita pakai pola yang sama seperti UpdatePenandaan:
+                    //     tidak baca JSON dari Flask, tapi pakai path lokal yang sudah dibentuk
+                    return filePath;
                 }
 
                 // ===============================
                 // 🔹 Upload hanya TTD Wali
                 // ===============================
-                string? ttdWaliPath = await UploadTTDWaliAsync(vm.TTDWali);
+                string? ttdWaliPath = await UploadToFlaskAsync(vm.TTDWali, "TTDWaliAssesmetEdukasi");
 
 
                 // cek ttd perawat
@@ -257,7 +270,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 // ===============================
                 var data = new AssesmentEdukasiDetail
                 {
-                    DetailAsesmenEdukasiId = Guid.NewGuid(),
+                    DetailAsesmenEdukasiId = detailId,
                     AsesmenEdukasiId = vm.AsesmenEdukasiId,
                     TopikEdukasiId = vm.TopikEdukasiId,
                     TglDetailAsesmenEdukasi = vm.TglDetailAsesmenEdukasi,
@@ -285,14 +298,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
+                {
+                    await _hubContext.Clients.All.SendAsync("Assessment Edukasi Detail Created", new
+                    {
+                        Action = "create",
+                        id = data.DetailAsesmenEdukasiId
+                    });
+
                     return Created("",
-                        new
-                        {
-                            message = "Berhasil menambahkan Detail Asesmen Edukasi",
-                            id = data.DetailAsesmenEdukasiId,
-                            ttdWaliPath,
-                            ttdPerawatPath = ttd.Path
-                        });
+                    new
+                    {
+                        message = "Berhasil menambahkan Detail Asesmen Edukasi",
+                        id = data.DetailAsesmenEdukasiId,
+                        ttdWaliPath,
+                        ttdPerawatPath = ttd.Path
+                    });
+                }
 
                 return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
             }
@@ -302,14 +323,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             }
         }
 
-
         [HttpPut("{id}")]
         [Consumes("multipart/form-data")]
         [RequestSizeLimit(50_000_000)]
         [RequestFormLimits(MultipartBodyLengthLimit = 50_000_000)]
         public async Task<IActionResult> Update(Guid id,[FromForm] AssessmentEdukasiDetailViewModel vm)
         {
-            if (vm == null || !vm.DetailAsesmenEdukasiId.HasValue)
+            if (vm == null )
                 return BadRequest(new { message = "DetailAsesmenEdukasiId wajib ada." });
 
             try
@@ -429,6 +449,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 entity.UpdateDateTime = DateTimeOffset.UtcNow;
 
                 await _applicationDbContext.SaveChangesAsync();
+
+                await _hubContext.Clients.All.SendAsync("Assessment Edukasi Detail Update", new
+                {
+                    Action = "update",
+                    id = entity.DetailAsesmenEdukasiId
+                });
+
 
                 return Ok(new
                 {

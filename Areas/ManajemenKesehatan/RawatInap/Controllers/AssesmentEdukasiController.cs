@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -10,6 +11,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Controllers
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.ViewModels;
 using QuilvianSystemBackendDev.Models;
@@ -27,7 +29,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-
+        private readonly IHubContext<AssessmentEdukasiHub> _hubContext;
         private readonly ILogger<AssesmentEdukasiController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
@@ -36,13 +38,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ILogger<AssesmentEdukasiController> logger,
-            IWebHostEnvironment webHostEnvironment)
+            IWebHostEnvironment webHostEnvironment,
+            IHubContext<AssessmentEdukasiHub> hubContext)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+            _hubContext = hubContext;
         }
 
         [HttpGet]
@@ -194,6 +198,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                 if (result > 0)
                 {
+                    await _hubContext.Clients.All.SendAsync("Assessment Edukasi Created", new
+                    {
+                        Action = "create",
+                        id = data.AsesmenEdukasiId
+                    });
+
                     return Created
                         ("", 
                         new { 
@@ -279,6 +289,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                 if (result > 0)
                 {
+                    await _hubContext.Clients.All.SendAsync("Assessment Edukasi Update", new
+                    {
+                        Action = "update",
+                        id = existingData.AsesmenEdukasiId
+                    });
+
                     return Ok(new
                     {
                         message = "Update Data Berhasil || 200 Updated",

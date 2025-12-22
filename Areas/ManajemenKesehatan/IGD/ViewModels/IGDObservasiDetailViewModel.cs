@@ -8,7 +8,8 @@
         public Guid? ObatId { get; set; }
         public string? GambaranEKG { get; set; }
         public string? DCShock { get; set; }
-        public decimal? TD { get; set; }                  // Tekanan Darah
+        public decimal? TekananDarahSystolic { get; set; }
+        public decimal? TekananDarahDiastolic { get; set; }            
         public decimal? RR { get; set; }                  // Respiratory Rate
         public decimal? Suhu { get; set; }
         public decimal? SPO2 { get; set; }

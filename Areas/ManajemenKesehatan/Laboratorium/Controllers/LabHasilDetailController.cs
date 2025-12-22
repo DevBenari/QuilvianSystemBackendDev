@@ -507,6 +507,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         int page = 1,
         int perPage = 10,
         Guid? kunjunganId = null,
+        Guid? labbookingid = null,
+        string? namaLab =null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -524,6 +526,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                          join b in _applicationDbContext.LabHasils
                          on a.HasilLabId equals b.HasilLabId into bGroup
                          from b in bGroup.DefaultIfEmpty()
+
+                         join c in _applicationDbContext.Labs
+                         on b.LabId equals c.LabId into cGroup
+                         from c in cGroup.DefaultIfEmpty()  
 
                          where a.IsDelete == false || a.IsDelete == null
                          select new
@@ -562,21 +568,37 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.JamSpecimen,
                              a.InfoNReff,
                              a.Keterangan,
+
+                             // ttg Lab hasil
+                             b.LabId,
+                             NamaLab = c.NamaLab,
+                             b.LabBookingId,
+                             b.UserActiveId,
+                             b.PenanggungJawabAnalisId,
+                             b.PenanggungJawabId,
+                             b.TanggalPemeriksaan,
+                             KeteranganLabHasil = b.Keterangan,
                          });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-            //if (!string.IsNullOrWhiteSpace(search))
-            //{
-            //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-            //    query = query.Where(u =>
-            //        EF.Functions.ILike(u.NamaDiskon, search)
-            //    );
-            //}
+            if (!string.IsNullOrWhiteSpace(namaLab))
+            {
+                namaLab = $"%{namaLab.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+                query = query.Where(u =>
+                    EF.Functions.ILike(u.NamaLab, namaLab)
+                );
+            }
 
             // filter based on kunjungan id
             if (kunjunganId.HasValue)
             {
                 query = query.Where(u=>u.KunjunganId == kunjunganId.Value);
+            }
+
+            // lab booking id
+            if (labbookingid.HasValue)
+            {
+                query = query.Where(u => u.LabBookingId == labbookingid.Value);
             }
 
             //// **Filter berdasarkan tanggal**

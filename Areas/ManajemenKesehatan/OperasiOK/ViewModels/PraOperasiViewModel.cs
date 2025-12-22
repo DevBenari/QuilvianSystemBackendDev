@@ -30,9 +30,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.ViewModels
         // Relasi ke tabel TTD
         public Guid? TTDPerawatRuanganId { get; set; } //ke-1
 
-        // Path file tanda tangan
-        public string? TTDPerawatRuanganPath { get; set; }
-
         //// Penandaan Operasi
         //public string? PenandaanOperasiBag1 { get; set; }
         //public string? PenandaanOperasiBag2 { get; set; }

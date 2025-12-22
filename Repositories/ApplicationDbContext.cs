@@ -6,6 +6,7 @@ using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.HRD.Pengajuan.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Gizi.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.Models;
@@ -294,6 +295,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<ResikoJatuh> ResikoJatuhs { get; set; }
         public DbSet<PenilaianResikoJatuhDetail> PenilaianResikoJatuhDetails { get; set; }
         public DbSet<CatatanPerawat> CatatanPerawats { get; set; }
+        public DbSet<MonitoringNyeri> MonitoringNyeris { get; set; }
         #endregion
 
         #region Farmasi
@@ -307,6 +309,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<ResepTelaah> ResepTelaahs { get; set; }
         public DbSet<ObatSubstitusi> ObatSubstitusis { get; set; }
         public DbSet<ObatTelaah> ObatTelaahs { get; set; }
+        public DbSet<ObatRuteDetail> ObatRuteDetails { get; set; }
 
         #endregion
 
@@ -377,6 +380,12 @@ namespace QuilvianSystemBackendDev.Repositories
         #region MCU
         public DbSet<PaketMCU> PaketMCUs { get; set; }
         public DbSet<ModulMCU> ModulMCUs { get; set; }
+        #endregion
+
+        #region ALKES
+        public DbSet<AlatPemakaian> AlatPemakaians { get; set; }
+        public DbSet<AlatPemakaianDetail> AlatPemakaianDetails { get; set; }
+
         #endregion
     }
 }

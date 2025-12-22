@@ -105,7 +105,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                         DosisObat = o != null ? o.Dosis : null,
                         d.GambaranEKG,
                         d.DCShock,
-                        d.TD,
+                        d.TekananDarahDiastolic,
+                        d.TekananDarahSystolic,
                         d.RR,
                         d.Suhu,
                         d.SPO2,
@@ -224,7 +225,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                         GambaranEKG = d.GambaranEKG,
                         DCShock = d.DCShock,
 
-                        TD = d.TD,
+                        TekananDarahDiastolic = d.TekananDarahDiastolic,
+                        TekananDarahSystolic = d.TekananDarahSystolic,
                         RR = d.RR,
                         Suhu = d.Suhu,
                         SPO2 = d.SPO2,
@@ -360,7 +362,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                         old.ObatId = detail.ObatId;
                         old.GambaranEKG = detail.GambaranEKG;
                         old.DCShock = detail.DCShock;
-                        old.TD = detail.TD;
+                        old.TekananDarahSystolic = detail.TekananDarahSystolic;
+                        old.TekananDarahDiastolic = detail.TekananDarahDiastolic;
                         old.RR = detail.RR;
                         old.Suhu = detail.Suhu;
                         old.SPO2 = detail.SPO2;
@@ -388,7 +391,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                             ObatId = detail.ObatId,
                             GambaranEKG = detail.GambaranEKG,
                             DCShock = detail.DCShock,
-                            TD = detail.TD,
+                            TekananDarahDiastolic = detail.TekananDarahDiastolic,
+                            TekananDarahSystolic = detail.TekananDarahSystolic,
                             RR = detail.RR,
                             Suhu = detail.Suhu,
                             SPO2 = detail.SPO2,
@@ -695,7 +699,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                     DosisObat = o != null ? o.Dosis : null,
                     d.GambaranEKG,
                     d.DCShock,
-                    d.TD,
+                    d.TekananDarahDiastolic,
+                    d.TekananDarahSystolic,
                     d.RR,
                     d.Suhu,
                     d.SPO2,

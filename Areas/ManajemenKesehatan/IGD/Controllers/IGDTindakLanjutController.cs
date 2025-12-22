@@ -49,21 +49,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 var data = await (from a in _applicationDbContext.IGDTindakLanjuts
                                   join u1 in _applicationDbContext.UserActives
                                       on a.CreateBy equals u1.UserActiveId into u1Group
-                                  from createBy in u1Group.DefaultIfEmpty()
+                                  from u1 in u1Group.DefaultIfEmpty()
 
-                                  join u2 in _applicationDbContext.UserActives
-                                      on a.UpdateBy equals u2.UserActiveId into u2Group
-                                  from updateBy in u2Group.DefaultIfEmpty()
-
+                                  join b in _applicationDbContext.Beds
+                                  on a.BedId equals b.BedId into bGroup
+                                  from b in bGroup.DefaultIfEmpty()
                                   where a.TindakLanjutIgdId == id
                                         && (a.IsDelete == false || a.IsDelete == null)
-
                                   select new
                                   {
                                       a.TindakLanjutIgdId,
                                       a.KunjunganId,
                                       a.PasienId,
-                                      a.KamarId,
+                                      a.BedId,
+                                      b.NomorBed,
+                                      b.Deskripsi,
 
                                       a.WaktuPindah,
                                       a.TindakanLanjutan,
@@ -86,7 +86,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
                                       // Vital Sign
                                       a.Suhu,
-                                      a.TD,
+                                      a.TekananDarahSystolic,
+                                      a.TekananDarahDiastolic,
                                       a.Nadi,
                                       a.RR,
                                       a.SPO2,
@@ -112,11 +113,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
                                       // Audit
                                       a.CreateBy,
-                                      CreateByName = createBy.FullName,
+                                      CreateByName = u1.FullName,
                                       a.CreateDateTime,
 
                                       a.UpdateBy,
-                                      UpdateByName = updateBy.FullName,
+                                      UpdateByName = u1.FullName,
                                       a.UpdateDateTime
                                   }).FirstOrDefaultAsync();
 
@@ -170,7 +171,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
                     KunjunganId = vm.KunjunganId,
                     PasienId = vm.PasienId,
-                    KamarId = vm.KamarId,
+                    BedId = vm.BedId,
 
                     WaktuPindah = vm.WaktuPindah,
 
@@ -194,7 +195,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                     Reaksi = vm.Reaksi,
 
                     Suhu = vm.Suhu,
-                    TD = vm.TD,
+                    TekananDarahDiastolic = vm.TekananDarahDiastolic,
+                    TekananDarahSystolic = vm.TekananDarahSystolic,
                     Nadi = vm.Nadi,
                     RR = vm.RR,
                     SPO2 = vm.SPO2,
@@ -295,7 +297,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 // --- Update fields ---
                 data.KunjunganId = vm.KunjunganId;
                 data.PasienId = vm.PasienId;
-                data.KamarId = vm.KamarId;
+                data.BedId = vm.BedId;
 
                 data.WaktuPindah = vm.WaktuPindah;
 
@@ -319,7 +321,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 data.Reaksi = vm.Reaksi;
 
                 data.Suhu = vm.Suhu;
-                data.TD = vm.TD;
+                data.TekananDarahDiastolic = vm.TekananDarahDiastolic;
+                data.TekananDarahSystolic = vm.TekananDarahSystolic;
                 data.Nadi = vm.Nadi;
                 data.RR = vm.RR;
                 data.SPO2 = vm.SPO2;
@@ -386,7 +389,117 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
             }
         }
 
+        [HttpPut("IGDPulang/{id}")]
+        public async Task<IActionResult> UpdateWaktuPulangIGD(Guid id, [FromBody] DateTime? date)
+        {
+            if (date == null || !ModelState.IsValid)
+                return BadRequest(new { message = "Data tidak valid." });
 
+            try
+            {
+                if (!_applicationDbContext.Database.CanConnect())
+                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+
+                // Ambil user login dari JWT
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin))
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+
+                if (getUserActive == null)
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+
+                var userActiveId = getUserActive.UserActiveId;
+
+                var data = await _applicationDbContext.IGDTindakLanjuts
+                    .FirstOrDefaultAsync(a => a.TindakLanjutIgdId == id && (a.IsDelete == false || a.IsDelete == null));
+
+                if (data == null)
+                    return NotFound(new { message = $"Data Tindak Lanjut IGD dengan ID {id} tidak ditemukan." });
+
+                // --- Update fields ---
+                data.WaktuDipulangkan = date;
+
+                data.UpdateBy = userActiveId;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
+
+                _applicationDbContext.IGDTindakLanjuts.Update(data);
+                int result = await _applicationDbContext.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    return Ok(new
+                    {
+                        message = "Update Data Tindak Lanjut IGD Berhasil || 200 OK",
+                        id = data.TindakLanjutIgdId
+                    });
+                }
+
+                return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
+        [HttpPut("IGDMeninggal/{id}")]
+        public async Task<IActionResult> UpdateWaktuMeninggalIGD(Guid id, [FromBody] DateTime? date)
+        {
+            if (date == null || !ModelState.IsValid)
+                return BadRequest(new { message = "Data tidak valid." });
+
+            try
+            {
+                if (!_applicationDbContext.Database.CanConnect())
+                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+
+                // Ambil user login dari JWT
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin))
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+
+                if (getUserActive == null)
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+
+                var userActiveId = getUserActive.UserActiveId;
+
+                var data = await _applicationDbContext.IGDTindakLanjuts
+                    .FirstOrDefaultAsync(a => a.TindakLanjutIgdId == id && (a.IsDelete == false || a.IsDelete == null));
+
+                if (data == null)
+                    return NotFound(new { message = $"Data Tindak Lanjut IGD dengan ID {id} tidak ditemukan." });
+
+                // --- Update fields ---
+                data.TanggalMeninggal = date;
+
+                data.UpdateBy = userActiveId;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
+
+                _applicationDbContext.IGDTindakLanjuts.Update(data);
+                int result = await _applicationDbContext.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    return Ok(new
+                    {
+                        message = "Update Data Tindak Lanjut IGD Berhasil || 200 OK",
+                        id = data.TindakLanjutIgdId
+                    });
+                }
+
+                return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
 
         [HttpGet("paged")]
         public async Task<IActionResult> PagedAsync(
@@ -405,13 +518,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                         join u in _applicationDbContext.UserActives
                             on a.CreateBy equals u.UserActiveId into uGroup
                         from u in uGroup.DefaultIfEmpty()
+
+                        join b in _applicationDbContext.Beds
+                        on a.BedId equals b.BedId into bGroup
+                        from b in bGroup.DefaultIfEmpty()
+
                         where a.IsDelete == false || a.IsDelete == null
                         select new
                         {
                             a.TindakLanjutIgdId,
                             a.KunjunganId,
                             a.PasienId,
-                            a.KamarId,
+                            a.BedId,
+                            b.NomorBed,
+                            b.Deskripsi,
                             a.WaktuPindah,
                             a.TindakanLanjutan,
                             a.StatusPasien,
@@ -433,7 +553,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
                             // Vital Sign
                             a.Suhu,
-                            a.TD,
+                            a.TekananDarahDiastolic,
+                            a.TekananDarahSystolic,
                             a.Nadi,
                             a.RR,
                             a.SPO2,

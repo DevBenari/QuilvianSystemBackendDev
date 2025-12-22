@@ -989,15 +989,15 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
             }
         }
 
-        [HttpGet("UbahPassword/{userActiveId}")]
-        public async Task<IActionResult> UbahPasswordById(Guid userActiveId, [FromQuery] string newPassword)
+        [HttpPut("UbahPassword/{userActiveId}")]
+        public async Task<IActionResult> UbahPasswordById(Guid userActiveId, [FromBody] UbahPasswordViewModel vm)
         {
             if (userActiveId == Guid.Empty)
             {
                 return BadRequest(new { message = "UserActiveId tidak boleh kosong." });
             }
 
-            if (string.IsNullOrWhiteSpace(newPassword))
+            if (string.IsNullOrWhiteSpace(vm.Password))
             {
                 return BadRequest(new { message = "Password baru harus diisi." });
             }
@@ -1022,7 +1022,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
 
                 // 🔑 Generate token dan ubah password
                 var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-                var result = await _userManager.ResetPasswordAsync(user, token, newPassword);
+                var result = await _userManager.ResetPasswordAsync(user, token, vm.Password);
 
                 if (!result.Succeeded)
                 {
@@ -1222,6 +1222,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
         public IActionResult PagedUserActive(
         int page = 1,
         int perPage = 10,
+        Guid? id = null,
         string? search = null,
         string? email = null,
         string? pathTTD = null,
@@ -1315,14 +1316,20 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                              TTDPath = td != null ? td.TTDPath : null,
                          });
 
+            // filter based on user active id
+            if (id.HasValue)
+            {
+                query = query.Where(u=>u.UserActiveId == id.Value);
+            }
+
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             if (!string.IsNullOrWhiteSpace(search))
             {
                 search = $"%{search.ToLower()}%"; 
                 query = query.Where(u =>
                     EF.Functions.ILike(u.FullName, search) ||
-                    EF.Functions.ILike(u.CreateByName, search)  ||
                     EF.Functions.ILike(u.Email, search) ||
+                    EF.Functions.ILike(u.CreateByName, search)  ||
                     EF.Functions.ILike(u.NamaTipeUser, search)
                 );
             }
