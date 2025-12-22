@@ -76,6 +76,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.PasienId,
                              a.UserActivePerawatId,
                              a.TglObservasi,
+                             a.Intake,
+                             a.Outake,
                              a.CairanMasuk,
                              a.CairanSisa,
                              a.CairanKeluar,
@@ -245,6 +247,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     KunjunganId = vm.KunjunganId,
                     PasienId = vm.PasienId,
                     UserActivePerawatId = vm.UserActivePerawatId,
+                    Intake = vm.Intake,
+                    Outake = vm.Outake,
                     CairanMasuk =vm.CairanMasuk,
                     CairanKeluar = vm.CairanKeluar,
                     CairanSisa = vm.CairanSisa,
@@ -391,6 +395,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 existing.KunjunganId = vm.KunjunganId;
                 existing.PasienId = vm.PasienId;
                 existing.UserActivePerawatId = vm.UserActivePerawatId;
+                existing.Intake = vm.Intake;
+                existing.Outake = vm.Outake;
                 existing.CairanMasuk = vm.CairanMasuk;
                 existing.CairanKeluar = vm.CairanKeluar;
                 existing.CairanSisa = vm.CairanSisa;
@@ -510,6 +516,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.PasienId,
                              a.UserActivePerawatId,
                              a.TglObservasi,
+                             a.Intake,
+                             a.Outake,
                              a.CairanMasuk,
                              a.CairanKeluar,
                              a.CairanSisa,

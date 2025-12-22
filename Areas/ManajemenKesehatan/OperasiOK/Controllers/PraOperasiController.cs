@@ -332,7 +332,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                     PasienId = vm.PasienId,
                     PainAssessmentId = vm.PainAssessmentId,
                     VitalSignId = vm.VitalSignId,
-
                     StatusMental = vm.StatusMental,
                     PengobatanSaatIni = vm.PengobatanSaatIni,
                     AlatBantu = vm.AlatBantu,
