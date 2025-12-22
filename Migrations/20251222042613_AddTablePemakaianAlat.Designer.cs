@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -12,9 +13,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251222042613_AddTablePemakaianAlat")]
+    partial class AddTablePemakaianAlat
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1674,100 +1676,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.HasKey("TicketId");
 
                     b.ToTable("Hrd_PengajuanTiketing", "public");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Models.AlatPemakaian", b =>
-                {
-                    b.Property<Guid>("PemakaianAlatId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("CreateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("DeleteBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("DeleteDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsDelete")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Keterangan")
-                        .HasColumnType("text");
-
-                    b.Property<Guid?>("KunjunganId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("PasienId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("TanggalPemakaian")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("UpdateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("UpdateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("PemakaianAlatId");
-
-                    b.ToTable("AlatPemakaians");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Models.AlatPemakaianDetail", b =>
-                {
-                    b.Property<Guid>("DetailPemakaianAlatId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("CreateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("DeleteBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("DeleteDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<decimal?>("HargaPeralatan")
-                        .HasColumnType("numeric");
-
-                    b.Property<bool>("IsDelete")
-                        .HasColumnType("boolean");
-
-                    b.Property<decimal?>("Keterangan")
-                        .HasColumnType("numeric");
-
-                    b.Property<Guid?>("PemakaianAlatId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("PeralatanId")
-                        .HasColumnType("uuid");
-
-                    b.Property<int?>("QtyPemakaian")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal?>("TotalPemakaianAlat")
-                        .HasColumnType("numeric");
-
-                    b.Property<Guid>("UpdateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("UpdateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("DetailPemakaianAlatId");
-
-                    b.ToTable("AlatPemakaianDetails");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models.DetailPenerimaanUnit", b =>

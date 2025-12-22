@@ -202,6 +202,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.IsPresent,
                         a.Antrian,
                         a.IsFinishedKasir,
+                        a.IsTriage,
+                        a.IsCTTPasienIGD,
                         TglMasukKunjungan = a.TglMasuk,
                         a.CaraMasukRS,
                         a.KondisiKeluar,
@@ -278,6 +280,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         r.IsFinished,
                         r.IsScreening,
                         r.IsPresent,
+                        r.IsTriage,
+                        r.IsCTTPasienIGD,
                         r.Antrian,
                         TglMasukKunjungan = r.TglMasuk,
                         r.CaraMasukRS,
@@ -441,6 +445,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.IsFinished,
                         a.IsScreening,
                         a.IsPresent,
+                        a.IsTriage,
+                        a.IsCTTPasienIGD,
                         a.Antrian,
                         TglMasukKunjungan = a.TglMasuk,
                         a.CaraMasukRS,
@@ -633,6 +639,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     IsScreening = false,
                     IsPresent = true,
                     IsFinishedKasir = false,
+                    IsTriage = false,
+                    IsCTTPasienIGD = false,
                     Antrian = nomorAntrianFormatted, // null jika IGD
                     AsalKunjungan = request.AsalKunjungan,
                     TglMasuk = request.TglMasuk,
@@ -1226,6 +1234,66 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             return Ok(new { message = "Status IsScreening berhasil diperbarui." });
         }
 
+        [HttpPut("{id}/is-Triage")]
+        public async Task<IActionResult> UpdateIsTriage(Guid id, [FromBody] UpdateStatusKunjungan request)
+        {
+            var kunjungan = await _applicationDbContext.Kunjungans.FindAsync(id);
+            if (kunjungan == null)
+                return NotFound(new { message = "Kunjungan tidak ditemukan." });
+
+            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(EmailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var userId = user?.UserActiveId ?? Guid.Empty;
+
+            kunjungan.IsTriage = request.Status;
+            kunjungan.UpdateDateTime = DateTimeOffset.UtcNow;
+            kunjungan.UpdateBy = userId;
+            await _applicationDbContext.SaveChangesAsync();
+
+            // Notifikasi SignalR
+            await _hubContext.Clients.All.SendAsync("isTriage Changed", new
+            {
+                action = "updateIsCTTPasienIGD",
+                kunjunganId = kunjungan.KunjunganID,
+                isTriage = request.Status
+            });
+
+            return Ok(new { message = "Status isTriage berhasil diperbarui." });
+        }
+
+        [HttpPut("{id}/is-CTTPasienIGD")]
+        public async Task<IActionResult> UpdateIsCTTPasienIGD(Guid id, [FromBody] UpdateStatusKunjungan request)
+        {
+            var kunjungan = await _applicationDbContext.Kunjungans.FindAsync(id);
+            if (kunjungan == null)
+                return NotFound(new { message = "Kunjungan tidak ditemukan." });
+
+            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(EmailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var userId = user?.UserActiveId ?? Guid.Empty;
+
+            kunjungan.IsCTTPasienIGD = request.Status;
+            kunjungan.UpdateDateTime = DateTimeOffset.UtcNow;
+            kunjungan.UpdateBy = userId;
+            await _applicationDbContext.SaveChangesAsync();
+
+            // Notifikasi SignalR
+            await _hubContext.Clients.All.SendAsync("IsCTTPasienIGD Changed", new
+            {
+                action = "updateIsCTTPasienIGD",
+                kunjunganId = kunjungan.KunjunganID,
+                IsCTTPasienIGD = request.Status
+            });
+
+            return Ok(new { message = "Status IsCTTPasienIGD berhasil diperbarui." });
+        }
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
@@ -1398,6 +1466,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.IsFinished,
                         a.IsScreening,
                         a.IsPresent,
+                        a.IsTriage,
+                        a.IsCTTPasienIGD,
                         a.Antrian,
                         TglMasukKunjungan = a.TglMasuk,
                         a.CaraMasukRS,
