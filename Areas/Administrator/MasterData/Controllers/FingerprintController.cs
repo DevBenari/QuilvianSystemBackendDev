@@ -77,18 +77,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                 return BadRequest(new { message = "Template fingerprint tidak valid" });
 
             try
-            {
-                var existing = await _db.Fingerprints
-                    .FirstOrDefaultAsync(x => x.UserId == vm.UserId);
-
-                if (existing != null)
-                {
-                    existing.Template = vm.Template;
-                    existing.CreateDateTime = DateTime.UtcNow;
-                    _db.Fingerprints.Update(existing);
-                }
-                else
-                {
+            {                
                     var newData = new Fingerprint
                     {
                         FingerprintId = Guid.NewGuid(),
@@ -100,7 +89,6 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                     };
 
                     await _db.Fingerprints.AddAsync(newData);
-                }
 
                 await _db.SaveChangesAsync();
 
