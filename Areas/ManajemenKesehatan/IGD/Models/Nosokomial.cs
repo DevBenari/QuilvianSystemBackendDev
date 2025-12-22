@@ -28,6 +28,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Models
         public Guid? KepalaRuanganId { get; set; }
         public string? TTDPerawat { get; set; } // File path / Base64 signature
         public Guid? PerawatId { get; set; }
+        public bool? Status { get; set; }
 
     }
 }
