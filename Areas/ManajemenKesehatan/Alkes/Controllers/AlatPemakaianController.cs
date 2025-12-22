@@ -374,7 +374,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
 
                             HargaItem = alatDb.TarifRs,
                             QtyItem = qtyInput,
-                            SubTotalItem = billing.HargaItem * billing.QtyItem,
+                            SubTotalItem = alatDb.TarifRs * qtyInput,
 
                             JenisBilling = "Alkes",
                             StatusPengambilan = true,
@@ -618,10 +618,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
             string? sortDirection = "desc",
 
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-    DateTime? startDate = null,
+            DateTime? startDate = null,
 
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-    DateTime? endDate = null,
+            DateTime? endDate = null,
 
             [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null
         )
