@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -12,9 +13,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251222063218_AddKolomPeralatanIdDanKelasId")]
+    partial class AddKolomPeralatanIdDanKelasId
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1747,8 +1749,8 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<Guid?>("KelasId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Keterangan")
-                        .HasColumnType("text");
+                    b.Property<decimal?>("Keterangan")
+                        .HasColumnType("numeric");
 
                     b.Property<Guid?>("PemakaianAlatId")
                         .HasColumnType("uuid");
@@ -10965,20 +10967,11 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<DateTimeOffset>("DeleteDateTime")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid?>("DepartementId")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("Disposition")
                         .HasColumnType("text");
 
-                    b.Property<Guid?>("DokterPemeriksaId")
-                        .HasColumnType("uuid");
-
                     b.Property<bool>("IsDelete")
                         .HasColumnType("boolean");
-
-                    b.Property<Guid?>("KelasId")
-                        .HasColumnType("uuid");
 
                     b.Property<Guid>("KunjunganId")
                         .HasColumnType("uuid");

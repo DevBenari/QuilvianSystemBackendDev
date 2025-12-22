@@ -19,6 +19,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
         public string? KondisiKeluar { get; set; }
 
         public bool? IsTriage { get; set; }
-        public string? IsCTTPasienIGD { get; set; }
+        public bool? IsCTTPasienIGD { get; set; }
     }
 }

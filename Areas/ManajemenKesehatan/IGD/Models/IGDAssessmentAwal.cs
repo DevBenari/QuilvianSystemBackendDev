@@ -24,6 +24,5 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Models
         public string? TanggalPencatatan { get; set; }
         public string? HasilAlloanamnesis {get; set;}
         public bool? IsAnamnesis { get; set; }
-
     }
 }

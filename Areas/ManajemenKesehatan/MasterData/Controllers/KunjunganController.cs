@@ -1630,6 +1630,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         r.IsFinished,
                         r.IsScreening,
                         r.IsPresent,
+                        r.IsTriage,
+                        r.IsCTTPasienIGD,
                         TglMasukKunjungan = r.TglMasuk,
                         r.CaraMasukRS,
                         r.KondisiKeluar,

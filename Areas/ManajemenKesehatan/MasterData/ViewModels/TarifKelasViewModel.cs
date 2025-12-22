@@ -5,6 +5,7 @@
         public Guid? TindakanId { get; set; }
         public Guid? KelasId { get; set; }
         public Guid? PemeriksaanLabId { get; set; }
+        public Guid? PeralatanId { get; set; }
         public string? NamaKelas { get; set; }
         public decimal? TarifDokter { get; set; }
         public decimal? TarifRs { get; set; }
