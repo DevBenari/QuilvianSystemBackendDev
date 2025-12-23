@@ -133,6 +133,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                                     t.KeluhanUtama,
                                     t.DiteruskanKepada,
                                     t.DikirimKe,
+
                                     t.Status,
                                     t.Keterangan,
                                     DetailIndikatorId = d.IndikatorPengkajianId,
@@ -183,6 +184,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                                      t.KeluhanUtama,
                                      t.DiteruskanKepada,
                                      t.DikirimKe,
+
                                      t.Status,
                                      t.Keterangan,
                                      t.CreateBy,
@@ -205,7 +207,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
                 // Tidak melakukan grouping yang bisa membatasi banyaknya details yang ditampilkan
                 var groupedResult = joinedData
+
                     .GroupBy(x => new { x.TriageId, x.KunjunganId, x.KeluhanUtama, x.DiteruskanKepada, x.DikirimKe, x.Status, x.Keterangan, x.CreateBy, x.CreateDateTime })
+
                     .Select(g => new
                     {
                         g.Key.TriageId,
@@ -213,7 +217,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                         g.Key.KeluhanUtama,
                         g.Key.DiteruskanKepada,
                         g.Key.DikirimKe,
+
                         g.Key.Status,
+
                         g.Key.Keterangan,
                         g.Key.CreateBy,
                         CreateDateTime = g.Key.CreateDateTime,
@@ -517,7 +523,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                                 t.KeluhanUtama,
                                 t.DiteruskanKepada,
                                 t.DikirimKe,
+
                                 t.Status,
+
                                 t.Keterangan,
                                 DetailIndikatorId = d.IndikatorPengkajianId,
                                 DetailKeterangan = d.Keterangan,

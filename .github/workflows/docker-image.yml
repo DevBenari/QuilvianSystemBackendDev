@@ -1,8 +1,9 @@
-name: QuilvianSta-Deploy
+
+name: QuilvianProduction-Deploy
 on:
   push:
     branches:
-      - QuilvianSta  # Branch utama sekarang
+      - QuilvianProduction  # Branch utama sekarang
 
 jobs:
   deploy:
@@ -23,17 +24,17 @@ jobs:
       run: |
         ssh ${{ secrets.SSH_USER_BACKEND }}@${{ secrets.SSH_IP_BACKEND_PRO }} << 'EOF'
 
-          cd ~/QuilvianSta
+          cd ~/QuilvianProduction
 
           echo "Resetting local changes..."
-          git reset --hard origin/QuilvianSta
+          git reset --hard origin/QuilvianProduction
           git clean -fd
 
           echo "Pulling latest changes..."
-          git pull origin QuilvianSta
+          git pull origin QuilvianProduction
 
-          IMAGE_NAME="quilviansta-backend"
-          CONTAINER_NAME="quilviansta-container"
+          IMAGE_NAME="quilvianproduction-backend"
+          CONTAINER_NAME="quilvianproduction-container"
 
           DEPLOY_TIME=$(date +"%A, %d-%m-%Y %H:%M:%S") 
 
@@ -43,16 +44,21 @@ jobs:
           echo "Stopping and removing old container..."
           docker stop $CONTAINER_NAME || true
           docker rm $CONTAINER_NAME || true
-
-          echo "Creating new container (no ports)..."
-          # docker run -d --name $CONTAINER_NAME --memory="1g" --memory-swap="1g" --restart unless-stopped $IMAGE_NAME
-          docker run -d \
+          echo "Checking if container exists..."
+          if [ "$(docker ps -a -q -f name=$CONTAINER_NAME)" ]; then
+            echo "Container exists, restarting..."
+            docker restart $CONTAINER_NAME
+          else
+            echo "Container does not exist, creating a new one..."
+            # docker run -d --name $CONTAINER_NAME --memory="1g" --memory-swap="1g" --restart unless-stopped $IMAGE_NAME
+            docker run -d \
             --name $CONTAINER_NAME \
-            -p 5000:80 \
-            --memory="1g" \
-            --memory-swap="1g" \
+            -p 4000:80 \
+            --memory="3g" \
+            --memory-swap="3g" \
             --restart unless-stopped \
             $IMAGE_NAME
+          fi
 
           echo "Cleaning up unused Docker images..."
           docker system prune -af
@@ -61,14 +67,16 @@ jobs:
 
           PUSHER="${{ github.actor }}"
           
-          # Kirim notifikasi ke Telegram setelah update
+          # Kirim notifikasi ke Telegram setelah update tes
           curl -X POST "https://api.telegram.org/bot7630899059:AAFqAUGUB7I5V9VGKXbcmoWmbYWvrdmnje8/sendMessage" \
               -d chat_id=-1002437306112 \
               -d text="✅ Deployment Sukses! 🚀
               *Docker Image:* $IMAGE_NAME
               *Container:* $CONTAINER_NAME
               *Tanggal:* $DEPLOY_TIME%0A
-              Deployment dilakukan Backend Branch *$PUSHER*%0A
+              Deployment dilakukan Production Branch *$PUSHER*%0A
               🔄 Container telah diperbarui dan berjalan dengan baik. 🎉"
 
         EOF
+
+          # pro
