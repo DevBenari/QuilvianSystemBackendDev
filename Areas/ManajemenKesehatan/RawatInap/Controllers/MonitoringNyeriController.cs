@@ -11,7 +11,9 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.HubSignalR;
+
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.ViewModels;
 using QuilvianSystemBackendDev.Migrations;
@@ -30,7 +32,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
+
         private readonly IHubContext<MonitoringNyeriHub> _hubContext;
+
         private readonly ILogger<MonitoringNyeriController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
@@ -39,15 +43,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ILogger<MonitoringNyeriController> logger,
+
             IWebHostEnvironment webHostEnvironment,
             IHubContext<MonitoringNyeriHub> hubContext)
+
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+
             _hubContext = hubContext;
+
         }
 
         [HttpGet]
@@ -220,6 +228,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                 if (result > 0)
                 {
+
                     await _hubContext.Clients.All.SendAsync("Monitoring Nyeri Created", new
                     {
                         Action = "create",
@@ -227,6 +236,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     });
 
                     return Created("", new { message = "Tambah Data Berhasil || 201 Created", id = data.MonitoringNyeriId });
+
                 }
                 else
                 {
@@ -324,6 +334,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                 if (result > 0)
                 {
+
                     await _hubContext.Clients.All.SendAsync("Monitoring Nyeri Updated", new
                     {
                         Action = "update",
@@ -331,6 +342,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     });
 
                     return Ok(new { message = "Update Data Berhasil || 200 OK", id = entity.MonitoringNyeriId });
+
                 }
                 else
                 {
@@ -428,9 +440,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on x.CreateBy equals u.UserActiveId
 
+
                          join o in _applicationDbContext.Obats
                          on x.ObatId equals o.ObatId into oGroup
                          from o in oGroup.DefaultIfEmpty()
+
 
                          where x.IsDelete == false || x.IsDelete == null
                          select new
@@ -455,7 +469,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                              WaktuIntervensi = x.WaktuIntervensi,
                              ObatId = x.ObatId,
+
                              NamaObat = o.ObatName,
+
                              Dosis = x.Dosis,
                              Rute = x.Rute,
                              IntervensiNonFarmakologi = x.IntervensiNonFarmakologi,

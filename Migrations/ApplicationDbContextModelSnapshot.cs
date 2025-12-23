@@ -13682,6 +13682,7 @@ namespace QuilvianSystemBackendDev.Migrations
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models.MonitoringNyeri", b =>
+
                 {
                     b.Property<Guid>("MonitoringNyeriId")
                         .ValueGeneratedOnAdd()
