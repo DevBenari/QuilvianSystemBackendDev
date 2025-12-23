@@ -1,9 +1,9 @@
-
 name: QuilvianProduction-Deploy
+
 on:
   push:
     branches:
-      - QuilvianProduction  # Branch utama sekarang
+      - QuilvianProduction
 
 jobs:
   deploy:
@@ -13,66 +13,52 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    - name: Setup SSH Connection
+    - name: Setup SSH
       run: |
         mkdir -p ~/.ssh
         echo "${{ secrets.SSH_PRIVATE_KEY_BACKEND_PRO }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
         ssh-keyscan -H ${{ secrets.SSH_IP_BACKEND_PRO }} >> ~/.ssh/known_hosts
 
-    - name: Deploy to Server
+    - name: Deploy to Production Server
       run: |
         ssh ${{ secrets.SSH_USER_BACKEND }}@${{ secrets.SSH_IP_BACKEND_PRO }} << 'EOF'
+        set -e
 
-          cd ~/QuilvianProduction
+        cd ~/QuilvianProduction
 
-          echo "Resetting local changes..."
-          git reset --hard origin/QuilvianProduction
-          git clean -fd
+        echo "📥 Update source code"
+        git fetch origin
+        git reset --hard origin/QuilvianProduction
+        git clean -fd
 
-          echo "Pulling latest changes..."
-          git pull origin QuilvianProduction
+        # ===== IMAGE VERSION =====
+        IMAGE_TAG=$(date +%Y%m%d%H%M%S)
+        IMAGE_NAME="quilvianproduction-backend:$IMAGE_TAG"
+        CONTAINER_NAME="quilvianproduction-container"
 
-          IMAGE_NAME="quilvianproduction-backend"
-          CONTAINER_NAME="quilvianproduction-container"
+        echo "🐳 Build Docker Image: $IMAGE_NAME"
+        docker build --no-cache -t $IMAGE_NAME .
 
-          DEPLOY_TIME=$(date +"%A, %d-%m-%Y %H:%M:%S") 
+        echo "🛑 Stop old container"
+        docker stop $CONTAINER_NAME || true
+        docker rm $CONTAINER_NAME || true
 
-          echo "Building new Docker image (no cache)..."
-          docker build --no-cache -t $IMAGE_NAME .
+        echo "🚀 Run new container"
+        docker run -d \
+          --name $CONTAINER_NAME \
+          -e ASPNETCORE_ENVIRONMENT=Production \
+          -p 4000:80 \
+          --restart unless-stopped \
+          --memory="3g" \
+          --memory-swap="3g" \
+          $IMAGE_NAME
 
-          echo "Stopping old container..."
-          docker stop $CONTAINER_NAME || true
-          docker rm $CONTAINER_NAME || true
+        echo "🔍 Verify running image"
+        docker inspect $CONTAINER_NAME --format='Container uses image: {{.Config.Image}}'
 
-          echo "Running new container..."
-          docker run -d \
-            --name $CONTAINER_NAME \
-            -p 4000:80 \
-            --memory="3g" \
-            --memory-swap="3g" \
-            --restart unless-stopped \
-            $IMAGE_NAME
-          fi
+        echo "🧹 Cleanup old images (safe)"
+        docker image prune -f
 
-
-          echo "Cleaning up unused Docker images..."
-          docker system prune -af
-
-          echo "Deployment completed!"
-
-          PUSHER="${{ github.actor }}"
-          
-          # Kirim notifikasi ke Telegram setelah update tes
-          curl -X POST "https://api.telegram.org/bot7630899059:AAFqAUGUB7I5V9VGKXbcmoWmbYWvrdmnje8/sendMessage" \
-              -d chat_id=-1002437306112 \
-              -d text="✅ Deployment Sukses! 🚀
-              *Docker Image:* $IMAGE_NAME
-              *Container:* $CONTAINER_NAME
-              *Tanggal:* $DEPLOY_TIME%0A
-              Deployment dilakukan Production Branch *$PUSHER*%0A
-              🔄 Container telah diperbarui dan berjalan dengan baik. 🎉"
-
+        echo "✅ Deployment Production DONE"
         EOF
-
-          # pro
