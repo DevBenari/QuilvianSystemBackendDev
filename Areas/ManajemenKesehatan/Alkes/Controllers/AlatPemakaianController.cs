@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using Microsoft.AspNet.SignalR.Client.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
@@ -157,7 +158,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
             // Ambil semua header pemakaian alat
             // =========================
             var headers = await _applicationDbContext.AlatPemakaians
-                .Where(x => x.KunjunganId == kunjunganId)
+                .Where(x => x.KunjunganId == kunjunganId && !x.IsDelete)
                 .OrderByDescending(x => x.CreateDateTime)
                 .Select(x => new
                 {
@@ -179,7 +180,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
             // Ambil semua detail
             // =========================
             var details = await _applicationDbContext.AlatPemakaianDetails
-                .Where(x => pemakaianIds.Contains((Guid)x.PemakaianAlatId))
+                .Where(x => pemakaianIds.Contains((Guid)x.PemakaianAlatId)&&!x.IsDelete)
                 .Select(x => new
                 {
                     x.PemakaianAlatId,
@@ -398,6 +399,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
                 await _applicationDbContext.SaveChangesAsync();
                 await trx.CommitAsync();
 
+                await _hubContext.Clients.All.SendAsync("Pemakaian alat ditambah", new
+                {
+                    action = "create",
+                    alatPemakaianId
+                });
+
                 return Created("", new
                 {
                     message = "Berhasil menambahkan Alat Pemakaian + Detail + Billing",
@@ -590,6 +597,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
                 await _applicationDbContext.SaveChangesAsync();
                 await trx.CommitAsync();
 
+                await _hubContext.Clients.All.SendAsync("Pemakaian alat diupdate", new
+                {
+                    action = "update",
+                    header.PemakaianAlatId
+                });
+
                 return Ok(new
                 {
                     message = "Berhasil update pemakaian alat (detail tidak hilang) + billing ter-update",
@@ -604,6 +617,123 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(Guid id)
+        {
+            // Auth
+            var emailLogin = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(emailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = await _applicationDbContext.UserActives.FirstOrDefaultAsync(x => x.Email == emailLogin);
+            if (user == null)
+                return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+
+            var userId = user.UserActiveId;
+
+            await using var trx = await _applicationDbContext.Database.BeginTransactionAsync();
+            try
+            {
+                // =========================
+                // 1) Ambil header (yang belum di-delete)
+                // =========================
+                var header = await _applicationDbContext.AlatPemakaians
+                    .FirstOrDefaultAsync(x =>
+                        x.PemakaianAlatId == id &&
+                        (x.IsDelete == false || x.IsDelete == null));
+
+                if (header == null)
+                    return NotFound(new { message = "Data pemakaian alat tidak ditemukan atau sudah dihapus." });
+
+                var kunjunganId = header.KunjunganId;
+
+                // =========================
+                // 2) Ambil details (yang belum di-delete)
+                // =========================
+                var details = await _applicationDbContext.AlatPemakaianDetails
+                    .Where(x =>
+                        x.PemakaianAlatId == id &&
+                        (x.IsDelete == false || x.IsDelete == null))
+                    .ToListAsync();
+
+                var peralatanIds = details
+                    .Where(d => d.PeralatanId != null)
+                    .Select(d => d.PeralatanId!.Value)
+                    .Distinct()
+                    .ToList();
+
+                // =========================
+                // 3) Soft delete BILLING terkait
+                // =========================
+                // Hanya billing alkes, kunjungan sama, itemId ada di peralatanIds
+                var billings = new List<Billing>();
+
+                if (peralatanIds.Count > 0)
+                {
+                    billings = await _applicationDbContext.Billings
+                        .Where(b =>
+                            b.KunjunganId == kunjunganId &&
+                            b.JenisBilling.ToLower() == "alkes" &&
+                            peralatanIds.Contains((Guid)b.ItemId) &&
+                            (b.IsDelete == false || b.IsDelete == null))
+                        .ToListAsync();
+
+                    foreach (var b in billings)
+                    {
+                        b.IsDelete = true;
+                        b.DeleteBy = userId;
+                        b.DeleteDateTime = DateTimeOffset.UtcNow;
+
+                        // kalau kolom delete tidak ada, pakai update:
+                        // b.UpdateBy = userId;
+                        // b.UpdateDateTime = DateTimeOffset.UtcNow;
+                    }
+                }
+
+                // =========================
+                // 4) Soft delete DETAILS
+                // =========================
+                foreach (var d in details)
+                {
+                    d.IsDelete = true;
+                    d.DeleteBy = userId;
+                    d.DeleteDateTime = DateTimeOffset.UtcNow;
+
+                    // jika tidak ada kolom Delete*, pakai Update*
+                    // d.UpdateBy = userId;
+                    // d.UpdateDateTime = DateTimeOffset.UtcNow;
+                }
+
+                // =========================
+                // 5) Soft delete HEADER
+                // =========================
+                header.IsDelete = true;
+                header.DeleteBy = userId;
+                header.DeleteDateTime = DateTimeOffset.UtcNow;
+
+                // kalau tidak ada kolom delete, pakai update:
+                // header.UpdateBy = userId;
+                // header.UpdateDateTime = DateTimeOffset.UtcNow;
+
+                await _applicationDbContext.SaveChangesAsync();
+                await trx.CommitAsync();
+
+                return Ok(new
+                {
+                    message = "Berhasil soft delete pemakaian alat + detail + billing terkait.",
+                    pemakaianAlatId = id,
+                    deletedDetails = details.Count,
+                    deletedBillings = billings.Count
+                });
+            }
+            catch (Exception ex)
+            {
+                await trx.RollbackAsync();
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
 
         [HttpGet("paged")]
         public async Task<IActionResult> PagedAlatPemakaian(
@@ -777,7 +907,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
             // =========================
             var pageDetails = await (
                 from d in _applicationDbContext.AlatPemakaianDetails
-                where pemakaianIds.Contains((Guid)d.PemakaianAlatId)
+                where pemakaianIds.Contains((Guid)d.PemakaianAlatId) && !d.IsDelete
 
                 join p0 in _applicationDbContext.Peralatans on d.PeralatanId equals p0.PeralatanId into pp
                 from p in pp.DefaultIfEmpty()
@@ -796,7 +926,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
                     d.QtyPemakaian,
                     d.HargaPeralatan,
                     d.TotalPemakaianAlat,
-                    d.Keterangan
+                    d.Keterangan,
+                    d.IsDelete,
+                    d.CreateDateTime,
                 }
             ).ToListAsync();
 

@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Hubs;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.HubSignalR;
@@ -256,6 +257,10 @@ app.MapHub<NosokomialHub>("/hubs/nosokomial");
 // signal R Laboratorium
 app.MapHub<LabBookingHub>("/hubs/labbooking");
 app.MapHub<LabBookingDetailHub>("/hubs/labbookingdetail");
+
+
+// signal R Alkes
+app.MapHub<AlatPemakaianHub>("/hubs/alatpemakaian");
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
