@@ -258,19 +258,19 @@ app.MapHub<LabBookingHub>("/hubs/labbooking");
 app.MapHub<LabBookingDetailHub>("/hubs/labbookingdetail");
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Home");
-        c.SwaggerEndpoint("/swagger/manajemen_kesehatan/swagger.json", "Manajemen Kesehatan API");
-        c.SwaggerEndpoint("/swagger/administrator/swagger.json", "Administrator API");
-        c.SwaggerEndpoint("/swagger/hrd/swagger.json", "HRD API");
-        c.SwaggerEndpoint("/swagger/master/swagger.json", "Master API");
-        c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None);
-    });
-}
+//if (app.Environment.IsDevelopment())
+//{
+//    app.UseSwagger();
+//    app.UseSwaggerUI(c =>
+//    {
+//        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Home");
+//        c.SwaggerEndpoint("/swagger/manajemen_kesehatan/swagger.json", "Manajemen Kesehatan API");
+//        c.SwaggerEndpoint("/swagger/administrator/swagger.json", "Administrator API");
+//        c.SwaggerEndpoint("/swagger/hrd/swagger.json", "HRD API");
+//        c.SwaggerEndpoint("/swagger/master/swagger.json", "Master API");
+//        c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None);
+//    });
+//}
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 app.UseSwagger();
 app.UseSwaggerUI(c =>
