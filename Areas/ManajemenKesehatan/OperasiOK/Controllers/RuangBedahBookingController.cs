@@ -244,6 +244,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                     PenandaanLokasiOperasi = vm.PenandaanLokasiOperasi,
                     isBedahBersalin = vm.isBedahBersalin,
                     isSuratIzinOperasi = false,
+                    IsTerverifikasi = vm.IsTerverifikasi,
                     Keterangan = vm.Keterangan,
                     TipeTindakan = vm.TipeTindakan,
                     TipeOperasi = vm.TipeOperasi,

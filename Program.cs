@@ -243,6 +243,9 @@ app.MapHub<PermintaanUnitHub>("/hubs/permintaanunit");
 
 // signal R Ranap
 app.MapHub<SuratPengantarRanapHub>("/hubs/suratpengantarranap");
+app.MapHub<AssessmentEdukasiDetailHub>("/hubs/assessmentedukasidetail");
+app.MapHub<AssessmentEdukasiHub>("/hubs/assessmentedukasi");
+app.MapHub<MonitoringNyeriHub>("hubs/monitoringnyeri");
 
 // signal R IGD
 app.MapHub<IGDTriageHub>("/hubs/IGDtriage");

@@ -77,18 +77,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                 return BadRequest(new { message = "Template fingerprint tidak valid" });
 
             try
-            {
-                var existing = await _db.Fingerprints
-                    .FirstOrDefaultAsync(x => x.UserId == vm.UserId);
-
-                if (existing != null)
-                {
-                    existing.Template = vm.Template;
-                    existing.CreateDateTime = DateTime.UtcNow;
-                    _db.Fingerprints.Update(existing);
-                }
-                else
-                {
+            {                
                     var newData = new Fingerprint
                     {
                         FingerprintId = Guid.NewGuid(),
@@ -100,7 +89,6 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                     };
 
                     await _db.Fingerprints.AddAsync(newData);
-                }
 
                 await _db.SaveChangesAsync();
 
@@ -117,98 +105,128 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
             }
         }
 
-        // ===========================
-        // 2. VERIFY FINGERPRINT
-        // ===========================
-        [HttpPost("verify")]
-        public async Task<IActionResult> VerifyFingerprint([FromBody] FingerprintVerifyViewModel vm)
-        {
-            if (vm == null || string.IsNullOrEmpty(vm.Template))
-                return BadRequest(new { message = "Template fingerprint tidak valid" });
+        //// ===========================
+        //// 2. VERIFY FINGERPRINT
+        //// ===========================
+        //[HttpPost("verify")]
+        //public async Task<IActionResult> VerifyFingerprint([FromBody] FingerprintVerifyViewModel vm)
+        //{
+        //    if (vm == null || string.IsNullOrEmpty(vm.Template))
+        //        return BadRequest(new { message = "Template fingerprint tidak valid" });
 
-            try
-            {
-                var userFinger = await _db.Fingerprints
-                    .FirstOrDefaultAsync(x => x.UserId == vm.UserId);
+        //    try
+        //    {
+        //        var userFinger = await _db.Fingerprints
+        //            .FirstOrDefaultAsync(x => x.UserId == vm.UserId);
 
-                if (userFinger == null)
-                    return NotFound(new { message = "Fingerprint user belum terdaftar" });
+        //        if (userFinger == null)
+        //            return NotFound(new { message = "Fingerprint user belum terdaftar" });
 
-                // ⭐⭐⭐
-                // DI SINI PROSES MATCHING TEMPLATE
-                // Pada server Linux, template hanya dibandingkan secara string
-                // Bila butuh real matching, harus dilakukan di Windows
-                // ⭐⭐⭐
+        //        // ⭐⭐⭐
+        //        // DI SINI PROSES MATCHING TEMPLATE
+        //        // Pada server Linux, template hanya dibandingkan secara string
+        //        // Bila butuh real matching, harus dilakukan di Windows
+        //        // ⭐⭐⭐
 
-                bool isMatch = userFinger.Template == vm.Template;
+        //        bool isMatch = userFinger.Template == vm.Template;
 
-                return Ok(new
-                {
-                    message = "Fingerprint verifikasi berhasil",
-                    match = isMatch
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error verifying fingerprint");
-                return StatusCode(500, new { message = ex.Message });
-            }
-        }
+        //        return Ok(new
+        //        {
+        //            message = "Fingerprint verifikasi berhasil",
+        //            match = isMatch
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Error verifying fingerprint");
+        //        return StatusCode(500, new { message = ex.Message });
+        //    }
+        //}
 
         // ===========================
         // 3. GET DATA FINGERPRINT USER
         // ===========================
-        [HttpGet("{DeviceId}")]
-        public async Task<IActionResult> GetFingerprint(string userId)
-        {
-            var data = await _db.Fingerprints.FirstOrDefaultAsync(x => x.UserId == userId);
+        //[HttpGet("{DeviceId}")]
+        //public async Task<IActionResult> GetFingerprint(string userId)
+        //{
+        //    var data = await _db.Fingerprints.FirstOrDefaultAsync(x => x.UserId == userId);
 
-            if (data == null)
-                return NotFound(new { message = "Fingerprint tidak ditemukan" });
+        //    if (data == null)
+        //        return NotFound(new { message = "Fingerprint tidak ditemukan" });
 
-            return Ok(new
-            {
-                message = "Fingerprint ditemukan",
-                data
-            });
-        }
+        //    return Ok(new
+        //    {
+        //        message = "Fingerprint ditemukan",
+        //        data
+        //    });
+        //}
 
-
-        [HttpPut("device-id")]
-        public async Task<IActionResult> UpdateDeviceIdByUserId([FromBody] FingerprintVerifyViewModel request)
+        [HttpPut("device-id/{fingerprintId}")]
+        public async Task<IActionResult> UpdateDeviceIdByFingerprintId(
+        Guid fingerprintId,
+        [FromBody] FingerprintVerifyViewModel request)
         {
             try
             {
                 if (request == null || string.IsNullOrWhiteSpace(request.DeviceId))
-                    return BadRequest(new { message = "UserId dan DeviceId wajib diisi" });
+                    return BadRequest(new { message = "DeviceId wajib diisi" });
 
-                var fingerprints = await _db.Fingerprints
-                    .Where(x => x.UserId == request.UserId)
-                    .ToListAsync();
+                var fingerprint = await _db.Fingerprints
+                    .FirstOrDefaultAsync(x => x.FingerprintId == fingerprintId);
 
-                if (fingerprints == null || fingerprints.Count == 0)
-                    return NotFound(new { message = $"Tidak ada data fingerprint untuk UserId {request.UserId}" });
+                if (fingerprint == null)
+                    return NotFound(new
+                    {
+                        message = $"Fingerprint dengan FingerprintId '{fingerprintId}' tidak ditemukan"
+                    });
 
-                foreach (var fp in fingerprints)
-                {
-                    fp.DeviceId = request.DeviceId;
-                    // kalau punya kolom UpdateDateTime bisa di-set disini:
-                    // fp.UpdateDateTime = DateTime.Now;
-                }
+                fingerprint.DeviceId = request.DeviceId;
+                // fingerprint.UpdateDateTime = DateTime.Now; // jika ada
 
                 await _db.SaveChangesAsync();
 
                 return Ok(new
                 {
-                    message = "Berhasil mengupdate DeviceId fingerprint berdasarkan UserId",
-                    userId = request.UserId,
-                    deviceIdBaru = request.DeviceId,
-                    totalFingerprintDiupdate = fingerprints.Count
+                    message = "Berhasil mengupdate DeviceId fingerprint",
+                    fingerprintId = fingerprintId,
+                    deviceIdBaru = request.DeviceId
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating device id by user id");
+                _logger.LogError(ex, "Error updating device id by fingerprint id");
+                return StatusCode(500, new { message = ex.Message });
+            }
+        }
+
+        [HttpDelete("{fingerprintId}")]
+        public async Task<IActionResult> DeleteFingerprint(Guid fingerprintId)
+        {
+            try
+            {
+                var data = await _db.Fingerprints
+                    .FirstOrDefaultAsync(x => x.FingerprintId == fingerprintId);
+
+                if (data == null)
+                {
+                    return NotFound(new
+                    {
+                        message = $"Fingerprint dengan FingerprintId '{fingerprintId}' tidak ditemukan"
+                    });
+                }
+
+                _db.Fingerprints.Remove(data);
+                await _db.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    message = "Fingerprint berhasil dihapus",
+                    fingerprintId = fingerprintId
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting fingerprint");
                 return StatusCode(500, new { message = ex.Message });
             }
         }
@@ -248,6 +266,5 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                 return StatusCode(500, new { message = ex.Message });
             }
         }
-
     }
 }

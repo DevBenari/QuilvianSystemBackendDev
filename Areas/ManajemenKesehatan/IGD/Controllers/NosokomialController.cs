@@ -105,6 +105,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                              a.TTDPerawat,
                              a.PerawatId,
                              NamaPerawat = p.FullName ?? null,
+                             a.Status,
 
                          }).OrderByDescending(a => a.CreateDateTime);
 
@@ -183,7 +184,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                                 a.TTDPerawat,
                                 a.PerawatId,
                                 NamaPerawat = p.FullName ?? null,
-
+                                a.Status
                             });
             if (listdata == null)
             {
@@ -317,7 +318,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                     DiagnosaAkhir = vm.DiagnosaAkhir,
                     PerawatId = vm.PerawatId,
                     TTDPerawat = pTTD.Path,
-
+                    Status = vm.Status,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow
                 };
@@ -486,6 +487,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 data.DiagnosaAkhir = vm.DiagnosaAkhir ?? data.DiagnosaAkhir;
                 data.PerawatId = vm.PerawatId ?? data.PerawatId;
                 data.TTDKepalaRuangan = ttdP.Path;
+                data.Status = vm.Status ?? data.Status;
+
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
@@ -732,6 +735,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
         int page = 1,
         int perPage = 10,
         Guid? kunjunganId = null,
+        bool? status = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -745,6 +749,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
             var query = (from a in _applicationDbContext.Nosokomials
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
+
+                         // join ke user ac
+                         join kr in _applicationDbContext.UserActives
+                         on a.KepalaRuanganId equals kr.UserActiveId into krGroup
+                         from kr in krGroup.DefaultIfEmpty()
+
+                         join p in _applicationDbContext.UserActives
+                         on a.PerawatId equals p.UserActiveId into pGroup
+                         from p in pGroup.DefaultIfEmpty()
+
                          where a.IsDelete == false || a.IsDelete == null
                          select new
                          {
@@ -770,8 +784,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                              a.DiagnosaAkhir,
                              a.TTDKepalaRuangan,
                              a.KepalaRuanganId,
+                             NamaKepalaRuangan = kr.FullName ?? null,
                              a.TTDPerawat,
                              a.PerawatId,
+                             NamaPerawat = p.FullName ?? null,
+                             a.Status,
+
                          });
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             //if (!string.IsNullOrWhiteSpace(search))
@@ -786,6 +804,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
             if (kunjunganId.HasValue)
             {
                 query = query.Where(u=>u.KunjunganId == kunjunganId.Value);
+            }
+
+            // filter based on status 
+            if (status.HasValue)
+            {
+                query = query.Where(u => u.Status == status.Value);
             }
 
             //// **Filter berdasarkan tanggal**

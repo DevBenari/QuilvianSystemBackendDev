@@ -21,6 +21,8 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controllers;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
+using static OpenCvSharp.Stitcher;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 {
@@ -76,6 +78,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                              a.KeluhanUtama,
                              a.DiteruskanKepada,
                              a.WaktuMasuk,
+                             a.DikirimKe,
+                             a.Status,
                              a.Keterangan,
                          }).OrderByDescending(a => a.CreateDateTime);
 
@@ -128,6 +132,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                                     KunjunganId = t.KunjunganId,
                                     t.KeluhanUtama,
                                     t.DiteruskanKepada,
+                                    t.DikirimKe,
+                                    t.Status,
                                     t.Keterangan,
                                     DetailIndikatorId = d.IndikatorPengkajianId,
                                     DetailKeterangan = d.Keterangan,
@@ -176,6 +182,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                                      t.KunjunganId,
                                      t.KeluhanUtama,
                                      t.DiteruskanKepada,
+                                     t.DikirimKe,
+                                     t.Status,
                                      t.Keterangan,
                                      t.CreateBy,
                                      t.CreateDateTime,
@@ -197,13 +205,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
                 // Tidak melakukan grouping yang bisa membatasi banyaknya details yang ditampilkan
                 var groupedResult = joinedData
-                    .GroupBy(x => new { x.TriageId, x.KunjunganId, x.KeluhanUtama, x.DiteruskanKepada, x.Keterangan, x.CreateBy, x.CreateDateTime })
+                    .GroupBy(x => new { x.TriageId, x.KunjunganId, x.KeluhanUtama, x.DiteruskanKepada, x.DikirimKe, x.Status, x.Keterangan, x.CreateBy, x.CreateDateTime })
                     .Select(g => new
                     {
                         g.Key.TriageId,
                         g.Key.KunjunganId,
                         g.Key.KeluhanUtama,
                         g.Key.DiteruskanKepada,
+                        g.Key.DikirimKe,
+                        g.Key.Status,
                         g.Key.Keterangan,
                         g.Key.CreateBy,
                         CreateDateTime = g.Key.CreateDateTime,
@@ -287,7 +297,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                     KeluhanUtama = vm.KeluhanUtama,
                     DiteruskanKepada = vm.DiteruskanKepada,
                     WaktuMasuk = DateTime.Now,
+                    DikirimKe = vm.DikirimKe,
                     Keterangan = vm.Keterangan,
+                    Status = vm.Status,
 
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
@@ -382,7 +394,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 data.WaktuMasuk = DateTime.Now;
                 data.DiteruskanKepada = vm.DiteruskanKepada;
                 data.KeluhanUtama = vm.KeluhanUtama;
+                data.DikirimKe = vm.DikirimKe;
                 data.Keterangan = vm.Keterangan;
+                data.Status = vm.Status;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -481,6 +495,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
             int page = 1,
             int perPage = 10,
             Guid? kunjunganId = null,
+            bool? status = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? startDate = null,
@@ -501,6 +516,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                                 KunjunganId = t.KunjunganId,
                                 t.KeluhanUtama,
                                 t.DiteruskanKepada,
+                                t.DikirimKe,
+                                t.Status,
                                 t.Keterangan,
                                 DetailIndikatorId = d.IndikatorPengkajianId,
                                 DetailKeterangan = d.Keterangan,
@@ -513,6 +530,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
             if (kunjunganId.HasValue)
             {
                 baseQuery = baseQuery.Where(u => u.KunjunganId == kunjunganId.Value);
+            }
+
+            // filter based on status 
+            if (status.HasValue)
+            {
+                baseQuery = baseQuery.Where(u => u.Status == status.Value);
             }
 
             if (startDate.HasValue && endDate.HasValue)
@@ -610,6 +633,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                                  t.KunjunganId,
                                  t.KeluhanUtama,
                                  t.DiteruskanKepada,
+                                 t.Status,
                                  t.Keterangan,
                                  t.CreateBy,
                                  t.CreateDateTime,
@@ -618,13 +642,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
             // --- Grouping berdasarkan TriageId untuk mendapatkan data seperti yang Anda inginkan ---
             var groupedResult = joinedData
-                .GroupBy(x => new { x.TriageId, x.KunjunganId, x.KeluhanUtama, x.DiteruskanKepada, x.Keterangan, x.CreateBy, x.CreateDateTime })
+                .GroupBy(x => new { x.TriageId, x.KunjunganId, x.KeluhanUtama, x.DiteruskanKepada, x.Keterangan, x.Status, x.CreateBy, x.CreateDateTime })
                 .Select(g => new
                 {
                     g.Key.TriageId,
                     g.Key.KunjunganId,
                     g.Key.KeluhanUtama,
                     g.Key.DiteruskanKepada,
+                    g.Key.Status,
                     g.Key.Keterangan,
                     g.Key.CreateBy,
                     CreateDateTime = g.Key.CreateDateTime ,

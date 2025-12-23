@@ -317,6 +317,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                     join o in _applicationDbContext.Obats.AsNoTracking()
                                         on d.ObatId equals o.ObatId into obatJoin
                                     from o in obatJoin.DefaultIfEmpty()
+
+                                    join or in _applicationDbContext.ObatRutes.AsNoTracking()
+                                    on o.ObatRuteId equals or.RuteObatId into orJoin
+                                    from or in orJoin.DefaultIfEmpty()
                                     where d.ResepId == resep.ResepId && (d.IsRacikan == false || d.IsRacikan == null) && (!d.IsDelete)
                                     select new
                                     {
@@ -324,6 +328,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                         d.ObatId,
                                         ObatName = o != null ? o.ObatName : null,
                                         KategoriObat = o != null ? o.KategoriObat : null,
+                                        RuteObat = or != null ? or.RuteObat : null,
                                         d.Qty,
                                         d.HargaObat,
                                         d.TotalHargaObat,
@@ -2139,6 +2144,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             var daftarObat = await (
                 from d in _applicationDbContext.DetailReseps.AsNoTracking()
                 join o in _applicationDbContext.Obats.AsNoTracking() on d.ObatId equals o.ObatId
+
+                join or in _applicationDbContext.ObatRutes.AsNoTracking()
+                    on o.ObatRuteId equals or.RuteObatId into orJoin
+                from or in orJoin.DefaultIfEmpty()
+
                 where resepIds.Contains((Guid)d.ResepId)
                       && (d.IsRacikan == false || d.IsRacikan == null)
                       && !d.IsDelete
@@ -2149,6 +2159,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     d.ObatId,
                     o.ObatName,
                     o.ObatCode,
+                    or.RuteObat,
                     o.KategoriObat,
                     d.Qty,
                     d.HargaObat,
@@ -2473,6 +2484,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             // 🔎 Ambil detail obat batch
             var daftarObat = await (from d in _applicationDbContext.DetailReseps.AsNoTracking()
                                     join o in _applicationDbContext.Obats.AsNoTracking() on d.ObatId equals o.ObatId
+                                    
+                                    join or in _applicationDbContext.ObatRutes.AsNoTracking()
+                                            on o.ObatRuteId equals or.RuteObatId into orJoin
+                                    from or in orJoin.DefaultIfEmpty()
+
                                     where resepIds.Contains((Guid)d.ResepId) && (d.IsRacikan == false || d.IsRacikan == null)
                                     select new
                                     {
@@ -2480,6 +2496,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                         d.DetailResepId,
                                         d.ObatId,
                                         o.ObatName,
+                                        RuteObat = or != null ? or.RuteObat : null,
                                         d.Qty,
                                         d.HargaObat,
                                         d.TotalHargaObat,

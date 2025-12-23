@@ -70,6 +70,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateByName = u.FullName,
                             a.TindakanKunjunganId,
                             a.KunjunganId,
+                            a.DepartementId,
+                            a.DokterPemeriksaId,
+                            a.KelasId,
                             a.TindakanId,
                             t.NamaTindakan,
                             a.Quantity,
@@ -201,6 +204,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     TindakanKunjunganId = Guid.NewGuid(),
                     KunjunganId = vm.KunjunganId,
                     TindakanId = vm.TindakanId,
+                    DepartementId = vm.DepartementId,
+                    DokterPemeriksaId = vm.DokterPemeriksaId,
+                    KelasId = vm.KelasId,
                     Quantity = vm.Quantity,
                     Total = totalqty, // Masukkan nilai Total yang telah dihitung
                     RanapId = vm.RanapId,
@@ -348,6 +354,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 // **Update Data**
                 data.KunjunganId = vm.KunjunganId;
                 data.TindakanId = vm.TindakanId;
+                data.KelasId = vm.KelasId;
+                data.DokterPemeriksaId = vm.DokterPemeriksaId;
+                data.DepartementId = vm.DepartementId;
                 data.Quantity = vm.Quantity;
                 data.Total = totalqty;
                 data.RanapId = vm.RanapId;
@@ -521,6 +530,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateByName = u.FullName,
                             a.TindakanKunjunganId,
                             a.KunjunganId,
+                            a.DepartementId,
+                            a.DokterPemeriksaId,
+                            a.KelasId,
                             a.TindakanId,
                             t.NamaTindakan,
                             a.Quantity,
