@@ -1,3 +1,4 @@
+
 name: QuilvianProduction-Deploy
 on:
   push:
@@ -38,28 +39,22 @@ jobs:
           DEPLOY_TIME=$(date +"%A, %d-%m-%Y %H:%M:%S") 
 
           echo "Building new Docker image..."
-          docker build -t $IMAGE_NAME .
-
-          echo "Stopping and removing old container..."
+          echo "Building new Docker image (no cache)..."
+          docker build --no-cache -t $IMAGE_NAME .
+          
+          echo "Stopping old container..."
           docker stop $CONTAINER_NAME || true
           docker rm $CONTAINER_NAME || true
-
-          echo "Checking if container exists..."
-          if [ "$(docker ps -a -q -f name=$CONTAINER_NAME)" ]; then
-            echo "Container exists, restarting..."
-            docker restart $CONTAINER_NAME
-          else
-            echo "Container does not exist, creating a new one..."
-            # docker run -d --name $CONTAINER_NAME --memory="1g" --memory-swap="1g" --restart unless-stopped $IMAGE_NAME
-            docker run -d \
+          
+          echo "Running new container..."
+          docker run -d \
             --name $CONTAINER_NAME \
             -p 4000:80 \
             --memory="3g" \
             --memory-swap="3g" \
             --restart unless-stopped \
             $IMAGE_NAME
-          fi
-
+            
           echo "Cleaning up unused Docker images..."
           docker system prune -af
 

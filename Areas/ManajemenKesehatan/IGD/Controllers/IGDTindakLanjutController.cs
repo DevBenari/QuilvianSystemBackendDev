@@ -49,21 +49,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 var data = await (from a in _applicationDbContext.IGDTindakLanjuts
                                   join u1 in _applicationDbContext.UserActives
                                       on a.CreateBy equals u1.UserActiveId into u1Group
-                                  from createBy in u1Group.DefaultIfEmpty()
+                                  from u1 in u1Group.DefaultIfEmpty()
 
-                                  join u2 in _applicationDbContext.UserActives
-                                      on a.UpdateBy equals u2.UserActiveId into u2Group
-                                  from updateBy in u2Group.DefaultIfEmpty()
-
+                                  join b in _applicationDbContext.Beds
+                                  on a.BedId equals b.BedId into bGroup
+                                  from b in bGroup.DefaultIfEmpty()
                                   where a.TindakLanjutIgdId == id
                                         && (a.IsDelete == false || a.IsDelete == null)
-
                                   select new
                                   {
                                       a.TindakLanjutIgdId,
                                       a.KunjunganId,
                                       a.PasienId,
-                                      a.KamarId,
+                                      a.BedId,
+                                      b.NomorBed,
+                                      b.Deskripsi,
 
                                       a.WaktuPindah,
                                       a.TindakanLanjutan,
@@ -86,7 +86,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
                                       // Vital Sign
                                       a.Suhu,
-                                      a.TD,
+                                      a.TekananDarahSystolic,
+                                      a.TekananDarahDiastolic,
                                       a.Nadi,
                                       a.RR,
                                       a.SPO2,
@@ -112,11 +113,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
                                       // Audit
                                       a.CreateBy,
-                                      CreateByName = createBy.FullName,
+                                      CreateByName = u1.FullName,
                                       a.CreateDateTime,
 
                                       a.UpdateBy,
-                                      UpdateByName = updateBy.FullName,
+                                      UpdateByName = u1.FullName,
                                       a.UpdateDateTime
                                   }).FirstOrDefaultAsync();
 
@@ -170,7 +171,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
                     KunjunganId = vm.KunjunganId,
                     PasienId = vm.PasienId,
-                    KamarId = vm.KamarId,
+                    BedId = vm.BedId,
 
                     WaktuPindah = vm.WaktuPindah,
 
@@ -194,7 +195,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                     Reaksi = vm.Reaksi,
 
                     Suhu = vm.Suhu,
-                    TD = vm.TD,
+                    TekananDarahDiastolic = vm.TekananDarahDiastolic,
+                    TekananDarahSystolic = vm.TekananDarahSystolic,
                     Nadi = vm.Nadi,
                     RR = vm.RR,
                     SPO2 = vm.SPO2,
@@ -295,7 +297,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 // --- Update fields ---
                 data.KunjunganId = vm.KunjunganId;
                 data.PasienId = vm.PasienId;
-                data.KamarId = vm.KamarId;
+                data.BedId = vm.BedId;
 
                 data.WaktuPindah = vm.WaktuPindah;
 
@@ -319,7 +321,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 data.Reaksi = vm.Reaksi;
 
                 data.Suhu = vm.Suhu;
-                data.TD = vm.TD;
+                data.TekananDarahDiastolic = vm.TekananDarahDiastolic;
+                data.TekananDarahSystolic = vm.TekananDarahSystolic;
                 data.Nadi = vm.Nadi;
                 data.RR = vm.RR;
                 data.SPO2 = vm.SPO2;
@@ -515,13 +518,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                         join u in _applicationDbContext.UserActives
                             on a.CreateBy equals u.UserActiveId into uGroup
                         from u in uGroup.DefaultIfEmpty()
+
+                        join b in _applicationDbContext.Beds
+                        on a.BedId equals b.BedId into bGroup
+                        from b in bGroup.DefaultIfEmpty()
+
                         where a.IsDelete == false || a.IsDelete == null
                         select new
                         {
                             a.TindakLanjutIgdId,
                             a.KunjunganId,
                             a.PasienId,
-                            a.KamarId,
+                            a.BedId,
+                            b.NomorBed,
+                            b.Deskripsi,
                             a.WaktuPindah,
                             a.TindakanLanjutan,
                             a.StatusPasien,
@@ -543,7 +553,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
                             // Vital Sign
                             a.Suhu,
-                            a.TD,
+                            a.TekananDarahDiastolic,
+                            a.TekananDarahSystolic,
                             a.Nadi,
                             a.RR,
                             a.SPO2,

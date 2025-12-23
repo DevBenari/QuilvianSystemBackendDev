@@ -10,6 +10,7 @@ using QuilvianSystemBackendDev.Repositories;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using static QRCoder.PayloadGenerator;
 
 namespace QuilvianSystemBackendDev.Controllers
 {
@@ -92,6 +93,16 @@ namespace QuilvianSystemBackendDev.Controllers
                         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]));
                         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
+                        // Update fingerprint
+                        var fingerprint = await _context.Fingerprints
+                            .FirstOrDefaultAsync(f => f.UserId == idfinger.UserId);
+
+                        if (fingerprint != null)
+                        {
+                            fingerprint.DeviceId = Guid.NewGuid().ToString();
+                            _context.Fingerprints.Update(fingerprint);
+                            await _context.SaveChangesAsync();
+                        }
                         var claims = new[]
                         {
                                 new Claim(JwtRegisteredClaimNames.Sub, userActiveFinger.Email),

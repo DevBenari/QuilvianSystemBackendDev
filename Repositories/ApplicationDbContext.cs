@@ -6,6 +6,7 @@ using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.HRD.Pengajuan.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Gizi.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.Models;
@@ -379,6 +380,12 @@ namespace QuilvianSystemBackendDev.Repositories
         #region MCU
         public DbSet<PaketMCU> PaketMCUs { get; set; }
         public DbSet<ModulMCU> ModulMCUs { get; set; }
+        #endregion
+
+        #region ALKES
+        public DbSet<AlatPemakaian> AlatPemakaians { get; set; }
+        public DbSet<AlatPemakaianDetail> AlatPemakaianDetails { get; set; }
+
         #endregion
     }
 }
