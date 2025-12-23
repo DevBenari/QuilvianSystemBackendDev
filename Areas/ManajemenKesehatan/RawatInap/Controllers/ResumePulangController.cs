@@ -355,6 +355,29 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             }
         }
 
+        [HttpPut("{id}/Status-ResumePulang")]
+        public async Task<IActionResult> UpdateIsFinished(Guid id, [FromBody] StatusPrioritasCitoRanapVM request)
+        {
+            var data = await _applicationDbContext.ResumePulangs.FindAsync(id);
+            if (data == null)
+                return NotFound(new { message = "Resep tidak ditemukan." });
+
+            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(EmailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var userId = user?.UserActiveId ?? Guid.Empty;
+
+            data.StatusResume = request.Status;
+            data.UpdateDateTime = DateTimeOffset.UtcNow;
+            data.UpdateBy = userId;
+
+            await _applicationDbContext.SaveChangesAsync();
+
+            return Ok(new { message = "Status detail resume pulang berhasil diperbarui." });
+        }
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {

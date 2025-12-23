@@ -1,3 +1,4 @@
+
 name: QuilvianProduction-Deploy
 on:
   push:
@@ -43,7 +44,6 @@ jobs:
           echo "Stopping and removing old container..."
           docker stop $CONTAINER_NAME || true
           docker rm $CONTAINER_NAME || true
-
           echo "Checking if container exists..."
           if [ "$(docker ps -a -q -f name=$CONTAINER_NAME)" ]; then
             echo "Container exists, restarting..."

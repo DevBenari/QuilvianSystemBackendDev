@@ -27,6 +27,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public DateTime? TglMasuk {  get; set; }
         public string? CaraMasukRS { get; set; }
         public string? KondisiKeluar {  get; set; }
+        public bool? IsTriage {  get; set; }
+        public bool? IsCTTPasienIGD { get; set; }
         // ttg rawat inap
         //public DateTime? TglMasukRanap { get; set; }
         //public DateTime? TglKeluarRanap { get; set; }

@@ -12,7 +12,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Models
         // Relasi utama
         public Guid? KunjunganId { get; set; }
         public Guid? PasienId { get; set; }
-        public Guid? KamarId { get; set; }
+        public Guid? BedId { get; set; }
 
         // Informasi waktu
         public DateTime? WaktuPindah { get; set; }
@@ -42,7 +42,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Models
 
         // Vital Sign
         public decimal? Suhu { get; set; }
-        public string? TD { get; set; }    // Tekanan darah bisa string (contoh: 120/80)
+        public decimal? TekananDarahSystolic { get; set; }
+        public decimal? TekananDarahDiastolic { get; set; }
         public decimal? Nadi { get; set; }
         public decimal? RR { get; set; }
         public decimal? SPO2 { get; set; }

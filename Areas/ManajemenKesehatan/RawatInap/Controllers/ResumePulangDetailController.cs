@@ -454,6 +454,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
         [HttpPut("{id}/Status-DetailResumePulang")]
         public async Task<IActionResult> UpdateIsFinished(Guid id, [FromBody] StatusPrioritasCitoRanapVM request)
         {

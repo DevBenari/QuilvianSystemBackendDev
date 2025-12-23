@@ -24,5 +24,6 @@
         public string? DiagnosaAwal { get; set; }
         public string? DiagnosaAkhir { get; set; }
         public Guid? PerawatId { get; set; }
+        public bool? Status { get; set; }
     }
 }

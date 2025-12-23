@@ -8,7 +8,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models
         [Key]
         public Guid TransferPasienId { get; set; } // Generate Otomatis
         public Guid? KunjunganId { get; set; }
-        public Guid? KamarId { get; set; }
+        public Guid? BedId { get; set; }
         public string? DiagnosaUtama { get; set; }
         public string? DiagnosaSekunder { get; set; }
         public Guid? DokterId1 { get; set; } // Dokter utama
