@@ -215,7 +215,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
 
 
         // ===========================
-        // 4. DELETE FINGERPRINT BY USER ID
+        // 4. DELETE FINGERPRINT BY USER ID ahhhhh
         // ===========================
         [HttpDelete("{userId}")]
         public async Task<IActionResult> DeleteFingerprint(string userId)
