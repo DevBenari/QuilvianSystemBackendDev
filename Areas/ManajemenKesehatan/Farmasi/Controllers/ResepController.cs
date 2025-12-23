@@ -1994,6 +1994,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             string? search = null,
             Guid? kunjunganid = null,
             Guid? dokterid = null,
+            Guid? userActiveId = null,
+            bool? isPerawat = null,
             string? obatCode = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
@@ -2041,6 +2043,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
             if (dokterid.HasValue)
                 query = query.Where(q => q.Resep.DokterId == dokterid.Value);
+
+            if (userActiveId.HasValue)
+            {
+                query = query.Where(q => q.Resep.CreateBy == userActiveId.Value);
+            }
+
+            if (isPerawat.HasValue)
+            {
+                query = query.Where(q => q.User.IsPerawat == isPerawat.Value);
+            }
+
 
             if (periode.HasValue)
             {
@@ -2309,6 +2322,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 q.Resep.RanapId,
                 q.Resep.IsResepPulang,
                 TanggalPembuatanResep = q.Resep.TanggalPembuatanResep?.ToString("yyyy-MM-dd"),
+                q.User.IsPerawat,
                 CreateByName = q.User.FullName,
 
                 DaftarObat = daftarObat.Where(d => d.ResepId == q.Resep.ResepId).ToList(),
