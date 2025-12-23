@@ -232,39 +232,39 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
         }
 
 
-        // ===========================
-        // 4. DELETE FINGERPRINT BY USER ID ahhhhh
-        // ===========================
-        //[HttpDelete("{userId}")]
-        //public async Task<IActionResult> DeleteFingerprint(string userId)
-        //{
-        //    try
-        //    {
-        //        var data = await _db.Fingerprints
-        //            .FirstOrDefaultAsync(x => x.UserId == userId);
+         //===========================
+         //4. DELETE FINGERPRINT BY USER ID ahhhhh
+         //===========================
+        [HttpDelete("{userId}")]
+        public async Task<IActionResult> DeleteFingerprint(string userId)
+        {
+            try
+            {
+                var data = await _db.Fingerprints
+                    .FirstOrDefaultAsync(x => x.UserId == userId);
 
-        //        if (data == null)
-        //        {
-        //            return NotFound(new
-        //            {
-        //                message = $"Fingerprint dengan UserId '{userId}' tidak ditemukan"
-        //            });
-        //        }
+                if (data == null)
+                {
+                    return NotFound(new
+                    {
+                        message = $"Fingerprint dengan UserId '{userId}' tidak ditemukan"
+                    });
+                }
 
-        //        _db.Fingerprints.Remove(data);
-        //        await _db.SaveChangesAsync();
+                _db.Fingerprints.Remove(data);
+                await _db.SaveChangesAsync();
 
-        //        return Ok(new
-        //        {
-        //            message = "Fingerprint berhasil dihapus",
-        //            userId = userId
-        //        });
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "Error deleting fingerprint");
-        //        return StatusCode(500, new { message = ex.Message });
-        //    }
-        //}
+                return Ok(new
+                {
+                    message = "Fingerprint berhasil dihapus",
+                    userId = userId
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting fingerprint");
+                return StatusCode(500, new { message = ex.Message });
+            }
+        }
     }
 }

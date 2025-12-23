@@ -2,7 +2,7 @@ name: QuilvianProduction-Deploy
 on:
   push:
     branches:
-      - QuilvianProduction
+      - QuilvianProduction  # Branch utama sekarang
 
 jobs:
   deploy:
@@ -28,44 +28,55 @@ jobs:
           echo "Resetting local changes..."
           git reset --hard origin/QuilvianProduction
           git clean -fd
+
+          echo "Pulling latest changes..."
           git pull origin QuilvianProduction
 
-          # ===== Gunakan tag unik untuk image =====
-          IMAGE_TAG=$(date +%Y%m%d%H%M%S)
-          IMAGE_NAME="quilvianproduction-backend:$IMAGE_TAG"
+          IMAGE_NAME="quilvianproduction-backend"
           CONTAINER_NAME="quilvianproduction-container"
 
-          echo "Building Docker image with tag $IMAGE_TAG..."
-          docker build --no-cache -t $IMAGE_NAME .
+          DEPLOY_TIME=$(date +"%A, %d-%m-%Y %H:%M:%S") 
+
+          echo "Building new Docker image..."
+          docker build -t $IMAGE_NAME .
 
           echo "Stopping and removing old container..."
           docker stop $CONTAINER_NAME || true
           docker rm $CONTAINER_NAME || true
 
-          echo "Running new container..."
-          docker run -d \
+          echo "Checking if container exists..."
+          if [ "$(docker ps -a -q -f name=$CONTAINER_NAME)" ]; then
+            echo "Container exists, restarting..."
+            docker restart $CONTAINER_NAME
+          else
+            echo "Container does not exist, creating a new one..."
+            # docker run -d --name $CONTAINER_NAME --memory="1g" --memory-swap="1g" --restart unless-stopped $IMAGE_NAME
+            docker run -d \
             --name $CONTAINER_NAME \
             -p 4000:80 \
             --memory="3g" \
             --memory-swap="3g" \
             --restart unless-stopped \
             $IMAGE_NAME
+          fi
 
           echo "Cleaning up unused Docker images..."
-          docker image prune -f
+          docker system prune -af
 
           echo "Deployment completed!"
-          
-          PUSHER="${{ github.actor }}"
 
-          # Kirim notifikasi Telegram
-          curl -X POST "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/sendMessage" \
-              -d chat_id=<YOUR_CHAT_ID> \
+          PUSHER="${{ github.actor }}"
+          
+          # Kirim notifikasi ke Telegram setelah update tes
+          curl -X POST "https://api.telegram.org/bot7630899059:AAFqAUGUB7I5V9VGKXbcmoWmbYWvrdmnje8/sendMessage" \
+              -d chat_id=-1002437306112 \
               -d text="✅ Deployment Sukses! 🚀
               *Docker Image:* $IMAGE_NAME
               *Container:* $CONTAINER_NAME
-              *Tanggal:* $(date +"%A, %d-%m-%Y %H:%M:%S")%0A
+              *Tanggal:* $DEPLOY_TIME%0A
               Deployment dilakukan Production Branch *$PUSHER*%0A
               🔄 Container telah diperbarui dan berjalan dengan baik. 🎉"
 
         EOF
+
+          # pro
