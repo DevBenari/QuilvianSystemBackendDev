@@ -524,6 +524,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             string? search = null,
             Guid? tindakanId = null,
             Guid? kelasId = null,
+            Guid? poliId = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
             DateTime? startDate = null,
@@ -557,6 +558,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     query = query.Where(t =>
                         _applicationDbContext.TarifKelass
                             .Any(tk => tk.TindakanId == t.TindakanId && tk.KelasId == kid));
+                }
+
+                if (poliId.HasValue)
+                {
+                    var pid = poliId.Value;
+                    query = query.Where(t =>
+                        _applicationDbContext.TindakanPolis
+                            .Any(tp => tp.TindakanId == t.TindakanId && tp.PoliId == pid));
                 }
 
                 if (!string.IsNullOrWhiteSpace(search))

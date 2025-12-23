@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Hubs;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.HubSignalR;
@@ -245,9 +246,7 @@ app.MapHub<PermintaanUnitHub>("/hubs/permintaanunit");
 app.MapHub<SuratPengantarRanapHub>("/hubs/suratpengantarranap");
 app.MapHub<AssessmentEdukasiDetailHub>("/hubs/assessmentedukasidetail");
 app.MapHub<AssessmentEdukasiHub>("/hubs/assessmentedukasi");
-
 app.MapHub<MonitoringNyeriHub>("hubs/monitoringnyeri");
-
 
 // signal R IGD
 app.MapHub<IGDTriageHub>("/hubs/IGDtriage");
@@ -259,20 +258,24 @@ app.MapHub<NosokomialHub>("/hubs/nosokomial");
 app.MapHub<LabBookingHub>("/hubs/labbooking");
 app.MapHub<LabBookingDetailHub>("/hubs/labbookingdetail");
 
+
+// signal R Alkes
+app.MapHub<AlatPemakaianHub>("/hubs/alatpemakaian");
+
 // Configure the HTTP request pipeline.
-//if (app.Environment.IsDevelopment())
-//{
-//    app.UseSwagger();
-//    app.UseSwaggerUI(c =>
-//    {
-//        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Home");
-//        c.SwaggerEndpoint("/swagger/manajemen_kesehatan/swagger.json", "Manajemen Kesehatan API");
-//        c.SwaggerEndpoint("/swagger/administrator/swagger.json", "Administrator API");
-//        c.SwaggerEndpoint("/swagger/hrd/swagger.json", "HRD API");
-//        c.SwaggerEndpoint("/swagger/master/swagger.json", "Master API");
-//        c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None);
-//    });
-//}
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Home");
+        c.SwaggerEndpoint("/swagger/manajemen_kesehatan/swagger.json", "Manajemen Kesehatan API");
+        c.SwaggerEndpoint("/swagger/administrator/swagger.json", "Administrator API");
+        c.SwaggerEndpoint("/swagger/hrd/swagger.json", "HRD API");
+        c.SwaggerEndpoint("/swagger/master/swagger.json", "Master API");
+        c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None);
+    });
+}
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 app.UseSwagger();
 app.UseSwaggerUI(c =>

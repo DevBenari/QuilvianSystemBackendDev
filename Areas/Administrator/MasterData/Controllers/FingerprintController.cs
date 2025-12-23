@@ -232,9 +232,9 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
         }
 
 
-         //===========================
-         //4. DELETE FINGERPRINT BY USER ID ahhhhh
-         //===========================
+        // ===========================
+        // 4. DELETE FINGERPRINT BY USER ID
+        // ===========================
         [HttpDelete("{userId}")]
         public async Task<IActionResult> DeleteFingerprint(string userId)
         {
