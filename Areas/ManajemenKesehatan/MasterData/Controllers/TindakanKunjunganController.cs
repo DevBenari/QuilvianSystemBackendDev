@@ -76,7 +76,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.TindakanId,
                             t.NamaTindakan,
                             a.Quantity,
-                            a.Total
+                            a.Total,
+                            a.TanggalPemeriksaan
                         }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -210,6 +211,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     Quantity = vm.Quantity,
                     Total = totalqty, // Masukkan nilai Total yang telah dihitung
                     RanapId = vm.RanapId,
+                    TanggalPemeriksaan = vm.TanggalPemeriksaan,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow
                 };
@@ -360,6 +362,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.Quantity = vm.Quantity;
                 data.Total = totalqty;
                 data.RanapId = vm.RanapId;
+                data.TanggalPemeriksaan = vm.TanggalPemeriksaan;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -536,7 +539,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.TindakanId,
                             t.NamaTindakan,
                             a.Quantity,
-                            a.Total
+                            a.Total,
+                            a.TanggalPemeriksaan
                         };
             // filter based on kunjungan id
             if (kunjunganId.HasValue )

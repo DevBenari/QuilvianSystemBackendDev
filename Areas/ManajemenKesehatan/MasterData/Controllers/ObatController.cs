@@ -13,6 +13,7 @@ using Newtonsoft.Json.Converters;
 using System.Globalization;
 using Microsoft.IdentityModel.Tokens;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels;
+using System.Linq;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
@@ -50,85 +51,156 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            var query = _applicationDbContext.Obats
-                .Where(a => !a.IsDelete)
-                .Select(a => new
-                {
-                    a.CreateDateTime,
-                    a.CreateBy,
-                    CreateByName = _applicationDbContext.UserActives
-                        .Where(u => u.UserActiveId == a.CreateBy)
-                        .Select(u => u.FullName)
-                        .FirstOrDefault(),
-                    a.ObatId,
-                    a.ObatCode,
-                    a.ObatName,
-                    a.HNAPrice,
-                    a.HTEPrice,
-                    a.Stock,
-                    a.IsActive,
-                    a.Note,
-                    a.BentukObatId,
-                    BentukObatName = _applicationDbContext.BentukObats
-                        .Where(bo => bo.BentukSatuanId == a.BentukObatId)
-                        .Select(bo => bo.NamaBentukSatuan)
-                        .FirstOrDefault(),
-                    a.SatuanId,
-                    SatuanName = _applicationDbContext.Satuans
-                        .Where(s => s.SatuanId == a.SatuanId)
-                        .Select(s => s.NamaSatuan)
-                        .FirstOrDefault(),
+            // ===============================
+            // 1️⃣ Ambil query dasar
+            // ===============================
+            var baseQuery = _applicationDbContext.Obats
+                .AsNoTracking()
+                .Where(o => !o.IsDelete);
 
-                    KandunganNames = (from ok in _applicationDbContext.ObatKandungans
-                                      join k in _applicationDbContext.Kandungans on ok.KandunganId equals k.KandunganId
-                                      where ok.ObatId == a.ObatId
-                                      select k.NamaKandungan).Distinct().ToList(),
-
-                    AsuransiNames = (from oa in _applicationDbContext.ObatAsuransis
-                                     join asu in _applicationDbContext.Asuransis on oa.AsuransiId equals asu.AsuransiId
-                                     where oa.ObatId == a.ObatId
-                                     select asu.NamaAsuransi).Distinct().ToList(),
-
-                    // New fields added
-                    a.Minimal,
-                    a.Maximal,
-                    a.Farmakologi,
-                    a.Peringatan,
-                    a.Indikasi,
-                    a.Kontraindikasi,
-                    a.CaraKerja,
-                    a.InteraksiObat,
-                    a.Dosis,
-                    a.TakaranDosis,
-                    a.JumlahSatuan,
-                    a.Kategori,
-                    a.ItemId,
-                    a.ObatRuteId,
-                    RuteObatNama = _applicationDbContext.ObatRutes
-                        .Where(bo => bo.RuteObatId == a.ObatRuteId)
-                        .Select(bo => bo.RuteObat)
-                        .FirstOrDefault(),
-                    a.KategoriObat,
-                    a.IsControlled,
-                }).OrderByDescending(a => a.CreateDateTime);
-
-            var totalRows = await query.CountAsync();
+            var totalRows = await baseQuery.CountAsync();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
 
-            var listdata = await query
+            // =======================================================
+            // 2️⃣ Paging — hanya ambil data yang dibutuhkan
+            // =======================================================
+            var obatList = await baseQuery
+                .OrderByDescending(o => o.CreateDateTime)
                 .Skip((page - 1) * perPage)
                 .Take(perPage)
                 .ToListAsync();
 
-            if (!listdata.Any())
-            {
+            if (!obatList.Any())
                 return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
-            }
 
+            // Ambil semua ID
+            var obatIds = obatList.Select(o => o.ObatId).ToList();
+            var userIds = obatList.Select(o => o.CreateBy).Distinct().ToList();
+
+            var bentukIds = obatList.Select(o => o.BentukObatId).Distinct().ToList();
+            var satuanIds = obatList.Select(o => o.SatuanId).Distinct().ToList();
+            var ruteIds = obatList.Select(o => o.ObatRuteId).Distinct().ToList();
+
+            // =======================================================
+            // 3️⃣ Ambil lookup secara batch
+            // =======================================================
+
+            var userLookup = await _applicationDbContext.UserActives
+                .Where(u => userIds.Contains(u.UserActiveId))
+                .Select(u => new { u.UserActiveId, u.FullName })
+                .ToDictionaryAsync(x => x.UserActiveId, x => x.FullName);
+
+            var bentukLookup = await _applicationDbContext.BentukObats
+                .Where(b => bentukIds.Contains(b.BentukSatuanId))
+                .Select(b => new { b.BentukSatuanId, b.NamaBentukSatuan })
+                .ToDictionaryAsync(x => x.BentukSatuanId, x => x.NamaBentukSatuan);
+
+            var satuanLookup = await _applicationDbContext.Satuans
+                .Where(s => satuanIds.Contains(s.SatuanId))
+                .Select(s => new { s.SatuanId, s.NamaSatuan })
+                .ToDictionaryAsync(x => x.SatuanId, x => x.NamaSatuan);
+
+            var ruteLookup = await _applicationDbContext.ObatRutes
+                .Where(r => ruteIds.Contains(r.RuteObatId))
+                .Select(r => new { r.RuteObatId, r.RuteObat })
+                .ToDictionaryAsync(x => x.RuteObatId, x => x.RuteObat);
+
+            var kandunganList = await (
+                from ok in _applicationDbContext.ObatKandungans
+                join k in _applicationDbContext.Kandungans on ok.KandunganId equals k.KandunganId
+                where obatIds.Contains(ok.ObatId)
+                select new { ok.ObatId, k.NamaKandungan }
+            ).ToListAsync();
+
+            var kandunganLookup = kandunganList
+                .GroupBy(x => x.ObatId)
+                .ToDictionary(g => g.Key, g => g.Select(v => v.NamaKandungan).Distinct().ToList());
+
+            // Asuransi lookup
+            var asuransiList = await (
+                from oa in _applicationDbContext.ObatAsuransis
+                join a in _applicationDbContext.Asuransis on oa.AsuransiId equals a.AsuransiId
+                where obatIds.Contains(oa.ObatId)
+                select new { oa.ObatId, a.NamaAsuransi }
+            ).ToListAsync();
+
+            var asuransiLookup = asuransiList
+                .GroupBy(x => x.ObatId)
+                .ToDictionary(g => g.Key, g => g.Select(v => v.NamaAsuransi).Distinct().ToList());
+
+            // =======================================================
+            // 4️⃣ Gabungkan data
+            // =======================================================
+            var result = obatList.Select(o => new
+            {
+                o.CreateDateTime,
+                o.CreateBy,
+                CreateByName = userLookup.ContainsKey(o.CreateBy) ? userLookup[o.CreateBy] : null,
+
+                o.ObatId,
+                o.ObatCode,
+                o.ObatName,
+                o.HNAPrice,
+                o.HTEPrice,
+                o.Stock,
+                o.IsActive,
+                o.Note,
+
+                // Bentuk Obat
+                o.BentukObatId,
+                BentukObatName = o.BentukObatId.HasValue && bentukLookup.ContainsKey(o.BentukObatId.Value)
+                        ? bentukLookup[o.BentukObatId.Value]
+                        : null,
+
+                // Satuan Obat
+                o.SatuanId,
+                SatuanName = o.SatuanId.HasValue && satuanLookup.ContainsKey(o.SatuanId.Value)
+                    ? satuanLookup[o.SatuanId.Value]
+                    : null,
+
+                // Kandungan
+                KandunganNames = kandunganLookup.ContainsKey(o.ObatId)
+                        ? kandunganLookup[o.ObatId]
+                        : new List<string>(),
+
+                // Asuransi
+                AsuransiNames = asuransiLookup.ContainsKey(o.ObatId)
+                        ? asuransiLookup[o.ObatId]
+                        : new List<string>(),
+
+                // Fields tambahan
+                o.Minimal,
+                o.Maximal,
+                o.Farmakologi,
+                o.Peringatan,
+                o.Indikasi,
+                o.Kontraindikasi,
+                o.CaraKerja,
+                o.InteraksiObat,
+                o.Dosis,
+                o.TakaranDosis,
+                o.JumlahSatuan,
+                o.Kategori,
+                o.ItemId,
+
+                // Rute Obat
+                o.ObatRuteId,
+                RuteObatNama = o.ObatRuteId.HasValue && ruteLookup.ContainsKey(o.ObatRuteId.Value)
+                        ? ruteLookup[o.ObatRuteId.Value]
+                        : null,
+
+                o.KategoriObat,
+                o.IsControlled
+            });
+
+
+            // =======================================================
+            // 5️⃣ Return final response
+            // =======================================================
             return Ok(new
             {
                 message = "Berhasil || 200 OK",
-                data = listdata,
+                data = result,
                 pagination = new
                 {
                     CurrentPage = page,
@@ -140,83 +212,120 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
 
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetObatById(Guid id)
         {
-            var data = await _applicationDbContext.Obats
-                .Where(a => a.ObatId == id && !a.IsDelete)
-                .Select(a => new
-                {
-                    a.CreateDateTime,
-                    a.CreateBy,
-                    CreateByName = _applicationDbContext.UserActives
-                        .Where(u => u.UserActiveId == a.CreateBy)
-                        .Select(u => u.FullName)
-                        .FirstOrDefault(),
-                    a.ObatId,
-                    a.ObatCode,
-                    a.ObatName,
-                    a.HNAPrice,
-                    a.HTEPrice,
-                    a.Stock,
-                    a.IsActive,
-                    a.Note,
-                    a.BentukObatId,
-                    BentukObatName = _applicationDbContext.BentukObats
-                        .Where(bo => bo.BentukSatuanId == a.BentukObatId)
-                        .Select(bo => bo.NamaBentukSatuan)
-                        .FirstOrDefault(),
-                    a.SatuanId,
-                    SatuanName = _applicationDbContext.Satuans
-                        .Where(s => s.SatuanId == a.SatuanId)
-                        .Select(s => s.NamaSatuan)
-                        .FirstOrDefault(),
-
-                    KandunganNames = (from ok in _applicationDbContext.ObatKandungans
-                                      join k in _applicationDbContext.Kandungans on ok.KandunganId equals k.KandunganId
-                                      where ok.ObatId == a.ObatId
-                                      select k.NamaKandungan).Distinct().ToList(),
-
-                    AsuransiNames = (from oa in _applicationDbContext.ObatAsuransis
-                                     join asu in _applicationDbContext.Asuransis on oa.AsuransiId equals asu.AsuransiId
-                                     where oa.ObatId == a.ObatId
-                                     select asu.NamaAsuransi).Distinct().ToList(),
-
-                    // Info tambahan
-                    a.Minimal,
-                    a.Maximal,
-                    a.Farmakologi,
-                    a.Peringatan,
-                    a.Indikasi,
-                    a.Kontraindikasi,
-                    a.CaraKerja,
-                    a.InteraksiObat,
-                    a.Dosis,
-                    a.TakaranDosis,
-                    a.JumlahSatuan,
-                    a.Kategori,
-                    a.ItemId,
-                    a.ObatRuteId,
-                    RuteObatNama = _applicationDbContext.ObatRutes
-                        .Where(bo => bo.RuteObatId == a.ObatRuteId)
-                        .Select(bo => bo.RuteObat)
-                        .FirstOrDefault(),
-                    a.KategoriObat,
-                    a.IsControlled,
-                })
+            // =======================
+            // 1️⃣ Ambil Obat Utama
+            // =======================
+            var obat = await _applicationDbContext.Obats
+                .Where(o => o.ObatId == id && !o.IsDelete)
+                .AsNoTracking()
                 .FirstOrDefaultAsync();
 
-            if (data == null)
-            {
+            if (obat == null)
                 return NotFound(new { message = "Obat tidak ditemukan || 404 Not Found" });
-            }
+
+            // =======================
+            // 2️⃣ Ambil semua relasi dalam batch
+            // =======================
+
+            // Pembuat data
+            var userName = await _applicationDbContext.UserActives
+                .Where(u => u.UserActiveId == obat.CreateBy)
+                .Select(u => u.FullName)
+                .FirstOrDefaultAsync();
+
+            // Bentuk obat
+            var bentukObatName = await _applicationDbContext.BentukObats
+                .Where(b => b.BentukSatuanId == obat.BentukObatId)
+                .Select(b => b.NamaBentukSatuan)
+                .FirstOrDefaultAsync();
+
+            // Satuan obat
+            var satuanName = await _applicationDbContext.Satuans
+                .Where(s => s.SatuanId == obat.SatuanId)
+                .Select(s => s.NamaSatuan)
+                .FirstOrDefaultAsync();
+
+            // Rute obat
+            var ruteObatName = await _applicationDbContext.ObatRutes
+                .Where(r => r.RuteObatId == obat.ObatRuteId)
+                .Select(r => r.RuteObat)
+                .FirstOrDefaultAsync();
+
+            // Kandungan list
+            var kandunganList = await (
+                from ok in _applicationDbContext.ObatKandungans
+                join k in _applicationDbContext.Kandungans on ok.KandunganId equals k.KandunganId
+                where ok.ObatId == id
+                select k.NamaKandungan
+            ).Distinct().ToListAsync();
+
+            // Asuransi list
+            var asuransiList = await (
+                from oa in _applicationDbContext.ObatAsuransis
+                join a in _applicationDbContext.Asuransis on oa.AsuransiId equals a.AsuransiId
+                where oa.ObatId == id
+                select a.NamaAsuransi
+            ).Distinct().ToListAsync();
+
+            // =======================
+            // 3️⃣ Gabungkan hasil
+            // =======================
+            var result = new
+            {
+                obat.CreateDateTime,
+                obat.CreateBy,
+                CreateByName = userName,
+                obat.ObatId,
+                obat.ObatCode,
+                obat.ObatName,
+                obat.HNAPrice,
+                obat.HTEPrice,
+                obat.Stock,
+                obat.IsActive,
+                obat.Note,
+
+                obat.BentukObatId,
+                BentukObatName = bentukObatName,
+
+                obat.SatuanId,
+                SatuanName = satuanName,
+
+                KandunganNames = kandunganList,
+                AsuransiNames = asuransiList,
+
+                // Info tambahan
+                obat.Minimal,
+                obat.Maximal,
+                obat.Farmakologi,
+                obat.Peringatan,
+                obat.Indikasi,
+                obat.Kontraindikasi,
+                obat.CaraKerja,
+                obat.InteraksiObat,
+                obat.Dosis,
+                obat.TakaranDosis,
+                obat.JumlahSatuan,
+                obat.Kategori,
+                obat.ItemId,
+
+                obat.ObatRuteId,
+                RuteObatNama = ruteObatName,
+
+                obat.KategoriObat,
+                obat.IsControlled
+            };
 
             return Ok(new
             {
                 message = "Berhasil mengambil data obat || 200 OK",
-                data
+                data = result
             });
         }
+
 
         [HttpPost]
         public async Task<IActionResult> CreateObat([FromBody] ObatViewModel vm)
@@ -651,6 +760,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     row.SatuanName,
                     row.ItemId,
                     row.ObatRuteId,
+                    row.NamaObatRute,
                     row.KategoriObat,
                     row.IsControlled,
                     KandunganNames = groupedKandungan.ContainsKey(row.ObatId) ? groupedKandungan[row.ObatId] : new List<string>(),
