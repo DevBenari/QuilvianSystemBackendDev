@@ -110,7 +110,48 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet("{id}")]
         public async Task<IActionResult> GetPeralatanById(Guid id)
         {
-            var listdata = _applicationDbContext.Peralatans.Find(id);
+            var listdata = from a in _applicationDbContext.Peralatans
+                           join u in _applicationDbContext.UserActives
+                               on a.CreateBy equals u.UserActiveId
+                           join k in _applicationDbContext.KategoriPeralatans
+                               on a.KategoriPeralatanId equals k.KategoriPeralatanId into katGroup
+                           from k in katGroup.DefaultIfEmpty()
+
+                           join t in _applicationDbContext.TarifKelass
+                               on a.PeralatanId equals t.PeralatanId into tarifGroup
+                           from t in tarifGroup.DefaultIfEmpty()
+
+                           join kl in _applicationDbContext.Kelass
+                               on t.KelasId equals kl.KelasId into kelasGroup
+                           from kl in kelasGroup.DefaultIfEmpty()
+
+                           where a.IsDelete == false && a.PeralatanId == id
+                           select new
+                           {
+                               CreateDateTime = a.CreateDateTime,
+                               CreateBy = a.CreateBy,
+                               CreateByName = u.FullName ?? null,
+
+                               PeralatanId = a.PeralatanId,
+                               KodePeralatan = a.KodePeralatan,
+                               NamaPeralatan = a.NamaPeralatan,
+
+                               Manufacturer = a.Manufacturer,
+                               Purchase_date = a.Purchase_date,
+                               Maintenance_status = a.Maintenance_status,
+                               Operational_status = a.Operational_status,
+                               Department_name = a.Department_name,
+                               Location = a.Location,
+
+                               KategoriPeralatanId = a.KategoriPeralatanId,
+                               NamaKategoriPeralatan = k != null ? k.NamaKategoriPeralatan : null,
+
+                               KelasId = kl != null ? (Guid?)kl.KelasId : null,
+                               NamaKelas = kl != null ? kl.NamaKelas : null,
+
+                               TarifKelasId = t != null ? (Guid?)t.TarifKelasId : null,
+                               TarifRs = t != null ? t.TarifRs : null
+                           }; 
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -327,10 +368,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
         // pagination
         [HttpGet("paged")]
-        public IActionResult PegedAsuransi(
+        public async Task<IActionResult> PegedPeralatan(
         int page = 1,
         int perPage = 10,
         string? search = null,
+        Guid? kelasid = null,
+        Guid? alatId = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -343,26 +386,57 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         join u in _applicationDbContext.UserActives
                             on a.CreateBy equals u.UserActiveId
                         join k in _applicationDbContext.KategoriPeralatans
-                            on a.KategoriPeralatanId equals k.KategoriPeralatanId
+                            on a.KategoriPeralatanId equals k.KategoriPeralatanId into katGroup
+                        from k in katGroup.DefaultIfEmpty()
+
+                        join t in _applicationDbContext.TarifKelass
+                            on a.PeralatanId equals t.PeralatanId into tarifGroup
+                        from t in tarifGroup.DefaultIfEmpty()
+
+                        join kl in _applicationDbContext.Kelass
+                            on t.KelasId equals kl.KelasId into kelasGroup
+                        from kl in kelasGroup.DefaultIfEmpty()
+
                         where a.IsDelete == false
                         select new
                         {
                             CreateDateTime = a.CreateDateTime,
                             CreateBy = a.CreateBy,
-                            CreateByName = u.FullName,
+                            CreateByName = u.FullName ?? null,
+
                             PeralatanId = a.PeralatanId,
                             KodePeralatan = a.KodePeralatan,
                             NamaPeralatan = a.NamaPeralatan,
+
                             Manufacturer = a.Manufacturer,
                             Purchase_date = a.Purchase_date,
                             Maintenance_status = a.Maintenance_status,
                             Operational_status = a.Operational_status,
                             Department_name = a.Department_name,
                             Location = a.Location,
-                            KategoriPeralatanId = a.KategoriPeralatanId,
-                            NamaKategoriPeralatan = k.NamaKategoriPeralatan,
 
+                            KategoriPeralatanId = a.KategoriPeralatanId,
+                            NamaKategoriPeralatan = k != null ? k.NamaKategoriPeralatan : null,
+
+                            KelasId = kl != null ? (Guid?)kl.KelasId : null,
+                            NamaKelas = kl != null ? kl.NamaKelas : null,
+
+                            TarifKelasId = t != null ? (Guid?)t.TarifKelasId : null,
+                            TarifRs = t != null ? t.TarifRs : null
                         };
+
+
+            // filter berdasarkan kelas id
+            if (kelasid.HasValue)
+            {
+                query = query.Where(u => u.KelasId == kelasid.Value);
+            }
+
+            // filter based on alat id
+            if (alatId.HasValue)
+            {
+                query = query.Where(u => u.PeralatanId == alatId.Value);
+            }
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             if (!string.IsNullOrWhiteSpace(search))
