@@ -525,6 +525,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         on a.TindakanId equals t.TindakanId into tindakanGroup
                         from t in tindakanGroup.DefaultIfEmpty()
 
+                        // join ke table kunjungan
+                        join k in _applicationDbContext.Kunjungans
+                        on a.KunjunganId equals k.KunjunganID into kunjunganGroup
+                        from k in kunjunganGroup.DefaultIfEmpty()
+
                         where a.IsDelete == false
                         select new
                         {
@@ -533,6 +538,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateByName = u.FullName,
                             a.TindakanKunjunganId,
                             a.KunjunganId,
+                            k.JenisKunjungan,
                             a.DepartementId,
                             a.DokterPemeriksaId,
                             a.KelasId,

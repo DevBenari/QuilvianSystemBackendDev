@@ -56,9 +56,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
         public async Task<IActionResult> GetById(Guid id)
         {
             // =========================
-            // Ambil header
+            // 1) Ambil header
             // =========================
             var header = await _applicationDbContext.AlatPemakaians
+                .AsNoTracking()
                 .Where(x => x.PemakaianAlatId == id)
                 .Select(x => new
                 {
@@ -76,9 +77,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
                 return NotFound(new { message = "Data pemakaian alat tidak ditemukan." });
 
             // =========================
-            // Ambil detail alat
+            // 2) Ambil detail alat
             // =========================
             var details = await _applicationDbContext.AlatPemakaianDetails
+                .AsNoTracking()
                 .Where(x => x.PemakaianAlatId == id)
                 .Select(x => new
                 {
@@ -93,10 +95,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
                 .ToListAsync();
 
             // =========================
-            // Ambil nama alat & kelas (optional, tapi biasanya dibutuhkan frontend)
+            // 3) Lookup Nama Peralatan & Nama Kelas
             // =========================
-            var alatIds = details.Select(d => d.PeralatanId).Distinct().ToList();
-            var kelasIds = details.Select(d => d.KelasId).Distinct().ToList();
+
+            var alatIds = details.Where(d => d.PeralatanId != null).Select(d => d.PeralatanId!.Value).Distinct().ToList();
+            var kelasIds = details.Where(d => d.KelasId != null).Select(d => d.KelasId!.Value).Distinct().ToList();
 
             var namaAlatDict = await _applicationDbContext.Peralatans
                 .Where(x => alatIds.Contains(x.PeralatanId))
@@ -108,28 +111,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
                 .Select(x => new { x.KelasId, x.NamaKelas })
                 .ToDictionaryAsync(x => x.KelasId, x => x.NamaKelas);
 
-            //// =========================
-            //// Billing alkes untuk kunjungan ini (optional)
-            //// =========================
-            //var billings = await _applicationDbContext.Billings
-            //    .Where(b =>
-            //        b.KunjunganId == header.KunjunganId &&
-            //        b.JenisBilling.ToLower() == "alkes" &&
-            //        alatIds.Contains(b.ItemId))
-            //    .Select(b => new
-            //    {
-            //        b.BillingId,
-            //        b.BillingKode,
-            //        b.ItemId,
-            //        b.NamaItem,
-            //        b.QtyItem,
-            //        b.HargaItem,
-            //        b.SubTotalItem
-            //    })
-            //    .ToListAsync();
-
             // =========================
-            // Final response
+            // 4) Final result (AMAN dari null)
             // =========================
             var result = new
             {
@@ -138,27 +121,39 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
                 {
                     d.DetailPemakaianAlatId,
                     d.PeralatanId,
-                    NamaPeralatan = namaAlatDict.TryGetValue((Guid)d.PeralatanId, out var nama) ? nama : null,
+
+                    NamaPeralatan =
+                        d.PeralatanId != null &&
+                        namaAlatDict.TryGetValue(d.PeralatanId.Value, out var alat)
+                            ? alat
+                            : null,
+
                     d.KelasId,
-                    NamaKelas = kelasDict.TryGetValue((Guid)d.KelasId, out var kelas) ? kelas : null,
+                    NamaKelas =
+                        d.KelasId != null &&
+                        kelasDict.TryGetValue(d.KelasId.Value, out var kelas)
+                            ? kelas
+                            : null,
+
                     d.QtyPemakaian,
                     d.HargaPeralatan,
                     d.TotalPemakaianAlat,
                     d.Keterangan
-                }),
-                //Billings = billings
+                })
             };
 
             return Ok(result);
         }
 
+
         [HttpGet("by-kunjungan/{kunjunganId}")]
         public async Task<IActionResult> GetByKunjunganId(Guid kunjunganId)
         {
             // =========================
-            // Ambil semua header pemakaian alat
+            // 1. Ambil header pemakaian alat
             // =========================
             var headers = await _applicationDbContext.AlatPemakaians
+                .AsNoTracking()
                 .Where(x => x.KunjunganId == kunjunganId && !x.IsDelete)
                 .OrderByDescending(x => x.CreateDateTime)
                 .Select(x => new
@@ -178,10 +173,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
             var pemakaianIds = headers.Select(h => h.PemakaianAlatId).ToList();
 
             // =========================
-            // Ambil semua detail
+            // 2. Ambil semua detail alat
             // =========================
             var details = await _applicationDbContext.AlatPemakaianDetails
-                .Where(x => pemakaianIds.Contains((Guid)x.PemakaianAlatId)&&!x.IsDelete)
+                .AsNoTracking()
+                .Where(x => pemakaianIds.Contains((Guid)x.PemakaianAlatId) && !x.IsDelete)
                 .Select(x => new
                 {
                     x.PemakaianAlatId,
@@ -196,10 +192,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
                 .ToListAsync();
 
             // =========================
-            // Ambil master alat & kelas
+            // 3. Load lookup master alat & kelas
             // =========================
-            var alatIds = details.Select(d => d.PeralatanId).Distinct().ToList();
-            var kelasIds = details.Select(d => d.KelasId).Distinct().ToList();
+            var alatIds = details.Where(d => d.PeralatanId != null).Select(d => d.PeralatanId!.Value).Distinct().ToList();
+            var kelasIds = details.Where(d => d.KelasId != null).Select(d => d.KelasId!.Value).Distinct().ToList();
 
             var namaAlatDict = await _applicationDbContext.Peralatans
                 .Where(x => alatIds.Contains(x.PeralatanId))
@@ -212,24 +208,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
                 .ToDictionaryAsync(x => x.KelasId, x => x.NamaKelas);
 
             // =========================
-            // Billing alkes (per kunjungan)
-            // =========================
-            //var billings = await _applicationDbContext.Billings
-            //    .Where(b => b.KunjunganId == kunjunganId && b.JenisBilling.ToLower() == "alkes")
-            //    .Select(b => new
-            //    {
-            //        b.BillingId,
-            //        b.BillingKode,
-            //        b.ItemId,
-            //        b.NamaItem,
-            //        b.QtyItem,
-            //        b.HargaItem,
-            //        b.SubTotalItem
-            //    })
-            //    .ToListAsync();
-
-            // =========================
-            // Group response per pemakaian alat
+            // 4. Grouping hasil aman dari null
             // =========================
             var result = headers.Select(h => new
             {
@@ -240,9 +219,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
                     {
                         d.DetailPemakaianAlatId,
                         d.PeralatanId,
-                        NamaPeralatan = namaAlatDict.TryGetValue((Guid)d.PeralatanId, out var nama) ? nama : null,
+                        NamaPeralatan =
+                            d.PeralatanId != null &&
+                            namaAlatDict.TryGetValue(d.PeralatanId.Value, out var nama)
+                                ? nama
+                                : null,
+
                         d.KelasId,
-                        NamaKelas = kelasDict.TryGetValue((Guid)d.KelasId, out var kelas) ? kelas : null,
+                        NamaKelas =
+                            d.KelasId != null &&
+                            kelasDict.TryGetValue(d.KelasId.Value, out var kelas)
+                                ? kelas
+                                : null,
+
                         d.QtyPemakaian,
                         d.HargaPeralatan,
                         d.TotalPemakaianAlat,
@@ -254,8 +243,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
             {
                 KunjunganId = kunjunganId,
                 TotalPemakaian = headers.Count,
-                Data = result,
-                //Billings = billings
+                Data = result
             });
         }
 
