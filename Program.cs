@@ -51,7 +51,7 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =
 // Tambahkan layanan CORS
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
+    options.AddPolicy("AllowSpecific", policy =>
     {
         policy
             .SetIsOriginAllowed(origin => true) // <- ✅ allow semua origin
