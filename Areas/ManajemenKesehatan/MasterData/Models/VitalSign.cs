@@ -31,6 +31,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? Kesadaran {  get; set; }
         public bool? IsNadiTeraba {  get; set; }
         public bool? IsRegularNadi {  get; set; }
+        public bool? IsLaporanSedasi {  get; set; }
         public decimal? Respirasi {  get; set; }
         public string? PolaNapas {  get; set; }
         public decimal? BBPreHD { get; set; }

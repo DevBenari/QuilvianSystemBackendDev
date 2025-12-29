@@ -15,7 +15,7 @@
         public decimal? BMI { get; set; }
         public decimal? LingkarKepalaBayi { get; set; }
         public decimal? Nadi { get; set; }
-
+        public bool? IsLaporanSedasi { get; set; }
         public Guid? DelegasiId { get; set; }
 
         public decimal? PenggunaanOksigen { get; set; }

@@ -98,6 +98,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.BBKering,
                             a.PengkajianScoreId,
                             a.ScoreGizi,
+                            a.IsLaporanSedasi,
                         }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -194,6 +195,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.LingkarLenganAtas,
                             a.PengkajianScoreId,
                             a.ScoreGizi,
+                            a.IsLaporanSedasi,
                         }).ToList();
 
             if (!data.Any())
@@ -301,6 +303,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     LingkarLenganAtas = vm.LingkarLenganAtas,
                     PengkajianScoreId = vm.PengkajianScoreId,
                     ScoreGizi = vm.ScoreGizi,
+                    IsLaporanSedasi = vm.IsLaporanSedasi,
 
                     CreateBy = createBy,
                     CreateDateTime = DateTimeOffset.UtcNow
@@ -441,6 +444,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.LingkarLenganAtas = vm.LingkarLenganAtas;
                 data.PengkajianScoreId = vm.PengkajianScoreId;
                 data.ScoreGizi = vm.ScoreGizi;
+                data.IsLaporanSedasi = vm.IsLaporanSedasi;
 
                 data.UpdateBy = modifyBy;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -762,6 +766,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 a.LingkarLenganAtas,
                                 a.PengkajianScoreId,
                                 a.ScoreGizi,
+                                a.IsLaporanSedasi   
                             };
 
                 //**Filter berdasarkan search(Perbaikan agar bisa mencari 1 huruf)**
