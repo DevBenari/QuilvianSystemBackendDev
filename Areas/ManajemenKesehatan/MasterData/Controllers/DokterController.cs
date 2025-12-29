@@ -337,6 +337,191 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
+        // GET: api/Dokter/by-email?email=xxx@xxx.com
+        [HttpGet("by-email")]
+        public async Task<IActionResult> GetDokterByEmail([FromQuery] string email)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(email))
+                    return BadRequest(new { message = "Email wajib diisi." });
+
+                email = email.Trim().ToLower();
+
+                // =========================================================
+                // 1️⃣ Ambil user aktif berdasarkan email
+                // =========================================================
+                var userActive = await _context.UserActives
+                    .AsNoTracking()
+                    .Where(u => u.Email.ToLower() == email)
+                    .Select(u => new { u.UserActiveId, u.FullName, u.Email })
+                    .FirstOrDefaultAsync();
+
+                if (userActive == null)
+                {
+                    return NotFound(new { message = $"User dengan email {email} tidak ditemukan || 404 Not Found" });
+                }
+
+                // =========================================================
+                // 2️⃣ Ambil data dokter utama berdasarkan NmDokter = FullName user
+                // =========================================================
+                var dokter = await _context.Dokters
+                    .AsNoTracking()
+                    .Where(d => !d.IsDelete && d.NmDokter == userActive.FullName)
+                    .FirstOrDefaultAsync();
+
+                if (dokter == null)
+                {
+                    return NotFound(new
+                    {
+                        message = $"Dokter dengan email {email} tidak ditemukan (NmDokter tidak match FullName user) || 404 Not Found",
+                        userFullName = userActive.FullName
+                    });
+                }
+
+                // =========================================================
+                // 3️⃣ Ambil nama pembuat (CreateByName)
+                // =========================================================
+                var CreateByName = await _context.UserActives
+                    .Where(u => u.UserActiveId == dokter.CreateBy)
+                    .Select(u => u.FullName)
+                    .FirstOrDefaultAsync();
+
+                // =========================================================
+                // 4️⃣ Email dokter (pakai hasil dari UserActives)
+                // =========================================================
+                var Email = userActive.Email;
+
+                // =========================================================
+                // 5️⃣ Ambil Asuransi Dokter (ID & Nama)
+                // =========================================================
+                var asuransiRaw = await (
+                    from da in _context.DokterAsuransis
+                    join a in _context.Asuransis on da.AsuransiId equals a.AsuransiId
+                    where da.DokterId == dokter.DokterId && !da.IsDelete
+                    select new
+                    {
+                        da.AsuransiId,
+                        a.NamaAsuransi
+                    }
+                ).ToListAsync();
+
+                var AsuransiIds = asuransiRaw
+                    .Select(x => x.AsuransiId)
+                    .Distinct()
+                    .ToList();
+
+                var NamaAsuransi = asuransiRaw
+                    .Select(x => x.NamaAsuransi)
+                    .Distinct()
+                    .ToList();
+
+                // =========================================================
+                // 6️⃣ Ambil Poli Dokter (ID & Nama)
+                // =========================================================
+                var poliRaw = await (
+                    from dp in _context.DokterPolis
+                    join p in _context.Polikliniks on dp.PoliId equals p.PoliklinikId
+                    where dp.DokterId == dokter.DokterId && !dp.IsDelete
+                    select new
+                    {
+                        dp.PoliId,
+                        p.NamaPoliklinik,
+                        dp.DokterPoliId
+                    }
+                ).ToListAsync();
+
+                var PoliIds = poliRaw
+                    .Select(p => p.PoliId)
+                    .Distinct()
+                    .ToList();
+
+                var NamaPoli = poliRaw
+                    .Select(p => p.NamaPoliklinik)
+                    .Distinct()
+                    .ToList();
+
+                var dokterPoliIds = poliRaw
+                    .Select(p => p.DokterPoliId)
+                    .Distinct()
+                    .ToList();
+
+                // =========================================================
+                // 7️⃣ Ambil JadwalPraktek
+                // =========================================================
+                var JadwalPraktek = await (
+                    from jp in _context.JadwalPrakteks
+                    where dokterPoliIds.Contains((Guid)jp.DokterPoliId) && !jp.IsDelete
+                    select new
+                    {
+                        jp.JadwalPraktekId,
+                        jp.HariPraktek,
+                        jp.WaktuPraktek,
+                        jp.JamMulai,
+                        jp.JamBerakhir
+                    }
+                )
+                .OrderBy(j => j.HariPraktek)
+                .ThenBy(j => j.JamMulai)
+                .ToListAsync();
+
+                // =========================================================
+                // 8️⃣ Format Foto Dokter (imageUrl)
+                // =========================================================
+                string imageUrl = !string.IsNullOrEmpty(dokter.FotoName)
+                    ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{dokter.FotoName}"
+                    : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg";
+
+                // =========================================================
+                // 9️⃣ FINAL OBJECT
+                // =========================================================
+                var result = new
+                {
+                    dokter.CreateDateTime,
+                    dokter.CreateBy,
+                    CreateByName,
+
+                    Email,
+
+                    dokter.DokterId,
+                    dokter.KdDokter,
+                    dokter.NmDokter,
+                    dokter.Spesialis,
+                    dokter.Sip,
+                    dokter.Str,
+                    dokter.TglSip,
+                    dokter.TglStr,
+                    dokter.Nik,
+                    dokter.Nohp,
+                    dokter.Alamat,
+                    dokter.IsAsuransi,
+                    dokter.IsActive,
+                    dokter.UserActiveId,
+                    dokter.FotoName,
+                    dokter.FotoPath,
+
+                    imageUrl,
+
+                    AsuransiIds,
+                    NamaAsuransi,
+
+                    PoliIds,
+                    NamaPoli,
+
+                    JadwalPraktek
+                };
+
+                return Ok(new
+                {
+                    message = "Berhasil mengambil data dokter berdasarkan email || 200 OK",
+                    data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
 
 
         [HttpGet("get-image/{id}")]

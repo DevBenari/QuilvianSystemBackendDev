@@ -508,6 +508,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             int page = 1,
             int perPage = 10,
             Guid? kunjunganId = null,
+            Guid? pasienId = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -532,6 +533,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 if (kunjunganId.HasValue)
                 {
                     baseQuery = baseQuery.Where(a => a.KunjunganId == kunjunganId.Value);
+                }
+
+                // filter based on pasien id (via Kunjungan)
+                if (pasienId.HasValue)
+                {
+                    var pid = pasienId.Value;
+
+                    baseQuery = baseQuery.Where(a =>
+                        _applicationDbContext.Kunjungans.Any(k =>
+                            k.KunjunganID == a.KunjunganId &&
+                            k.PasienId == pid));
                 }
 
                 // Filter berdasarkan tanggal
@@ -633,6 +645,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         CreateByName = u.FullName,
                         a.TindakanKunjunganId,
                         a.KunjunganId,
+                        k.PasienId,
                         JenisKunjungan = k != null ? k.JenisKunjungan : null,
                         AsuransiId = k != null ? k.AsuransiId : null,
                         NamaAsuransi = ar != null ? ar.NamaAsuransi : null,
