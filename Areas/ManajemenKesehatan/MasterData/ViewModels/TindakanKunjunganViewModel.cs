@@ -9,6 +9,7 @@
         public Guid? DepartementId { get; set; }
         public Guid? DokterPemeriksaId { get; set; }
         public Guid? KelasId { get; set; }
+        public DateTime? TanggalPemeriksaan { get; set; }
         //public decimal? Total { get; set; }
         public string? Disposition { get; set; }
         public Guid? DiskonId { get; set; }
