@@ -258,7 +258,6 @@ app.MapHub<NosokomialHub>("/hubs/nosokomial");
 app.MapHub<LabBookingHub>("/hubs/labbooking");
 app.MapHub<LabBookingDetailHub>("/hubs/labbookingdetail");
 
-
 // signal R Alkes
 app.MapHub<AlatPemakaianHub>("/hubs/alatpemakaian");
 

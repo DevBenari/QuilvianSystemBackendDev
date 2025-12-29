@@ -3,6 +3,7 @@
     public class AlatPemakaianDetailViewModel
     {
         public Guid? DetailPemakaianAlatId { get; set; } // <== untuk update baris existing
+        public Guid? PemakaianAlatId { get; set; }
         public Guid? PeralatanId { get; set; }
         public Guid? KelasId { get; set; }
         public int? QtyPemakaian { get; set; }
