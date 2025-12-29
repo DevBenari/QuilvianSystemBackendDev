@@ -33,16 +33,30 @@ builder.Services.Configure<Microsoft.AspNetCore.Mvc.JsonOptions>(options =>
     options.JsonSerializerOptions.Converters.Add(new NullableDateOnlyJsonConverter());
 });
 
-// Tambahkan layanan CORS
+// // Tambahkan layanan CORS
+// builder.Services.AddCors(options =>
+// {
+//     options.AddPolicy("AllowSpecific", policy =>
+//     {
+//         policy
+//             .SetIsOriginAllowed(origin => true) // <- ✅ allow semua origin
+//             .AllowAnyMethod()
+//             .AllowAnyHeader()
+//             .AllowCredentials(); // <- ✅ wajib untuk SignalR WebSocket
+//     });
+// });
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowSpecific", policy =>
+    options.AddPolicy("CorsPolicy", policy =>
     {
         policy
-            .SetIsOriginAllowed(origin => true) // <- ✅ allow semua origin
+            .WithOrigins(
+                "https://quilvian-mmchospital.com/",
+                "https://staging.quilvian-mmchospital.com/"
+            )
             .AllowAnyMethod()
             .AllowAnyHeader()
-            .AllowCredentials(); // <- ✅ wajib untuk SignalR WebSocket
+            .AllowCredentials(); // WAJIB kalau pakai SignalR
     });
 });
 
