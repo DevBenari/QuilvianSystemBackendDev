@@ -523,7 +523,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-
         [HttpGet("get-image/{id}")]
         public async Task<IActionResult> GetImage(Guid id)
         {

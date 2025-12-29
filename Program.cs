@@ -222,10 +222,11 @@ builder.Services.AddControllers(options =>
 builder.Services.AddEndpointsApiExplorer();
 
 // Konfigurasi SignalR
-// Tambahkan sebelum var app = builder.Build();
 builder.Services.AddSignalR();
 
 var app = builder.Build();
+
+app.UseCors("AllowSpecific"); // Panggil sebelum middleware lainnya
 
 // Konfigurasi SignalR
 // signal R kunjungan
@@ -246,7 +247,7 @@ app.MapHub<PermintaanUnitHub>("/hubs/permintaanunit");
 app.MapHub<SuratPengantarRanapHub>("/hubs/suratpengantarranap");
 app.MapHub<AssessmentEdukasiDetailHub>("/hubs/assessmentedukasidetail");
 app.MapHub<AssessmentEdukasiHub>("/hubs/assessmentedukasi");
-app.MapHub<MonitoringNyeriHub>("hubs/monitoringnyeri");
+app.MapHub<MonitoringNyeriHub>("/hubs/monitoringnyeri");
 
 // signal R IGD
 app.MapHub<IGDTriageHub>("/hubs/IGDtriage");
@@ -290,7 +291,6 @@ app.UseSwaggerUI(c =>
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
-app.UseCors("AllowSpecific"); // Panggil sebelum middleware lainnya
 app.UseAuthentication(); // Tambahkan middleware autentikasi
 app.UseAuthorization();
 app.MapControllers();
