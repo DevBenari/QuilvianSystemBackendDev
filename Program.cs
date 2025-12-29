@@ -49,31 +49,18 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =
 
 
 // Tambahkan layanan CORS
-// builder.Services.AddCors(options =>
-// {
-//     options.AddPolicy("AllowSpecific", policy =>
-//     {
-//         policy
-//             .SetIsOriginAllowed(origin => true) // <- ✅ allow semua origin
-//             .AllowAnyMethod()
-//             .AllowAnyHeader()
-//             .AllowCredentials(); // <- ✅ wajib untuk SignalR WebSocket
-//     });
-// });
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("CorsPolicy", policy =>
+    options.AddPolicy("AllowAll", policy =>
     {
         policy
-            .WithOrigins(
-                "https://quilvian-mmchospital.com/",
-                "https://staging.quilvian-mmchospital.com/"
-            )
+            .SetIsOriginAllowed(origin => true) // <- ✅ allow semua origin
             .AllowAnyMethod()
             .AllowAnyHeader()
-            .AllowCredentials(); // WAJIB kalau pakai SignalR
+            .AllowCredentials(); // <- ✅ wajib untuk SignalR WebSocket
     });
 });
+
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
     options.Password.RequireNonAlphanumeric = false;
