@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -12,9 +13,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251230032928_AddKolomTabmbahanSuratPengantarRanap")]
+    partial class AddKolomTabmbahanSuratPengantarRanap
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -6735,8 +6737,8 @@ namespace QuilvianSystemBackendDev.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("AsuransiId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("AsuransiId")
+                        .HasColumnType("text");
 
                     b.Property<Guid>("CreateBy")
                         .HasColumnType("uuid");
@@ -6756,8 +6758,8 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("NoPolis")
                         .HasColumnType("text");
 
-                    b.Property<Guid?>("PasienId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("PasienId")
+                        .HasColumnType("text");
 
                     b.Property<string>("Umur")
                         .IsRequired()

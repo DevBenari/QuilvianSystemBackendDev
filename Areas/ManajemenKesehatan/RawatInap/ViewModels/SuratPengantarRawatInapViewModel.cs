@@ -8,5 +8,11 @@
         public string? AlasanRanap { get; set; }
         public string? RencanaTindakLanjut { get; set; }
         public string? AsalUnit { get; set; }
+        public string? IndikasiTindakan { get; set; }
+        public string? JenisOperasi { get; set; }
+        public string? TawaranLayanan { get; set; }
+        public string? HarapanHasil { get; set; }
+        public bool? IsAdaHambatan { get; set; }
+        public Guid? DokterDPJPId { get; set; }
     }
 }
