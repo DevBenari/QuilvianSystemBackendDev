@@ -44,5 +44,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels
     {
         public Guid ObatId { get; set; }
         public Guid AsuransiId { get; set; }
+        public decimal? Diskon { get; set; }
     }
 }

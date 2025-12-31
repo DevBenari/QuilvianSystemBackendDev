@@ -24,6 +24,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public Guid TindakanAsuransiId { get; set; }
         public Guid TindakanId { get; set; }
         public Guid AsuransiId { get; set; }
+        public decimal? Diskon { get; set; }
 
     }
 

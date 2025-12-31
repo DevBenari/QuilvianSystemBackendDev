@@ -1,21 +1,23 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System;
+using System.Linq;
+using System.Security.Claims;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
-using QuilvianSystemBackendDev.Repositories;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Security.Claims;
-using QuilvianSystemBackendDev.Models;
-using Microsoft.AspNetCore.Identity;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
+using QuilvianSystemBackendDev.Models;
+using QuilvianSystemBackendDev.Repositories;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
+    [EnableCors("AllowSpecific")]
     public class ObatAsuransiController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
@@ -135,6 +137,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     ObatAsuransiId = Guid.NewGuid(),
                     ObatId = obatAsuransi.ObatId,
                     AsuransiId = obatAsuransi.AsuransiId,
+                    Diskon = obatAsuransi.Diskon,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow
                 };
@@ -182,6 +185,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 // Update data
                 data.ObatId = obatAsuransi.ObatId;
                 data.AsuransiId = obatAsuransi.AsuransiId;
+                data.Diskon = obatAsuransi.Diskon;
 
                 _applicationDbContext.ObatAsuransis.Update(data);
                 await _applicationDbContext.SaveChangesAsync();

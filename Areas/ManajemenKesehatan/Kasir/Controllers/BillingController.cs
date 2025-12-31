@@ -443,7 +443,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             }
         }
 
-
         [HttpGet("ObatFarmasiByKunjunganId/{kunjunganId}")]
         public async Task<IActionResult> GetObatFarmasiByKunjunganId(Guid kunjunganId)
         {

@@ -1,18 +1,13 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
-using QuilvianSystemBackendDev.Repositories;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
-using Microsoft.AspNetCore.Cors;
-using System.Security.Claims;
-using Microsoft.AspNetCore.Identity;
 using QuilvianSystemBackendDev.Models;
-using Swashbuckle.AspNetCore.Annotations;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
-using System.Globalization;
-using Microsoft.IdentityModel.Tokens;
+using QuilvianSystemBackendDev.Repositories;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
@@ -20,21 +15,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class TindakanAsuransiController : Controller
+    public class PemeriksaanLabAsuransiController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<TindakanAsuransiController> _logger;
+        private readonly ILogger<PemeriksaanLabAsuransiController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public TindakanAsuransiController
+        public PemeriksaanLabAsuransiController
         (
             ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<TindakanAsuransiController> logger,
+            ILogger<PemeriksaanLabAsuransiController> logger,
             IWebHostEnvironment webHostEnvironment
         )
         {
@@ -44,7 +39,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
         }
-        // Tambah getsdfd
+
         [HttpGet]
         public async Task<IActionResult> GetAlL(int page = 1, int perPage = 10)
         {
@@ -52,7 +47,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            var query = from a in _applicationDbContext.TindakanAsuransis
+            var query = from a in _applicationDbContext.PemeriksaanLabAsuransis
                         join u in _applicationDbContext.UserActives
                             on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
@@ -61,9 +56,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.CreateDateTime,
                             a.CreateBy,
                             CreateByName = u.FullName,
-                            a.TindakanAsuransiId,
+                            a.PemeriksaanLabAsuransiId,
                             a.AsuransiId,
-                            a.TindakanId,
+                            a.PemeriksaanLabId,
                             a.Diskon
                         };
 
@@ -96,9 +91,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
             });
         }
-        // POST: api/tindakanasuransi
+
         [HttpPost]
-        public async Task<IActionResult> CreateTindakanAsuransi([FromBody] TindakanAsuransiViewModel vm)
+        public async Task<IActionResult> CreateTindakanAsuransi([FromBody] PemeriksaanLabAsuransiVM vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -122,8 +117,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cek Duplikasi**
-                bool isDuplicate = _applicationDbContext.TindakanAsuransis
-                    .Any(c => c.TindakanId == vm.TindakanId && c.AsuransiId == vm.AsuransiId && c.IsDelete == false);
+                bool isDuplicate = _applicationDbContext.PemeriksaanLabAsuransis
+                    .Any(c => c.PemeriksaanLabId == vm.PemeriksaanLabId && c.AsuransiId == vm.AsuransiId && c.IsDelete == false);
 
                 if (isDuplicate)
                 {
@@ -131,10 +126,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // **Buat Data Baru**
-                var data = new TindakanAsuransi
+                var data = new PemeriksaanLabAsuransi
                 {
-                    TindakanAsuransiId = Guid.NewGuid(),
-                    TindakanId = vm.TindakanId,
+                    PemeriksaanLabAsuransiId = Guid.NewGuid(),
+                    PemeriksaanLabId = vm.PemeriksaanLabId,
                     AsuransiId = vm.AsuransiId,
                     Diskon = vm.Diskon,
                     CreateDateTime = DateTime.UtcNow,
@@ -142,7 +137,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 };
 
                 // **Simpan ke Database**
-                _applicationDbContext.TindakanAsuransis.Add(data);
+                _applicationDbContext.PemeriksaanLabAsuransis.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -158,12 +153,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-        // GET: api/tindakanasuransi/{id}
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetTindakanAsuransiById(Guid id)
+        public async Task<IActionResult> GetPemeriksaanLabAsuransiById(Guid id)
         {
-            var data = await _applicationDbContext.TindakanAsuransis
-                .Where(t => t.TindakanId == id && !t.IsDelete)
+            var data = await _applicationDbContext.PemeriksaanLabAsuransis
+                .Where(t => t.PemeriksaanLabId == id && !t.IsDelete)
                 .ToListAsync();  // Mengambil semua data yang sesuai dalam bentuk list
 
             if (data == null)
@@ -174,7 +168,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             return Ok(new { message = "Data ditemukan || 200 OK", data });
         }
 
-        // DELETE: api/tindakanasuransi/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTindakanAsuransi(Guid id)
         {
@@ -195,7 +188,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data Relasi**
-                var data = await _applicationDbContext.TindakanAsuransis.FindAsync(id);
+                var data = await _applicationDbContext.PemeriksaanLabAsuransis.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -207,7 +200,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 data.IsDelete = true;
 
-                _applicationDbContext.TindakanAsuransis.Update(data);
+                _applicationDbContext.PemeriksaanLabAsuransis.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -223,9 +216,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-        // PUT: api/TindakanAsuransi/{id}
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateTindakanAsuransi(Guid id, [FromBody] TindakanAsuransiViewModel vm)
+        public async Task<IActionResult> UpdatePemeriksaanLabAsuransi(Guid id, [FromBody] PemeriksaanLabAsuransiVM vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -254,8 +246,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 // ======================================================
                 // 1) Ambil data lama yang mau diupdate
                 // ======================================================
-                var data = await _applicationDbContext.TindakanAsuransis
-                    .FirstOrDefaultAsync(x => x.TindakanAsuransiId == id && x.IsDelete == false);
+                var data = await _applicationDbContext.PemeriksaanLabAsuransis
+                    .FirstOrDefaultAsync(x => x.PemeriksaanLabAsuransiId == id && x.IsDelete == false);
 
                 if (data == null)
                 {
@@ -265,10 +257,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 // ======================================================
                 // 2) Cek duplikasi (kecuali data yang sedang diupdate)
                 // ======================================================
-                bool isDuplicate = await _applicationDbContext.TindakanAsuransis
+                bool isDuplicate = await _applicationDbContext.PemeriksaanLabAsuransis
                     .AnyAsync(c =>
-                        c.TindakanAsuransiId != id &&
-                        c.TindakanId == vm.TindakanId &&
+                        c.PemeriksaanLabAsuransiId != id &&
+                        c.PemeriksaanLabId == vm.PemeriksaanLabId &&
                         c.AsuransiId == vm.AsuransiId &&
                         c.IsDelete == false
                     );
@@ -281,7 +273,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 // ======================================================
                 // 3) Update data
                 // ======================================================
-                data.TindakanId = vm.TindakanId;
+                data.PemeriksaanLabId = vm.PemeriksaanLabId;
                 data.AsuransiId = vm.AsuransiId;
                 data.Diskon = vm.Diskon;
 
@@ -306,6 +298,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
 
     }
 }
