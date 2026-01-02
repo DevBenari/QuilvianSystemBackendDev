@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Models;
@@ -59,7 +60,31 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.PemeriksaanLabAsuransiId,
                             a.AsuransiId,
                             a.PemeriksaanLabId,
-                            a.Diskon
+
+                            // ============================
+                            // MARKUP
+                            // ============================
+                            a.MarkupDokter,
+                            a.MarkupRs,
+                            a.MarkupJp,
+                            a.MarkupBahp,
+                            a.MarkupLainnya,
+                            a.MarkupTotal,
+                            a.IsMarkupBerlaku,
+                            a.MarkupDari,
+                            a.MarkupSampai,
+
+                            // ============================
+                            // DISKON
+                            // ============================
+                            a.DiskonDokter,
+                            a.DiskonRs,
+                            a.DiskonJp,
+                            a.DiskonBahp,
+                            a.DiskonTotal,
+                            a.IsDiskonBerlaku,
+                            a.DiskonDari,
+                            a.DiskonSampai
                         };
 
             // Hitung total data sebelum paginasi
@@ -131,7 +156,34 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     PemeriksaanLabAsuransiId = Guid.NewGuid(),
                     PemeriksaanLabId = vm.PemeriksaanLabId,
                     AsuransiId = vm.AsuransiId,
-                    Diskon = vm.Diskon,
+
+                    // ============================
+                    // MARKUP
+                    // ============================
+                    MarkupDokter = vm.MarkupDokter,
+                    MarkupRs = vm.MarkupRs,
+                    MarkupJp = vm.MarkupJp,
+                    MarkupBahp = vm.MarkupBahp,
+                    MarkupLainnya = vm.MarkupLainnya,
+                    MarkupTotal = vm.MarkupTotal,
+
+                    IsMarkupBerlaku = vm.IsMarkupBerlaku ,
+                    MarkupDari = vm.MarkupDari,
+                    MarkupSampai = vm.MarkupSampai,
+
+                    // ============================
+                    // DISKON
+                    // ============================
+                    DiskonDokter = vm.DiskonDokter,
+                    DiskonRs = vm.DiskonRs,
+                    DiskonJp = vm.DiskonJp,
+                    DiskonBahp = vm.DiskonBahp,
+                    DiskonTotal = vm.DiskonTotal,
+
+                    IsDiskonBerlaku = vm.IsDiskonBerlaku,
+                    DiskonDari = vm.DiskonDari,
+                    DiskonSampai = vm.DiskonSampai,
+
                     CreateDateTime = DateTime.UtcNow,
                     CreateBy = userActiveId
                 };
@@ -275,7 +327,33 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 // ======================================================
                 data.PemeriksaanLabId = vm.PemeriksaanLabId;
                 data.AsuransiId = vm.AsuransiId;
-                data.Diskon = vm.Diskon;
+                // ============================
+                // MARKUP
+                // ============================
+                data.MarkupDokter = vm.MarkupDokter;
+                data.MarkupRs = vm.MarkupRs;
+                data.MarkupJp = vm.MarkupJp;
+                data.MarkupBahp = vm.MarkupBahp;
+                data.MarkupLainnya = vm.MarkupLainnya;
+                data.MarkupTotal = vm.MarkupTotal;
+
+                data.IsMarkupBerlaku = vm.IsMarkupBerlaku;
+                data.MarkupDari = vm.MarkupDari;
+                data.MarkupSampai = vm.MarkupSampai;
+
+                // ============================
+                // DISKON
+                // ============================
+                data.DiskonDokter = vm.DiskonDokter;
+                data.DiskonRs = vm.DiskonRs;
+                data.DiskonJp = vm.DiskonJp;
+                data.DiskonBahp = vm.DiskonBahp;
+                data.DiskonTotal = vm.DiskonTotal;
+
+                data.IsDiskonBerlaku = vm.IsDiskonBerlaku ;
+                data.DiskonDari = vm.DiskonDari;
+                data.DiskonSampai = vm.DiskonSampai;
+
 
                 // audit update (jika ada fieldnya)
                 data.UpdateDateTime = DateTime.UtcNow;

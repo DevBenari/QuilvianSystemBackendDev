@@ -58,6 +58,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.TarifKelasAsuransiId,
                             a.AsuransiId,
                             a.TarifKelasId,
+                            a.TanggalPemakaian,
+                            a.Keterangan
                         };
 
             // Hitung total data sebelum paginasi
@@ -129,6 +131,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     TarifKelasAsuransiId = Guid.NewGuid(),
                     TarifKelasId = vm.TarifKelasId,
                     AsuransiId = vm.AsuransiId,
+                    Keterangan = vm.Keterangan,
+                    TanggalPemakaian = vm.TanggalPemakaian,
                     CreateDateTime = DateTime.UtcNow,
                     CreateBy = userActiveId
                 };
@@ -272,6 +276,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 // ======================================================
                 data.TarifKelasId = vm.TarifKelasId;
                 data.AsuransiId = vm.AsuransiId;
+                data.Keterangan = vm.Keterangan;
+                data.TanggalPemakaian = vm.TanggalPemakaian;
 
                 // audit update (jika ada fieldnya)
                 data.UpdateDateTime = DateTime.UtcNow;

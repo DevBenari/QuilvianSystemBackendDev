@@ -1,9 +1,10 @@
 ﻿namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels
 {
-    public class PemeriksaanLabAsuransiVM
+    public class MenuMakananAsuransiVM
     {
-        public Guid? PemeriksaanLabId { get; set; }
         public Guid? AsuransiId { get; set; }
+        public Guid? MenuMakananId { get; set; }
+
         // ============================
         // MARKUP
         // ============================

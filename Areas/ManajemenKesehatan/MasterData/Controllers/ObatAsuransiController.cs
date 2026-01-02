@@ -46,7 +46,32 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              oa.ObatId,
                              o.ObatName,
                              oa.AsuransiId,
-                             AsuransiName = a.NamaAsuransi
+                             AsuransiName = a.NamaAsuransi,
+                             // ============================
+                             // MARKUP
+                             // ============================
+                             oa.MarkupDokter,
+                             oa.MarkupRs,
+                             oa.MarkupJp,
+                             oa.MarkupBahp,
+                             oa.MarkupLainnya,
+                             oa.MarkupTotal,
+                             oa.IsMarkupBerlaku,
+                             oa.MarkupDari,
+                             oa.MarkupSampai,
+
+                             // ============================
+                             // DISKON
+                             // ============================
+                             oa.DiskonDokter,
+                             oa.DiskonRs,
+                             oa.DiskonJp,
+                             oa.DiskonBahp,
+                             oa.DiskonTotal,
+                             oa.IsDiskonBerlaku,
+                             oa.DiskonDari,
+                             oa.DiskonSampai,
+                             
                          }).OrderByDescending(a => a.CreateDateTime);
 
             var totalRows = await query.CountAsync();
@@ -137,7 +162,32 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     ObatAsuransiId = Guid.NewGuid(),
                     ObatId = obatAsuransi.ObatId,
                     AsuransiId = obatAsuransi.AsuransiId,
-                    Diskon = obatAsuransi.Diskon,
+                    // ============================
+                    // MARKUP
+                    // ============================
+                    MarkupDokter = obatAsuransi.MarkupDokter,
+                    MarkupRs = obatAsuransi.MarkupRs,
+                    MarkupJp = obatAsuransi.MarkupJp,
+                    MarkupBahp = obatAsuransi.MarkupBahp,
+                    MarkupLainnya = obatAsuransi.MarkupLainnya,
+                    MarkupTotal = obatAsuransi.MarkupTotal,
+
+                    IsMarkupBerlaku = obatAsuransi.IsMarkupBerlaku ,
+                    MarkupDari = obatAsuransi.MarkupDari,
+                    MarkupSampai = obatAsuransi.MarkupSampai,
+
+                    // ============================
+                    // DISKON
+                    // ============================
+                    DiskonDokter = obatAsuransi.DiskonDokter,
+                    DiskonRs = obatAsuransi.DiskonRs,
+                    DiskonJp = obatAsuransi.DiskonJp,
+                    DiskonBahp = obatAsuransi.DiskonBahp,
+                    DiskonTotal = obatAsuransi.DiskonTotal,
+
+                    IsDiskonBerlaku = obatAsuransi.IsDiskonBerlaku,
+                    DiskonDari = obatAsuransi.DiskonDari,
+                    DiskonSampai = obatAsuransi.DiskonSampai,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow
                 };
@@ -185,7 +235,33 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 // Update data
                 data.ObatId = obatAsuransi.ObatId;
                 data.AsuransiId = obatAsuransi.AsuransiId;
-                data.Diskon = obatAsuransi.Diskon;
+                // ============================
+                // MARKUP
+                // ============================
+                data.MarkupDokter = obatAsuransi.MarkupDokter;
+                data.MarkupRs = obatAsuransi.MarkupRs;
+                data.MarkupJp = obatAsuransi.MarkupJp;
+                data.MarkupBahp = obatAsuransi.MarkupBahp;
+                data.MarkupLainnya = obatAsuransi.MarkupLainnya;
+                data.MarkupTotal = obatAsuransi.MarkupTotal;
+
+                data.IsMarkupBerlaku = obatAsuransi.IsMarkupBerlaku;
+                data.MarkupDari = obatAsuransi.MarkupDari;
+                data.MarkupSampai = obatAsuransi.MarkupSampai;
+
+                // ============================
+                // DISKON
+                // ============================
+                data.DiskonDokter = obatAsuransi.DiskonDokter;
+                data.DiskonRs = obatAsuransi.DiskonRs;
+                data.DiskonJp = obatAsuransi.DiskonJp;
+                data.DiskonBahp = obatAsuransi.DiskonBahp;
+                data.DiskonTotal = obatAsuransi.DiskonTotal;
+
+                data.IsDiskonBerlaku = obatAsuransi.IsDiskonBerlaku;
+                data.DiskonDari = obatAsuransi.DiskonDari;
+                data.DiskonSampai = obatAsuransi.DiskonSampai;
+
 
                 _applicationDbContext.ObatAsuransis.Update(data);
                 await _applicationDbContext.SaveChangesAsync();

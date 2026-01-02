@@ -4,5 +4,7 @@
     {
         public Guid? AsuransiId { get; set; }
         public Guid? TarifKelasId { get; set; }
+        public DateTime? TanggalPemakaian { get; set; }
+        public DateTime? Keterangan { get; set; }
     }
 }

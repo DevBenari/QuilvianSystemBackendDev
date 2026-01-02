@@ -1,9 +1,15 @@
-﻿namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels
+﻿using System.ComponentModel.DataAnnotations;
+using QuilvianSystemBackendDev.Models;
+
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
 {
-    public class PemeriksaanLabAsuransiVM
+    public class MenuMakananAsuransi : UserActivity
     {
-        public Guid? PemeriksaanLabId { get; set; }
+        [Key]
+        public Guid MenuMakananAsuransiId { get; set; }
         public Guid? AsuransiId { get; set; }
+        public Guid? MenuMakananId { get; set; }
+
         // ============================
         // MARKUP
         // ============================

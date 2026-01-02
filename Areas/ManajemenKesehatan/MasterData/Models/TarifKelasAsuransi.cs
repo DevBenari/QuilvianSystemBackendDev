@@ -11,5 +11,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public Guid TarifKelasAsuransiId { get; set; }
         public Guid? AsuransiId { get; set; }
         public Guid? TarifKelasId { get; set; }
+        public DateTime? TanggalPemakaian { get; set; }
+        public DateTime? Keterangan { get; set; }
     }
 }
