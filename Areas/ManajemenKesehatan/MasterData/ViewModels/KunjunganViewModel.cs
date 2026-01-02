@@ -17,8 +17,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
         public DateTime? TglMasuk { get; set; }
         public string? CaraMasukRS { get; set; }
         public string? KondisiKeluar { get; set; }
-
         public bool? IsTriage { get; set; }
         public bool? IsCTTPasienIGD { get; set; }
+        public decimal? DepositRanap { get; set; }
     }
 }

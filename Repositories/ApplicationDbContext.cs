@@ -176,6 +176,8 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<PAS> PASs { get; set; }
         public DbSet<PemeriksaanLabAsuransi> PemeriksaanLabAsuransis {  get; set; }
         public DbSet<TarifKelasAsuransi> TarifKelasAsuransis { get; set; }
+        public DbSet<CatatanKIE> CatatanKIEs { get; set; }
+        public DbSet<InformasiPenundaan> InformasiPenundaans {  get; set; }
         #endregion
 
         #region Areas Keuangan
