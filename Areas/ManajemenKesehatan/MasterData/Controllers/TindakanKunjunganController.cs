@@ -77,7 +77,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             t.NamaTindakan,
                             a.Quantity,
                             a.Total,
-                            a.TanggalPemeriksaan
+                            a.TanggalPemeriksaan,
+                            a.Disposition,
+                            a.Keterangan,
                         }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -212,6 +214,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     Total = totalqty, // Masukkan nilai Total yang telah dihitung
                     RanapId = vm.RanapId,
                     TanggalPemeriksaan = vm.TanggalPemeriksaan,
+                    Keterangan = vm.Keterangan,
+                    Disposition = vm.Disposition,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow
                 };
@@ -253,11 +257,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     JenisBilling = "Tindakan", // Menandakan ini adalah billing untuk tindakan
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
-                    Keterangan = vm.Disposition,
+                    Keterangan = vm.Keterangan,
                 };
 
-                    _applicationDbContext.Billings.Add(billing);
-              
+                _applicationDbContext.Billings.Add(billing);
 
                 int result = await _applicationDbContext.SaveChangesAsync();
 
@@ -363,6 +366,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.Total = totalqty;
                 data.RanapId = vm.RanapId;
                 data.TanggalPemeriksaan = vm.TanggalPemeriksaan;
+                data.Disposition = vm.Disposition;
+                data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -402,7 +407,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         HargaItem = tarifKelas.TarifTotal,
                         QtyItem = vm.Quantity,
                         SubTotalItem = totalqty,
-                        Keterangan = vm.Disposition,
+                        Keterangan = vm.Keterangan,
                         JenisBilling = "Tindakan",
                         StatusPengambilan = true,
                         CreateBy = userActiveId,
@@ -416,7 +421,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     existingBilling.HargaItem = tarifKelas.TarifTotal;
                     existingBilling.SubTotalItem = totalqty;
                     existingBilling.QtyItem = vm.Quantity;
-                    existingBilling.Keterangan = vm.Disposition;
+                    existingBilling.Keterangan = vm.Keterangan;
                     existingBilling.DiskonId = vm.DiskonId;
                     existingBilling.UpdateBy = userActiveId;
                     existingBilling.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -645,6 +650,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         CreateByName = u.FullName,
                         a.TindakanKunjunganId,
                         a.KunjunganId,
+                        a.Disposition,
                         k.PasienId,
                         JenisKunjungan = k != null ? k.JenisKunjungan : null,
                         AsuransiId = k != null ? k.AsuransiId : null,
@@ -656,7 +662,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         NamaTindakan = t != null ? t.NamaTindakan : null,
                         a.Quantity,
                         a.Total,
-                        a.TanggalPemeriksaan
+                        a.TanggalPemeriksaan,
+                        a.Keterangan,
                     };
 
                 // ======================================================

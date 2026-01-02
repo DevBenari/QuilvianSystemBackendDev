@@ -17,5 +17,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public int? Quantity { get; set; }
         public decimal? Total { get; set; }
         public string? Disposition { get; set; }
+        public string? Keterangan { get; set; }
     }
 }

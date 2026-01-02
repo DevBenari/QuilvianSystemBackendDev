@@ -178,6 +178,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<TarifKelasAsuransi> TarifKelasAsuransis { get; set; }
         public DbSet<CatatanKIE> CatatanKIEs { get; set; }
         public DbSet<InformasiPenundaan> InformasiPenundaans {  get; set; }
+        public DbSet<PelunasanDeposit> PelunasanDeposits { get; set; }
         #endregion
 
         #region Areas Keuangan
