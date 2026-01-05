@@ -29,6 +29,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models
         public string? BarangDiserahkan { get; set; } // Barang yang diserahkan ketika pindah pasien
         public string? IntervensiPerawat { get; set; }
         public string? PlanningTindakan { get; set; }
+        public DateTime? TglMasuk {  get; set; }
+        public DateTime? TglKeluar {  get; set; }
 
         // 🔹 File Upload (TTD)
         public string? TTDMenyerahkanPath { get; set; } // URL/File Path hasil upload

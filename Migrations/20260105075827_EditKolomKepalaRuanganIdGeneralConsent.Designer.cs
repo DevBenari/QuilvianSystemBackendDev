@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -12,9 +13,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260105075827_EditKolomKepalaRuanganIdGeneralConsent")]
+    partial class EditKolomKepalaRuanganIdGeneralConsent
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -15165,8 +15167,8 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<Guid?>("KunjunganId")
                         .HasColumnType("uuid");
 
-                    b.Property<decimal?>("NoRevisi")
-                        .HasColumnType("numeric");
+                    b.Property<string>("NoRevisi")
+                        .HasColumnType("text");
 
                     b.Property<Guid?>("PasienId")
                         .HasColumnType("uuid");
@@ -15189,8 +15191,8 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<DateTimeOffset>("UpdateDateTime")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<decimal?>("Urutan")
-                        .HasColumnType("numeric");
+                    b.Property<string>("Urutan")
+                        .HasColumnType("text");
 
                     b.HasKey("PermintaanPrivasiId");
 

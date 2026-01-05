@@ -174,6 +174,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         on lbd.PemeriksaanLabId equals lp.PemeriksaanLabId into pemeriksaanGroup
                     from lp in pemeriksaanGroup.DefaultIfEmpty()
 
+                    join la in _applicationDbContext.Labs
+                        on lbd.LabId equals la.LabId into laGroup
+                    from la in laGroup.DefaultIfEmpty()
+
                         // RESEP
                     join r in _applicationDbContext.Reseps.Where(x => !x.IsDelete)
                         on k.KunjunganID equals r.KunjunganId into resepGroup
@@ -219,7 +223,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
                     where k.KunjunganID == kunjunganId && !k.IsDelete
 
-                    select new { k, p, a, ap, d, poli, r, dr, o, rc, tobj, t, adm, kasir, dk, mp, lbd, lp };
+                    select new { k, p, a, ap, d, poli, r, dr, o, rc, tobj, t, adm, kasir, dk, mp, lbd, lp, la };
 
                 var result = await query.ToListAsync();
                 if (!result.Any())
@@ -288,6 +292,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                                 return new
                                 {
                                     x.lbd.DetailBookingLabId,
+                                    x.la.NamaLab,
                                     x.lp?.NamaPemeriksaan,
                                     x.lp?.HargaPemeriksaan,
                                     Qty = bill?.QtyItem ?? 1,

@@ -301,6 +301,9 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<PenilaianResikoJatuhDetail> PenilaianResikoJatuhDetails { get; set; }
         public DbSet<CatatanPerawat> CatatanPerawats { get; set; }
         public DbSet<MonitoringNyeri> MonitoringNyeris { get; set; }
+        public DbSet<GeneralConsent> GeneralConsents { get; set; }
+        public DbSet<PermintaanPrivasi> PermintaanPrivasis { get; set; }
+        public DbSet<NilaiKepercayaan> NilaiKepercayaans { get; set; }
         #endregion
 
         #region Farmasi

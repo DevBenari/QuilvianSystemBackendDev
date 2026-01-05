@@ -1341,7 +1341,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         }
 
         [HttpPut("{id}/is-VerifiedByDokter")]
-        public async Task<IActionResult> UpdateIsVerifiedByDokter(Guid id, [FromBody] bool request)
+        public async Task<IActionResult> UpdateIsVerifiedByDokter(Guid id, [FromBody] TandaiObatViewModel request)
         {
             var data = await _applicationDbContext.Reseps.FindAsync(id);
             if (data == null)
@@ -1354,7 +1354,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
             var userId = user?.UserActiveId ?? Guid.Empty;
 
-            data.IsVerifyByDoctor = request;
+            data.IsVerifyByDoctor = request.Status;
             data.UpdateDateTime = DateTimeOffset.UtcNow;
             data.UpdateBy = userId;
             await _applicationDbContext.SaveChangesAsync();
@@ -2362,6 +2362,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 q.Resep.StatusPengambilanResep,
                 q.Resep.IsCancelled,
                 q.Resep.IsLunas,
+                q.Resep.IsVerifyByDoctor,
                 q.Resep.RanapId,
                 q.Resep.IsResepPulang,
                 TanggalPembuatanResep = q.Resep.TanggalPembuatanResep?.ToString("yyyy-MM-dd"),
@@ -2647,6 +2648,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 q.Resep.IsCancelled,
                 q.Resep.IsLunas,
                 q.Resep.IsResepPulang,
+                q.Resep.IsVerifyByDoctor,
                 TanggalPembuatanResep = q.Resep.TanggalPembuatanResep?.ToString("yyyy-MM-dd"),
                 CreateByName = q.User.FullName,
 
