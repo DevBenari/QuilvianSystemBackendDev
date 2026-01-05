@@ -280,10 +280,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                 var userActiveId = getUserActive.UserActiveId;
 
-                // cek ttd user
-                var ttdMengetahui = await _ttdService.CheckTTDAsync((Guid)vm.PetugasMengetahuiId);
-                var ttdMenyerahkan = await _ttdService.CheckTTDAsync((Guid)vm.PetugasMenyerahkanId);
-                var ttdPenerima = await _ttdService.CheckTTDAsync((Guid)vm.PetugasPenerimaId);
+                // ==================================================
+                // ✅ Cek TTD berdasarkan PetugasId (HANYA kalau ada)
+                // ==================================================
+                var ttdMengetahui = vm.PetugasMengetahuiId.HasValue
+                    ? await _ttdService.CheckTTDAsync(vm.PetugasMengetahuiId.Value)
+                    : null;
+
+                var ttdMenyerahkan = vm.PetugasMenyerahkanId.HasValue
+                    ? await _ttdService.CheckTTDAsync(vm.PetugasMenyerahkanId.Value)
+                    : null;
+
+                var ttdPenerima = vm.PetugasPenerimaId.HasValue
+                    ? await _ttdService.CheckTTDAsync(vm.PetugasPenerimaId.Value)
+                    : null;
 
                 //// **Cek Duplikasi**
                 //var today = DateTime.UtcNow.Date;
@@ -325,14 +335,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     IntervensiPerawat = vm.IntervensiPerawat,
                     PlanningTindakan = vm.PlanningTindakan,
 
-                    PetugasMenyerahkanId = vm.PetugasMenyerahkanId,
-                    TTDMenyerahkanPath = ttdMenyerahkan.Path,
+                    PetugasMenyerahkanId = vm.PetugasMenyerahkanId ,
+                    TTDMenyerahkanPath = ttdMenyerahkan?.Path,
 
                     PetugasMengetahuiId = vm.PetugasMengetahuiId,
-                    TTDMengetahuiPath = ttdMengetahui.Path,
+                    TTDMengetahuiPath = ttdMengetahui?.Path,
 
                     PetugasPenerimaId = vm.PetugasMengetahuiId,
-                    TTDPenerimaPath = ttdPenerima.Path,
+                    TTDPenerimaPath = ttdPenerima?.Path,
 
                     Keterangan = vm.Keterangan,
                     CreateBy = userActiveId,
@@ -346,9 +356,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     return Created("", new
                     {
                         message = "Tambah Data Transfer Pasien Berhasil || 201 Created",
-                        TTDIdMenyerahkan = ttdMenyerahkan.TTDId,
-                        TTDIdMengetahui = ttdMengetahui.TTDId,
-                        TTDIdPenerima = ttdPenerima.TTDId,
+                        TTDIdMenyerahkan = ttdMenyerahkan?.TTDId,
+                        TTDIdMengetahui = ttdMengetahui?.TTDId,
+                        TTDIdPenerima = ttdPenerima?.TTDId,
                     });
 
                 return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
@@ -359,7 +369,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}, {ex.InnerException}, {ex.StackTrace}" });
             }
         }
 
