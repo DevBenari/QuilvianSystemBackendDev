@@ -405,6 +405,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             string? search = null,
             Guid? kategoriId = null,
             Guid? alatId = null,
+            Guid? kelasId = null, 
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
             DateTime? startDate = null,
@@ -415,189 +416,257 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            // =============================
-            // 1. QUERY HEADER (tanpa join)
-            // =============================
-            var q = _applicationDbContext.Peralatans
-                .AsNoTracking()
-                .Where(a => !a.IsDelete);
-
-            // FILTER ID
-            if (alatId.HasValue)
-                q = q.Where(a => a.PeralatanId == alatId.Value);
-
-            if (kategoriId.HasValue)
-                q = q.Where(a => a.KategoriPeralatanId == kategoriId.Value);
-
-            // SEARCH
-            if (!string.IsNullOrWhiteSpace(search))
+            try
             {
-                var s = $"%{search.ToLower()}%";
-                q = q.Where(a =>
-                    EF.Functions.ILike(a.KodePeralatan, s) ||
-                    EF.Functions.ILike(a.NamaPeralatan, s));
-            }
+                // =============================
+                // 1. BASE QUERY HEADER
+                // =============================
+                var q = _applicationDbContext.Peralatans
+                    .AsNoTracking()
+                    .Where(a => a.IsDelete == false);
 
-            // RANGE WAKTU
-            if (startDate.HasValue && endDate.HasValue)
-            {
-                var startUtc = startDate.Value.Date;
-                var endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1);
+                // FILTER ID
+                if (alatId.HasValue)
+                    q = q.Where(a => a.PeralatanId == alatId.Value);
 
-                q = q.Where(a => a.CreateDateTime >= startUtc && a.CreateDateTime <= endUtc);
-            }
+                if (kategoriId.HasValue)
+                    q = q.Where(a => a.KategoriPeralatanId == kategoriId.Value);
 
-            // FILTER PERIODE
-            if (periode.HasValue)
-            {
-                var today = DateTime.UtcNow.Date;
-
-                switch (periode.Value)
+                // ✅ FILTER berdasarkan kelasId (EXISTS on TarifKelass)
+                if (kelasId.HasValue)
                 {
-                    case PeriodeFilter.Today:
-                        q = q.Where(a => a.CreateDateTime.Date == today);
-                        break;
-
-                    case PeriodeFilter.ThisWeek:
-                        var startOfWeek = today.AddDays(-(int)today.DayOfWeek);
-                        q = q.Where(a => a.CreateDateTime.Date >= startOfWeek && a.CreateDateTime.Date <= today);
-                        break;
-
-                    case PeriodeFilter.LastWeek:
-                        var startOfThis = today.AddDays(-(int)today.DayOfWeek);
-                        var startLast = startOfThis.AddDays(-7);
-                        q = q.Where(a => a.CreateDateTime.Date >= startLast && a.CreateDateTime.Date < startOfThis);
-                        break;
-
-                    case PeriodeFilter.ThisMonth:
-                        q = q.Where(a => a.CreateDateTime.Month == today.Month && a.CreateDateTime.Year == today.Year);
-                        break;
-
-                    case PeriodeFilter.LastMonth:
-                        var last = today.AddMonths(-1);
-                        q = q.Where(a => a.CreateDateTime.Month == last.Month && a.CreateDateTime.Year == last.Year);
-                        break;
+                    q = q.Where(a =>
+                        _applicationDbContext.TarifKelass.Any(t =>
+                            t.PeralatanId == a.PeralatanId &&
+                            t.KelasId == kelasId.Value &&
+                            (t.IsDelete == false || t.IsDelete == null)
+                        )
+                    );
                 }
-            }
 
-            // SORTING
-            bool desc = sortDirection?.ToLower() == "desc";
-            q = desc
-                ? orderBy switch
+                // SEARCH
+                if (!string.IsNullOrWhiteSpace(search))
                 {
-                    "KodePeralatan" => q.OrderByDescending(a => a.KodePeralatan),
-                    "NamaPeralatan" => q.OrderByDescending(a => a.NamaPeralatan),
-                    _ => q.OrderByDescending(a => a.CreateDateTime)
+                    var s = $"%{search.ToLower()}%";
+                    q = q.Where(a =>
+                        EF.Functions.ILike(a.KodePeralatan, s) ||
+                        EF.Functions.ILike(a.NamaPeralatan, s));
                 }
-                : orderBy switch
+
+                // RANGE WAKTU
+                if (startDate.HasValue && endDate.HasValue)
                 {
-                    "KodePeralatan" => q.OrderBy(a => a.KodePeralatan),
-                    "NamaPeralatan" => q.OrderBy(a => a.NamaPeralatan),
-                    _ => q.OrderBy(a => a.CreateDateTime)
-                };
+                    var startUtc = startDate.Value.Date;
+                    var endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1);
 
-            // =============================
-            // PAGINATION
-            // =============================
-            var totalRows = await q.CountAsync();
-            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-
-            var header = await q
-                .Skip((page - 1) * perPage)
-                .Take(perPage)
-                .Select(a => new
-                {
-                    a.PeralatanId,
-                    a.KodePeralatan,
-                    a.NamaPeralatan,
-                    a.Manufacturer,
-                    a.Purchase_date,
-                    a.Maintenance_status,
-                    a.Operational_status,
-                    a.Department_name,
-                    a.Location,
-                    a.KategoriPeralatanId,
-                    a.CreateDateTime,
-                    a.CreateBy,
-                    CreateByName = _applicationDbContext.UserActives
-                        .Where(u => u.UserActiveId == a.CreateBy)
-                        .Select(u => u.FullName)
-                        .FirstOrDefault()
-                })
-                .ToListAsync();
-
-            if (!header.Any())
-                return NotFound(new { message = "Page not found." });
-
-            // =============================
-            // 2. LOAD RELASI (Lookups)
-            // =============================
-
-            var peralatanIds = header.Select(h => h.PeralatanId).ToList();
-
-            // KATEGORI
-            var kategoriDict = await _applicationDbContext.KategoriPeralatans
-                .Where(k => peralatanIds.Contains(k.KategoriPeralatanId))
-                .ToDictionaryAsync(k => k.KategoriPeralatanId, k => k.NamaKategoriPeralatan);
-
-            // TARIF KELAS (LIST)
-            var tarifList = await (
-                from t in _applicationDbContext.TarifKelass
-                join kl in _applicationDbContext.Kelass on t.KelasId equals kl.KelasId
-                where peralatanIds.Contains(t.PeralatanId.Value)
-                select new
-                {
-                    t.PeralatanId,
-                    t.TarifKelasId,
-                    t.KelasId,
-                    kl.NamaKelas,
-                    t.TarifRs
+                    q = q.Where(a => a.CreateDateTime >= startUtc && a.CreateDateTime <= endUtc);
                 }
-            ).ToListAsync();
 
-            var tarifLookup = tarifList.ToLookup(t => t.PeralatanId);
+                // FILTER PERIODE
+                if (periode.HasValue)
+                {
+                    var today = DateTime.UtcNow.Date;
 
-            // =============================
-            // FINAL RESULT (tanpa duplikasi!)
-            // =============================
-            var result = header.Select(h => new
-            {
-                h.PeralatanId,
-                h.KodePeralatan,
-                h.NamaPeralatan,
-                h.Manufacturer,
-                h.Purchase_date,
-                h.Maintenance_status,
-                h.Operational_status,
-                h.Department_name,
-                h.Location,
-                h.CreateDateTime,
-                h.CreateBy,
-                h.CreateByName,
+                    switch (periode.Value)
+                    {
+                        case PeriodeFilter.Today:
+                            q = q.Where(a => a.CreateDateTime.Date == today);
+                            break;
 
-                KategoriPeralatanId = h.KategoriPeralatanId,
-                NamaKategoriPeralatan =
-                    h.KategoriPeralatanId != null &&
-                    kategoriDict.TryGetValue((Guid)h.KategoriPeralatanId, out var namaKategori)
-                        ? namaKategori
+                        case PeriodeFilter.ThisWeek:
+                            var startOfWeek = today.AddDays(-(int)today.DayOfWeek);
+                            q = q.Where(a => a.CreateDateTime.Date >= startOfWeek && a.CreateDateTime.Date <= today);
+                            break;
+
+                        case PeriodeFilter.LastWeek:
+                            var startOfThis = today.AddDays(-(int)today.DayOfWeek);
+                            var startLast = startOfThis.AddDays(-7);
+                            q = q.Where(a => a.CreateDateTime.Date >= startLast && a.CreateDateTime.Date < startOfThis);
+                            break;
+
+                        case PeriodeFilter.ThisMonth:
+                            q = q.Where(a => a.CreateDateTime.Month == today.Month && a.CreateDateTime.Year == today.Year);
+                            break;
+
+                        case PeriodeFilter.LastMonth:
+                            var last = today.AddMonths(-1);
+                            q = q.Where(a => a.CreateDateTime.Month == last.Month && a.CreateDateTime.Year == last.Year);
+                            break;
+                    }
+                }
+
+                // SORTING
+                bool desc = string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase);
+
+                q = desc
+                    ? orderBy switch
+                    {
+                        "KodePeralatan" => q.OrderByDescending(a => a.KodePeralatan),
+                        "NamaPeralatan" => q.OrderByDescending(a => a.NamaPeralatan),
+                        _ => q.OrderByDescending(a => a.CreateDateTime)
+                    }
+                    : orderBy switch
+                    {
+                        "KodePeralatan" => q.OrderBy(a => a.KodePeralatan),
+                        "NamaPeralatan" => q.OrderBy(a => a.NamaPeralatan),
+                        _ => q.OrderBy(a => a.CreateDateTime)
+                    };
+
+                // =============================
+                // PAGINATION
+                // =============================
+                var totalRows = await q.CountAsync();
+                var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+                if (totalRows == 0)
+                {
+                    return Ok(new
+                    {
+                        message = "No data found",
+                        pagination = new
+                        {
+                            currentPage = page,
+                            perPage,
+                            totalRows,
+                            totalPages = 0
+                        },
+                        data = Array.Empty<object>()
+                    });
+                }
+
+                if (page > totalPages)
+                    return NotFound(new { message = "Page not found." });
+
+                // =============================
+                // LOAD HEADER PAGE
+                // =============================
+                var header = await q
+                    .Skip((page - 1) * perPage)
+                    .Take(perPage)
+                    .Select(a => new
+                    {
+                        a.PeralatanId,
+                        a.KodePeralatan,
+                        a.NamaPeralatan,
+                        a.Manufacturer,
+                        a.Purchase_date,
+                        a.Maintenance_status,
+                        a.Operational_status,
+                        a.Department_name,
+                        a.Location,
+                        a.KategoriPeralatanId,
+                        a.CreateDateTime,
+                        a.CreateBy
+                    })
+                    .ToListAsync();
+
+                if (!header.Any())
+                    return NotFound(new { message = "Page not found." });
+
+                var peralatanIds = header.Select(h => h.PeralatanId).Distinct().ToList();
+
+                // =============================
+                // LOAD USER ACTIVE (bulk)
+                // =============================
+                var userIds = header
+                    .Where(h => h.CreateBy != Guid.Empty)
+                    .Select(h => h.CreateBy)
+                    .Distinct()
+                    .ToList();
+
+                var userDict = await _applicationDbContext.UserActives
+                    .AsNoTracking()
+                    .Where(u => userIds.Contains(u.UserActiveId) && u.IsDelete == false)
+                    .ToDictionaryAsync(u => u.UserActiveId, u => u.FullName);
+
+                // =============================
+                // ✅ LOAD KATEGORI (pakai kategoriIds)
+                // =============================
+                var kategoriIds = header
+                    .Where(h => h.KategoriPeralatanId != Guid.Empty)
+                    .Select(h => h.KategoriPeralatanId)
+                    .Distinct()
+                    .ToList();
+
+                var kategoriDict = await _applicationDbContext.KategoriPeralatans
+                    .AsNoTracking()
+                    .Where(k => kategoriIds.Contains(k.KategoriPeralatanId) && k.IsDelete == false)
+                    .ToDictionaryAsync(k => k.KategoriPeralatanId, k => k.NamaKategoriPeralatan);
+
+                // =============================
+                // TARIF KELAS (bulk)
+                // =============================
+                var tarifListQuery =
+                    from t in _applicationDbContext.TarifKelass.AsNoTracking()
+                    join kl in _applicationDbContext.Kelass.AsNoTracking() on t.KelasId equals kl.KelasId
+                    where t.PeralatanId.HasValue
+                          && peralatanIds.Contains(t.PeralatanId.Value)
+                          && (t.IsDelete == false || t.IsDelete == null)
+                    select new
+                    {
+                        t.PeralatanId,
+                        t.TarifKelasId,
+                        t.KelasId,
+                        kl.NamaKelas,
+                        t.TarifRs
+                    };
+
+                if (kelasId.HasValue)
+                    tarifListQuery = tarifListQuery.Where(t => t.KelasId == kelasId.Value);
+
+                var tarifList = await tarifListQuery.ToListAsync();
+                var tarifLookup = tarifList.ToLookup(t => t.PeralatanId);
+
+                // =============================
+                // FINAL RESULT
+                // =============================
+                var result = header.Select(h => new
+                {
+                    h.PeralatanId,
+                    h.KodePeralatan,
+                    h.NamaPeralatan,
+                    h.Manufacturer,
+                    h.Purchase_date,
+                    h.Maintenance_status,
+                    h.Operational_status,
+                    h.Department_name,
+                    h.Location,
+
+                    h.CreateDateTime,
+                    h.CreateBy,
+                    CreateByName = userDict.TryGetValue(h.CreateBy, out var fullname)
+                        ? fullname
                         : null,
 
-                TarifKelas = tarifLookup[h.PeralatanId].ToList()
-            });
 
-            return Ok(new
-            {
-                message = "Berhasil || 200 OK",
-                pagination = new
+                    h.KategoriPeralatanId,
+                    NamaKategoriPeralatan =
+                        kategoriDict.TryGetValue(h.KategoriPeralatanId, out var namaKategori)
+                            ? namaKategori
+                            : null,
+
+                    TarifKelas = tarifLookup[h.PeralatanId].ToList()
+                });
+
+                return Ok(new
                 {
-                    currentPage = page,
-                    perPage,
-                    totalRows,
-                    totalPages
-                },
-                data = result
-            });
+                    message = "Berhasil || 200 OK",
+                    pagination = new
+                    {
+                        currentPage = page,
+                        perPage,
+                        totalRows,
+                        totalPages
+                    },
+                    data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
         }
+
 
 
         //[HttpGet("paged")]

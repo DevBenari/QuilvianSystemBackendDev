@@ -220,8 +220,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 decimal? nextUrutan = (maxUrutanThisMonth ?? 0) + 1;
 
-                // default NoRevisi = 1 untuk create
-                var nextNoRevisi = 1;
+                
+                var nextNoRevisi = 0;
 
                 // cek path ttd
                 var ttdPetugas = await _ttdService.CheckTTDAsync((Guid)vm.PetugasId);

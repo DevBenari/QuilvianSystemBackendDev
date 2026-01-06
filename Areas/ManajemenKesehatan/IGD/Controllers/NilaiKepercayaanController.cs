@@ -6,38 +6,38 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.ViewModels;
 using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controllers
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class PermintaanPrivasiController : Controller
+    public class NilaiKepercayaanController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-        private readonly string _uploadUrl;
         private readonly ITTDService _ttdService;
-        private readonly ILogger<PermintaanPrivasiController> _logger;
+        private readonly string _uploadUrl;
+        private readonly ILogger<NilaiKepercayaanController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public PermintaanPrivasiController(
+        public NilaiKepercayaanController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<PermintaanPrivasiController> logger,
+            ILogger<NilaiKepercayaanController> logger,
             IWebHostEnvironment webHostEnvironment,
             IConfiguration configuration,
             ITTDService ttdService)
@@ -51,9 +51,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             _ttdService = ttdService;
         }
 
-
         [HttpGet("{id}")]
-        public async Task<IActionResult> GeById(Guid id)
+        public async Task<IActionResult> GetById(Guid id)
         {
             try
             {
@@ -64,8 +63,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 }
 
                 // 2. Cari data di database berdasarkan ID (Primary Key)
-                var data = await _applicationDbContext.PermintaanPrivasis
-                    .FirstOrDefaultAsync(x => x.PermintaanPrivasiId == id);
+                var data = await _applicationDbContext.NilaiKepercayaans
+                    .FirstOrDefaultAsync(x => x.NilaiKepercayaanId == id);
 
                 // 3. Cek apakah data ditemukan (Pencegahan NullReferenceException)
                 if (data == null)
@@ -85,7 +84,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
         [HttpPost]
         [RequestSizeLimit(20_000_000)]
-        public async Task<IActionResult> Create([FromForm] PermintaanPrivasiViewModel vm)
+        [Consumes("multipart/form-data")]
+        [RequestFormLimits(MultipartBodyLengthLimit = 20_000_000)]
+        public async Task<IActionResult> Create([FromForm] NilaiKepercayaanViewModel vm)
         {
             if (vm == null)
                 return BadRequest(new { message = "Data tidak valid." });
@@ -116,12 +117,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 // =====================================================
                 // 🔹 Generate ID lebih awal (dipakai untuk nama file)
                 // =====================================================
-                var privId = Guid.NewGuid();
+                var nilaiKepercayaanId = Guid.NewGuid();
 
                 // =====================================================
-                // 🔹 Helper upload ke Flask (SESUAI pola PraOperasi)
+                // 🔹 Helper upload ke Flask (bisa beda folder)
                 // =====================================================
-                async Task<string?> UploadToFlaskAsync(IFormFile? file, string prefix)
+                async Task<string?> UploadToFlaskAsync(IFormFile? file, string prefix, string folderTarget)
                 {
                     if (file == null || file.Length == 0)
                         return null;
@@ -136,8 +137,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                         throw new Exception($"{prefix} maksimal 5MB.");
 
                     var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
-                    var fileName = $"{privId}_{prefix}_{safeTime}{ext}";
-                    var folderTarget = "PermintaanPrivasi";
+                    var fileName = $"{nilaiKepercayaanId}_{prefix}_{safeTime}{ext}";
                     var filePath = $"/{folderTarget}/{fileName}";
 
                     using var ms = new MemoryStream();
@@ -166,67 +166,72 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 }
 
                 // =====================================================
-                // 🔹 Upload file TTD (PARALEL kalau nanti ada banyak file)
+                // 🔹 Upload 2 file (PARALEL)
                 // =====================================================
-                var uploadTTDTask = UploadToFlaskAsync(vm.TTDPenandaTangan, "TTDPenandaTanganPriv");
-                await Task.WhenAll(uploadTTDTask);
+                var uploadTTDTask = UploadToFlaskAsync(vm.TTDPenandaTangan, "TTD_PenandaTangan", "NilaiKepercayaan");
+                var uploadLabelTask = UploadToFlaskAsync(vm.LabelPasien, "Label_Pasien", "LabelPasien");
+
+                await Task.WhenAll(uploadTTDTask, uploadLabelTask);
 
                 // =====================================================
-                // 🔹 Generate Urutan & NoRevisi
+                // 🔹 Generate Urutan & NoRevisi (contoh per-bulan)
                 // =====================================================
-                // Urutan: auto increment dari 001 berdasarkan awal bulan
-                // NoRevisi: auto increment dari 01 tiap edit (untuk create default = 1)
                 var now = DateTimeOffset.UtcNow;
-
                 var startMonth = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
                 var endMonth = startMonth.AddMonths(1).AddTicks(-1);
 
-                var maxUrutanThisMonth = await _applicationDbContext.PermintaanPrivasis
+                var maxUrutanThisMonth = await _applicationDbContext.NilaiKepercayaans
                     .Where(x =>
                         x.CreateDateTime >= startMonth &&
                         x.CreateDateTime <= endMonth &&
                         x.IsDelete == false)
-                    .MaxAsync(x => (decimal?)x.Urutan);   // <-- Max bisa handle NULL
+                    .MaxAsync(x => (decimal?)x.Urutan);
 
                 decimal? nextUrutan = (maxUrutanThisMonth ?? 0) + 1;
-
-                var nextNoRevisi = 0;
-
-                // cek path ttd
-                var ttdPetugas = await _ttdService.CheckTTDAsync((Guid)vm.KepalaRuanganId);
+                decimal? nextNoRevisi = 1;
 
                 // =====================================================
                 // 🔹 Simpan ke DB
                 // =====================================================
-                var data = new PermintaanPrivasi
+                var data = new NilaiKepercayaan
                 {
-                    PermintaanPrivasiId = privId,
-                    KunjunganId = vm.KunjunganId,
+                    NilaiKepercayaanId = nilaiKepercayaanId,
                     PasienId = vm.PasienId,
+
                     Urutan = nextUrutan,
                     NoRevisi = nextNoRevisi,
-                    AksesDiperbolehkan = vm.AksesDiperbolehkan,
-                    PermintaanKhusus = vm.PermintaanKhusus,
-                    IsTransportasiPrivasi = vm.IsTransportasiPrivasi,
-                    TanggalPermintaan = vm.TanggalPermintaan,
-                    KepalaRuanganId = vm.KepalaRuanganId,
-                    PathKepalaRuangan = ttdPetugas?.Path,
-                    PathTTDPenandaTangan = uploadTTDTask.Result,
-                    Keterangan = vm.Keterangan,
+
+                    TanggalTTD = vm.TanggalTTD,
+                    NamaPenandaTangan = vm.NamaPenandaTangan,
+                    TanggalLahirPenandaTangan = vm.TanggalLahirPenandaTangan,
+                    UmurPenandaTangan = vm.UmurPenandaTangan,
+                    GenderPenandaTangan = vm.GenderPenandaTangan,
+                    AlamatPenandaTangan = vm.AlamatPenandaTangan,
+
+                    HubDenganPasien = vm.HubDenganPasien,
+                    AgamaPasien = vm.AgamaPasien,
+                    GenderPasien = vm.GenderPasien,
+
+                    NilaiBertentangan = vm.NilaiBertentangan,
+
+                    // path file
+                    TTDPenandaTanganPath = uploadTTDTask.Result,
+                    PathLabelPasien = uploadLabelTask.Result,
+
                     CreateBy = userId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                     IsDelete = false
                 };
 
-                _applicationDbContext.PermintaanPrivasis.Add(data);
+                _applicationDbContext.NilaiKepercayaans.Add(data);
                 await _applicationDbContext.SaveChangesAsync();
 
                 return Created("", new
                 {
-                    message = "Berhasil tambah Pelunasan Deposit",
-                    data.PermintaanPrivasiId,
-                    data.PathTTDPenandaTangan,
-                    data.PathKepalaRuangan,
+                    message = "Berhasil tambah Nilai Kepercayaan",
+                    data.NilaiKepercayaanId,
+                    data.TTDPenandaTanganPath,
+                    data.PathLabelPasien,
                     data.Urutan,
                     data.NoRevisi
                 });
@@ -239,7 +244,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
         [HttpPut("{id}")]
         [RequestSizeLimit(20_000_000)]
-        public async Task<IActionResult> Update(Guid id, [FromForm] PermintaanPrivasiViewModel vm)
+        [Consumes("multipart/form-data")]
+        [RequestFormLimits(MultipartBodyLengthLimit = 20_000_000)]
+        public async Task<IActionResult> Update(Guid id, [FromForm] NilaiKepercayaanViewModel vm)
         {
             if (vm == null)
                 return BadRequest(new { message = "Data tidak valid." });
@@ -270,16 +277,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 // =====================================================
                 // 🔹 Ambil data existing
                 // =====================================================
-                var data = await _applicationDbContext.PermintaanPrivasis
-                    .FirstOrDefaultAsync(x => x.PermintaanPrivasiId == id && x.IsDelete == false);
+                var data = await _applicationDbContext.NilaiKepercayaans
+                    .FirstOrDefaultAsync(x => x.NilaiKepercayaanId == id && x.IsDelete == false);
 
                 if (data == null)
-                    return NotFound(new { message = "Data Permintaan Privasi tidak ditemukan." });
+                    return NotFound(new { message = "Data Nilai Kepercayaan tidak ditemukan." });
 
                 // =====================================================
-                // 🔹 Helper upload ke Flask (SESUAI pola PraOperasi)
+                // 🔹 Helper upload ke Flask (bisa beda folder)
                 // =====================================================
-                async Task<string?> UploadToFlaskAsync(IFormFile? file, string prefix)
+                async Task<string?> UploadToFlaskAsync(IFormFile? file, string prefix, string folderTarget)
                 {
                     if (file == null || file.Length == 0)
                         return null;
@@ -295,7 +302,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                     var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
                     var fileName = $"{id}_{prefix}_{safeTime}{ext}";
-                    var folderTarget = "PermintaanPrivasi";
                     var filePath = $"/{folderTarget}/{fileName}";
 
                     using var ms = new MemoryStream();
@@ -324,64 +330,66 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 }
 
                 // =====================================================
-                // 🔹 Upload file TTD (opsional)
+                // 🔹 Upload file (hanya jika ada di request)
                 // =====================================================
-                string? newPathTTDPenandaTangan = null;
+                Task<string?> uploadTTDTask = Task.FromResult<string?>(null);
+                Task<string?> uploadLabelTask = Task.FromResult<string?>(null);
 
                 if (vm.TTDPenandaTangan != null && vm.TTDPenandaTangan.Length > 0)
-                {
-                    newPathTTDPenandaTangan = await UploadToFlaskAsync(vm.TTDPenandaTangan, "TTDPenandaTanganPriv");
-                }
+                    uploadTTDTask = UploadToFlaskAsync(vm.TTDPenandaTangan, "TTD_PenandaTangan", "NilaiKepercayaan");
+
+                if (vm.LabelPasien != null && vm.LabelPasien.Length > 0)
+                    uploadLabelTask = UploadToFlaskAsync(vm.LabelPasien, "Label_Pasien", "LabelPasien");
+
+                await Task.WhenAll(uploadTTDTask, uploadLabelTask);
 
                 // =====================================================
-                // 🔹 Update TTD Kepala Ruangan (kalau ada)
+                // 🔹 Increment NoRevisi saat update
                 // =====================================================
-                string? newPathKepalaRuangan = data.PathKepalaRuangan;
-
-                if (vm.KepalaRuanganId.HasValue)
-                {
-                    var ttdPetugas = await _ttdService.CheckTTDAsync(vm.KepalaRuanganId.Value);
-                    newPathKepalaRuangan = ttdPetugas?.Path;
-                }
+                decimal? nextNoRevisi = (data.NoRevisi ?? 0) + 1;
 
                 // =====================================================
-                // 🔹 Update Data (PUT)
+                // 🔹 Update Data (Urutan tidak diubah)
                 // =====================================================
-                data.KunjunganId = vm.KunjunganId;
                 data.PasienId = vm.PasienId;
 
-                // ❗ Urutan tidak diubah
-                // data.Urutan tetap
+                data.NoRevisi = nextNoRevisi;
 
-                // ✅ NoRevisi naik setiap update
-                data.NoRevisi = (data.NoRevisi ?? 0) + 1;
+                data.TanggalTTD = vm.TanggalTTD;
+                data.NamaPenandaTangan = vm.NamaPenandaTangan;
+                data.TanggalLahirPenandaTangan = vm.TanggalLahirPenandaTangan;
+                data.UmurPenandaTangan = vm.UmurPenandaTangan;
+                data.GenderPenandaTangan = vm.GenderPenandaTangan;
+                data.AlamatPenandaTangan = vm.AlamatPenandaTangan;
 
-                data.AksesDiperbolehkan = vm.AksesDiperbolehkan;
-                data.PermintaanKhusus = vm.PermintaanKhusus;
-                data.IsTransportasiPrivasi = vm.IsTransportasiPrivasi;
-                data.TanggalPermintaan = vm.TanggalPermintaan;
+                data.HubDenganPasien = vm.HubDenganPasien;
+                data.AgamaPasien = vm.AgamaPasien;
+                data.GenderPasien = vm.GenderPasien;
 
-                data.KepalaRuanganId = vm.KepalaRuanganId;
-                data.PathKepalaRuangan = newPathKepalaRuangan;
+                data.NilaiBertentangan = vm.NilaiBertentangan;
 
-                // kalau upload baru ada, replace path lama
-                if (!string.IsNullOrWhiteSpace(newPathTTDPenandaTangan))
-                    data.PathTTDPenandaTangan = newPathTTDPenandaTangan;
+                // ✅ Update path file hanya jika ada upload baru
+                var newTTDPath = uploadTTDTask.Result;
+                if (!string.IsNullOrWhiteSpace(newTTDPath))
+                    data.TTDPenandaTanganPath = newTTDPath;
 
-                data.Keterangan = vm.Keterangan;
+                var newLabelPath = uploadLabelTask.Result;
+                if (!string.IsNullOrWhiteSpace(newLabelPath))
+                    data.PathLabelPasien = newLabelPath;
 
+                // metadata update (kalau ada)
                 data.UpdateBy = userId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.PermintaanPrivasis.Update(data);
+                _applicationDbContext.NilaiKepercayaans.Update(data);
                 await _applicationDbContext.SaveChangesAsync();
 
                 return Ok(new
                 {
-                    message = "Berhasil update Permintaan Privasi || 200 OK",
-                    data.PermintaanPrivasiId,
-                    data.PathTTDPenandaTangan,
-                    data.PathKepalaRuangan,
+                    message = "Berhasil update Nilai Kepercayaan",
+                    data.NilaiKepercayaanId,
+                    data.TTDPenandaTanganPath,
+                    data.PathLabelPasien,
                     data.Urutan,
                     data.NoRevisi
                 });
@@ -419,7 +427,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.PermintaanPrivasis.FindAsync(id);
+                var data = await _applicationDbContext.NilaiKepercayaans.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -431,7 +439,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                 data.IsDelete = true;
 
-                _applicationDbContext.PermintaanPrivasis.Update(data);
+                _applicationDbContext.NilaiKepercayaans.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -457,15 +465,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         public async Task<IActionResult> GetAll(
             int page = 1,
             int perPage = 10,
-            //string? search = null,
-            Guid? kunjunganId = null,
+            string? search = null,
             Guid? pasienId = null,
-            Guid? kepalaRuanganId = null,
             string? orderBy = "CreatedAt",
             string? sortDirection = "desc",
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? startDate = null,
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? endDate = null,
-            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))]
+            PeriodeFilter? periode = null
         )
         {
             try
@@ -474,26 +481,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 if (perPage < 1) perPage = 10;
 
                 // ==========================================
-                // 1) BASE QUERY (PermintaanPrivasi)
+                // 1) BASE QUERY (NilaiKepercayaan)
                 // ==========================================
-                var baseQuery = _applicationDbContext.PermintaanPrivasis
+                var baseQuery = _applicationDbContext.NilaiKepercayaans
                     .AsNoTracking()
                     .Where(x => x.IsDelete == false);
-
-                // filter by kunjunganId
-                if (kunjunganId.HasValue)
-                    baseQuery = baseQuery.Where(x => x.KunjunganId == kunjunganId.Value);
 
                 // filter by pasienId
                 if (pasienId.HasValue)
                     baseQuery = baseQuery.Where(x => x.PasienId == pasienId.Value);
 
-                // filter by kepalaRuanganId
-                if (kepalaRuanganId.HasValue)
-                    baseQuery = baseQuery.Where(x => x.KepalaRuanganId == kepalaRuanganId.Value);
-
                 // ==========================================
-                // 2) FILTER TANGGAL (CreatedAt)
+                // 2) FILTER TANGGAL (CreateDateTime)
                 // ==========================================
                 if (startDate.HasValue && endDate.HasValue)
                 {
@@ -502,8 +501,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                     baseQuery = baseQuery.Where(x =>
                         x.CreateDateTime >= startUtc &&
-                        x.CreateDateTime <= endUtc
-                    );
+                        x.CreateDateTime <= endUtc);
                 }
 
                 // filter periode
@@ -565,19 +563,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     from u in userJoin.DefaultIfEmpty()
                     select new
                     {
-                        x.PermintaanPrivasiId,
-                        x.KunjunganId,
+                        x.NilaiKepercayaanId,
                         x.PasienId,
                         x.Urutan,
                         x.NoRevisi,
-                        x.AksesDiperbolehkan,
-                        x.PermintaanKhusus,
-                        x.IsTransportasiPrivasi,
-                        x.TanggalPermintaan,
-                        x.KepalaRuanganId,
-                        x.PathKepalaRuangan,
-                        x.PathTTDPenandaTangan,
-                        x.Keterangan,
+
+                        x.TanggalTTD,
+                        x.NamaPenandaTangan,
+                        x.TanggalLahirPenandaTangan,
+                        x.UmurPenandaTangan,
+                        x.GenderPenandaTangan,
+                        x.AlamatPenandaTangan,
+
+                        x.HubDenganPasien,
+                        x.AgamaPasien,
+                        x.GenderPasien,
+
+                        x.PathLabelPasien,
+                        x.NilaiBertentangan,
+                        x.TTDPenandaTanganPath,
+
                         x.IsDelete,
                         x.CreateDateTime,
                         x.CreateBy,
@@ -585,20 +590,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     };
 
                 // ==========================================
-                // 4) SEARCH
+                // 4) SEARCH (setelah join)
                 // ==========================================
-                //if (!string.IsNullOrWhiteSpace(search))
-                //{
-                //    var pattern = $"%{search.ToLower()}%";
+                if (!string.IsNullOrWhiteSpace(search))
+                {
+                    var pattern = $"%{search.ToLower()}%";
 
-                //    query = query.Where(x =>
-                //        EF.Functions.ILike(x.Urutan ?? "", pattern) ||
-                //        EF.Functions.ILike(x.NoRevisi ?? "", pattern) ||
-                //        EF.Functions.ILike(x.AksesDiperbolehkan ?? "", pattern) ||
-                //        EF.Functions.ILike(x.PermintaanKhusus ?? "", pattern) ||
-                //        EF.Functions.ILike(x.Keterangan ?? "", pattern)
-                //    );
-                //}
+                    query = query.Where(x =>
+                        EF.Functions.ILike(x.NamaPenandaTangan, pattern) ||
+                        EF.Functions.ILike(x.HubDenganPasien, pattern) ||
+                        EF.Functions.ILike(x.NilaiBertentangan, pattern)
+                    );
+                }
 
                 // ==========================================
                 // 5) SORTING
@@ -609,14 +612,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     ? orderBy switch
                     {
                         "CreatedAt" => query.OrderByDescending(x => x.CreateDateTime),
-                        "TanggalPermintaan" => query.OrderByDescending(x => x.TanggalPermintaan),
+                        "NamaPenandaTangan" => query.OrderByDescending(x => x.NamaPenandaTangan),
                         "Urutan" => query.OrderByDescending(x => x.Urutan),
                         _ => query.OrderByDescending(x => x.CreateDateTime)
                     }
                     : orderBy switch
                     {
                         "CreatedAt" => query.OrderBy(x => x.CreateDateTime),
-                        "TanggalPermintaan" => query.OrderBy(x => x.TanggalPermintaan),
+                        "NamaPenandaTangan" => query.OrderBy(x => x.NamaPenandaTangan),
                         "Urutan" => query.OrderBy(x => x.Urutan),
                         _ => query.OrderBy(x => x.CreateDateTime)
                     };
@@ -671,8 +674,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
-
-
 
     }
 }
