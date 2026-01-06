@@ -1,0 +1,528 @@
+﻿using System.Linq;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.ViewModels;
+using QuilvianSystemBackendDev.Models;
+using QuilvianSystemBackendDev.Repositories;
+using Swashbuckle.AspNetCore.Annotations;
+
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controllers
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    [Authorize]
+    [EnableCors("AllowSpecific")]
+    public class HandoverPasienController : Controller
+    {
+        private readonly ApplicationDbContext _applicationDbContext;
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly SignInManager<ApplicationUser> _signInManager;
+
+        private readonly ILogger<HandoverPasienController> _logger;
+        private readonly IWebHostEnvironment _webHostEnvironment;
+
+        public HandoverPasienController(
+            ApplicationDbContext applicationDbContext,
+            UserManager<ApplicationUser> userManager,
+            SignInManager<ApplicationUser> signInManager,
+            ILogger<HandoverPasienController> logger,
+            IWebHostEnvironment webHostEnvironment)
+        {
+            _applicationDbContext = applicationDbContext;
+            _userManager = userManager;
+            _signInManager = signInManager;
+            _logger = logger;
+            _webHostEnvironment = webHostEnvironment;
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(Guid id)
+        {
+            var handover = await _applicationDbContext.HandoverPasiens
+                .AsNoTracking()
+                .FirstOrDefaultAsync(h => h.HandoverPasienId == id);
+
+            if (handover == null)
+                return NotFound(new { message = "Data handover pasien tidak ditemukan." });
+
+            var details = await _applicationDbContext.HandoverPasienDetails
+                .AsNoTracking()
+                .Where(d => d.HandoverPasienId == id)
+                .ToListAsync();
+
+            return Ok(new
+            {
+                message = "Berhasil",
+                data = new
+                {
+                    handover,   // semua kolom dari tabel handoverpasien
+                    details     // detail yang handoverpasienid = id
+                }
+            });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Create([FromBody] HandoverPasienViewModel vm)
+        {
+            if (vm == null || !ModelState.IsValid)
+                return BadRequest(new { message = "Data tidak valid." });
+
+            if (!_applicationDbContext.Database.CanConnect())
+                return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+
+            // Ambil user login (opsional, mengikuti pola kamu)
+            var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(emailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var getUserActive = await _applicationDbContext.UserActives
+                .FirstOrDefaultAsync(u => u.Email == emailLogin);
+
+            if (getUserActive == null)
+                return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+
+            // transaksi biar parent+detail aman
+            await using var trx = await _applicationDbContext.Database.BeginTransactionAsync();
+            try
+            {
+                var handoverId = Guid.NewGuid();
+
+                // 1) Insert parent
+                var handover = new HandoverPasien
+                {
+                    HandoverPasienId = handoverId, // sesuaikan kalau PK kamu beda
+                    KunjunganId = vm.KunjunganId,
+                    PasienId = vm.PasienId,
+                    TanggalSerahTerima = vm.TanggalSerahTerima,
+                    AdministrationId = vm.AdministrationId,
+                    CROId = vm.CROId,
+                    PerawatId = vm.PerawatId,
+                    Keterangan = vm.Keterangan,
+                    CreateDateTime = DateTimeOffset.UtcNow,
+                    CreateBy = getUserActive.UserActiveId
+                };
+
+                _applicationDbContext.HandoverPasiens.Add(handover);
+
+                // 2) Insert details (pakai HandoverPasienId dari parent)
+                if (vm.Details != null && vm.Details.Count > 0)
+                {
+                    var detailEntities = vm.Details.Select(d => new HandoverPasienDetail
+                    {
+                        // kalau ada PK detail, isi (sesuaikan)
+                        DetailHandoverPasienId = Guid.NewGuid(),
+                        HandoverPasienId = handoverId,
+                        ChecklistItemId = d.ChecklistItemId,
+                        IsSudah = d.IsSudah,
+                        Keterangan = d.Keterangan,
+
+                        CreateDateTime = DateTimeOffset.UtcNow,
+                        CreateBy = getUserActive.UserActiveId
+                    }).ToList();
+
+                    _applicationDbContext.HandoverPasienDetails.AddRange(detailEntities);
+                }
+
+                await _applicationDbContext.SaveChangesAsync();
+                await trx.CommitAsync();
+
+                return CreatedAtAction(nameof(GetById), new { id = handoverId }, new
+                {
+                    message = "Berhasil membuat handover pasien.",
+                    id = handoverId
+                });
+            }
+            catch (Exception ex)
+            {
+                await trx.RollbackAsync();
+                return StatusCode(500, new { message = "Gagal membuat handover pasien.", error = ex.Message });
+            }
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(Guid id, [FromBody] HandoverPasienViewModel vm)
+        {
+            if (vm == null || !ModelState.IsValid)
+                return BadRequest(new { message = "Data tidak valid." });
+
+            if (!_applicationDbContext.Database.CanConnect())
+                return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+
+            var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(emailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var getUserActive = await _applicationDbContext.UserActives
+                .FirstOrDefaultAsync(u => u.Email == emailLogin);
+
+            if (getUserActive == null)
+                return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+
+            await using var trx = await _applicationDbContext.Database.BeginTransactionAsync();
+            try
+            {
+                // 1) Parent
+                var handover = await _applicationDbContext.HandoverPasiens
+                    .FirstOrDefaultAsync(h => h.HandoverPasienId == id);
+
+                if (handover == null)
+                    return NotFound(new { message = "Data handover pasien tidak ditemukan." });
+
+                // Update kolom parent
+                handover.KunjunganId = vm.KunjunganId;
+                handover.PasienId = vm.PasienId;
+                handover.TanggalSerahTerima = vm.TanggalSerahTerima;
+                handover.AdministrationId = vm.AdministrationId;
+                handover.CROId = vm.CROId;
+                handover.PerawatId = vm.PerawatId;
+                handover.Keterangan = vm.Keterangan;
+
+                handover.UpdateDateTime = DateTimeOffset.UtcNow;
+                handover.UpdateBy = getUserActive.UserActiveId;
+
+                // 2) Detail (TIDAK DIHAPUS, hanya UPSERT berdasarkan ChecklistItemId)
+                if (vm.Details != null && vm.Details.Count > 0)
+                {
+                    var existingDetails = await _applicationDbContext.HandoverPasienDetails
+                        .Where(d => d.HandoverPasienId == id)
+                        .ToListAsync();
+
+                    foreach (var d in vm.Details)
+                    {
+                        // cari detail lama berdasarkan ChecklistItemId (tanpa butuh DetailHandoverPasienId)
+                        var existing = existingDetails
+                            .FirstOrDefault(x => x.ChecklistItemId == d.ChecklistItemId);
+
+                        if (existing != null)
+                        {
+                            existing.IsSudah = d.IsSudah;
+                            existing.Keterangan = d.Keterangan;
+                            existing.UpdateDateTime = DateTimeOffset.UtcNow;
+                            existing.UpdateBy = getUserActive.UserActiveId;
+                        }
+                        else
+                        {
+                            // INSERT detail baru
+                            var newDetail = new HandoverPasienDetail
+                            {
+                                DetailHandoverPasienId = Guid.NewGuid(),
+                                HandoverPasienId = id,
+                                ChecklistItemId = d.ChecklistItemId,
+                                IsSudah = d.IsSudah,
+                                Keterangan = d.Keterangan,
+                                CreateDateTime = DateTimeOffset.UtcNow,
+                                CreateBy = getUserActive.UserActiveId
+                            };
+                            _applicationDbContext.HandoverPasienDetails.Add(newDetail);
+                        }
+                    }
+                }
+
+                await _applicationDbContext.SaveChangesAsync();
+                await trx.CommitAsync();
+
+                return Ok(new { message = "Berhasil update handover pasien (detail lama tidak dihapus).", id });
+            }
+            catch (Exception ex)
+            {
+                await trx.RollbackAsync();
+                return StatusCode(500, new { message = "Gagal update handover pasien.", error = ex.Message });
+            }
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> SoftDelete(Guid id)
+        {
+            if (!_applicationDbContext.Database.CanConnect())
+                return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+
+            var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(emailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var getUserActive = await _applicationDbContext.UserActives
+                .FirstOrDefaultAsync(u => u.Email == emailLogin);
+
+            if (getUserActive == null)
+                return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+
+            await using var trx = await _applicationDbContext.Database.BeginTransactionAsync();
+            try
+            {
+                var now = DateTimeOffset.UtcNow;
+
+                // Jika kamu pakai Global Query Filter (mis. IsDeleted == false),
+                // dan ingin tetap bisa delete data yang sudah terfilter, pakai IgnoreQueryFilters().
+                var handover = await _applicationDbContext.HandoverPasiens
+                    //.IgnoreQueryFilters()
+                    .FirstOrDefaultAsync(h => h.HandoverPasienId == id);
+
+                if (handover == null)
+                    return NotFound(new { message = "Data handover pasien tidak ditemukan." });
+
+                // Jika sudah terhapus, boleh langsung return OK (idempotent)
+                if (handover.IsDelete)
+                {
+                    return Ok(new
+                    {
+                        message = "Data sudah dalam kondisi terhapus (soft delete).",
+                        id
+                    });
+                }
+
+                // Soft delete parent
+                handover.IsDelete = true;
+                handover.DeleteDateTime = now;
+                handover.DeleteBy = getUserActive.UserActiveId;
+
+                // Soft delete details
+                var details = await _applicationDbContext.HandoverPasienDetails
+                    //.IgnoreQueryFilters()
+                    .Where(d => d.HandoverPasienId == id && !d.IsDelete)
+                    .ToListAsync();
+
+                foreach (var d in details)
+                {
+                    d.IsDelete = true;
+                    d.DeleteDateTime = now;
+                    d.DeleteBy = getUserActive.UserActiveId;
+                }
+
+                await _applicationDbContext.SaveChangesAsync();
+                await trx.CommitAsync();
+
+                return Ok(new
+                {
+                    message = "Berhasil soft delete handover pasien dan detailnya.",
+                    id,
+                    deletedDetailCount = details.Count
+                });
+            }
+            catch (Exception ex)
+            {
+                await trx.RollbackAsync();
+                return StatusCode(500, new { message = "Gagal soft delete data.", error = ex.Message });
+            }
+        }
+
+        [HttpGet("paged")]
+        public async Task<IActionResult> Paged(
+            int page = 1,
+            int perPage = 10,
+            //string? search = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            Guid? kunjunganId = null,
+            Guid? pasienId = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+            DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+            DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        {
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
+
+            var baseQuery =
+                from h in _applicationDbContext.HandoverPasiens.AsNoTracking()
+                join u in _applicationDbContext.UserActives.AsNoTracking()
+                    on h.CreateBy equals u.UserActiveId
+                where (h.IsDelete == false || h.IsDelete == null) // sesuaikan: IsDelete / IsDeleted
+                select new
+                {
+                    h.HandoverPasienId,
+                    h.KunjunganId,
+                    h.PasienId,
+                    h.TanggalSerahTerima,
+                    h.AdministrationId,
+                    h.CROId,
+                    h.PerawatId,
+                    h.Keterangan,
+                    h.CreateDateTime,
+                    h.CreateBy,
+                    CreateByName = u.FullName
+                };
+
+            // FILTER kunjunganId & pasienId (baru)
+            if (kunjunganId.HasValue && kunjunganId.Value != Guid.Empty)
+                baseQuery = baseQuery.Where(x => x.KunjunganId == kunjunganId.Value);
+
+            if (pasienId.HasValue && pasienId.Value != Guid.Empty)
+                baseQuery = baseQuery.Where(x => x.PasienId == pasienId.Value);
+
+            // SEARCH
+            //if (!string.IsNullOrWhiteSpace(search))
+            //{
+            //    var s = $"%{search.ToLower()}%";
+            //    baseQuery = baseQuery.Where(x =>
+            //        EF.Functions.ILike(x.CROId ?? "", s) ||
+            //        EF.Functions.ILike(x.Keterangan ?? "", s) ||
+            //        EF.Functions.ILike(x.CreateByName ?? "", s)
+            //    );
+            //}
+
+            // FILTER tanggal custom
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
+                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+
+                baseQuery = baseQuery.Where(x => x.CreateDateTime >= startUtc && x.CreateDateTime <= endUtc);
+            }
+
+            // FILTER periode
+            if (periode.HasValue)
+            {
+                DateTime today = DateTime.UtcNow.Date;
+
+                baseQuery = periode.Value switch
+                {
+                    PeriodeFilter.Today =>
+                        baseQuery.Where(x => x.CreateDateTime.Date == today),
+
+                    PeriodeFilter.ThisWeek =>
+                        baseQuery.Where(x => x.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek)
+                                          && x.CreateDateTime.Date <= today),
+
+                    PeriodeFilter.LastWeek =>
+                        baseQuery.Where(x => x.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek)
+                                          && x.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)),
+
+                    PeriodeFilter.ThisMonth =>
+                        baseQuery.Where(x => x.CreateDateTime.Month == today.Month && x.CreateDateTime.Year == today.Year),
+
+                    PeriodeFilter.LastMonth =>
+                        baseQuery.Where(x => x.CreateDateTime >= new DateTime(today.Year, today.Month, 1).AddMonths(-1)
+                                          && x.CreateDateTime < new DateTime(today.Year, today.Month, 1)),
+
+                    PeriodeFilter.ThisYear =>
+                        baseQuery.Where(x => x.CreateDateTime.Year == today.Year),
+
+                    PeriodeFilter.LastYear =>
+                        baseQuery.Where(x => x.CreateDateTime.Year == today.Year - 1),
+
+                    PeriodeFilter.Last3Months =>
+                        baseQuery.Where(x => x.CreateDateTime >= today.AddMonths(-3)),
+
+                    PeriodeFilter.Last6Months =>
+                        baseQuery.Where(x => x.CreateDateTime >= today.AddMonths(-6)),
+
+                    _ => baseQuery
+                };
+            }
+
+            // SORTING
+            baseQuery = (sortDirection?.ToLower() == "desc")
+                ? orderBy switch
+                {
+                    "CreateDateTime" => baseQuery.OrderByDescending(x => x.CreateDateTime),
+                    "CreateByName" => baseQuery.OrderByDescending(x => x.CreateByName),
+                    "TanggalSerahTerima" => baseQuery.OrderByDescending(x => x.TanggalSerahTerima),
+                    "CROId" => baseQuery.OrderByDescending(x => x.CROId),
+                    _ => baseQuery.OrderByDescending(x => x.CreateDateTime)
+                }
+                : orderBy switch
+                {
+                    "CreateDateTime" => baseQuery.OrderBy(x => x.CreateDateTime),
+                    "CreateByName" => baseQuery.OrderBy(x => x.CreateByName),
+                    "TanggalSerahTerima" => baseQuery.OrderBy(x => x.TanggalSerahTerima),
+                    "CROId" => baseQuery.OrderBy(x => x.CROId),
+                    _ => baseQuery.OrderBy(x => x.CreateDateTime)
+                };
+
+            var totalRows = await baseQuery.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            if (totalRows == 0)
+            {
+                return Ok(new
+                {
+                    status = "success",
+                    message = "Data retrieved successfully",
+                    data = new
+                    {
+                        Rows = new List<object>(),
+                        TotalRows = 0,
+                        CurrentPage = page,
+                        PerPage = perPage,
+                        TotalPages = 0
+                    }
+                });
+            }
+
+            if (page > totalPages)
+                return NotFound(new { message = "Page not found." });
+
+            // Ambil page parent
+            var parents = await baseQuery
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToListAsync();
+
+            var parentIds = parents.Select(x => x.HandoverPasienId).ToList();
+
+            // Ambil detail untuk semua parent di page (1 query)
+            var details = await _applicationDbContext.HandoverPasienDetails
+                .AsNoTracking()
+                .Where(d => parentIds.Contains((Guid)d.HandoverPasienId) && (d.IsDelete == false || d.IsDelete == null))
+                .Select(d => new
+                {
+                    d.DetailHandoverPasienId,
+                    d.HandoverPasienId,
+                    d.ChecklistItemId,
+                    d.IsSudah,
+                    d.Keterangan,
+                    d.CreateDateTime,
+                    d.CreateBy
+                })
+                .ToListAsync();
+
+            var detailMap = details
+                .GroupBy(d => d.HandoverPasienId)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            var rows = parents.Select(p => new
+            {
+                p.HandoverPasienId,
+                p.KunjunganId,
+                p.PasienId,
+                p.TanggalSerahTerima,
+                p.AdministrationId,
+                p.CROId,
+                p.PerawatId,
+                p.Keterangan,
+                p.CreateDateTime,
+                p.CreateBy,
+                p.CreateByName,
+                Details = detailMap.TryGetValue(p.HandoverPasienId, out var det)
+                    ? det.Select(x => (object)x).ToList()
+                    : new List<object>()
+            }).ToList();
+
+            return Ok(new
+            {
+                status = "success",
+                message = "Data retrieved successfully",
+                data = new
+                {
+                    Rows = rows,
+                    TotalRows = totalRows,
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalPages = totalPages
+                }
+            });
+        }
+
+
+    }
+}

@@ -304,6 +304,8 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<GeneralConsent> GeneralConsents { get; set; }
         public DbSet<PermintaanPrivasi> PermintaanPrivasis { get; set; }
         public DbSet<NilaiKepercayaan> NilaiKepercayaans { get; set; }
+        public DbSet<HandoverPasien> HandoverPasiens { get; set; }
+        public DbSet<HandoverPasienDetail> HandoverPasienDetails { get; set; }
         #endregion
 
         #region Farmasi
