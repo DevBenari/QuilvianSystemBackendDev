@@ -342,7 +342,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                             {
                                 // ambil nama tindakan
                                 tindakanDict.TryGetValue(tindakanId, out var namaTindakan);
-                                namaTindakan ??= "Tindakan Operasi";
+                                namaTindakan ??= "Operasi";
 
                                 // ambil tarif
                                 if (!tarifDict.TryGetValue(tindakanId, out var tarifTotal) || tarifTotal == null)
@@ -695,7 +695,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                 // =========================
                 // 4) Soft delete billing lama (jenis tindakan operasi)
                 // =========================
-                const string jenisBilling = "Tindakan Operasi";
+                const string jenisBilling = "Operasi";
 
                 var oldBillings = await _applicationDbContext.Billings
                     .Where(b =>
@@ -990,7 +990,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                 // 4) Soft delete billings terkait booking ini
                 //    (pakai JenisBilling yang kamu gunakan sebelumnya)
                 // =========================
-                const string jenisBilling = "Tindakan Operasi";
+                const string jenisBilling = "Operasi";
 
                 var billings = await _applicationDbContext.Billings
                     .Where(b =>
