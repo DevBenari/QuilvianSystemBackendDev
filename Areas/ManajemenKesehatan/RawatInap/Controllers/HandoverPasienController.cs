@@ -47,6 +47,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
+            // 1. Ambil data Header (HandoverPasien)
             var handover = await _applicationDbContext.HandoverPasiens
                 .AsNoTracking()
                 .FirstOrDefaultAsync(h => h.HandoverPasienId == id);
@@ -54,9 +55,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             if (handover == null)
                 return NotFound(new { message = "Data handover pasien tidak ditemukan." });
 
+            // 2. Ambil data Detail dan Joinkan dengan tabel ChecklistItem
             var details = await _applicationDbContext.HandoverPasienDetails
                 .AsNoTracking()
                 .Where(d => d.HandoverPasienId == id)
+                .Join(
+                    _applicationDbContext.ChecklistItems, // Tabel tujuan join
+                    detail => detail.ChecklistItemId,      // Foreign key di tabel detail
+                    item => item.ChecklistItemId,        // Primary key di tabel checklist
+                    (detail, item) => new {                // Hasil proyeksi
+                        detail.DetailHandoverPasienId,
+                        detail.HandoverPasienId,
+                        detail.ChecklistItemId,
+                        ChecklistItemName = item.NamaChecklistItem,    // Mengambil Nama dari tabel ChecklistItem
+                        detail.IsSudah,                 // Asumsi ada kolom ini
+                        detail.Keterangan
+                    }
+                )
                 .ToListAsync();
 
             return Ok(new
@@ -64,8 +79,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 message = "Berhasil",
                 data = new
                 {
-                    handover,   // semua kolom dari tabel handoverpasien
-                    details     // detail yang handoverpasienid = id
+                    handover,
+                    details
                 }
             });
         }
@@ -471,20 +486,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             var parentIds = parents.Select(x => x.HandoverPasienId).ToList();
 
             // Ambil detail untuk semua parent di page (1 query)
-            var details = await _applicationDbContext.HandoverPasienDetails
-                .AsNoTracking()
-                .Where(d => parentIds.Contains((Guid)d.HandoverPasienId) && (d.IsDelete == false || d.IsDelete == null))
-                .Select(d => new
-                {
-                    d.DetailHandoverPasienId,
-                    d.HandoverPasienId,
-                    d.ChecklistItemId,
-                    d.IsSudah,
-                    d.Keterangan,
-                    d.CreateDateTime,
-                    d.CreateBy
-                })
-                .ToListAsync();
+            var details = await (from d in _applicationDbContext.HandoverPasienDetails.AsNoTracking()
+                                 join c in _applicationDbContext.ChecklistItems.AsNoTracking()
+                                    on d.ChecklistItemId equals c.ChecklistItemId
+                                 where parentIds.Contains((Guid)d.HandoverPasienId) && (d.IsDelete == false || d.IsDelete == null)
+                                 select new
+                                 {
+                                     d.DetailHandoverPasienId,
+                                     d.HandoverPasienId,
+                                     d.ChecklistItemId,
+                                     ChecklistItemName = c.NamaChecklistItem, // Menampilkan nama dari tabel ChecklistItems
+                                     d.IsSudah,
+                                     d.Keterangan,
+                                     d.CreateDateTime,
+                                     d.CreateBy
+                                 }).ToListAsync();
 
             var detailMap = details
                 .GroupBy(d => d.HandoverPasienId)

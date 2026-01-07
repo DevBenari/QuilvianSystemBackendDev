@@ -11,6 +11,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using SkiaSharp;
@@ -454,7 +455,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             try
             {
                 // =========================
-                // HEADER KUNJUNGAN (ringan)
+                // 1) HEADER
                 // =========================
                 var header = await _applicationDbContext.Kunjungans
                     .AsNoTracking()
@@ -484,117 +485,240 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     .FirstOrDefaultAsync();
 
                 if (header == null)
-                {
-                    return NotFound(new
-                    {
-                        status = "failed",
-                        message = "Data kunjungan tidak ditemukan."
-                    });
-                }
+                    return NotFound(new { status = "failed", message = "Data kunjungan tidak ditemukan." });
 
                 // =========================
-                // FILTER: KHUSUS RAWAT INAP (IP)
+                // 2) VALIDASI IP
                 // =========================
-                var jenis = (header.JenisKunjungan ?? "").Trim();
-
-                // sesuaikan ini dengan value di DB kamu (umumnya: IP / OP)
-                if (jenis != "IP")
+                if (!IsRawatInapIP(header.JenisKunjungan))
                 {
-                    var jenisReadable = jenis switch
-                    {
-                        "OP" => "Rawat Jalan (OP)",
-                        _ => $"bukan Rawat Inap (IP) (jenis: {header.JenisKunjungan})"
-                    };
-
                     return BadRequest(new
                     {
                         status = "failed",
-                        message = $"Maaf, endpoint ini hanya untuk prakiraan biaya Rawat Inap (IP). Kunjungan yang dipilih adalah {jenisReadable}."
+                        message = BuildJenisKunjunganMessage(header.JenisKunjungan)
                     });
                 }
 
                 // =========================
-                // BILLING (SINGLE QUERY - CEPAT)
+                // 3) BILLING
                 // =========================
                 var billings = await _applicationDbContext.Billings
                     .AsNoTracking()
-                    .Where(b => b.KunjunganId == kunjunganId
-                    // kalau Billing punya IsDelete di UserActivity, aktifkan ini:
-                    // && (b.IsDelete == false || b.IsDelete == null)
-                    )
-                    .Select(b => new
-                    {
-                        b.BillingId,
-                        b.BillingKode,
-                        b.ItemId,
-                        b.JenisBilling,
-                        b.NamaItem,
-                        b.HargaItem,
-                        b.QtyItem,
-                        b.SubTotalItem,
-                        b.Keterangan
-                    })
+                    .Where(b => b.KunjunganId == kunjunganId && (b.IsDelete == false || b.IsDelete == null))
                     .ToListAsync();
 
                 // =========================
-                // NORMALIZE GROUPING SESUAI RULE
+                // 4) SOURCE OF TRUTH RANAP
                 // =========================
-                static string NormalizeGroup(string? jenisBilling, string? namaItem)
-                {
-                    var jb = (jenisBilling ?? "").Trim();
+                var bookingRanaps = await _applicationDbContext.BookingBedRanaps
+                    .AsNoTracking()
+                    .Where(x => x.KunjunganId == kunjunganId && (x.IsDelete == false || x.IsDelete == null))
+                    .ToListAsync();
 
-                    // sesuai mapping kamu
-                    if (jb.Equals("Operasi", StringComparison.OrdinalIgnoreCase)) return "Tindakan Operasi";
-                    if (jb.Equals("Tindakan", StringComparison.OrdinalIgnoreCase)) return "Tindakan Rawat Inap";
-                    if (jb.Equals("Alkes", StringComparison.OrdinalIgnoreCase)) return "Alkes Khusus";
-                    if (jb.Equals("Kamar Ranap", StringComparison.OrdinalIgnoreCase)) return "Biaya Kamar Rawat";
-                    if (jb.Equals("Biaya Admin", StringComparison.OrdinalIgnoreCase)) return "Biaya Lain-lain";
-                    if (jb.Equals("Obat", StringComparison.OrdinalIgnoreCase)) return "Obat";
-                    if (jb.Equals("Pemeriksaan Lab", StringComparison.OrdinalIgnoreCase)) return "Pemeriksaan Lab";
+                var transfers = await _applicationDbContext.TransferPasiens
+                    .AsNoTracking()
+                    .Where(x => x.KunjunganId == kunjunganId && (x.IsDelete == false || x.IsDelete == null))
+                    .ToListAsync();
 
-                    // kalau nanti kamu bikin jenis billing khusus visit dokter
-                    if (jb.Equals("Visit Dokter", StringComparison.OrdinalIgnoreCase)) return "Biaya Visit Dokter";
-
-                    // fallback jika visit dokter masih numpang di "Kamar Ranap" / lain-lain (berdasarkan NamaItem)
-                    var nm = (namaItem ?? "").ToLowerInvariant();
-                    if (nm.Contains("visit dokter") || (nm.Contains("visit") && nm.Contains("dokter")))
-                        return "Biaya Visit Dokter";
-
-                    return "Lain-lain";
-                }
+                // Transfer per bedId (cepat untuk lookup)
+                var transferByBed = transfers
+                    .Where(t => t.BedId != null)
+                    .GroupBy(t => t.BedId!.Value)
+                    .ToDictionary(
+                        g => g.Key,
+                        g => g.OrderBy(x => x.TglMasuk ?? x.TglPindah ?? DateTime.MinValue).ToList()
+                    );
 
                 // =========================
-                // GROUPING + TOTAL
+                // 5) GROUPING + BUILD ITEMS
                 // =========================
                 var groups = billings
                     .GroupBy(b => NormalizeGroup(b.JenisBilling, b.NamaItem))
-                    .Select(g => new
+                    .Select(g =>
                     {
-                        Group = g.Key,
-                        Items = g.Select(x => new
+                        var items = new List<object>();
+                        decimal total = 0m;
+
+                        foreach (var b in g)
                         {
-                            x.BillingId,
-                            x.BillingKode,
-                            x.ItemId,
-                            x.JenisBilling,
-                            x.NamaItem,
-                            Qty = x.QtyItem ?? 1,
-                            Harga = x.HargaItem ?? 0,
-                            Subtotal = x.SubTotalItem ?? ((x.QtyItem ?? 1) * (x.HargaItem ?? 0)),
-                            x.Keterangan
-                        }).ToList(),
-                        Total = g.Sum(x => x.SubTotalItem ?? ((x.QtyItem ?? 1) * (x.HargaItem ?? 0)))
+                            var jenis = (b.JenisBilling ?? "").Trim();
+
+                            // default
+                            int qty = b.QtyItem ?? 1;
+                            decimal harga = b.HargaItem ?? 0m;
+                            decimal subtotal = b.SubTotalItem ?? (qty * harga);
+
+                            // =========================
+                            // KHUSUS KAMAR RANAP
+                            // Billing.ItemId = KamarId
+                            // Qty tetap 1; Harga = tarif/hari * totalHari
+                            // Tampilkan tanggal Booking & Transfer
+                            // =========================
+                            if (jenis.Equals("Kamar Ranap", StringComparison.OrdinalIgnoreCase))
+                            {
+                                var tarifPerHari = b.HargaItem ?? 0m;
+
+                                int totalHari = 0;
+                                DateTime? tglMasukAwal = null;
+                                DateTime? tglKeluarAkhir = null;
+
+                                // detail per segmen booking (berisi tanggal booking + daftar transfer yang relevan)
+                                var segments = new List<object>();
+
+                                if (b.ItemId != null)
+                                {
+                                    var kamarId = b.ItemId.Value;
+
+                                    var bookingsKamar = bookingRanaps
+                                        .Where(x => x.KamarId == kamarId)
+                                        .OrderBy(x => x.TglMasuk ?? DateTime.MinValue)
+                                        .ToList();
+
+                                    foreach (var bk in bookingsKamar)
+                                    {
+                                        tglMasukAwal ??= bk.TglMasuk;
+
+                                        // Tentukan end-date final segmen: booking.TglKeluar > transfer end > null(=masih dirawat)
+                                        var endTransfer = ResolveEndFromTransfer(bk.BedId, bk.TglMasuk, transferByBed);
+                                        var endFinal = bk.TglKeluar ?? endTransfer;
+
+                                        var hari = HitungJumlahHariRanap(bk.TglMasuk, endFinal);
+                                        totalHari += hari;
+
+                                        if (endFinal.HasValue)
+                                        {
+                                            if (!tglKeluarAkhir.HasValue || endFinal.Value > tglKeluarAkhir.Value)
+                                                tglKeluarAkhir = endFinal;
+                                        }
+
+                                        // ambil daftar transfer yang relevan untuk segmen ini (bed yang sama, setelah start segmen)
+                                        var transfersSegmen = GetTransfersForSegment(bk.BedId, bk.TglMasuk, endFinal, transferByBed);
+
+                                        segments.Add(new
+                                        {
+                                            bk.BookingBedRanapId,
+                                            bk.KamarId,
+                                            bk.BedId,
+
+                                            // tanggal dari BookingBedRanap
+                                            TglMasukBooking = bk.TglMasuk,
+                                            TglKeluarBooking = bk.TglKeluar,
+
+                                            // tanggal final yg dipakai hitung hari
+                                            TglKeluarTransfer = endTransfer,
+                                            TglKeluarFinal = endFinal,
+
+                                            JumlahHari = hari,
+
+                                            // daftar transfer pasien (tanggal masuk/pindah/keluar)
+                                            TransferPasien = transfersSegmen.Select(t => new
+                                            {
+                                                t.TransferPasienId,
+                                                t.BedId,
+                                                t.TglMasuk,
+                                                t.TglPindah,
+                                                t.TglKeluar,
+                                                t.Keterangan
+                                            }).ToList()
+                                        });
+                                    }
+                                }
+
+                                // Kalau tidak ada booking untuk kamar ini -> fallback aman (pakai billing apa adanya)
+                                if (totalHari <= 0)
+                                {
+                                    qty = 1;
+                                    harga = b.HargaItem ?? 0m;
+                                    subtotal = b.SubTotalItem ?? harga;
+
+                                    total += subtotal;
+
+                                    items.Add(new
+                                    {
+                                        b.BillingId,
+                                        b.BillingKode,
+                                        b.ItemId, // KamarId
+                                        b.JenisBilling,
+                                        b.NamaItem,
+                                        b.Keterangan,
+                                        Qty = qty,
+                                        Harga = harga,
+                                        Subtotal = subtotal,
+                                        Note = "Tidak ditemukan BookingBedRanap untuk KamarId ini. Pastikan BookingBedRanap.KamarId == Billing.ItemId."
+                                    });
+
+                                    continue;
+                                }
+
+                                // Qty tetap 1; harga total berdasarkan hari
+                                qty = 1;
+                                harga = tarifPerHari * totalHari;
+                                subtotal = harga;
+
+                                total += subtotal;
+
+                                items.Add(new
+                                {
+                                    b.BillingId,
+                                    b.BillingKode,
+                                    b.ItemId, // KamarId
+                                    b.JenisBilling,
+                                    b.NamaItem,
+                                    b.Keterangan,
+                                    Qty = qty,
+                                    Harga = harga,
+                                    Subtotal = subtotal,
+
+                                    // info khusus kamar
+                                    JumlahHari = totalHari,
+                                    HargaPerHari = tarifPerHari,
+                                    TglMasukBookingAwal = tglMasukAwal,
+                                    TglKeluarFinalAkhir = tglKeluarAkhir,
+
+                                    // detail segmen booking + transfer
+                                    Segments = segments
+                                });
+
+                                continue;
+                            }
+
+                            // =========================
+                            // SELAIN KAMAR RANAP
+                            // =========================
+                            total += subtotal;
+
+                            items.Add(new
+                            {
+                                b.BillingId,
+                                b.BillingKode,
+                                b.ItemId,
+                                b.JenisBilling,
+                                b.NamaItem,
+                                b.Keterangan,
+                                Qty = qty,
+                                Harga = harga,
+                                Subtotal = subtotal
+                            });
+                        }
+
+                        return new
+                        {
+                            Group = g.Key,
+                            Items = items,
+                            Total = total
+                        };
                     })
                     .ToList();
 
-                // Urutan grup seperti kebutuhan UI (sesuai gambar kamu)
+                // =========================
+                // 6) ORDER GROUPS
+                // =========================
                 var order = new[]
                 {
                 "Tindakan Operasi",
                 "Tindakan Rawat Inap",
                 "Alkes Khusus",
                 "Biaya Kamar Rawat",
-                "Biaya Visit Dokter",
                 "Pemeriksaan Lab",
                 "Biaya Lain-lain",
                 "Obat",
@@ -607,9 +731,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
                 var grandTotal = orderedGroups.Sum(x => x.Total);
 
-                // =========================
-                // RESPONSE
-                // =========================
                 return Ok(new
                 {
                     status = "success",
@@ -623,12 +744,109 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new
-                {
-                    status = "failed",
-                    message = ex.Message
-                });
+                return StatusCode(500, new { status = "failed", message = ex.Message });
             }
+        }
+
+        // =====================================================
+        // HELPERS (minimal)
+        // =====================================================
+        private static bool IsRawatInapIP(string? jenisKunjungan)
+        {
+            var j = (jenisKunjungan ?? "").Trim().ToUpperInvariant();
+            return j == "IP" || j == "RAWAT INAP" || j == "INAP";
+        }
+
+        private static string BuildJenisKunjunganMessage(string? jenisKunjungan)
+        {
+            var j = (jenisKunjungan ?? "").Trim().ToUpperInvariant();
+            var readable = j switch
+            {
+                "OP" => "Rawat Jalan (OP)",
+                "RAWAT JALAN" => "Rawat Jalan",
+                "" => "bukan Rawat Inap (IP)",
+                _ => jenisKunjungan ?? "bukan Rawat Inap (IP)"
+            };
+
+            return $"Maaf, prakiraan billing ini hanya untuk Rawat Inap (IP). Kunjungan yang dipilih adalah {readable}.";
+        }
+
+        private static string NormalizeGroup(string? jenisBilling, string? namaItem)
+        {
+            var jb = (jenisBilling ?? "").Trim();
+
+            if (jb.Equals("Operasi", StringComparison.OrdinalIgnoreCase)) return "Tindakan Operasi";
+            if (jb.Equals("Tindakan", StringComparison.OrdinalIgnoreCase)) return "Tindakan Rawat Inap";
+            if (jb.Equals("Alkes", StringComparison.OrdinalIgnoreCase)) return "Alkes Khusus";
+            if (jb.Equals("Kamar Ranap", StringComparison.OrdinalIgnoreCase)) return "Biaya Kamar Rawat";
+            if (jb.Equals("Biaya Admin", StringComparison.OrdinalIgnoreCase)) return "Biaya Lain-lain";
+            if (jb.Equals("Obat", StringComparison.OrdinalIgnoreCase)) return "Obat";
+            if (jb.Equals("Pemeriksaan Lab", StringComparison.OrdinalIgnoreCase)) return "Pemeriksaan Lab";
+
+            return "Lain-lain";
+        }
+
+        private static int HitungJumlahHariRanap(DateTime? tglMasuk, DateTime? tglKeluarFinal)
+        {
+            if (!tglMasuk.HasValue) return 1;
+
+            var start = tglMasuk.Value;
+            var end = tglKeluarFinal ?? DateTime.Now; // kalau belum pulang -> sekarang
+            if (end < start) end = start;
+
+            var durasi = end - start;
+            var hari = (int)Math.Ceiling(durasi.TotalDays);
+            if (hari < 1) hari = 1;
+
+            return hari;
+        }
+
+        // End-date dari transfer: ambil transfer pertama (anchor>=start) untuk bed tsb,
+        // end = TglKeluar ?? TglPindah
+        private static DateTime? ResolveEndFromTransfer(
+            Guid? bedId,
+            DateTime? start,
+            Dictionary<Guid, List<TransferPasien>> transferByBed)
+        {
+            if (!bedId.HasValue) return null;
+            if (!transferByBed.TryGetValue(bedId.Value, out var list) || list.Count == 0) return null;
+
+            var s = start ?? DateTime.MinValue;
+
+            var candidate = list
+                .Select(t => new { Transfer = t, Anchor = t.TglMasuk ?? t.TglPindah })
+                .Where(x => x.Anchor.HasValue && x.Anchor.Value >= s)
+                .OrderBy(x => x.Anchor!.Value)
+                .FirstOrDefault();
+
+            if (candidate == null) return null;
+
+            return candidate.Transfer.TglKeluar ?? candidate.Transfer.TglPindah;
+        }
+
+        // Transfer yang relevan untuk segmen booking (bed sama, dalam range start..end jika end ada)
+        private static List<TransferPasien> GetTransfersForSegment(
+            Guid? bedId,
+            DateTime? segStart,
+            DateTime? segEnd,
+            Dictionary<Guid, List<TransferPasien>> transferByBed)
+        {
+            var result = new List<TransferPasien>();
+            if (!bedId.HasValue) return result;
+            if (!transferByBed.TryGetValue(bedId.Value, out var list) || list.Count == 0) return result;
+
+            var start = segStart ?? DateTime.MinValue;
+
+            return list
+                .Where(t =>
+                {
+                    var anchor = t.TglMasuk ?? t.TglPindah ?? DateTime.MinValue;
+                    if (anchor < start) return false;
+                    if (segEnd.HasValue && anchor > segEnd.Value) return false;
+                    return true;
+                })
+                .OrderBy(t => t.TglMasuk ?? t.TglPindah ?? DateTime.MinValue)
+                .ToList();
         }
 
         [HttpGet("ObatFarmasiByKunjunganId/{kunjunganId}")]
