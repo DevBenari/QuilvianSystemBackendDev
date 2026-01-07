@@ -306,6 +306,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<NilaiKepercayaan> NilaiKepercayaans { get; set; }
         public DbSet<HandoverPasien> HandoverPasiens { get; set; }
         public DbSet<HandoverPasienDetail> HandoverPasienDetails { get; set; }
+        public DbSet<SelisihBiaya> SelisihBiayas { get; set; }
         #endregion
 
         #region Farmasi

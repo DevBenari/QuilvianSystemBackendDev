@@ -192,6 +192,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                             Umur = HitungUmurLengkap(a.TanggalLahir),
                             StatusPerkawinan = a.StatusPerkawinan,
                             AgamaId = a.AgamaId,
+                            NamaAgama = a.NamaAgama,
                             PendidikanTerakhirId = a.PendidikanTerakhirId,
                             AlamatIdentitas = a.AlamatIdentitas,
                             AlamatDomisili = a.AlamatDomisili,
@@ -232,9 +233,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                             MembershipId = a.MembershipId,
                             a.TinggalBersama,
                             imageUrl = !string.IsNullOrEmpty(a.FotoName)
-                                        ? $"{Request.Scheme}://{Request.Host}/FotoPasienBaru/{a.FotoName}"
-                                        : $"{Request.Scheme}://{Request.Host}/FotoPasienBaru/user.jpg",
-                            QRUrl = $"{Request.Scheme}://{Request.Host}/QRCodePasienBaru/{Path.GetFileName(a.QrCode)}",
+                                        ? $"/FotoPasienBaru/{a.FotoName}"
+                                        : $"/FotoPasienBaru/user.jpg",
+                            QRUrl = $"/QRCodePasienBaru/{Path.GetFileName(a.QrCode)}",
                         };
 
             // Hitung total data sebelum paginasi
@@ -300,6 +301,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     listdata.CatatanKhusus,
                     listdata.StatusPerkawinan,
                     listdata.AgamaId,
+                    listdata.NamaAgama,
                     listdata.PendidikanTerakhirId,
                     listdata.AlamatIdentitas,
                     listdata.AlamatDomisili,
@@ -342,9 +344,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     listdata.TinggalBersama,
                     listdata.MembershipId,
                     imageUrl = !string.IsNullOrEmpty(listdata.FotoName)
-                        ? $"{Request.Scheme}://{Request.Host}/FotoPasienBaru/{listdata.FotoName}"
-                        : $"{Request.Scheme}://{Request.Host}/FotoPasienBaru/user.jpg",
-                    QRUrl = $"{Request.Scheme}://{Request.Host}/QRCodePasienBaru/{Path.GetFileName(listdata.QrCode)}",
+                        ? $"/FotoPasienBaru/{listdata.FotoName}"
+                        : $"/FotoPasienBaru/user.jpg",
+                    QRUrl = $"/QRCodePasienBaru/{Path.GetFileName(listdata.QrCode)}",
                 }
             });
         }
@@ -384,6 +386,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     listdata.JenisKelamin,
                     listdata.StatusPerkawinan,
                     listdata.AgamaId,
+                    listdata.NamaAgama,
                     listdata.PendidikanTerakhirId,
                     listdata.AlamatIdentitas,
                     listdata.AlamatDomisili,
@@ -426,9 +429,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     listdata.MembershipId,
                     listdata.TinggalBersama,
                     imageUrl = !string.IsNullOrEmpty(listdata.FotoName)
-                        ? $"{Request.Scheme}://{Request.Host}/FotoPasienBaru/{listdata.FotoName}"
-                        : $"{Request.Scheme}://{Request.Host}/FotoPasienBaru/user.jpg",
-                    QRUrl = $"{Request.Scheme}://{Request.Host}/QRCodePasienBaru/{Path.GetFileName(listdata.QrCode)}",
+                        ? $"/FotoPasienBaru/{listdata.FotoName}"
+                        : $"/FotoPasienBaru/user.jpg",
+                    QRUrl = $"/QRCodePasienBaru/{Path.GetFileName(listdata.QrCode)}"
                 }
             });
         }
@@ -673,6 +676,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         JenisKelamin = vm.JenisKelamin,
                         StatusPerkawinan = vm.StatusPerkawinan,
                         AgamaId = vm.AgamaId,
+                        NamaAgama = vm.NamaAgama,
                         PendidikanTerakhirId = vm.PendidikanTerakhirId,
                         AlamatIdentitas = vm.AlamatIdentitas,
                         AlamatDomisili = vm.AlamatDomisili,
@@ -726,8 +730,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         message = "Tambah Data Berhasil || 201 Created",
                         PasienBaruId = daftar.PendaftaranPasienBaruId,
                         NomorRekamMedis = daftar.NoRekamMedis,
-                        qrCodeUrl = $"{Request.Scheme}://{Request.Host}/QRCodePasienBaru/{qrCodeFileName}",
-                        url = $"{Request.Scheme}://{Request.Host}/FotoPasienBaru/{fotoFileName}"
+                        qrCodeUrl = $"/QRCodePasienBaru/{qrCodeFileName}",
+                        url = $"/FotoPasienBaru/{fotoFileName}"
                     });
                 }
                 else
@@ -790,6 +794,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 pasien.CatatanKhusus = vm.CatatanKhusus ?? pasien.CatatanKhusus;
                 pasien.StatusPerkawinan = vm.StatusPerkawinan ?? pasien.StatusPerkawinan;
                 pasien.AgamaId = vm.AgamaId ?? pasien.AgamaId;
+                pasien.NamaAgama = vm.NamaAgama ?? pasien.NamaAgama;
                 pasien.PendidikanTerakhirId = vm.PendidikanTerakhirId ?? pasien.PendidikanTerakhirId;
                 pasien.AlamatIdentitas = vm.AlamatIdentitas ?? pasien.AlamatIdentitas;
                 pasien.AlamatDomisili = vm.AlamatDomisili ?? pasien.AlamatDomisili;
@@ -886,8 +891,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 return Ok(new
                 {
                     message = "Update Data Berhasil || 200 OK",
-                    qrCodeUrl = $"{Request.Scheme}://{Request.Host}/QRCodePasienBaru/{Path.GetFileName(pasien.QrCode)}",
-                    uploadFotoUrl = $"{Request.Scheme}://{Request.Host}{pasien.FotoPath}"
+                    qrCodeUrl = $"/QRCodePasienBaru/{Path.GetFileName(pasien.QrCode)}",
+                    uploadFotoUrl = $"{pasien.FotoPath}"
                 });
             }
             catch (Exception ex)
@@ -975,6 +980,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                             Umur = HitungUmurLengkap(a.TanggalLahir),
                             StatusPerkawinan = a.StatusPerkawinan,
                             AgamaId = a.AgamaId,
+                            NamaAgama = a.NamaAgama,
                             PendidikanTerakhirId = a.PendidikanTerakhirId,
                             AlamatIdentitas = a.AlamatIdentitas,
                             AlamatDomisili = a.AlamatDomisili,
@@ -1015,9 +1021,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                             MembershipId = a.MembershipId,
                             a.TinggalBersama,
                             imageUrl = !string.IsNullOrEmpty(a.FotoName)
-                                        ? $"{Request.Scheme}://{Request.Host}/FotoPasienBaru/{a.FotoName}"
-                                        : $"{Request.Scheme}://{Request.Host}/FotoPasienBaru/user.jpg",
-                            QRUrl = $"{Request.Scheme}://{Request.Host}/QRCodePasienBaru/{Path.GetFileName(a.QrCode)}",
+                                        ? $"/FotoPasienBaru/{a.FotoName}"
+                                        : $"/FotoPasienBaru/user.jpg",
+                            QRUrl = $"/QRCodePasienBaru/{Path.GetFileName(a.QrCode)}",
                         };
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
