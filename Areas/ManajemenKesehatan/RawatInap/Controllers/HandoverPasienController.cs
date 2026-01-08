@@ -11,6 +11,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.ViewModels;
+using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
@@ -26,7 +27,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-
+        private readonly ITTDService _ttdService;
         private readonly ILogger<HandoverPasienController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
@@ -35,13 +36,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ILogger<HandoverPasienController> logger,
-            IWebHostEnvironment webHostEnvironment)
+            IWebHostEnvironment webHostEnvironment,
+            ITTDService ttdService)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+            _ttdService = ttdService;
         }
 
         [HttpGet("{id}")]
@@ -111,6 +114,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             {
                 var handoverId = Guid.NewGuid();
 
+                var ttdPerawat = await _ttdService.CheckTTDAsync((Guid)(vm.PerawatId));
+                var ttdCro = await _ttdService.CheckTTDAsync((Guid)(vm.CROId));
+                var ttdAdmin = await _ttdService.CheckTTDAsync((Guid)(vm.AdministrationId));
+
+
                 // 1) Insert parent
                 var handover = new HandoverPasien
                 {
@@ -119,8 +127,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     PasienId = vm.PasienId,
                     TanggalSerahTerima = vm.TanggalSerahTerima,
                     AdministrationId = vm.AdministrationId,
+                    PathTTDAdministration = ttdAdmin?.Path,
                     CROId = vm.CROId,
+                    PathTTDCRO = ttdCro?.Path,
                     PerawatId = vm.PerawatId,
+                    PathTTDPerawat = ttdPerawat?.Path,
                     Keterangan = vm.Keterangan,
                     CreateDateTime = DateTimeOffset.UtcNow,
                     CreateBy = getUserActive.UserActiveId
@@ -192,13 +203,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 if (handover == null)
                     return NotFound(new { message = "Data handover pasien tidak ditemukan." });
 
+                var ttdPerawat = await _ttdService.CheckTTDAsync((Guid)(vm.PerawatId));
+                var ttdCro = await _ttdService.CheckTTDAsync((Guid)(vm.CROId));
+                var ttdAdmin = await _ttdService.CheckTTDAsync((Guid)(vm.AdministrationId));
+
                 // Update kolom parent
                 handover.KunjunganId = vm.KunjunganId;
                 handover.PasienId = vm.PasienId;
                 handover.TanggalSerahTerima = vm.TanggalSerahTerima;
                 handover.AdministrationId = vm.AdministrationId;
+                handover.PathTTDAdministration = ttdAdmin?.Path;
                 handover.CROId = vm.CROId;
+                handover.PathTTDCRO = ttdCro?.Path;
                 handover.PerawatId = vm.PerawatId;
+                handover.PathTTDPerawat = ttdPerawat?.Path;
                 handover.Keterangan = vm.Keterangan;
 
                 handover.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -359,8 +377,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     h.PasienId,
                     h.TanggalSerahTerima,
                     h.AdministrationId,
+                    h.PathTTDAdministration,
                     h.CROId,
+                    h.PathTTDCRO,
                     h.PerawatId,
+                    h.PathTTDPerawat,
                     h.Keterangan,
                     h.CreateDateTime,
                     h.CreateBy,
@@ -513,8 +534,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 p.PasienId,
                 p.TanggalSerahTerima,
                 p.AdministrationId,
+                p.PathTTDAdministration,
                 p.CROId,
+                p.PathTTDCRO,
                 p.PerawatId,
+                p.PathTTDPerawat,
                 p.Keterangan,
                 p.CreateDateTime,
                 p.CreateBy,
