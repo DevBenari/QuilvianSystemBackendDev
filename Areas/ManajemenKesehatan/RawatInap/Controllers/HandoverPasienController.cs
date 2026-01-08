@@ -50,43 +50,123 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            // 1. Ambil data Header (HandoverPasien)
+            // =========================
+            // 1) Header
+            // =========================
             var handover = await _applicationDbContext.HandoverPasiens
                 .AsNoTracking()
-                .FirstOrDefaultAsync(h => h.HandoverPasienId == id);
+                .FirstOrDefaultAsync(h => h.HandoverPasienId == id && (h.IsDelete == false || h.IsDelete == null));
 
             if (handover == null)
                 return NotFound(new { message = "Data handover pasien tidak ditemukan." });
 
-            // 2. Ambil data Detail dan Joinkan dengan tabel ChecklistItem
+            // =========================
+            // 2) Details + Checklist name
+            // =========================
             var details = await _applicationDbContext.HandoverPasienDetails
                 .AsNoTracking()
-                .Where(d => d.HandoverPasienId == id)
+                .Where(d => d.HandoverPasienId == id && (d.IsDelete == false || d.IsDelete == null))
                 .Join(
-                    _applicationDbContext.ChecklistItems, // Tabel tujuan join
-                    detail => detail.ChecklistItemId,      // Foreign key di tabel detail
-                    item => item.ChecklistItemId,        // Primary key di tabel checklist
-                    (detail, item) => new {                // Hasil proyeksi
-                        detail.DetailHandoverPasienId,
-                        detail.HandoverPasienId,
-                        detail.ChecklistItemId,
-                        ChecklistItemName = item.NamaChecklistItem,    // Mengambil Nama dari tabel ChecklistItem
-                        detail.IsSudah,                 // Asumsi ada kolom ini
-                        detail.Keterangan
+                    _applicationDbContext.ChecklistItems.AsNoTracking(),
+                    d => d.ChecklistItemId,
+                    c => c.ChecklistItemId,
+                    (d, c) => new
+                    {
+                        d.DetailHandoverPasienId,
+                        d.HandoverPasienId,
+                        d.ChecklistItemId,
+                        ChecklistItemName = c.NamaChecklistItem,
+                        d.IsSudah,
+                        d.Keterangan
                     }
                 )
                 .ToListAsync();
+
+            // =========================
+            // 3) Ambil semua userId yang dibutuhkan (1 query)
+            // =========================
+            var userIds = new HashSet<Guid>();
+
+            if (handover.CreateBy != Guid.Empty) userIds.Add(handover.CreateBy);
+
+            if (handover.CROId.HasValue && handover.CROId.Value != Guid.Empty)
+                userIds.Add(handover.CROId.Value);
+
+            if (handover.AdministrationId.HasValue && handover.AdministrationId.Value != Guid.Empty)
+                userIds.Add(handover.AdministrationId.Value);
+
+            if (handover.PerawatId.HasValue && handover.PerawatId.Value != Guid.Empty)
+                userIds.Add(handover.PerawatId.Value);
+
+            // kalau entity kamu ada UpdateBy/ModifiedBy dari UserActivity, bisa aktifkan:
+            // if (handover.UpdateBy.HasValue && handover.UpdateBy.Value != Guid.Empty)
+            //     userIds.Add(handover.UpdateBy.Value);
+
+            var userMap = userIds.Count == 0
+                ? new Dictionary<Guid, string?>()
+                : await _applicationDbContext.UserActives
+                    .AsNoTracking()
+                    .Where(u => userIds.Contains(u.UserActiveId))
+                    .Select(u => new { u.UserActiveId, u.FullName })
+                    .ToDictionaryAsync(x => x.UserActiveId, x => x.FullName);
+
+            string? GetName(Guid? id2)
+            {
+                if (!id2.HasValue || id2.Value == Guid.Empty) return null;
+                return userMap.TryGetValue(id2.Value, out var name) ? name : null;
+            }
+
+            string? GetNameNonNull(Guid id2)
+            {
+                if (id2 == Guid.Empty) return null;
+                return userMap.TryGetValue(id2, out var name) ? name : null;
+            }
+
+            // =========================
+            // 4) Response versi "enriched"
+            // =========================
+            var handoverEnriched = new
+            {
+                handover.HandoverPasienId,
+                handover.KunjunganId,
+                handover.PasienId,
+                handover.TanggalSerahTerima,
+
+                handover.AdministrationId,
+                AdministrationName = GetName(handover.AdministrationId),
+                handover.PathTTDAdministration,
+
+                handover.CROId,
+                CROName = GetName(handover.CROId),
+                handover.PathTTDCRO,
+
+                handover.PerawatId,
+                PerawatName = GetName(handover.PerawatId),
+                handover.PathTTDPerawat,
+
+                handover.Keterangan,
+
+                handover.CreateDateTime,
+                handover.CreateBy,
+                CreateByName = GetNameNonNull(handover.CreateBy),
+
+                // kalau ada:
+                // handover.UpdateDateTime,
+                // handover.UpdateBy,
+                // UpdateByName = GetName(handover.UpdateBy),
+            };
 
             return Ok(new
             {
                 message = "Berhasil",
                 data = new
                 {
-                    handover,
+                    handover = handoverEnriched,
                     details
                 }
             });
         }
+
 
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] HandoverPasienViewModel vm)
@@ -506,17 +586,61 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
             var parentIds = parents.Select(x => x.HandoverPasienId).ToList();
 
+            // ==============================
+            // ✅ Ambil semua UserId unik di page
+            // ==============================
+            var userIds = new HashSet<Guid>();
+
+            foreach (var p in parents)
+            {
+                if (p.CreateBy != Guid.Empty) userIds.Add(p.CreateBy);
+
+                if (p.CROId.HasValue && p.CROId.Value != Guid.Empty)
+                    userIds.Add(p.CROId.Value);
+
+                if (p.AdministrationId.HasValue && p.AdministrationId.Value != Guid.Empty)
+                    userIds.Add(p.AdministrationId.Value);
+
+                if (p.PerawatId.HasValue && p.PerawatId.Value != Guid.Empty)
+                    userIds.Add(p.PerawatId.Value);
+            }
+
+            // ==============================
+            // ✅ 1 query ambil semua user name
+            // ==============================
+            var userMap = await _applicationDbContext.UserActives
+                .AsNoTracking()
+                .Where(u => userIds.Contains(u.UserActiveId))
+                .Select(u => new { u.UserActiveId, u.FullName })
+                .ToDictionaryAsync(x => x.UserActiveId, x => x.FullName);
+
+            // helper local untuk ambil nama dari map
+            string? GetUserName(Guid? id)
+            {
+                if (!id.HasValue || id.Value == Guid.Empty) return null;
+                return userMap.TryGetValue(id.Value, out var name) ? name : null;
+            }
+
+            string? GetUserNameNonNull(Guid id)
+            {
+                if (id == Guid.Empty) return null;
+                return userMap.TryGetValue(id, out var name) ? name : null;
+            }
+
+            // ==============================
             // Ambil detail untuk semua parent di page (1 query)
+            // ==============================
             var details = await (from d in _applicationDbContext.HandoverPasienDetails.AsNoTracking()
                                  join c in _applicationDbContext.ChecklistItems.AsNoTracking()
                                     on d.ChecklistItemId equals c.ChecklistItemId
-                                 where parentIds.Contains((Guid)d.HandoverPasienId) && (d.IsDelete == false || d.IsDelete == null)
+                                 where parentIds.Contains((Guid)d.HandoverPasienId)
+                                       && (d.IsDelete == false || d.IsDelete == null)
                                  select new
                                  {
                                      d.DetailHandoverPasienId,
                                      d.HandoverPasienId,
                                      d.ChecklistItemId,
-                                     ChecklistItemName = c.NamaChecklistItem, // Menampilkan nama dari tabel ChecklistItems
+                                     ChecklistItemName = c.NamaChecklistItem,
                                      d.IsSudah,
                                      d.Keterangan,
                                      d.CreateDateTime,
@@ -527,26 +651,42 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 .GroupBy(d => d.HandoverPasienId)
                 .ToDictionary(g => g.Key, g => g.ToList());
 
+            // ==============================
+            // ✅ Build rows + tambahkan nama
+            // ==============================
             var rows = parents.Select(p => new
             {
                 p.HandoverPasienId,
                 p.KunjunganId,
                 p.PasienId,
                 p.TanggalSerahTerima,
+
                 p.AdministrationId,
+                AdministrationName = GetUserName(p.AdministrationId),
+
                 p.PathTTDAdministration,
+
                 p.CROId,
+                CROName = GetUserName(p.CROId),
+
                 p.PathTTDCRO,
+
                 p.PerawatId,
+                PerawatName = GetUserName(p.PerawatId),
+
                 p.PathTTDPerawat,
+
                 p.Keterangan,
                 p.CreateDateTime,
+
                 p.CreateBy,
-                p.CreateByName,
+                CreateByName = GetUserNameNonNull(p.CreateBy),
+
                 Details = detailMap.TryGetValue(p.HandoverPasienId, out var det)
                     ? det.Select(x => (object)x).ToList()
                     : new List<object>()
             }).ToList();
+
 
             return Ok(new
             {
@@ -562,7 +702,5 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 }
             });
         }
-
-
     }
 }
