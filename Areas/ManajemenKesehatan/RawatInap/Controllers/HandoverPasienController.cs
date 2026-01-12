@@ -194,8 +194,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             {
                 var handoverId = Guid.NewGuid();
 
-                var ttdPerawat = await _ttdService.CheckTTDAsync((Guid)(vm.PerawatId));
-                var ttdCro = await _ttdService.CheckTTDAsync((Guid)(vm.CROId));
+                //var ttdPerawat = await _ttdService.CheckTTDAsync((Guid)(vm.PerawatId));
+                //var ttdCro = await _ttdService.CheckTTDAsync((Guid)(vm.CROId));
                 var ttdAdmin = await _ttdService.CheckTTDAsync((Guid)(vm.AdministrationId));
 
 
@@ -208,10 +208,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     TanggalSerahTerima = vm.TanggalSerahTerima,
                     AdministrationId = vm.AdministrationId,
                     PathTTDAdministration = ttdAdmin?.Path,
-                    CROId = vm.CROId,
-                    PathTTDCRO = ttdCro?.Path,
-                    PerawatId = vm.PerawatId,
-                    PathTTDPerawat = ttdPerawat?.Path,
+                    //CROId = vm.CROId,
+                    //PathTTDCRO = ttdCro?.Path,
+                    //PerawatId = vm.PerawatId,
+                    //PathTTDPerawat = ttdPerawat?.Path,
                     Keterangan = vm.Keterangan,
                     CreateDateTime = DateTimeOffset.UtcNow,
                     CreateBy = getUserActive.UserActiveId
@@ -254,6 +254,108 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             }
         }
 
+        [HttpPut("HandoverPasien-TTDCRO/{id}")]
+        public async Task<IActionResult> UpdateTTDCRO(Guid id, [FromBody] HandoverPasienTTDVM vm)
+        {
+            if (vm == null || !ModelState.IsValid)
+                return BadRequest(new { message = "Data tidak valid." });
+
+            if (!_applicationDbContext.Database.CanConnect())
+                return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+
+            var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(emailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var getUserActive = await _applicationDbContext.UserActives
+                .FirstOrDefaultAsync(u => u.Email == emailLogin);
+
+            if (getUserActive == null)
+                return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+
+            await using var trx = await _applicationDbContext.Database.BeginTransactionAsync();
+            try
+            {
+                // 1) Parent
+                var handover = await _applicationDbContext.HandoverPasiens
+                    .FirstOrDefaultAsync(h => h.HandoverPasienId == id);
+
+                if (handover == null)
+                    return NotFound(new { message = "Data handover pasien tidak ditemukan." });
+
+                var ttdCro = await _ttdService.CheckTTDAsync((Guid)(vm.PetugasID));
+
+                // Update kolom parent
+                
+                handover.CROId = vm.PetugasID;
+                handover.PathTTDCRO = ttdCro?.Path;
+
+                handover.UpdateDateTime = DateTimeOffset.UtcNow;
+                handover.UpdateBy = getUserActive.UserActiveId;
+
+                await _applicationDbContext.SaveChangesAsync();
+                await trx.CommitAsync();
+
+                return Ok(new { message = "Berhasil update TTD CRO pada handover pasien.", id });
+            }
+            catch (Exception ex)
+            {
+                await trx.RollbackAsync();
+                return StatusCode(500, new { message = "Gagal update handover pasien.", error = ex.Message });
+            }
+        }
+
+        [HttpPut("HandoverPasien-TTDPerawat/{id}")]
+        public async Task<IActionResult> UpdateTTDPerawat(Guid id, [FromBody] HandoverPasienTTDVM vm)
+        {
+            if (vm == null || !ModelState.IsValid)
+                return BadRequest(new { message = "Data tidak valid." });
+
+            if (!_applicationDbContext.Database.CanConnect())
+                return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+
+            var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(emailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var getUserActive = await _applicationDbContext.UserActives
+                .FirstOrDefaultAsync(u => u.Email == emailLogin);
+
+            if (getUserActive == null)
+                return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+
+            await using var trx = await _applicationDbContext.Database.BeginTransactionAsync();
+            try
+            {
+                // 1) Parent
+                var handover = await _applicationDbContext.HandoverPasiens
+                    .FirstOrDefaultAsync(h => h.HandoverPasienId == id);
+
+                if (handover == null)
+                    return NotFound(new { message = "Data handover pasien tidak ditemukan." });
+
+                var ttdPerawat = await _ttdService.CheckTTDAsync((Guid)(vm.PetugasID));
+
+                // Update kolom parent
+
+                handover.PerawatId = vm.PetugasID;
+                handover.PathTTDPerawat = ttdPerawat?.Path;
+
+                handover.UpdateDateTime = DateTimeOffset.UtcNow;
+                handover.UpdateBy = getUserActive.UserActiveId;
+
+                await _applicationDbContext.SaveChangesAsync();
+                await trx.CommitAsync();
+
+                return Ok(new { message = "Berhasil update TTD perawat pada handover pasien.", id });
+            }
+            catch (Exception ex)
+            {
+                await trx.RollbackAsync();
+                return StatusCode(500, new { message = "Gagal update handover pasien.", error = ex.Message });
+            }
+        }
+
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] HandoverPasienViewModel vm)
         {
@@ -283,8 +385,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 if (handover == null)
                     return NotFound(new { message = "Data handover pasien tidak ditemukan." });
 
-                var ttdPerawat = await _ttdService.CheckTTDAsync((Guid)(vm.PerawatId));
-                var ttdCro = await _ttdService.CheckTTDAsync((Guid)(vm.CROId));
+
                 var ttdAdmin = await _ttdService.CheckTTDAsync((Guid)(vm.AdministrationId));
 
                 // Update kolom parent
@@ -293,10 +394,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 handover.TanggalSerahTerima = vm.TanggalSerahTerima;
                 handover.AdministrationId = vm.AdministrationId;
                 handover.PathTTDAdministration = ttdAdmin?.Path;
-                handover.CROId = vm.CROId;
-                handover.PathTTDCRO = ttdCro?.Path;
-                handover.PerawatId = vm.PerawatId;
-                handover.PathTTDPerawat = ttdPerawat?.Path;
                 handover.Keterangan = vm.Keterangan;
 
                 handover.UpdateDateTime = DateTimeOffset.UtcNow;

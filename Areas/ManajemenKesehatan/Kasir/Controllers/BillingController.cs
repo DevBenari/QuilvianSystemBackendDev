@@ -749,7 +749,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         }
 
         // =====================================================
-        // HELPERS (minimal)
+        // HELPERS PERKIRAAN BILLING
         // =====================================================
         private static bool IsRawatInapIP(string? jenisKunjungan)
         {
