@@ -167,7 +167,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 join p in _applicationDbContext.PendaftaranPasienBarus on k.PasienId equals p.PendaftaranPasienBaruId
                 join a in _applicationDbContext.Asuransis on k.AsuransiId equals a.AsuransiId into asuransiTempGroup
                 from a in asuransiTempGroup.DefaultIfEmpty()
-                join ap in _applicationDbContext.AsuransiPasiens on p.PendaftaranPasienBaruId.ToString() equals ap.PasienId into asuransiPasienGroup
+                join ap in _applicationDbContext.AsuransiPasiens on p.PendaftaranPasienBaruId equals ap.PasienId into asuransiPasienGroup
                 from ap in asuransiPasienGroup.DefaultIfEmpty()
                 join d in _applicationDbContext.Dokters on k.DokterId equals d.DokterId
                 join poli in _applicationDbContext.Polikliniks on k.PoliklinikId equals poli.PoliklinikId
@@ -415,6 +415,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     return new
                     {
                         first.k.KunjunganID,
+                        first.k.JenisKunjungan,
                         first.kasir?.KasirId,
                         first.k.PasienId,
                         first.p?.NamaLengkap,

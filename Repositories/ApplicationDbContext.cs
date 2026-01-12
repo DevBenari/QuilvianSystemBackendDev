@@ -174,6 +174,11 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<StockDarah> StockDarahs { get; set; }
         public DbSet<PenerimaanDarah> PenerimaanDarahs { get; set; }
         public DbSet<PAS> PASs { get; set; }
+        public DbSet<PemeriksaanLabAsuransi> PemeriksaanLabAsuransis {  get; set; }
+        public DbSet<TarifKelasAsuransi> TarifKelasAsuransis { get; set; }
+        public DbSet<CatatanKIE> CatatanKIEs { get; set; }
+        public DbSet<InformasiPenundaan> InformasiPenundaans {  get; set; }
+        public DbSet<PelunasanDeposit> PelunasanDeposits { get; set; }
         #endregion
 
         #region Areas Keuangan
@@ -296,6 +301,12 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<PenilaianResikoJatuhDetail> PenilaianResikoJatuhDetails { get; set; }
         public DbSet<CatatanPerawat> CatatanPerawats { get; set; }
         public DbSet<MonitoringNyeri> MonitoringNyeris { get; set; }
+        public DbSet<GeneralConsent> GeneralConsents { get; set; }
+        public DbSet<PermintaanPrivasi> PermintaanPrivasis { get; set; }
+        public DbSet<NilaiKepercayaan> NilaiKepercayaans { get; set; }
+        public DbSet<HandoverPasien> HandoverPasiens { get; set; }
+        public DbSet<HandoverPasienDetail> HandoverPasienDetails { get; set; }
+        public DbSet<SelisihBiaya> SelisihBiayas { get; set; }
         #endregion
 
         #region Farmasi

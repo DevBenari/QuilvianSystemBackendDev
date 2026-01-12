@@ -17,6 +17,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.ViewModels;
+using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
@@ -33,7 +34,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-
+        private readonly ITTDService _ttdService;
         private readonly ILogger<SuratPengantarRanapController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly IHubContext<SuratPengantarRanapHub> _hubContext;
@@ -44,7 +45,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             SignInManager<ApplicationUser> signInManager,
             ILogger<SuratPengantarRanapController> logger,
             IWebHostEnvironment webHostEnvironment,
-            IHubContext<SuratPengantarRanapHub> hubContext
+            IHubContext<SuratPengantarRanapHub> hubContext,
+            ITTDService ttdService
             )
         {
             _applicationDbContext = applicationDbContext;
@@ -53,6 +55,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
             _hubContext = hubContext;
+            _ttdService = ttdService;
         }
 
         private static string HitungUmurLengkap(DateTime? tanggalLahir)
@@ -130,7 +133,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                         join poli in _applicationDbContext.Polikliniks on k.PoliklinikId equals poli.PoliklinikId
                         join ar in _applicationDbContext.Asuransis on k.AsuransiId equals ar.AsuransiId into asuransiGroup
                         from ar in asuransiGroup.DefaultIfEmpty()
-                        join ap in _applicationDbContext.AsuransiPasiens on p.PendaftaranPasienBaruId.ToString() equals ap.PasienId into asuransiPasienGroup
+                        join ap in _applicationDbContext.AsuransiPasiens on p.PendaftaranPasienBaruId equals ap.PasienId into asuransiPasienGroup
                         from ap in asuransiPasienGroup.DefaultIfEmpty()
 
                         where (a.IsDelete == false || a.IsDelete == null)
@@ -217,23 +220,49 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var result = (
-                from a in _applicationDbContext.SuratPengantarRawatInaps
-                join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId into userJoin
+            // =======================================
+            // 1) BASE QUERY: filter dulu pada tabel utama
+            // =======================================
+            var baseQuery = _applicationDbContext.SuratPengantarRawatInaps
+                .AsNoTracking()
+                .Where(a =>
+                    a.SuratPengantarRawatInapId == id &&
+                    (a.IsDelete == false || a.IsDelete == null)
+                );
+
+            // =======================================
+            // 2) JOIN QUERY: baru join setelah baseQuery kecil ✅
+            // =======================================
+            var result = await (
+                from a in baseQuery
+
+                join k in _applicationDbContext.Kunjungans.AsNoTracking()
+                    .Where(k => (k.IsDelete == false || k.IsDelete == null))
+                    on a.KunjunganId equals k.KunjunganID
+
+                join p in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking()
+                    on k.PasienId equals p.PendaftaranPasienBaruId
+
+                join d in _applicationDbContext.Dokters.AsNoTracking()
+                    on k.DokterId equals d.DokterId
+
+                join poli in _applicationDbContext.Polikliniks.AsNoTracking()
+                    on k.PoliklinikId equals poli.PoliklinikId
+
+                // LEFT JOIN UserActive
+                join u in _applicationDbContext.UserActives.AsNoTracking()
+                    on a.CreateBy equals u.UserActiveId into userJoin
                 from u in userJoin.DefaultIfEmpty()
 
-                join k in _applicationDbContext.Kunjungans on a.KunjunganId equals k.KunjunganID
-                join p in _applicationDbContext.PendaftaranPasienBarus on k.PasienId equals p.PendaftaranPasienBaruId
-                join d in _applicationDbContext.Dokters on k.DokterId equals d.DokterId
-                join poli in _applicationDbContext.Polikliniks on k.PoliklinikId equals poli.PoliklinikId
-                join ar in _applicationDbContext.Asuransis on k.AsuransiId equals ar.AsuransiId into asuransiGroup
+                    // LEFT JOIN Asuransi
+                join ar in _applicationDbContext.Asuransis.AsNoTracking()
+                    on k.AsuransiId equals ar.AsuransiId into asuransiGroup
                 from ar in asuransiGroup.DefaultIfEmpty()
-                join ap in _applicationDbContext.AsuransiPasiens on p.PendaftaranPasienBaruId.ToString() equals ap.PasienId into asuransiPasienGroup
-                from ap in asuransiPasienGroup.DefaultIfEmpty()
 
-                where a.SuratPengantarRawatInapId == id
-                      && (a.IsDelete == false || a.IsDelete == null)
-                      && (k.IsDelete == false || k.IsDelete == null)
+                    // LEFT JOIN AsuransiPasien
+                join ap in _applicationDbContext.AsuransiPasiens.AsNoTracking()
+                    on p.PendaftaranPasienBaruId equals ap.PasienId into asuransiPasienGroup
+                from ap in asuransiPasienGroup.DefaultIfEmpty()
 
                 select new
                 {
@@ -247,9 +276,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     a.RencanaTindakLanjut,
                     a.AsalUnit,
                     a.Status,
+                    a.IndikasiTindakan,
+                    a.JenisOperasi,
+                    a.HarapanHasil,
+                    a.IsAdaHambatan,
+                    a.PathTTDDokterDPJP,
                     a.CreateDateTime,
                     a.CreateBy,
-                    CreateByName = u.FullName,
+                    CreateByName = u != null ? u.FullName : null,
 
                     // Data Kunjungan
                     k.NoRekamMedis,
@@ -257,8 +291,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     k.TipePembayaran,
                     k.JenisKunjungan,
                     k.IsFinished,
-                    //k.TglMasukRanap,
-                    //k.TglKeluarRanap,
 
                     // Data Dokter
                     DokterId = d.DokterId,
@@ -276,11 +308,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     p.NoPasien,
 
                     // Data Asuransi
-                    ar.NamaAsuransi,
-                    ap.NoPolis
-
+                    NamaAsuransi = ar != null ? ar.NamaAsuransi : null,
+                    NoPolis = ap != null ? ap.NoPolis : null
                 }
-            ).FirstOrDefault();
+            ).FirstOrDefaultAsync();
 
             if (result == null)
             {
@@ -289,6 +320,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
             return Ok(result);
         }
+
 
         //[HttpGet("DataPasien/{kunjunganId}")]
         //public async Task<IActionResult> GetDataPasienByKunjunganId(Guid kunjunganId)
@@ -393,6 +425,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     return StatusCode(StatusCodes.Status409Conflict,
                         new { message = "Kunjungan ini sudah dalam proses rawat inap aktif" });
 
+                // get path ttd dokterDPJP
+                var ttd = await _ttdService.CheckTTDAsync((Guid)vm.DokterDPJPId);
+                
                 // **Buat Data Baru**
                 var data = new SuratPengantarRawatInap
                 {
@@ -405,6 +440,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                    AsalUnit = vm.AsalUnit,
                    NomorSuratPengantar = nomorSurat,
                    Status = FilterStatusSuratPengantarRanap.Menunggu.ToString(),
+                   IndikasiTindakan = vm.IndikasiTindakan,
+                   JenisOperasi = vm.JenisOperasi,
+                   TawaranLayanan = vm.TawaranLayanan,
+                   HarapanHasil = vm.HarapanHasil,
+                   IsAdaHambatan = vm.IsAdaHambatan,
+                   PathTTDDokterDPJP = ttd.Path,
+
                    CreateBy = userActiveId,
                    CreateDateTime = DateTimeOffset.UtcNow,
                 };
@@ -479,6 +521,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
+                // get path ttd dokterDPJP
+                var ttd = await _ttdService.CheckTTDAsync((Guid)vm.DokterDPJPId);
+
                 // **Update Data**
                 data.KunjunganId = vm.KunjunganId;
                 data.Diagnosa = vm.Diagnosa;
@@ -486,6 +531,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 data.AlasanRanap = vm.AlasanRanap;
                 data.RencanaTindakLanjut = vm.RencanaTindakLanjut;
                 data.AsalUnit = vm.AsalUnit;
+                data.IndikasiTindakan = vm.IndikasiTindakan;
+                data.JenisOperasi = vm.JenisOperasi;
+                data.TawaranLayanan = vm.TawaranLayanan;
+                data.HarapanHasil = vm.HarapanHasil;
+                data.IsAdaHambatan = vm.IsAdaHambatan;
+                data.PathTTDDokterDPJP = ttd.Path;
+
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -605,190 +657,254 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         }
 
         [HttpGet("paged")]
-        public IActionResult Paged(
-        int page = 1,
-        int perPage = 10,
-        string? search = null,
-        string? orderBy = "CreateDateTime",
-        string? sortDirection = "desc",
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                DateTime? startDate = null,
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                DateTime? endDate = null,
-        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        public async Task<IActionResult> Paged(
+            int page = 1,
+            int perPage = 10,
+            string? search = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+    DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+    DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
+            try
+            {
+                if (page < 1) page = 1;
+                if (perPage < 1) perPage = 10;
 
-            // Query data
-            var query = from a in _applicationDbContext.SuratPengantarRawatInaps
-                        join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId into userJoin
-                        from u in userJoin.DefaultIfEmpty()
+                // ======================================================
+                // 1) BASE QUERY (FILTER DULU ✅) -> ini yang bikin cepat
+                // ======================================================
+                var baseQuery = _applicationDbContext.SuratPengantarRawatInaps
+                    .AsNoTracking()
+                    .Where(a => (a.IsDelete == false || a.IsDelete == null));
 
-                        join k in _applicationDbContext.Kunjungans on a.KunjunganId equals k.KunjunganID
-                        join p in _applicationDbContext.PendaftaranPasienBarus on k.PasienId equals p.PendaftaranPasienBaruId
-                        join d in _applicationDbContext.Dokters on k.DokterId equals d.DokterId
-                        join poli in _applicationDbContext.Polikliniks on k.PoliklinikId equals poli.PoliklinikId
-                        join ar in _applicationDbContext.Asuransis on k.AsuransiId equals ar.AsuransiId into asuransiGroup
-                        from ar in asuransiGroup.DefaultIfEmpty()
-                        join ap in _applicationDbContext.AsuransiPasiens on p.PendaftaranPasienBaruId.ToString() equals ap.PasienId into asuransiPasienGroup
-                        from ap in asuransiPasienGroup.DefaultIfEmpty()
+                // Filter search (NomorSuratPengantar) di tabel utama -> paling murah
+                if (!string.IsNullOrWhiteSpace(search))
+                {
+                    var pattern = $"%{search.ToLower()}%";
+                    baseQuery = baseQuery.Where(a => EF.Functions.ILike(a.NomorSuratPengantar, pattern));
+                }
 
-                        where (a.IsDelete == false || a.IsDelete == null)
-                              && (k.IsDelete == false || k.IsDelete == null)
+                // Filter tanggal (CreateDateTime) di tabel utama -> paling murah
+                if (startDate.HasValue && endDate.HasValue)
+                {
+                    DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
+                    DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
 
-                        select new
+                    baseQuery = baseQuery.Where(a =>
+                        a.CreateDateTime >= startUtc &&
+                        a.CreateDateTime <= endUtc);
+                }
+
+                // Filter periode (CreateDateTime) di tabel utama -> paling murah
+                if (periode.HasValue)
+                {
+                    DateTime today = DateTime.UtcNow.Date;
+
+                    switch (periode)
+                    {
+                        case PeriodeFilter.Today:
+                            baseQuery = baseQuery.Where(a => a.CreateDateTime.Date == today);
+                            break;
+
+                        case PeriodeFilter.ThisWeek:
+                            baseQuery = baseQuery.Where(a =>
+                                a.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
+                                a.CreateDateTime.Date <= today);
+                            break;
+
+                        case PeriodeFilter.LastWeek:
+                            baseQuery = baseQuery.Where(a =>
+                                a.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
+                                a.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek));
+                            break;
+
+                        case PeriodeFilter.ThisMonth:
+                            baseQuery = baseQuery.Where(a =>
+                                a.CreateDateTime.Month == today.Month &&
+                                a.CreateDateTime.Year == today.Year);
+                            break;
+
+                        case PeriodeFilter.LastMonth:
+                            var lastMonth = today.AddMonths(-1);
+                            baseQuery = baseQuery.Where(a =>
+                                a.CreateDateTime.Month == lastMonth.Month &&
+                                a.CreateDateTime.Year == lastMonth.Year);
+                            break;
+
+                        case PeriodeFilter.ThisYear:
+                            baseQuery = baseQuery.Where(a => a.CreateDateTime.Year == today.Year);
+                            break;
+
+                        case PeriodeFilter.LastYear:
+                            baseQuery = baseQuery.Where(a => a.CreateDateTime.Year == today.Year - 1);
+                            break;
+
+                        case PeriodeFilter.Last3Months:
+                            baseQuery = baseQuery.Where(a => a.CreateDateTime >= today.AddMonths(-3));
+                            break;
+
+                        case PeriodeFilter.Last6Months:
+                            baseQuery = baseQuery.Where(a => a.CreateDateTime >= today.AddMonths(-6));
+                            break;
+                    }
+                }
+
+                // ======================================================
+                // 2) JOIN BARU SETELAH FILTER ✅
+                // ======================================================
+                var query =
+                    from a in baseQuery
+
+                        // join Kunjungan + filter delete di kunjungan (penting!)
+                    join k in _applicationDbContext.Kunjungans.AsNoTracking()
+                            .Where(k => (k.IsDelete == false || k.IsDelete == null))
+                        on a.KunjunganId equals k.KunjunganID
+
+                    join p in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking()
+                        on k.PasienId equals p.PendaftaranPasienBaruId
+
+                    join d in _applicationDbContext.Dokters.AsNoTracking()
+                        on k.DokterId equals d.DokterId
+
+                    join poli in _applicationDbContext.Polikliniks.AsNoTracking()
+                        on k.PoliklinikId equals poli.PoliklinikId
+
+                    // LEFT JOIN UserActive
+                    join u in _applicationDbContext.UserActives.AsNoTracking()
+                        on a.CreateBy equals u.UserActiveId into userJoin
+                    from u in userJoin.DefaultIfEmpty()
+
+                        // LEFT JOIN Asuransi
+                    join ar in _applicationDbContext.Asuransis.AsNoTracking()
+                        on k.AsuransiId equals ar.AsuransiId into asuransiGroup
+                    from ar in asuransiGroup.DefaultIfEmpty()
+
+                        // LEFT JOIN AsuransiPasien
+                    join ap in _applicationDbContext.AsuransiPasiens.AsNoTracking()
+                        on p.PendaftaranPasienBaruId equals ap.PasienId into asuransiPasienGroup
+                    from ap in asuransiPasienGroup.DefaultIfEmpty()
+
+                    select new
+                    {
+                        // Data Surat Pengantar
+                        a.SuratPengantarRawatInapId,
+                        a.KunjunganId,
+                        a.NomorSuratPengantar,
+                        a.Diagnosa,
+                        a.ICDId,
+                        a.AlasanRanap,
+                        a.RencanaTindakLanjut,
+                        a.AsalUnit,
+                        a.Status,
+                        a.CreateDateTime,
+                        a.CreateBy,
+                        CreateByName = u != null ? u.FullName : null,
+
+                        // Data Kunjungan
+                        k.NoRekamMedis,
+                        k.TipePasien,
+                        k.TipePembayaran,
+                        k.JenisKunjungan,
+                        k.IsFinished,
+
+                        // Data Dokter
+                        DokterId = d.DokterId,
+                        DokterName = d.NmDokter,
+
+                        // Data Poli
+                        PoliklinikId = poli.PoliklinikId,
+                        PoliklinikName = poli.NamaPoliklinik,
+
+                        // Data Pasien
+                        PasienId = p.PendaftaranPasienBaruId,
+                        PasienName = p.NamaLengkap,
+                        JenisKelamin = p.JenisKelamin,
+                        Umur = HitungUmurLengkap(p.TanggalLahir),
+                        p.NoPasien,
+
+                        // data Asuransi
+                        NamaAsuransi = ar != null ? ar.NamaAsuransi : null,
+                        NoPolis = ap != null ? ap.NoPolis : null
+                    };
+
+                // ======================================================
+                // 3) SORTING (benar ASC/DESC)
+                // ======================================================
+                bool desc = string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase);
+
+                query = desc
+                    ? orderBy switch
+                    {
+                        "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
+                        "CreateByName" => query.OrderByDescending(u => u.CreateByName),
+                        "NomorSuratPengantar" => query.OrderByDescending(u => u.NomorSuratPengantar),
+                        _ => query.OrderByDescending(u => u.CreateDateTime)
+                    }
+                    : orderBy switch
+                    {
+                        "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
+                        "CreateByName" => query.OrderBy(u => u.CreateByName),
+                        "NomorSuratPengantar" => query.OrderBy(u => u.NomorSuratPengantar),
+                        _ => query.OrderBy(u => u.CreateDateTime)
+                    };
+
+                // ======================================================
+                // 4) PAGINATION (ASYNC ✅)
+                // ======================================================
+                var totalRows = await query.CountAsync();
+                var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+                if (totalRows == 0)
+                {
+                    return Ok(new
+                    {
+                        status = "success",
+                        message = "No data found",
+                        data = new
                         {
-                            // Data Surat Pengantar
-                            a.SuratPengantarRawatInapId,
-                            a.KunjunganId,
-                            a.NomorSuratPengantar,
-                            a.Diagnosa,
-                            a.ICDId,
-                            a.AlasanRanap,
-                            a.RencanaTindakLanjut,
-                            a.AsalUnit,
-                            a.Status,
-                            a.CreateDateTime,
-                            a.CreateBy,
-                            CreateByName = u.FullName,
-
-                            // Data Kunjungan
-                            k.NoRekamMedis,
-                            k.TipePasien,
-                            k.TipePembayaran,
-                            k.JenisKunjungan,
-                            k.IsFinished,
-                            //k.TglMasukRanap,
-                            //k.TglKeluarRanap,
-
-                            // Data Dokter
-                            DokterId = d.DokterId,
-                            DokterName = d.NmDokter,
-
-                            // Data Poli
-                            PoliklinikId = poli.PoliklinikId,
-                            PoliklinikName = poli.NamaPoliklinik,
-
-                            // Data Pasien
-                            PasienId = p.PendaftaranPasienBaruId,
-                            PasienName = p.NamaLengkap,
-                            JenisKelamin = p.JenisKelamin,
-                            Umur = HitungUmurLengkap(p.TanggalLahir),
-                            p.NoPasien,
-
-                            //data Asuransi
-                            ar.NamaAsuransi,
-                            ap.NoPolis
-                        };
-
-            //**Filter berdasarkan search(Perbaikan agar bisa mencari 1 huruf)**
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-                query = query.Where(u =>
-                    EF.Functions.ILike(u.NomorSuratPengantar, search)
-                );
-            }
-
-            //// **Filter berdasarkan tanggal**
-            if (startDate.HasValue && endDate.HasValue)
-            {
-                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
-                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
-
-                query = query.Where(u =>
-                    u.CreateDateTime >= startUtc &&
-                    u.CreateDateTime <= endUtc);
-            }
-
-            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
-            if (periode.HasValue)
-            {
-                DateTime today = DateTime.UtcNow.Date;
-
-                switch (periode)
-                {
-                    case PeriodeFilter.Today:
-                        query = query.Where(u => u.CreateDateTime.Date == today);
-                        break;
-                    case PeriodeFilter.ThisWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date <= today
-                        );
-                        break;
-                    case PeriodeFilter.LastWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)
-                        );
-                        break;
-                    case PeriodeFilter.ThisMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month &&
-                            u.CreateDateTime.Year == today.Year
-                        );
-                        break;
-                    case PeriodeFilter.LastMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month - 1 &&
-                            u.CreateDateTime.Year == today.Year
-                        );
-                        break;
-                    case PeriodeFilter.ThisYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
-                        break;
-                    case PeriodeFilter.LastYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
-                        break;
-                    case PeriodeFilter.Last3Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
-                        break;
-                    case PeriodeFilter.Last6Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
-                        break;
+                            Rows = new List<object>(),
+                            TotalRows = 0,
+                            CurrentPage = page,
+                            PerPage = perPage,
+                            TotalPages = 0
+                        }
+                    });
                 }
+
+                if (page > totalPages)
+                    return NotFound(new { message = "Page not found." });
+
+                var rows = await query
+                    .Skip((page - 1) * perPage)
+                    .Take(perPage)
+                    .ToListAsync();
+
+                // ======================================================
+                // 5) RETURN
+                // ======================================================
+                return Ok(new
+                {
+                    status = "success",
+                    message = "Data retrieved successfully",
+                    data = new
+                    {
+                        Rows = rows,
+                        TotalRows = totalRows,
+                        CurrentPage = page,
+                        PerPage = perPage,
+                        TotalPages = totalPages
+                    }
+                });
             }
-
-            // Sorting Data dengan cara yang lebih aman
-            query = sortDirection?.ToLower() == "desc"
-                ? orderBy switch
-                {
-                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "NomorSuratPengantar" => query.OrderByDescending(u => u.NomorSuratPengantar),
-                    _ => query.OrderByDescending(u => u.CreateDateTime)
-                }
-                : orderBy switch
-                {
-                    "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    "NomorSuratPengantar" => query.OrderBy(u => u.NomorSuratPengantar),
-                    _ => query.OrderBy(u => u.CreateDateTime)
-                };
-
-            // Pagination
-            var totalRows = query.Count();
-            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
-
-            if (rows.Count == 0 && page > totalPages)
+            catch (Exception ex)
             {
-                return NotFound(new { message = "Page not found." });
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
-
-            return Ok(new
-            {
-                status = "success",
-                message = "Data retrieved successfully",
-                data = new
-                {
-                    Rows = rows,
-                    TotalRows = totalRows,
-                    CurrentPage = page,
-                    PerPage = perPage,
-                    TotalPages = totalPages
-                }
-            });
         }
+
     }
 }

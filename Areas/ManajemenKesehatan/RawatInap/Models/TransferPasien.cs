@@ -19,16 +19,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models
         public string? AlergicOf { get; set; } // Sebutkan alerginya
         public string? AlasanPindahPasien { get; set; }
         public DateTime? TglPindah { get; set; }
-        public Guid? PengawasanHarianId { get; set; }
-        public Guid? ObservasiCairanId { get; set; }
-        public Guid? IndikatorPengkajianId { get; set; }
-        public Guid? PemberianObatId { get; set; }
+        //public Guid? PengawasanHarianId { get; set; }
+        //public Guid? ObservasiCairanId { get; set; }
+        //public Guid? IndikatorPengkajianId { get; set; }
+        //public Guid? PemberianObatId { get; set; }
         public decimal? TotalScoreAldrete { get; set; }
         public decimal? TotalScoreSteward { get; set; }
         public bool? IsICU { get; set; }
         public string? BarangDiserahkan { get; set; } // Barang yang diserahkan ketika pindah pasien
         public string? IntervensiPerawat { get; set; }
         public string? PlanningTindakan { get; set; }
+        public DateTime? TglMasuk {  get; set; }
+        public DateTime? TglKeluar {  get; set; }
 
         // 🔹 File Upload (TTD)
         public string? TTDMenyerahkanPath { get; set; } // URL/File Path hasil upload

@@ -113,6 +113,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         CreateByName = u.FullName,
                         a.SOAPID,
                         a.KunjunganId,
+                        k.JenisKunjungan,
                         PasienId = k.PasienId,
                         a.Subjective,
                         a.Objective,
@@ -195,6 +196,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.CreateByName,
                             a.SOAPID,
                             a.KunjunganId,
+                            a.JenisKunjungan,
                             a.PasienId,
                             a.Subjective,
                             a.Objective,
@@ -419,6 +421,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         CreateByName = u.FullName,
                         a.SOAPID,
                         a.KunjunganId,
+                        k.JenisKunjungan,
                         PasienId = k.PasienId,
                         a.Subjective,
                         a.Objective,
@@ -482,6 +485,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     data.CreateByName,
                     data.SOAPID,
                     data.KunjunganId,
+                    data.JenisKunjungan,
                     data.PasienId,
                     data.Subjective,
                     data.Objective,
@@ -685,6 +689,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                                    a.SOAPID,
                                    a.KunjunganId,
+                                   k.JenisKunjungan,
                                    PasienId = k.PasienId,
 
                                    a.Subjective,
@@ -755,6 +760,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         data.CreateByName,
                         data.SOAPID,
                         data.KunjunganId,
+                        data.JenisKunjungan,
                         data.PasienId,
                         data.Subjective,
                         data.Objective,
@@ -868,6 +874,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.SOAPID,
                         a.KunjunganId,
                         PasienId = k.PasienId,
+                        k.JenisKunjungan,
                         a.Subjective,
                         a.Objective,
                         a.DaftarICD10, // CSV
@@ -934,6 +941,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         data.SOAPID,
                         data.KunjunganId,
                         data.PasienId,
+                        data.JenisKunjungan,
                         data.Subjective,
                         data.Objective,
                         DaftarICD10 = icdCodes,
@@ -1048,6 +1056,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.SOAPID,
                         a.KunjunganId,
                         PasienId = k.PasienId,
+                        k.JenisKunjungan,
                         a.Subjective,
                         a.Objective,
                         a.DaftarICD10, // CSV
@@ -1114,6 +1123,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         data.SOAPID,
                         data.KunjunganId,
                         data.PasienId,
+                        data.JenisKunjungan,
                         data.Subjective,
                         data.Objective,
                         DaftarICD10 = icdCodes,
@@ -1693,7 +1703,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     a.SOAPID,
                     a.KunjunganId,
                     PasienId = k.PasienId,
-
+                    k.JenisKunjungan,
                     a.Subjective,
                     a.Objective,
                     a.DaftarICD10,
@@ -1851,6 +1861,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 x.SOAPID,
                 x.KunjunganId,
                 x.PasienId,
+                x.JenisKunjungan,
                 x.Subjective,
                 x.Objective,
                 daftarICD10 = (x.DaftarICD10 ?? string.Empty)
@@ -1942,7 +1953,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     a.SOAPID,
                     a.KunjunganId,
                     PasienId = k.PasienId,
-
+                    k.JenisKunjungan,
                     a.Subjective,
                     a.Objective,
                     a.DaftarICD10,
@@ -2100,6 +2111,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 x.SOAPID,
                 x.KunjunganId,
                 x.PasienId,
+                x.JenisKunjungan,
                 x.Subjective,
                 x.Objective,
                 daftarICD10 = (x.DaftarICD10 ?? string.Empty)
@@ -2188,7 +2200,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     a.SOAPID,
                     a.KunjunganId,
                     PasienId = k.PasienId,
-
+                    k.JenisKunjungan,
                     a.Subjective,
                     a.Objective,
                     a.DaftarICD10,
@@ -2346,6 +2358,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 x.SOAPID,
                 x.KunjunganId,
                 x.PasienId,
+                x.JenisKunjungan,
                 x.Subjective,
                 x.Objective,
                 daftarICD10 = (x.DaftarICD10 ?? string.Empty)

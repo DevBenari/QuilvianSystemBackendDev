@@ -152,75 +152,96 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         public async Task<IActionResult> Create([FromBody] BookingBedRanapViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
-            {
                 return BadRequest(new { message = "Data tidak valid." });
-            }
+
+            if (vm.KunjunganId == null || vm.KamarId == null || vm.BedId == null)
+                return BadRequest(new { message = "KunjunganId, KamarId, dan BedId wajib diisi." });
+
+            await using var trx = await _applicationDbContext.Database.BeginTransactionAsync();
 
             try
             {
-                // **Cek koneksi ke database**
+                // cek koneksi db
                 if (!_applicationDbContext.Database.CanConnect())
-                {
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
-                }
 
-                // **Ambil User ID dari JWT Claims**
+                // auth
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
-                {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
-                }
 
-                var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+
                 if (getUserActive == null)
-                {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-                }
+
                 var userActiveId = getUserActive.UserActiveId;
 
-                // Validasi tanggal masuk ranap
+                // validasi tanggal masuk
                 var parsedTglMasukRanap = TryParseTanggalToUtc(vm.TglMasuk);
                 if (parsedTglMasukRanap == null)
-                {
-                    return BadRequest(new
+                    return BadRequest(new { message = "Format tanggal masuk ranap tidak valid! Gunakan yyyy-MM-dd." });
+
+                // validasi kunjungan ada
+                var kunjunganExist = await _applicationDbContext.Kunjungans
+                    .AnyAsync(k => k.KunjunganID == vm.KunjunganId && k.IsDelete != true);
+
+                if (!kunjunganExist)
+                    return NotFound(new { message = "Kunjungan tidak ditemukan." });
+
+                // validasi kamar + ambil tarif & kelas
+                var kamar = await _applicationDbContext.Kamars
+                    .Where(k => k.KamarId == vm.KamarId && k.IsDelete != true)
+                    .Select(k => new
                     {
-                        message = "Format tanngal masuk ranap tidak valid! Gunakan format yyyy-MM-dd."
-                    });
-                }
+                        k.KamarId,
+                        k.KelasId,
+                        k.KodeKamar,
+                        k.NamaKamar,
+                        k.TarifHarian
+                    })
+                    .FirstOrDefaultAsync();
 
-                // cek data bed yang tersedia
-                var dataBed = _applicationDbContext.Beds
-                    .FirstOrDefault(b => b.BedId == vm.BedId);
-                if (dataBed == null)
-                {
+                if (kamar == null)
+                    return NotFound(new { message = "Data kamar tidak ditemukan." });
+
+                if (kamar.TarifHarian == null || kamar.TarifHarian <= 0)
+                    return BadRequest(new { message = "TarifHarian kamar belum di-set / tidak valid." });
+
+                // cek bed tersedia
+                var bed = await _applicationDbContext.Beds
+                    .FirstOrDefaultAsync(b => b.BedId == vm.BedId && b.IsDelete != true);
+
+                if (bed == null)
                     return NotFound(new { message = "Data bed tidak ditemukan." });
-                }
-                else
-                {
-                    dataBed.Status = true; // Tandai bed sebagai tidak tersedia
-                }
 
-                // validasi kunjunganId yang sama tidak boleh membuat booking bed lagi
-                var existingBooking = _applicationDbContext.BookingBedRanaps
-                    .FirstOrDefault(b => b.KunjunganId == vm.KunjunganId && b.TglKeluar == null);
+                if (bed.Status == true)
+                    return BadRequest(new { message = "Bed sudah terpakai / tidak tersedia." });
+
+                // validasi kunjungan belum punya booking aktif
+                var existingBooking = await _applicationDbContext.BookingBedRanaps
+                    .FirstOrDefaultAsync(b =>
+                        b.KunjunganId == vm.KunjunganId &&
+                        b.TglKeluar == null &&
+                        b.IsDelete != true);
 
                 if (existingBooking != null)
-                {
-                    return BadRequest(new
-                    {
-                        message = "Kunjungan ini sudah memiliki booking bed."
-                    });
-                }
+                    return BadRequest(new { message = "Kunjungan ini sudah memiliki booking bed." });
 
-                // **Buat Data Baru**
+                // lock bed
+                bed.Status = true;
+
+                // insert booking
+                var bookingId = Guid.NewGuid();
+
                 var data = new BookingBedRanap
                 {
-                    BookingBedRanapId = Guid.NewGuid(),
+                    BookingBedRanapId = bookingId,
                     KunjunganId = vm.KunjunganId,
                     KamarId = vm.KamarId,
                     BedId = vm.BedId,
                     TglMasuk = parsedTglMasukRanap,
-                    //TglKeluar = parsedTglKeluarRanap,
                     NoKamar = vm.NoKamar,
                     StatusBed = true,
                     Keterangan = vm.Keterangan,
@@ -228,36 +249,186 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
 
-                // **Simpan ke Database**
                 _applicationDbContext.BookingBedRanaps.Add(data);
-                int result = await _applicationDbContext.SaveChangesAsync();
 
-                if (result > 0)
+                // =========================
+                // ✅ BILLING KAMAR RANAP
+                // =========================
+                const string jenisBilling = "Kamar Ranap";
+
+                // billing kode incremental per kunjungan untuk jenis ini
+                var billingCount = await _applicationDbContext.Billings
+                    .Where(b =>
+                        b.KunjunganId == vm.KunjunganId &&
+                        b.JenisBilling == jenisBilling &&
+                        (b.IsDelete == false || b.IsDelete == null))
+                    .CountAsync();
+
+                var billingKode = $"{(billingCount + 1):D3}";
+
+                // qty awal 1 hari (prakiraan hari pertama)
+                var qty = 1;
+                var harga = kamar.TarifHarian.Value;
+                var subtotal = harga * qty;
+
+                var billing = new Billing
                 {
-                    return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
-                }
-                else
+                    BillingId = Guid.NewGuid(),
+                    KunjunganId = vm.KunjunganId,
+                    BillingDate = DateTime.UtcNow,
+                    BillingKode = billingKode,
+
+                    // Item kamar
+                    ItemId = kamar.KamarId,
+                    NamaItem = $"Kamar Ranap - {(kamar.NamaKamar ?? kamar.KodeKamar ?? vm.NoKamar)}",
+                    HargaItem = harga,
+                    QtyItem = qty,
+                    SubTotalItem = subtotal,
+
+                    JenisBilling = jenisBilling,
+                    Keterangan = $"BookingBedRanapId={bookingId};Start={parsedTglMasukRanap:yyyy-MM-dd}",
+
+                    CreateBy = userActiveId,
+                    CreateDateTime = DateTimeOffset.UtcNow
+                };
+
+                _applicationDbContext.Billings.Add(billing);
+
+                await _applicationDbContext.SaveChangesAsync();
+                await trx.CommitAsync();
+
+                return Created("", new
                 {
-                    return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
-                }
-            }
-            catch (DbUpdateException dbEx)
-            {
-                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+                    message = "Booking bed ranap + billing kamar harian berhasil dibuat || 201 Created",
+                    bookingBedRanapId = bookingId,
+                    kamarId = kamar.KamarId,
+                    kelasId = kamar.KelasId,
+                    tarifHarian = harga,
+                    billingId = billing.BillingId,
+                    billingKode = billingKode,
+                    qtyAwal = qty,
+                    subtotalAwal = subtotal
+                });
             }
             catch (Exception ex)
             {
+                await trx.RollbackAsync();
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
 
-        [HttpPut("KeluarRawatInap/{id}")]
+        //[HttpPost]
+        //public async Task<IActionResult> Create([FromBody] BookingBedRanapViewModel vm)
+        //{
+        //    if (vm == null || !ModelState.IsValid)
+        //    {
+        //        return BadRequest(new { message = "Data tidak valid." });
+        //    }
+
+        //    try
+        //    {
+        //        // **Cek koneksi ke database**
+        //        if (!_applicationDbContext.Database.CanConnect())
+        //        {
+        //            return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+        //        }
+
+        //        // **Ambil User ID dari JWT Claims**
+        //        var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        //        if (string.IsNullOrEmpty(emailLogin))
+        //        {
+        //            return Unauthorized(new { message = "User tidak terautentikasi!" });
+        //        }
+
+        //        var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
+        //        if (getUserActive == null)
+        //        {
+        //            return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+        //        }
+        //        var userActiveId = getUserActive.UserActiveId;
+
+        //        // Validasi tanggal masuk ranap
+        //        var parsedTglMasukRanap = TryParseTanggalToUtc(vm.TglMasuk);
+        //        if (parsedTglMasukRanap == null)
+        //        {
+        //            return BadRequest(new
+        //            {
+        //                message = "Format tanngal masuk ranap tidak valid! Gunakan format yyyy-MM-dd."
+        //            });
+        //        }
+
+        //        // cek data bed yang tersedia
+        //        var dataBed = _applicationDbContext.Beds
+        //            .FirstOrDefault(b => b.BedId == vm.BedId);
+        //        if (dataBed == null)
+        //        {
+        //            return NotFound(new { message = "Data bed tidak ditemukan." });
+        //        }
+        //        else
+        //        {
+        //            dataBed.Status = true; // Tandai bed sebagai tidak tersedia
+        //        }
+
+        //        // validasi kunjunganId yang sama tidak boleh membuat booking bed lagi
+        //        var existingBooking = _applicationDbContext.BookingBedRanaps
+        //            .FirstOrDefault(b => b.KunjunganId == vm.KunjunganId && b.TglKeluar == null);
+
+        //        if (existingBooking != null)
+        //        {
+        //            return BadRequest(new
+        //            {
+        //                message = "Kunjungan ini sudah memiliki booking bed."
+        //            });
+        //        }
+
+        //        // **Buat Data Baru**
+        //        var data = new BookingBedRanap
+        //        {
+        //            BookingBedRanapId = Guid.NewGuid(),
+        //            KunjunganId = vm.KunjunganId,
+        //            KamarId = vm.KamarId,
+        //            BedId = vm.BedId,
+        //            TglMasuk = parsedTglMasukRanap,
+        //            //TglKeluar = parsedTglKeluarRanap,
+        //            NoKamar = vm.NoKamar,
+        //            StatusBed = true,
+        //            Keterangan = vm.Keterangan,
+        //            CreateBy = userActiveId,
+        //            CreateDateTime = DateTimeOffset.UtcNow,
+        //        };
+
+        //        // **Simpan ke Database**
+        //        _applicationDbContext.BookingBedRanaps.Add(data);
+        //        int result = await _applicationDbContext.SaveChangesAsync();
+
+        //        if (result > 0)
+        //        {
+        //            return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
+        //        }
+        //        else
+        //        {
+        //            return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
+        //        }
+        //    }
+        //    catch (DbUpdateException dbEx)
+        //    {
+        //        return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+        //    }
+        //}
+
+        [HttpPut("KeluarKamarRawatInap/{id}")]
         public async Task<IActionResult> Keluar(Guid id, [FromBody] KeluarRanapViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
                 return BadRequest(new { message = "Data tidak valid." });
             }
+
+            await using var tx = await _applicationDbContext.Database.BeginTransactionAsync();
 
             try
             {
@@ -275,55 +446,138 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 }
 
                 var getUserActive = await _applicationDbContext.UserActives
-                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin && u.IsDelete == false);
+
                 if (getUserActive == null)
                 {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
                 }
+
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data Booking Bed**
-                var data = await _applicationDbContext.BookingBedRanaps.FindAsync(id);
+                var data = await _applicationDbContext.BookingBedRanaps
+                    .FirstOrDefaultAsync(x => x.BookingBedRanapId == id && x.IsDelete == false);
+
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
-                data.TglKeluar = TryParseTanggalToUtc(vm.TglKeluar);
-                data.StatusBed = false; // Tandai bed sebagai tersedia
+                // Validasi tanggal keluar
+                var parsedTglKeluar = TryParseTanggalToUtc(vm.TglKeluar);
+                if (parsedTglKeluar == null)
+                {
+                    return BadRequest(new { message = "Format tanggal keluar tidak valid! Gunakan format yyyy-MM-dd." });
+                }
+
+                if (data.TglMasuk == null)
+                {
+                    return BadRequest(new { message = "Tanggal masuk ranap belum terisi. Tidak dapat menghitung biaya kamar." });
+                }
+
+                if (parsedTglKeluar.Value < data.TglMasuk.Value)
+                {
+                    return BadRequest(new { message = "Tanggal keluar tidak boleh lebih kecil dari tanggal masuk." });
+                }
+
+                // ✅ Update booking keluar
+                data.TglKeluar = parsedTglKeluar;
+                data.StatusBed = false;
+                data.UpdateBy = userActiveId;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
                 _applicationDbContext.BookingBedRanaps.Update(data);
 
-                // cari data bed dalam tabel beds
+                // ✅ Update bed jadi available
                 var dataBed = await _applicationDbContext.Beds
-                    .FirstOrDefaultAsync(b => b.BedId == data.BedId);
+                    .FirstOrDefaultAsync(b => b.BedId == data.BedId && b.IsDelete == false);
+
                 if (dataBed == null)
                 {
                     return NotFound(new { message = "Data bed tidak ditemukan." });
                 }
-                else
+
+                dataBed.Status = false;
+                _applicationDbContext.Beds.Update(dataBed);
+
+                // =====================================================
+                // ✅ HITUNG JUMLAH HARI PEMAKAIAN KAMAR
+                // =====================================================
+                var durasi = parsedTglKeluar.Value - data.TglMasuk.Value;
+
+                int jumlahHari = (int)Math.Ceiling(durasi.TotalDays);
+                if (jumlahHari < 1) jumlahHari = 1;
+
+
+                // =====================================================
+                // ✅ CLOSE BILLING KAMAR RANAP
+                // =====================================================
+                const string jenisBilling = "Kamar Ranap";
+                var bookingIdString = data.BookingBedRanapId.ToString();
+
+                var billing = await _applicationDbContext.Billings
+                    .Where(b =>
+                        b.KunjunganId == data.KunjunganId &&
+                        b.JenisBilling == jenisBilling &&
+                        (b.IsDelete == false || b.IsDelete == null) &&
+                        b.Keterangan != null &&
+                        b.Keterangan.Contains(bookingIdString))
+                    .OrderByDescending(b => b.CreateDateTime)
+                    .FirstOrDefaultAsync();
+
+                if (billing == null)
                 {
-                    dataBed.Status = false; // Tandai bed sebagai tersedia
-                    _applicationDbContext.Beds.Update(dataBed);
+                    // Kalau kamu ingin tetap boleh keluar walaupun billing tidak ketemu
+                    // bisa ganti jadi return Ok dengan warning.
+                    return NotFound(new
+                    {
+                        message = "Billing kamar ranap tidak ditemukan untuk booking ini. Pastikan billing dibuat saat booking."
+                    });
                 }
 
-                // **Update Data**
-                int result = await _applicationDbContext.SaveChangesAsync();
+                if (billing.HargaItem == null)
+                {
+                    return BadRequest(new
+                    {
+                        message = "HargaItem pada billing kamar ranap kosong. Tidak bisa menghitung subtotal."
+                    });
+                }
+
+                // ✅ Update billing
+                //billing.QtyItem = jumlahHari;
+                billing.SubTotalItem = billing.HargaItem.Value * jumlahHari;
+                billing.UpdateBy = userActiveId;
+                billing.UpdateDateTime = DateTimeOffset.UtcNow;
+
+                _applicationDbContext.Billings.Update(billing);
+
+                // =====================================================
+                // ✅ SAVE + COMMIT
+                // =====================================================
+                var result = await _applicationDbContext.SaveChangesAsync();
+                await tx.CommitAsync();
 
                 if (result > 0)
                 {
-                    return Ok(new { message = "Update Data Berhasil || 200 OK" });
+                    return Ok(new
+                    {
+                        message = "Pasien berhasil keluar ranap + billing kamar berhasil di-close dan diperbarui || 200 OK",
+                        jumlahHari,
+                        hargaHarian = billing.HargaItem,
+                        subtotal = billing.SubTotalItem
+                    });
                 }
-                else
-                {
-                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
-                }
+
+                return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
             }
             catch (DbUpdateException dbEx)
             {
+                await tx.RollbackAsync();
                 return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
             }
             catch (Exception ex)
             {
+                await tx.RollbackAsync();
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
@@ -340,25 +594,39 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 if (!await _applicationDbContext.Database.CanConnectAsync())
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
 
-                // Ambil User ID dari JWT Claims
+                // =====================================================
+                // 🔹 Ambil User ID dari JWT Claims
+                // =====================================================
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
 
                 var getUserActive = await _applicationDbContext.UserActives
-                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin && u.IsDelete == false);
 
                 if (getUserActive == null)
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
 
                 var userActiveId = getUserActive.UserActiveId;
 
-                // Cari data booking
-                var data = await _applicationDbContext.BookingBedRanaps.FindAsync(id);
+                // =====================================================
+                // 🔹 Cari data booking (Pastikan tidak deleted)
+                // =====================================================
+                var data = await _applicationDbContext.BookingBedRanaps
+                    .FirstOrDefaultAsync(x => x.BookingBedRanapId == id && x.IsDelete != true);
+
                 if (data == null)
                     return NotFound(new { message = "Data tidak ditemukan." });
 
-                // Validasi tanggal masuk
+                // =====================================================
+                // 🔹 Rekomendasi keamanan: block update kalau sudah selesai
+                // =====================================================
+                if (data.TglKeluar != null)
+                    return BadRequest(new { message = "Booking sudah selesai (TglKeluar terisi), tidak bisa diupdate." });
+
+                // =====================================================
+                // 🔹 Validasi tanggal masuk
+                // =====================================================
                 var parsedTglMasukRanap = TryParseTanggalToUtc(vm.TglMasuk);
                 if (parsedTglMasukRanap == null)
                 {
@@ -368,9 +636,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     });
                 }
 
-                // Validasi kunjunganId yang sama tidak boleh membuat booking bed lagi
+                // =====================================================
+                // 🔹 Validasi kunjunganId tidak boleh punya booking lain aktif
+                // =====================================================
                 var existingBooking = await _applicationDbContext.BookingBedRanaps
-                    .FirstOrDefaultAsync(b => b.KunjunganId == vm.KunjunganId && b.IsDelete == false && b.BookingBedRanapId != id);
+                    .FirstOrDefaultAsync(b =>
+                        b.KunjunganId == vm.KunjunganId &&
+                        b.TglKeluar == null &&
+                        b.IsDelete == false &&
+                        b.BookingBedRanapId != id);
+
                 if (existingBooking != null)
                 {
                     return BadRequest(new
@@ -379,16 +654,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     });
                 }
 
-                // Cek apakah BedId berubah
+                // =====================================================
+                // 🔹 Cek apakah BedId berubah
+                // =====================================================
                 var bedLamaId = data.BedId;
                 var bedBaruId = vm.BedId;
                 bool bedBerubah = bedBaruId != bedLamaId;
 
-                // Mulai transaksi agar konsisten
+                // =====================================================
+                // 🔹 Mulai transaksi
+                // =====================================================
                 await using var tx = await _applicationDbContext.Database.BeginTransactionAsync();
                 try
                 {
-                    // Update field umum BookingBedRanap
+                    // =====================================================
+                    // 🔹 Update field umum BookingBedRanap
+                    // =====================================================
                     data.KunjunganId = vm.KunjunganId;
                     data.KamarId = vm.KamarId;
                     data.TglMasuk = parsedTglMasukRanap;
@@ -397,49 +678,51 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     data.UpdateBy = userActiveId;
                     data.UpdateDateTime = DateTimeOffset.UtcNow;
 
+                    // =====================================================
+                    // 🔹 Jika bed berubah → unlock old bed + lock new bed
+                    // =====================================================
                     if (bedBerubah)
                     {
-                        // Ambil bed lama & baru
                         Bed? bedLama = null;
+
                         if (bedLamaId.HasValue)
                         {
                             bedLama = await _applicationDbContext.Beds
-                                .FirstOrDefaultAsync(b => b.BedId == bedLamaId.Value);
+                                .FirstOrDefaultAsync(b => b.BedId == bedLamaId.Value && b.IsDelete != true);
                         }
 
                         var bedBaru = await _applicationDbContext.Beds
-                            .FirstOrDefaultAsync(b => b.BedId == bedBaruId);
+                            .FirstOrDefaultAsync(b => b.BedId == bedBaruId && b.IsDelete != true);
 
                         if (bedBaru == null)
                             return NotFound(new { message = "Bed baru tidak ditemukan." });
 
-                        // Opsional: tolak jika bed baru sudah terisi
+                        // ✅ Tolak jika bed baru sudah terisi
                         if (bedBaru.Status == true)
                             return Conflict(new { message = "Bed baru sedang terisi. Pilih bed lain." });
 
-                        // Pindahkan bed di booking
+                        // pindahkan bed
                         data.BedId = bedBaruId;
-                        // sinkronkan status aktif di booking jika diperlukan
                         data.StatusBed = true;
 
-                        // Ubah status di tabel Beds (atomik dalam transaksi)
+                        // unlock old bed
                         if (bedLama != null)
                         {
                             bedLama.Status = false;
-                            _applicationDbContext.Beds.Update(bedLama);
                         }
 
+                        // lock new bed
                         bedBaru.Status = true;
-                        _applicationDbContext.Beds.Update(bedBaru);
                     }
                     else
                     {
-                        // Jika bed tidak berubah dan kamu ingin mengikuti flag dari VM:
+                        // bed tidak berubah
                         data.StatusBed = true;
                     }
 
-                    _applicationDbContext.BookingBedRanaps.Update(data);
-
+                    // =====================================================
+                    // 🔹 Save + Commit
+                    // =====================================================
                     var result = await _applicationDbContext.SaveChangesAsync();
                     await tx.CommitAsync();
 
@@ -464,76 +747,130 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             }
         }
 
+
         //[HttpPut("{id}")]
         //public async Task<IActionResult> Update(Guid id, [FromBody] BookingBedRanapViewModel vm)
         //{
         //    if (vm == null || !ModelState.IsValid)
-        //    {
         //        return BadRequest(new { message = "Data tidak valid." });
-        //    }
 
         //    try
         //    {
-        //        // **Cek koneksi ke database**
         //        if (!await _applicationDbContext.Database.CanConnectAsync())
-        //        {
         //            return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
-        //        }
 
-        //        // **Ambil User ID dari JWT Claims**
+        //        // Ambil User ID dari JWT Claims
         //        var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         //        if (string.IsNullOrEmpty(emailLogin))
-        //        {
         //            return Unauthorized(new { message = "User tidak terautentikasi!" });
-        //        }
 
         //        var getUserActive = await _applicationDbContext.UserActives
         //            .FirstOrDefaultAsync(u => u.Email == emailLogin);
+
         //        if (getUserActive == null)
-        //        {
         //            return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-        //        }
+
         //        var userActiveId = getUserActive.UserActiveId;
 
-        //        // **Cari Data**
+        //        // Cari data booking
         //        var data = await _applicationDbContext.BookingBedRanaps.FindAsync(id);
         //        if (data == null)
-        //        {
         //            return NotFound(new { message = "Data tidak ditemukan." });
-        //        }
 
+        //        // Validasi tanggal masuk
         //        var parsedTglMasukRanap = TryParseTanggalToUtc(vm.TglMasuk);
         //        if (parsedTglMasukRanap == null)
         //        {
         //            return BadRequest(new
         //            {
-        //                message = "Format tanngal masuk ranap tidak valid! Gunakan format yyyy-MM-dd."
+        //                message = "Format tanggal masuk ranap tidak valid! Gunakan format yyyy-MM-dd."
         //            });
         //        }
 
-        //        // **Update Data**
-        //        //data.KunjunganId = vm.KunjunganId;
-        //        data.KamarId = vm.KamarId;
-        //        data.BedId = vm.BedId;
-        //        data.TglMasuk = parsedTglMasukRanap;
-        //        //data.TglKeluar = parsedTglKeluarRanap;
-        //        data.NoKamar = vm.NoKamar;
-        //        data.StatusBed = vm.StatusBed;
-        //        data.Keterangan = vm.Keterangan;
-
-        //        data.UpdateBy = userActiveId;
-        //        data.UpdateDateTime = DateTimeOffset.UtcNow;
-
-        //        _applicationDbContext.BookingBedRanaps.Update(data);
-        //        int result = await _applicationDbContext.SaveChangesAsync();
-
-        //        if (result > 0)
+        //        // Validasi kunjunganId yang sama tidak boleh membuat booking bed lagi
+        //        var existingBooking = await _applicationDbContext.BookingBedRanaps
+        //            .FirstOrDefaultAsync(b => b.KunjunganId == vm.KunjunganId && b.IsDelete == false && b.BookingBedRanapId != id);
+        //        if (existingBooking != null)
         //        {
-        //            return Ok(new { message = "Update Data Berhasil || 200 OK" });
+        //            return BadRequest(new
+        //            {
+        //                message = "Kunjungan ini sudah memiliki booking bed."
+        //            });
         //        }
-        //        else
+
+        //        // Cek apakah BedId berubah
+        //        var bedLamaId = data.BedId;
+        //        var bedBaruId = vm.BedId;
+        //        bool bedBerubah = bedBaruId != bedLamaId;
+
+        //        // Mulai transaksi agar konsisten
+        //        await using var tx = await _applicationDbContext.Database.BeginTransactionAsync();
+        //        try
         //        {
+        //            // Update field umum BookingBedRanap
+        //            data.KunjunganId = vm.KunjunganId;
+        //            data.KamarId = vm.KamarId;
+        //            data.TglMasuk = parsedTglMasukRanap;
+        //            data.NoKamar = vm.NoKamar;
+        //            data.Keterangan = vm.Keterangan;
+        //            data.UpdateBy = userActiveId;
+        //            data.UpdateDateTime = DateTimeOffset.UtcNow;
+
+        //            if (bedBerubah)
+        //            {
+        //                // Ambil bed lama & baru
+        //                Bed? bedLama = null;
+        //                if (bedLamaId.HasValue)
+        //                {
+        //                    bedLama = await _applicationDbContext.Beds
+        //                        .FirstOrDefaultAsync(b => b.BedId == bedLamaId.Value);
+        //                }
+
+        //                var bedBaru = await _applicationDbContext.Beds
+        //                    .FirstOrDefaultAsync(b => b.BedId == bedBaruId);
+
+        //                if (bedBaru == null)
+        //                    return NotFound(new { message = "Bed baru tidak ditemukan." });
+
+        //                // Opsional: tolak jika bed baru sudah terisi
+        //                if (bedBaru.Status == true)
+        //                    return Conflict(new { message = "Bed baru sedang terisi. Pilih bed lain." });
+
+        //                // Pindahkan bed di booking
+        //                data.BedId = bedBaruId;
+        //                // sinkronkan status aktif di booking jika diperlukan
+        //                data.StatusBed = true;
+
+        //                // Ubah status di tabel Beds (atomik dalam transaksi)
+        //                if (bedLama != null)
+        //                {
+        //                    bedLama.Status = false;
+        //                    _applicationDbContext.Beds.Update(bedLama);
+        //                }
+
+        //                bedBaru.Status = true;
+        //                _applicationDbContext.Beds.Update(bedBaru);
+        //            }
+        //            else
+        //            {
+        //                // Jika bed tidak berubah dan kamu ingin mengikuti flag dari VM:
+        //                data.StatusBed = true;
+        //            }
+
+        //            _applicationDbContext.BookingBedRanaps.Update(data);
+
+        //            var result = await _applicationDbContext.SaveChangesAsync();
+        //            await tx.CommitAsync();
+
+        //            if (result > 0)
+        //                return Ok(new { message = "Update Data Berhasil || 200 OK" });
+
         //            return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
+        //        }
+        //        catch
+        //        {
+        //            await tx.RollbackAsync();
+        //            throw;
         //        }
         //    }
         //    catch (DbUpdateException dbEx)

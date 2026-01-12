@@ -53,8 +53,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
             var result = (from ap in _applicationDbContext.AsuransiPasiens
-                         join p in _applicationDbContext.PendaftaranPasienBarus on ap.PasienId equals p.PendaftaranPasienBaruId.ToString()
-                         join a in _applicationDbContext.Asuransis on ap.AsuransiId equals a.AsuransiId.ToString()
+                         join p in _applicationDbContext.PendaftaranPasienBarus on ap.PasienId equals p.PendaftaranPasienBaruId
+                         join a in _applicationDbContext.Asuransis on ap.AsuransiId equals a.AsuransiId
                          select new
                          {
                              ap.AsuransiPasienId,
@@ -115,11 +115,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet("AsuransiByPasien/{pasienId}")]
-        public async Task<IActionResult> GetAsuransiPasienByPasienId(string pasienId)
+        public async Task<IActionResult> GetAsuransiPasienByPasienId(Guid pasienId)
         {
             var listdata = (from ap in _applicationDbContext.AsuransiPasiens
-                            join p in _applicationDbContext.PendaftaranPasienBarus on ap.PasienId equals p.PendaftaranPasienBaruId.ToString()
-                            join a in _applicationDbContext.Asuransis on ap.AsuransiId equals a.AsuransiId.ToString()
+                            join p in _applicationDbContext.PendaftaranPasienBarus on ap.PasienId equals p.PendaftaranPasienBaruId
+                            join a in _applicationDbContext.Asuransis on ap.AsuransiId equals a.AsuransiId
                             where ap.PasienId == pasienId
                             select new
                             {
@@ -176,7 +176,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpPost]
         public async Task<IActionResult> CreateAsuransiPasien([FromBody] AsuransiPasienViewModel request)
         {
-            if (request == null || string.IsNullOrEmpty(request.PasienId) || string.IsNullOrEmpty(request.AsuransiId))
+            if (request == null || request.PasienId == null || request.AsuransiId == null)
             {
                 return BadRequest(new { message = "Data tidak boleh kosong!" });
             }
@@ -195,10 +195,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Periksa apakah pasien dan asuransi ada di database
                 var pasienExists = _applicationDbContext.PendaftaranPasienBarus
-                                      .Any(p => p.PendaftaranPasienBaruId.ToString() == request.PasienId);
+                                      .Any(p => p.PendaftaranPasienBaruId == request.PasienId);
 
                 var asuransiExists = _applicationDbContext.Asuransis
-                                      .Any(a => a.AsuransiId.ToString() == request.AsuransiId);
+                                      .Any(a => a.AsuransiId == request.AsuransiId);
 
                 if (!pasienExists || !asuransiExists)
                 {
@@ -327,7 +327,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateAsuransiPasien(Guid id, [FromBody] AsuransiPasienViewModel request)
         {
-            if (request == null || string.IsNullOrEmpty(request.PasienId) || string.IsNullOrEmpty(request.AsuransiId))
+            if (request == null || request.PasienId == null || request.AsuransiId == null)
             {
                 return BadRequest(new { message = "Data tidak boleh kosong!" });
             }
@@ -343,9 +343,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
                 // Periksa apakah pasien dan asuransi ada di database
                 var pasienExists = _applicationDbContext.PendaftaranPasienBarus
-                                      .Any(p => p.PendaftaranPasienBaruId.ToString() == request.PasienId);
+                                      .Any(p => p.PendaftaranPasienBaruId == request.PasienId);
                 var asuransiExists = _applicationDbContext.Asuransis
-                                      .Any(a => a.AsuransiId.ToString() == request.AsuransiId);
+                                      .Any(a => a.AsuransiId == request.AsuransiId);
                 if (!pasienExists || !asuransiExists)
                 {
                     return NotFound(new { message = "Pasien atau Asuransi tidak ditemukan!" });
@@ -433,8 +433,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         {
             // Query data
             var query = from ap in _applicationDbContext.AsuransiPasiens
-                        join p in _applicationDbContext.PendaftaranPasienBarus on ap.PasienId equals p.PendaftaranPasienBaruId.ToString()
-                        join a in _applicationDbContext.Asuransis on ap.AsuransiId equals a.AsuransiId.ToString()
+                        join p in _applicationDbContext.PendaftaranPasienBarus on ap.PasienId equals p.PendaftaranPasienBaruId
+                        join a in _applicationDbContext.Asuransis on ap.AsuransiId equals a.AsuransiId
                         select new
                         {
                             CreateDateTime = a.CreateDateTime,

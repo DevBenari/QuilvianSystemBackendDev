@@ -336,7 +336,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         int page = 1,
         int perPage = 10,
         Guid? checklistTemplateid = null,
-        string? search = null,
+        string? namaTemplate = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -369,11 +369,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                          };
 
             //**Filter berdasarkan search(Perbaikan agar bisa mencari 1 huruf)**
-            if (!string.IsNullOrWhiteSpace(search))
+            if (!string.IsNullOrWhiteSpace(namaTemplate))
             {
-                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+                namaTemplate = $"%{namaTemplate.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
-                    EF.Functions.ILike(u.NamaTemplateChecklist, search)
+                    EF.Functions.ILike(u.NamaTemplateChecklist, namaTemplate)
                 );
             }
 

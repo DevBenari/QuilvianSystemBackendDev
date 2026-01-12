@@ -207,6 +207,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         TglMasukKunjungan = a.TglMasuk,
                         a.CaraMasukRS,
                         a.KondisiKeluar,
+                        a.DepositRanap,
                         d.NmDokter,
                         gambardokter = !string.IsNullOrEmpty(d.FotoName)
                             ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
@@ -448,6 +449,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.IsTriage,
                         a.IsCTTPasienIGD,
                         a.Antrian,
+                        a.DepositRanap,
                         TglMasukKunjungan = a.TglMasuk,
                         a.CaraMasukRS,
                         a.KondisiKeluar,
@@ -646,6 +648,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     TglMasuk = request.TglMasuk,
                     CaraMasukRS = request.CaraMasukRS,
                     KondisiKeluar = request.KondisiKeluar,
+                    DepositRanap = request.DepositRanap,
                 };
 
                 _applicationDbContext.Kunjungans.Add(newKunjungan);
@@ -1002,6 +1005,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 existing.TglMasuk = request.TglMasuk;
                 existing.CaraMasukRS = request.CaraMasukRS;
                 existing.KondisiKeluar = request.KondisiKeluar;
+                existing.DepositRanap = request.DepositRanap;
+
                 existing.UpdateDateTime = DateTimeOffset.UtcNow;
                 existing.UpdateBy = UserActiveId;
 
@@ -1469,6 +1474,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.IsTriage,
                         a.IsCTTPasienIGD,
                         a.Antrian,
+                        a.DepositRanap,
                         TglMasukKunjungan = a.TglMasuk,
                         a.CaraMasukRS,
                         a.KondisiKeluar,
@@ -1636,6 +1642,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         r.CaraMasukRS,
                         r.KondisiKeluar,
                         r.Antrian,
+                        r.DepositRanap,
                         r.IsFinishedKasir,
                         r.NmDokter,
                         r.gambardokter,

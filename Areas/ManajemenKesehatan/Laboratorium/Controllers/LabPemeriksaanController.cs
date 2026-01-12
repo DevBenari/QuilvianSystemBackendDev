@@ -508,130 +508,122 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
         [HttpGet("paged")]
         public async Task<IActionResult> Paged(
-        int page = 1,
-        int perPage = 10,
-        Guid? KategoriPemeriksaanId = null,
-        Guid? Labid = null,
-        Guid? kelasId = null,
-        string? search = null,
-        string? kodePemeriksaan = null,
-        string? namaLab = null,
-        string? namaKategori = null,
-        string? orderBy = "CreateDateTime",
-        string? sortDirection = "desc",
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? startDate = null,
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? endDate = null,
-        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+            int page = 1,
+            int perPage = 10,
+            Guid? KategoriPemeriksaanId = null,
+            Guid? Labid = null,
+            Guid? kelasId = null,
+            string? search = null,
+            string? kodePemeriksaan = null,
+            string? namaLab = null,
+            string? namaKategori = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
             try
             {
-                // ⚡ Ambil semua tarif kelas hanya sekali
-                var allTarifKelas = await (
-                    from tk in _applicationDbContext.TarifKelass
-                    join kl in _applicationDbContext.Kelass on tk.KelasId equals kl.KelasId
+                if (page < 1) page = 1;
+                if (perPage < 1) perPage = 10;
+
+                // ======================================================
+                // 1) BASE QUERY (FILTER DI DB, JANGAN AMBIL TARIF DULU)
+                // ======================================================
+                var query =
+                    from a in _applicationDbContext.LabPemeriksaans.AsNoTracking()
+                    where (a.IsDelete == false || a.IsDelete == null)
+
+                    // LEFT JOIN UserActive
+                    join u0 in _applicationDbContext.UserActives.AsNoTracking()
+                        on a.CreateBy equals u0.UserActiveId into userJoin
+                    from u in userJoin.DefaultIfEmpty()
+
+                        // LEFT JOIN Kategori
+                    join k0 in _applicationDbContext.LabKategoriPemeriksaans.AsNoTracking()
+                        on a.KategoriPemeriksaanId equals k0.KategoriPemeriksaanId into kategoriGroup
+                    from k in kategoriGroup.DefaultIfEmpty()
+
+                        // LEFT JOIN Lab
+                    join l0 in _applicationDbContext.Labs.AsNoTracking()
+                        on k.LabId equals l0.LabId into labGroup
+                    from l in labGroup.DefaultIfEmpty()
+
                     select new
                     {
-                        tk.PemeriksaanLabId,
-                        tk.KelasId,
-                        tk.TarifKelasId,
-                        tk.TarifDokter,
-                        tk.TarifRs,
-                        tk.TarifJp,
-                        tk.TarifBahp,
-                        tk.TarifLain,
-                        tk.TarifTotal,
-                        tk.KSO,
-                        NamaKelas = kl.NamaKelas
-                    }
-                ).ToListAsync();
+                        a.CreateDateTime,
+                        a.CreateBy,
+                        CreateByName = u != null ? u.FullName : null,
+                        a.PemeriksaanLabId,
+                        a.NamaPemeriksaan,
+                        a.HargaPemeriksaan,
+                        a.KodePemeriksaan,
+                        a.KategoriPemeriksaanId,
+                        NamaKategori = k != null ? k.NamaKategori : null,
+                        KodeKategoriPemeriksaan = k != null ? k.KodeKategori : null,
+                        LabId = l != null ? (Guid?)l.LabId : null,
+                        NamaLab = l != null ? l.NamaLab : null,
+                        KodeLab = l != null ? l.KodeKategori : null,
+                        a.Keterangan
+                    };
 
-                // 🔹 Query utama
-                var query = from a in _applicationDbContext.LabPemeriksaans
-                            join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                                on a.CreateBy equals u.UserActiveId
-                            join k in _applicationDbContext.LabKategoriPemeriksaans
-                                on a.KategoriPemeriksaanId equals k.KategoriPemeriksaanId into kategoriGroup
-                            from k in kategoriGroup.DefaultIfEmpty()
-                            join l in _applicationDbContext.Labs
-                                on k.LabId equals l.LabId into labGroup
-                            from l in labGroup.DefaultIfEmpty()
-                            where a.IsDelete == false || a.IsDelete == null
-                            select new
-                            {
-                                a.CreateDateTime,
-                                a.CreateBy,
-                                CreateByName = u.FullName,
-                                a.PemeriksaanLabId,
-                                a.NamaPemeriksaan,
-                                a.HargaPemeriksaan,
-                                a.KodePemeriksaan,
-                                a.KategoriPemeriksaanId,
-                                k.NamaKategori,
-                                KodeKategoriPemeriksaan = k.KodeKategori,
-                                l.LabId,
-                                l.NamaLab,
-                                KodeLab = l.KodeKategori,
-                                a.Keterangan
-                            };
-
-                // 🔍 Filter pencarian
+                // ======================================================
+                // 2) FILTERS (SEMUA DI DB)
+                // ======================================================
                 if (!string.IsNullOrWhiteSpace(search))
                 {
                     string pattern = $"%{search.ToLower()}%";
                     query = query.Where(u =>
-                        EF.Functions.ILike(u.NamaPemeriksaan, pattern) ||
-                        EF.Functions.ILike(u.KodeLab, pattern) ||
-                        EF.Functions.ILike(u.KodeKategoriPemeriksaan, pattern));
+                        (u.NamaPemeriksaan != null && EF.Functions.ILike(u.NamaPemeriksaan, pattern)) ||
+                        (u.KodeLab != null && EF.Functions.ILike(u.KodeLab, pattern)) ||
+                        (u.KodeKategoriPemeriksaan != null && EF.Functions.ILike(u.KodeKategoriPemeriksaan, pattern))
+                    );
                 }
 
                 if (!string.IsNullOrWhiteSpace(kodePemeriksaan))
                 {
                     string pattern = $"%{kodePemeriksaan.ToLower()}%";
-                    query = query.Where(u => EF.Functions.ILike(u.KodePemeriksaan, pattern));
+                    query = query.Where(u => u.KodePemeriksaan != null && EF.Functions.ILike(u.KodePemeriksaan, pattern));
                 }
 
                 if (!string.IsNullOrWhiteSpace(namaLab))
                 {
                     string pattern = $"%{namaLab.ToLower()}%";
-                    query = query.Where(u => EF.Functions.ILike(u.NamaLab, pattern));
+                    query = query.Where(u => u.NamaLab != null && EF.Functions.ILike(u.NamaLab, pattern));
                 }
 
                 if (!string.IsNullOrWhiteSpace(namaKategori))
                 {
                     string pattern = $"%{namaKategori.ToLower()}%";
-                    query = query.Where(u => EF.Functions.ILike(u.NamaKategori, pattern));
+                    query = query.Where(u => u.NamaKategori != null && EF.Functions.ILike(u.NamaKategori, pattern));
                 }
 
                 if (KategoriPemeriksaanId.HasValue)
-                    query = query.Where(u => u.KategoriPemeriksaanId == KategoriPemeriksaanId);
+                    query = query.Where(u => u.KategoriPemeriksaanId == KategoriPemeriksaanId.Value);
 
                 if (Labid.HasValue)
-                    query = query.Where(u => u.LabId == Labid);
+                    query = query.Where(u => u.LabId == Labid.Value);
 
-                // filter based on kelas id
+                // ✅ FILTER KELAS DI DB (tanpa load allTarifKelas dulu)
                 if (kelasId.HasValue)
                 {
-                    var pemeriksaanIdsByKelas = allTarifKelas
-                        .Where(t => t.KelasId == kelasId.Value)
-                        .Select(t => t.PemeriksaanLabId)
-                        .Distinct()
-                        .ToList();
-
-                    query = query.Where(u => pemeriksaanIdsByKelas.Contains(u.PemeriksaanLabId));
+                    var kid = kelasId.Value;
+                    query = query.Where(u =>
+                        _applicationDbContext.TarifKelass.Any(tk =>
+                            tk.PemeriksaanLabId == u.PemeriksaanLabId && tk.KelasId == kid
+                        )
+                    );
                 }
 
-                // 🔹 Filter tanggal
                 if (startDate.HasValue && endDate.HasValue)
                 {
                     DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
                     DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
 
-                    query = query.Where(u =>
-                        u.CreateDateTime >= startUtc &&
-                        u.CreateDateTime <= endUtc);
+                    query = query.Where(u => u.CreateDateTime >= startUtc && u.CreateDateTime <= endUtc);
                 }
 
-                // 🔹 Filter periode
                 if (periode.HasValue)
                 {
                     DateTime today = DateTime.UtcNow.Date;
@@ -652,15 +644,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                 u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek));
                             break;
                         case PeriodeFilter.ThisMonth:
-                            query = query.Where(u =>
-                                u.CreateDateTime.Month == today.Month &&
-                                u.CreateDateTime.Year == today.Year);
+                            query = query.Where(u => u.CreateDateTime.Month == today.Month && u.CreateDateTime.Year == today.Year);
                             break;
                         case PeriodeFilter.LastMonth:
                             var lastMonth = today.AddMonths(-1);
-                            query = query.Where(u =>
-                                u.CreateDateTime.Month == lastMonth.Month &&
-                                u.CreateDateTime.Year == lastMonth.Year);
+                            query = query.Where(u => u.CreateDateTime.Month == lastMonth.Month && u.CreateDateTime.Year == lastMonth.Year);
                             break;
                         case PeriodeFilter.ThisYear:
                             query = query.Where(u => u.CreateDateTime.Year == today.Year);
@@ -677,9 +665,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     }
                 }
 
+                // ======================================================
+                // 3) SORTING (DI DB)
+                // ======================================================
+                bool desc = string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase);
 
-                // 🔹 Sorting
-                query = sortDirection?.ToLower() == "desc"
+                query = desc
                     ? orderBy switch
                     {
                         "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
@@ -699,15 +690,72 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         _ => query.OrderBy(u => u.CreateDateTime)
                     };
 
-                // 🔹 Eksekusi dan pagination
+                // ======================================================
+                // 4) PAGING (HANYA AMBIL DATA PAGE)
+                // ======================================================
                 var totalRows = await query.CountAsync();
                 var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-                var rows = await query.Skip((page - 1) * perPage).Take(perPage).ToListAsync();
 
-                if (rows.Count == 0 && page > totalPages)
+                if (totalRows == 0)
+                {
+                    return Ok(new
+                    {
+                        status = "success",
+                        message = "No data found",
+                        data = new
+                        {
+                            Rows = new List<object>(),
+                            TotalRows = 0,
+                            CurrentPage = page,
+                            PerPage = perPage,
+                            TotalPages = 0
+                        }
+                    });
+                }
+
+                if (page > totalPages)
                     return NotFound(new { message = "Page not found." });
 
-                // ✅ Gabungkan data tarif kelas di memory (tanpa N+1)
+                var rows = await query
+                    .Skip((page - 1) * perPage)
+                    .Take(perPage)
+                    .ToListAsync();
+
+                // ======================================================
+                // 5) AMBIL TARIF KELAS KHUSUS UNTUK ROWS (BATCH, TANPA N+1)
+                // ======================================================
+                var pemeriksaanIds = rows.Select(r => r.PemeriksaanLabId).Distinct().ToList();
+
+                var allTarifKelasQuery =
+                    from tk in _applicationDbContext.TarifKelass.AsNoTracking()
+                    join kl in _applicationDbContext.Kelass.AsNoTracking() on tk.KelasId equals kl.KelasId
+                    where pemeriksaanIds.Contains((Guid)tk.PemeriksaanLabId)
+                    select new
+                    {
+                        tk.PemeriksaanLabId,
+                        tk.KelasId,
+                        tk.TarifKelasId,
+                        tk.TarifDokter,
+                        tk.TarifRs,
+                        tk.TarifJp,
+                        tk.TarifBahp,
+                        tk.TarifLain,
+                        tk.TarifTotal,
+                        tk.KSO,
+                        NamaKelas = kl.NamaKelas
+                    };
+
+                if (kelasId.HasValue)
+                    allTarifKelasQuery = allTarifKelasQuery.Where(t => t.KelasId == kelasId.Value);
+
+                var allTarifKelas = await allTarifKelasQuery.ToListAsync();
+
+                // ✅ lookup supaya bukan O(n*m)
+                var tarifLookup = allTarifKelas.ToLookup(t => t.PemeriksaanLabId);
+
+                // ======================================================
+                // 6) BUILD RESULT (TARIF DARI LOOKUP)
+                // ======================================================
                 var result = rows.Select(r => new
                 {
                     r.PemeriksaanLabId,
@@ -720,9 +768,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     r.CreateDateTime,
                     r.CreateByName,
                     r.Keterangan,
-                    TarifKelas = allTarifKelas
-                        .Where(t => t.PemeriksaanLabId == r.PemeriksaanLabId && (!kelasId.HasValue || t.KelasId == kelasId.Value))
-                        .ToList()
+                    TarifKelas = tarifLookup[r.PemeriksaanLabId].ToList()
                 });
 
                 return Ok(new
@@ -744,6 +790,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
 
 
         //[HttpGet("paged")]

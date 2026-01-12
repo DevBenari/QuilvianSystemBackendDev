@@ -1,18 +1,19 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Globalization;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
-using QuilvianSystemBackendDev.Repositories;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
-using Microsoft.AspNetCore.Cors;
-using System.Security.Claims;
-using Microsoft.AspNetCore.Identity;
-using QuilvianSystemBackendDev.Models;
-using Swashbuckle.AspNetCore.Annotations;
+using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using System.Globalization;
-using Microsoft.IdentityModel.Tokens;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
+using QuilvianSystemBackendDev.Models;
+using QuilvianSystemBackendDev.Repositories;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
@@ -63,7 +64,31 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateByName = u.FullName,
                             a.TindakanAsuransiId,
                             a.AsuransiId,
-                            a.TindakanId
+                            a.TindakanId,
+                            // ============================
+                            // MARKUP
+                            // ============================
+                            a.MarkupDokter,
+                            a.MarkupRs,
+                            a.MarkupJp,
+                            a.MarkupBahp,
+                            a.MarkupLainnya,
+                            a.MarkupTotal,
+                            a.IsMarkupBerlaku,
+                            a.MarkupDari,
+                            a.MarkupSampai,
+
+                            // ============================
+                            // DISKON
+                            // ============================
+                            a.DiskonDokter,
+                            a.DiskonRs,
+                            a.DiskonJp,
+                            a.DiskonBahp,
+                            a.DiskonTotal,
+                            a.IsDiskonBerlaku,
+                            a.DiskonDari,
+                            a.DiskonSampai
                         };
 
             // Hitung total data sebelum paginasi
@@ -135,6 +160,33 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     TindakanAsuransiId = Guid.NewGuid(),
                     TindakanId = vm.TindakanId,
                     AsuransiId = vm.AsuransiId,
+                    // ============================
+                    // MARKUP
+                    // ============================
+                    MarkupDokter = vm.MarkupDokter,
+                    MarkupRs = vm.MarkupRs,
+                    MarkupJp = vm.MarkupJp,
+                    MarkupBahp = vm.MarkupBahp,
+                    MarkupLainnya = vm.MarkupLainnya,
+                    MarkupTotal = vm.MarkupTotal,
+
+                    IsMarkupBerlaku = vm.IsMarkupBerlaku,
+                    MarkupDari = vm.MarkupDari,
+                    MarkupSampai = vm.MarkupSampai,
+
+                    // ============================
+                    // DISKON
+                    // ============================
+                    DiskonDokter = vm.DiskonDokter,
+                    DiskonRs = vm.DiskonRs,
+                    DiskonJp = vm.DiskonJp,
+                    DiskonBahp = vm.DiskonBahp,
+                    DiskonTotal = vm.DiskonTotal,
+
+                    IsDiskonBerlaku = vm.IsDiskonBerlaku,
+                    DiskonDari = vm.DiskonDari,
+                    DiskonSampai = vm.DiskonSampai,
+
                     CreateDateTime = DateTime.UtcNow,
                     CreateBy = userActiveId
                 };
@@ -220,5 +272,116 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
+        // PUT: api/TindakanAsuransi/{id}
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateTindakanAsuransi(Guid id, [FromBody] TindakanAsuransiViewModel vm)
+        {
+            if (vm == null || !ModelState.IsValid)
+            {
+                return BadRequest(new { message = "Data tidak valid." });
+            }
+
+            try
+            {
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                var getUserActive = await _applicationDbContext.UserActives
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+
+                if (getUserActive == null)
+                {
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+                }
+
+                var userActiveId = getUserActive.UserActiveId;
+
+                // ======================================================
+                // 1) Ambil data lama yang mau diupdate
+                // ======================================================
+                var data = await _applicationDbContext.TindakanAsuransis
+                    .FirstOrDefaultAsync(x => x.TindakanAsuransiId == id && x.IsDelete == false);
+
+                if (data == null)
+                {
+                    return NotFound(new { message = $"Data relasi dengan ID {id} tidak ditemukan || 404 Not Found" });
+                }
+
+                // ======================================================
+                // 2) Cek duplikasi (kecuali data yang sedang diupdate)
+                // ======================================================
+                bool isDuplicate = await _applicationDbContext.TindakanAsuransis
+                    .AnyAsync(c =>
+                        c.TindakanAsuransiId != id &&
+                        c.TindakanId == vm.TindakanId &&
+                        c.AsuransiId == vm.AsuransiId &&
+                        c.IsDelete == false
+                    );
+
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
+                }
+
+                // ======================================================
+                // 3) Update data
+                // ======================================================
+                data.TindakanId = vm.TindakanId;
+                data.AsuransiId = vm.AsuransiId;
+                // ============================
+                // MARKUP
+                // ============================
+                data.MarkupDokter = vm.MarkupDokter;
+                data.MarkupRs = vm.MarkupRs;
+                data.MarkupJp = vm.MarkupJp;
+                data.MarkupBahp = vm.MarkupBahp;
+                data.MarkupLainnya = vm.MarkupLainnya;
+                data.MarkupTotal = vm.MarkupTotal;
+
+                data.IsMarkupBerlaku = vm.IsMarkupBerlaku ;
+                data.MarkupDari = vm.MarkupDari;
+                data.MarkupSampai = vm.MarkupSampai;
+
+                // ============================
+                // DISKON
+                // ============================
+                data.DiskonDokter = vm.DiskonDokter;
+                data.DiskonRs = vm.DiskonRs;
+                data.DiskonJp = vm.DiskonJp;
+                data.DiskonBahp = vm.DiskonBahp;
+                data.DiskonTotal = vm.DiskonTotal;
+
+                data.IsDiskonBerlaku = vm.IsDiskonBerlaku;
+                data.DiskonDari = vm.DiskonDari;
+                data.DiskonSampai = vm.DiskonSampai;
+
+
+                // audit update (jika ada fieldnya)
+                data.UpdateDateTime = DateTime.UtcNow;
+                data.UpdateBy = userActiveId;
+
+                // ======================================================
+                // 4) Save
+                // ======================================================
+                int result = await _applicationDbContext.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    return Ok(new { message = "Update Data Relasi Berhasil || 200 OK" });
+                }
+
+                return StatusCode(500, new { message = "Data tidak berhasil diupdate." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
     }
 }
