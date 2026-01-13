@@ -357,6 +357,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         int page = 1,
         int perPage = 10,
         string? search = null,
+        Guid? kelasid = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -393,6 +394,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 query = query.Where(u =>
                     EF.Functions.ILike(u.KelasId.ToString(), search)
                 );
+            }
+
+            // filter based on kelas id
+            if (kelasid.HasValue)
+            {
+                query = query.Where(u=>u.KelasId == kelasid.Value);
             }
 
             //// **Filter berdasarkan tanggal**
