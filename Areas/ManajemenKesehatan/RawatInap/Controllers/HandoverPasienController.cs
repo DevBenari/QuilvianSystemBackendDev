@@ -4,11 +4,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.ViewModels;
 using QuilvianSystemBackendDev.Interfaces;
@@ -30,6 +32,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         private readonly ITTDService _ttdService;
         private readonly ILogger<HandoverPasienController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly IHubContext<HandoverPasienHub> _hubContext;
 
         public HandoverPasienController(
             ApplicationDbContext applicationDbContext,
@@ -37,7 +40,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             SignInManager<ApplicationUser> signInManager,
             ILogger<HandoverPasienController> logger,
             IWebHostEnvironment webHostEnvironment,
-            ITTDService ttdService)
+            ITTDService ttdService,
+            IHubContext<HandoverPasienHub> hubContext)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
@@ -45,6 +49,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
             _ttdService = ttdService;
+            _hubContext = hubContext;
         }
 
         [HttpGet("{id}")]
@@ -241,8 +246,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 await _applicationDbContext.SaveChangesAsync();
                 await trx.CommitAsync();
 
+                await _hubContext.Clients.All.SendAsync("Handover Pasien Created", new
+                {
+                    Action = "create",
+                    id = handoverId
+                });
+
                 return CreatedAtAction(nameof(GetById), new { id = handoverId }, new
                 {
+
                     message = "Berhasil membuat handover pasien.",
                     id = handoverId
                 });
@@ -295,7 +307,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                 await _applicationDbContext.SaveChangesAsync();
                 await trx.CommitAsync();
-
+                await _hubContext.Clients.All.SendAsync("Update TTD CRO Handover Pasien", new
+                {
+                    Action = "update",
+                    id = handover.HandoverPasienId
+                });
                 return Ok(new { message = "Berhasil update TTD CRO pada handover pasien.", id });
             }
             catch (Exception ex)
@@ -346,7 +362,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                 await _applicationDbContext.SaveChangesAsync();
                 await trx.CommitAsync();
-
+                await _hubContext.Clients.All.SendAsync("Update TTD perawat Handover Pasien", new
+                {
+                    Action = "update",
+                    id = handover.HandoverPasienId
+                });
                 return Ok(new { message = "Berhasil update TTD perawat pada handover pasien.", id });
             }
             catch (Exception ex)
@@ -439,7 +459,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                 await _applicationDbContext.SaveChangesAsync();
                 await trx.CommitAsync();
-
+                await _hubContext.Clients.All.SendAsync("Update Handover Pasien", new
+                {
+                    Action = "update",
+                    id = handover.HandoverPasienId
+                });
                 return Ok(new { message = "Berhasil update handover pasien (detail lama tidak dihapus).", id });
             }
             catch (Exception ex)

@@ -254,6 +254,7 @@ app.MapHub<IGDTriageHub>("/hubs/IGDtriage");
 app.MapHub<PindahRuanganHub>("/hubs/pindahruangan");
 app.MapHub<IGDAssessmentAwalHub>("/hubs/IGDassessmentawal");
 app.MapHub<NosokomialHub>("/hubs/nosokomial");
+app.MapHub<HandoverPasienHub>("/hubs/handoverpasien");
 
 // signal R Laboratorium
 app.MapHub<LabBookingHub>("/hubs/labbooking");

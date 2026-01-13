@@ -528,6 +528,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         Guid? bedId = null,
         Guid? kamarId = null,
         Guid? kelasId = null,
+        string? search = null,
         string? namaKamar = null,
         string? orderBy = "TarifHarian",
         string? sortDirection = "desc",
@@ -582,11 +583,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                          });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-            if (!string.IsNullOrWhiteSpace(namaKamar))
+            if (!string.IsNullOrWhiteSpace(search))
             {
-                namaKamar = $"%{namaKamar.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
-                    EF.Functions.ILike(u.NamaKamar, namaKamar)
+                    EF.Functions.ILike(u.NamaKelas, search) ||
+                    EF.Functions.ILike(u.NamaKamar, search)
                 );
             }
 
