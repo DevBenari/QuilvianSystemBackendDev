@@ -363,6 +363,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                         user.FotoName,
                         user.FotoPath,
                         dataDokter,
+                        user.IsPerawat
                     }
                 });
             }
