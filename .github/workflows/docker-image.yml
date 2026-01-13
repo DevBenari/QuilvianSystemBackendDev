@@ -55,7 +55,7 @@ jobs:
             --memory="1g" --memory-swap="1g" \
             --restart unless-stopped \
             -e ASPNETCORE_ENVIRONMENT=Production \
-            -v /opt/quilvian/config/appsettings.Production.json:/app/appsettings.Production.json:ro \
+            -v /opt/quilvian/config/appsettings.json:/app/appsettings.json:ro \
             $IMAGE_NAME
 
           fi
