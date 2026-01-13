@@ -27,7 +27,7 @@ jobs:
 
           echo "Resetting local changes..."
           git reset --hard origin/QuilvianDev
-          git clean -fd
+          git clean -fd -e appsettings.json
 
           echo "Pulling latest changes..."
           git pull origin QuilvianDev
