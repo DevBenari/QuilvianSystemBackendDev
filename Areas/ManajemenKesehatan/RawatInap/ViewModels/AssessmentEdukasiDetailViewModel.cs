@@ -17,7 +17,7 @@
 
         // 🔹 File Upload untuk tanda tangan perawat
         public Guid? TTDPerawatId { get; set; }        // File tanda tangan perawat
-        public string? EdukasiDetail { get; set; }
+        public string? TopikEdukasiLainnya { get; set; }
         public string? EvaluasiEdukasi { get; set; }      // Evaluasi hasil edukasi
         public string? Keterangan { get; set; }           // Catatan tambahan
         public DateTime? TglEvaluasiEdukasi { get; set; } // Tanggal evaluasi dilakukan
