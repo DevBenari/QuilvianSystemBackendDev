@@ -1725,11 +1725,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 var login = await (
                     from u in _applicationDbContext.UserActives.AsNoTracking()
-                    join t in _applicationDbContext.TipeUsers.AsNoTracking()   // <-- SESUAIKAN DbSet
+                    join t in _applicationDbContext.TipeUsers.AsNoTracking()
                         on u.TipeUserId equals t.TipeUserId
                     where u.Email == emailLogin
-                          && u.IsDelete == false
-                          && t.IsDelete == false
+                          && (u.IsDelete == false || u.IsDelete == null)
+                          && (t.IsDelete == false || t.IsDelete == null)
                     select new
                     {
                         u.UserActiveId,
@@ -1742,9 +1742,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 if (login == null)
                     return Unauthorized(new { message = "User aktif tidak ditemukan." });
 
-                // Tentukan role berdasarkan NamaTipeUser / KodeTipeUser
                 var tipeName = (login.TipeUserName ?? "").Trim().ToLowerInvariant();
-
                 bool isDokter = tipeName == "dokter";
                 bool isPerawat = tipeName == "perawat";
                 bool isAdmin = tipeName.Contains("admin") || tipeName.Contains("superadmin");
@@ -1758,8 +1756,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 Guid? dokterLoginId = null;
                 if (isDokter)
                 {
-                    dokterLoginId = await _applicationDbContext.Dokters
-                        .AsNoTracking()
+                    dokterLoginId = await _applicationDbContext.Dokters.AsNoTracking()
                         .Where(d => d.UserActiveId == login.UserActiveId && (d.IsDelete == false || d.IsDelete == null))
                         .Select(d => (Guid?)d.DokterId)
                         .FirstOrDefaultAsync();
@@ -1778,7 +1775,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 // =====================================================
                 var jumlahPerJenis = _applicationDbContext.Kunjungans
                     .AsNoTracking()
-                    .Where(k => !k.IsDelete)
+                    .Where(k => k.IsDelete == false)
                     .GroupBy(k => new { k.PasienId, k.JenisKunjungan })
                     .Select(g => new
                     {
@@ -1788,59 +1785,88 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     });
 
                 // =====================================================
-                // 3) Base query (IQueryable) - no ToList dulu
+                // 3) Base query dengan LEFT JOIN lengkap (IQueryable)
                 // =====================================================
                 var baseQuery =
                     from a in _applicationDbContext.Kunjungans.AsNoTracking()
+                    where a.IsDelete == false
 
-                    join creator in _applicationDbContext.UserActives.AsNoTracking()
-                        on a.CreateBy equals creator.UserActiveId into creatorGroup
-                    from creator in creatorGroup.DefaultIfEmpty()
+                    join u0 in _applicationDbContext.UserActives.AsNoTracking()
+                        on a.CreateBy equals u0.UserActiveId into userGroup
+                    from u in userGroup.DefaultIfEmpty()
 
-                    join poli in _applicationDbContext.Polikliniks.AsNoTracking()
-                        on a.PoliklinikId equals poli.PoliklinikId into poliGroup
-                    from poli in poliGroup.DefaultIfEmpty()
+                    join p0 in _applicationDbContext.Polikliniks.AsNoTracking()
+                        on a.PoliklinikId equals p0.PoliklinikId into poliGroup
+                    from p in poliGroup.DefaultIfEmpty()
 
-                    join asu in _applicationDbContext.Asuransis.AsNoTracking()
-                        on a.AsuransiId equals asu.AsuransiId into asuGroup
-                    from asu in asuGroup.DefaultIfEmpty()
+                    join o0 in _applicationDbContext.Asuransis.AsNoTracking()
+                        on a.AsuransiId equals o0.AsuransiId into asuransiGroup
+                    from o in asuransiGroup.DefaultIfEmpty()
 
-                    join ps in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking()
-                        on a.PasienId equals ps.PendaftaranPasienBaruId into pasienGroup
+                    join ps0 in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking()
+                        on a.PasienId equals ps0.PendaftaranPasienBaruId into pasienGroup
                     from ps in pasienGroup.DefaultIfEmpty()
 
-                    join d in _applicationDbContext.Dokters.AsNoTracking()
-                        on a.DokterId equals d.DokterId into dokterGroup
+                    join d0 in _applicationDbContext.Dokters.AsNoTracking()
+                        on a.DokterId equals d0.DokterId into dokterGroup
                     from d in dokterGroup.DefaultIfEmpty()
 
                     join j in jumlahPerJenis
                         on new { a.PasienId, a.JenisKunjungan }
                         equals new { j.PasienId, j.JenisKunjungan }
 
-                    where a.IsDelete == false
+                    join bb0 in _applicationDbContext.BookingBedRanaps.AsNoTracking()
+                        on a.KunjunganID equals bb0.KunjunganId into bookingGroup
+                    from bb in bookingGroup.DefaultIfEmpty()
+
+                    join b0 in _applicationDbContext.Beds.AsNoTracking()
+                        on bb.BedId equals b0.BedId into bedGroup
+                    from b in bedGroup.DefaultIfEmpty()
+
+                    join k0 in _applicationDbContext.Kamars.AsNoTracking()
+                        on bb.KamarId equals k0.KamarId into kamarGroup
+                    from k in kamarGroup.DefaultIfEmpty()
+
+                    join kl0 in _applicationDbContext.Kelass.AsNoTracking()
+                        on k.KelasId equals kl0.KelasId into kelasGroup
+                    from kl in kelasGroup.DefaultIfEmpty()
+
+                    join sp0 in _applicationDbContext.SuratPengantarRawatInaps.AsNoTracking()
+                        on a.KunjunganID equals sp0.KunjunganId into suratGroup
+                    from sp in suratGroup.DefaultIfEmpty()
 
                     select new
                     {
                         a.KunjunganID,
+
+                        a.AsuransiId,
+                        NamaAsuransi = o != null && o.NamaAsuransi != null ? o.NamaAsuransi : "Tunai",
+
+                        a.PoliklinikId,
+                        NamaPoliklinik = p != null ? p.NamaPoliklinik : null,
+
                         a.DokterId,
                         NamaDokter = d != null ? d.NmDokter : null,
                         FotoDokter = d != null ? d.FotoName : null,
 
                         a.PasienId,
+                        a.AsalKunjungan,
                         NamaPasien = ps != null ? ps.NamaLengkap : null,
-                        ps.TanggalLahir,
-                        ps.JenisKelamin,
-                        ps.NoPasien,
+                        TanggalLahir = ps != null ? ps.TanggalLahir : null,
+                        JenisKelamin = ps != null ? ps.JenisKelamin : null,
+                        NoPasien = ps != null ? ps.NoPasien : null,
+                        NoWali2 = ps != null ? ps.NoWali2 : null,
+                        NoWali3 = ps != null ? ps.NoWali3 : null,
+                        NamaWali2 = ps != null ? ps.NamaWali2 : null,
+                        NamaWali3 = ps != null ? ps.NamaWali3 : null,
+                        NamaKontakDarurat = ps != null ? ps.NamaKontakDarurat : null,
+                        NoTeleponDarurat = ps != null ? ps.NoTeleponDarurat : null,
+                        EmailPasien = ps != null ? ps.Email : null,
+                        AlamatDomisili = ps != null ? ps.AlamatDomisili : null,
+                        AlamatDarurat = ps != null ? ps.AlamatDarurat : null,
+                        AlamatIdentitas = ps != null ? ps.AlamatIdentitas : null,
 
                         a.NoRekamMedis,
-                        a.AsalKunjungan,
-
-                        a.PoliklinikId,
-                        NamaPoliklinik = poli != null ? poli.NamaPoliklinik : null,
-
-                        a.AsuransiId,
-                        NamaAsuransi = asu != null && asu.NamaAsuransi != null ? asu.NamaAsuransi : "Tunai",
-
                         a.TipePasien,
                         a.TipePembayaran,
                         a.JenisKunjungan,
@@ -1848,7 +1874,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                         a.CreateDateTime,
                         a.CreateBy,
-                        CreateByName = creator != null ? creator.FullName : null,
+                        CreateByName = u != null ? u.FullName : null,
 
                         a.IsFinished,
                         a.IsScreening,
@@ -1862,26 +1888,42 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.KondisiKeluar,
                         a.IsFinishedKasir,
 
-                        JumlahJenisKunjungan = j.JumlahJenis
+                        JumlahJenisKunjungan = j.JumlahJenis,
+
+                        BookingBedRanapId = bb != null ? (Guid?)bb.BookingBedRanapId : null,
+                        KelasId = kl != null ? (Guid?)kl.KelasId : null,
+                        KamarId = bb != null ? (Guid?)bb.KamarId : null,
+                        KamarNama = k != null ? k.NamaKamar : null,
+                        LantaiKamar = k != null ? k.Lantai : null,
+                        KelasNama = kl != null ? kl.NamaKelas : null,
+                        BedId = bb != null ? (Guid?)bb.BedId : null,
+                        NomorKamar = bb != null ? bb.NoKamar : null,
+                        NomorBed = b != null ? b.NomorBed : null,
+                        StatusBed = bb != null ? bb.StatusBed : null,
+                        KeteranganBed = bb != null ? bb.Keterangan : null,
+                        TglKeluar = bb != null ? bb.TglKeluar : null,
+                        TglMasuk = bb != null ? bb.TglMasuk : null,
+
+                        NomorSuratPengantar = sp != null ? sp.NomorSuratPengantar : null,
+                        Diagnosa = sp != null ? sp.Diagnosa : null,
+                        AsalUnit = sp != null ? sp.AsalUnit : null
                     };
 
                 // =====================================================
-                // 4) Apply rule akses
+                // 4) Rule akses: dokter hanya lihat pasiennya
                 // =====================================================
                 if (isDokter)
                 {
-                    // Dokter: hanya pasiennya sendiri (dr budi hanya lihat pasien dr budi)
                     baseQuery = baseQuery.Where(x => x.DokterId == dokterLoginId!.Value);
                 }
                 else
                 {
-                    // Perawat/Admin: boleh semua, optional filter dokterId dari query
                     if (dokterId.HasValue && dokterId.Value != Guid.Empty)
                         baseQuery = baseQuery.Where(x => x.DokterId == dokterId.Value);
                 }
 
                 // =====================================================
-                // 5) Filter dinamis lainnya
+                // 5) Filter dinamis
                 // =====================================================
                 if (isFinished.HasValue) baseQuery = baseQuery.Where(x => x.IsFinished == isFinished.Value);
                 if (isPresent.HasValue) baseQuery = baseQuery.Where(x => x.IsPresent == isPresent.Value);
@@ -1956,7 +1998,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // =====================================================
-                // 6) Sorting (minimal)
+                // 6) Sorting
                 // =====================================================
                 bool desc = (sortDirection ?? "desc").ToLower() == "desc";
 
@@ -1968,7 +2010,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 };
 
                 // =====================================================
-                // 7) Paging DB (cepat)
+                // 7) Paging di DB
                 // =====================================================
                 var totalRows = await baseQuery.CountAsync();
                 var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
@@ -1979,7 +2021,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     .ToListAsync();
 
                 // =====================================================
-                // 8) Alergi hanya untuk kunjungan di page
+                // 8) Alergi hanya untuk data yang tampil (anti N+1 & hemat)
                 // =====================================================
                 var kunjunganIds = rows.Select(x => x.KunjunganID).ToList();
 
@@ -2018,15 +2060,28 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         r.TanggalLahir,
                         r.JenisKelamin,
                         r.NoPasien,
+                        r.NoWali2,
+                        r.NoWali3,
+                        r.NamaWali2,
+                        r.NamaWali3,
+                        r.NamaKontakDarurat,
+                        r.NoTeleponDarurat,
+                        Email = r.EmailPasien,
+                        r.AlamatDomisili,
+                        r.AlamatDarurat,
+                        r.AlamatIdentitas,
                         Umur = r.TanggalLahir.HasValue ? HitungUmurLengkap(r.TanggalLahir) : null,
+
                         r.NoRekamMedis,
                         r.TipePasien,
                         r.TipePembayaran,
                         r.JenisKunjungan,
                         r.StatusPengkajian,
+
                         r.CreateDateTime,
                         r.CreateBy,
                         r.CreateByName,
+
                         r.IsFinished,
                         r.IsScreening,
                         r.IsPresent,
@@ -2044,6 +2099,25 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             : $"{host}/FotoDokter/dokter.jpg",
 
                         r.JumlahJenisKunjungan,
+
+                        r.BookingBedRanapId,
+                        r.KelasId,
+                        r.KamarId,
+                        r.KamarNama,
+                        r.LantaiKamar,
+                        r.KelasNama,
+                        r.BedId,
+                        r.NomorKamar,
+                        r.NomorBed,
+                        r.StatusBed,
+                        Keterangan = r.KeteranganBed,
+                        r.TglKeluar,
+                        r.TglMasuk,
+
+                        r.NomorSuratPengantar,
+                        r.Diagnosa,
+                        r.AsalUnit,
+
                         Alergic = al ?? new List<string>()
                     };
                 }).ToList();
@@ -2067,6 +2141,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
 
     }
 }
