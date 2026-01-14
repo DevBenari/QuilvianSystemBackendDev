@@ -1357,340 +1357,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-        [HttpGet("paged")]
-        public async Task<IActionResult> PagedKunjunganAsync(
-            int page = 1,
-            int perPage = 10,
-            string? search = null,
-            string? orderBy = "CreateDateTime",
-            string? sortDirection = "desc",
-            [FromQuery] DateTime? startDate = null,
-            [FromQuery] DateTime? endDate = null,
-            [FromQuery] PeriodeFilter? periode = null,
-            [FromQuery] bool? isFinished = null,
-            [FromQuery] bool? isScreening = null,
-            [FromQuery] bool? isPresent = null,
-            [FromQuery] bool? isFinishedKasir = null,
-            [FromQuery] TipePasienFilter? TipePasien = null,
-            [FromQuery] EnumJenisKunjungan? JenisKunjungan = null,
-            [FromQuery] string? AsalKunjungan = null,
-            [FromQuery] Guid? dokterId = null
-        )
-        {
-            try
-            {
-                // ✅ Ambil data alergi (anti N+1)
-                var allAlergic = await _applicationDbContext.PainAssessments
-                    .Where(x => !x.IsDelete)
-                    .GroupBy(x => x.KunjunganId)
-                    .Select(g => new
-                    {
-                        KunjunganId = g.Key,
-                        AlergicList = g.Select(x => x.Alergic).Distinct().ToList()
-                    })
-                    .ToListAsync();
-
-                // ✅ Hitung jumlah kunjungan per pasien per jenis
-                var jumlahPerJenis = _applicationDbContext.Kunjungans
-                    .Where(k => !k.IsDelete)
-                    .GroupBy(k => new { k.PasienId, k.JenisKunjungan })
-                    .Select(g => new
-                    {
-                        g.Key.PasienId,
-                        g.Key.JenisKunjungan,
-                        JumlahJenis = g.Count()
-                    });
-
-                // ✅ Base query dengan LEFT JOIN (DefaultIfEmpty)
-                var baseQuery =
-                    from a in _applicationDbContext.Kunjungans
-                    join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId into userGroup
-                    from u in userGroup.DefaultIfEmpty()
-
-                    join p in _applicationDbContext.Polikliniks on a.PoliklinikId equals p.PoliklinikId into poliGroup
-                    from p in poliGroup.DefaultIfEmpty()
-
-                    join o in _applicationDbContext.Asuransis on a.AsuransiId equals o.AsuransiId into asuransiGroup
-                    from o in asuransiGroup.DefaultIfEmpty()
-
-                    join ps in _applicationDbContext.PendaftaranPasienBarus on a.PasienId equals ps.PendaftaranPasienBaruId into pasienGroup
-                    from ps in pasienGroup.DefaultIfEmpty()
-
-                    join d in _applicationDbContext.Dokters on a.DokterId equals d.DokterId into dokterGroup
-                    from d in dokterGroup.DefaultIfEmpty()
-
-                    join j in jumlahPerJenis on new { a.PasienId, a.JenisKunjungan } equals new { j.PasienId, j.JenisKunjungan }
-
-                    join bb in _applicationDbContext.BookingBedRanaps on a.KunjunganID equals bb.KunjunganId into bookingGroup
-                    from bb in bookingGroup.DefaultIfEmpty()
-
-                    join b in _applicationDbContext.Beds on bb.BedId equals b.BedId into bedGroup
-                    from b in bedGroup.DefaultIfEmpty()
-
-                    join k in _applicationDbContext.Kamars on bb.KamarId equals k.KamarId into kamarGroup
-                    from k in kamarGroup.DefaultIfEmpty()
-
-                    join kl in _applicationDbContext.Kelass on k.KelasId equals kl.KelasId into kelasGroup
-                    from kl in kelasGroup.DefaultIfEmpty()
-
-                    join sp in _applicationDbContext.SuratPengantarRawatInaps on a.KunjunganID equals sp.KunjunganId into suratGroup
-                    from sp in suratGroup.DefaultIfEmpty()
-
-                    where a.IsDelete == false
-                    select new
-                    {
-                        a.KunjunganID,
-                        a.AsuransiId,
-                        NamaAsuransi = o != null && o.NamaAsuransi != null ? o.NamaAsuransi : "Tunai",
-                        a.PoliklinikId,
-                        NamaPoliklinik = p != null ? p.NamaPoliklinik : null,
-                        a.DokterId,
-                        NamaDokter = d != null ? d.NmDokter : null,
-                        a.PasienId,
-                        a.AsalKunjungan,
-                        NamaPasien = ps != null ? ps.NamaLengkap : null,
-                        ps.TanggalLahir,
-                        ps.JenisKelamin,
-                        ps.NoPasien,
-                        ps.NoWali2,
-                        ps.NoWali3,
-                        ps.NamaWali2,
-                        ps.NamaWali3,
-                        ps.NamaKontakDarurat,
-                        ps.NoTeleponDarurat,
-                        ps.Email,
-                        AlamatDomisili = ps != null ? ps.AlamatDomisili : null,
-                        AlamatDarurat = ps != null ? ps.AlamatDarurat : null,
-                        AlamatIdentitas = ps != null ? ps.AlamatIdentitas : null,
-                        Umur = ps != null ? HitungUmurLengkap(ps.TanggalLahir) : null,
-                        a.NoRekamMedis,
-                        a.TipePasien,
-                        a.TipePembayaran,
-                        a.JenisKunjungan,
-                        a.StatusPengkajian,
-                        a.CreateDateTime,
-                        a.CreateBy,
-                        a.IsFinished,
-                        a.IsScreening,
-                        a.IsPresent,
-                        a.IsTriage,
-                        a.IsCTTPasienIGD,
-                        a.Antrian,
-                        a.DepositRanap,
-                        TglMasukKunjungan = a.TglMasuk,
-                        a.CaraMasukRS,
-                        a.KondisiKeluar,
-                        a.IsFinishedKasir,
-                        d.NmDokter,
-                        gambardokter = !string.IsNullOrEmpty(d.FotoName)
-                            ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
-                            : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg",
-                        CreateByName = u != null ? u.FullName : null,
-                        JumlahJenisKunjungan = j.JumlahJenis,
-                        BookingBedRanapId = bb != null ? (Guid?)bb.BookingBedRanapId : null,
-                        KelasId = kl != null ? (Guid?)kl.KelasId : null,
-                        KamarId = bb != null ? bb.KamarId : null,
-                        KamarNama = k != null ? k.NamaKamar : null,
-                        LantaiKamar = k != null ? k.Lantai : null,
-                        KelasNama = kl != null ? kl.NamaKelas : null,
-                        BedId = bb != null ? bb.BedId : null,
-                        NomorKamar = bb != null ? bb.NoKamar : null,
-                        NomorBed = b != null ? b.NomorBed : null,
-                        StatusBed = bb != null ? bb.StatusBed : null,
-                        Keterangan = bb != null ? bb.Keterangan : null,
-                        TglKeluar = bb != null ? bb.TglKeluar : null,
-                        TglMasuk = bb != null ? bb.TglMasuk : null,
-                        NomorSuratPengantar = sp != null ? sp.NomorSuratPengantar : null,
-                        Diagnosa = sp != null ? sp.Diagnosa : null,
-                        AsalUnit = sp != null ? sp.AsalUnit : null
-                    };
-
-                // ✅ Filter dinamis
-                if (isFinished.HasValue) baseQuery = baseQuery.Where(u => u.IsFinished == isFinished.Value);
-                if (isPresent.HasValue) baseQuery = baseQuery.Where(u => u.IsPresent == isPresent.Value);
-                if (isScreening.HasValue) baseQuery = baseQuery.Where(u => u.IsScreening == isScreening.Value);
-                if (isFinishedKasir.HasValue) baseQuery = baseQuery.Where(u => u.IsFinishedKasir == isFinishedKasir.Value);
-                if (TipePasien.HasValue) baseQuery = baseQuery.Where(u => u.TipePasien == TipePasien.Value.ToString());
-                if (JenisKunjungan.HasValue) baseQuery = baseQuery.Where(u => u.JenisKunjungan == JenisKunjungan.Value.ToString());
-                if (dokterId.HasValue) baseQuery = baseQuery.Where(u => u.DokterId == dokterId.Value);
-
-                // ✅ Filter tanggal
-                if (startDate.HasValue && endDate.HasValue)
-                {
-                    DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
-                    DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
-                    baseQuery = baseQuery.Where(u => u.CreateDateTime >= startUtc && u.CreateDateTime <= endUtc);
-                }
-
-                // ✅ Filter asal kunjungan
-                if (!string.IsNullOrWhiteSpace(AsalKunjungan))
-                {
-                    string pattern = $"%{AsalKunjungan.ToLower()}%";
-                    baseQuery = baseQuery.Where(u =>
-                        EF.Functions.ILike(u.AsalKunjungan, pattern));
-                }
-
-                // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
-                if (periode.HasValue)
-                {
-                    DateTime today = DateTime.UtcNow.Date;
-
-                    switch (periode)
-                    {
-                        case PeriodeFilter.Today:
-                            baseQuery = baseQuery.Where(u => u.CreateDateTime.Date == today);
-                            break;
-                        case PeriodeFilter.ThisWeek:
-                            baseQuery = baseQuery.Where(u =>
-                                u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
-                                u.CreateDateTime.Date <= today
-                            );
-                            break;
-                        case PeriodeFilter.LastWeek:
-                            baseQuery = baseQuery.Where(u =>
-                                u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                                u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)
-                            );
-                            break;
-                        case PeriodeFilter.ThisMonth:
-                            baseQuery = baseQuery.Where(u =>
-                                u.CreateDateTime.Month == today.Month &&
-                                u.CreateDateTime.Year == today.Year
-                            );
-                            break;
-                        case PeriodeFilter.LastMonth:
-                            baseQuery = baseQuery.Where(u =>
-                                u.CreateDateTime.Month == today.Month - 1 &&
-                                u.CreateDateTime.Year == today.Year
-                            );
-                            break;
-                        case PeriodeFilter.ThisYear:
-                            baseQuery = baseQuery.Where(u => u.CreateDateTime.Year == today.Year);
-                            break;
-                        case PeriodeFilter.LastYear:
-                            baseQuery = baseQuery.Where(u => u.CreateDateTime.Year == today.Year - 1);
-                            break;
-                        case PeriodeFilter.Last3Months:
-                            baseQuery = baseQuery.Where(u => u.CreateDateTime >= today.AddMonths(-3));
-                            break;
-                        case PeriodeFilter.Last6Months:
-                            baseQuery = baseQuery.Where(u => u.CreateDateTime >= today.AddMonths(-6));
-                            break;
-                    }
-                }
-
-                // ✅ Filter pencarian
-                if (!string.IsNullOrWhiteSpace(search))
-                {
-                    string pattern = $"%{search.ToLower()}%";
-                    baseQuery = baseQuery.Where(u =>
-                        EF.Functions.ILike(u.NamaPasien, pattern) ||
-                        EF.Functions.ILike(u.NmDokter, pattern) ||
-                        EF.Functions.ILike(u.NoRekamMedis, pattern) ||
-                        EF.Functions.ILike(u.NamaPoliklinik, pattern) ||
-                        EF.Functions.ILike(u.Antrian, pattern));
-                }
-
-                // ✅ Eksekusi & paging
-                var list = await baseQuery.OrderByDescending(u => u.CreateDateTime).ToListAsync();
-
-                var totalRows = list.Count;
-                var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-                var rows = list.Skip((page - 1) * perPage).Take(perPage).ToList();
-
-                // ✅ Tambahkan data alergi
-                var result = rows.Select(r =>
-                {
-                    var alergi = allAlergic.FirstOrDefault(a => a.KunjunganId == r.KunjunganID);
-                    return new
-                    {
-                        r.KunjunganID,
-                        r.AsuransiId,
-                        r.NamaAsuransi,
-                        r.PoliklinikId,
-                        r.NamaPoliklinik,
-                        r.DokterId,
-                        r.NamaDokter,
-                        r.PasienId,
-                        r.AsalKunjungan,
-                        r.NamaPasien,
-                        r.TanggalLahir,
-                        r.JenisKelamin,
-                        r.NoPasien,
-                        r.NoWali2,
-                        r.NoWali3,
-                        r.NamaWali2,
-                        r.NamaWali3,
-                        r.NamaKontakDarurat,
-                        r.NoTeleponDarurat,
-                        r.Email,
-                        r.Umur,
-                        r.AlamatDarurat,
-                        r.AlamatDomisili,
-                        r.AlamatIdentitas,
-                        r.NoRekamMedis,
-                        r.TipePasien,
-                        r.TipePembayaran,
-                        r.JenisKunjungan,
-                        r.StatusPengkajian,
-                        r.CreateDateTime,
-                        r.CreateBy,
-                        r.IsFinished,
-                        r.IsScreening,
-                        r.IsPresent,
-                        r.IsTriage,
-                        r.IsCTTPasienIGD,
-                        TglMasukKunjungan = r.TglMasuk,
-                        r.CaraMasukRS,
-                        r.KondisiKeluar,
-                        r.Antrian,
-                        r.DepositRanap,
-                        r.IsFinishedKasir,
-                        r.NmDokter,
-                        r.gambardokter,
-                        r.CreateByName,
-                        r.JumlahJenisKunjungan,
-                        r.BookingBedRanapId,
-                        r.KelasId,
-                        r.KamarId,
-                        r.KamarNama,
-                        r.LantaiKamar,
-                        r.KelasNama,
-                        r.BedId,
-                        r.NomorKamar,
-                        r.NomorBed,
-                        r.StatusBed,
-                        r.Keterangan,
-                        r.TglKeluar,
-                        r.TglMasuk,
-                        r.NomorSuratPengantar,
-                        r.Diagnosa,
-                        r.AsalUnit,
-                        Alergic = alergi?.AlergicList ?? new List<string>()
-                    };
-                }).ToList();
-
-                return Ok(new
-                {
-                    status = "success",
-                    message = "Data kunjungan berhasil diambil.",
-                    data = new
-                    {
-                        Rows = result,
-                        TotalRows = totalRows,
-                        CurrentPage = page,
-                        PerPage = perPage,
-                        TotalPages = totalPages
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
-            }
-        }
-
-
         //[HttpGet("paged")]
         //public async Task<IActionResult> PagedKunjunganAsync(
         //    int page = 1,
@@ -1713,71 +1379,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         //{
         //    try
         //    {
-        //        if (page < 1) page = 1;
-        //        if (perPage < 1) perPage = 10;
-
-        //        // =====================================================
-        //        // 0) Ambil user login + tipe user (JOIN MstTipeUser)
-        //        // =====================================================
-        //        var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        //        if (string.IsNullOrWhiteSpace(emailLogin))
-        //            return Unauthorized(new { message = "User tidak terautentikasi." });
-
-        //        var login = await (
-        //            from u in _applicationDbContext.UserActives.AsNoTracking()
-        //            join t in _applicationDbContext.TipeUsers.AsNoTracking()   // <-- SESUAIKAN DbSet
-        //                on u.TipeUserId equals t.TipeUserId
-        //            where u.Email == emailLogin
-        //                  && u.IsDelete == false
-        //                  && t.IsDelete == false
-        //            select new
+        //        // ✅ Ambil data alergi (anti N+1)
+        //        var allAlergic = await _applicationDbContext.PainAssessments
+        //            .Where(x => !x.IsDelete)
+        //            .GroupBy(x => x.KunjunganId)
+        //            .Select(g => new
         //            {
-        //                u.UserActiveId,
-        //                u.FullName,
-        //                u.TipeUserId,
-        //                TipeUserName = t.NamaTipeUser,
-        //            }
-        //        ).FirstOrDefaultAsync();
+        //                KunjunganId = g.Key,
+        //                AlergicList = g.Select(x => x.Alergic).Distinct().ToList()
+        //            })
+        //            .ToListAsync();
 
-        //        if (login == null)
-        //            return Unauthorized(new { message = "User aktif tidak ditemukan." });
-
-        //        // Tentukan role berdasarkan NamaTipeUser / KodeTipeUser
-        //        var tipeName = (login.TipeUserName ?? "").Trim().ToLowerInvariant();
-
-        //        bool isDokter = tipeName == "dokter" ;
-        //        bool isPerawat = tipeName == "perawat" ;
-        //        bool isAdmin = tipeName.Contains("admin") || tipeName.Contains("superadmin") ;
-
-        //        if (!isDokter && !isPerawat && !isAdmin)
-        //            return StatusCode(403, new { message = "Anda tidak memiliki akses untuk melihat daftar pasien." });
-
-        //        // =====================================================
-        //        // 1) Jika Dokter login → ambil DokterId dari MstDokter.UserActiveId
-        //        // =====================================================
-        //        Guid? dokterLoginId = null;
-        //        if (isDokter)
-        //        {
-        //            dokterLoginId = await _applicationDbContext.Dokters
-        //                .AsNoTracking()
-        //                .Where(d => d.UserActiveId == login.UserActiveId && (d.IsDelete == false || d.IsDelete == null))
-        //                .Select(d => (Guid?)d.DokterId)
-        //                .FirstOrDefaultAsync();
-
-        //            if (!dokterLoginId.HasValue)
-        //            {
-        //                return StatusCode(403, new
-        //                {
-        //                    message = "Akun dokter Anda belum terhubung ke master dokter. Hubungi admin untuk menghubungkan UserActiveId ke data dokter."
-        //                });
-        //            }
-        //        }
-
-        //        // =====================================================
-        //        // 2) Subquery: jumlah kunjungan per pasien per jenis
-        //        // =====================================================
+        //        // ✅ Hitung jumlah kunjungan per pasien per jenis
         //        var jumlahPerJenis = _applicationDbContext.Kunjungans
-        //            .AsNoTracking()
         //            .Where(k => !k.IsDelete)
         //            .GroupBy(k => new { k.PasienId, k.JenisKunjungan })
         //            .Select(g => new
@@ -1787,69 +1401,75 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         //                JumlahJenis = g.Count()
         //            });
 
-        //        // =====================================================
-        //        // 3) Base query (IQueryable) - no ToList dulu
-        //        // =====================================================
+        //        // ✅ Base query dengan LEFT JOIN (DefaultIfEmpty)
         //        var baseQuery =
-        //            from a in _applicationDbContext.Kunjungans.AsNoTracking()
+        //            from a in _applicationDbContext.Kunjungans
+        //            join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId into userGroup
+        //            from u in userGroup.DefaultIfEmpty()
 
-        //            join creator in _applicationDbContext.UserActives.AsNoTracking()
-        //                on a.CreateBy equals creator.UserActiveId into creatorGroup
-        //            from creator in creatorGroup.DefaultIfEmpty()
+        //            join p in _applicationDbContext.Polikliniks on a.PoliklinikId equals p.PoliklinikId into poliGroup
+        //            from p in poliGroup.DefaultIfEmpty()
 
-        //            join poli in _applicationDbContext.Polikliniks.AsNoTracking()
-        //                on a.PoliklinikId equals poli.PoliklinikId into poliGroup
-        //            from poli in poliGroup.DefaultIfEmpty()
+        //            join o in _applicationDbContext.Asuransis on a.AsuransiId equals o.AsuransiId into asuransiGroup
+        //            from o in asuransiGroup.DefaultIfEmpty()
 
-        //            join asu in _applicationDbContext.Asuransis.AsNoTracking()
-        //                on a.AsuransiId equals asu.AsuransiId into asuGroup
-        //            from asu in asuGroup.DefaultIfEmpty()
-
-        //            join ps in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking()
-        //                on a.PasienId equals ps.PendaftaranPasienBaruId into pasienGroup
+        //            join ps in _applicationDbContext.PendaftaranPasienBarus on a.PasienId equals ps.PendaftaranPasienBaruId into pasienGroup
         //            from ps in pasienGroup.DefaultIfEmpty()
 
-        //            join d in _applicationDbContext.Dokters.AsNoTracking()
-        //                on a.DokterId equals d.DokterId into dokterGroup
+        //            join d in _applicationDbContext.Dokters on a.DokterId equals d.DokterId into dokterGroup
         //            from d in dokterGroup.DefaultIfEmpty()
 
-        //            join j in jumlahPerJenis
-        //                on new { a.PasienId, a.JenisKunjungan }
-        //                equals new { j.PasienId, j.JenisKunjungan }
+        //            join j in jumlahPerJenis on new { a.PasienId, a.JenisKunjungan } equals new { j.PasienId, j.JenisKunjungan }
+
+        //            join bb in _applicationDbContext.BookingBedRanaps on a.KunjunganID equals bb.KunjunganId into bookingGroup
+        //            from bb in bookingGroup.DefaultIfEmpty()
+
+        //            join b in _applicationDbContext.Beds on bb.BedId equals b.BedId into bedGroup
+        //            from b in bedGroup.DefaultIfEmpty()
+
+        //            join k in _applicationDbContext.Kamars on bb.KamarId equals k.KamarId into kamarGroup
+        //            from k in kamarGroup.DefaultIfEmpty()
+
+        //            join kl in _applicationDbContext.Kelass on k.KelasId equals kl.KelasId into kelasGroup
+        //            from kl in kelasGroup.DefaultIfEmpty()
+
+        //            join sp in _applicationDbContext.SuratPengantarRawatInaps on a.KunjunganID equals sp.KunjunganId into suratGroup
+        //            from sp in suratGroup.DefaultIfEmpty()
 
         //            where a.IsDelete == false
-
         //            select new
         //            {
         //                a.KunjunganID,
+        //                a.AsuransiId,
+        //                NamaAsuransi = o != null && o.NamaAsuransi != null ? o.NamaAsuransi : "Tunai",
+        //                a.PoliklinikId,
+        //                NamaPoliklinik = p != null ? p.NamaPoliklinik : null,
         //                a.DokterId,
         //                NamaDokter = d != null ? d.NmDokter : null,
-        //                FotoDokter = d != null ? d.FotoName : null,
-
         //                a.PasienId,
+        //                a.AsalKunjungan,
         //                NamaPasien = ps != null ? ps.NamaLengkap : null,
         //                ps.TanggalLahir,
         //                ps.JenisKelamin,
         //                ps.NoPasien,
-
+        //                ps.NoWali2,
+        //                ps.NoWali3,
+        //                ps.NamaWali2,
+        //                ps.NamaWali3,
+        //                ps.NamaKontakDarurat,
+        //                ps.NoTeleponDarurat,
+        //                ps.Email,
+        //                AlamatDomisili = ps != null ? ps.AlamatDomisili : null,
+        //                AlamatDarurat = ps != null ? ps.AlamatDarurat : null,
+        //                AlamatIdentitas = ps != null ? ps.AlamatIdentitas : null,
+        //                Umur = ps != null ? HitungUmurLengkap(ps.TanggalLahir) : null,
         //                a.NoRekamMedis,
-        //                a.AsalKunjungan,
-
-        //                a.PoliklinikId,
-        //                NamaPoliklinik = poli != null ? poli.NamaPoliklinik : null,
-
-        //                a.AsuransiId,
-        //                NamaAsuransi = asu != null && asu.NamaAsuransi != null ? asu.NamaAsuransi : "Tunai",
-
         //                a.TipePasien,
         //                a.TipePembayaran,
         //                a.JenisKunjungan,
         //                a.StatusPengkajian,
-
         //                a.CreateDateTime,
         //                a.CreateBy,
-        //                CreateByName = creator != null ? creator.FullName : null,
-
         //                a.IsFinished,
         //                a.IsScreening,
         //                a.IsPresent,
@@ -1861,148 +1481,127 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         //                a.CaraMasukRS,
         //                a.KondisiKeluar,
         //                a.IsFinishedKasir,
-
-        //                JumlahJenisKunjungan = j.JumlahJenis
+        //                d.NmDokter,
+        //                gambardokter = !string.IsNullOrEmpty(d.FotoName)
+        //                    ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
+        //                    : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg",
+        //                CreateByName = u != null ? u.FullName : null,
+        //                JumlahJenisKunjungan = j.JumlahJenis,
+        //                BookingBedRanapId = bb != null ? (Guid?)bb.BookingBedRanapId : null,
+        //                KelasId = kl != null ? (Guid?)kl.KelasId : null,
+        //                KamarId = bb != null ? bb.KamarId : null,
+        //                KamarNama = k != null ? k.NamaKamar : null,
+        //                LantaiKamar = k != null ? k.Lantai : null,
+        //                KelasNama = kl != null ? kl.NamaKelas : null,
+        //                BedId = bb != null ? bb.BedId : null,
+        //                NomorKamar = bb != null ? bb.NoKamar : null,
+        //                NomorBed = b != null ? b.NomorBed : null,
+        //                StatusBed = bb != null ? bb.StatusBed : null,
+        //                Keterangan = bb != null ? bb.Keterangan : null,
+        //                TglKeluar = bb != null ? bb.TglKeluar : null,
+        //                TglMasuk = bb != null ? bb.TglMasuk : null,
+        //                NomorSuratPengantar = sp != null ? sp.NomorSuratPengantar : null,
+        //                Diagnosa = sp != null ? sp.Diagnosa : null,
+        //                AsalUnit = sp != null ? sp.AsalUnit : null
         //            };
 
-        //        // =====================================================
-        //        // 4) Apply rule akses
-        //        // =====================================================
-        //        if (isDokter)
-        //        {
-        //            // Dokter: hanya pasiennya sendiri (dr budi hanya lihat pasien dr budi)
-        //            baseQuery = baseQuery.Where(x => x.DokterId == dokterLoginId!.Value);
-        //        }
-        //        else
-        //        {
-        //            // Perawat/Admin: boleh semua, optional filter dokterId dari query
-        //            if (dokterId.HasValue && dokterId.Value != Guid.Empty)
-        //                baseQuery = baseQuery.Where(x => x.DokterId == dokterId.Value);
-        //        }
+        //        // ✅ Filter dinamis
+        //        if (isFinished.HasValue) baseQuery = baseQuery.Where(u => u.IsFinished == isFinished.Value);
+        //        if (isPresent.HasValue) baseQuery = baseQuery.Where(u => u.IsPresent == isPresent.Value);
+        //        if (isScreening.HasValue) baseQuery = baseQuery.Where(u => u.IsScreening == isScreening.Value);
+        //        if (isFinishedKasir.HasValue) baseQuery = baseQuery.Where(u => u.IsFinishedKasir == isFinishedKasir.Value);
+        //        if (TipePasien.HasValue) baseQuery = baseQuery.Where(u => u.TipePasien == TipePasien.Value.ToString());
+        //        if (JenisKunjungan.HasValue) baseQuery = baseQuery.Where(u => u.JenisKunjungan == JenisKunjungan.Value.ToString());
+        //        if (dokterId.HasValue) baseQuery = baseQuery.Where(u => u.DokterId == dokterId.Value);
 
-        //        // =====================================================
-        //        // 5) Filter dinamis lainnya
-        //        // =====================================================
-        //        if (isFinished.HasValue) baseQuery = baseQuery.Where(x => x.IsFinished == isFinished.Value);
-        //        if (isPresent.HasValue) baseQuery = baseQuery.Where(x => x.IsPresent == isPresent.Value);
-        //        if (isScreening.HasValue) baseQuery = baseQuery.Where(x => x.IsScreening == isScreening.Value);
-        //        if (isFinishedKasir.HasValue) baseQuery = baseQuery.Where(x => x.IsFinishedKasir == isFinishedKasir.Value);
-
-        //        if (TipePasien.HasValue) baseQuery = baseQuery.Where(x => x.TipePasien == TipePasien.Value.ToString());
-        //        if (JenisKunjungan.HasValue) baseQuery = baseQuery.Where(x => x.JenisKunjungan == JenisKunjungan.Value.ToString());
-
+        //        // ✅ Filter tanggal
         //        if (startDate.HasValue && endDate.HasValue)
         //        {
         //            DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
         //            DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
-        //            baseQuery = baseQuery.Where(x => x.CreateDateTime >= startUtc && x.CreateDateTime <= endUtc);
+        //            baseQuery = baseQuery.Where(u => u.CreateDateTime >= startUtc && u.CreateDateTime <= endUtc);
         //        }
 
+        //        // ✅ Filter asal kunjungan
         //        if (!string.IsNullOrWhiteSpace(AsalKunjungan))
         //        {
-        //            var pattern = $"%{AsalKunjungan.ToLower()}%";
-        //            baseQuery = baseQuery.Where(x => EF.Functions.ILike(x.AsalKunjungan ?? "", pattern));
+        //            string pattern = $"%{AsalKunjungan.ToLower()}%";
+        //            baseQuery = baseQuery.Where(u =>
+        //                EF.Functions.ILike(u.AsalKunjungan, pattern));
         //        }
 
+        //        // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
         //        if (periode.HasValue)
         //        {
         //            DateTime today = DateTime.UtcNow.Date;
 
-        //            baseQuery = periode.Value switch
+        //            switch (periode)
         //            {
-        //                PeriodeFilter.Today =>
-        //                    baseQuery.Where(x => x.CreateDateTime.Date == today),
-
-        //                PeriodeFilter.ThisWeek =>
-        //                    baseQuery.Where(x => x.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek)
-        //                                      && x.CreateDateTime.Date <= today),
-
-        //                PeriodeFilter.LastWeek =>
-        //                    baseQuery.Where(x => x.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek)
-        //                                      && x.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)),
-
-        //                PeriodeFilter.ThisMonth =>
-        //                    baseQuery.Where(x => x.CreateDateTime.Month == today.Month && x.CreateDateTime.Year == today.Year),
-
-        //                PeriodeFilter.LastMonth =>
-        //                    baseQuery.Where(x => x.CreateDateTime >= new DateTime(today.Year, today.Month, 1).AddMonths(-1)
-        //                                      && x.CreateDateTime < new DateTime(today.Year, today.Month, 1)),
-
-        //                PeriodeFilter.ThisYear =>
-        //                    baseQuery.Where(x => x.CreateDateTime.Year == today.Year),
-
-        //                PeriodeFilter.LastYear =>
-        //                    baseQuery.Where(x => x.CreateDateTime.Year == today.Year - 1),
-
-        //                PeriodeFilter.Last3Months =>
-        //                    baseQuery.Where(x => x.CreateDateTime >= today.AddMonths(-3)),
-
-        //                PeriodeFilter.Last6Months =>
-        //                    baseQuery.Where(x => x.CreateDateTime >= today.AddMonths(-6)),
-
-        //                _ => baseQuery
-        //            };
+        //                case PeriodeFilter.Today:
+        //                    baseQuery = baseQuery.Where(u => u.CreateDateTime.Date == today);
+        //                    break;
+        //                case PeriodeFilter.ThisWeek:
+        //                    baseQuery = baseQuery.Where(u =>
+        //                        u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
+        //                        u.CreateDateTime.Date <= today
+        //                    );
+        //                    break;
+        //                case PeriodeFilter.LastWeek:
+        //                    baseQuery = baseQuery.Where(u =>
+        //                        u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
+        //                        u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)
+        //                    );
+        //                    break;
+        //                case PeriodeFilter.ThisMonth:
+        //                    baseQuery = baseQuery.Where(u =>
+        //                        u.CreateDateTime.Month == today.Month &&
+        //                        u.CreateDateTime.Year == today.Year
+        //                    );
+        //                    break;
+        //                case PeriodeFilter.LastMonth:
+        //                    baseQuery = baseQuery.Where(u =>
+        //                        u.CreateDateTime.Month == today.Month - 1 &&
+        //                        u.CreateDateTime.Year == today.Year
+        //                    );
+        //                    break;
+        //                case PeriodeFilter.ThisYear:
+        //                    baseQuery = baseQuery.Where(u => u.CreateDateTime.Year == today.Year);
+        //                    break;
+        //                case PeriodeFilter.LastYear:
+        //                    baseQuery = baseQuery.Where(u => u.CreateDateTime.Year == today.Year - 1);
+        //                    break;
+        //                case PeriodeFilter.Last3Months:
+        //                    baseQuery = baseQuery.Where(u => u.CreateDateTime >= today.AddMonths(-3));
+        //                    break;
+        //                case PeriodeFilter.Last6Months:
+        //                    baseQuery = baseQuery.Where(u => u.CreateDateTime >= today.AddMonths(-6));
+        //                    break;
+        //            }
         //        }
 
+        //        // ✅ Filter pencarian
         //        if (!string.IsNullOrWhiteSpace(search))
         //        {
-        //            var pattern = $"%{search.ToLower()}%";
-        //            baseQuery = baseQuery.Where(x =>
-        //                EF.Functions.ILike(x.NamaPasien ?? "", pattern) ||
-        //                EF.Functions.ILike(x.NamaDokter ?? "", pattern) ||
-        //                EF.Functions.ILike(x.NoRekamMedis ?? "", pattern) ||
-        //                EF.Functions.ILike(x.NamaPoliklinik ?? "", pattern) ||
-        //                EF.Functions.ILike(x.Antrian ?? "", pattern));
+        //            string pattern = $"%{search.ToLower()}%";
+        //            baseQuery = baseQuery.Where(u =>
+        //                EF.Functions.ILike(u.NamaPasien, pattern) ||
+        //                EF.Functions.ILike(u.NmDokter, pattern) ||
+        //                EF.Functions.ILike(u.NoRekamMedis, pattern) ||
+        //                EF.Functions.ILike(u.NamaPoliklinik, pattern) ||
+        //                EF.Functions.ILike(u.Antrian, pattern));
         //        }
 
-        //        // =====================================================
-        //        // 6) Sorting (minimal)
-        //        // =====================================================
-        //        bool desc = (sortDirection ?? "desc").ToLower() == "desc";
+        //        // ✅ Eksekusi & paging
+        //        var list = await baseQuery.OrderByDescending(u => u.CreateDateTime).ToListAsync();
 
-        //        baseQuery = (orderBy ?? "CreateDateTime") switch
-        //        {
-        //            "NamaPasien" => desc ? baseQuery.OrderByDescending(x => x.NamaPasien) : baseQuery.OrderBy(x => x.NamaPasien),
-        //            "NamaDokter" => desc ? baseQuery.OrderByDescending(x => x.NamaDokter) : baseQuery.OrderBy(x => x.NamaDokter),
-        //            "CreateDateTime" or _ => desc ? baseQuery.OrderByDescending(x => x.CreateDateTime) : baseQuery.OrderBy(x => x.CreateDateTime),
-        //        };
-
-        //        // =====================================================
-        //        // 7) Paging DB (cepat)
-        //        // =====================================================
-        //        var totalRows = await baseQuery.CountAsync();
+        //        var totalRows = list.Count;
         //        var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+        //        var rows = list.Skip((page - 1) * perPage).Take(perPage).ToList();
 
-        //        var rows = await baseQuery
-        //            .Skip((page - 1) * perPage)
-        //            .Take(perPage)
-        //            .ToListAsync();
-
-        //        // =====================================================
-        //        // 8) Alergi hanya untuk kunjungan di page
-        //        // =====================================================
-        //        var kunjunganIds = rows.Select(x => x.KunjunganID).ToList();
-
-        //        var alergiMap = await _applicationDbContext.PainAssessments
-        //            .AsNoTracking()
-        //            .Where(x => !x.IsDelete && kunjunganIds.Contains((Guid)x.KunjunganId))
-        //            .GroupBy(x => x.KunjunganId)
-        //            .Select(g => new
-        //            {
-        //                KunjunganId = g.Key,
-        //                AlergicList = g.Select(x => x.Alergic).Distinct().ToList()
-        //            })
-        //            .ToDictionaryAsync(x => x.KunjunganId, x => x.AlergicList);
-
-        //        // =====================================================
-        //        // 9) Response
-        //        // =====================================================
-        //        var host = $"{Request.Scheme}://{Request.Host}";
-
+        //        // ✅ Tambahkan data alergi
         //        var result = rows.Select(r =>
         //        {
-        //            alergiMap.TryGetValue(r.KunjunganID, out var al);
-
+        //            var alergi = allAlergic.FirstOrDefault(a => a.KunjunganId == r.KunjunganID);
         //            return new
         //            {
         //                r.KunjunganID,
@@ -2018,7 +1617,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         //                r.TanggalLahir,
         //                r.JenisKelamin,
         //                r.NoPasien,
-        //                Umur = r.TanggalLahir.HasValue ? HitungUmurLengkap(r.TanggalLahir) : null,
+        //                r.NoWali2,
+        //                r.NoWali3,
+        //                r.NamaWali2,
+        //                r.NamaWali3,
+        //                r.NamaKontakDarurat,
+        //                r.NoTeleponDarurat,
+        //                r.Email,
+        //                r.Umur,
+        //                r.AlamatDarurat,
+        //                r.AlamatDomisili,
+        //                r.AlamatIdentitas,
         //                r.NoRekamMedis,
         //                r.TipePasien,
         //                r.TipePembayaran,
@@ -2026,25 +1635,38 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         //                r.StatusPengkajian,
         //                r.CreateDateTime,
         //                r.CreateBy,
-        //                r.CreateByName,
         //                r.IsFinished,
         //                r.IsScreening,
         //                r.IsPresent,
         //                r.IsTriage,
         //                r.IsCTTPasienIGD,
-        //                r.Antrian,
-        //                r.DepositRanap,
-        //                r.TglMasukKunjungan,
+        //                TglMasukKunjungan = r.TglMasuk,
         //                r.CaraMasukRS,
         //                r.KondisiKeluar,
+        //                r.Antrian,
+        //                r.DepositRanap,
         //                r.IsFinishedKasir,
-
-        //                gambardokter = !string.IsNullOrEmpty(r.FotoDokter)
-        //                    ? $"{host}/FotoDokter/{r.FotoDokter}"
-        //                    : $"{host}/FotoDokter/dokter.jpg",
-
+        //                r.NmDokter,
+        //                r.gambardokter,
+        //                r.CreateByName,
         //                r.JumlahJenisKunjungan,
-        //                Alergic = al ?? new List<string>()
+        //                r.BookingBedRanapId,
+        //                r.KelasId,
+        //                r.KamarId,
+        //                r.KamarNama,
+        //                r.LantaiKamar,
+        //                r.KelasNama,
+        //                r.BedId,
+        //                r.NomorKamar,
+        //                r.NomorBed,
+        //                r.StatusBed,
+        //                r.Keterangan,
+        //                r.TglKeluar,
+        //                r.TglMasuk,
+        //                r.NomorSuratPengantar,
+        //                r.Diagnosa,
+        //                r.AsalUnit,
+        //                Alergic = alergi?.AlergicList ?? new List<string>()
         //            };
         //        }).ToList();
 
@@ -2067,6 +1689,384 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         //        return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
         //    }
         //}
+
+
+        [HttpGet("paged")]
+        public async Task<IActionResult> PagedKunjunganAsync(
+            int page = 1,
+            int perPage = 10,
+            string? search = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery] DateTime? startDate = null,
+            [FromQuery] DateTime? endDate = null,
+            [FromQuery] PeriodeFilter? periode = null,
+            [FromQuery] bool? isFinished = null,
+            [FromQuery] bool? isScreening = null,
+            [FromQuery] bool? isPresent = null,
+            [FromQuery] bool? isFinishedKasir = null,
+            [FromQuery] TipePasienFilter? TipePasien = null,
+            [FromQuery] EnumJenisKunjungan? JenisKunjungan = null,
+            [FromQuery] string? AsalKunjungan = null,
+            [FromQuery] Guid? dokterId = null
+        )
+        {
+            try
+            {
+                if (page < 1) page = 1;
+                if (perPage < 1) perPage = 10;
+
+                // =====================================================
+                // 0) Ambil user login + tipe user (JOIN MstTipeUser)
+                // =====================================================
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrWhiteSpace(emailLogin))
+                    return Unauthorized(new { message = "User tidak terautentikasi." });
+
+                var login = await (
+                    from u in _applicationDbContext.UserActives.AsNoTracking()
+                    join t in _applicationDbContext.TipeUsers.AsNoTracking()   // <-- SESUAIKAN DbSet
+                        on u.TipeUserId equals t.TipeUserId
+                    where u.Email == emailLogin
+                          && u.IsDelete == false
+                          && t.IsDelete == false
+                    select new
+                    {
+                        u.UserActiveId,
+                        u.FullName,
+                        u.TipeUserId,
+                        TipeUserName = t.NamaTipeUser,
+                    }
+                ).FirstOrDefaultAsync();
+
+                if (login == null)
+                    return Unauthorized(new { message = "User aktif tidak ditemukan." });
+
+                // Tentukan role berdasarkan NamaTipeUser / KodeTipeUser
+                var tipeName = (login.TipeUserName ?? "").Trim().ToLowerInvariant();
+
+                bool isDokter = tipeName == "dokter";
+                bool isPerawat = tipeName == "perawat";
+                bool isAdmin = tipeName.Contains("admin") || tipeName.Contains("superadmin");
+
+                if (!isDokter && !isPerawat && !isAdmin)
+                    return StatusCode(403, new { message = "Anda tidak memiliki akses untuk melihat daftar pasien." });
+
+                // =====================================================
+                // 1) Jika Dokter login → ambil DokterId dari MstDokter.UserActiveId
+                // =====================================================
+                Guid? dokterLoginId = null;
+                if (isDokter)
+                {
+                    dokterLoginId = await _applicationDbContext.Dokters
+                        .AsNoTracking()
+                        .Where(d => d.UserActiveId == login.UserActiveId && (d.IsDelete == false || d.IsDelete == null))
+                        .Select(d => (Guid?)d.DokterId)
+                        .FirstOrDefaultAsync();
+
+                    if (!dokterLoginId.HasValue)
+                    {
+                        return StatusCode(403, new
+                        {
+                            message = "Akun dokter Anda belum terhubung ke master dokter. Hubungi admin untuk menghubungkan UserActiveId ke data dokter."
+                        });
+                    }
+                }
+
+                // =====================================================
+                // 2) Subquery: jumlah kunjungan per pasien per jenis
+                // =====================================================
+                var jumlahPerJenis = _applicationDbContext.Kunjungans
+                    .AsNoTracking()
+                    .Where(k => !k.IsDelete)
+                    .GroupBy(k => new { k.PasienId, k.JenisKunjungan })
+                    .Select(g => new
+                    {
+                        g.Key.PasienId,
+                        g.Key.JenisKunjungan,
+                        JumlahJenis = g.Count()
+                    });
+
+                // =====================================================
+                // 3) Base query (IQueryable) - no ToList dulu
+                // =====================================================
+                var baseQuery =
+                    from a in _applicationDbContext.Kunjungans.AsNoTracking()
+
+                    join creator in _applicationDbContext.UserActives.AsNoTracking()
+                        on a.CreateBy equals creator.UserActiveId into creatorGroup
+                    from creator in creatorGroup.DefaultIfEmpty()
+
+                    join poli in _applicationDbContext.Polikliniks.AsNoTracking()
+                        on a.PoliklinikId equals poli.PoliklinikId into poliGroup
+                    from poli in poliGroup.DefaultIfEmpty()
+
+                    join asu in _applicationDbContext.Asuransis.AsNoTracking()
+                        on a.AsuransiId equals asu.AsuransiId into asuGroup
+                    from asu in asuGroup.DefaultIfEmpty()
+
+                    join ps in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking()
+                        on a.PasienId equals ps.PendaftaranPasienBaruId into pasienGroup
+                    from ps in pasienGroup.DefaultIfEmpty()
+
+                    join d in _applicationDbContext.Dokters.AsNoTracking()
+                        on a.DokterId equals d.DokterId into dokterGroup
+                    from d in dokterGroup.DefaultIfEmpty()
+
+                    join j in jumlahPerJenis
+                        on new { a.PasienId, a.JenisKunjungan }
+                        equals new { j.PasienId, j.JenisKunjungan }
+
+                    where a.IsDelete == false
+
+                    select new
+                    {
+                        a.KunjunganID,
+                        a.DokterId,
+                        NamaDokter = d != null ? d.NmDokter : null,
+                        FotoDokter = d != null ? d.FotoName : null,
+
+                        a.PasienId,
+                        NamaPasien = ps != null ? ps.NamaLengkap : null,
+                        ps.TanggalLahir,
+                        ps.JenisKelamin,
+                        ps.NoPasien,
+
+                        a.NoRekamMedis,
+                        a.AsalKunjungan,
+
+                        a.PoliklinikId,
+                        NamaPoliklinik = poli != null ? poli.NamaPoliklinik : null,
+
+                        a.AsuransiId,
+                        NamaAsuransi = asu != null && asu.NamaAsuransi != null ? asu.NamaAsuransi : "Tunai",
+
+                        a.TipePasien,
+                        a.TipePembayaran,
+                        a.JenisKunjungan,
+                        a.StatusPengkajian,
+
+                        a.CreateDateTime,
+                        a.CreateBy,
+                        CreateByName = creator != null ? creator.FullName : null,
+
+                        a.IsFinished,
+                        a.IsScreening,
+                        a.IsPresent,
+                        a.IsTriage,
+                        a.IsCTTPasienIGD,
+                        a.Antrian,
+                        a.DepositRanap,
+                        TglMasukKunjungan = a.TglMasuk,
+                        a.CaraMasukRS,
+                        a.KondisiKeluar,
+                        a.IsFinishedKasir,
+
+                        JumlahJenisKunjungan = j.JumlahJenis
+                    };
+
+                // =====================================================
+                // 4) Apply rule akses
+                // =====================================================
+                if (isDokter)
+                {
+                    // Dokter: hanya pasiennya sendiri (dr budi hanya lihat pasien dr budi)
+                    baseQuery = baseQuery.Where(x => x.DokterId == dokterLoginId!.Value);
+                }
+                else
+                {
+                    // Perawat/Admin: boleh semua, optional filter dokterId dari query
+                    if (dokterId.HasValue && dokterId.Value != Guid.Empty)
+                        baseQuery = baseQuery.Where(x => x.DokterId == dokterId.Value);
+                }
+
+                // =====================================================
+                // 5) Filter dinamis lainnya
+                // =====================================================
+                if (isFinished.HasValue) baseQuery = baseQuery.Where(x => x.IsFinished == isFinished.Value);
+                if (isPresent.HasValue) baseQuery = baseQuery.Where(x => x.IsPresent == isPresent.Value);
+                if (isScreening.HasValue) baseQuery = baseQuery.Where(x => x.IsScreening == isScreening.Value);
+                if (isFinishedKasir.HasValue) baseQuery = baseQuery.Where(x => x.IsFinishedKasir == isFinishedKasir.Value);
+
+                if (TipePasien.HasValue) baseQuery = baseQuery.Where(x => x.TipePasien == TipePasien.Value.ToString());
+                if (JenisKunjungan.HasValue) baseQuery = baseQuery.Where(x => x.JenisKunjungan == JenisKunjungan.Value.ToString());
+
+                if (startDate.HasValue && endDate.HasValue)
+                {
+                    DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
+                    DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+                    baseQuery = baseQuery.Where(x => x.CreateDateTime >= startUtc && x.CreateDateTime <= endUtc);
+                }
+
+                if (!string.IsNullOrWhiteSpace(AsalKunjungan))
+                {
+                    var pattern = $"%{AsalKunjungan.ToLower()}%";
+                    baseQuery = baseQuery.Where(x => EF.Functions.ILike(x.AsalKunjungan ?? "", pattern));
+                }
+
+                if (periode.HasValue)
+                {
+                    DateTime today = DateTime.UtcNow.Date;
+
+                    baseQuery = periode.Value switch
+                    {
+                        PeriodeFilter.Today =>
+                            baseQuery.Where(x => x.CreateDateTime.Date == today),
+
+                        PeriodeFilter.ThisWeek =>
+                            baseQuery.Where(x => x.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek)
+                                              && x.CreateDateTime.Date <= today),
+
+                        PeriodeFilter.LastWeek =>
+                            baseQuery.Where(x => x.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek)
+                                              && x.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)),
+
+                        PeriodeFilter.ThisMonth =>
+                            baseQuery.Where(x => x.CreateDateTime.Month == today.Month && x.CreateDateTime.Year == today.Year),
+
+                        PeriodeFilter.LastMonth =>
+                            baseQuery.Where(x => x.CreateDateTime >= new DateTime(today.Year, today.Month, 1).AddMonths(-1)
+                                              && x.CreateDateTime < new DateTime(today.Year, today.Month, 1)),
+
+                        PeriodeFilter.ThisYear =>
+                            baseQuery.Where(x => x.CreateDateTime.Year == today.Year),
+
+                        PeriodeFilter.LastYear =>
+                            baseQuery.Where(x => x.CreateDateTime.Year == today.Year - 1),
+
+                        PeriodeFilter.Last3Months =>
+                            baseQuery.Where(x => x.CreateDateTime >= today.AddMonths(-3)),
+
+                        PeriodeFilter.Last6Months =>
+                            baseQuery.Where(x => x.CreateDateTime >= today.AddMonths(-6)),
+
+                        _ => baseQuery
+                    };
+                }
+
+                if (!string.IsNullOrWhiteSpace(search))
+                {
+                    var pattern = $"%{search.ToLower()}%";
+                    baseQuery = baseQuery.Where(x =>
+                        EF.Functions.ILike(x.NamaPasien ?? "", pattern) ||
+                        EF.Functions.ILike(x.NamaDokter ?? "", pattern) ||
+                        EF.Functions.ILike(x.NoRekamMedis ?? "", pattern) ||
+                        EF.Functions.ILike(x.NamaPoliklinik ?? "", pattern) ||
+                        EF.Functions.ILike(x.Antrian ?? "", pattern));
+                }
+
+                // =====================================================
+                // 6) Sorting (minimal)
+                // =====================================================
+                bool desc = (sortDirection ?? "desc").ToLower() == "desc";
+
+                baseQuery = (orderBy ?? "CreateDateTime") switch
+                {
+                    "NamaPasien" => desc ? baseQuery.OrderByDescending(x => x.NamaPasien) : baseQuery.OrderBy(x => x.NamaPasien),
+                    "NamaDokter" => desc ? baseQuery.OrderByDescending(x => x.NamaDokter) : baseQuery.OrderBy(x => x.NamaDokter),
+                    "CreateDateTime" or _ => desc ? baseQuery.OrderByDescending(x => x.CreateDateTime) : baseQuery.OrderBy(x => x.CreateDateTime),
+                };
+
+                // =====================================================
+                // 7) Paging DB (cepat)
+                // =====================================================
+                var totalRows = await baseQuery.CountAsync();
+                var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+                var rows = await baseQuery
+                    .Skip((page - 1) * perPage)
+                    .Take(perPage)
+                    .ToListAsync();
+
+                // =====================================================
+                // 8) Alergi hanya untuk kunjungan di page
+                // =====================================================
+                var kunjunganIds = rows.Select(x => x.KunjunganID).ToList();
+
+                var alergiMap = await _applicationDbContext.PainAssessments
+                    .AsNoTracking()
+                    .Where(x => !x.IsDelete && kunjunganIds.Contains((Guid)x.KunjunganId))
+                    .GroupBy(x => x.KunjunganId)
+                    .Select(g => new
+                    {
+                        KunjunganId = g.Key,
+                        AlergicList = g.Select(x => x.Alergic).Distinct().ToList()
+                    })
+                    .ToDictionaryAsync(x => x.KunjunganId, x => x.AlergicList);
+
+                // =====================================================
+                // 9) Response
+                // =====================================================
+                var host = $"{Request.Scheme}://{Request.Host}";
+
+                var result = rows.Select(r =>
+                {
+                    alergiMap.TryGetValue(r.KunjunganID, out var al);
+
+                    return new
+                    {
+                        r.KunjunganID,
+                        r.AsuransiId,
+                        r.NamaAsuransi,
+                        r.PoliklinikId,
+                        r.NamaPoliklinik,
+                        r.DokterId,
+                        r.NamaDokter,
+                        r.PasienId,
+                        r.AsalKunjungan,
+                        r.NamaPasien,
+                        r.TanggalLahir,
+                        r.JenisKelamin,
+                        r.NoPasien,
+                        Umur = r.TanggalLahir.HasValue ? HitungUmurLengkap(r.TanggalLahir) : null,
+                        r.NoRekamMedis,
+                        r.TipePasien,
+                        r.TipePembayaran,
+                        r.JenisKunjungan,
+                        r.StatusPengkajian,
+                        r.CreateDateTime,
+                        r.CreateBy,
+                        r.CreateByName,
+                        r.IsFinished,
+                        r.IsScreening,
+                        r.IsPresent,
+                        r.IsTriage,
+                        r.IsCTTPasienIGD,
+                        r.Antrian,
+                        r.DepositRanap,
+                        r.TglMasukKunjungan,
+                        r.CaraMasukRS,
+                        r.KondisiKeluar,
+                        r.IsFinishedKasir,
+
+                        gambardokter = !string.IsNullOrEmpty(r.FotoDokter)
+                            ? $"{host}/FotoDokter/{r.FotoDokter}"
+                            : $"{host}/FotoDokter/dokter.jpg",
+
+                        r.JumlahJenisKunjungan,
+                        Alergic = al ?? new List<string>()
+                    };
+                }).ToList();
+
+                return Ok(new
+                {
+                    status = "success",
+                    message = "Data kunjungan berhasil diambil.",
+                    data = new
+                    {
+                        Rows = result,
+                        TotalRows = totalRows,
+                        CurrentPage = page,
+                        PerPage = perPage,
+                        TotalPages = totalPages
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
 
     }
 }

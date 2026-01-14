@@ -216,7 +216,9 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<MasterTTD> MasterTTDs { get; set; }
         public DbSet<MasterSoal> MasterSoals { get; set; }
         public DbSet<HasilTest> HasilTests { get; set; }
-
+        public DbSet<InstalasiUnit> InstalasiUnits { get; set; }
+        public DbSet<Karyawan> Karyawans { get; set; }
+        public DbSet<MappingPosisi> MappingPosisis { get; set; }
 
         #endregion
 
