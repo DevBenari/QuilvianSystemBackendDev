@@ -105,62 +105,6 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
             }
         }
 
-        //// ===========================
-        //// 2. VERIFY FINGERPRINT
-        //// ===========================
-        //[HttpPost("verify")]
-        //public async Task<IActionResult> VerifyFingerprint([FromBody] FingerprintVerifyViewModel vm)
-        //{
-        //    if (vm == null || string.IsNullOrEmpty(vm.Template))
-        //        return BadRequest(new { message = "Template fingerprint tidak valid" });
-
-        //    try
-        //    {
-        //        var userFinger = await _db.Fingerprints
-        //            .FirstOrDefaultAsync(x => x.UserId == vm.UserId);
-
-        //        if (userFinger == null)
-        //            return NotFound(new { message = "Fingerprint user belum terdaftar" });
-
-        //        // ⭐⭐⭐
-        //        // DI SINI PROSES MATCHING TEMPLATE
-        //        // Pada server Linux, template hanya dibandingkan secara string
-        //        // Bila butuh real matching, harus dilakukan di Windows
-        //        // ⭐⭐⭐
-
-        //        bool isMatch = userFinger.Template == vm.Template;
-
-        //        return Ok(new
-        //        {
-        //            message = "Fingerprint verifikasi berhasil",
-        //            match = isMatch
-        //        });
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "Error verifying fingerprint");
-        //        return StatusCode(500, new { message = ex.Message });
-        //    }
-        //}
-
-        // ===========================
-        // 3. GET DATA FINGERPRINT USER
-        // ===========================
-        //[HttpGet("{DeviceId}")]
-        //public async Task<IActionResult> GetFingerprint(string userId)
-        //{
-        //    var data = await _db.Fingerprints.FirstOrDefaultAsync(x => x.UserId == userId);
-
-        //    if (data == null)
-        //        return NotFound(new { message = "Fingerprint tidak ditemukan" });
-
-        //    return Ok(new
-        //    {
-        //        message = "Fingerprint ditemukan",
-        //        data
-        //    });
-        //}
-
         [HttpPut("device-id/{fingerprintId}")]
         public async Task<IActionResult> UpdateDeviceIdByFingerprintId(
         Guid fingerprintId,
