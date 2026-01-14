@@ -903,7 +903,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                             NominalPembayaran = detail.NominalPembayaran,
                             Keterangan = detail.Keterangan,
                             StatusPembayaran = detail.StatusPembayaran,
-                            TglPembayaran = DateTime.UtcNow
+                            TglPembayaran = DateTime.UtcNow,
+                            CreateBy = userActiveId,
+                            CreateDateTime = DateTimeOffset.UtcNow
                         }).ToList();
 
                         _applicationDbContext.MainKasirDetails.AddRange(detailEntities);

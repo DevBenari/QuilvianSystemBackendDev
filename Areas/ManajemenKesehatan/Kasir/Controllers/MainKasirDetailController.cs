@@ -51,15 +51,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = (from a in _applicationDbContext.MainKasirDetails
-                         join u in _applicationDbContext.UserActives
-                         on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false || a.IsDelete == null
+            var query = (from a in _applicationDbContext.MainKasirDetails.AsNoTracking()
+                         where a.IsDelete != true
+                         join u0 in _applicationDbContext.UserActives.AsNoTracking()
+                             on a.CreateBy equals u0.UserActiveId into uj
+                         from u in uj.DefaultIfEmpty()
                          select new
                          {
                              a.CreateDateTime,
                              a.CreateBy,
-                             CreateByName = u.FullName,
+                             CreateByName = u != null ? u.FullName : null, // ✅ kalau null tetap tampil
                              a.MainKasirDetailId,
                              a.MainKasirId,
                              a.MetodePembayaranId,
@@ -355,25 +356,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         {
 
             // Query data
-            var query = from a in _applicationDbContext.MainKasirDetails
-                        join u in _applicationDbContext.UserActives
-                        on a.CreateBy equals u.UserActiveId
-                        where a.IsDelete == false || a.IsDelete == null
-                        select new
-                        {
-                            a.CreateDateTime,
-                            a.CreateBy,
-                            CreateByName = u.FullName,
-                            a.MainKasirDetailId,
-                            a.MainKasirId,
-                            a.MetodePembayaranId,
-                            a.ReferenceId,
-                            a.NamaMetode,
-                            a.NominalPembayaran,
-                            a.StatusPembayaran,
-                            a.Keterangan,
-                            a.TglPembayaran,
-                        };
+            var query = (from a in _applicationDbContext.MainKasirDetails.AsNoTracking()
+                         where a.IsDelete != true
+                         join u0 in _applicationDbContext.UserActives.AsNoTracking()
+                             on a.CreateBy equals u0.UserActiveId into uj
+                         from u in uj.DefaultIfEmpty()
+                         select new
+                         {
+                             a.CreateDateTime,
+                             a.CreateBy,
+                             CreateByName = u != null ? u.FullName : null, // ✅ kalau null tetap tampil
+                             a.MainKasirDetailId,
+                             a.MainKasirId,
+                             a.MetodePembayaranId,
+                             a.ReferenceId,
+                             a.NamaMetode,
+                             a.NominalPembayaran,
+                             a.StatusPembayaran,
+                             a.Keterangan,
+                             a.TglPembayaran,
+                         });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             //if (!string.IsNullOrWhiteSpace(search))
