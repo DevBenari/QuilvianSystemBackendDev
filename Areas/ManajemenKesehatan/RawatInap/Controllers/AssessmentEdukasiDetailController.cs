@@ -127,6 +127,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.TTDPerawatPath,
                              a.EvaluasiEdukasi,
                              a.TglEvaluasiEdukasi,
+                             a.EdukasiDetail,
                              a.Keterangan,
                          }).OrderByDescending(a => a.CreateDateTime);
 
@@ -280,6 +281,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     MetodeEdukasi = vm.MetodeEdukasi,
                     SaranaEdukasi = vm.SaranaEdukasi,
                     EvaluasiEdukasi = vm.EvaluasiEdukasi,
+                    EdukasiDetail = vm.EdukasiDetail,
                     Keterangan = vm.Keterangan,
                     TglEvaluasiEdukasi = vm.TglEvaluasiEdukasi,
 
@@ -438,6 +440,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 entity.MetodeEdukasi = vm.MetodeEdukasi;
                 entity.SaranaEdukasi = vm.SaranaEdukasi;
                 entity.EvaluasiEdukasi = vm.EvaluasiEdukasi;
+                entity.EdukasiDetail = vm.EdukasiDetail;
                 entity.Keterangan = vm.Keterangan;
                 entity.TglEvaluasiEdukasi = vm.TglEvaluasiEdukasi;
 
@@ -584,6 +587,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.TTDPerawatPath,
                              a.EvaluasiEdukasi,
                              a.TglEvaluasiEdukasi,
+                             a.EdukasiDetail,
                              a.Keterangan,
                          });
 

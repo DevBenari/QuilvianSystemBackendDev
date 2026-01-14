@@ -415,6 +415,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         {
                             first.k.KunjunganID,
                             first.k.JenisKunjungan,
+                            TanggalKunjungan = first.k?.TglMasuk,
                             first.kasir?.KasirId,
                             first.p?.NamaLengkap,
                             first.p?.NoRekamMedis,
@@ -422,7 +423,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                             first.poli?.NamaPoliklinik,
                             first.k.TipePembayaran,
                             first.a?.NamaAsuransi,
-
+                            Umur = HitungUmurLengkap(first.p?.TanggalLahir),
                             DaftarPemeriksaanLab = daftarPemeriksaanLab,
                             DaftarObat = daftarObat,
                             DaftarRacikan = daftarRacikan,
