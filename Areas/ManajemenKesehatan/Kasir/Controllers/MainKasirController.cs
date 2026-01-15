@@ -13,6 +13,7 @@ using Newtonsoft.Json.Converters;
 using OpenCvSharp;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Services;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
@@ -37,6 +38,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         private readonly IHubContext<MainKasirHub> _hubContext;
         private readonly ILogger<MainKasirController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private IBillingService _billingService;
 
         public MainKasirController(
             ApplicationDbContext applicationDbContext,
@@ -44,7 +46,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             SignInManager<ApplicationUser> signInManager,
             ILogger<MainKasirController> logger,
             IWebHostEnvironment webHostEnvironment,
-            IHubContext<MainKasirHub> hubContext)
+            IHubContext<MainKasirHub> hubContext,
+            IBillingService billingService)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
@@ -52,6 +55,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
             _hubContext = hubContext;
+            _billingService = billingService;
         }
 
         public static string HitungUmurLengkap(DateTime? tanggalLahir)
@@ -822,114 +826,123 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         //    return Ok(new { status = "success", data = kasirData });
         //}
 
-
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] MainKasirViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
-            {
                 return BadRequest(new { message = "Data tidak valid." });
-            }
 
+            if (vm.Details == null || !vm.Details.Any())
+                return BadRequest(new { message = "Detail pembayaran wajib diisi minimal 1 item." });
+
+            if (!await _applicationDbContext.Database.CanConnectAsync())
+                return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+
+            var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(emailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var userActiveId = await _applicationDbContext.UserActives
+                .Where(u => u.Email == emailLogin)
+                .Select(u => (Guid?)u.UserActiveId)
+                .FirstOrDefaultAsync();
+
+            if (!userActiveId.HasValue)
+                return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+
+            await using var trx = await _applicationDbContext.Database.BeginTransactionAsync();
             try
             {
-                // **Cek koneksi ke database**
-                if (!_applicationDbContext.Database.CanConnect())
-                {
-                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
-                }
+                // 1) Validasi kunjungan
+                var kunjunganOk = await _applicationDbContext.Kunjungans
+                    .AsNoTracking()
+                    .AnyAsync(k => k.KunjunganID == vm.KunjunganId && !k.IsDelete);
 
-                // **Ambil User ID dari JWT Claims**
-                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(emailLogin))
-                {
-                    return Unauthorized(new { message = "User tidak terautentikasi!" });
-                }
-
-                var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
-                if (getUserActive == null)
-                {
-                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-                }
-                var userActiveId = getUserActive.UserActiveId;
-
-                // cek validasi kunjungan id
-                var datakunjungan = await _applicationDbContext.Kunjungans
-                    .FirstOrDefaultAsync(k => k.KunjunganID == vm.KunjunganId && !k.IsDelete);
-                if (datakunjungan == null)
-                {
+                if (!kunjunganOk)
                     return NotFound(new { message = "Kunjungan tidak ditemukan atau sudah dihapus." });
-                }
 
-                // cegah duplikasi data
+                // 2) Cegah duplikasi
                 var existingKasir = await _applicationDbContext.MainKasirs
+                    .AsNoTracking()
                     .AnyAsync(k => k.KunjunganId == vm.KunjunganId && !k.IsDelete);
-                if (existingKasir)
-                {
-                    return Conflict(new { message = "Kasir untuk kunjungan ini sudah pernah dibuat." });
-                }
 
-                // inseert new data
+                if (existingKasir)
+                    return Conflict(new { message = "Kasir untuk kunjungan ini sudah pernah dibuat." });
+
+                // 3) Insert header
+                var kasirId = Guid.NewGuid();
+
                 var data = new MainKasir
                 {
-                    KasirId = Guid.NewGuid(),
+                    KasirId = kasirId,
                     KunjunganId = vm.KunjunganId,
                     DiskonId = vm.DiskonId,
                     GrandTotalPembayaran = vm.GrandTotalPembayaran,
                     TotalBiayaObat = vm.TotalBiayaObat,
                     Keterangan = vm.Keterangan,
-                    TglPembayaran = DateTimeOffset.UtcNow, // Atau sesuai kebutuhan
+                    TglPembayaran = DateTimeOffset.UtcNow,
                     IsDelete = false,
-
-                    CreateBy = userActiveId,
+                    CreateBy = userActiveId.Value,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
 
-                // **Simpan ke Database**
                 _applicationDbContext.MainKasirs.Add(data);
-                int resultkasir = await _applicationDbContext.SaveChangesAsync();
 
-                if (resultkasir > 0)
+                // 4) Insert detail
+                var detailEntities = vm.Details.Select(detail => new MainKasirDetail
                 {
-                    if (vm.Details != null && vm.Details.Any())
-                    {
-                        var detailEntities = vm.Details.Select(detail => new MainKasirDetail
-                        {
-                            MainKasirDetailId = Guid.NewGuid(),
-                            MainKasirId = data.KasirId,
-                            MetodePembayaranId = detail.MetodePembayaranId,
-                            ReferenceId = detail.ReferenceId,
-                            NamaMetode = detail.NamaMetode,
-                            NominalPembayaran = detail.NominalPembayaran,
-                            Keterangan = detail.Keterangan,
-                            StatusPembayaran = detail.StatusPembayaran,
-                            TglPembayaran = DateTime.UtcNow,
-                            CreateBy = userActiveId,
-                            CreateDateTime = DateTimeOffset.UtcNow
-                        }).ToList();
+                    MainKasirDetailId = Guid.NewGuid(),
+                    MainKasirId = kasirId,
+                    MetodePembayaranId = detail.MetodePembayaranId,
+                    ReferenceId = detail.ReferenceId,
+                    NamaMetode = detail.NamaMetode,
+                    NominalPembayaran = detail.NominalPembayaran,
+                    Keterangan = detail.Keterangan,
+                    StatusPembayaran = detail.StatusPembayaran,
+                    TglPembayaran = DateTime.UtcNow,
+                    CreateBy = userActiveId.Value,
+                    CreateDateTime = DateTimeOffset.UtcNow
+                }).ToList();
 
-                        _applicationDbContext.MainKasirDetails.AddRange(detailEntities);
-                        await _applicationDbContext.SaveChangesAsync();
+                _applicationDbContext.MainKasirDetails.AddRange(detailEntities);
 
-                        await _hubContext.Clients.All.SendAsync("Data pembayaran Created", new
-                        {
-                            Action = "create",
-                            data = data.KasirId,
-                        });
-                    }
-                    return Ok(new { message = "Data berhasil disimpan || 200 OK" });
-                }
-                else
+                // 5) Save sekali
+                var saved = await _applicationDbContext.SaveChangesAsync();
+                if (saved <= 0)
                 {
+                    await trx.RollbackAsync();
                     return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
                 }
+
+                // 6) ✅ Update billing pakai SERVICE (bulk update)
+                var affectedBilling = await _billingService.MarkBillingAsPaidAsync((Guid)vm.KunjunganId);
+
+                await trx.CommitAsync();
+
+                // 7) SignalR
+                await _hubContext.Clients.All.SendAsync("Data pembayaran Created", new
+                {
+                    Action = "create",
+                    data = data.KasirId,
+                    billingUpdated = affectedBilling
+                });
+
+                return Ok(new
+                {
+                    message = "Data berhasil disimpan || 200 OK",
+                    kasirId = data.KasirId,
+                    totalDetail = detailEntities.Count,
+                    billingUpdated = affectedBilling
+                });
             }
             catch (DbUpdateException dbEx)
             {
-                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+                await trx.RollbackAsync();
+                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message ?? dbEx.Message}" });
             }
             catch (Exception ex)
             {
+                await trx.RollbackAsync();
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
@@ -1030,7 +1043,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
-
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
