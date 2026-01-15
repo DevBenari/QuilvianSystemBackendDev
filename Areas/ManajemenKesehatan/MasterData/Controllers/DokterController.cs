@@ -83,6 +83,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     d.UserActiveId,
                     d.IsAsuransi,
                     d.IsActive,
+                    d.HargaVisit,
                     d.FotoName,
                     d.FotoPath,
                     imageUrl = !string.IsNullOrEmpty(d.FotoName)
@@ -305,6 +306,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     dokter.Str,
                     dokter.TglSip,
                     dokter.TglStr,
+                    dokter.HargaVisit,
                     dokter.Nik,
                     dokter.Nohp,
                     dokter.Alamat,
@@ -698,6 +700,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         Email = vm.Email,
                         Nohp = vm.Nohp,
                         Alamat = vm.Alamat,
+                        HargaVisit = vm.HargaVisit,
                         CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = UserActiveId,
                         IsDelete = false,
@@ -822,6 +825,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.Alamat = vm.Alamat ?? data.Alamat;
                 data.Spesialis = vm.Spesialis ?? data.Spesialis;
                 data.IsAsuransi = vm.IsAsuransi ?? data.IsAsuransi;
+                data.HargaVisit = vm.HargaVisit ?? data.HargaVisit;
 
                 if (userActive != null)
                 {
@@ -1434,6 +1438,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 d.UserActiveId,
                 d.IsAsuransi,
                 d.IsActive,
+                d.HargaVisit,
                 d.FotoName,
                 d.FotoPath,
                 imageUrl = !string.IsNullOrEmpty(d.FotoName)

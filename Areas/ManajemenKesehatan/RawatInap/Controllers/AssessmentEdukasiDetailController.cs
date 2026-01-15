@@ -179,7 +179,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                             from ae in aeGroup.DefaultIfEmpty()
 
                             where (a.IsDelete == false || a.IsDelete == null) 
-                            && a.AsesmenEdukasiId == id
+                            && a.DetailAsesmenEdukasiId == id
                             select new
                             {
                                 a.CreateDateTime,

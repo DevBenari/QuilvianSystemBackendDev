@@ -25,6 +25,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? FotoPath { get; set; }
         public bool? IsActive { get; set; }
         public Guid? UserActiveId { get; set; }
+        public decimal? HargaVisit { get; set; }
 
         // Navigation properties
         //public virtual ICollection<DokterPoli>? DokterPolis { get; set; }
