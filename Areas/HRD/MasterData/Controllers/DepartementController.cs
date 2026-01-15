@@ -7,14 +7,14 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.HRD.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
+namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
@@ -58,19 +58,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         where a.IsDelete == false
                         select new
                         {
-                            CreateDateTime = a.CreateDateTime,
-                            CreateBy = a.CreateBy,
+                            a.CreateDateTime,
+                            a.CreateBy,
                             CreateByName = u.FullName,
-                            DepartementId = a.DepartementId,
-                            KodeDepartement = a.KodeDepartement,
-                            NamaDepartement = a.NamaDepartement,
-                            KepalaDepartement = a.KepalaDepartement,
-                            Lokasi = a.Lokasi,
-                            Telepon = a.Telepon,
-                            Email = a.Email,
-                            JamBuka = a.JamBuka,
-                            JamTutup = a.JamTutup,
-                            Layanan = a.Layanan,
+                            a.DepartementId,
+                            a.KodeDepartement,
+                            a.NamaDepartement,
+                            a.KepalaDepartement,
+                            a.Lokasi,
+                            a.Telepon,
+                            a.Email,
+                            a.JamBuka,
+                            a.JamTutup,
+                            a.Layanan,
                         }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -327,19 +327,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         where a.IsDelete == false
                         select new
                         {
-                            CreateDateTime = a.CreateDateTime,
-                            CreateBy = a.CreateBy,
+                            a.CreateDateTime,
+                            a.CreateBy,
                             CreateByName = u.FullName,
-                            DepartementId = a.DepartementId,
-                            KodeDepartement = a.KodeDepartement,
-                            NamaDepartement = a.NamaDepartement,
-                            KepalaDepartement = a.KepalaDepartement,
-                            Lokasi = a.Lokasi,
-                            Telepon = a.Telepon,
-                            Email = a.Email,
-                            JamBuka = a.JamBuka,
-                            JamTutup = a.JamTutup,
-                            Layanan = a.Layanan,
+                            a.DepartementId,
+                            a.KodeDepartement,
+                            a.NamaDepartement,
+                            a.KepalaDepartement,
+                            a.Lokasi,
+                            a.Telepon,
+                            a.Email,
+                            a.JamBuka,
+                            a.JamTutup,
+                            a.Layanan,
 
                         };
 
@@ -377,14 +377,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         break;
                     case PeriodeFilter.ThisWeek:
                         query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
+                            u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
                             u.CreateDateTime.Date <= today
                         );
                         break;
                     case PeriodeFilter.LastWeek:
                         query = query.Where(u =>
                             u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek))
+                            u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)
                         );
                         break;
                     case PeriodeFilter.ThisMonth:

@@ -344,8 +344,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-
-
         [HttpGet("{id}")]
         public async Task<IActionResult> GetKunjunganById(Guid id)
         {
@@ -501,8 +499,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
-
-
 
         [HttpPost]
         public async Task<IActionResult> CreateKunjunganPasien([FromBody] KunjunganViewModel request)
@@ -675,6 +671,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         SubTotalItem = biayaAdmin.NominalBiayaAdministrasi,
                         BillingKode = "001",
                         JenisBilling = "Biaya Admin",
+                        StatusBilling = false,
                         BillingDate = DateTime.UtcNow,
                         CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = UserActiveId
@@ -714,8 +711,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 return StatusCode(500, new { message = $"Terjadi kesalahan: {ex.Message}" });
             }
         }
-
-
 
         //[HttpPost]
         //public async Task<IActionResult> CreateKunjunganPasien([FromBody] KunjunganViewModel request)
@@ -1049,6 +1044,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             SubTotalItem = biayaAdmin.NominalBiayaAdministrasi,
                             BillingKode = "001",
                             JenisBilling = "Biaya Admin",
+                            StatusBilling = false,
                             BillingDate = DateTime.UtcNow,
                             CreateDateTime = DateTimeOffset.UtcNow,
                             CreateBy = UserActiveId
