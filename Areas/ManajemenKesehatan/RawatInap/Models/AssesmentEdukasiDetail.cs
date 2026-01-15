@@ -21,6 +21,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models
         public Guid? TTDPerawatId { get; set; }
         public string? TTDPerawatPath { get; set; }
         public string? EvaluasiEdukasi { get; set; }
+        public string? TopikEdukasiLainnya {  get; set; }
         public string? Keterangan { get; set; }
         public DateTime? TglEvaluasiEdukasi { get; set; }
     }

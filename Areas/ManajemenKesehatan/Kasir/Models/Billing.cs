@@ -21,5 +21,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models
         public string? Keterangan { get; set; }
         public string? JenisBilling { get; set; }
         public bool? StatusPengambilan { get; set; }
+        public bool? StatusBilling {  get; set; }
     }
 }

@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Helpers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
@@ -46,31 +47,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             _webHostEnvironment = webHostEnvironment;
         }
 
-        private DateTime? TryParseTanggalToUtc(string tanggal)
-        {
-            if (DateTime.TryParseExact(
-                    tanggal,
-                    "yyyy-MM-dd",
-                    CultureInfo.InvariantCulture,
-                    DateTimeStyles.None,
-                    out var parsedDate))
-            {
-                var now = DateTime.Now; // atau DateTime.UtcNow jika kamu mau jam UTC
-                var finalDateTime = new DateTime(
-                    parsedDate.Year,
-                    parsedDate.Month,
-                    parsedDate.Day,
-                    now.Hour,
-                    now.Minute,
-                    now.Second,
-                    DateTimeKind.Local); // atau Utc jika perlu
-
-                return finalDateTime.ToUniversalTime(); // simpan dalam UTC
-            }
-
-            return null;
-        }
-
         [HttpGet]
         public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
         {
@@ -97,6 +73,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.UserActivePerawatId,
                              a.NamaPerawat,
                              a.TglPengambilanObat,
+                             a.ShiftPengambilan,
                              a.Keterangan,
 
                          }).OrderByDescending(a => a.CreateDateTime);
@@ -194,10 +171,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     ResepId = vm.ResepId,
                     UserActiveFarmasiId = vm.UserActiveFarmasiId,
                     NamaFarmasi = vm.NamaFarmasi,
-                    TglPeracikan = TryParseTanggalToUtc(vm.TglPeracikan),
+                    TglPeracikan = vm.TglPeracikan,
                     UserActivePerawatId = vm.UserActivePerawatId,
                     NamaPerawat = vm.NamaPerawat,
-                    TglPengambilanObat = TryParseTanggalToUtc(vm.TglPengambilanObat),
+                    TglPengambilanObat = vm.TglPengambilanObat,
+                    ShiftPengambilan = ShiftHelper.GetShiftName((DateTime)vm.TglPengambilanObat),
                     Keterangan = vm.Keterangan,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
@@ -269,10 +247,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 data.ResepId = vm.ResepId;
                 data.UserActiveFarmasiId = vm.UserActiveFarmasiId;
                 data.NamaFarmasi = vm.NamaFarmasi;
-                data.TglPeracikan = TryParseTanggalToUtc(vm.TglPeracikan);
+                data.TglPeracikan = vm.TglPeracikan;
                 data.UserActivePerawatId = vm.UserActivePerawatId;
                 data.NamaPerawat = vm.NamaPerawat;
-                data.TglPengambilanObat = TryParseTanggalToUtc(vm.TglPengambilanObat);
+                data.TglPengambilanObat = vm.TglPengambilanObat;
+                data.ShiftPengambilan = ShiftHelper.GetShiftName((DateTime)vm.TglPengambilanObat);
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
@@ -393,6 +372,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.UserActivePerawatId,
                              a.NamaPerawat,
                              a.TglPengambilanObat,
+                             a.ShiftPengambilan,
                              a.Keterangan,
 
                          });

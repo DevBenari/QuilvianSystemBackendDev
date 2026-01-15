@@ -299,7 +299,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                                     Qty = bill?.QtyItem ?? 1,
                                     Subtotal = bill?.SubTotalItem ?? x.lp?.HargaPemeriksaan ?? 0,
                                     BillingId = bill?.BillingId,
-                                    BillingKode = bill?.BillingKode
+                                    BillingKode = bill?.BillingKode,
+                                    bill?.StatusBilling
                                 };
                             }).ToList();
 
@@ -325,6 +326,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                                     Subtotal = bill?.SubTotalItem ?? (x.dr.Qty * x.o.HTEPrice),
                                     BillingId = bill?.BillingId,
                                     BillingKode = bill?.BillingKode,
+                                    bill?.StatusBilling,
                                     x.dr.Signa,
                                     x.dr.SignaTambahan,
                                     x.dr.StatusPengambilanObat
@@ -356,6 +358,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                                     Subtotal = bill?.SubTotalItem,
                                     BillingId = bill?.BillingId,
                                     BillingKode = bill?.BillingKode,
+                                    bill?.StatusBilling,
                                     x.dr.Signa,
                                     x.dr.SignaTambahan,
                                     x.dr.StatusPengambilanObat,
@@ -389,7 +392,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                                     Harga = bill?.HargaItem ?? x.tobj.Total ?? 0,
                                     Subtotal = bill?.SubTotalItem ?? ((x.tobj.Quantity ?? 1) * (x.tobj.Total ?? 0)),
                                     BillingId = bill?.BillingId,
-                                    BillingKode = bill?.BillingKode
+                                    BillingKode = bill?.BillingKode,
+                                    bill?.StatusBilling
                                 };
                             }).ToList();
 
@@ -405,7 +409,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                                 b.HargaItem,
                                 b.QtyItem,
                                 b.SubTotalItem,
-                                b.BillingKode
+                                b.BillingKode,
+                                b.StatusBilling,
                             }).ToList();
 
                         var totalAdmin = daftarAdmin.Sum(x => x.SubTotalItem ?? 0);
@@ -415,6 +420,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         {
                             first.k.KunjunganID,
                             first.k.JenisKunjungan,
+                            TanggalKunjungan = first.k?.TglMasuk,
                             first.kasir?.KasirId,
                             first.p?.NamaLengkap,
                             first.p?.NoRekamMedis,
@@ -422,7 +428,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                             first.poli?.NamaPoliklinik,
                             first.k.TipePembayaran,
                             first.a?.NamaAsuransi,
-
+                            Umur = HitungUmurLengkap(first.p?.TanggalLahir),
                             DaftarPemeriksaanLab = daftarPemeriksaanLab,
                             DaftarObat = daftarObat,
                             DaftarRacikan = daftarRacikan,

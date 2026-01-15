@@ -9,6 +9,7 @@ using Microsoft.OpenApi.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Hubs;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.HubSignalR;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Services;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Services;
@@ -213,6 +214,9 @@ builder.Services.AddScoped<serviceMasterData>();
 // add service untuk cek ttd e master ttd
 builder.Services.AddScoped<ITTDService, TTDService>();
 
+// add service untuk update status billing 
+builder.Services.AddScoped<IBillingService, BillingPaidService>();
+
 // Add services to the container.
 builder.Services.AddControllers(options =>
 {
@@ -254,6 +258,7 @@ app.MapHub<IGDTriageHub>("/hubs/IGDtriage");
 app.MapHub<PindahRuanganHub>("/hubs/pindahruangan");
 app.MapHub<IGDAssessmentAwalHub>("/hubs/IGDassessmentawal");
 app.MapHub<NosokomialHub>("/hubs/nosokomial");
+app.MapHub<HandoverPasienHub>("/hubs/handoverpasien");
 
 // signal R Laboratorium
 app.MapHub<LabBookingHub>("/hubs/labbooking");

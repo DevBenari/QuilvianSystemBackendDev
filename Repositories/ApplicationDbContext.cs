@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using NuGet.Configuration;
 using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers;
 using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
@@ -65,6 +66,7 @@ namespace QuilvianSystemBackendDev.Repositories
         }
 
         public DbSet<UserActive> UserActives { get; set; }
+        public DbSet<Setting> Settings { get; set; }
 
         #region Areas Master
         public DbSet<Agama> Agamas { get; set; }
@@ -214,7 +216,9 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<MasterTTD> MasterTTDs { get; set; }
         public DbSet<MasterSoal> MasterSoals { get; set; }
         public DbSet<HasilTest> HasilTests { get; set; }
-
+        public DbSet<InstalasiUnit> InstalasiUnits { get; set; }
+        public DbSet<Karyawan> Karyawans { get; set; }
+        public DbSet<MappingPosisi> MappingPosisis { get; set; }
 
         #endregion
 

@@ -653,6 +653,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                 SubTotalItem = obatDb.HTEPrice * qtyInput,
                                 JenisBilling = "Obat",
                                 StatusPengambilan = true,
+                                StatusBilling = false,
                                 CreateBy = getUserActive.UserActiveId,
                                 CreateDateTime = DateTimeOffset.UtcNow
                             };
@@ -784,6 +785,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                 SubTotalItem = totalHargaRacikan ,
                                 JenisBilling = "Obat",
                                 StatusPengambilan = true,
+                                StatusBilling = false,
                                 CreateBy = getUserActive.UserActiveId,
                                 CreateDateTime = DateTimeOffset.UtcNow
                             };
@@ -1168,6 +1170,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             SubTotalItem = obatDb.HTEPrice * qty,
                             JenisBilling = "Obat",
                             StatusPengambilan = true,
+                            StatusBilling = false,
                             CreateBy = userId,
                             CreateDateTime = DateTimeOffset.UtcNow
                         };
@@ -1285,6 +1288,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                         SubTotalItem = totalHarga,
                         JenisBilling = "Obat",
                         StatusPengambilan = true,
+                        StatusBilling = false,
                         CreateBy = userId,
                         CreateDateTime = DateTimeOffset.UtcNow
                     });
@@ -1308,7 +1312,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 return StatusCode(500, new { message = $"Terjadi kesalahan: {ex.Message}" });
             }
         }
-
 
         [HttpPut("{id}/is-cancelled")]
         public async Task<IActionResult> UpdateIsFinished(Guid id, [FromBody] IsCancelledResepViewModel request)
@@ -2038,7 +2041,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             Guid? kunjunganid = null,
             Guid? dokterid = null,
             Guid? userActiveId = null,
-            bool? isPerawat = null,
+            Guid? tipeuserid = null,
             string? obatCode = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
@@ -2092,9 +2095,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 query = query.Where(q => q.Resep.CreateBy == userActiveId.Value);
             }
 
-            if (isPerawat.HasValue)
+            if (tipeuserid.HasValue)
             {
-                query = query.Where(q => q.User.IsPerawat == isPerawat.Value);
+                query = query.Where(q => q.User.TipeUserId == tipeuserid.Value);
             }
 
 
@@ -2366,7 +2369,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 q.Resep.RanapId,
                 q.Resep.IsResepPulang,
                 TanggalPembuatanResep = q.Resep.TanggalPembuatanResep?.ToString("yyyy-MM-dd"),
-                q.User.IsPerawat,
+                q.User.TipeUserId,
                 CreateByName = q.User.FullName,
 
                 DaftarObat = daftarObat.Where(d => d.ResepId == q.Resep.ResepId).ToList(),

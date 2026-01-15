@@ -177,6 +177,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     PekerjaanPenandaTangan = vm.PekerjaanPenandaTangan,
                     NoPengenalPenandaTangan = vm.NoPengenalPenandaTangan,
                     TipeTandaPengenal = vm.TipeTandaPengenal,
+                    PathTTDPenandaTangan = uploadTTDTask.Result,
 
                     NoHpPenandaTangan = vm.NoHpPenandaTangan,
                     NoTelpKantorPenandaTangan = vm.NoTelpKantorPenandaTangan,
@@ -325,6 +326,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 data.PekerjaanPenandaTangan = vm.PekerjaanPenandaTangan;
                 data.NoPengenalPenandaTangan = vm.NoPengenalPenandaTangan;
                 data.TipeTandaPengenal = vm.TipeTandaPengenal;
+                data.PathTTDPenandaTangan = newPathTtdPenandaTangan;
 
                 data.NoHpPenandaTangan = vm.NoHpPenandaTangan;
                 data.NoTelpKantorPenandaTangan = vm.NoTelpKantorPenandaTangan;
