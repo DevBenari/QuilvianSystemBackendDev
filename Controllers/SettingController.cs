@@ -29,24 +29,38 @@ namespace QuilvianSystemBackendDev.Controllers
 
             return Ok(setting);
         }
-
+        public class SettingRepo
+        {
+            public Guid SettingId { get; set; }
+            public string BaseUrlAi { get; set; } = string.Empty;
+            public string ApiKeyAi { get; set; } = string.Empty;
+            public string ModelAi { get; set; } = string.Empty;
+            public string Prompt { get; set; } = string.Empty;
+            public bool StatusAi { get; set; } = false;
+        }
         // PUT: api/setting
         [HttpPut]
-        public async Task<IActionResult> Update([FromBody] Setting setting)
+        public async Task<IActionResult> Update([FromBody] SettingRepo setting)
         {
-            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            // Ambil user login
+            var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var getUserActive = await _context.UserActives
-                .FirstOrDefaultAsync(u => u.Email == EmailLogin);
+                .FirstOrDefaultAsync(u => u.Email == emailLogin);
 
+            if (getUserActive == null)
+                return Unauthorized("User tidak ditemukan");
+
+            // Ambil data setting dari DB
             var data = await _context.Settings.FirstOrDefaultAsync();
-
             if (data == null)
-                return NotFound("Setting not initialized");
+                return NotFound("Setting belum diinisialisasi");
 
-            data.BaseUrlAi = setting.BaseUrlAi;
-            data.ApiKeyAi = setting.ApiKeyAi;
-            data.ModelAi = setting.ModelAi;
-            data.StatusAi = setting.StatusAi;
+            // Hanya update field yang dikirim (tidak null)
+            if (setting.BaseUrlAi != null) data.BaseUrlAi = setting.BaseUrlAi;
+            if (setting.ApiKeyAi != null) data.ApiKeyAi = setting.ApiKeyAi;
+            if (setting.ModelAi != null) data.ModelAi = setting.ModelAi;
+            if (setting.Prompt != null) data.Prompt = setting.Prompt;
+            if (setting.StatusAi) data.StatusAi = setting.StatusAi;
 
             data.UpdateBy = getUserActive.UserActiveId;
             data.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -55,6 +69,7 @@ namespace QuilvianSystemBackendDev.Controllers
 
             return Ok(data);
         }
+
 
         // PATCH: api/setting/status
         [HttpPatch("status")]
