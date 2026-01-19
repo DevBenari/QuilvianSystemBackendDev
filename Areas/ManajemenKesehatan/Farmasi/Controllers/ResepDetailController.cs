@@ -689,6 +689,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             SubTotalItem = obat.HTEPrice * qty,
                             JenisBilling = "Obat",
                             StatusPengambilan = true,
+                            StatusBilling = false,
                             CreateBy = getUserActive.UserActiveId,
                             CreateDateTime = DateTimeOffset.UtcNow
                     };

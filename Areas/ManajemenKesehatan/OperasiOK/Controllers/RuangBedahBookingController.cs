@@ -385,7 +385,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
 
                                     JenisBilling = jenisBillingOperasi,
                                     Keterangan = d.Keterangan,
-
+                                    StatusBilling = false,
                                     CreateBy = userActiveId,
                                     CreateDateTime = DateTimeOffset.UtcNow
                                 });
@@ -810,7 +810,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
 
                             JenisBilling = jenisBilling,
                             Keterangan = d.Keterangan,
-
+                            StatusBilling = false,
                             IsDelete = false,
                             CreateBy = userActiveId,
                             CreateDateTime = DateTimeOffset.UtcNow

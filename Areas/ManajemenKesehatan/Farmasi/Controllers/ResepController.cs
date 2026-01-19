@@ -653,6 +653,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                 SubTotalItem = obatDb.HTEPrice * qtyInput,
                                 JenisBilling = "Obat",
                                 StatusPengambilan = true,
+                                StatusBilling = false,
                                 CreateBy = getUserActive.UserActiveId,
                                 CreateDateTime = DateTimeOffset.UtcNow
                             };
@@ -784,6 +785,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                 SubTotalItem = totalHargaRacikan ,
                                 JenisBilling = "Obat",
                                 StatusPengambilan = true,
+                                StatusBilling = false,
                                 CreateBy = getUserActive.UserActiveId,
                                 CreateDateTime = DateTimeOffset.UtcNow
                             };
@@ -1168,6 +1170,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             SubTotalItem = obatDb.HTEPrice * qty,
                             JenisBilling = "Obat",
                             StatusPengambilan = true,
+                            StatusBilling = false,
                             CreateBy = userId,
                             CreateDateTime = DateTimeOffset.UtcNow
                         };
@@ -1285,6 +1288,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                         SubTotalItem = totalHarga,
                         JenisBilling = "Obat",
                         StatusPengambilan = true,
+                        StatusBilling = false,
                         CreateBy = userId,
                         CreateDateTime = DateTimeOffset.UtcNow
                     });
@@ -1308,7 +1312,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 return StatusCode(500, new { message = $"Terjadi kesalahan: {ex.Message}" });
             }
         }
-
 
         [HttpPut("{id}/is-cancelled")]
         public async Task<IActionResult> UpdateIsFinished(Guid id, [FromBody] IsCancelledResepViewModel request)

@@ -284,7 +284,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     HargaItem = harga,
                     QtyItem = qty,
                     SubTotalItem = subtotal,
-
+                    StatusBilling = false,
                     JenisBilling = jenisBilling,
                     Keterangan = $"BookingBedRanapId={bookingId};Start={parsedTglMasukRanap:yyyy-MM-dd}",
 

@@ -164,7 +164,47 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.AssesmentEdukasiDetails.Find(id);
+            var listdata = (from a in _applicationDbContext.AssesmentEdukasiDetails
+                            join u in _applicationDbContext.UserActives.DefaultIfEmpty()
+                            on a.CreateBy equals u.UserActiveId
+
+                            // join ke tabel mst topik edukasi
+                            join te in _applicationDbContext.TopikEdukasis
+                            on a.TopikEdukasiId equals te.TopikEdukasiId into teGroup
+                            from te in teGroup.DefaultIfEmpty()
+
+                                // join ke tabel assesment edukasi
+                            join ae in _applicationDbContext.AssesmentEdukasis
+                            on a.AsesmenEdukasiId equals ae.AsesmenEdukasiId into aeGroup
+                            from ae in aeGroup.DefaultIfEmpty()
+
+                            where (a.IsDelete == false || a.IsDelete == null) 
+                            && a.DetailAsesmenEdukasiId == id
+                            select new
+                            {
+                                a.CreateDateTime,
+                                a.CreateBy,
+                                CreateByName = u.FullName,
+                                a.DetailAsesmenEdukasiId,
+                                a.AsesmenEdukasiId,
+                                a.TopikEdukasiId,
+                                ae.KunjunganId,
+                                te.NamaTopik,
+                                a.TglDetailAsesmenEdukasi,
+                                a.DurasiWaktu,
+                                a.TTDWaliId,
+                                a.NamaWali,
+                                a.TTDWaliPath,
+                                a.TingkatPemahaman,
+                                a.MetodeEdukasi,
+                                a.SaranaEdukasi,
+                                a.TTDPerawatId,
+                                a.TTDPerawatPath,
+                                a.EvaluasiEdukasi,
+                                a.TglEvaluasiEdukasi,
+                                a.TopikEdukasiLainnya,
+                                a.Keterangan,
+                            });
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });

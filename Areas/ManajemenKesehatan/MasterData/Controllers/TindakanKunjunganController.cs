@@ -255,6 +255,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     HargaItem = tarifKelas.TarifTotal,
                     SubTotalItem = totalqty,
                     JenisBilling = "Tindakan", // Menandakan ini adalah billing untuk tindakan
+                    StatusBilling= false,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                     Keterangan = vm.Keterangan,
@@ -410,6 +411,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         Keterangan = vm.Keterangan,
                         JenisBilling = "Tindakan",
                         StatusPengambilan = true,
+                        StatusBilling = false,
                         CreateBy = userActiveId,
                         CreateDateTime = DateTimeOffset.UtcNow,
                     };

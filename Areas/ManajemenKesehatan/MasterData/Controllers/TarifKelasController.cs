@@ -72,6 +72,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.KSO,
                             a.PemeriksaanLabId,
                             a.PeralatanId,
+                            a.DokterId,
                         }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -188,6 +189,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     KSO = vm.KSO,
                     PemeriksaanLabId = vm.PemeriksaanLabId,
                     PeralatanId = vm.PeralatanId,
+                    DokterId = vm.DokterId,
 
                     // **User Activity**
                     CreateBy = userActiveId,
@@ -271,6 +273,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     (vm.TarifBahp ?? 0) +
                     (vm.TarifLain ?? 0);
                 data.KSO = vm.KSO;
+                data.DokterId = vm.DokterId;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;

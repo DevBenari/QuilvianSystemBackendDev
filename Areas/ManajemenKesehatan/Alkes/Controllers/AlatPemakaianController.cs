@@ -368,7 +368,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
 
                             JenisBilling = "Alkes",
                             StatusPengambilan = true,
-
+                            StatusBilling = false,
                             CreateBy = userId,
                             CreateDateTime = DateTimeOffset.UtcNow
                         };
@@ -410,7 +410,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateAlatPemakaian(Guid id, [FromBody] AlatPemakaianViewModel vm)
+        public async Task<IActionResult> UpdateAlatPemakaian(Guid pemakaianAlatId, [FromBody] AlatPemakaianViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
@@ -421,10 +421,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
             if (vm.Details == null || vm.Details.Count == 0)
                 return BadRequest(new { message = "Detail pemakaian alat wajib diisi minimal 1 item." });
 
-            // =========================
-            // Auth
-            // =========================
-            var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            // Ambil user dari JWT
+            var emailLogin = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(emailLogin))
                 return Unauthorized(new { message = "User tidak terautentikasi!" });
 
@@ -438,114 +436,168 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
             try
             {
                 // =========================
-                // 1) Ambil header
+                // 1) Ambil header yang akan diupdate
                 // =========================
                 var header = await _applicationDbContext.AlatPemakaians
-                    .FirstOrDefaultAsync(x => x.PemakaianAlatId == id);
+                    .FirstOrDefaultAsync(x => x.PemakaianAlatId == pemakaianAlatId);
 
                 if (header == null)
-                    return NotFound(new { message = "Data pemakaian alat tidak ditemukan." });
+                    return NotFound(new { message = "Data Alat Pemakaian tidak ditemukan." });
+
+                // Optional: validasi kunjungan tidak berubah (kalau mau dikunci)
+                // if (header.KunjunganId != vm.KunjunganId.Value)
+                //     return BadRequest(new { message = "KunjunganId tidak boleh diubah." });
 
                 // =========================
-                // 2) Ambil existing detail
+                // 2) Update HEADER
                 // =========================
-                var existingDetails = await _applicationDbContext.AlatPemakaianDetails
-                    .Where(x => x.PemakaianAlatId == id)
+                header.KunjunganId = vm.KunjunganId.Value;
+                header.PasienId = vm.PasienId.Value;
+                header.TanggalPemakaian = vm.TanggalPemakaian ?? header.TanggalPemakaian; // atau DateTime.UtcNow
+                header.Keterangan = vm.Keterangan;
+
+                // kalau punya kolom update audit:
+                // header.UpdateBy = userId;
+                // header.UpdateDateTime = DateTimeOffset.UtcNow;
+
+                _applicationDbContext.AlatPemakaians.Update(header);
+
+                // =========================
+                // 3) Hapus DETAIL lama (replace all)
+                // =========================
+                var oldDetails = await _applicationDbContext.AlatPemakaianDetails
+                    .Where(d => d.PemakaianAlatId == pemakaianAlatId)
                     .ToListAsync();
 
-                // Buat dictionary cepat lookup berdasarkan (PeralatanId, KelasId)
-                var existingDict = existingDetails.ToDictionary(
-                    x => (x.PeralatanId!.Value, x.KelasId!.Value),
-                    x => x
-                );
+                if (oldDetails.Count > 0)
+                    _applicationDbContext.AlatPemakaianDetails.RemoveRange(oldDetails);
 
                 // =========================
-                // 3) Preload tarif + nama alat
+                // 4) Hapus BILLING Alkes untuk kunjungan ini (replace all)
+                //    Catatan: jika billing alkes bisa berasal dari modul lain,
+                //    lebih aman pakai marker / reference id. Tapi untuk sekarang,
+                //    kita asumsikan billing alkes untuk kunjungan ini berasal dari pemakaian alat.
                 // =========================
-                var alatIds = vm.Details.Select(x => x.PeralatanId!.Value).Distinct().ToList();
-                var kelasIds = vm.Details.Select(x => x.KelasId!.Value).Distinct().ToList();
+                var oldBillings = await _applicationDbContext.Billings
+                    .Where(b => b.KunjunganId == vm.KunjunganId.Value &&
+                                b.JenisBilling != null &&
+                                b.JenisBilling.ToLower() == "alkes")
+                    .ToListAsync();
 
-                var namaAlatDict = await _applicationDbContext.Peralatans
-                    .Where(x => alatIds.Contains(x.PeralatanId))
-                    .ToDictionaryAsync(x => x.PeralatanId, x => x.NamaPeralatan);
-
-                var tarifDict = await _applicationDbContext.TarifKelass
-                    .Where(x => alatIds.Contains(x.PeralatanId!.Value) && kelasIds.Contains(x.KelasId!.Value))
-                    .ToDictionaryAsync(
-                        x => (x.PeralatanId!.Value, x.KelasId!.Value),
-                        x => x.TarifRs!.Value
-                    );
+                if (oldBillings.Count > 0)
+                    _applicationDbContext.Billings.RemoveRange(oldBillings);
 
                 // =========================
-                // 4) PROSES SYNC DETAIL
+                // 5) Siapkan billingIndex baru (lanjut nomor dari billing existing non-alkes)
+                //    atau tetap khusus alkes saja seperti POST kamu:
                 // =========================
+                int billingIndex = await _applicationDbContext.Billings
+                    .CountAsync(b => b.KunjunganId == vm.KunjunganId.Value &&
+                                     b.JenisBilling != null &&
+                                     b.JenisBilling.ToLower() == "alkes");
 
-                // Track yang masih dipakai
-                var usedKeys = new HashSet<(Guid, Guid)>();
+                // =========================
+                // 6) Insert DETAIL baru + BILLING baru (aggregate per alat)
+                // =========================
+                var billingDict = new Dictionary<Guid, Billing>(); // key: PeralatanId
+                var detailEntities = new List<AlatPemakaianDetail>();
 
                 foreach (var d in vm.Details)
                 {
-                    var key = (d.PeralatanId!.Value, d.KelasId!.Value);
-                    usedKeys.Add(key);
+                    if (d?.PeralatanId == null)
+                        return BadRequest(new { message = "PeralatanId pada detail wajib diisi." });
 
-                    var qty = d.QtyPemakaian ?? 1;
+                    var alatId = d.PeralatanId.Value;
 
-                    if (!tarifDict.TryGetValue(key, out var tarifRs))
-                        return BadRequest(new { message = $"Tarif tidak ditemukan untuk PeralatanId={key.Item1}, KelasId={key.Item2}" });
+                    var qtyInput = d.QtyPemakaian ?? 1;
+                    if (qtyInput <= 0) qtyInput = 1;
 
-                    if (existingDict.TryGetValue(key, out var existing))
+                    // Ambil tarif per kelas
+                    var alatDb = await _applicationDbContext.TarifKelass
+                        .FirstOrDefaultAsync(x => x.PeralatanId == alatId && x.KelasId == d.KelasId);
+
+                    var namaAlat = await _applicationDbContext.Peralatans
+                        .Where(x => x.PeralatanId == alatId)
+                        .Select(x => x.NamaPeralatan)
+                        .FirstOrDefaultAsync();
+
+                    if (alatDb == null && namaAlat == null)
+                        return BadRequest(new { message = $"Peralatan tidak ditemukan: {alatId}" });
+
+                    if (alatDb == null)
+                        return BadRequest(new { message = $"Tarif alat belum tersedia untuk PeralatanId {alatId} dan KelasId {d.KelasId}." });
+
+                    var subTotal = alatDb.TarifRs * qtyInput;
+
+                    // ---- DETAIL ----
+                    detailEntities.Add(new AlatPemakaianDetail
                     {
-                        // UPDATE
-                        existing.QtyPemakaian = qty;
-                        existing.HargaPeralatan = tarifRs;
-                        existing.TotalPemakaianAlat = tarifRs * qty;
-                        existing.Keterangan = d.Keterangan;
-                        existing.UpdateBy = userId;
-                        existing.UpdateDateTime = DateTimeOffset.UtcNow;
-                    }
-                    else
+                        DetailPemakaianAlatId = Guid.NewGuid(),
+                        PemakaianAlatId = pemakaianAlatId,
+                        PeralatanId = alatId,
+                        KelasId = d.KelasId,
+                        QtyPemakaian = qtyInput,
+                        HargaPeralatan = alatDb.TarifRs,
+                        TotalPemakaianAlat = subTotal,
+                        Keterangan = d.Keterangan,
+                        CreateBy = userId,
+                        CreateDateTime = DateTimeOffset.UtcNow
+                    });
+
+                    // ---- BILLING (aggregate per alat) ----
+                    if (!billingDict.TryGetValue(alatId, out var billing))
                     {
-                        // INSERT
-                        var newDetail = new AlatPemakaianDetail
+                        billingIndex++;
+
+                        billing = new Billing
                         {
-                            DetailPemakaianAlatId = Guid.NewGuid(),
-                            PemakaianAlatId = id,
-                            PeralatanId = key.Item1,
-                            KelasId = key.Item2,
-                            QtyPemakaian = qty,
-                            HargaPeralatan = tarifRs,
-                            TotalPemakaianAlat = tarifRs * qty,
-                            Keterangan = d.Keterangan,
+                            BillingId = Guid.NewGuid(),
+                            KunjunganId = vm.KunjunganId.Value,
+
+                            BillingDate = DateTime.UtcNow,
+                            BillingKode = $"{billingIndex:D3}",
+
+                            ItemId = alatId,
+                            NamaItem = namaAlat,
+
+                            HargaItem = alatDb.TarifRs,
+                            QtyItem = qtyInput,
+                            SubTotalItem = alatDb.TarifRs * qtyInput,
+
+                            JenisBilling = "Alkes",
+                            StatusPengambilan = true,
+                            StatusBilling = false,
                             CreateBy = userId,
                             CreateDateTime = DateTimeOffset.UtcNow
                         };
 
-                        _applicationDbContext.AlatPemakaianDetails.Add(newDetail);
+                        billingDict[alatId] = billing;
+                    }
+                    else
+                    {
+                        billing.QtyItem += qtyInput;
+                        billing.SubTotalItem = billing.HargaItem * billing.QtyItem;
                     }
                 }
 
-                // =========================
-                // 5) DELETE detail yang tidak dikirim lagi
-                // =========================
-                var toDelete = existingDetails
-                    .Where(x => !usedKeys.Contains((x.PeralatanId!.Value, x.KelasId!.Value)))
-                    .ToList();
+                _applicationDbContext.AlatPemakaianDetails.AddRange(detailEntities);
+                _applicationDbContext.Billings.AddRange(billingDict.Values);
 
-                if (toDelete.Count > 0)
-                {
-                    _applicationDbContext.AlatPemakaianDetails.RemoveRange(toDelete);
-                }
-
-                // =========================
-                // 6) Simpan perubahan
-                // =========================
                 await _applicationDbContext.SaveChangesAsync();
                 await trx.CommitAsync();
 
+                await _hubContext.Clients.All.SendAsync("Pemakaian alat diupdate", new
+                {
+                    action = "update",
+                    pemakaianAlatId
+                });
+
                 return Ok(new
                 {
-                    message = "Berhasil update pemakaian alat (otomatis update/insert/delete detail)",
-                    deleted = toDelete.Count
+                    message = "Berhasil update Alat Pemakaian + Detail + Billing",
+                    pemakaianAlatId,
+                    totalDetail = detailEntities.Count,
+                    totalBilling = billingDict.Count
                 });
             }
             catch (Exception ex)
@@ -554,7 +606,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
-
 
         //[HttpPut("{id}")]
         //public async Task<IActionResult> UpdateAlatPemakaian(Guid id, [FromBody] AlatPemakaianViewModel vm)

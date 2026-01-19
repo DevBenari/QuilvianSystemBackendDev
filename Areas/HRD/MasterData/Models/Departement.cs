@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
+namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Models
 {
     [Table("MstDepartement", Schema = "public")]
     public class Departement : UserActivity
