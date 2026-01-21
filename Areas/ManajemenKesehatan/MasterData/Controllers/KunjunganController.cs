@@ -551,6 +551,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         k.PoliklinikId == request.PoliklinikId &&
                         !k.IsDelete &&
                         k.IsFinished == false &&
+                        k.IsFinishedKasir == false &&
                         k.JenisKunjungan == "OP" &&
                         k.CreateDateTime.Date == today);
                 }
@@ -560,6 +561,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         k.PasienId == request.PasienId &&
                         !k.IsDelete &&
                         k.IsFinished == false &&
+                        k.IsFinishedKasir == false &&
                         k.JenisKunjungan == "IP");
                 }
 
@@ -1950,6 +1952,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     {
                         PeriodeFilter.Today =>
                             baseQuery.Where(x => x.CreateDateTime.Date == today),
+
+                        PeriodeFilter.Yesterday =>
+                            baseQuery.Where(x=>x.CreateDateTime.Date == today.AddDays(-1)),
 
                         PeriodeFilter.ThisWeek =>
                             baseQuery.Where(x => x.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek)

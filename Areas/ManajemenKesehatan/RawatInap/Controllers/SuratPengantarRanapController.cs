@@ -119,93 +119,154 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         [HttpGet]
         public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
         {
-            // Validasi agar page dan perPage minimal bernilai 1
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            var query = from a in _applicationDbContext.SuratPengantarRawatInaps
-                        join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId into userJoin
-                        from u in userJoin.DefaultIfEmpty()
+            // Base query (IQueryable) + AsNoTracking
+            var baseQuery =
+                from a in _applicationDbContext.SuratPengantarRawatInaps.AsNoTracking()
+                join u0 in _applicationDbContext.UserActives.AsNoTracking()
+                    on a.CreateBy equals u0.UserActiveId into userJoin
+                from u in userJoin.DefaultIfEmpty()
 
-                        join k in _applicationDbContext.Kunjungans on a.KunjunganId equals k.KunjunganID
-                        join p in _applicationDbContext.PendaftaranPasienBarus on k.PasienId equals p.PendaftaranPasienBaruId
-                        join d in _applicationDbContext.Dokters on k.DokterId equals d.DokterId
-                        join poli in _applicationDbContext.Polikliniks on k.PoliklinikId equals poli.PoliklinikId
-                        join ar in _applicationDbContext.Asuransis on k.AsuransiId equals ar.AsuransiId into asuransiGroup
-                        from ar in asuransiGroup.DefaultIfEmpty()
-                        join ap in _applicationDbContext.AsuransiPasiens on p.PendaftaranPasienBaruId equals ap.PasienId into asuransiPasienGroup
-                        from ap in asuransiPasienGroup.DefaultIfEmpty()
+                join k in _applicationDbContext.Kunjungans.AsNoTracking()
+                    on a.KunjunganId equals k.KunjunganID
 
-                        where (a.IsDelete == false || a.IsDelete == null)
-                              && (k.IsDelete == false || k.IsDelete == null)
+                join p in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking()
+                    on k.PasienId equals p.PendaftaranPasienBaruId
 
-                        orderby a.CreateDateTime descending
+                join d in _applicationDbContext.Dokters.AsNoTracking()
+                    on k.DokterId equals d.DokterId
 
-                        select new
-                        {
-                            // Data Surat Pengantar
-                            a.SuratPengantarRawatInapId,
-                            a.KunjunganId,
-                            a.NomorSuratPengantar,
-                            a.Diagnosa,
-                            a.ICDId,
-                            a.AlasanRanap,
-                            a.RencanaTindakLanjut,
-                            a.AsalUnit,
-                            a.Status,
-                            a.CreateDateTime,
-                            a.CreateBy,
-                            CreateByName = u.FullName,
+                join poli in _applicationDbContext.Polikliniks.AsNoTracking()
+                    on k.PoliklinikId equals poli.PoliklinikId
 
-                            // Data Kunjungan
-                            k.NoRekamMedis,
-                            k.TipePasien,
-                            k.TipePembayaran,
-                            k.JenisKunjungan,
-                            k.IsFinished,
-                            //k.TglMasukRanap,
-                            //k.TglKeluarRanap,
+                // LEFT JOIN Asuransi (karena bisa null)
+                join ar0 in _applicationDbContext.Asuransis.AsNoTracking()
+                    on k.AsuransiId equals ar0.AsuransiId into asuransiGroup
+                from ar in asuransiGroup.DefaultIfEmpty()
 
-                            // Data Dokter
-                            DokterId = d.DokterId,
-                            DokterName = d.NmDokter,
+                    // LEFT JOIN AsuransiPasien (karena bisa null / banyak)
+                join ap0 in _applicationDbContext.AsuransiPasiens.AsNoTracking()
+                    on p.PendaftaranPasienBaruId equals ap0.PasienId into asuransiPasienGroup
+                from ap in asuransiPasienGroup.DefaultIfEmpty()
 
-                            // Data Poli
-                            PoliklinikId = poli.PoliklinikId,
-                            PoliklinikName = poli.NamaPoliklinik,
+                where a.IsDelete != true
+                      && k.IsDelete != true
 
-                            // Data Pasien
-                            PasienId = p.PendaftaranPasienBaruId,
-                            PasienName = p.NamaLengkap,
-                            JenisKelamin = p.JenisKelamin,
-                            Umur = HitungUmurLengkap(p.TanggalLahir),
-                            p.NoPasien,
+                select new
+                {
+                    // Surat Pengantar
+                    a.SuratPengantarRawatInapId,
+                    a.KunjunganId,
+                    a.NomorSuratPengantar,
+                    a.Diagnosa,
+                    a.ICDId,
+                    a.AlasanRanap,
+                    a.RencanaTindakLanjut,
+                    a.AsalUnit,
+                    a.IndikasiTindakan,
+                    a.JenisOperasi,
+                    a.TawaranLayanan,
+                    a.HarapanHasil,
+                    a.IsAdaHambatan,
+                    a.PathTTDDokterDPJP,
+                    a.Status,
+                    a.CreateDateTime,
+                    a.CreateBy,
+                    CreateByName = u != null ? u.FullName : null,
 
-                            //data Asuransi
-                            ar.NamaAsuransi,
-                            ap.NoPolis
-                        };
+                    // Kunjungan
+                    k.NoRekamMedis,
+                    k.TipePasien,
+                    k.TipePembayaran,
+                    k.JenisKunjungan,
+                    k.IsFinished,
 
-            // Hitung total data sebelum paginasi
-            var totalRows = query.Count();
+                    // Dokter
+                    DokterId = d.DokterId,
+                    DokterName = d.NmDokter,
+
+                    // Poli
+                    PoliklinikId = poli.PoliklinikId,
+                    PoliklinikName = poli.NamaPoliklinik,
+
+                    // Pasien
+                    PasienId = p.PendaftaranPasienBaruId,
+                    PasienName = p.NamaLengkap,
+                    JenisKelamin = p.JenisKelamin,
+                    p.NoPasien,
+                    TanggalLahir = p.TanggalLahir, // umur dihitung setelah paging
+
+                    // Asuransi
+                    NamaAsuransi = ar != null ? ar.NamaAsuransi : "Tunai",
+                    NoPolis = ap != null ? ap.NoPolis : null
+                };
+
+            // Sorting (di DB)
+            var query = baseQuery.OrderByDescending(x => x.CreateDateTime);
+
+            // Count + paging (di DB)
+            var totalRows = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
 
-            // Ambil data sesuai paging
-            var listdata = query
+            var rows = await query
                 .Skip((page - 1) * perPage)
                 .Take(perPage)
-                .ToList();
+                .ToListAsync();
 
-            if (!listdata.Any())
+            // Jika ingin tetap 404 ketika kosong, aktifkan ini:
+            // if (rows.Count == 0)
+            //     return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
+
+            // Hitung umur setelah paging (hanya untuk data yang tampil)
+            var result = rows.Select(r => new
             {
-                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
-            }
+                r.SuratPengantarRawatInapId,
+                r.KunjunganId,
+                r.NomorSuratPengantar,
+                r.Diagnosa,
+                r.ICDId,
+                r.AlasanRanap,
+                r.RencanaTindakLanjut,
+                r.AsalUnit,
+                r.IndikasiTindakan,
+                r.JenisOperasi,
+                r.TawaranLayanan,
+                r.HarapanHasil,
+                r.IsAdaHambatan,
+                r.PathTTDDokterDPJP,
+                r.Status,
+                r.CreateDateTime,
+                r.CreateBy,
+                r.CreateByName,
 
-            // Return hasil dengan paging info
+                r.NoRekamMedis,
+                r.TipePasien,
+                r.TipePembayaran,
+                r.JenisKunjungan,
+                r.IsFinished,
+
+                r.DokterId,
+                r.DokterName,
+
+                r.PoliklinikId,
+                r.PoliklinikName,
+
+                r.PasienId,
+                r.PasienName,
+                r.JenisKelamin,
+                Umur = HitungUmurLengkap(r.TanggalLahir),
+                r.NoPasien,
+
+                r.NamaAsuransi,
+                r.NoPolis
+            }).ToList();
+
             return Ok(new
             {
                 message = "Berhasil || 200 OK",
-                data = listdata,
+                data = result,
                 pagination = new
                 {
                     CurrentPage = page,
@@ -214,8 +275,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     TotalPages = totalPages
                 }
             });
-
         }
+
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
@@ -800,6 +861,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                         a.RencanaTindakLanjut,
                         a.AsalUnit,
                         a.Status,
+                        a.IndikasiTindakan,
+                        a.JenisOperasi,
+                        a.TawaranLayanan,
+                        a.HarapanHasil,
+                        a.IsAdaHambatan,
+                        a.PathTTDDokterDPJP,
                         a.CreateDateTime,
                         a.CreateBy,
                         CreateByName = u != null ? u.FullName : null,

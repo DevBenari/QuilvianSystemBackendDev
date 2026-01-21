@@ -11,6 +11,7 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Models
         public Guid InstalasiUnitId { get; set; }
         public string? KodeInstalasiUnit {  get; set; }
         public string? NamaInstalasiUnit { get; set; }
+        public Guid? DepartementId { get; set; }
         public string? Keterangan {  get; set; }
     }
 }

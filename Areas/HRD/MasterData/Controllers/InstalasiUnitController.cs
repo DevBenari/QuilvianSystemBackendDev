@@ -377,130 +377,194 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
         }
 
         [HttpGet("paged")]
-        public IActionResult Paged(
+        public async Task<IActionResult> Paged(
             int page = 1,
             int perPage = 10,
             string? search = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                            DateTime? startDate = null,
+            DateTime? startDate = null,
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                            DateTime? endDate = null,
-            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+            DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null,
+
+            // ✅ tambahan filter
+            Guid? instalasiUnitId = null,
+            Guid? departementId = null
+        )
         {
+            page = page < 1 ? 1 : page;
+            perPage = perPage < 1 ? 10 : perPage;
+            perPage = Math.Min(perPage, 100);
 
-            // Query data
-            var query = (from a in _applicationDbContext.InstalasiUnits
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false || a.IsDelete == null
-                         select new
-                         {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = u.FullName,
-                             a.InstalasiUnitId,
-                             a.KodeInstalasiUnit,
-                             a.NamaInstalasiUnit,
-                             a.Keterangan,
-                         });
+            // ===== hitung range tanggal (index-friendly) =====
+            DateTime? rangeStartUtc = null;
+            DateTime? rangeEndExclusiveUtc = null;
 
-            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-                query = query.Where(u =>
-                    EF.Functions.ILike(u.NamaInstalasiUnit, search)
-                );
-            }
-
-            //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
             {
-                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
-                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
-
-                query = query.Where(u =>
-                    u.CreateDateTime >= startUtc &&
-                    u.CreateDateTime <= endUtc);
+                rangeStartUtc = startDate.Value.Date.ToUniversalTime();
+                rangeEndExclusiveUtc = endDate.Value.Date.AddDays(1).ToUniversalTime();
             }
-
-            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
-            if (periode.HasValue)
+            else if (periode.HasValue)
             {
-                DateTime today = DateTime.UtcNow.Date;
+                var today = DateTime.UtcNow.Date;
 
-                switch (periode)
+                switch (periode.Value)
                 {
                     case PeriodeFilter.Today:
-                        query = query.Where(u => u.CreateDateTime.Date == today);
-                        break;
+                        rangeStartUtc = today; rangeEndExclusiveUtc = today.AddDays(1); break;
+
                     case PeriodeFilter.ThisWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date <= today
-                        );
-                        break;
+                        var weekStart = today.AddDays(-(int)today.DayOfWeek);
+                        rangeStartUtc = weekStart; rangeEndExclusiveUtc = today.AddDays(1); break;
+
                     case PeriodeFilter.LastWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)
-                        );
-                        break;
+                        var thisWeekStart = today.AddDays(-(int)today.DayOfWeek);
+                        rangeStartUtc = thisWeekStart.AddDays(-7); rangeEndExclusiveUtc = thisWeekStart; break;
+
                     case PeriodeFilter.ThisMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month &&
-                            u.CreateDateTime.Year == today.Year
-                        );
-                        break;
+                        var monthStart = new DateTime(today.Year, today.Month, 1);
+                        rangeStartUtc = monthStart; rangeEndExclusiveUtc = monthStart.AddMonths(1); break;
+
                     case PeriodeFilter.LastMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month - 1 &&
-                            u.CreateDateTime.Year == today.Year
-                        );
-                        break;
+                        var thisMonthStart = new DateTime(today.Year, today.Month, 1);
+                        var lastMonthStart = thisMonthStart.AddMonths(-1);
+                        rangeStartUtc = lastMonthStart; rangeEndExclusiveUtc = thisMonthStart; break;
+
                     case PeriodeFilter.ThisYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
-                        break;
+                        var yearStart = new DateTime(today.Year, 1, 1);
+                        rangeStartUtc = yearStart; rangeEndExclusiveUtc = yearStart.AddYears(1); break;
+
                     case PeriodeFilter.LastYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
-                        break;
+                        var thisYearStart2 = new DateTime(today.Year, 1, 1);
+                        var lastYearStart2 = thisYearStart2.AddYears(-1);
+                        rangeStartUtc = lastYearStart2; rangeEndExclusiveUtc = thisYearStart2; break;
+
                     case PeriodeFilter.Last3Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
-                        break;
+                        rangeStartUtc = today.AddMonths(-3); rangeEndExclusiveUtc = today.AddDays(1); break;
+
                     case PeriodeFilter.Last6Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
-                        break;
+                        rangeStartUtc = today.AddMonths(-6); rangeEndExclusiveUtc = today.AddDays(1); break;
                 }
             }
 
-            // Sorting Data dengan cara yang lebih aman
-            query = sortDirection?.ToLower() == "desc"
-                ? orderBy switch
+            // ===== BASE QUERY =====
+            var baseQuery =
+                from a in _applicationDbContext.InstalasiUnits.AsNoTracking()
+                where a.IsDelete == false || a.IsDelete == null
+
+                join d0 in _applicationDbContext.Departements.AsNoTracking()
+                    on a.DepartementId equals d0.DepartementId into dJoin
+                from d in dJoin.DefaultIfEmpty()
+
+                join u0 in _applicationDbContext.UserActives.AsNoTracking()
+                    on a.CreateBy equals u0.UserActiveId into uJoin
+                from u in uJoin.DefaultIfEmpty()
+
+                select new
                 {
-                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "NamaInstalasiUnit" => query.OrderByDescending(u => u.NamaInstalasiUnit),
-                    _ => query.OrderByDescending(u => u.CreateDateTime)
-                }
-                : orderBy switch
-                {
-                    "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    "NamaInstalasiUnit" => query.OrderBy(u => u.NamaInstalasiUnit),
-                    _ => query.OrderBy(u => u.CreateDateTime)
+                    a.DepartementId,
+                    DepartementName = d != null ? d.NamaDepartement :null,
+
+                    a.CreateDateTime,
+                    a.CreateBy,
+                    CreateByName = u != null ? u.FullName : null,
+
+                    a.InstalasiUnitId,
+                    a.KodeInstalasiUnit,
+                    a.NamaInstalasiUnit,
+                    a.Keterangan
                 };
 
-            // Pagination
-            var totalRows = query.Count();
-            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
+            // ✅ Filter by InstalasiUnitId (paling cepat karena PK)
+            if (instalasiUnitId.HasValue)
+                baseQuery = baseQuery.Where(x => x.InstalasiUnitId == instalasiUnitId.Value);
 
-            if (rows.Count == 0 && page > totalPages)
+            // ✅ Filter by DepartementId (FK)
+            if (departementId.HasValue)
+                baseQuery = baseQuery.Where(x => x.DepartementId == departementId.Value);
+
+            // Search teks (nama unit)
+            if (!string.IsNullOrWhiteSpace(search))
             {
-                return NotFound(new { message = "Page not found." });
+                var pattern = $"%{search.Trim().ToLower()}%";
+                baseQuery = baseQuery.Where(x => EF.Functions.ILike(x.NamaInstalasiUnit, pattern));
             }
+
+            // Filter tanggal range
+            if (rangeStartUtc.HasValue && rangeEndExclusiveUtc.HasValue)
+            {
+                var start = rangeStartUtc.Value;
+                var endEx = rangeEndExclusiveUtc.Value;
+                baseQuery = baseQuery.Where(x => x.CreateDateTime >= start && x.CreateDateTime < endEx);
+            }
+
+            // ===== Tahap A: paging departemen =====
+            var deptAgg =
+                baseQuery
+                    .GroupBy(x => new { x.DepartementId, x.DepartementName })
+                    .Select(g => new
+                    {
+                        g.Key.DepartementId,
+                        g.Key.DepartementName,
+                        TotalRows = g.Count(),
+                        LatestCreateDateTime = g.Max(x => x.CreateDateTime)
+                    });
+
+            bool desc = (sortDirection ?? "desc").Equals("desc", StringComparison.OrdinalIgnoreCase);
+
+            deptAgg = (orderBy ?? "CreateDateTime") switch
+            {
+                "DepartementName" => desc ? deptAgg.OrderByDescending(x => x.DepartementName) : deptAgg.OrderBy(x => x.DepartementName),
+                "TotalRows" => desc ? deptAgg.OrderByDescending(x => x.TotalRows) : deptAgg.OrderBy(x => x.TotalRows),
+                _ => desc ? deptAgg.OrderByDescending(x => x.LatestCreateDateTime) : deptAgg.OrderBy(x => x.LatestCreateDateTime),
+            };
+
+            var totalGroups = await deptAgg.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalGroups / (double)perPage);
+
+            if (totalGroups > 0 && page > totalPages)
+                return NotFound(new { message = "Page not found." });
+
+            var deptsPage = await deptAgg
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToListAsync();
+
+            var deptIds = deptsPage.Select(x => x.DepartementId).ToList();
+
+            // ===== Tahap B: ambil rows hanya untuk departemen pada halaman =====
+            var rowsQuery = baseQuery.Where(x => deptIds.Contains(x.DepartementId));
+
+            rowsQuery = (orderBy ?? "CreateDateTime") switch
+            {
+                "CreateByName" => desc ? rowsQuery.OrderByDescending(x => x.CreateByName) : rowsQuery.OrderBy(x => x.CreateByName),
+                "NamaInstalasiUnit" => desc ? rowsQuery.OrderByDescending(x => x.NamaInstalasiUnit) : rowsQuery.OrderBy(x => x.NamaInstalasiUnit),
+                _ => desc ? rowsQuery.OrderByDescending(x => x.CreateDateTime) : rowsQuery.OrderBy(x => x.CreateDateTime),
+            };
+
+            var rows = await rowsQuery.ToListAsync();
+
+            var groups = deptsPage.Select(d => new
+            {
+                d.DepartementId,
+                d.DepartementName,
+                d.TotalRows,
+                Rows = rows.Where(r => r.DepartementId == d.DepartementId)
+                           .Select(r => new
+                           {
+                               r.CreateDateTime,
+                               r.CreateBy,
+                               r.CreateByName,
+                               r.InstalasiUnitId,
+                               r.KodeInstalasiUnit,
+                               r.NamaInstalasiUnit,
+                               r.Keterangan
+                           })
+                           .ToList()
+            });
 
             return Ok(new
             {
@@ -508,13 +572,15 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
                 message = "Data retrieved successfully",
                 data = new
                 {
-                    Rows = rows,
-                    TotalRows = totalRows,
+                    Groups = groups,
+                    TotalGroups = totalGroups,
                     CurrentPage = page,
                     PerPage = perPage,
                     TotalPages = totalPages
                 }
             });
         }
+
+
     }
 }

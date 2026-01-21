@@ -63,7 +63,12 @@ namespace QuilvianSystemBackendDev.Repositories
                     v => JsonSerializer.Serialize(v, jsonOptions),
                     v => JsonSerializer.Deserialize<Dictionary<string, decimal>>(v, jsonOptions)
                 );
+
+            modelBuilder.Entity<PendaftaranPasienBaru>()
+                .HasIndex(x => x.NoRekamMedis)
+                .IsUnique();
         }
+
 
         public DbSet<UserActive> UserActives { get; set; }
         public DbSet<Setting> Settings { get; set; }
