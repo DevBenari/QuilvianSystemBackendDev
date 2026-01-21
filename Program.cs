@@ -9,6 +9,7 @@ using Microsoft.OpenApi.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Hubs;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.HubSignalR;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Interfaces;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Services;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.HubSignalR;
@@ -221,6 +222,9 @@ builder.Services.AddScoped<IBillingService, BillingPaidService>();
 
 // add service untuk generate no rm unique
 builder.Services.AddScoped<INoRMGeneratorService, NoRMGeneratorService>();
+
+// service generate no kwitansi unique
+builder.Services.AddScoped<INoKwitansiService, NoKwitansiService>();
 
 
 // Add services to the container.

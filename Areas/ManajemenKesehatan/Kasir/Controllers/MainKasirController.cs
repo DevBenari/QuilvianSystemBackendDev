@@ -19,6 +19,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using SkiaSharp;
@@ -39,6 +40,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         private readonly ILogger<MainKasirController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private IBillingService _billingService;
+        private readonly ITTDService _ttdService;
 
         public MainKasirController(
             ApplicationDbContext applicationDbContext,
@@ -47,7 +49,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             ILogger<MainKasirController> logger,
             IWebHostEnvironment webHostEnvironment,
             IHubContext<MainKasirHub> hubContext,
-            IBillingService billingService)
+            IBillingService billingService,
+            ITTDService ttdService)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
@@ -56,6 +59,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             _webHostEnvironment = webHostEnvironment;
             _hubContext = hubContext;
             _billingService = billingService;
+            _ttdService = ttdService;
         }
 
         public static string HitungUmurLengkap(DateTime? tanggalLahir)
@@ -825,7 +829,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
         //    return Ok(new { status = "success", data = kasirData });
         //}
-
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] MainKasirViewModel vm)
         {
@@ -871,17 +874,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
                 // 3) Insert header
                 var kasirId = Guid.NewGuid();
+                var ttd = await _ttdService.CheckTTDAsync((Guid)vm.TTDUserVerfiedId);
 
                 var data = new MainKasir
                 {
                     KasirId = kasirId,
                     KunjunganId = vm.KunjunganId,
+                    PasienId = vm.PasienId,
+                    JumlahAngsuran = vm.JumlahAngsuran,
+                    StatusPembayaran = vm.StatusPembayaran,
+                    IsVerified = vm.IsVerified,
+                    NoKwitansi = vm.NoKwitansi,
                     DiskonId = vm.DiskonId,
                     GrandTotalPembayaran = vm.GrandTotalPembayaran,
                     TotalBiayaObat = vm.TotalBiayaObat,
                     Keterangan = vm.Keterangan,
                     TglPembayaran = DateTimeOffset.UtcNow,
                     IsDelete = false,
+                    TTDUserVerfiedId = vm.TTDUserVerfiedId,
+                    PathUserVerified = ttd?.Path,
+
                     CreateBy = userActiveId.Value,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };

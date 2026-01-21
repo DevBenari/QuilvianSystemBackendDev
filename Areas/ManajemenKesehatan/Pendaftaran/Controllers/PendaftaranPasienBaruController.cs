@@ -491,19 +491,65 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
         }
 
         [HttpGet("nik/{nik}")]
-        public IActionResult GetPendaftraanPasienBaruByNik(string nik)
+        public async Task<IActionResult> GetPendaftraanPasienBaruByNik(string nik)
         {
-            var listdata = _applicationDbContext.PendaftaranPasienBarus
+            var listdata = await _applicationDbContext.PendaftaranPasienBarus
                 .Where(p => p.NoIdentitas == nik && !p.IsDelete)
-                .FirstOrDefault();
+                .FirstOrDefaultAsync();
 
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
             }
 
-            var parsed = listdata.TanggalLahir?.ToString("yyyy-MM-dd");
+            // =============================
+            // 🔎 Cek apakah pasien masih punya kunjungan aktif
+            // =============================
+            // OP: aktif hari ini (tanpa poli karena endpoint hanya NoRM)
+            TimeZoneInfo tzJakarta;
+            try { tzJakarta = TimeZoneInfo.FindSystemTimeZoneById("Asia/Jakarta"); }
+            catch { tzJakarta = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time"); } // Windows fallback
 
+            var nowWib = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, tzJakarta);
+            var startWib = nowWib.Date;               // 00:00 WIB hari ini
+            var endWib = startWib.AddDays(1);         // 00:00 WIB besok
+
+            var startUtc = new DateTimeOffset(startWib, tzJakarta.GetUtcOffset(startWib)).ToUniversalTime();
+            var endUtc = new DateTimeOffset(endWib, tzJakarta.GetUtcOffset(endWib)).ToUniversalTime();
+
+            var hasActiveOPToday = await _applicationDbContext.Kunjungans
+                .AsNoTracking()
+                .AnyAsync(k =>
+                    k.PasienId == listdata.PendaftaranPasienBaruId &&
+                    !k.IsDelete &&
+                    k.IsFinished == false &&
+                    k.IsFinishedKasir == false &&
+                    k.JenisKunjungan == "OP" &&
+                    k.CreateDateTime >= startUtc &&
+                    k.CreateDateTime < endUtc);
+
+            // IP: aktif kapan pun
+            var hasActiveIP = await _applicationDbContext.Kunjungans
+                .AsNoTracking()
+                .AnyAsync(k =>
+                    k.PasienId == listdata.PendaftaranPasienBaruId &&
+                    !k.IsDelete &&
+                    k.IsFinished == false &&
+                    k.IsFinishedKasir == false &&
+                    k.JenisKunjungan == "IP");
+
+            var hasActiveVisit = hasActiveOPToday || hasActiveIP;
+
+            string? jenisAktif = null;
+            if (hasActiveOPToday && hasActiveIP) jenisAktif = "OP,IP";
+            else if (hasActiveOPToday) jenisAktif = "OP";
+            else if (hasActiveIP) jenisAktif = "IP";
+
+            // bad request jika pasien masih punya kunjungan aktif
+            if (hasActiveVisit)
+                return BadRequest(new { message = $"Pasien masih memiliki kunjungan aktif ({jenisAktif})." });
+
+            var parsed = listdata.TanggalLahir?.ToString("yyyy-MM-dd");
 
             return Ok(new
             {
@@ -619,35 +665,39 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
         public async Task<IActionResult> CreatePendaftaranPasienBaru([FromForm] PendaftaranPasienBaruViewModel vm, CancellationToken ct)
         {
             if (vm == null || !ModelState.IsValid)
-            {
                 return BadRequest(new { message = "Data tidak valid." });
-            }
 
             try
             {
-                // **Ambil User ID dari JWT Claims**
-                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(EmailLogin))
-                {
+                if (!_applicationDbContext.Database.CanConnect())
+                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+
+                // ==============================
+                // 🔐 Ambil User Aktif dari JWT
+                // ==============================
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin))
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
-                }
 
-                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
-                if (GetUserActive == null)
-                {
+                var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
+                if (getUserActive == null)
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-                }
 
-                var UserActiveId = GetUserActive.UserActiveId;
+                var userActiveId = getUserActive.UserActiveId;
 
                 var dateNow = DateTime.UtcNow;
                 var setDateNow = dateNow.ToString("yyMMdd");
 
-                // Ambil data terakhir untuk hari ini (tanpa ToString di query)
-                var lastCode = _applicationDbContext.PendaftaranPasienBarus
-                    .Where(d => d.CreateDateTime.Date == dateNow.Date)
+                // ==========================================
+                // ✅ Generate KodePasien (lebih aman pakai range, bukan .Date)
+                // ==========================================
+                var startToday = dateNow.Date;
+                var endTodayEx = dateNow.Date.AddDays(1);
+
+                var lastCode = await _applicationDbContext.PendaftaranPasienBarus
+                    .Where(d => d.CreateDateTime >= startToday && d.CreateDateTime < endTodayEx)
                     .OrderByDescending(k => k.KodePasien)
-                    .FirstOrDefault();
+                    .FirstOrDefaultAsync(ct);
 
                 string kodePasien;
                 if (lastCode == null)
@@ -657,7 +707,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 else
                 {
                     var lastCodeTrim = lastCode.KodePasien.Substring(3, 6);
-
                     if (lastCodeTrim != setDateNow)
                     {
                         kodePasien = $"PSN{setDateNow}0001";
@@ -669,74 +718,66 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 }
 
                 // =============================
-                // ✅ Cek Duplikasi DULU (biar NoRM tidak keburu “kepakai”)
+                // ✅ Cek Duplikasi DULU
                 // =============================
                 var isDuplicate = await _applicationDbContext.PendaftaranPasienBarus
                     .AnyAsync(c => c.NoIdentitas == vm.NoIdentitas, ct);
 
                 if (isDuplicate)
-                {
                     return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
-                }
 
-                // **Validasi & Simpan Foto Profil**
-                string fotoPath = null;
-                string fotoFileName = null;
+                // =============================
+                // ✅ Upload Foto ke Flask (mirip Lab)
+                // =============================
+                string fotoPath = "/FotoPasienBaru/user.jpg"; // default
+                string fotoFileName = "user.jpg";
 
                 if (vm.Foto != null && vm.Foto.Length > 0)
                 {
-                    var maxSize = 2 * 1024 * 1024;
                     var allowedExtensions = new List<string> { ".jpg", ".jpeg", ".png" };
-                    var fileExtension = Path.GetExtension(vm.Foto.FileName).ToLower();
+                    var maxSize = 2 * 1024 * 1024; // 2MB
+                    var ext = Path.GetExtension(vm.Foto.FileName).ToLower();
+
+                    if (!allowedExtensions.Contains(ext))
+                        return BadRequest(new { message = "Format foto tidak valid. Gunakan JPG/PNG." });
 
                     if (vm.Foto.Length > maxSize)
-                    {
                         return BadRequest(new { message = "Ukuran file terlalu besar! Maksimum 2MB." });
-                    }
 
-                    if (!allowedExtensions.Contains(fileExtension))
-                    {
-                        return BadRequest(new { message = "Format file tidak valid! Gunakan JPG atau PNG." });
-                    }
+                    var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
+                    fotoFileName = $"{kodePasien}_{safeTime}{ext}";
 
-                    var uploadFolder = Path.Combine(_webHostEnvironment.WebRootPath, "FotoPasienBaru");
-                    if (!Directory.Exists(uploadFolder))
-                    {
-                        Directory.CreateDirectory(uploadFolder);
-                    }
-
-                    fotoFileName = $"{kodePasien}{fileExtension}";
-                    var fotoFilePath = Path.Combine(uploadFolder, fotoFileName);
-
-                    using (var stream = new FileStream(fotoFilePath, FileMode.Create))
-                    {
-                        await vm.Foto.CopyToAsync(stream, ct);
-                    }
-
-                    fotoPath = $"/FotoPasienBaru/{fotoFileName}";
-
-                    // 📤 **Kirim foto ke server Python Flask**
                     using var client = new HttpClient();
                     using var ms = new MemoryStream();
                     await vm.Foto.CopyToAsync(ms, ct);
                     ms.Position = 0;
 
-                    var content = new MultipartFormDataContent {
-                { new StreamContent(ms) {
-                    Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.Foto.ContentType) }
-                }, "file", fotoFileName },
-                { new StringContent("FotoPasienBaru"), "folderTarget" }
-            };
+                    var content = new MultipartFormDataContent
+                    {
+                        {
+                            new StreamContent(ms)
+                            {
+                                Headers = { ContentType = new MediaTypeHeaderValue(vm.Foto.ContentType) }
+                            },
+                            "file", fotoFileName
+                        },
+                        { new StringContent("FotoPasienBaru"), "folderTarget" }
+                    };
 
-                    _ = await client.PostAsync(_uploadUrl, content, ct);
-                }
-                else
-                {
-                    fotoPath = "/FotoPasienBaru/user.jpg";
-                    fotoFileName = "user.jpg";
+                    var flaskResponse = await client.PostAsync(_uploadUrl, content, ct);
+                    if (!flaskResponse.IsSuccessStatusCode)
+                        return StatusCode(500, new { message = "Gagal upload foto pasien ke server Flask." });
+
+                    var responseBody = await flaskResponse.Content.ReadAsStringAsync(ct);
+                    dynamic jsonResp = JsonConvert.DeserializeObject(responseBody);
+
+                    // fleksibel: tergantung response flask kamu pakai key apa
+                    fotoPath = jsonResp?.url ?? jsonResp?.fileUrl ?? jsonResp?.path ?? fotoPath;
                 }
 
-                // **Konversi `TanggalLahir` dari string "yyyy-MM-dd" ke `DateTime`**
+                // =============================
+                // ✅ Parse TanggalLahir
+                // =============================
                 if (!DateTime.TryParseExact(vm.TanggalLahir, "yyyy-MM-dd",
                     CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsedDate))
                 {
@@ -745,144 +786,137 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 parsedDate = DateTime.SpecifyKind(parsedDate, DateTimeKind.Utc);
 
                 // =============================
-                // ✅ Generate NoRM DISINI (setelah validasi dan sebelum generate QR/insert)
+                // ✅ Generate NoRM (setelah validasi duplikasi)
                 // =============================
                 var noRekamMedis = await _noRmGenerator.GenerateNoRekamMedisAsync(ct);
 
-                // Inisialisasi variabel untuk path dan filename QR code
-                string QRPath = null;
-                string qrCodeFileName = null;
+                // =============================
+                // ✅ Generate QR Bytes + Upload ke Flask (mirip Lab)
+                // =============================
+                string qrPath = "";
+                string qrCodeFileName = $"{noRekamMedis}_{DateTimeOffset.UtcNow:yyyyMMddHHmmss}.png";
 
-                // 1. Lokasi logo (pastikan file ada di folder wwwroot/images)
+                // lokasi logo
                 var logoPath = Path.Combine(_webHostEnvironment.WebRootPath, "images", "logo.png");
-
-                // 2. Generate QR code dengan logo asli sebagai byte[]
                 var qrCodeBytes = QrCodeHelper.GenerateQrCodeWithLogoPngBytes(noRekamMedis, logoPath);
 
-                // 3. Validasi folder tujuan penyimpanan QR code
-                var uploadQrFolder = Path.Combine(_webHostEnvironment.WebRootPath, "QRCodePasienBaru");
-                if (!Directory.Exists(uploadQrFolder))
+                using (var clientQR = new HttpClient())
+                using (var qrUploadStream = new MemoryStream(qrCodeBytes))
                 {
-                    Directory.CreateDirectory(uploadQrFolder);
-                }
-
-                // 4. Tentukan nama file dan path penyimpanan
-                qrCodeFileName = $"{noRekamMedis}.png";
-                var qrCodeFilePath = Path.Combine(uploadQrFolder, qrCodeFileName);
-
-                // 5. Simpan byte[] QR code ke dalam file
-                await System.IO.File.WriteAllBytesAsync(qrCodeFilePath, qrCodeBytes, ct);
-
-                // 6. Simpan path relatif ke database
-                QRPath = $"/QRCodePasienBaru/{qrCodeFileName}";
-
-                // Upload QR ke server Flask
-                using var clientQR = new HttpClient();
-
-                using var qrUploadStream = new MemoryStream(qrCodeBytes);
-                var qrContent = new MultipartFormDataContent {
+                    var qrContent = new MultipartFormDataContent
             {
-                new StreamContent(qrUploadStream)
                 {
-                    Headers = { ContentType = new MediaTypeHeaderValue("image/png") }
+                    new StreamContent(qrUploadStream)
+                    {
+                        Headers = { ContentType = new MediaTypeHeaderValue("image/png") }
+                    },
+                    "file", qrCodeFileName
                 },
-                "file", qrCodeFileName
-            },
-            { new StringContent("QRCodePasienBaru"), "folderTarget" }
-        };
+                { new StringContent("QRCodePasienBaru"), "folderTarget" }
+            };
 
-                _ = await clientQR.PostAsync(_uploadUrl, qrContent, ct);
+                    var flaskRespQR = await clientQR.PostAsync(_uploadUrl, qrContent, ct);
+                    if (!flaskRespQR.IsSuccessStatusCode)
+                        return StatusCode(500, new { message = "Gagal upload QR Code pasien ke server Flask." });
 
-                if (ModelState.IsValid)
-                {
-                    // Simpan Data
-                    var daftar = new PendaftaranPasienBaru
-                    {
-                        PendaftaranPasienBaruId = Guid.NewGuid(),
-                        CreateDateTime = DateTimeOffset.UtcNow,
-                        CreateBy = UserActiveId,
-                        KodePasien = kodePasien,
-                        NoRekamMedis = noRekamMedis,
-                        TipePasien = vm.TipePasien,
-                        TipePendaftaran = vm.TipePendaftaran,
-                        TitleId = vm.TitleId,
-                        NamaLengkap = vm.NamaLengkap,
-                        IdentitasId = vm.IdentitasId,
-                        NoIdentitas = vm.NoIdentitas,
-                        TempatLahir = vm.TempatLahir,
-                        CatatanKhusus = vm.CatatanKhusus,
-                        TanggalLahir = parsedDate,
-                        JenisKelamin = vm.JenisKelamin,
-                        StatusPerkawinan = vm.StatusPerkawinan,
-                        AgamaId = vm.AgamaId,
-                        NamaAgama = vm.NamaAgama,
-                        PendidikanTerakhirId = vm.PendidikanTerakhirId,
-                        AlamatIdentitas = vm.AlamatIdentitas,
-                        AlamatDomisili = vm.AlamatDomisili,
-                        NegaraId = vm.NegaraId,
-                        ProvinsiId = vm.ProvinsiId,
-                        KotaId = vm.KotaId,
-                        KecKabId = vm.KecKabId,
-                        KelurahanId = vm.KelurahanId,
-                        KodePos = vm.KodePos,
-                        Email = vm.Email,
-                        NoPasien = vm.NoPasien,
-                        NoWali2 = vm.NoWali2,
-                        NoWali3 = vm.NoWali3,
-                        NamaWali2 = vm.NamaWali2,
-                        NamaWali3 = vm.NamaWali3,
-                        Kewarganegaraan = vm.Kewarganegaraan,
-                        Suku = vm.Suku,
-                        StatusKewarganegaraan = vm.StatusKewarganegaraan,
-                        PekerjaanId = vm.PekerjaanId,
-                        NamaPerusahaan = vm.NamaPerusahaan,
-                        AlamatPerusahaan = vm.AlamatPerusahaan,
-                        NoTeleponPerusahaan = vm.NoTeleponPerusahaan,
-                        GolonganDarahId = vm.GolonganDarahId,
-                        Alergi = vm.Alergi,
-                        RiwayatPenyakit = vm.RiwayatPenyakit,
-                        RiwayatOperasi = vm.RiwayatOperasi,
-                        RiwayatPenyakitKeluarga = vm.RiwayatPenyakitKeluarga,
-                        HubunganKeluarga1 = vm.HubunganKeluarga1,
-                        HubunganPasien = vm.HubunganPasien,
-                        NamaKontakDarurat = vm.NamaKontakDarurat,
-                        AlamatDarurat = vm.AlamatDarurat,
-                        NoTeleponDarurat = vm.NoTeleponDarurat,
-                        NamaOrangTua = vm.NamaOrangTua,
-                        IdentitasOrangTua = vm.IdentitasOrangTua,
-                        PekerjaanWali = vm.PekerjaanWali,
-                        HubunganKeluarga2 = vm.HubunganKeluarga2,
-                        HubunganKeluarga3 = vm.HubunganKeluarga3,
-                        MembershipId = vm.MembershipId,
-                        TinggalBersama = vm.TinggalBersama,
-                        FotoName = fotoFileName,
-                        QrCode = QRPath,
-                        FotoPath = fotoPath,
-                    };
+                    var respBodyQr = await flaskRespQR.Content.ReadAsStringAsync(ct);
+                    dynamic jsonQr = JsonConvert.DeserializeObject(respBodyQr);
 
-                    _applicationDbContext.PendaftaranPasienBarus.Add(daftar);
-                    await _applicationDbContext.SaveChangesAsync(ct);
-
-                    return Created("", new
-                    {
-                        message = "Tambah Data Berhasil || 201 Created",
-                        PasienBaruId = daftar.PendaftaranPasienBaruId,
-                        NomorRekamMedis = daftar.NoRekamMedis,
-                        qrCodeUrl = $"/QRCodePasienBaru/{qrCodeFileName}",
-                        url = $"/FotoPasienBaru/{fotoFileName}"
-                    });
+                    qrPath = jsonQr?.url ?? jsonQr?.fileUrl ?? jsonQr?.path ?? "";
                 }
-                else
+
+                // =============================
+                // ✅ Simpan Data
+                // =============================
+                var daftar = new PendaftaranPasienBaru
                 {
-                    return BadRequest(new { message = "Data tidak valid." });
-                }
+                    PendaftaranPasienBaruId = Guid.NewGuid(),
+                    CreateDateTime = DateTimeOffset.UtcNow,
+                    CreateBy = userActiveId,
+                    KodePasien = kodePasien,
+                    NoRekamMedis = noRekamMedis,
+
+                    // ... field lain tetap
+                    TipePasien = vm.TipePasien,
+                    TipePendaftaran = vm.TipePendaftaran,
+                    TitleId = vm.TitleId,
+                    NamaLengkap = vm.NamaLengkap,
+                    IdentitasId = vm.IdentitasId,
+                    NoIdentitas = vm.NoIdentitas,
+                    TempatLahir = vm.TempatLahir,
+                    CatatanKhusus = vm.CatatanKhusus,
+                    TanggalLahir = parsedDate,
+                    JenisKelamin = vm.JenisKelamin,
+                    StatusPerkawinan = vm.StatusPerkawinan,
+                    AgamaId = vm.AgamaId,
+                    NamaAgama = vm.NamaAgama,
+                    PendidikanTerakhirId = vm.PendidikanTerakhirId,
+                    AlamatIdentitas = vm.AlamatIdentitas,
+                    AlamatDomisili = vm.AlamatDomisili,
+                    NegaraId = vm.NegaraId,
+                    ProvinsiId = vm.ProvinsiId,
+                    KotaId = vm.KotaId,
+                    KecKabId = vm.KecKabId,
+                    KelurahanId = vm.KelurahanId,
+                    KodePos = vm.KodePos,
+                    Email = vm.Email,
+                    NoPasien = vm.NoPasien,
+                    NoWali2 = vm.NoWali2,
+                    NoWali3 = vm.NoWali3,
+                    NamaWali2 = vm.NamaWali2,
+                    NamaWali3 = vm.NamaWali3,
+                    Kewarganegaraan = vm.Kewarganegaraan,
+                    Suku = vm.Suku,
+                    StatusKewarganegaraan = vm.StatusKewarganegaraan,
+                    PekerjaanId = vm.PekerjaanId,
+                    NamaPerusahaan = vm.NamaPerusahaan,
+                    AlamatPerusahaan = vm.AlamatPerusahaan,
+                    NoTeleponPerusahaan = vm.NoTeleponPerusahaan,
+                    GolonganDarahId = vm.GolonganDarahId,
+                    Alergi = vm.Alergi,
+                    RiwayatPenyakit = vm.RiwayatPenyakit,
+                    RiwayatOperasi = vm.RiwayatOperasi,
+                    RiwayatPenyakitKeluarga = vm.RiwayatPenyakitKeluarga,
+                    HubunganKeluarga1 = vm.HubunganKeluarga1,
+                    HubunganPasien = vm.HubunganPasien,
+                    NamaKontakDarurat = vm.NamaKontakDarurat,
+                    AlamatDarurat = vm.AlamatDarurat,
+                    NoTeleponDarurat = vm.NoTeleponDarurat,
+                    NamaOrangTua = vm.NamaOrangTua,
+                    IdentitasOrangTua = vm.IdentitasOrangTua,
+                    PekerjaanWali = vm.PekerjaanWali,
+                    HubunganKeluarga2 = vm.HubunganKeluarga2,
+                    HubunganKeluarga3 = vm.HubunganKeluarga3,
+                    MembershipId = vm.MembershipId,
+                    TinggalBersama = vm.TinggalBersama,
+
+                    // ✅ sesuai pola Lab (path hasil dari Flask)
+                    FotoName = fotoFileName,
+                    FotoPath = fotoPath,
+                    QrCode = qrPath,
+                };
+
+                _applicationDbContext.PendaftaranPasienBarus.Add(daftar);
+                await _applicationDbContext.SaveChangesAsync(ct);
+
+                return Created("", new
+                {
+                    message = "Tambah Data Berhasil || 201 Created",
+                    PasienBaruId = daftar.PendaftaranPasienBaruId,
+                    NomorRekamMedis = daftar.NoRekamMedis,
+                    qrCodeUrl = daftar.QrCode,
+                    url = daftar.FotoPath
+                });
+            }
+            catch (DbUpdateException dbEx)
+            {
+                return StatusCode(500, new { message = $"Kesalahan database: {dbEx.InnerException?.Message}" });
             }
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
-
 
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdatePendaftaranPasien(Guid id, [FromForm] PendaftaranPasienBaruViewModel vm)

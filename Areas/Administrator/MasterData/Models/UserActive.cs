@@ -16,7 +16,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models
         public string PlaceOfBirth { get; set; }
         public DateTime DateOfBirth { get; set; }
         public string Gender { get; set; }
-        public string Address { get; set; }
+        public string? Address { get; set; }
         public string Handphone { get; set; }
         public string Email { get; set; }
         [MaxLength(64)]
