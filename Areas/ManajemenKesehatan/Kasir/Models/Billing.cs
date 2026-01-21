@@ -20,6 +20,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models
         public decimal? SubTotalItem { get; set; }
         public string? Keterangan { get; set; }
         public string? JenisBilling { get; set; }
+        public string? InvoiceBilling { get; set; }
+        public bool? IsListWhiteOff { get; set; }
         public bool? StatusPengambilan { get; set; }
         public bool? StatusBilling {  get; set; }
     }

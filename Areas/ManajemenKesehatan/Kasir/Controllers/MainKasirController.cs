@@ -898,8 +898,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     NamaMetode = detail.NamaMetode,
                     NominalPembayaran = detail.NominalPembayaran,
                     Keterangan = detail.Keterangan,
-                    StatusPembayaran = detail.StatusPembayaran,
                     TglPembayaran = DateTime.UtcNow,
+
                     CreateBy = userActiveId.Value,
                     CreateDateTime = DateTimeOffset.UtcNow
                 }).ToList();
@@ -1019,7 +1019,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         NamaMetode = detail.NamaMetode,
                         NominalPembayaran = detail.NominalPembayaran,
                         Keterangan = detail.Keterangan,
-                        StatusPembayaran = detail.StatusPembayaran,
                     }).ToList();
 
                     _applicationDbContext.MainKasirDetails.AddRange(newDetails);

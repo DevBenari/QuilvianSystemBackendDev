@@ -67,7 +67,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                              a.ReferenceId,
                              a.NamaMetode,
                              a.NominalPembayaran,
-                             a.StatusPembayaran,
                              a.Keterangan,
                              a.TglPembayaran,
                          }).OrderByDescending(a => a.CreateDateTime);
@@ -158,7 +157,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     NamaMetode = vm.NamaMetode,
                     NominalPembayaran = vm.NominalPembayaran,
                     Keterangan = vm.Keterangan,
-                    StatusPembayaran = vm.StatusPembayaran,
                     TglPembayaran = DateTime.UtcNow,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
@@ -185,28 +183,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             {
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
-        }
-
-        [HttpPut("{id}/DetailKasir-Status")]
-        public async Task<IActionResult> UpdateIsLunas(Guid id, [FromBody] StatusBayarDetailKasurViewModel request)
-        {
-            var data = await _applicationDbContext.MainKasirDetails.FindAsync(id);
-            if (data == null)
-                return NotFound(new { message = "Detail pembayaran tidak ditemukan." });
-
-            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(EmailLogin))
-                return Unauthorized(new { message = "User tidak terautentikasi!" });
-
-            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
-            var userId = user?.UserActiveId ?? Guid.Empty;
-
-            data.StatusPembayaran = request.StatusPembayaran;
-            data.UpdateDateTime = DateTimeOffset.UtcNow;
-            data.UpdateBy = userId;
-
-            await _applicationDbContext.SaveChangesAsync();
-            return Ok(new { message = "Status isFinished berhasil diperbarui." });
         }
 
         [HttpPut("{id}")]
@@ -372,7 +348,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                              a.ReferenceId,
                              a.NamaMetode,
                              a.NominalPembayaran,
-                             a.StatusPembayaran,
                              a.Keterangan,
                              a.TglPembayaran,
                          });

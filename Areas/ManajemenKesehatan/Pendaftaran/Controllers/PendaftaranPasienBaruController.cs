@@ -20,6 +20,7 @@ using ZXing.QrCode.Internal;
 using System.IO;
 using SixLabors.ImageSharp.PixelFormats;
 using System.Net.Http.Headers;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Interfaces;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controllers
 {
@@ -33,7 +34,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly string _uploadUrl;
-
+        private readonly INoRMGeneratorService _noRmGenerator;
         private readonly ILogger<PendaftaranPasienBaruController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
@@ -44,7 +45,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             SignInManager<ApplicationUser> signInManager,
             IConfiguration configuration,
             ILogger<PendaftaranPasienBaruController> logger,
-            IWebHostEnvironment webHostEnvironment
+            IWebHostEnvironment webHostEnvironment,
+            INoRMGeneratorService noRmGenerator
         )
         {
             _applicationDbContext = context;
@@ -52,6 +54,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+            _noRmGenerator = noRmGenerator;
             _uploadUrl = configuration["FileStorage:UploadUrl"];
         }
 
@@ -613,7 +616,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreatePendaftaranPasienBaru([FromForm] PendaftaranPasienBaruViewModel vm)
+        public async Task<IActionResult> CreatePendaftaranPasienBaru([FromForm] PendaftaranPasienBaruViewModel vm, CancellationToken ct)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -624,15 +627,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             {
                 // **Ambil User ID dari JWT Claims**
                 var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
-                var UserActiveId = GetUserActive.UserActiveId;
-
                 if (string.IsNullOrEmpty(EmailLogin))
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var dateNow = DateTime.UtcNow; ;
+                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                if (GetUserActive == null)
+                {
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+                }
+
+                var UserActiveId = GetUserActive.UserActiveId;
+
+                var dateNow = DateTime.UtcNow;
                 var setDateNow = dateNow.ToString("yyMMdd");
 
                 // Ambil data terakhir untuk hari ini (tanpa ToString di query)
@@ -647,7 +655,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     kodePasien = $"PSN{setDateNow}0001";
                 }
                 else
-               {
+                {
                     var lastCodeTrim = lastCode.KodePasien.Substring(3, 6);
 
                     if (lastCodeTrim != setDateNow)
@@ -660,61 +668,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     }
                 }
 
-                var noRekamMedis = await GenerateNoRekamMedisAsync();
-                // Inisialisasi variabel untuk path dan filename QR code
-                string QRPath = null;
-                string qrCodeFileName = null;
-
-                // 1. Lokasi logo (pastikan file ada di folder wwwroot/images)
-                var logoPath = Path.Combine(_webHostEnvironment.WebRootPath, "images", "logo.png");
-
-                // 2. Generate QR code dengan logo asli sebagai byte[]
-                var qrCodeBytes = QrCodeHelper.GenerateQrCodeWithLogoPngBytes(noRekamMedis, logoPath);
-
-                // 3. Validasi folder tujuan penyimpanan QR code
-                var uploadQrFolder = Path.Combine(_webHostEnvironment.WebRootPath, "QRCodePasienBaru");
-                if (!Directory.Exists(uploadQrFolder))
-                {
-                    Directory.CreateDirectory(uploadQrFolder);
-                }
-
-                // 4. Tentukan nama file dan path penyimpanan
-                qrCodeFileName = $"{noRekamMedis}.png";
-                var qrCodeFilePath = Path.Combine(uploadQrFolder, qrCodeFileName);
-
-                // 5. Simpan byte[] QR code ke dalam file menggunakan MemoryStream
-                using (var memoryStream = new MemoryStream(qrCodeBytes))
-                {
-                    using (var stream = new FileStream(qrCodeFilePath, FileMode.Create))
-                    {
-                        memoryStream.CopyTo(stream); // Menyerupai vm.Foto.CopyTo()
-                    }
-                }
-
-                // 6. Simpan path relatif ke database atau response
-                QRPath = $"/QRCodePasienBaru/{qrCodeFileName}";
-
-                // Upload QR ke server Flask setelah file sudah selesai ditulis
-                using var clientQR = new HttpClient();
-
-                using var qrUploadStream = new MemoryStream(qrCodeBytes); // langsung dari byte[], tidak dari file
-                var qrContent = new MultipartFormDataContent {
-                    {
-                        new StreamContent(qrUploadStream)
-                        {
-                            Headers = { ContentType = new MediaTypeHeaderValue("image/png") }
-                        },
-                        "file", qrCodeFileName
-                    },
-                    { new StringContent("QRCodePasienBaru"), "folderTarget" }
-                };
-
-                var flaskResponseQR = await clientQR.PostAsync(_uploadUrl, qrContent);
-
-
-                // Cek Duplikasi
+                // =============================
+                // ✅ Cek Duplikasi DULU (biar NoRM tidak keburu “kepakai”)
+                // =============================
                 var isDuplicate = await _applicationDbContext.PendaftaranPasienBarus
-                    .AnyAsync(c =>c.NoIdentitas == vm.NoIdentitas);
+                    .AnyAsync(c => c.NoIdentitas == vm.NoIdentitas, ct);
 
                 if (isDuplicate)
                 {
@@ -724,6 +682,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 // **Validasi & Simpan Foto Profil**
                 string fotoPath = null;
                 string fotoFileName = null;
+
                 if (vm.Foto != null && vm.Foto.Length > 0)
                 {
                     var maxSize = 2 * 1024 * 1024;
@@ -751,7 +710,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
 
                     using (var stream = new FileStream(fotoFilePath, FileMode.Create))
                     {
-                        vm.Foto.CopyTo(stream);
+                        await vm.Foto.CopyToAsync(stream, ct);
                     }
 
                     fotoPath = $"/FotoPasienBaru/{fotoFileName}";
@@ -759,25 +718,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     // 📤 **Kirim foto ke server Python Flask**
                     using var client = new HttpClient();
                     using var ms = new MemoryStream();
-                    await vm.Foto.CopyToAsync(ms);
+                    await vm.Foto.CopyToAsync(ms, ct);
                     ms.Position = 0;
 
                     var content = new MultipartFormDataContent {
-                        // File utama
-                        { new StreamContent(ms) {
-                            Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.Foto.ContentType) }
-                        }, "file", fotoFileName },
+                { new StreamContent(ms) {
+                    Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.Foto.ContentType) }
+                }, "file", fotoFileName },
+                { new StringContent("FotoPasienBaru"), "folderTarget" }
+            };
 
-                        // Nama folder tujuan di server Flask
-                        { new StringContent("FotoPasienBaru"), "folderTarget" }
-                    };
-
-                    // Ganti IP di bawah dengan alamat Python Flask server Anda
-                    var flaskResponse = await client.PostAsync(_uploadUrl, content);
+                    _ = await client.PostAsync(_uploadUrl, content, ct);
                 }
                 else
                 {
-                    //Jika user tidak upload foto, gunakan foto default
                     fotoPath = "/FotoPasienBaru/user.jpg";
                     fotoFileName = "user.jpg";
                 }
@@ -789,6 +743,55 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     return BadRequest(new { message = "Format TanggalLahir tidak valid! Gunakan format yyyy-MM-dd." });
                 }
                 parsedDate = DateTime.SpecifyKind(parsedDate, DateTimeKind.Utc);
+
+                // =============================
+                // ✅ Generate NoRM DISINI (setelah validasi dan sebelum generate QR/insert)
+                // =============================
+                var noRekamMedis = await _noRmGenerator.GenerateNoRekamMedisAsync(ct);
+
+                // Inisialisasi variabel untuk path dan filename QR code
+                string QRPath = null;
+                string qrCodeFileName = null;
+
+                // 1. Lokasi logo (pastikan file ada di folder wwwroot/images)
+                var logoPath = Path.Combine(_webHostEnvironment.WebRootPath, "images", "logo.png");
+
+                // 2. Generate QR code dengan logo asli sebagai byte[]
+                var qrCodeBytes = QrCodeHelper.GenerateQrCodeWithLogoPngBytes(noRekamMedis, logoPath);
+
+                // 3. Validasi folder tujuan penyimpanan QR code
+                var uploadQrFolder = Path.Combine(_webHostEnvironment.WebRootPath, "QRCodePasienBaru");
+                if (!Directory.Exists(uploadQrFolder))
+                {
+                    Directory.CreateDirectory(uploadQrFolder);
+                }
+
+                // 4. Tentukan nama file dan path penyimpanan
+                qrCodeFileName = $"{noRekamMedis}.png";
+                var qrCodeFilePath = Path.Combine(uploadQrFolder, qrCodeFileName);
+
+                // 5. Simpan byte[] QR code ke dalam file
+                await System.IO.File.WriteAllBytesAsync(qrCodeFilePath, qrCodeBytes, ct);
+
+                // 6. Simpan path relatif ke database
+                QRPath = $"/QRCodePasienBaru/{qrCodeFileName}";
+
+                // Upload QR ke server Flask
+                using var clientQR = new HttpClient();
+
+                using var qrUploadStream = new MemoryStream(qrCodeBytes);
+                var qrContent = new MultipartFormDataContent {
+            {
+                new StreamContent(qrUploadStream)
+                {
+                    Headers = { ContentType = new MediaTypeHeaderValue("image/png") }
+                },
+                "file", qrCodeFileName
+            },
+            { new StringContent("QRCodePasienBaru"), "folderTarget" }
+        };
+
+                _ = await clientQR.PostAsync(_uploadUrl, qrContent, ct);
 
                 if (ModelState.IsValid)
                 {
@@ -853,13 +856,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         MembershipId = vm.MembershipId,
                         TinggalBersama = vm.TinggalBersama,
                         FotoName = fotoFileName,
-                        QrCode = QRPath, // Simpan hanya path QR Code
+                        QrCode = QRPath,
                         FotoPath = fotoPath,
-                        //QrCodeImage = qrCodeBytes,
-
                     };
+
                     _applicationDbContext.PendaftaranPasienBarus.Add(daftar);
-                    _applicationDbContext.SaveChanges();
+                    await _applicationDbContext.SaveChangesAsync(ct);
 
                     return Created("", new
                     {
@@ -880,6 +882,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
 
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdatePendaftaranPasien(Guid id, [FromForm] PendaftaranPasienBaruViewModel vm)

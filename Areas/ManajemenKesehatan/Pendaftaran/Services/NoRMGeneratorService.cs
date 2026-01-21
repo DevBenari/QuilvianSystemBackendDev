@@ -27,7 +27,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
                 await conn.OpenAsync(ct);
 
             await using var cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT nextval('no_rm_seq')";
+            cmd.CommandText = "SELECT nextval('public.no_rm_seq')";
             var result = await cmd.ExecuteScalarAsync(ct);
 
             return Convert.ToInt64(result);

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -12,9 +13,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260121032202_AddSequenceNoRM")]
+    partial class AddSequenceNoRM
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -5465,13 +5467,7 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<decimal?>("HargaItem")
                         .HasColumnType("numeric");
 
-                    b.Property<string>("InvoiceBilling")
-                        .HasColumnType("text");
-
                     b.Property<bool>("IsDelete")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool?>("IsListWhiteOff")
                         .HasColumnType("boolean");
 
                     b.Property<Guid?>("ItemId")
@@ -5651,31 +5647,10 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<bool>("IsDelete")
                         .HasColumnType("boolean");
 
-                    b.Property<bool?>("IsVerified")
-                        .HasColumnType("boolean");
-
-                    b.Property<int?>("JumlahAngsuran")
-                        .HasColumnType("integer");
-
                     b.Property<string>("Keterangan")
                         .HasColumnType("text");
 
                     b.Property<Guid?>("KunjunganId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("NoKwitansi")
-                        .HasColumnType("text");
-
-                    b.Property<Guid?>("PasienId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("PathUserVerified")
-                        .HasColumnType("text");
-
-                    b.Property<string>("StatusPembayaran")
-                        .HasColumnType("text");
-
-                    b.Property<Guid?>("TTDUserVerfiedId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset?>("TglPembayaran")
@@ -5704,9 +5679,6 @@ namespace QuilvianSystemBackendDev.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<decimal?>("AngsuranKe")
-                        .HasColumnType("numeric");
-
                     b.Property<Guid>("CreateBy")
                         .HasColumnType("uuid");
 
@@ -5719,17 +5691,11 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<DateTimeOffset>("DeleteDateTime")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("InvoiceBilling")
-                        .HasColumnType("text");
-
                     b.Property<bool>("IsDelete")
                         .HasColumnType("boolean");
 
                     b.Property<string>("Keterangan")
                         .HasColumnType("text");
-
-                    b.Property<Guid?>("KunjunganId")
-                        .HasColumnType("uuid");
 
                     b.Property<Guid?>("MainKasirId")
                         .HasColumnType("uuid");
@@ -5743,20 +5709,14 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<decimal?>("NominalPembayaran")
                         .HasColumnType("numeric");
 
-                    b.Property<Guid?>("PasienId")
-                        .HasColumnType("uuid");
-
                     b.Property<Guid?>("ReferenceId")
                         .HasColumnType("uuid");
 
-                    b.Property<decimal?>("SisaPembayaran")
-                        .HasColumnType("numeric");
+                    b.Property<bool?>("StatusPembayaran")
+                        .HasColumnType("boolean");
 
                     b.Property<DateTime?>("TglPembayaran")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<decimal?>("TotalPembayaran")
-                        .HasColumnType("numeric");
 
                     b.Property<Guid>("UpdateBy")
                         .HasColumnType("uuid");

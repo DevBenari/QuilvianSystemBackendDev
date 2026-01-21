@@ -8,6 +8,5 @@
         public string? NamaMetode { get; set; }
         public decimal? NominalPembayaran { get; set; }
         public string? Keterangan { get; set; }
-        public bool? StatusPembayaran { get; set; }
     }
 }
