@@ -14,6 +14,8 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Services;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Interfaces;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.HubSignalR;
 using QuilvianSystemBackendDev.Helpers;
 using QuilvianSystemBackendDev.Interfaces;
@@ -216,6 +218,10 @@ builder.Services.AddScoped<ITTDService, TTDService>();
 
 // add service untuk update status billing 
 builder.Services.AddScoped<IBillingService, BillingPaidService>();
+
+// add service untuk generate no rm unique
+builder.Services.AddScoped<INoRMGeneratorService, NoRMGeneratorService>();
+
 
 // Add services to the container.
 builder.Services.AddControllers(options =>

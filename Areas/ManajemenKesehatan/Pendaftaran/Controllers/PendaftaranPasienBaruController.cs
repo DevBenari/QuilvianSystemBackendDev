@@ -351,6 +351,142 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             });
         }
 
+        [HttpGet("No-RekamMedis/{noRm}")]
+        public async Task<IActionResult> GetPendaftaranPasienBaruByNoRm(string noRm)
+        {
+            if (string.IsNullOrWhiteSpace(noRm))
+                return BadRequest(new { message = "NoRM wajib diisi." });
+
+            // 1) Cari pasien by NoRekamMedis
+            var pasien = await _applicationDbContext.PendaftaranPasienBarus
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.NoRekamMedis == noRm && !p.IsDelete);
+
+            if (pasien == null)
+                return NotFound(new { message = "Data tidak ditemukan." });
+
+            // 2) Hitung "hari ini" berdasarkan WIB lalu ubah ke range UTC (biar query akurat & efisien)
+            TimeZoneInfo tzJakarta;
+            try { tzJakarta = TimeZoneInfo.FindSystemTimeZoneById("Asia/Jakarta"); }
+            catch { tzJakarta = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time"); } // Windows fallback
+
+            var nowWib = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, tzJakarta);
+            var startWib = nowWib.Date;               // 00:00 WIB hari ini
+            var endWib = startWib.AddDays(1);         // 00:00 WIB besok
+
+            var startUtc = new DateTimeOffset(startWib, tzJakarta.GetUtcOffset(startWib)).ToUniversalTime();
+            var endUtc = new DateTimeOffset(endWib, tzJakarta.GetUtcOffset(endWib)).ToUniversalTime();
+
+            // =============================
+            // 🔎 Cek apakah pasien masih punya kunjungan aktif
+            // =============================
+            // OP: aktif hari ini (tanpa poli karena endpoint hanya NoRM)
+            var hasActiveOPToday = await _applicationDbContext.Kunjungans
+                .AsNoTracking()
+                .AnyAsync(k =>
+                    k.PasienId == pasien.PendaftaranPasienBaruId &&
+                    !k.IsDelete &&
+                    k.IsFinished == false &&
+                    k.IsFinishedKasir == false &&
+                    k.JenisKunjungan == "OP" &&
+                    k.CreateDateTime >= startUtc &&
+                    k.CreateDateTime < endUtc);
+
+            // IP: aktif kapan pun
+            var hasActiveIP = await _applicationDbContext.Kunjungans
+                .AsNoTracking()
+                .AnyAsync(k =>
+                    k.PasienId == pasien.PendaftaranPasienBaruId &&
+                    !k.IsDelete &&
+                    k.IsFinished == false &&
+                    k.IsFinishedKasir == false &&
+                    k.JenisKunjungan == "IP");
+
+            var hasActiveVisit = hasActiveOPToday || hasActiveIP;
+
+            string? jenisAktif = null;
+            if (hasActiveOPToday && hasActiveIP) jenisAktif = "OP,IP";
+            else if (hasActiveOPToday) jenisAktif = "OP";
+            else if (hasActiveIP) jenisAktif = "IP";
+
+            // bad request jika pasien masih punya kunjungan aktif
+            if (hasActiveVisit)
+                return BadRequest(new { message = $"Pasien masih memiliki kunjungan aktif ({jenisAktif})." });
+
+            var parsed = pasien.TanggalLahir?.ToString("yyyy-MM-dd");
+
+            return Ok(new
+            {
+                message = "Ditemukan || 200 OK",
+                hasActiveVisit,
+                activeVisitType = jenisAktif,
+                data = new
+                {
+                    pasien.PendaftaranPasienBaruId,
+                    pasien.KodePasien,
+                    pasien.NoRekamMedis,
+                    pasien.TipePasien,
+                    pasien.TitleId,
+                    pasien.NamaLengkap,
+                    pasien.IdentitasId,
+                    pasien.NoIdentitas,
+                    pasien.TempatLahir,
+                    pasien.CatatanKhusus,
+                    TanggalLahir = parsed,
+                    Umur = HitungUmurLengkap(pasien.TanggalLahir),
+                    pasien.JenisKelamin,
+                    pasien.StatusPerkawinan,
+                    pasien.AgamaId,
+                    pasien.NamaAgama,
+                    pasien.PendidikanTerakhirId,
+                    pasien.AlamatIdentitas,
+                    pasien.AlamatDomisili,
+                    pasien.NegaraId,
+                    pasien.ProvinsiId,
+                    pasien.KotaId,
+                    pasien.KecKabId,
+                    pasien.KelurahanId,
+                    pasien.KodePos,
+                    pasien.Email,
+                    pasien.NoPasien,
+                    pasien.NoWali2,
+                    pasien.NoWali3,
+                    pasien.NamaWali2,
+                    pasien.NamaWali3,
+                    pasien.Kewarganegaraan,
+                    pasien.Suku,
+                    pasien.StatusKewarganegaraan,
+                    pasien.PekerjaanId,
+                    pasien.NamaPerusahaan,
+                    pasien.AlamatPerusahaan,
+                    pasien.NoTeleponPerusahaan,
+                    pasien.GolonganDarahId,
+                    pasien.Alergi,
+                    pasien.RiwayatPenyakit,
+                    pasien.RiwayatOperasi,
+                    pasien.RiwayatPenyakitKeluarga,
+                    pasien.HubunganKeluarga1,
+                    pasien.HubunganPasien,
+                    pasien.AlamatDarurat,
+                    pasien.NoTeleponDarurat,
+                    pasien.NamaKontakDarurat,
+                    pasien.NamaOrangTua,
+                    pasien.IdentitasOrangTua,
+                    pasien.PekerjaanWali,
+                    pasien.HubunganKeluarga2,
+                    pasien.HubunganKeluarga3,
+                    pasien.FotoName,
+                    pasien.FotoPath,
+                    pasien.MembershipId,
+                    pasien.TinggalBersama,
+                    imageUrl = !string.IsNullOrEmpty(pasien.FotoName)
+                        ? $"/FotoPasienBaru/{pasien.FotoName}"
+                        : $"/FotoPasienBaru/user.jpg",
+                    QRUrl = $"/QRCodePasienBaru/{Path.GetFileName(pasien.QrCode)}"
+                }
+            });
+        }
+
         [HttpGet("nik/{nik}")]
         public IActionResult GetPendaftraanPasienBaruByNik(string nik)
         {
