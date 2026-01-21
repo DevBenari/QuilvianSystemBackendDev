@@ -4,10 +4,14 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using QuilvianSystemBackendDev.Models;
-using QuilvianSystemBackendDev.Repositories; 
+using QuilvianSystemBackendDev.Repositories;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
+[EnableCors("AllowSpecific")]
 public class AiController : ControllerBase
 {
     private readonly HttpClient _httpClient;
