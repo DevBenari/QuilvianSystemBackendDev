@@ -12,6 +12,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using OpenCvSharp;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.HubSignalR;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Interfaces;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Services;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
@@ -41,6 +42,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         private readonly IWebHostEnvironment _webHostEnvironment;
         private IBillingService _billingService;
         private readonly ITTDService _ttdService;
+        private readonly INoKwitansiService _noKwitansiService;
 
         public MainKasirController(
             ApplicationDbContext applicationDbContext,
@@ -50,7 +52,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             IWebHostEnvironment webHostEnvironment,
             IHubContext<MainKasirHub> hubContext,
             IBillingService billingService,
-            ITTDService ttdService)
+            ITTDService ttdService,
+            INoKwitansiService noKwitansiService)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
@@ -60,6 +63,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             _hubContext = hubContext;
             _billingService = billingService;
             _ttdService = ttdService;
+            _noKwitansiService = noKwitansiService;
         }
 
         public static string HitungUmurLengkap(DateTime? tanggalLahir)
@@ -884,7 +888,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     JumlahAngsuran = vm.JumlahAngsuran,
                     StatusPembayaran = vm.StatusPembayaran,
                     IsVerified = vm.IsVerified,
-                    NoKwitansi = vm.NoKwitansi,
+                    NoKwitansi = vm.NoKwitansi, 
                     DiskonId = vm.DiskonId,
                     GrandTotalPembayaran = vm.GrandTotalPembayaran,
                     TotalBiayaObat = vm.TotalBiayaObat,
@@ -905,10 +909,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 {
                     MainKasirDetailId = Guid.NewGuid(),
                     MainKasirId = kasirId,
+                    KunjunganId = detail.KunjunganId,
+                    PasienId = detail.PasienId,
+                    TotalPembayaran = detail.TotalPembayaran,
+                    NominalPembayaran = detail.NominalPembayaran,
+                    SisaPembayaran = detail.TotalPembayaran - detail.NominalPembayaran,
                     MetodePembayaranId = detail.MetodePembayaranId,
+                    InvoiceBilling = detail.InvoiceBilling,
+                    AngsuranKe = 1, //hari kamis bikin ini
                     ReferenceId = detail.ReferenceId,
                     NamaMetode = detail.NamaMetode,
-                    NominalPembayaran = detail.NominalPembayaran,
                     Keterangan = detail.Keterangan,
                     TglPembayaran = DateTime.UtcNow,
 

@@ -17,7 +17,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Services
         public async Task<string> GenerateNoKwitansiAsync(DateTime tglPembayaran, CancellationToken ct = default)
         {
             // format tanggal: HariBulanTahun dari tanggal pembayaran yang diinput
-            var datePart = tglPembayaran.ToString("ddMMyyyy");
+            var datePart = tglPembayaran.ToString("yyyyMMdd");
             var prefix = "KWS";
 
             // kunci transaksi per tanggal agar tidak double saat concurrent request
@@ -34,7 +34,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Services
             await _db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock({0});", new object[] { lockKey }, ct);
 
             // ambil nomor terakhir untuk tanggal tsb (urut desc)
-            // pola: KWS + 4 digit + ddMMyyyy
+            // pola: KWS + 4 digit + yyyyMMdd
             var last = await _db.MainKasirs.AsNoTracking()
                 .Where(x => x.NoKwitansi != null
                             && x.NoKwitansi.StartsWith(prefix)
