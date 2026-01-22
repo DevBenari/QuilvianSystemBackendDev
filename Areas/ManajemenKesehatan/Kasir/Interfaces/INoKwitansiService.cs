@@ -2,6 +2,6 @@
 {
     public interface INoKwitansiService
     {
-        Task<string> GenerateNoKwitansiAsync(DateTime tglPembayaran, CancellationToken ct = default);
+        Task<string> GenerateNoKwitansiAsync(DateTimeOffset tglPembayaran, CancellationToken ct = default);
     }
 }

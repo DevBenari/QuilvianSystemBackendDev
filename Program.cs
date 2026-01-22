@@ -158,59 +158,6 @@ builder.Services.AddSwaggerGen(c =>
 
 });
 
-//builder.Services.AddSwaggerGen(c =>
-//{
-//    c.EnableAnnotations();
-
-//    // Konversi Enum ke String di Swagger
-//    c.MapType<PeriodeFilter>(() => new OpenApiSchema
-//    {
-//        Type = "string",
-//        Enum = Enum.GetValues(typeof(PeriodeFilter))
-//            .Cast<PeriodeFilter>()
-//            .Select(e => new OpenApiString(e.ToString()))
-//            .ToList<IOpenApiAny>()
-//    });
-
-//    // Menampilkan Date Picker untuk startDate dan endDate
-//    c.MapType<DateTime>(() => new OpenApiSchema
-//    {
-//        Type = "string",
-//        Format = "date-time"
-//    });
-
-//    c.SwaggerDoc("v1", new() { Title = "My API", Version = "v1" });
-//    c.SwaggerDoc("manajemen_kesehatan", new OpenApiInfo { Title = "Manajemen Kesehatan API", Version = "v1" });
-//    c.SwaggerDoc("hrd", new OpenApiInfo { Title = "Administrator API", Version = "v1" });
-
-//    // Konfigurasi JWT Authentication
-//    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-//    {
-//        Name = "Authorization",
-//        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
-//        Scheme = "Bearer",
-//        BearerFormat = "JWT",
-//        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-//        Description = "Masukkan JWT dengan format: Bearer [token]"
-//    });
-
-//    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
-//    {
-//        {
-//            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-//            {
-//                Reference = new Microsoft.OpenApi.Models.OpenApiReference
-//                {
-//                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-//                    Id = "Bearer"
-//                }
-//            },
-//            new string[] {}
-//        }
-//    });
-//});
-
-
 // add services untuk menampilkan data role
 builder.Services.AddScoped<serviceMasterData>();
 
@@ -226,6 +173,8 @@ builder.Services.AddScoped<INoRMGeneratorService, NoRMGeneratorService>();
 // service generate no kwitansi unique
 builder.Services.AddScoped<INoKwitansiService, NoKwitansiService>();
 
+// add service generate no angsuran
+builder.Services.AddScoped<IGenerateUrutanAngsuran, GenerateUrutanAngsuranService>();
 
 // Add services to the container.
 builder.Services.AddControllers(options =>

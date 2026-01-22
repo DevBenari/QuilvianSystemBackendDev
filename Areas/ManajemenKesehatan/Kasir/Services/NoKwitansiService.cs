@@ -14,7 +14,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Services
             _db = db;
         }
 
-        public async Task<string> GenerateNoKwitansiAsync(DateTime tglPembayaran, CancellationToken ct = default)
+        public async Task<string> GenerateNoKwitansiAsync(DateTimeOffset tglPembayaran, CancellationToken ct = default)
         {
             // format tanggal: HariBulanTahun dari tanggal pembayaran yang diinput
             var datePart = tglPembayaran.ToString("yyyyMMdd");
