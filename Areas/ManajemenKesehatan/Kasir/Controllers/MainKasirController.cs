@@ -44,6 +44,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         private readonly ITTDService _ttdService;
         private readonly INoKwitansiService _noKwitansiService;
         private readonly IGenerateUrutanAngsuran _generateUrutanAngsuran;
+        private readonly ICountAngsuran _countAngsuran;
 
         public MainKasirController(
             ApplicationDbContext applicationDbContext,
@@ -55,7 +56,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             IBillingService billingService,
             ITTDService ttdService,
             INoKwitansiService noKwitansiService,
-            IGenerateUrutanAngsuran generateUrutanAngsuran)
+            IGenerateUrutanAngsuran generateUrutanAngsuran,
+            ICountAngsuran countAngsuran)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
@@ -67,6 +69,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             _ttdService = ttdService;
             _noKwitansiService = noKwitansiService;
             _generateUrutanAngsuran = generateUrutanAngsuran;
+            _countAngsuran = countAngsuran;
         }
 
         public static string HitungUmurLengkap(DateTime? tanggalLahir)
@@ -554,7 +557,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 var finalStatus = (sisaAfter <= 0) ? "Lunas" : (string.IsNullOrWhiteSpace(statusFromVm) ? "Cicil" : statusFromVm);
 
                 // 9) Generate NoKwitansi (per request)
-                var noKwitansi = await _noKwitansiService.GenerateNoKwitansiAsync(tglPembayaran, HttpContext.RequestAborted);
+                string? noKwitansi = null;
+                if (sisaAfter <= 0) // hanya saat lunas
+                {
+                    noKwitansi = await _noKwitansiService.GenerateNoKwitansiAsync(tglPembayaran, HttpContext.RequestAborted);
+                }
+
 
                 // 10) TTD
                 var ttd = (vm.TTDUserVerfiedId.HasValue)
@@ -571,7 +579,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         KasirId = kasirId,
                         KunjunganId = kunjunganId,
                         PasienId = vm.PasienId,
-                        JumlahAngsuran = vm.JumlahAngsuran,
+                        JumlahAngsuran = await _countAngsuran.CountAsync((Guid)vm.KunjunganId),
 
                         StatusPembayaran = finalStatus,
                         IsVerified = vm.IsVerified,
@@ -603,10 +611,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     // Update status & tanggal pembayaran terakhir
                     headerEntity.StatusPembayaran = finalStatus;
                     headerEntity.TglPembayaran = tglPembayaran;
-
-                    // NOTE: karena NoKwitansi hanya ada di header, kita update jadi kwitansi terakhir
                     headerEntity.NoKwitansi = noKwitansi;
-
                     // kalau mau update field ini tiap cicilan, silakan; kalau tidak, boleh dihapus
                     headerEntity.IsVerified = vm.IsVerified;
                     headerEntity.TTDUserVerfiedId = vm.TTDUserVerfiedId ?? headerEntity.TTDUserVerfiedId;

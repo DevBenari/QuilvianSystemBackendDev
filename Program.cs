@@ -176,6 +176,7 @@ builder.Services.AddScoped<INoKwitansiService, NoKwitansiService>();
 // add service generate no angsuran
 builder.Services.AddScoped<IGenerateUrutanAngsuran, GenerateUrutanAngsuranService>();
 
+builder.Services.AddScoped<ICountAngsuran, CountAngsuranService>();
 // Add services to the container.
 builder.Services.AddControllers(options =>
 {
