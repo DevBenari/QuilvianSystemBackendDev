@@ -36,13 +36,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
         private readonly ILogger<AlatPemakaianController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly IHubContext<AlatPemakaianHub> _hubContext;
+        private readonly IGenerateInvoiceBillingService _generateInvoiceBillingService;
         public AlatPemakaianController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ILogger<AlatPemakaianController> logger,
             IWebHostEnvironment webHostEnvironment,
-            IHubContext<AlatPemakaianHub> hubContext)
+            IHubContext<AlatPemakaianHub> hubContext,
+            IGenerateInvoiceBillingService generateInvoiceBillingService
+            )
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
@@ -50,6 +53,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
             _hubContext = hubContext;
+            _generateInvoiceBillingService = generateInvoiceBillingService;
         }
 
         [HttpGet("{id}")]
@@ -358,7 +362,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
 
                             BillingDate = DateTime.UtcNow,
                             BillingKode = $"{billingIndex:D3}",
-
+                            InvoiceBilling = await _generateInvoiceBillingService.GetOrCreateAsync(
+                                (Guid)header.KunjunganId,
+                                DateTime.UtcNow),
+                            IsListWhiteOff = false,
                             ItemId = alatId,
                             NamaItem = namaAlat,
 
@@ -556,7 +563,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
 
                             BillingDate = DateTime.UtcNow,
                             BillingKode = $"{billingIndex:D3}",
-
+                            InvoiceBilling = await _generateInvoiceBillingService.GetOrCreateAsync(
+                                (Guid)header.KunjunganId,
+                                DateTime.UtcNow),
+                            IsListWhiteOff = false,
                             ItemId = alatId,
                             NamaItem = namaAlat,
 

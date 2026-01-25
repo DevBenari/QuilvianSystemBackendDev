@@ -2,7 +2,7 @@
 {
     public class VisitDokterViewModel
     {
-        public string? TanggalVisit { get; set; }
+        public DateTime? TanggalVisit { get; set; }
         public TimeSpan? WaktuVisit { get; set; }
         public Guid? KunjunganId { get; set; }
         public Guid? PasienId { get; set; }

@@ -177,6 +177,9 @@ builder.Services.AddScoped<INoKwitansiService, NoKwitansiService>();
 builder.Services.AddScoped<IGenerateUrutanAngsuran, GenerateUrutanAngsuranService>();
 
 builder.Services.AddScoped<ICountAngsuran, CountAngsuranService>();
+
+builder.Services.AddScoped<IGenerateInvoiceBillingService, GenerateInvoiceBillingService>();
+
 // Add services to the container.
 builder.Services.AddControllers(options =>
 {

@@ -11,6 +11,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
@@ -1350,5 +1351,489 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
+
+        [HttpGet("GetBillingPaged")]
+        public async Task<IActionResult> GetBillingPaged(
+            [FromQuery] Guid? kunjunganId,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10,
+
+            [FromQuery] DateTime? startDate = null,
+            [FromQuery] DateTime? endDate = null,
+            [FromQuery] PeriodeFilter? periode = null)
+        {
+            try
+            {
+                if (page <= 0) page = 1;
+                if (pageSize <= 0) pageSize = 10;
+
+                // ============================================================
+                // BASE QUERY KUNJUNGAN (FILTER + PAGING PER KUNJUNGANID)
+                // Filter & order pakai Kunjungan.CreateDateTime
+                // ============================================================
+                var baseQuery = _applicationDbContext.Kunjungans
+                    .AsNoTracking()
+                    .Where(k => !k.IsDelete);
+
+                if (kunjunganId.HasValue && kunjunganId.Value != Guid.Empty)
+                    baseQuery = baseQuery.Where(k => k.KunjunganID == kunjunganId.Value);
+
+                // ============================================================
+                // FILTER RANGE (startDate & endDate) pada CreateDateTime
+                // ============================================================
+                if (startDate.HasValue && endDate.HasValue)
+                {
+                    // dibuat UTC range (00:00:00 - 23:59:59.9999999)
+                    var startUtc = new DateTimeOffset(DateTime.SpecifyKind(startDate.Value.Date, DateTimeKind.Utc));
+                    var endUtc = new DateTimeOffset(DateTime.SpecifyKind(endDate.Value.Date.AddDays(1).AddTicks(-1), DateTimeKind.Utc));
+
+                    baseQuery = baseQuery.Where(k => k.CreateDateTime >= startUtc && k.CreateDateTime <= endUtc);
+                }
+
+                // ============================================================
+                // FILTER PERIODE pada CreateDateTime (tambahan Yesterday)
+                // ============================================================
+                if (periode.HasValue)
+                {
+                    var today = DateTime.UtcNow.Date;
+
+                    DateTimeOffset rangeStartUtc;
+                    DateTimeOffset rangeEndUtc;
+
+                    switch (periode.Value)
+                    {
+                        case PeriodeFilter.Today:
+                            rangeStartUtc = new DateTimeOffset(DateTime.SpecifyKind(today, DateTimeKind.Utc));
+                            rangeEndUtc = new DateTimeOffset(DateTime.SpecifyKind(today.AddDays(1).AddTicks(-1), DateTimeKind.Utc));
+                            baseQuery = baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc && k.CreateDateTime <= rangeEndUtc);
+                            break;
+
+                        case PeriodeFilter.Yesterday:
+                            var y = today.AddDays(-1);
+                            rangeStartUtc = new DateTimeOffset(DateTime.SpecifyKind(y, DateTimeKind.Utc));
+                            rangeEndUtc = new DateTimeOffset(DateTime.SpecifyKind(y.AddDays(1).AddTicks(-1), DateTimeKind.Utc));
+                            baseQuery = baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc && k.CreateDateTime <= rangeEndUtc);
+                            break;
+
+                        case PeriodeFilter.ThisWeek:
+                            var weekStart = today.AddDays(-(int)today.DayOfWeek);
+                            rangeStartUtc = new DateTimeOffset(DateTime.SpecifyKind(weekStart, DateTimeKind.Utc));
+                            rangeEndUtc = new DateTimeOffset(DateTime.SpecifyKind(today.AddDays(1).AddTicks(-1), DateTimeKind.Utc));
+                            baseQuery = baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc && k.CreateDateTime <= rangeEndUtc);
+                            break;
+
+                        case PeriodeFilter.LastWeek:
+                            var lastWeekStart = today.AddDays(-7 - (int)today.DayOfWeek);
+                            var lastWeekEnd = lastWeekStart.AddDays(6);
+                            rangeStartUtc = new DateTimeOffset(DateTime.SpecifyKind(lastWeekStart, DateTimeKind.Utc));
+                            rangeEndUtc = new DateTimeOffset(DateTime.SpecifyKind(lastWeekEnd.AddDays(1).AddTicks(-1), DateTimeKind.Utc));
+                            baseQuery = baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc && k.CreateDateTime <= rangeEndUtc);
+                            break;
+
+                        case PeriodeFilter.ThisMonth:
+                            var thisMonthStart = new DateTime(today.Year, today.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+                            rangeStartUtc = new DateTimeOffset(thisMonthStart);
+                            rangeEndUtc = new DateTimeOffset(thisMonthStart.AddMonths(1).AddTicks(-1));
+                            baseQuery = baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc && k.CreateDateTime <= rangeEndUtc);
+                            break;
+
+                        case PeriodeFilter.LastMonth:
+                            var lm = today.AddMonths(-1);
+                            var lastMonthStart = new DateTime(lm.Year, lm.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+                            rangeStartUtc = new DateTimeOffset(lastMonthStart);
+                            rangeEndUtc = new DateTimeOffset(lastMonthStart.AddMonths(1).AddTicks(-1));
+                            baseQuery = baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc && k.CreateDateTime <= rangeEndUtc);
+                            break;
+
+                        case PeriodeFilter.ThisYear:
+                            var thisYearStart = new DateTime(today.Year, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                            rangeStartUtc = new DateTimeOffset(thisYearStart);
+                            rangeEndUtc = new DateTimeOffset(thisYearStart.AddYears(1).AddTicks(-1));
+                            baseQuery = baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc && k.CreateDateTime <= rangeEndUtc);
+                            break;
+
+                        case PeriodeFilter.LastYear:
+                            var lastYearStart = new DateTime(today.Year - 1, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                            rangeStartUtc = new DateTimeOffset(lastYearStart);
+                            rangeEndUtc = new DateTimeOffset(lastYearStart.AddYears(1).AddTicks(-1));
+                            baseQuery = baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc && k.CreateDateTime <= rangeEndUtc);
+                            break;
+
+                        case PeriodeFilter.Last3Months:
+                            rangeStartUtc = new DateTimeOffset(DateTime.SpecifyKind(today.AddMonths(-3), DateTimeKind.Utc));
+                            baseQuery = baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc);
+                            break;
+
+                        case PeriodeFilter.Last6Months:
+                            rangeStartUtc = new DateTimeOffset(DateTime.SpecifyKind(today.AddMonths(-6), DateTimeKind.Utc));
+                            baseQuery = baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc);
+                            break;
+                    }
+                }
+
+                // ============================================================
+                // PAGING KUNJUNGAN ID (ORDER BY CreateDateTime DESC)
+                // ============================================================
+                var totalKunjungan = await baseQuery.CountAsync();
+                var totalPages = (int)Math.Ceiling(totalKunjungan / (double)pageSize);
+
+                var pageKunjunganIds = await baseQuery
+                    .OrderByDescending(k => k.CreateDateTime)
+                    .ThenByDescending(k => k.KunjunganID)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .Select(k => k.KunjunganID)
+                    .ToListAsync();
+
+                if (!pageKunjunganIds.Any())
+                {
+                    return Ok(new
+                    {
+                        status = "success",
+                        page,
+                        pageSize,
+                        totalKunjungan,
+                        totalPages,
+                        data = new List<object>()
+                    });
+                }
+
+                // ============================================================
+                // LOAD BILLINGS UNTUK PAGE KUNJUNGAN
+                // ============================================================
+                var billings = await _applicationDbContext.Billings
+                    .AsNoTracking()
+                    .Where(b => pageKunjunganIds.Contains((Guid)b.KunjunganId) && (b.IsDelete == false || b.IsDelete == null))
+                    .ToListAsync();
+
+                var billingsByKunjungan = billings
+                    .GroupBy(b => b.KunjunganId)
+                    .ToDictionary(g => g.Key, g => g.ToList());
+
+                // ============================================================
+                // QUERY UTAMA (SAMA SEPERTI PUNYAMU) - FILTER PAGE IDS
+                // ============================================================
+                var query =
+                    from k in _applicationDbContext.Kunjungans
+
+                    join p in _applicationDbContext.PendaftaranPasienBarus on k.PasienId equals p.PendaftaranPasienBaruId
+                    join a in _applicationDbContext.Asuransis on k.AsuransiId equals a.AsuransiId into asuransiTempGroup
+                    from a in asuransiTempGroup.DefaultIfEmpty()
+
+                    join ap in _applicationDbContext.AsuransiPasiens
+                        on p.PendaftaranPasienBaruId equals ap.PasienId into asuransiPasienGroup
+                    from ap in asuransiPasienGroup.DefaultIfEmpty()
+
+                    join d in _applicationDbContext.Dokters on k.DokterId equals d.DokterId
+                    join poli in _applicationDbContext.Polikliniks on k.PoliklinikId equals poli.PoliklinikId
+
+                    // LAB
+                    join lbd in _applicationDbContext.LabBookingDetails
+                        on k.PasienId equals lbd.PasienId into labGroup
+                    from lbd in labGroup.DefaultIfEmpty()
+
+                    join lp in _applicationDbContext.LabPemeriksaans
+                        on lbd.PemeriksaanLabId equals lp.PemeriksaanLabId into pemeriksaanGroup
+                    from lp in pemeriksaanGroup.DefaultIfEmpty()
+
+                    join la in _applicationDbContext.Labs
+                        on lbd.LabId equals la.LabId into laGroup
+                    from la in laGroup.DefaultIfEmpty()
+
+                        // RESEP
+                    join r in _applicationDbContext.Reseps.Where(x => !x.IsDelete)
+                        on k.KunjunganID equals r.KunjunganId into resepGroup
+                    from r in resepGroup.DefaultIfEmpty()
+
+                    join dr in _applicationDbContext.DetailReseps.Where(x => !x.IsDelete)
+                        on r.ResepId equals dr.ResepId into detailResepGroup
+                    from dr in detailResepGroup.DefaultIfEmpty()
+
+                    join o in _applicationDbContext.Obats
+                        on dr.ObatId equals o.ObatId into obatGroup
+                    from o in obatGroup.DefaultIfEmpty()
+
+                    join rc in _applicationDbContext.Racikans
+                        on dr.RacikanId equals rc.RacikanId into racikanGroup
+                    from rc in racikanGroup.DefaultIfEmpty()
+
+                        // TINDAKAN
+                    join tobj in _applicationDbContext.TindakanKunjungans
+                        on k.KunjunganID equals tobj.KunjunganId into tindakanGroup
+                    from tobj in tindakanGroup.DefaultIfEmpty()
+
+                    join t in _applicationDbContext.Tindakans
+                        on tobj.TindakanId equals t.TindakanId into tindakanMasterGroup
+                    from t in tindakanMasterGroup.DefaultIfEmpty()
+
+                        // ADMIN + KASIR
+                    join adm in _applicationDbContext.BiayaAdministrasis
+                        on k.JenisKunjungan equals adm.BiayaAdministrasiKode into admGroup
+                    from adm in admGroup.DefaultIfEmpty()
+
+                    join kasir in _applicationDbContext.MainKasirs
+                        on k.KunjunganID equals kasir.KunjunganId into kasirGroup
+                    from kasir in kasirGroup.DefaultIfEmpty()
+
+                    join dk in _applicationDbContext.MainKasirDetails
+                        on kasir.KasirId equals dk.MainKasirId into kasirDetailGroup
+                    from dk in kasirDetailGroup.DefaultIfEmpty()
+
+                    join mp in _applicationDbContext.MetodePembayarans
+                        on dk.MetodePembayaranId equals mp.MetodePembayaranId into metodeGroup
+                    from mp in metodeGroup.DefaultIfEmpty()
+
+                    where pageKunjunganIds.Contains(k.KunjunganID) && !k.IsDelete
+
+                    select new { k, p, a, ap, d, poli, r, dr, o, rc, tobj, t, adm, kasir, dk, mp, lbd, lp, la };
+
+                var result = await query.ToListAsync();
+                if (!result.Any())
+                    return NotFound(new { message = "Data billing tidak ditemukan." });
+
+                // ============================================================
+                // RACIKAN IDs
+                // ============================================================
+                var racikanIds = result
+                    .Where(x => x.dr?.IsRacikan == true && x.dr.RacikanId != null)
+                    .Select(x => x.dr!.RacikanId!.Value)
+                    .Distinct()
+                    .ToList();
+
+                // ============================================================
+                // LOAD KOMPOSISI RACIKAN
+                // ============================================================
+                var racikanDetails = racikanIds.Any()
+                    ? await (
+                        from rd in _applicationDbContext.RacikanDetails
+                        join ob in _applicationDbContext.Obats on rd.ObatId equals ob.ObatId
+                        where racikanIds.Contains(rd.RacikanId.Value)
+                        select new
+                        {
+                            RacikanId = rd.RacikanId.Value,
+                            rd.DetailRacikanId,
+                            rd.ObatId,
+                            ob.ObatName,
+                            ob.ObatCode,
+                            rd.QtyUsed,
+                            rd.KomposisiDosis,
+                            rd.CreateBy,
+                            rd.CreateDateTime,
+                            ob.HTEPrice
+                        }
+                    )
+                    .Select(x => (object)x)
+                    .ToListAsync()
+                    : new List<object>();
+
+                var racikanMap = racikanDetails
+                    .Cast<dynamic>()
+                    .GroupBy(x => (Guid)x.RacikanId)
+                    .ToDictionary(g => g.Key, g => g.ToList());
+
+                // ============================================================
+                // GROUPING PER KUNJUNGAN (OUTPUT SAMA)
+                // ============================================================
+                var data = result
+                    .GroupBy(x => x.k.KunjunganID)
+                    .Select(group =>
+                    {
+                        var first = group.First();
+                        var kid = first.k.KunjunganID;
+
+                        billingsByKunjungan.TryGetValue(kid, out var billList);
+                        billList ??= new List<Billing>();
+
+                        var billLookup = billList.ToLookup(b => (b.JenisBilling, b.ItemId));
+
+                        Billing? FindBill(string jenis, Guid? itemId)
+                            => itemId.HasValue ? billLookup[(jenis, itemId.Value)].FirstOrDefault() : null;
+
+                        // ================= LAB =================
+                        var daftarPemeriksaanLab = group
+                            .Where(x => x.lbd != null)
+                            .GroupBy(x => x.lbd.DetailBookingLabId)
+                            .Select(g =>
+                            {
+                                var x = g.First();
+                                var bill = FindBill("Pemeriksaan Lab", x.lbd.DetailBookingLabId);
+
+                                return new
+                                {
+                                    x.lbd.DetailBookingLabId,
+                                    NamaLab = x.la?.NamaLab,
+                                    NamaPemeriksaan = x.lp?.NamaPemeriksaan,
+                                    HargaPemeriksaan = x.lp?.HargaPemeriksaan,
+                                    Qty = bill?.QtyItem ?? 1,
+                                    Subtotal = bill?.SubTotalItem ?? x.lp?.HargaPemeriksaan ?? 0,
+                                    BillingId = bill?.BillingId,
+                                    BillingKode = bill?.BillingKode,
+                                    bill?.StatusBilling
+                                };
+                            }).ToList();
+
+                        var totalLab = daftarPemeriksaanLab.Sum(x => x.Subtotal);
+
+                        // ================= OBAT NON RACIKAN =================
+                        var daftarObat = group
+                            .Where(x => x.dr != null && x.o != null && x.dr.IsRacikan != true)
+                            .GroupBy(x => x.dr.DetailResepId)
+                            .Select(g =>
+                            {
+                                var x = g.First();
+                                var bill = FindBill("Obat", x.dr.ObatId);
+
+                                return new
+                                {
+                                    x.r?.ResepId,
+                                    x.dr.DetailResepId,
+                                    x.dr.ObatId,
+                                    ObatName = x.o?.ObatName,
+                                    Qty = bill?.QtyItem ?? x.dr.Qty,
+                                    Harga = bill?.HargaItem ?? x.o?.HTEPrice,
+                                    Subtotal = bill?.SubTotalItem ?? ((x.dr.Qty ?? 0) * (x.o?.HTEPrice ?? 0)),
+                                    BillingId = bill?.BillingId,
+                                    BillingKode = bill?.BillingKode,
+                                    bill?.StatusBilling,
+                                    x.dr.Signa,
+                                    x.dr.SignaTambahan,
+                                    x.dr.StatusPengambilanObat
+                                };
+                            }).ToList();
+
+                        var totalObat = daftarObat.Sum(x => x.Subtotal);
+
+                        // ================= RACIKAN =================
+                        var daftarRacikan = group
+                            .Where(x => x.dr != null && x.dr.IsRacikan == true && x.rc != null)
+                            .GroupBy(x => x.dr.RacikanId)
+                            .Select(g =>
+                            {
+                                var x = g.First();
+                                var bill = FindBill("Obat", x.dr.RacikanId);
+
+                                racikanMap.TryGetValue(x.dr.RacikanId.Value, out var komps);
+
+                                return new
+                                {
+                                    x.r?.ResepId,
+                                    x.dr.RacikanId,
+                                    NamaRacikan = x.rc?.NamaRacikan,
+                                    KodeRacikan = x.rc?.KodeRacikan,
+                                    Qty = bill?.QtyItem,
+                                    Harga = bill?.HargaItem,
+                                    Subtotal = bill?.SubTotalItem,
+                                    BillingId = bill?.BillingId,
+                                    BillingKode = bill?.BillingKode,
+                                    bill?.StatusBilling,
+                                    x.dr.Signa,
+                                    x.dr.SignaTambahan,
+                                    x.dr.StatusPengambilanObat,
+                                    Komposisi = komps?.Select(k => new
+                                    {
+                                        k.ObatId,
+                                        k.ObatName,
+                                        k.QtyUsed,
+                                        k.KomposisiDosis,
+                                        k.HTEPrice
+                                    })
+                                };
+                            }).ToList();
+
+                        var totalRacikan = daftarRacikan.Sum(x => x.Subtotal ?? 0);
+
+                        // ================= TINDAKAN =================
+                        var daftarTindakan = group
+                            .Where(x => x.tobj != null && x.t != null)
+                            .GroupBy(x => x.tobj.TindakanKunjunganId)
+                            .Select(g =>
+                            {
+                                var x = g.First();
+                                var bill = FindBill("Tindakan", x.tobj.TindakanId);
+
+                                return new
+                                {
+                                    x.t.TindakanId,
+                                    NamaTindakan = x.t?.NamaTindakan,
+                                    Qty = bill?.QtyItem ?? x.tobj.Quantity ?? 1,
+                                    Harga = bill?.HargaItem ?? x.tobj.Total ?? 0,
+                                    Subtotal = bill?.SubTotalItem ?? ((x.tobj.Quantity ?? 1) * (x.tobj.Total ?? 0)),
+                                    BillingId = bill?.BillingId,
+                                    BillingKode = bill?.BillingKode,
+                                    bill?.StatusBilling
+                                };
+                            }).ToList();
+
+                        var totalTindakan = daftarTindakan.Sum(x => x.Subtotal);
+
+                        // ================= ADMIN =================
+                        var daftarAdmin = billList
+                            .Where(b => b.JenisBilling == "Biaya Admin")
+                            .Select(b => new
+                            {
+                                b.BillingId,
+                                b.NamaItem,
+                                b.HargaItem,
+                                b.QtyItem,
+                                b.SubTotalItem,
+                                b.BillingKode,
+                                b.StatusBilling,
+                            }).ToList();
+
+                        var totalAdmin = daftarAdmin.Sum(x => x.SubTotalItem ?? 0);
+
+                        // ================= FINAL =================
+                        return new
+                        {
+                            first.k.KunjunganID,
+                            first.k.JenisKunjungan,
+                            TanggalKunjungan = first.k?.TglMasuk,
+                            CreateDateTime = first.k.CreateDateTime, // ✅ buat lihat sorting basisnya
+                            first.kasir?.KasirId,
+                            first.p?.NamaLengkap,
+                            first.p?.NoRekamMedis,
+                            first.d?.NmDokter,
+                            first.poli?.NamaPoliklinik,
+                            first.k.TipePembayaran,
+                            first.a?.NamaAsuransi,
+                            Umur = HitungUmurLengkap(first.p?.TanggalLahir),
+
+                            DaftarPemeriksaanLab = daftarPemeriksaanLab,
+                            DaftarObat = daftarObat,
+                            DaftarRacikan = daftarRacikan,
+                            DaftarTindakan = daftarTindakan,
+                            DaftarBiayaAdmin = daftarAdmin,
+
+                            TotalPemeriksaanLab = totalLab,
+                            TotalObat = totalObat,
+                            TotalRacikan = totalRacikan,
+                            TotalTindakan = totalTindakan,
+                            TotalBiayaAdmin = totalAdmin,
+
+                            TotalKeseluruhan = totalLab + totalObat + totalRacikan + totalTindakan + totalAdmin
+                        };
+                    })
+                    .OrderByDescending(x => x.CreateDateTime)  // ✅ urut output juga berdasarkan createDateTime kunjungan
+                    .ToList();
+
+                return Ok(new
+                {
+                    status = "success",
+                    page,
+                    pageSize,
+                    totalKunjungan,
+                    totalPages,
+                    data
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
+            }
+        }
+
+
+
     }
 }

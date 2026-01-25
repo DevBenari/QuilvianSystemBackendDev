@@ -14,6 +14,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.ViewModels;
+using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
@@ -29,7 +30,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-
+        private readonly IGenerateInvoiceBillingService _generateInvoiceBillingService;
         private readonly ILogger<BookingBedRanapController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
@@ -39,13 +40,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ILogger<BookingBedRanapController> logger,
-            IWebHostEnvironment webHostEnvironment)
+            IWebHostEnvironment webHostEnvironment,
+            IGenerateInvoiceBillingService generateInvoiceBillingService)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+            _generateInvoiceBillingService = generateInvoiceBillingService;
         }
         private DateTime? TryParseTanggalToUtc(string tanggal)
         {
@@ -277,7 +280,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     KunjunganId = vm.KunjunganId,
                     BillingDate = DateTime.UtcNow,
                     BillingKode = billingKode,
-
+                    InvoiceBilling = await _generateInvoiceBillingService.GetOrCreateAsync(
+                                (Guid)vm.KunjunganId,
+                                DateTime.UtcNow),
+                    IsListWhiteOff = false,
                     // Item kamar
                     ItemId = kamar.KamarId,
                     NamaItem = $"Kamar Ranap - {(kamar.NamaKamar ?? kamar.KodeKamar ?? vm.NoKamar)}",

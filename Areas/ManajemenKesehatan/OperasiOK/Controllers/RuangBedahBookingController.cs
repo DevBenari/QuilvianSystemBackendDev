@@ -15,6 +15,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
@@ -30,7 +31,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-
+        private readonly IGenerateInvoiceBillingService _generateInvoiceBillingService;
         private readonly ILogger<RuangBedahBookingController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
@@ -39,13 +40,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ILogger<RuangBedahBookingController> logger,
-            IWebHostEnvironment webHostEnvironment)
+            IWebHostEnvironment webHostEnvironment,
+            IGenerateInvoiceBillingService generateInvoiceBillingService)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+            _generateInvoiceBillingService = generateInvoiceBillingService;
         }
 
         [HttpGet]
@@ -378,6 +381,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                                     // penting: ItemId = tindakanId (biar sama seperti contoh Anda)
                                     ItemId = tindakanId,
                                     NamaItem = namaTindakan,
+                                    InvoiceBilling = await _generateInvoiceBillingService.GetOrCreateAsync(
+                                    (Guid)vm.KunjunganId,
+                                    DateTime.UtcNow),
+                                    IsListWhiteOff = false,
 
                                     QtyItem = qty,
                                     HargaItem = tarifTotal,
@@ -801,7 +808,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                             KunjunganId = vm.KunjunganId.Value,
                             BillingDate = DateTime.UtcNow,
                             BillingKode = billingKode,
-
+                            InvoiceBilling = await _generateInvoiceBillingService.GetOrCreateAsync(
+                                (Guid)vm.KunjunganId,
+                                DateTime.UtcNow),
+                            IsListWhiteOff = false,
                             ItemId = tid,
                             NamaItem = namaTindakan,
                             QtyItem = qty,
