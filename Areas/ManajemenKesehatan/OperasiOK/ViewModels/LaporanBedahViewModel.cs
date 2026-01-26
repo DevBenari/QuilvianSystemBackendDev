@@ -4,7 +4,7 @@
     {
         public Guid? KunjunganId { get; set; }
         public Guid? PasienId { get; set; }
-        public Guid? TindakanId { get; set; }
+        public List<Guid>? TindakanId { get; set; }
         public string? DetailTindakan { get; set; }
         public Guid? DokterOperatorId { get; set; }
         public Guid? DokterAnestesiId { get; set; }
@@ -12,8 +12,8 @@
         public Guid? AsistenAnestesiId { get; set; }
         public Guid? PerawatId { get; set; }
         public string? JenisAnestesi { get; set; }
-        public string? DiagnosaPraOp { get; set; }
-        public string? DiagnosaPostOp { get; set; }
+        public List<string>? DiagnosaPraOp { get; set; }
+        public List<string>? DiagnosaPostOp { get; set; }
         public string? JaringanEksisiInsisi { get; set; }
         public string? TipeUrgensi { get; set; }
         public bool? IsPemeriksaanPA { get; set; }
