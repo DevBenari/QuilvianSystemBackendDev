@@ -213,7 +213,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 // simpan ke tabel billing buat visit dokter
                 var dr = await _applicationDbContext.Dokters
                     .AsNoTracking()
-                    .FirstOrDefaultAsync(x => x.DokterId == vm.DokterId);
+                    .Where(x => x.DokterId == vm.DokterId)
+                    .Select(x => x.NmDokter)
+                    .SingleOrDefaultAsync();
+
+                var harga = await _applicationDbContext.TarifKelass
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(x => x.DokterId == vm.DokterId && x.KelasId == vm.KelasId);
 
                 int billingCount = await _applicationDbContext.Billings
                     .CountAsync(b =>
@@ -234,10 +240,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                                 (Guid)vm.KunjunganId,
                                 DateTime.UtcNow),
                     IsListWhiteOff = false,
-                    NamaItem = $"Visit Dokter : {dr?.NmDokter ?? null}",
-                    HargaItem = dr?.HargaVisit ?? 0m,
+                    NamaItem = $"Visit Dokter : {dr ?? null}",
+                    HargaItem = harga?.TarifDokter ?? 0m,
                     QtyItem = 1,
-                    SubTotalItem = dr?.HargaVisit ?? 0m,
+                    SubTotalItem = harga?.TarifDokter ?? 0m,
                     BillingKode = $"{billingIndex:D3}",
                     JenisBilling = "Visit Dokter",
                     StatusBilling = false,

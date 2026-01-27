@@ -179,6 +179,8 @@ builder.Services.AddScoped<IGenerateUrutanAngsuran, GenerateUrutanAngsuranServic
 builder.Services.AddScoped<ICountAngsuran, CountAngsuranService>();
 
 builder.Services.AddScoped<IGenerateInvoiceBillingService, GenerateInvoiceBillingService>();
+builder.Services.AddScoped<IBillingKunjunganReadService, BillingKunjunganReadService>();
+builder.Services.AddScoped<IPerkiraanBillingRanapService, PerkiraanBillingRanapService>();
 
 // Add services to the container.
 builder.Services.AddControllers(options =>
