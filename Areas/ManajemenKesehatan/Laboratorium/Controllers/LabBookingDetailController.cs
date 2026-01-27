@@ -811,179 +811,165 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         }
 
         [HttpGet("paged")]
-        public IActionResult Paged(
-        int page = 1,
-        int perPage = 10,
-        string? NamaLaboratorium = null,
-        Guid? kunjunganId = null,
-        string? orderBy = "CreateDateTime",
-        string? sortDirection = "desc",
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                        DateTime? startDate = null,
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                        DateTime? endDate = null,
-        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        public async Task<IActionResult> Paged(
+            int page = 1,
+            int perPage = 10,
+            string? NamaLaboratorium = null,
+            Guid? kunjunganId = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+    DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+    DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null,
+            CancellationToken ct = default)
         {
+            // guard
+            if (page <= 0) page = 1;
+            if (perPage <= 0) perPage = 10;
+            if (perPage > 200) perPage = 200; // hard cap biar server aman
 
-            // Query data
-            var query = (from d in _applicationDbContext.LabBookingDetails
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on d.CreateBy equals u.UserActiveId
+            // Base query (no tracking => ringan)
+            var query =
+                from d in _applicationDbContext.LabBookingDetails.AsNoTracking()
+                where d.IsDelete != true
+                join u in _applicationDbContext.UserActives.AsNoTracking()
+                    on d.CreateBy equals u.UserActiveId into ug
+                from u in ug.DefaultIfEmpty()
 
-                         // join lab
-                         join l in _applicationDbContext.Labs 
-                         on d.LabId equals l.LabId into labGroup
-                         from l in labGroup.DefaultIfEmpty()
+                join l in _applicationDbContext.Labs.AsNoTracking()
+                    on d.LabId equals l.LabId into lg
+                from l in lg.DefaultIfEmpty()
 
+                join b in _applicationDbContext.LabBookings.AsNoTracking()
+                    on d.BookingLabId equals b.BookingLabId into bg
+                from b in bg.DefaultIfEmpty()
 
-                         // join ke lab booking
-                         join b in _applicationDbContext.LabBookings
-                         on d.BookingLabId equals b.BookingLabId into labBookings
-                         from b in labBookings.DefaultIfEmpty()
+                join p in _applicationDbContext.LabPemeriksaans.AsNoTracking()
+                    on d.PemeriksaanLabId equals p.PemeriksaanLabId into pg
+                from p in pg.DefaultIfEmpty()
 
-                         // joimn ke lab pemeriksaan
-                         join p in _applicationDbContext.LabPemeriksaans
-                         on d.PemeriksaanLabId equals p.PemeriksaanLabId into labPemeriksaans
-                         from p in labPemeriksaans.DefaultIfEmpty()
-
-                         where d.IsDelete == false || d.IsDelete == null
-                         select new
-                         {
-                             d.CreateDateTime,
-                             d.CreateBy,
-                             CreateByName = u.FullName,
-                             d.DetailBookingLabId,
-                             d.BookingLabId,
-                             d.PasienId,
-                             d.NoOrder,
-                             b.KunjunganId,
-                             d.PemeriksaanLabId,
-                             NamaPemeriksaan = p.NamaPemeriksaan ?? "-",
-                             HargaPemeriksaan = p.HargaPemeriksaan ?? null,
-                             d.LabId,
-                             NamaLab = l.NamaLab ?? "-",
-                             d.KategoriPatologiAnatomi,
-                             d.JenisSpecimen,
-                             d.LokasiSpecimen,
-                             d.KeteranganKlinik,
-                             d.PenyakitSebelumnya,
-                             d.PenggunaanFiksasi,
-                             d.JenisPemeriksaanGC,
-                             d.JenisGC,
-                             d.BahanNonGC,
-                             d.BahanMicrobiologi,
-                             d.MasaHaidTerakhir,
-                             d.Diagnosa,
-                             d.SpecimenJenisId,
-                             d.SpecimenMethodId,
-                             d.AsalSpecimenId,
-                             d.AlasanPembatalan,
-                             d.TTDPembatalanPath,
-                             d.StatusPemeriksaan,
-                             d.TanggalSelesai,
-                             d.StatusVerifikasi,
-                             d.Satuan,
-                         });
-
-            // filter kunjungan id
-            if (kunjunganId.HasValue )
-            {
-                query = query.Where(u=>u.KunjunganId == kunjunganId.Value);
-            }
-
-            //**Filter berdasarkan search(Perbaikan agar bisa mencari 1 huruf)**
-            if (!string.IsNullOrWhiteSpace(NamaLaboratorium))
-            {
-                NamaLaboratorium = $"%{NamaLaboratorium.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-                query = query.Where(u =>
-                    EF.Functions.ILike(u.NamaLab, NamaLaboratorium)
-                );
-            }
-
-            //// **Filter berdasarkan tanggal**
-            if (startDate.HasValue && endDate.HasValue)
-            {
-                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
-                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
-
-                query = query.Where(u =>
-                    u.CreateDateTime >= startUtc &&
-                    u.CreateDateTime <= endUtc);
-            }
-
-            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
-            if (periode.HasValue)
-            {
-                DateTime today = DateTime.UtcNow.Date;
-
-                switch (periode)
+                select new
                 {
-                    case PeriodeFilter.Today:
-                        query = query.Where(u => u.CreateDateTime.Date == today);
-                        break;
-                    case PeriodeFilter.ThisWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date <= today
-                        );
-                        break;
-                    case PeriodeFilter.LastWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)
-                        );
-                        break;
-                    case PeriodeFilter.ThisMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month &&
-                            u.CreateDateTime.Year == today.Year
-                        );
-                        break;
-                    case PeriodeFilter.LastMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month - 1 &&
-                            u.CreateDateTime.Year == today.Year
-                        );
-                        break;
-                    case PeriodeFilter.ThisYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
-                        break;
-                    case PeriodeFilter.LastYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
-                        break;
-                    case PeriodeFilter.Last3Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
-                        break;
-                    case PeriodeFilter.Last6Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
-                        break;
-                }
-            }
-
-            // Sorting Data dengan cara yang lebih aman
-            query = sortDirection?.ToLower() == "desc"
-                ? orderBy switch
-                {
-                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    _ => query.OrderByDescending(u => u.CreateDateTime)
-                }
-                : orderBy switch
-                {
-                    "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    _ => query.OrderBy(u => u.CreateDateTime)
+                    d.CreateDateTime,
+                    d.CreateBy,
+                    CreateByName = u != null ? u.FullName : null,
+                    d.DetailBookingLabId,
+                    d.BookingLabId,
+                    d.PasienId,
+                    d.NoOrder,
+                    KunjunganId = b != null ? b.KunjunganId : (Guid?)null,
+                    d.PemeriksaanLabId,
+                    NamaPemeriksaan = p != null ? (p.NamaPemeriksaan ?? "-") : "-",
+                    HargaPemeriksaan = p != null ? p.HargaPemeriksaan : (decimal?)null,
+                    d.LabId,
+                    NamaLab = l != null ? (l.NamaLab ?? "-") : "-",
+                    d.KategoriPatologiAnatomi,
+                    d.JenisSpecimen,
+                    d.LokasiSpecimen,
+                    d.KeteranganKlinik,
+                    d.PenyakitSebelumnya,
+                    d.PenggunaanFiksasi,
+                    d.JenisPemeriksaanGC,
+                    d.JenisGC,
+                    d.BahanNonGC,
+                    d.BahanMicrobiologi,
+                    d.MasaHaidTerakhir,
+                    d.Diagnosa,
+                    d.SpecimenJenisId,
+                    d.SpecimenMethodId,
+                    d.AsalSpecimenId,
+                    d.AlasanPembatalan,
+                    d.TTDPembatalanPath,
+                    d.StatusPemeriksaan,
+                    d.TanggalSelesai,
+                    d.StatusVerifikasi,
+                    d.Satuan,
                 };
 
-            // Pagination
-            var totalRows = query.Count();
-            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
+            // Filter kunjunganId
+            if (kunjunganId.HasValue)
+                query = query.Where(x => x.KunjunganId == kunjunganId.Value);
 
-            if (rows.Count == 0 && page > totalPages)
+            // Filter search NamaLaboratorium (ILike pakai pattern)
+            if (!string.IsNullOrWhiteSpace(NamaLaboratorium))
             {
-                return NotFound(new { message = "Page not found." });
+                var pattern = $"%{NamaLaboratorium.Trim().ToLower()}%";
+                query = query.Where(x => EF.Functions.ILike(x.NamaLab, pattern));
             }
+
+            // Filter periode/date range (gunakan range, jangan .Date)
+            // Kita pakai UTC date boundary agar index CreateDateTime kepakai.
+            DateTimeOffset? startUtc = null;
+            DateTimeOffset? endUtcExclusive = null;
+
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                var s = DateTime.SpecifyKind(startDate.Value.Date, DateTimeKind.Utc);
+                var e = DateTime.SpecifyKind(endDate.Value.Date, DateTimeKind.Utc).AddDays(1); // exclusive
+                startUtc = new DateTimeOffset(s);
+                endUtcExclusive = new DateTimeOffset(e);
+            }
+            else if (periode.HasValue)
+            {
+                var todayUtc = DateTime.UtcNow.Date;
+
+                (DateTime s, DateTime e) = periode.Value switch
+                {
+                    PeriodeFilter.Today => (todayUtc, todayUtc.AddDays(1)),
+                    PeriodeFilter.ThisWeek => (todayUtc.AddDays(-(int)todayUtc.DayOfWeek), todayUtc.AddDays(1)),
+                    PeriodeFilter.LastWeek => (todayUtc.AddDays(-7 - (int)todayUtc.DayOfWeek), todayUtc.AddDays(-(int)todayUtc.DayOfWeek)),
+                    PeriodeFilter.ThisMonth => (new DateTime(todayUtc.Year, todayUtc.Month, 1), new DateTime(todayUtc.Year, todayUtc.Month, 1).AddMonths(1)),
+                    PeriodeFilter.LastMonth => (new DateTime(todayUtc.Year, todayUtc.Month, 1).AddMonths(-1), new DateTime(todayUtc.Year, todayUtc.Month, 1)),
+                    PeriodeFilter.ThisYear => (new DateTime(todayUtc.Year, 1, 1), new DateTime(todayUtc.Year + 1, 1, 1)),
+                    PeriodeFilter.LastYear => (new DateTime(todayUtc.Year - 1, 1, 1), new DateTime(todayUtc.Year, 1, 1)),
+                    PeriodeFilter.Last3Months => (todayUtc.AddMonths(-3), todayUtc.AddDays(1)),
+                    PeriodeFilter.Last6Months => (todayUtc.AddMonths(-6), todayUtc.AddDays(1)),
+                    _ => (todayUtc, todayUtc.AddDays(1))
+                };
+
+                startUtc = new DateTimeOffset(DateTime.SpecifyKind(s, DateTimeKind.Utc));
+                endUtcExclusive = new DateTimeOffset(DateTime.SpecifyKind(e, DateTimeKind.Utc));
+            }
+
+            if (startUtc.HasValue && endUtcExclusive.HasValue)
+                query = query.Where(x => x.CreateDateTime >= startUtc.Value && x.CreateDateTime < endUtcExclusive.Value);
+
+            // Sorting whitelist (hindari dynamic string reflection)
+            var desc = (sortDirection ?? "desc").Equals("desc", StringComparison.OrdinalIgnoreCase);
+
+            query = (orderBy ?? "CreateDateTime") switch
+            {
+                "CreateByName" => desc ? query.OrderByDescending(x => x.CreateByName).ThenByDescending(x => x.CreateDateTime)
+                                      : query.OrderBy(x => x.CreateByName).ThenBy(x => x.CreateDateTime),
+
+                _ => desc ? query.OrderByDescending(x => x.CreateDateTime)
+                          : query.OrderBy(x => x.CreateDateTime)
+            };
+
+            // Total count (async)
+            var totalRows = await query.CountAsync(ct);
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            if (totalRows == 0)
+            {
+                return Ok(new
+                {
+                    status = "success",
+                    message = "Data retrieved successfully",
+                    data = new { Rows = Array.Empty<object>(), TotalRows = 0, CurrentPage = page, PerPage = perPage, TotalPages = 0 }
+                });
+            }
+
+            if (page > totalPages)
+                return NotFound(new { message = "Page not found." });
+
+            // Page data (async)
+            var rows = await query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToListAsync(ct);
 
             return Ok(new
             {
@@ -999,6 +985,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 }
             });
         }
+
 
     }
 }

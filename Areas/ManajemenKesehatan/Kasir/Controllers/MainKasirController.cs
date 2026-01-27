@@ -477,7 +477,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     x.KasirId,
                     x.KunjunganId,
                     x.PasienId,
-                    x.NoKwitansi,
+                    x.InvoiceBilling,
                     x.JumlahAngsuran,
                     x.StatusPembayaran,
                     x.IsVerified,
@@ -518,7 +518,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     d.PasienId,
                     d.TotalPembayaran,
                     d.SisaPembayaran,
-                    d.InvoiceBilling,
+                    d.NoKwitansi,
                     d.AngsuranKe,
                     d.NamaMetode,
                     d.NominalPembayaran,
@@ -569,7 +569,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         header.KasirId,
                         header.KunjunganId,
                         header.PasienId,
-                        header.NoKwitansi,
+                        header.InvoiceBilling,
                         header.JumlahAngsuran,
                         header.StatusPembayaran,
                         header.IsVerified,
@@ -601,7 +601,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         d.PasienId,
                         d.TotalPembayaran,
                         d.SisaPembayaran,
-                        d.InvoiceBilling,
+                        d.NoKwitansi,
                         d.AngsuranKe,
                         d.NamaMetode,
                         d.NominalPembayaran,
@@ -635,7 +635,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     x.KasirId,
                     x.KunjunganId,
                     x.PasienId,
-                    x.NoKwitansi,
+                    x.InvoiceBilling,
                     x.JumlahAngsuran,
                     x.StatusPembayaran,
                     x.IsVerified,
@@ -678,7 +678,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     d.PasienId,
                     d.TotalPembayaran,
                     d.SisaPembayaran,
-                    d.InvoiceBilling,
+                    d.NoKwitansi,
                     d.AngsuranKe,
                     d.NamaMetode,
                     d.NominalPembayaran,
@@ -734,7 +734,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     h.KasirId,
                     h.KunjunganId,
                     h.PasienId,
-                    h.NoKwitansi,
+                    h.InvoiceBilling,
                     h.JumlahAngsuran,
                     h.StatusPembayaran,
                     h.IsVerified,
@@ -767,7 +767,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     d.PasienId,
                     d.TotalPembayaran,
                     d.SisaPembayaran,
-                    d.InvoiceBilling,
+                    d.NoKwitansi,
                     d.AngsuranKe,
                     d.NamaMetode,
                     d.NominalPembayaran,
@@ -897,10 +897,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 }
 
 
-                // 10) TTD
+                // 10) TTD dan invoice billing
                 var ttd = (vm.TTDUserVerfiedId.HasValue)
                     ? await _ttdService.CheckTTDAsync(vm.TTDUserVerfiedId.Value)
                     : null;
+                
+                var ivc = await _applicationDbContext.Billings.AsNoTracking()
+                    .Where(b => b.KunjunganId == vm.KunjunganId)
+                    .Select(b => b.InvoiceBilling)
+                    .FirstOrDefaultAsync();
 
                 // 11) Create / Update header
                 MainKasir headerEntity;
@@ -917,7 +922,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         StatusPembayaran = finalStatus,
                         IsVerified = vm.IsVerified,
 
-                        NoKwitansi = noKwitansi,
+                        InvoiceBilling = ivc,
 
                         DiskonId = vm.DiskonId,
                         GrandTotalPembayaran = vm.GrandTotalPembayaran ?? totalTagihan,
@@ -944,7 +949,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     // Update status & tanggal pembayaran terakhir
                     headerEntity.StatusPembayaran = finalStatus;
                     headerEntity.TglPembayaran = tglPembayaran;
-                    headerEntity.NoKwitansi = noKwitansi;
+                    headerEntity.InvoiceBilling = ivc;
                     // kalau mau update field ini tiap cicilan, silakan; kalau tidak, boleh dihapus
                     headerEntity.IsVerified = vm.IsVerified;
                     headerEntity.TTDUserVerfiedId = vm.TTDUserVerfiedId ?? headerEntity.TTDUserVerfiedId;
@@ -970,7 +975,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     SisaPembayaran = sisaAfter,
 
                     MetodePembayaranId = detail.MetodePembayaranId,
-                    InvoiceBilling = detail.InvoiceBilling,
+                    //NoKwitansi = detail.InvoiceBilling,
 
                     AngsuranKe = angsuranKe, // ✅ hasil generate
                     ReferenceId = detail.ReferenceId,
@@ -1211,7 +1216,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     a.KasirId,
                     a.KunjunganId,
                     a.PasienId,
-                    a.NoKwitansi,
+                    a.InvoiceBilling,
                     a.JumlahAngsuran,
                     a.StatusPembayaran,
                     a.IsVerified,
@@ -1379,7 +1384,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     d.PasienId,
                     d.TotalPembayaran,
                     d.SisaPembayaran,
-                    d.InvoiceBilling,
+                    d.NoKwitansi,
                     d.AngsuranKe,
                     d.NamaMetode,
                     d.NominalPembayaran,
@@ -1435,7 +1440,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     h.KasirId,
                     h.KunjunganId,
                     h.PasienId,
-                    h.NoKwitansi,
+                    h.InvoiceBilling,
                     h.JumlahAngsuran,
                     h.StatusPembayaran,
                     h.IsVerified,
@@ -1467,7 +1472,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     d.PasienId,
                     d.TotalPembayaran,
                     d.SisaPembayaran,
-                    d.InvoiceBilling,
+                    d.NoKwitansi,
                     d.AngsuranKe,
                     d.NamaMetode,
                     d.NominalPembayaran,

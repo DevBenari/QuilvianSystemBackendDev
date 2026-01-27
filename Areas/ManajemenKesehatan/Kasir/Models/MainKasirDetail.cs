@@ -16,7 +16,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models
         public Guid? PasienId { get; set; }
         public decimal? TotalPembayaran { get; set; }
         public decimal? SisaPembayaran { get; set; }
-        public string? InvoiceBilling {  get; set; }
+        public string? NoKwitansi {  get; set; }
         public decimal? AngsuranKe {  get; set; }
         public string? NamaMetode { get; set; }
         public decimal? NominalPembayaran { get; set; }

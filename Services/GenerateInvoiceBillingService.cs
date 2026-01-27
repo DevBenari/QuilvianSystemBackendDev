@@ -24,7 +24,7 @@ namespace QuilvianSystemBackendDev.Services
                 throw new ArgumentException("KunjunganId tidak boleh kosong.", nameof(kunjunganId));
 
             // 1) Kalau sudah ada invoice di item manapun untuk kunjungan ini, pakai itu.
-            var existing = await _db.MainKasirDetails
+            var existing = await _db.MainKasirs
                 .AsNoTracking()
                 .Where(d => d.KunjunganId == kunjunganId && d.InvoiceBilling != null && d.InvoiceBilling != "")
                 .Select(d => d.InvoiceBilling!)
@@ -45,7 +45,7 @@ namespace QuilvianSystemBackendDev.Services
             var invoice = $"INVB{running}{datePart}";
 
             // 3) Set ke semua item (detail) untuk kunjungan ini yang belum punya invoice
-            var items = await _db.MainKasirDetails
+            var items = await _db.MainKasirs
                 .Where(d => d.KunjunganId == kunjunganId && (d.InvoiceBilling == null || d.InvoiceBilling == ""))
                 .ToListAsync(cancellationToken);
 
