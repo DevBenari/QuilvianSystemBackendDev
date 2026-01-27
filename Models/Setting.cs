@@ -9,6 +9,7 @@ namespace QuilvianSystemBackendDev.Models
         public string BaseUrlAi { get; set; } = string.Empty;
         public string ApiKeyAi { get; set; } = string.Empty;
         public string ModelAi { get; set; } = string.Empty;
+        public string Prompt { get; set; } = string.Empty;
         public bool StatusAi { get; set; } = false;
     }
 }

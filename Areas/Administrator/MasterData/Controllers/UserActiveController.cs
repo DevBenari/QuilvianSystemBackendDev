@@ -108,19 +108,23 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
             // Query data
             var query = (from a in _applicationDbContext.UserActives
 
-                        join t in _applicationDbContext.TipeUsers
+                        join t in _applicationDbContext.TipeUsers.AsNoTracking()
                             on a.TipeUserId equals t.TipeUserId into tipeJoin
                         from tipe in tipeJoin.DefaultIfEmpty()
 
-                        join dept in _applicationDbContext.Departements
+                        join dept in _applicationDbContext.Departements.AsNoTracking()
                             on a.DepartemenId equals dept.DepartementId into deptJoin
                         from dept in deptJoin.DefaultIfEmpty()
 
-                        join pos in _applicationDbContext.Positions
+                        join pos in _applicationDbContext.Positions.AsNoTracking()
                             on a.PositionId equals pos.PositionId into posJoin
                         from pos in posJoin.DefaultIfEmpty()
 
-                        join creator in _applicationDbContext.UserActives
+                         //join j in _applicationDbContext.Jabatans.AsNoTracking()
+                         //    on a.Jabatan equals pos.PositionId into posJoin
+                         //from pos in posJoin.DefaultIfEmpty()
+
+                         join creator in _applicationDbContext.UserActives.AsNoTracking()
                             on a.CreateBy equals creator.UserActiveId into creatorJoin
                         from creator in creatorJoin.DefaultIfEmpty()
 

@@ -8,9 +8,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Interfaces;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
@@ -27,22 +29,27 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-
+        private readonly IBillingKunjunganReadService _billingKunjunganReadService;
         private readonly ILogger<BillingController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly IPerkiraanBillingRanapService _perkiraanRanap;
 
         public BillingController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ILogger<BillingController> logger,
-            IWebHostEnvironment webHostEnvironment)
+            IWebHostEnvironment webHostEnvironment,
+            IBillingKunjunganReadService billingKunjunganReadService,
+            IPerkiraanBillingRanapService perkiraanRanap)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+            _billingKunjunganReadService = billingKunjunganReadService;
+            _perkiraanRanap = perkiraanRanap;
         }
 
         public static string HitungUmurLengkap(DateTime? tanggalLahir)
@@ -138,721 +145,30 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         }
 
         [HttpGet("GetBillingByKunjunganId/{kunjunganId}")]
-        public async Task<IActionResult> GetBillingByKunjunganId(Guid kunjunganId)
+        public async Task<IActionResult> GetBillingByKunjunganId(Guid kunjunganId, CancellationToken ct)
         {
-            try
-            {
-                // ================================
-                // LOAD BILLINGS
-                // ================================
-                var billings = await _applicationDbContext.Billings
-                    .Where(b => b.KunjunganId == kunjunganId && (b.IsDelete == false || b.IsDelete == null))
-                    .ToListAsync();
+            var data = await _billingKunjunganReadService.GetBillingKeseluruhanAsync(kunjunganId, DateTime.Now, ct);
+            if (data == null)
+                return NotFound(new { message = "Data billing tidak ditemukan." });
 
-                // ================================
-                // QUERY UTAMA (EFISIEN)
-                // ================================
-                var query =
-                    from k in _applicationDbContext.Kunjungans
-
-                    join p in _applicationDbContext.PendaftaranPasienBarus on k.PasienId equals p.PendaftaranPasienBaruId
-                    join a in _applicationDbContext.Asuransis on k.AsuransiId equals a.AsuransiId into asuransiTempGroup
-                    from a in asuransiTempGroup.DefaultIfEmpty()
-
-                    join ap in _applicationDbContext.AsuransiPasiens
-                        on p.PendaftaranPasienBaruId equals ap.PasienId into asuransiPasienGroup
-                    from ap in asuransiPasienGroup.DefaultIfEmpty()
-
-                    join d in _applicationDbContext.Dokters on k.DokterId equals d.DokterId
-                    join poli in _applicationDbContext.Polikliniks on k.PoliklinikId equals poli.PoliklinikId
-
-                    // LAB
-                    join lbd in _applicationDbContext.LabBookingDetails
-                        on k.PasienId equals lbd.PasienId into labGroup
-                    from lbd in labGroup.DefaultIfEmpty()
-
-                    join lp in _applicationDbContext.LabPemeriksaans
-                        on lbd.PemeriksaanLabId equals lp.PemeriksaanLabId into pemeriksaanGroup
-                    from lp in pemeriksaanGroup.DefaultIfEmpty()
-
-                    join la in _applicationDbContext.Labs
-                        on lbd.LabId equals la.LabId into laGroup
-                    from la in laGroup.DefaultIfEmpty()
-
-                        // RESEP
-                    join r in _applicationDbContext.Reseps.Where(x => !x.IsDelete)
-                        on k.KunjunganID equals r.KunjunganId into resepGroup
-                    from r in resepGroup.DefaultIfEmpty()
-
-                    join dr in _applicationDbContext.DetailReseps.Where(x => !x.IsDelete)
-                        on r.ResepId equals dr.ResepId into detailResepGroup
-                    from dr in detailResepGroup.DefaultIfEmpty()
-
-                    join o in _applicationDbContext.Obats
-                        on dr.ObatId equals o.ObatId into obatGroup
-                    from o in obatGroup.DefaultIfEmpty()
-
-                    join rc in _applicationDbContext.Racikans
-                        on dr.RacikanId equals rc.RacikanId into racikanGroup
-                    from rc in racikanGroup.DefaultIfEmpty()
-
-                        // TINDAKAN
-                    join tobj in _applicationDbContext.TindakanKunjungans
-                        on k.KunjunganID equals tobj.KunjunganId into tindakanGroup
-                    from tobj in tindakanGroup.DefaultIfEmpty()
-
-                    join t in _applicationDbContext.Tindakans
-                        on tobj.TindakanId equals t.TindakanId into tindakanMasterGroup
-                    from t in tindakanMasterGroup.DefaultIfEmpty()
-
-                        // ADMIN + KASIR
-                    join adm in _applicationDbContext.BiayaAdministrasis
-                        on k.JenisKunjungan equals adm.BiayaAdministrasiKode into admGroup
-                    from adm in admGroup.DefaultIfEmpty()
-
-                    join kasir in _applicationDbContext.MainKasirs
-                        on k.KunjunganID equals kasir.KunjunganId into kasirGroup
-                    from kasir in kasirGroup.DefaultIfEmpty()
-
-                    join dk in _applicationDbContext.MainKasirDetails
-                        on kasir.KasirId equals dk.MainKasirId into kasirDetailGroup
-                    from dk in kasirDetailGroup.DefaultIfEmpty()
-
-                    join mp in _applicationDbContext.MetodePembayarans
-                        on dk.MetodePembayaranId equals mp.MetodePembayaranId into metodeGroup
-                    from mp in metodeGroup.DefaultIfEmpty()
-
-                    where k.KunjunganID == kunjunganId && !k.IsDelete
-
-                    select new { k, p, a, ap, d, poli, r, dr, o, rc, tobj, t, adm, kasir, dk, mp, lbd, lp, la };
-
-                var result = await query.ToListAsync();
-                if (!result.Any())
-                    return NotFound(new { message = "Data billing tidak ditemukan." });
-
-                // ============================================================
-                // AMBIL RACIKAN IDs
-                // ============================================================
-                var racikanIds = result
-                    .Where(x => x.dr?.IsRacikan == true && x.dr.RacikanId != null)
-                    .Select(x => x.dr!.RacikanId!.Value)
-                    .Distinct()
-                    .ToList();
-
-                // ============================================================
-                // LOAD KOMPOSISI RACIKAN (EFISIEN)
-                // ============================================================
-                var racikanDetails = racikanIds.Any()
-                    ? await (
-                        from rd in _applicationDbContext.RacikanDetails
-                        join ob in _applicationDbContext.Obats on rd.ObatId equals ob.ObatId
-                        where racikanIds.Contains(rd.RacikanId.Value)
-                        select new
-                        {
-                            RacikanId = rd.RacikanId.Value,
-                            rd.DetailRacikanId,
-                            rd.ObatId,
-                            ob.ObatName,
-                            ob.ObatCode,
-                            rd.QtyUsed,
-                            rd.KomposisiDosis,
-                            rd.CreateBy,
-                            rd.CreateDateTime,
-                            ob.HTEPrice
-                        }
-                    )
-                    .Select(x => (object)x)   // 🔥 CAST ke object
-                    .ToListAsync()
-                    : new List<object>();      // 🔥 SAMAKAN TIPE
-
-                var racikanMap = racikanDetails
-                    .Cast<dynamic>()                 // 🔥 Convert kembali agar property bisa diakses
-                    .GroupBy(x => (Guid)x.RacikanId) // 🔥 property sudah bisa dibaca
-                    .ToDictionary(g => g.Key, g => g.ToList());
-
-                // ============================================================
-                // GROUPING KUNJUNGAN
-                // ============================================================
-                var data = result
-                    .GroupBy(x => x.k.KunjunganID)
-                    .Select(group =>
-                    {
-                        var first = group.First();
-
-                        // ================= LAB =================
-                        var daftarPemeriksaanLab = group
-                            .Where(x => x.lbd != null)
-                            .GroupBy(x => x.lbd.DetailBookingLabId)
-                            .Select(g =>
-                            {
-                                var x = g.First();
-                                var bill = billings.FirstOrDefault(b =>
-                                    b.ItemId == x.lbd.DetailBookingLabId &&
-                                    b.JenisBilling == "Pemeriksaan Lab");
-
-                                return new
-                                {
-                                    x.lbd.DetailBookingLabId,
-                                    x.la.NamaLab,
-                                    x.lp?.NamaPemeriksaan,
-                                    x.lp?.HargaPemeriksaan,
-                                    Qty = bill?.QtyItem ?? 1,
-                                    Subtotal = bill?.SubTotalItem ?? x.lp?.HargaPemeriksaan ?? 0,
-                                    BillingId = bill?.BillingId,
-                                    BillingKode = bill?.BillingKode,
-                                    bill?.StatusBilling
-                                };
-                            }).ToList();
-
-                        var totalLab = daftarPemeriksaanLab.Sum(x => x.Subtotal);
-
-                        // ================= OBAT NON RACIKAN =================
-                        var daftarObat = group
-                            .Where(x => x.dr != null && x.o != null && x.dr.IsRacikan != true)
-                            .GroupBy(x => x.dr.DetailResepId)
-                            .Select(g =>
-                            {
-                                var x = g.First();
-                                var bill = billings.FirstOrDefault(b => b.ItemId == x.dr.ObatId && b.JenisBilling == "Obat");
-
-                                return new
-                                {
-                                    x.r?.ResepId,
-                                    x.dr.DetailResepId,
-                                    x.dr.ObatId,
-                                    x.o.ObatName,
-                                    Qty = bill?.QtyItem ?? x.dr.Qty,
-                                    Harga = bill?.HargaItem ?? x.o.HTEPrice,
-                                    Subtotal = bill?.SubTotalItem ?? (x.dr.Qty * x.o.HTEPrice),
-                                    BillingId = bill?.BillingId,
-                                    BillingKode = bill?.BillingKode,
-                                    bill?.StatusBilling,
-                                    x.dr.Signa,
-                                    x.dr.SignaTambahan,
-                                    x.dr.StatusPengambilanObat
-                                };
-                            }).ToList();
-
-                        var totalObat = daftarObat.Sum(x => x.Subtotal);
-
-                        // ================= RACIKAN =================
-                        var daftarRacikan = group
-                            .Where(x => x.dr != null && x.dr.IsRacikan == true && x.rc != null)
-                            .GroupBy(x => x.dr.RacikanId)
-                            .Select(g =>
-                            {
-                                var x = g.First();
-                                var bill = billings.FirstOrDefault(b =>
-                                    b.ItemId == x.dr.RacikanId && b.JenisBilling == "Obat");
-
-                                racikanMap.TryGetValue(x.dr.RacikanId.Value, out var komps);
-
-                                return new
-                                {
-                                    x.r?.ResepId,
-                                    x.dr.RacikanId,
-                                    x.rc.NamaRacikan,
-                                    x.rc.KodeRacikan,
-                                    Qty = bill?.QtyItem,
-                                    Harga = bill?.HargaItem,
-                                    Subtotal = bill?.SubTotalItem,
-                                    BillingId = bill?.BillingId,
-                                    BillingKode = bill?.BillingKode,
-                                    bill?.StatusBilling,
-                                    x.dr.Signa,
-                                    x.dr.SignaTambahan,
-                                    x.dr.StatusPengambilanObat,
-                                    Komposisi = komps?.Select(k => new {
-                                        k.ObatId,
-                                        k.ObatName,
-                                        k.QtyUsed,
-                                        k.KomposisiDosis,
-                                        k.HTEPrice
-                                    })
-                                };
-                            }).ToList();
-
-                        var totalRacikan = daftarRacikan.Sum(x => x.Subtotal ?? 0);
-
-                        // ================= TINDAKAN =================
-                        var daftarTindakan = group
-                            .Where(x => x.tobj != null && x.t != null)
-                            .GroupBy(x => x.tobj.TindakanKunjunganId)
-                            .Select(g =>
-                            {
-                                var x = g.First();
-                                var bill = billings.FirstOrDefault(b =>
-                                    b.ItemId == x.tobj.TindakanId && b.JenisBilling == "Tindakan");
-
-                                return new
-                                {
-                                    x.t.TindakanId,
-                                    x.t.NamaTindakan,
-                                    Qty = bill?.QtyItem ?? x.tobj.Quantity ?? 1,
-                                    Harga = bill?.HargaItem ?? x.tobj.Total ?? 0,
-                                    Subtotal = bill?.SubTotalItem ?? ((x.tobj.Quantity ?? 1) * (x.tobj.Total ?? 0)),
-                                    BillingId = bill?.BillingId,
-                                    BillingKode = bill?.BillingKode,
-                                    bill?.StatusBilling
-                                };
-                            }).ToList();
-
-                        var totalTindakan = daftarTindakan.Sum(x => x.Subtotal);
-
-                        // ================= ADMIN =================
-                        var daftarAdmin = billings
-                            .Where(b => b.JenisBilling == "Biaya Admin")
-                            .Select(b => new
-                            {
-                                b.BillingId,
-                                b.NamaItem,
-                                b.HargaItem,
-                                b.QtyItem,
-                                b.SubTotalItem,
-                                b.BillingKode,
-                                b.StatusBilling,
-                            }).ToList();
-
-                        var totalAdmin = daftarAdmin.Sum(x => x.SubTotalItem ?? 0);
-
-                        // ================= FINAL =================
-                        return new
-                        {
-                            first.k.KunjunganID,
-                            first.k.JenisKunjungan,
-                            TanggalKunjungan = first.k?.TglMasuk,
-                            first.kasir?.KasirId,
-                            first.p?.NamaLengkap,
-                            first.p?.NoRekamMedis,
-                            first.d?.NmDokter,
-                            first.poli?.NamaPoliklinik,
-                            first.k.TipePembayaran,
-                            first.a?.NamaAsuransi,
-                            Umur = HitungUmurLengkap(first.p?.TanggalLahir),
-                            DaftarPemeriksaanLab = daftarPemeriksaanLab,
-                            DaftarObat = daftarObat,
-                            DaftarRacikan = daftarRacikan,
-                            DaftarTindakan = daftarTindakan,
-                            DaftarBiayaAdmin = daftarAdmin,
-
-                            TotalPemeriksaanLab = totalLab,
-                            TotalObat = totalObat,
-                            TotalRacikan = totalRacikan,
-                            TotalTindakan = totalTindakan,
-                            TotalBiayaAdmin = totalAdmin,
-
-                            TotalKeseluruhan =
-                                totalLab + totalObat + totalRacikan + totalTindakan + totalAdmin
-                        };
-                    })
-                    .FirstOrDefault();
-
-                return Ok(new { status = "success", data });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = ex.Message });
-            }
+            return Ok(new { status = "success", data });
         }
 
         [HttpGet("perkiraan-billing-ip/{kunjunganId}")]
-        public async Task<IActionResult> GetPerkiraanBillingRawatInap(Guid kunjunganId)
+        public async Task<IActionResult> GetPerkiraanBillingRawatInap(Guid kunjunganId, CancellationToken ct)
         {
             try
             {
-                // =========================
-                // 1) HEADER
-                // =========================
-                var header = await _applicationDbContext.Kunjungans
-                    .AsNoTracking()
-                    .Where(k => k.KunjunganID == kunjunganId && !k.IsDelete)
-                    .Select(k => new
-                    {
-                        k.KunjunganID,
-                        k.JenisKunjungan,
-                        k.TipePembayaran,
-                        Pasien = _applicationDbContext.PendaftaranPasienBarus
-                            .Where(p => p.PendaftaranPasienBaruId == k.PasienId)
-                            .Select(p => new { p.NamaLengkap, p.NoRekamMedis })
-                            .FirstOrDefault(),
-                        Dokter = _applicationDbContext.Dokters
-                            .Where(d => d.DokterId == k.DokterId)
-                            .Select(d => new { d.NmDokter })
-                            .FirstOrDefault(),
-                        Poli = _applicationDbContext.Polikliniks
-                            .Where(p => p.PoliklinikId == k.PoliklinikId)
-                            .Select(p => new { p.NamaPoliklinik })
-                            .FirstOrDefault(),
-                        Asuransi = _applicationDbContext.Asuransis
-                            .Where(a => a.AsuransiId == k.AsuransiId)
-                            .Select(a => new { a.NamaAsuransi })
-                            .FirstOrDefault()
-                    })
-                    .FirstOrDefaultAsync();
-
-                if (header == null)
+                var data = await _perkiraanRanap.GetPerkiraanBillingIpAsync(kunjunganId, ct);
+                if (data == null)
                     return NotFound(new { status = "failed", message = "Data kunjungan tidak ditemukan." });
 
-                // =========================
-                // 2) VALIDASI IP
-                // =========================
-                if (!IsRawatInapIP(header.JenisKunjungan))
-                {
-                    return BadRequest(new
-                    {
-                        status = "failed",
-                        message = BuildJenisKunjunganMessage(header.JenisKunjungan)
-                    });
-                }
-
-                // =========================
-                // 3) BILLING
-                // =========================
-                var billings = await _applicationDbContext.Billings
-                    .AsNoTracking()
-                    .Where(b => b.KunjunganId == kunjunganId && (b.IsDelete == false || b.IsDelete == null))
-                    .ToListAsync();
-
-                // =========================
-                // 4) SOURCE OF TRUTH RANAP
-                // =========================
-                var bookingRanaps = await _applicationDbContext.BookingBedRanaps
-                    .AsNoTracking()
-                    .Where(x => x.KunjunganId == kunjunganId && (x.IsDelete == false || x.IsDelete == null))
-                    .ToListAsync();
-
-                var transfers = await _applicationDbContext.TransferPasiens
-                    .AsNoTracking()
-                    .Where(x => x.KunjunganId == kunjunganId && (x.IsDelete == false || x.IsDelete == null))
-                    .ToListAsync();
-
-                // Transfer per bedId (cepat untuk lookup)
-                var transferByBed = transfers
-                    .Where(t => t.BedId != null)
-                    .GroupBy(t => t.BedId!.Value)
-                    .ToDictionary(
-                        g => g.Key,
-                        g => g.OrderBy(x => x.TglMasuk ?? x.TglPindah ?? DateTime.MinValue).ToList()
-                    );
-
-                // =========================
-                // 5) GROUPING + BUILD ITEMS
-                // =========================
-                var groups = billings
-                    .GroupBy(b => NormalizeGroup(b.JenisBilling, b.NamaItem))
-                    .Select(g =>
-                    {
-                        var items = new List<object>();
-                        decimal total = 0m;
-
-                        foreach (var b in g)
-                        {
-                            var jenis = (b.JenisBilling ?? "").Trim();
-
-                            // default
-                            int qty = b.QtyItem ?? 1;
-                            decimal harga = b.HargaItem ?? 0m;
-                            decimal subtotal = b.SubTotalItem ?? (qty * harga);
-
-                            // =========================
-                            // KHUSUS KAMAR RANAP
-                            // Billing.ItemId = KamarId
-                            // Qty tetap 1; Harga = tarif/hari * totalHari
-                            // Tampilkan tanggal Booking & Transfer
-                            // =========================
-                            if (jenis.Equals("Kamar Ranap", StringComparison.OrdinalIgnoreCase))
-                            {
-                                var tarifPerHari = b.HargaItem ?? 0m;
-
-                                int totalHari = 0;
-                                DateTime? tglMasukAwal = null;
-                                DateTime? tglKeluarAkhir = null;
-
-                                // detail per segmen booking (berisi tanggal booking + daftar transfer yang relevan)
-                                var segments = new List<object>();
-
-                                if (b.ItemId != null)
-                                {
-                                    var kamarId = b.ItemId.Value;
-
-                                    var bookingsKamar = bookingRanaps
-                                        .Where(x => x.KamarId == kamarId)
-                                        .OrderBy(x => x.TglMasuk ?? DateTime.MinValue)
-                                        .ToList();
-
-                                    foreach (var bk in bookingsKamar)
-                                    {
-                                        tglMasukAwal ??= bk.TglMasuk;
-
-                                        // Tentukan end-date final segmen: booking.TglKeluar > transfer end > null(=masih dirawat)
-                                        var endTransfer = ResolveEndFromTransfer(bk.BedId, bk.TglMasuk, transferByBed);
-                                        var endFinal = bk.TglKeluar ?? endTransfer;
-
-                                        var hari = HitungJumlahHariRanap(bk.TglMasuk, endFinal);
-                                        totalHari += hari;
-
-                                        if (endFinal.HasValue)
-                                        {
-                                            if (!tglKeluarAkhir.HasValue || endFinal.Value > tglKeluarAkhir.Value)
-                                                tglKeluarAkhir = endFinal;
-                                        }
-
-                                        // ambil daftar transfer yang relevan untuk segmen ini (bed yang sama, setelah start segmen)
-                                        var transfersSegmen = GetTransfersForSegment(bk.BedId, bk.TglMasuk, endFinal, transferByBed);
-
-                                        segments.Add(new
-                                        {
-                                            bk.BookingBedRanapId,
-                                            bk.KamarId,
-                                            bk.BedId,
-
-                                            // tanggal dari BookingBedRanap
-                                            TglMasukBooking = bk.TglMasuk,
-                                            TglKeluarBooking = bk.TglKeluar,
-
-                                            // tanggal final yg dipakai hitung hari
-                                            TglKeluarTransfer = endTransfer,
-                                            TglKeluarFinal = endFinal,
-
-                                            JumlahHari = hari,
-
-                                            // daftar transfer pasien (tanggal masuk/pindah/keluar)
-                                            TransferPasien = transfersSegmen.Select(t => new
-                                            {
-                                                t.TransferPasienId,
-                                                t.BedId,
-                                                t.TglMasuk,
-                                                t.TglPindah,
-                                                t.TglKeluar,
-                                                t.Keterangan
-                                            }).ToList()
-                                        });
-                                    }
-                                }
-
-                                // Kalau tidak ada booking untuk kamar ini -> fallback aman (pakai billing apa adanya)
-                                if (totalHari <= 0)
-                                {
-                                    qty = 1;
-                                    harga = b.HargaItem ?? 0m;
-                                    subtotal = b.SubTotalItem ?? harga;
-
-                                    total += subtotal;
-
-                                    items.Add(new
-                                    {
-                                        b.BillingId,
-                                        b.BillingKode,
-                                        b.ItemId, // KamarId
-                                        b.JenisBilling,
-                                        b.NamaItem,
-                                        b.Keterangan,
-                                        Qty = qty,
-                                        Harga = harga,
-                                        Subtotal = subtotal,
-                                        Note = "Tidak ditemukan BookingBedRanap untuk KamarId ini. Pastikan BookingBedRanap.KamarId == Billing.ItemId."
-                                    });
-
-                                    continue;
-                                }
-
-                                // Qty tetap 1; harga total berdasarkan hari
-                                qty = 1;
-                                harga = tarifPerHari * totalHari;
-                                subtotal = harga;
-
-                                total += subtotal;
-
-                                items.Add(new
-                                {
-                                    b.BillingId,
-                                    b.BillingKode,
-                                    b.ItemId, // KamarId
-                                    b.JenisBilling,
-                                    b.NamaItem,
-                                    b.Keterangan,
-                                    Qty = qty,
-                                    Harga = harga,
-                                    Subtotal = subtotal,
-
-                                    // info khusus kamar
-                                    JumlahHari = totalHari,
-                                    HargaPerHari = tarifPerHari,
-                                    TglMasukBookingAwal = tglMasukAwal,
-                                    TglKeluarFinalAkhir = tglKeluarAkhir,
-
-                                    // detail segmen booking + transfer
-                                    Segments = segments
-                                });
-
-                                continue;
-                            }
-
-                            // =========================
-                            // SELAIN KAMAR RANAP
-                            // =========================
-                            total += subtotal;
-
-                            items.Add(new
-                            {
-                                b.BillingId,
-                                b.BillingKode,
-                                b.ItemId,
-                                b.JenisBilling,
-                                b.NamaItem,
-                                b.Keterangan,
-                                Qty = qty,
-                                Harga = harga,
-                                Subtotal = subtotal
-                            });
-                        }
-
-                        return new
-                        {
-                            Group = g.Key,
-                            Items = items,
-                            Total = total
-                        };
-                    })
-                    .ToList();
-
-                // =========================
-                // 6) ORDER GROUPS
-                // =========================
-                var order = new[]
-                {
-                "Tindakan Operasi",
-                "Tindakan Rawat Inap",
-                "Alkes Khusus",
-                "Biaya Kamar Rawat",
-                "Pemeriksaan Lab",
-                "Biaya Lain-lain",
-                "Obat",
-                "Lain-lain"
-            };
-
-                var orderedGroups = groups
-                    .OrderBy(x => Array.IndexOf(order, x.Group) == -1 ? int.MaxValue : Array.IndexOf(order, x.Group))
-                    .ToList();
-
-                var grandTotal = orderedGroups.Sum(x => x.Total);
-
-                return Ok(new
-                {
-                    status = "success",
-                    data = new
-                    {
-                        Header = header,
-                        Groups = orderedGroups,
-                        GrandTotal = grandTotal
-                    }
-                });
+                return Ok(new { status = "success", data });
             }
-            catch (Exception ex)
+            catch (InvalidOperationException ex)
             {
-                return StatusCode(500, new { status = "failed", message = ex.Message });
+                return BadRequest(new { status = "failed", message = ex.Message });
             }
-        }
-
-        // =====================================================
-        // HELPERS PERKIRAAN BILLING
-        // =====================================================
-        private static bool IsRawatInapIP(string? jenisKunjungan)
-        {
-            var j = (jenisKunjungan ?? "").Trim().ToUpperInvariant();
-            return j == "IP" || j == "RAWAT INAP" || j == "INAP";
-        }
-
-        private static string BuildJenisKunjunganMessage(string? jenisKunjungan)
-        {
-            var j = (jenisKunjungan ?? "").Trim().ToUpperInvariant();
-            var readable = j switch
-            {
-                "OP" => "Rawat Jalan (OP)",
-                "RAWAT JALAN" => "Rawat Jalan",
-                "" => "bukan Rawat Inap (IP)",
-                _ => jenisKunjungan ?? "bukan Rawat Inap (IP)"
-            };
-
-            return $"Maaf, prakiraan billing ini hanya untuk Rawat Inap (IP). Kunjungan yang dipilih adalah {readable}.";
-        }
-
-        private static string NormalizeGroup(string? jenisBilling, string? namaItem)
-        {
-            var jb = (jenisBilling ?? "").Trim();
-
-            if (jb.Equals("Operasi", StringComparison.OrdinalIgnoreCase)) return "Tindakan Operasi";
-            if (jb.Equals("Tindakan", StringComparison.OrdinalIgnoreCase)) return "Tindakan Rawat Inap";
-            if (jb.Equals("Alkes", StringComparison.OrdinalIgnoreCase)) return "Alkes Khusus";
-            if (jb.Equals("Kamar Ranap", StringComparison.OrdinalIgnoreCase)) return "Biaya Kamar Rawat";
-            if (jb.Equals("Biaya Admin", StringComparison.OrdinalIgnoreCase)) return "Biaya Lain-lain";
-            if (jb.Equals("Obat", StringComparison.OrdinalIgnoreCase)) return "Obat";
-            if (jb.Equals("Pemeriksaan Lab", StringComparison.OrdinalIgnoreCase)) return "Pemeriksaan Lab";
-
-            return "Lain-lain";
-        }
-
-        private static int HitungJumlahHariRanap(DateTime? tglMasuk, DateTime? tglKeluarFinal)
-        {
-            if (!tglMasuk.HasValue) return 1;
-
-            var start = tglMasuk.Value;
-            var end = tglKeluarFinal ?? DateTime.Now; // kalau belum pulang -> sekarang
-            if (end < start) end = start;
-
-            var durasi = end - start;
-            var hari = (int)Math.Ceiling(durasi.TotalDays);
-            if (hari < 1) hari = 1;
-
-            return hari;
-        }
-
-        // End-date dari transfer: ambil transfer pertama (anchor>=start) untuk bed tsb,
-        // end = TglKeluar ?? TglPindah
-        private static DateTime? ResolveEndFromTransfer(
-            Guid? bedId,
-            DateTime? start,
-            Dictionary<Guid, List<TransferPasien>> transferByBed)
-        {
-            if (!bedId.HasValue) return null;
-            if (!transferByBed.TryGetValue(bedId.Value, out var list) || list.Count == 0) return null;
-
-            var s = start ?? DateTime.MinValue;
-
-            var candidate = list
-                .Select(t => new { Transfer = t, Anchor = t.TglMasuk ?? t.TglPindah })
-                .Where(x => x.Anchor.HasValue && x.Anchor.Value >= s)
-                .OrderBy(x => x.Anchor!.Value)
-                .FirstOrDefault();
-
-            if (candidate == null) return null;
-
-            return candidate.Transfer.TglKeluar ?? candidate.Transfer.TglPindah;
-        }
-
-        // Transfer yang relevan untuk segmen booking (bed sama, dalam range start..end jika end ada)
-        private static List<TransferPasien> GetTransfersForSegment(
-            Guid? bedId,
-            DateTime? segStart,
-            DateTime? segEnd,
-            Dictionary<Guid, List<TransferPasien>> transferByBed)
-        {
-            var result = new List<TransferPasien>();
-            if (!bedId.HasValue) return result;
-            if (!transferByBed.TryGetValue(bedId.Value, out var list) || list.Count == 0) return result;
-
-            var start = segStart ?? DateTime.MinValue;
-
-            return list
-                .Where(t =>
-                {
-                    var anchor = t.TglMasuk ?? t.TglPindah ?? DateTime.MinValue;
-                    if (anchor < start) return false;
-                    if (segEnd.HasValue && anchor > segEnd.Value) return false;
-                    return true;
-                })
-                .OrderBy(t => t.TglMasuk ?? t.TglPindah ?? DateTime.MinValue)
-                .ToList();
         }
 
         [HttpGet("ObatFarmasiByKunjunganId/{kunjunganId}")]
@@ -1350,5 +666,489 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
+
+        [HttpGet("GetBillingPaged")]
+        public async Task<IActionResult> GetBillingPaged(
+            [FromQuery] Guid? kunjunganId,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10,
+
+            [FromQuery] DateTime? startDate = null,
+            [FromQuery] DateTime? endDate = null,
+            [FromQuery] PeriodeFilter? periode = null)
+        {
+            try
+            {
+                if (page <= 0) page = 1;
+                if (pageSize <= 0) pageSize = 10;
+
+                // ============================================================
+                // BASE QUERY KUNJUNGAN (FILTER + PAGING PER KUNJUNGANID)
+                // Filter & order pakai Kunjungan.CreateDateTime
+                // ============================================================
+                var baseQuery = _applicationDbContext.Kunjungans
+                    .AsNoTracking()
+                    .Where(k => !k.IsDelete);
+
+                if (kunjunganId.HasValue && kunjunganId.Value != Guid.Empty)
+                    baseQuery = baseQuery.Where(k => k.KunjunganID == kunjunganId.Value);
+
+                // ============================================================
+                // FILTER RANGE (startDate & endDate) pada CreateDateTime
+                // ============================================================
+                if (startDate.HasValue && endDate.HasValue)
+                {
+                    // dibuat UTC range (00:00:00 - 23:59:59.9999999)
+                    var startUtc = new DateTimeOffset(DateTime.SpecifyKind(startDate.Value.Date, DateTimeKind.Utc));
+                    var endUtc = new DateTimeOffset(DateTime.SpecifyKind(endDate.Value.Date.AddDays(1).AddTicks(-1), DateTimeKind.Utc));
+
+                    baseQuery = baseQuery.Where(k => k.CreateDateTime >= startUtc && k.CreateDateTime <= endUtc);
+                }
+
+                // ============================================================
+                // FILTER PERIODE pada CreateDateTime (tambahan Yesterday)
+                // ============================================================
+                if (periode.HasValue)
+                {
+                    var today = DateTime.UtcNow.Date;
+
+                    DateTimeOffset rangeStartUtc;
+                    DateTimeOffset rangeEndUtc;
+
+                    switch (periode.Value)
+                    {
+                        case PeriodeFilter.Today:
+                            rangeStartUtc = new DateTimeOffset(DateTime.SpecifyKind(today, DateTimeKind.Utc));
+                            rangeEndUtc = new DateTimeOffset(DateTime.SpecifyKind(today.AddDays(1).AddTicks(-1), DateTimeKind.Utc));
+                            baseQuery = baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc && k.CreateDateTime <= rangeEndUtc);
+                            break;
+
+                        case PeriodeFilter.Yesterday:
+                            var y = today.AddDays(-1);
+                            rangeStartUtc = new DateTimeOffset(DateTime.SpecifyKind(y, DateTimeKind.Utc));
+                            rangeEndUtc = new DateTimeOffset(DateTime.SpecifyKind(y.AddDays(1).AddTicks(-1), DateTimeKind.Utc));
+                            baseQuery = baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc && k.CreateDateTime <= rangeEndUtc);
+                            break;
+
+                        case PeriodeFilter.ThisWeek:
+                            var weekStart = today.AddDays(-(int)today.DayOfWeek);
+                            rangeStartUtc = new DateTimeOffset(DateTime.SpecifyKind(weekStart, DateTimeKind.Utc));
+                            rangeEndUtc = new DateTimeOffset(DateTime.SpecifyKind(today.AddDays(1).AddTicks(-1), DateTimeKind.Utc));
+                            baseQuery = baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc && k.CreateDateTime <= rangeEndUtc);
+                            break;
+
+                        case PeriodeFilter.LastWeek:
+                            var lastWeekStart = today.AddDays(-7 - (int)today.DayOfWeek);
+                            var lastWeekEnd = lastWeekStart.AddDays(6);
+                            rangeStartUtc = new DateTimeOffset(DateTime.SpecifyKind(lastWeekStart, DateTimeKind.Utc));
+                            rangeEndUtc = new DateTimeOffset(DateTime.SpecifyKind(lastWeekEnd.AddDays(1).AddTicks(-1), DateTimeKind.Utc));
+                            baseQuery = baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc && k.CreateDateTime <= rangeEndUtc);
+                            break;
+
+                        case PeriodeFilter.ThisMonth:
+                            var thisMonthStart = new DateTime(today.Year, today.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+                            rangeStartUtc = new DateTimeOffset(thisMonthStart);
+                            rangeEndUtc = new DateTimeOffset(thisMonthStart.AddMonths(1).AddTicks(-1));
+                            baseQuery = baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc && k.CreateDateTime <= rangeEndUtc);
+                            break;
+
+                        case PeriodeFilter.LastMonth:
+                            var lm = today.AddMonths(-1);
+                            var lastMonthStart = new DateTime(lm.Year, lm.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+                            rangeStartUtc = new DateTimeOffset(lastMonthStart);
+                            rangeEndUtc = new DateTimeOffset(lastMonthStart.AddMonths(1).AddTicks(-1));
+                            baseQuery = baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc && k.CreateDateTime <= rangeEndUtc);
+                            break;
+
+                        case PeriodeFilter.ThisYear:
+                            var thisYearStart = new DateTime(today.Year, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                            rangeStartUtc = new DateTimeOffset(thisYearStart);
+                            rangeEndUtc = new DateTimeOffset(thisYearStart.AddYears(1).AddTicks(-1));
+                            baseQuery = baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc && k.CreateDateTime <= rangeEndUtc);
+                            break;
+
+                        case PeriodeFilter.LastYear:
+                            var lastYearStart = new DateTime(today.Year - 1, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                            rangeStartUtc = new DateTimeOffset(lastYearStart);
+                            rangeEndUtc = new DateTimeOffset(lastYearStart.AddYears(1).AddTicks(-1));
+                            baseQuery = baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc && k.CreateDateTime <= rangeEndUtc);
+                            break;
+
+                        case PeriodeFilter.Last3Months:
+                            rangeStartUtc = new DateTimeOffset(DateTime.SpecifyKind(today.AddMonths(-3), DateTimeKind.Utc));
+                            baseQuery = baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc);
+                            break;
+
+                        case PeriodeFilter.Last6Months:
+                            rangeStartUtc = new DateTimeOffset(DateTime.SpecifyKind(today.AddMonths(-6), DateTimeKind.Utc));
+                            baseQuery = baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc);
+                            break;
+                    }
+                }
+
+                // ============================================================
+                // PAGING KUNJUNGAN ID (ORDER BY CreateDateTime DESC)
+                // ============================================================
+                var totalKunjungan = await baseQuery.CountAsync();
+                var totalPages = (int)Math.Ceiling(totalKunjungan / (double)pageSize);
+
+                var pageKunjunganIds = await baseQuery
+                    .OrderByDescending(k => k.CreateDateTime)
+                    .ThenByDescending(k => k.KunjunganID)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .Select(k => k.KunjunganID)
+                    .ToListAsync();
+
+                if (!pageKunjunganIds.Any())
+                {
+                    return Ok(new
+                    {
+                        status = "success",
+                        page,
+                        pageSize,
+                        totalKunjungan,
+                        totalPages,
+                        data = new List<object>()
+                    });
+                }
+
+                // ============================================================
+                // LOAD BILLINGS UNTUK PAGE KUNJUNGAN
+                // ============================================================
+                var billings = await _applicationDbContext.Billings
+                    .AsNoTracking()
+                    .Where(b => pageKunjunganIds.Contains((Guid)b.KunjunganId) && (b.IsDelete == false || b.IsDelete == null))
+                    .ToListAsync();
+
+                var billingsByKunjungan = billings
+                    .GroupBy(b => b.KunjunganId)
+                    .ToDictionary(g => g.Key, g => g.ToList());
+
+                // ============================================================
+                // QUERY UTAMA (SAMA SEPERTI PUNYAMU) - FILTER PAGE IDS
+                // ============================================================
+                var query =
+                    from k in _applicationDbContext.Kunjungans
+
+                    join p in _applicationDbContext.PendaftaranPasienBarus on k.PasienId equals p.PendaftaranPasienBaruId
+                    join a in _applicationDbContext.Asuransis on k.AsuransiId equals a.AsuransiId into asuransiTempGroup
+                    from a in asuransiTempGroup.DefaultIfEmpty()
+
+                    join ap in _applicationDbContext.AsuransiPasiens
+                        on p.PendaftaranPasienBaruId equals ap.PasienId into asuransiPasienGroup
+                    from ap in asuransiPasienGroup.DefaultIfEmpty()
+
+                    join d in _applicationDbContext.Dokters on k.DokterId equals d.DokterId
+                    join poli in _applicationDbContext.Polikliniks on k.PoliklinikId equals poli.PoliklinikId
+
+                    // LAB
+                    join lbd in _applicationDbContext.LabBookingDetails
+                        on k.PasienId equals lbd.PasienId into labGroup
+                    from lbd in labGroup.DefaultIfEmpty()
+
+                    join lp in _applicationDbContext.LabPemeriksaans
+                        on lbd.PemeriksaanLabId equals lp.PemeriksaanLabId into pemeriksaanGroup
+                    from lp in pemeriksaanGroup.DefaultIfEmpty()
+
+                    join la in _applicationDbContext.Labs
+                        on lbd.LabId equals la.LabId into laGroup
+                    from la in laGroup.DefaultIfEmpty()
+
+                        // RESEP
+                    join r in _applicationDbContext.Reseps.Where(x => !x.IsDelete)
+                        on k.KunjunganID equals r.KunjunganId into resepGroup
+                    from r in resepGroup.DefaultIfEmpty()
+
+                    join dr in _applicationDbContext.DetailReseps.Where(x => !x.IsDelete)
+                        on r.ResepId equals dr.ResepId into detailResepGroup
+                    from dr in detailResepGroup.DefaultIfEmpty()
+
+                    join o in _applicationDbContext.Obats
+                        on dr.ObatId equals o.ObatId into obatGroup
+                    from o in obatGroup.DefaultIfEmpty()
+
+                    join rc in _applicationDbContext.Racikans
+                        on dr.RacikanId equals rc.RacikanId into racikanGroup
+                    from rc in racikanGroup.DefaultIfEmpty()
+
+                        // TINDAKAN
+                    join tobj in _applicationDbContext.TindakanKunjungans
+                        on k.KunjunganID equals tobj.KunjunganId into tindakanGroup
+                    from tobj in tindakanGroup.DefaultIfEmpty()
+
+                    join t in _applicationDbContext.Tindakans
+                        on tobj.TindakanId equals t.TindakanId into tindakanMasterGroup
+                    from t in tindakanMasterGroup.DefaultIfEmpty()
+
+                        // ADMIN + KASIR
+                    join adm in _applicationDbContext.BiayaAdministrasis
+                        on k.JenisKunjungan equals adm.BiayaAdministrasiKode into admGroup
+                    from adm in admGroup.DefaultIfEmpty()
+
+                    join kasir in _applicationDbContext.MainKasirs
+                        on k.KunjunganID equals kasir.KunjunganId into kasirGroup
+                    from kasir in kasirGroup.DefaultIfEmpty()
+
+                    join dk in _applicationDbContext.MainKasirDetails
+                        on kasir.KasirId equals dk.MainKasirId into kasirDetailGroup
+                    from dk in kasirDetailGroup.DefaultIfEmpty()
+
+                    join mp in _applicationDbContext.MetodePembayarans
+                        on dk.MetodePembayaranId equals mp.MetodePembayaranId into metodeGroup
+                    from mp in metodeGroup.DefaultIfEmpty()
+
+                    where pageKunjunganIds.Contains(k.KunjunganID) && !k.IsDelete
+
+                    select new { k, p, a, ap, d, poli, r, dr, o, rc, tobj, t, adm, kasir, dk, mp, lbd, lp, la };
+
+                var result = await query.ToListAsync();
+                if (!result.Any())
+                    return NotFound(new { message = "Data billing tidak ditemukan." });
+
+                // ============================================================
+                // RACIKAN IDs
+                // ============================================================
+                var racikanIds = result
+                    .Where(x => x.dr?.IsRacikan == true && x.dr.RacikanId != null)
+                    .Select(x => x.dr!.RacikanId!.Value)
+                    .Distinct()
+                    .ToList();
+
+                // ============================================================
+                // LOAD KOMPOSISI RACIKAN
+                // ============================================================
+                var racikanDetails = racikanIds.Any()
+                    ? await (
+                        from rd in _applicationDbContext.RacikanDetails
+                        join ob in _applicationDbContext.Obats on rd.ObatId equals ob.ObatId
+                        where racikanIds.Contains(rd.RacikanId.Value)
+                        select new
+                        {
+                            RacikanId = rd.RacikanId.Value,
+                            rd.DetailRacikanId,
+                            rd.ObatId,
+                            ob.ObatName,
+                            ob.ObatCode,
+                            rd.QtyUsed,
+                            rd.KomposisiDosis,
+                            rd.CreateBy,
+                            rd.CreateDateTime,
+                            ob.HTEPrice
+                        }
+                    )
+                    .Select(x => (object)x)
+                    .ToListAsync()
+                    : new List<object>();
+
+                var racikanMap = racikanDetails
+                    .Cast<dynamic>()
+                    .GroupBy(x => (Guid)x.RacikanId)
+                    .ToDictionary(g => g.Key, g => g.ToList());
+
+                // ============================================================
+                // GROUPING PER KUNJUNGAN (OUTPUT SAMA)
+                // ============================================================
+                var data = result
+                    .GroupBy(x => x.k.KunjunganID)
+                    .Select(group =>
+                    {
+                        var first = group.First();
+                        var kid = first.k.KunjunganID;
+
+                        billingsByKunjungan.TryGetValue(kid, out var billList);
+                        billList ??= new List<Billing>();
+
+                        var billLookup = billList.ToLookup(b => (b.JenisBilling, b.ItemId));
+
+                        Billing? FindBill(string jenis, Guid? itemId)
+                            => itemId.HasValue ? billLookup[(jenis, itemId.Value)].FirstOrDefault() : null;
+
+                        // ================= LAB =================
+                        var daftarPemeriksaanLab = group
+                            .Where(x => x.lbd != null)
+                            .GroupBy(x => x.lbd.DetailBookingLabId)
+                            .Select(g =>
+                            {
+                                var x = g.First();
+                                var bill = FindBill("Pemeriksaan Lab", x.lbd.DetailBookingLabId);
+
+                                return new
+                                {
+                                    x.lbd.DetailBookingLabId,
+                                    NamaLab = x.la?.NamaLab,
+                                    NamaPemeriksaan = x.lp?.NamaPemeriksaan,
+                                    HargaPemeriksaan = x.lp?.HargaPemeriksaan,
+                                    Qty = bill?.QtyItem ?? 1,
+                                    Subtotal = bill?.SubTotalItem ?? x.lp?.HargaPemeriksaan ?? 0,
+                                    BillingId = bill?.BillingId,
+                                    BillingKode = bill?.BillingKode,
+                                    bill?.StatusBilling
+                                };
+                            }).ToList();
+
+                        var totalLab = daftarPemeriksaanLab.Sum(x => x.Subtotal);
+
+                        // ================= OBAT NON RACIKAN =================
+                        var daftarObat = group
+                            .Where(x => x.dr != null && x.o != null && x.dr.IsRacikan != true)
+                            .GroupBy(x => x.dr.DetailResepId)
+                            .Select(g =>
+                            {
+                                var x = g.First();
+                                var bill = FindBill("Obat", x.dr.ObatId);
+
+                                return new
+                                {
+                                    x.r?.ResepId,
+                                    x.dr.DetailResepId,
+                                    x.dr.ObatId,
+                                    ObatName = x.o?.ObatName,
+                                    Qty = bill?.QtyItem ?? x.dr.Qty,
+                                    Harga = bill?.HargaItem ?? x.o?.HTEPrice,
+                                    Subtotal = bill?.SubTotalItem ?? ((x.dr.Qty ?? 0) * (x.o?.HTEPrice ?? 0)),
+                                    BillingId = bill?.BillingId,
+                                    BillingKode = bill?.BillingKode,
+                                    bill?.StatusBilling,
+                                    x.dr.Signa,
+                                    x.dr.SignaTambahan,
+                                    x.dr.StatusPengambilanObat
+                                };
+                            }).ToList();
+
+                        var totalObat = daftarObat.Sum(x => x.Subtotal);
+
+                        // ================= RACIKAN =================
+                        var daftarRacikan = group
+                            .Where(x => x.dr != null && x.dr.IsRacikan == true && x.rc != null)
+                            .GroupBy(x => x.dr.RacikanId)
+                            .Select(g =>
+                            {
+                                var x = g.First();
+                                var bill = FindBill("Obat", x.dr.RacikanId);
+
+                                racikanMap.TryGetValue(x.dr.RacikanId.Value, out var komps);
+
+                                return new
+                                {
+                                    x.r?.ResepId,
+                                    x.dr.RacikanId,
+                                    NamaRacikan = x.rc?.NamaRacikan,
+                                    KodeRacikan = x.rc?.KodeRacikan,
+                                    Qty = bill?.QtyItem,
+                                    Harga = bill?.HargaItem,
+                                    Subtotal = bill?.SubTotalItem,
+                                    BillingId = bill?.BillingId,
+                                    BillingKode = bill?.BillingKode,
+                                    bill?.StatusBilling,
+                                    x.dr.Signa,
+                                    x.dr.SignaTambahan,
+                                    x.dr.StatusPengambilanObat,
+                                    Komposisi = komps?.Select(k => new
+                                    {
+                                        k.ObatId,
+                                        k.ObatName,
+                                        k.QtyUsed,
+                                        k.KomposisiDosis,
+                                        k.HTEPrice
+                                    })
+                                };
+                            }).ToList();
+
+                        var totalRacikan = daftarRacikan.Sum(x => x.Subtotal ?? 0);
+
+                        // ================= TINDAKAN =================
+                        var daftarTindakan = group
+                            .Where(x => x.tobj != null && x.t != null)
+                            .GroupBy(x => x.tobj.TindakanKunjunganId)
+                            .Select(g =>
+                            {
+                                var x = g.First();
+                                var bill = FindBill("Tindakan", x.tobj.TindakanId);
+
+                                return new
+                                {
+                                    x.t.TindakanId,
+                                    NamaTindakan = x.t?.NamaTindakan,
+                                    Qty = bill?.QtyItem ?? x.tobj.Quantity ?? 1,
+                                    Harga = bill?.HargaItem ?? x.tobj.Total ?? 0,
+                                    Subtotal = bill?.SubTotalItem ?? ((x.tobj.Quantity ?? 1) * (x.tobj.Total ?? 0)),
+                                    BillingId = bill?.BillingId,
+                                    BillingKode = bill?.BillingKode,
+                                    bill?.StatusBilling
+                                };
+                            }).ToList();
+
+                        var totalTindakan = daftarTindakan.Sum(x => x.Subtotal);
+
+                        // ================= ADMIN =================
+                        var daftarAdmin = billList
+                            .Where(b => b.JenisBilling == "Biaya Admin")
+                            .Select(b => new
+                            {
+                                b.BillingId,
+                                b.NamaItem,
+                                b.HargaItem,
+                                b.QtyItem,
+                                b.SubTotalItem,
+                                b.BillingKode,
+                                b.StatusBilling,
+                            }).ToList();
+
+                        var totalAdmin = daftarAdmin.Sum(x => x.SubTotalItem ?? 0);
+
+                        // ================= FINAL =================
+                        return new
+                        {
+                            first.k.KunjunganID,
+                            first.k.JenisKunjungan,
+                            TanggalKunjungan = first.k?.TglMasuk,
+                            CreateDateTime = first.k.CreateDateTime, // ✅ buat lihat sorting basisnya
+                            first.kasir?.KasirId,
+                            first.p?.NamaLengkap,
+                            first.p?.NoRekamMedis,
+                            first.d?.NmDokter,
+                            first.poli?.NamaPoliklinik,
+                            first.k.TipePembayaran,
+                            first.a?.NamaAsuransi,
+                            Umur = HitungUmurLengkap(first.p?.TanggalLahir),
+
+                            DaftarPemeriksaanLab = daftarPemeriksaanLab,
+                            DaftarObat = daftarObat,
+                            DaftarRacikan = daftarRacikan,
+                            DaftarTindakan = daftarTindakan,
+                            DaftarBiayaAdmin = daftarAdmin,
+
+                            TotalPemeriksaanLab = totalLab,
+                            TotalObat = totalObat,
+                            TotalRacikan = totalRacikan,
+                            TotalTindakan = totalTindakan,
+                            TotalBiayaAdmin = totalAdmin,
+
+                            TotalKeseluruhan = totalLab + totalObat + totalRacikan + totalTindakan + totalAdmin
+                        };
+                    })
+                    .OrderByDescending(x => x.CreateDateTime)  // ✅ urut output juga berdasarkan createDateTime kunjungan
+                    .ToList();
+
+                return Ok(new
+                {
+                    status = "success",
+                    page,
+                    pageSize,
+                    totalKunjungan,
+                    totalPages,
+                    data
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
+            }
+        }
+
+
+
     }
 }

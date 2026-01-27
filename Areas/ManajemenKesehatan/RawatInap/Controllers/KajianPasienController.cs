@@ -53,105 +53,135 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             if (perPage < 1) perPage = 10;
 
             // =========================
-            // 1️⃣ Ambil data utama Kajian Pasien
+            // 0) Base untuk filter utama (lebih murah untuk COUNT)
             // =========================
-            var baseQuery = from a in _applicationDbContext.KajianPasiens
-                            join u in _applicationDbContext.UserActives
-                                on a.CreateBy equals u.UserActiveId into userGroup
-                            from u in userGroup.DefaultIfEmpty()
+            var kajianBase = _applicationDbContext.KajianPasiens
+                .AsNoTracking()
+                .Where(a => a.IsDelete != true);
 
-                            join k in _applicationDbContext.Kunjungans
-                                on a.KunjunganId equals k.KunjunganID into kunjunganGroup
-                            from k in kunjunganGroup.DefaultIfEmpty()
-
-                            where a.IsDelete == false || a.IsDelete == null
-                            orderby a.CreateDateTime descending
-                            select new
-                            {
-                                a.KajianPasienId,
-                                a.KunjunganId,
-                                a.VitalSignId,
-                                a.DokterId,
-                                a.UserActiveId,
-                                a.KeadaanUmum,
-                                a.KeadaanKulit,
-                                a.KeadaanKepalaLeher,
-                                a.KeadaanDada,
-                                a.KeadaanJantung,
-                                a.KeadaanParuParu,
-                                a.KeadaanAbdomen,
-                                a.KeadaanGenitalia,
-                                a.KeadaanAnggotaGerak,
-                                a.KeadaanLainnya,
-                                a.StatusLokalis,
-                                a.PemeriksaanPenunjang,
-                                a.DiagnosaSaatIni,
-                                a.DiagnosaBanding,
-                                a.DaftarMasalah,
-                                a.Program,
-                                a.Terapi,
-                                a.Edukasi,
-                                a.EdukasiKepada,
-                                a.Keterangan,
-                                a.TglKajian,
-                                a.TglTindakLanjut,
-                                a.IndikasiTindakLanjut,
-                                a.KamarId,
-                                a.NamaTempat,
-                                a.PenyampaianEdukasi,
-                                a.CreateBy,
-                                a.CreateDateTime,
-                                a.KajianUtamaPengkajian,
-                                a.CurrentMedicationId,
-                                a.BahasaDigunakan,
-                                a.JenisHambatan,
-
-                                a.IsDBNKepala,
-                                a.IsDBNMata,
-                                a.IsDBNMulut,
-                                a.IsDBNTHT,
-                                a.IsDBNLeher,
-                                a.IsDBNThorak,
-                                a.IsDBNJantung,
-                                a.IsDBNParu,
-                                a.IsDBNPunggung,
-                                a.IsDBNAbdomen,
-                                a.IsDBNGenital,
-                                a.IsDBNEkstremitas,
-
-                                a.KeadaanKepala,
-                                a.KeadaanLeher,
-                                a.KeadaanMata,
-                                a.KeadaanMulut,
-                                a.KeadaanTHT,
-                                a.KeadaanThorak,
-                                a.KeadaanPunggung,
-                                a.KeadaanEkstremitas,
-                                a.IsAsing,
-                                a.IsDaerah,
-                                CreateByName = u.FullName,
-                                k.NoRekamMedis,
-                            };
-
-            var totalRows = await baseQuery.CountAsync();
+            // COUNT tanpa join (lebih cepat)
+            var totalRows = await kajianBase.CountAsync();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
 
-            var listData = await baseQuery
+            // =========================
+            // 1) Query page data (baru join untuk kebutuhan tampilan)
+            // =========================
+            var pageQuery =
+                from a in kajianBase
+
+                join u0 in _applicationDbContext.UserActives.AsNoTracking()
+                    on a.CreateBy equals u0.UserActiveId into userGroup
+                from u in userGroup.DefaultIfEmpty()
+
+                join k0 in _applicationDbContext.Kunjungans.AsNoTracking()
+                    on a.KunjunganId equals k0.KunjunganID into kunjunganGroup
+                from k in kunjunganGroup.DefaultIfEmpty()
+
+                join v0 in _applicationDbContext.VitalSigns.AsNoTracking()
+                    on a.VitalSignId equals v0.VitalSignId into vitalSignGroup
+                from v in vitalSignGroup.DefaultIfEmpty()
+
+                orderby a.CreateDateTime descending
+                select new
+                {
+                    a.KajianPasienId,
+                    a.KunjunganId,
+                    a.VitalSignId,
+
+                    v.Suhu,
+                    v.Nadi,
+                    v.SaturasiOksigen,
+                    v.TekananDarahDiastolic,
+                    v.TekananDarahSystolic,
+                    v.Kesadaran,
+                    v.BBKering,
+                    v.Height,
+
+                    a.DokterId,
+                    a.UserActiveId,
+                    a.KeluhanUtama,
+                    a.KeadaanUmum,
+                    a.KeadaanKulit,
+                    a.KeadaanKepalaLeher,
+                    a.KeadaanDada,
+                    a.KeadaanJantung,
+                    a.KeadaanParuParu,
+                    a.KeadaanAbdomen,
+                    a.KeadaanGenitalia,
+                    a.KeadaanAnggotaGerak,
+                    a.KeadaanLainnya,
+                    a.StatusLokalis,
+                    a.PemeriksaanPenunjang,
+                    a.DiagnosaSaatIni,
+                    a.DiagnosaBanding,
+                    a.DaftarMasalah,
+                    a.Program,
+                    a.Terapi,
+                    a.Edukasi,
+                    a.EdukasiKepada,
+                    a.Keterangan,
+                    a.TglKajian,
+                    a.TglTindakLanjut,
+                    a.IndikasiTindakLanjut,
+                    a.KamarId,
+                    a.NamaTempat,
+                    a.PenyampaianEdukasi,
+                    a.CreateBy,
+                    a.CreateDateTime,
+                    a.KajianUtamaPengkajian,
+                    a.CurrentMedicationId,
+                    a.BahasaDigunakan,
+                    a.JenisHambatan,
+
+                    a.IsDBNKepala,
+                    a.IsDBNMata,
+                    a.IsDBNMulut,
+                    a.IsDBNTHT,
+                    a.IsDBNLeher,
+                    a.IsDBNThorak,
+                    a.IsDBNJantung,
+                    a.IsDBNParu,
+                    a.IsDBNPunggung,
+                    a.IsDBNAbdomen,
+                    a.IsDBNGenital,
+                    a.IsDBNEkstremitas,
+
+                    a.KeadaanKepala,
+                    a.KeadaanLeher,
+                    a.KeadaanMata,
+                    a.KeadaanMulut,
+                    a.KeadaanTHT,
+                    a.KeadaanThorak,
+                    a.KeadaanPunggung,
+                    a.KeadaanEkstremitas,
+                    a.IsAsing,
+                    a.IsDaerah,
+
+                    CreateByName = u != null ? u.FullName : null,
+                    NoRekamMedis = k != null ? k.NoRekamMedis : null,
+                };
+
+            var listData = await pageQuery
                 .Skip((page - 1) * perPage)
                 .Take(perPage)
-                .AsNoTracking()
                 .ToListAsync();
 
-            if (!listData.Any())
+            if (listData.Count == 0)
                 return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
 
             // =========================
-            // 2️⃣ Ambil data PainAssessment & SuratPengantar dalam batch (hindari N+1)
+            // 2) Ambil data PainAssessment & SuratPengantar (batch)
             // =========================
-            var kunjunganIds = listData.Select(x => x.KunjunganId).Distinct().ToList();
+            var kunjunganIds = listData
+                .Select(x => x.KunjunganId)
+                .Where(id => id != Guid.Empty)      // kalau nullable, sesuaikan jadi: .Where(id => id.HasValue).Select(id => id.Value)
+                .Distinct()
+                .ToList();
 
+            // Pain Assessment (filter IsDelete jika ada)
             var painAssessments = await _applicationDbContext.PainAssessments
-                .Where(p => kunjunganIds.Contains(p.KunjunganId))
+                .AsNoTracking()
+                .Where(p => kunjunganIds.Contains(p.KunjunganId) && p.IsDelete != true)
                 .Select(p => new
                 {
                     p.PainAssessmentId,
@@ -162,8 +192,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 .OrderByDescending(p => p.CreateDateTime)
                 .ToListAsync();
 
+            // Surat Pengantar (filter IsDelete jika ada)
             var suratPengantar = await _applicationDbContext.SuratPengantarRawatInaps
-                .Where(s => kunjunganIds.Contains(s.KunjunganId))
+                .AsNoTracking()
+                .Where(s => kunjunganIds.Contains(s.KunjunganId) && s.IsDelete != true)
                 .Select(s => new
                 {
                     s.KunjunganId,
@@ -172,87 +204,111 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 .ToListAsync();
 
             // =========================
-            // 3️⃣ Buat lookup untuk relasi
+            // 3) Map sekali (lebih hemat daripada ToLookup + ToList per row)
             // =========================
-            var painLookup = painAssessments.ToLookup(p => p.KunjunganId);
-            var suratLookup = suratPengantar.ToLookup(s => s.KunjunganId);
+            var painMap = painAssessments
+                .GroupBy(p => p.KunjunganId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Select(x => (object)x).ToList()
+                );
+
+            var suratMap = suratPengantar
+                .GroupBy(s => s.KunjunganId)
+                .ToDictionary(g => g.Key, g => g.FirstOrDefault()?.AsalUnit);
 
             // =========================
-            // 4️⃣ Gabungkan hasil (tanpa duplikasi, 1 KajianPasien = 1 baris)
+            // 4) Gabungkan hasil
             // =========================
-            var result = listData.Select(x => new
+            var result = listData.Select(x =>
             {
-                x.CreateDateTime,
-                x.CreateBy,
-                x.CreateByName,
-                x.KajianPasienId,
-                x.KunjunganId,
-                x.VitalSignId,
-                x.NoRekamMedis,
-                x.DokterId,
-                x.UserActiveId,
-                x.KeadaanUmum,
-                x.KeadaanKulit,
-                x.KeadaanKepalaLeher,
-                x.KeadaanDada,
-                x.KeadaanJantung,
-                x.KeadaanParuParu,
-                x.KeadaanAbdomen,
-                x.KeadaanGenitalia,
-                x.KeadaanAnggotaGerak,
-                x.KeadaanLainnya,
-                x.StatusLokalis,
-                x.PemeriksaanPenunjang,
-                x.DiagnosaSaatIni,
-                x.DiagnosaBanding,
-                x.DaftarMasalah,
-                x.Program,
-                x.Terapi,
-                x.Edukasi,
-                x.EdukasiKepada,
-                x.Keterangan,
-                x.TglKajian,
-                x.KajianUtamaPengkajian,
-                x.CurrentMedicationId,
-                x.TglTindakLanjut,
-                x.IndikasiTindakLanjut,
-                x.KamarId,
-                x.NamaTempat,
-                x.PenyampaianEdukasi,
-                x.BahasaDigunakan,
-                x.JenisHambatan,
+                painMap.TryGetValue(x.KunjunganId, out var painList);
+                suratMap.TryGetValue(x.KunjunganId, out var asalUnit);
 
-                x.IsDBNKepala,
-                x.IsDBNMata,
-                x.IsDBNMulut,
-                x.IsDBNTHT,
-                x.IsDBNLeher,
-                x.IsDBNThorak,
-                x.IsDBNJantung,
-                x.IsDBNParu,
-                x.IsDBNPunggung,
-                x.IsDBNAbdomen,
-                x.IsDBNGenital,
-                x.IsDBNEkstremitas,
+                return new
+                {
+                    x.CreateDateTime,
+                    x.CreateBy,
+                    x.CreateByName,
+                    x.KajianPasienId,
+                    x.KunjunganId,
+                    x.VitalSignId,
 
-                x.KeadaanKepala,
-                x.KeadaanLeher,
-                x.KeadaanMata,
-                x.KeadaanMulut,
-                x.KeadaanTHT,
-                x.KeadaanThorak,
-                x.KeadaanPunggung,
-                x.KeadaanEkstremitas,
-                x.IsAsing,
-                x.IsDaerah,
-                // 🔹 List Pain Assessment (semua record terkait)
-                PainAssessments = painLookup[x.KunjunganId].ToList(),
-                // 🔹 Info surat pengantar (ambil 1 saja karena jarang multiple)
-                AsalUnit = suratLookup[x.KunjunganId].FirstOrDefault()?.AsalUnit
-            });
+                    x.Suhu,
+                    x.Nadi,
+                    x.SaturasiOksigen,
+                    x.TekananDarahDiastolic,
+                    x.TekananDarahSystolic,
+                    x.Kesadaran,
+                    x.BBKering,
+                    x.Height,
+
+                    x.NoRekamMedis,
+                    x.DokterId,
+                    x.UserActiveId,
+                    x.KeluhanUtama,
+                    x.KeadaanUmum,
+                    x.KeadaanKulit,
+                    x.KeadaanKepalaLeher,
+                    x.KeadaanDada,
+                    x.KeadaanJantung,
+                    x.KeadaanParuParu,
+                    x.KeadaanAbdomen,
+                    x.KeadaanGenitalia,
+                    x.KeadaanAnggotaGerak,
+                    x.KeadaanLainnya,
+                    x.StatusLokalis,
+                    x.PemeriksaanPenunjang,
+                    x.DiagnosaSaatIni,
+                    x.DiagnosaBanding,
+                    x.DaftarMasalah,
+                    x.Program,
+                    x.Terapi,
+                    x.Edukasi,
+                    x.EdukasiKepada,
+                    x.Keterangan,
+                    x.TglKajian,
+                    x.KajianUtamaPengkajian,
+                    x.CurrentMedicationId,
+                    x.TglTindakLanjut,
+                    x.IndikasiTindakLanjut,
+                    x.KamarId,
+                    x.NamaTempat,
+                    x.PenyampaianEdukasi,
+                    x.BahasaDigunakan,
+                    x.JenisHambatan,
+
+                    x.IsDBNKepala,
+                    x.IsDBNMata,
+                    x.IsDBNMulut,
+                    x.IsDBNTHT,
+                    x.IsDBNLeher,
+                    x.IsDBNThorak,
+                    x.IsDBNJantung,
+                    x.IsDBNParu,
+                    x.IsDBNPunggung,
+                    x.IsDBNAbdomen,
+                    x.IsDBNGenital,
+                    x.IsDBNEkstremitas,
+
+                    x.KeadaanKepala,
+                    x.KeadaanLeher,
+                    x.KeadaanMata,
+                    x.KeadaanMulut,
+                    x.KeadaanTHT,
+                    x.KeadaanThorak,
+                    x.KeadaanPunggung,
+                    x.KeadaanEkstremitas,
+                    x.IsAsing,
+                    x.IsDaerah,
+
+                    PainAssessments = painList ?? new List<object>(),
+                    AsalUnit = asalUnit
+                };
+            }).ToList();
 
             // =========================
-            // 5️⃣ Return hasil
+            // 5) Return
             // =========================
             return Ok(new
             {
@@ -267,6 +323,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 }
             });
         }
+
 
         //[HttpGet]
         //public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
@@ -426,6 +483,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     VitalSignId = vm.VitalSignId,
                     DokterId = vm.DokterId,
                     UserActiveId = userActiveId,
+                    KeluhanUtama = vm.KeluhanUtama,
                     KeadaanUmum = vm.KeadaanUmum,
                     KeadaanKulit = vm.KeadaanKulit,
                     KeadaanKepalaLeher = vm.KeadaanKepalaLeher,
@@ -550,6 +608,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 data.VitalSignId = vm.VitalSignId;
                 data.DokterId = vm.DokterId;
                 data.UserActiveId = userActiveId;
+                data.KeluhanUtama = vm.KeluhanUtama;
                 data.KeadaanUmum = vm.KeadaanUmum;
                 data.KeadaanKulit = vm.KeadaanKulit;
                 data.KeadaanKepalaLeher = vm.KeadaanKepalaLeher;
@@ -688,208 +747,327 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         }
 
         [HttpGet("paged")]
-        public IActionResult Paged(
-        int page = 1,
-        int perPage = 10,
-        string? noRM = null,
-        Guid? kunjunganId = null,
-        string? orderBy = "CreateDateTime",
-        string? sortDirection = "desc",
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                DateTime? startDate = null,
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                DateTime? endDate = null,
-        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        public async Task<IActionResult> Paged(
+            int page = 1,
+            int perPage = 10,
+            string? noRM = null,
+            Guid? kunjunganId = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null
+        )
         {
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
 
-            // Query data
-            var query = (from a in _applicationDbContext.KajianPasiens
-                         join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId into userGroup
-                         from u in userGroup.DefaultIfEmpty()
+            // =====================================================
+            // 1) BASE QUERY (tanpa join ke tabel 1..N biar tidak dobel)
+            // =====================================================
+            var query =
+                from a in _applicationDbContext.KajianPasiens.AsNoTracking()
+                where a.IsDelete != true
+                join u0 in _applicationDbContext.UserActives.AsNoTracking()
+                    on a.CreateBy equals u0.UserActiveId into userGroup
+                from u in userGroup.DefaultIfEmpty()
 
-                         join k in _applicationDbContext.Kunjungans on a.KunjunganId equals k.KunjunganID into kunjunganGroup
-                         from k in kunjunganGroup.DefaultIfEmpty()
+                join k0 in _applicationDbContext.Kunjungans.AsNoTracking()
+                    on a.KunjunganId equals k0.KunjunganID into kunjunganGroup
+                from k in kunjunganGroup.DefaultIfEmpty()
 
-                         join pa in _applicationDbContext.PainAssessments on a.KunjunganId equals pa.KunjunganId into painGroup
-                         from pa in painGroup.DefaultIfEmpty()
+                join v0 in _applicationDbContext.VitalSigns.AsNoTracking()
+                    on a.VitalSignId equals v0.VitalSignId into vitalSignGroup
+                from v in vitalSignGroup.DefaultIfEmpty()
 
-                         join sp in _applicationDbContext.SuratPengantarRawatInaps on a.KunjunganId equals sp.KunjunganId into suratGroup
-                         from sp in suratGroup.DefaultIfEmpty()
+                select new
+                {
+                    a.CreateDateTime,
+                    a.CreateBy,
+                    CreateByName = u != null ? u.FullName : null,
+                    a.KajianPasienId,
+                    a.KunjunganId,
+                    a.VitalSignId,
 
-                         where a.IsDelete == false || a.IsDelete == null
-                         select new
-                         {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = u.FullName,
-                             a.KajianPasienId,
-                             a.KunjunganId,
-                             a.VitalSignId,
-                             k.NoRekamMedis,
-                             a.DokterId,
-                             a.UserActiveId,
-                             a.KeadaanUmum,
-                             a.KeadaanKulit,
-                             a.KeadaanKepalaLeher,
-                             a.KeadaanDada,
-                             a.KeadaanJantung,
-                             a.KeadaanParuParu,
-                             a.KeadaanAbdomen,
-                             a.KeadaanGenitalia,
-                             a.KeadaanAnggotaGerak,
-                             a.KeadaanLainnya,
-                             a.StatusLokalis,
-                             a.PemeriksaanPenunjang,
-                             a.DiagnosaSaatIni,
-                             a.DiagnosaBanding,
-                             a.DaftarMasalah,
-                             a.Program,
-                             a.Terapi,
-                             a.Edukasi,
-                             a.EdukasiKepada,
-                             a.Keterangan,
-                             a.TglKajian,
-                             a.KajianUtamaPengkajian,
-                             a.CurrentMedicationId,
-                             a.TglTindakLanjut,
-                             a.IndikasiTindakLanjut,
-                             a.KamarId,
-                             a.NamaTempat,
-                             a.PenyampaianEdukasi,
-                             a.BahasaDigunakan,
-                             a.JenisHambatan,
+                    v.Suhu,
+                    v.Nadi,
+                    v.SaturasiOksigen,
+                    v.TekananDarahDiastolic,
+                    v.TekananDarahSystolic,
+                    v.Kesadaran,
+                    v.BBKering,
+                    v.Height,
 
-                             a.IsDBNKepala,
-                             a.IsDBNMata,
-                             a.IsDBNMulut,
-                             a.IsDBNTHT,
-                             a.IsDBNLeher,
-                             a.IsDBNThorak,
-                             a.IsDBNJantung,
-                             a.IsDBNParu,
-                             a.IsDBNPunggung,
-                             a.IsDBNAbdomen,
-                             a.IsDBNGenital,
-                             a.IsDBNEkstremitas,
+                    NoRekamMedis = k != null ? k.NoRekamMedis : null,
 
-                             a.KeadaanKepala,
-                             a.KeadaanLeher,
-                             a.KeadaanMata,
-                             a.KeadaanMulut,
-                             a.KeadaanTHT,
-                             a.KeadaanThorak,
-                             a.KeadaanPunggung,
-                             a.KeadaanEkstremitas,
-                             a.IsAsing,
-                             a.IsDaerah,
+                    a.DokterId,
+                    a.UserActiveId,
+                    a.KeluhanUtama,
+                    a.KeadaanUmum,
+                    a.KeadaanKulit,
+                    a.KeadaanKepalaLeher,
+                    a.KeadaanDada,
+                    a.KeadaanJantung,
+                    a.KeadaanParuParu,
+                    a.KeadaanAbdomen,
+                    a.KeadaanGenitalia,
+                    a.KeadaanAnggotaGerak,
+                    a.KeadaanLainnya,
+                    a.StatusLokalis,
+                    a.PemeriksaanPenunjang,
+                    a.DiagnosaSaatIni,
+                    a.DiagnosaBanding,
+                    a.DaftarMasalah,
+                    a.Program,
+                    a.Terapi,
+                    a.Edukasi,
+                    a.EdukasiKepada,
+                    a.Keterangan,
+                    a.TglKajian,
+                    a.KajianUtamaPengkajian,
+                    a.CurrentMedicationId,
+                    a.TglTindakLanjut,
+                    a.IndikasiTindakLanjut,
+                    a.KamarId,
+                    a.NamaTempat,
+                    a.PenyampaianEdukasi,
+                    a.BahasaDigunakan,
+                    a.JenisHambatan,
 
-                             // info pain assessment
-                             pa.InheritedDisease,
+                    a.IsDBNKepala,
+                    a.IsDBNMata,
+                    a.IsDBNMulut,
+                    a.IsDBNTHT,
+                    a.IsDBNLeher,
+                    a.IsDBNThorak,
+                    a.IsDBNJantung,
+                    a.IsDBNParu,
+                    a.IsDBNPunggung,
+                    a.IsDBNAbdomen,
+                    a.IsDBNGenital,
+                    a.IsDBNEkstremitas,
 
-                             // info surat pengantar
-                             sp.AsalUnit,
+                    a.KeadaanKepala,
+                    a.KeadaanLeher,
+                    a.KeadaanMata,
+                    a.KeadaanMulut,
+                    a.KeadaanTHT,
+                    a.KeadaanThorak,
+                    a.KeadaanPunggung,
+                    a.KeadaanEkstremitas,
+                    a.IsAsing,
+                    a.IsDaerah
+                };
 
-                         });
-
-            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
+            // =====================================================
+            // 2) FILTER
+            // =====================================================
             if (!string.IsNullOrWhiteSpace(noRM))
             {
-                noRM = $"%{noRM.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-                query = query.Where(u =>
-                    EF.Functions.ILike(u.NoRekamMedis, noRM)
-                );
+                var pattern = $"%{noRM.ToLower()}%";
+                query = query.Where(x => EF.Functions.ILike(x.NoRekamMedis ?? "", pattern));
             }
 
-            //filter by kunjungan id
-            if (kunjunganId.HasValue)
-            {
-                query = query.Where(u=>u.KunjunganId == kunjunganId.Value);
-            }
+            if (kunjunganId.HasValue && kunjunganId.Value != Guid.Empty)
+                query = query.Where(x => x.KunjunganId == kunjunganId.Value);
 
-            //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
             {
                 DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
                 DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
-
-                query = query.Where(u =>
-                    u.CreateDateTime >= startUtc &&
-                    u.CreateDateTime <= endUtc);
+                query = query.Where(x => x.CreateDateTime >= startUtc && x.CreateDateTime <= endUtc);
             }
 
-            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
             if (periode.HasValue)
             {
                 DateTime today = DateTime.UtcNow.Date;
 
-                switch (periode)
+                query = periode.Value switch
                 {
-                    case PeriodeFilter.Today:
-                        query = query.Where(u => u.CreateDateTime.Date == today);
-                        break;
-                    case PeriodeFilter.ThisWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date <= today
-                        );
-                        break;
-                    case PeriodeFilter.LastWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)
-                        );
-                        break;
-                    case PeriodeFilter.ThisMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month &&
-                            u.CreateDateTime.Year == today.Year
-                        );
-                        break;
-                    case PeriodeFilter.LastMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month - 1 &&
-                            u.CreateDateTime.Year == today.Year
-                        );
-                        break;
-                    case PeriodeFilter.ThisYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
-                        break;
-                    case PeriodeFilter.LastYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
-                        break;
-                    case PeriodeFilter.Last3Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
-                        break;
-                    case PeriodeFilter.Last6Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
-                        break;
-                }
-            }
+                    PeriodeFilter.Today =>
+                        query.Where(x => x.CreateDateTime.Date == today),
 
-            // Sorting Data dengan cara yang lebih aman
-            query = sortDirection?.ToLower() == "desc"
-                ? orderBy switch
-                {
-                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    _ => query.OrderByDescending(u => u.CreateDateTime)
-                }
-                : orderBy switch
-                {
-                    "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    _ => query.OrderBy(u => u.CreateDateTime)
+                    PeriodeFilter.ThisWeek =>
+                        query.Where(x => x.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek)
+                                      && x.CreateDateTime.Date <= today),
+
+                    PeriodeFilter.LastWeek =>
+                        query.Where(x => x.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek)
+                                      && x.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)),
+
+                    PeriodeFilter.ThisMonth =>
+                        query.Where(x => x.CreateDateTime.Month == today.Month && x.CreateDateTime.Year == today.Year),
+
+                    PeriodeFilter.LastMonth =>
+                        query.Where(x => x.CreateDateTime >= new DateTime(today.Year, today.Month, 1).AddMonths(-1)
+                                      && x.CreateDateTime < new DateTime(today.Year, today.Month, 1)),
+
+                    PeriodeFilter.ThisYear =>
+                        query.Where(x => x.CreateDateTime.Year == today.Year),
+
+                    PeriodeFilter.LastYear =>
+                        query.Where(x => x.CreateDateTime.Year == today.Year - 1),
+
+                    PeriodeFilter.Last3Months =>
+                        query.Where(x => x.CreateDateTime >= today.AddMonths(-3)),
+
+                    PeriodeFilter.Last6Months =>
+                        query.Where(x => x.CreateDateTime >= today.AddMonths(-6)),
+
+                    _ => query
                 };
-
-            // Pagination
-            var totalRows = query.Count();
-            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
-
-            if (rows.Count == 0 && page > totalPages)
-            {
-                return NotFound(new { message = "Page not found." });
             }
+
+            // =====================================================
+            // 3) SORTING (aman)
+            // =====================================================
+            bool desc = (sortDirection ?? "desc").ToLower() == "desc";
+
+            query = (orderBy ?? "CreateDateTime") switch
+            {
+                "CreateByName" => desc ? query.OrderByDescending(x => x.CreateByName) : query.OrderBy(x => x.CreateByName),
+                "CreateDateTime" or _ => desc ? query.OrderByDescending(x => x.CreateDateTime) : query.OrderBy(x => x.CreateDateTime),
+            };
+
+            // =====================================================
+            // 4) PAGING (DB-side)
+            // =====================================================
+            var totalRows = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            if (totalPages > 0 && page > totalPages)
+                return NotFound(new { message = "Page not found." });
+
+            var rows = await query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToListAsync();
+
+            // =====================================================
+            // 5) Ambil PainAssessment & SuratPengantar batch untuk page ini
+            // =====================================================
+            var kunjunganIdsOnPage = rows
+                .Select(r => r.KunjunganId)
+                .Distinct()
+                .ToList();
+
+            // 5a) Ambil 1 PainAssessment terakhir per Kunjungan (kalau kamu cuma butuh InheritedDisease 1 saja)
+            var painLast = await _applicationDbContext.PainAssessments
+                .AsNoTracking()
+                .Where(p => p.IsDelete != true && kunjunganIdsOnPage.Contains(p.KunjunganId))
+                .GroupBy(p => p.KunjunganId)
+                .Select(g => new
+                {
+                    KunjunganId = g.Key,
+                    InheritedDisease = g.OrderByDescending(x => x.CreateDateTime)
+                                        .Select(x => x.InheritedDisease)
+                                        .FirstOrDefault()
+                })
+                .ToDictionaryAsync(x => x.KunjunganId, x => x.InheritedDisease);
+
+            // 5b) Surat pengantar (ambil 1 AsalUnit)
+            var suratMap = await _applicationDbContext.SuratPengantarRawatInaps
+                .AsNoTracking()
+                .Where(s => s.IsDelete != true && kunjunganIdsOnPage.Contains(s.KunjunganId))
+                .GroupBy(s => s.KunjunganId)
+                .Select(g => new
+                {
+                    KunjunganId = g.Key,
+                    AsalUnit = g.Select(x => x.AsalUnit).FirstOrDefault()
+                })
+                .ToDictionaryAsync(x => x.KunjunganId, x => x.AsalUnit);
+
+            // =====================================================
+            // 6) Gabungkan (tanpa row explosion)
+            // =====================================================
+            var result = rows.Select(r =>
+            {
+                painLast.TryGetValue(r.KunjunganId, out var inheritedDisease);
+                suratMap.TryGetValue(r.KunjunganId, out var asalUnit);
+
+                return new
+                {
+                    r.CreateDateTime,
+                    r.CreateBy,
+                    r.CreateByName,
+                    r.KajianPasienId,
+                    r.KunjunganId,
+                    r.VitalSignId,
+
+                    r.Suhu,
+                    r.Nadi,
+                    r.SaturasiOksigen,
+                    r.TekananDarahDiastolic,
+                    r.TekananDarahSystolic,
+                    r.Kesadaran,
+                    r.BBKering,
+                    r.Height,
+
+                    r.NoRekamMedis,
+
+                    r.DokterId,
+                    r.UserActiveId,
+                    r.KeluhanUtama,
+                    r.KeadaanUmum,
+                    r.KeadaanKulit,
+                    r.KeadaanKepalaLeher,
+                    r.KeadaanDada,
+                    r.KeadaanJantung,
+                    r.KeadaanParuParu,
+                    r.KeadaanAbdomen,
+                    r.KeadaanGenitalia,
+                    r.KeadaanAnggotaGerak,
+                    r.KeadaanLainnya,
+                    r.StatusLokalis,
+                    r.PemeriksaanPenunjang,
+                    r.DiagnosaSaatIni,
+                    r.DiagnosaBanding,
+                    r.DaftarMasalah,
+                    r.Program,
+                    r.Terapi,
+                    r.Edukasi,
+                    r.EdukasiKepada,
+                    r.Keterangan,
+                    r.TglKajian,
+                    r.KajianUtamaPengkajian,
+                    r.CurrentMedicationId,
+                    r.TglTindakLanjut,
+                    r.IndikasiTindakLanjut,
+                    r.KamarId,
+                    r.NamaTempat,
+                    r.PenyampaianEdukasi,
+                    r.BahasaDigunakan,
+                    r.JenisHambatan,
+
+                    r.IsDBNKepala,
+                    r.IsDBNMata,
+                    r.IsDBNMulut,
+                    r.IsDBNTHT,
+                    r.IsDBNLeher,
+                    r.IsDBNThorak,
+                    r.IsDBNJantung,
+                    r.IsDBNParu,
+                    r.IsDBNPunggung,
+                    r.IsDBNAbdomen,
+                    r.IsDBNGenital,
+                    r.IsDBNEkstremitas,
+
+                    r.KeadaanKepala,
+                    r.KeadaanLeher,
+                    r.KeadaanMata,
+                    r.KeadaanMulut,
+                    r.KeadaanTHT,
+                    r.KeadaanThorak,
+                    r.KeadaanPunggung,
+                    r.KeadaanEkstremitas,
+                    r.IsAsing,
+                    r.IsDaerah,
+
+                    // info tambahan
+                    InheritedDisease = inheritedDisease,
+                    AsalUnit = asalUnit
+                };
+            }).ToList();
 
             return Ok(new
             {
@@ -897,7 +1075,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 message = "Data retrieved successfully",
                 data = new
                 {
-                    Rows = rows,
+                    Rows = result,
                     TotalRows = totalRows,
                     CurrentPage = page,
                     PerPage = perPage,

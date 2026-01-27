@@ -9,11 +9,14 @@ using Microsoft.OpenApi.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Hubs;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.HubSignalR;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Interfaces;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Services;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Services;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Interfaces;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.HubSignalR;
 using QuilvianSystemBackendDev.Helpers;
 using QuilvianSystemBackendDev.Interfaces;
@@ -155,59 +158,6 @@ builder.Services.AddSwaggerGen(c =>
 
 });
 
-//builder.Services.AddSwaggerGen(c =>
-//{
-//    c.EnableAnnotations();
-
-//    // Konversi Enum ke String di Swagger
-//    c.MapType<PeriodeFilter>(() => new OpenApiSchema
-//    {
-//        Type = "string",
-//        Enum = Enum.GetValues(typeof(PeriodeFilter))
-//            .Cast<PeriodeFilter>()
-//            .Select(e => new OpenApiString(e.ToString()))
-//            .ToList<IOpenApiAny>()
-//    });
-
-//    // Menampilkan Date Picker untuk startDate dan endDate
-//    c.MapType<DateTime>(() => new OpenApiSchema
-//    {
-//        Type = "string",
-//        Format = "date-time"
-//    });
-
-//    c.SwaggerDoc("v1", new() { Title = "My API", Version = "v1" });
-//    c.SwaggerDoc("manajemen_kesehatan", new OpenApiInfo { Title = "Manajemen Kesehatan API", Version = "v1" });
-//    c.SwaggerDoc("hrd", new OpenApiInfo { Title = "Administrator API", Version = "v1" });
-
-//    // Konfigurasi JWT Authentication
-//    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-//    {
-//        Name = "Authorization",
-//        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
-//        Scheme = "Bearer",
-//        BearerFormat = "JWT",
-//        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-//        Description = "Masukkan JWT dengan format: Bearer [token]"
-//    });
-
-//    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
-//    {
-//        {
-//            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-//            {
-//                Reference = new Microsoft.OpenApi.Models.OpenApiReference
-//                {
-//                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-//                    Id = "Bearer"
-//                }
-//            },
-//            new string[] {}
-//        }
-//    });
-//});
-
-
 // add services untuk menampilkan data role
 builder.Services.AddScoped<serviceMasterData>();
 
@@ -216,6 +166,21 @@ builder.Services.AddScoped<ITTDService, TTDService>();
 
 // add service untuk update status billing 
 builder.Services.AddScoped<IBillingService, BillingPaidService>();
+
+// add service untuk generate no rm unique
+builder.Services.AddScoped<INoRMGeneratorService, NoRMGeneratorService>();
+
+// service generate no kwitansi unique
+builder.Services.AddScoped<INoKwitansiService, NoKwitansiService>();
+
+// add service generate no angsuran
+builder.Services.AddScoped<IGenerateUrutanAngsuran, GenerateUrutanAngsuranService>();
+
+builder.Services.AddScoped<ICountAngsuran, CountAngsuranService>();
+
+builder.Services.AddScoped<IGenerateInvoiceBillingService, GenerateInvoiceBillingService>();
+builder.Services.AddScoped<IBillingKunjunganReadService, BillingKunjunganReadService>();
+builder.Services.AddScoped<IPerkiraanBillingRanapService, PerkiraanBillingRanapService>();
 
 // Add services to the container.
 builder.Services.AddControllers(options =>

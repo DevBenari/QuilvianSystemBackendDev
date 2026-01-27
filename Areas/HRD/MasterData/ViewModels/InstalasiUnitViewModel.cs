@@ -6,6 +6,7 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.ViewModels
     {
         [Required]
         public string? NamaInstalasiUnit { get; set; }
+        public Guid? DepartementId { get; set; }
         public string? Keterangan { get; set; }
     }
 }

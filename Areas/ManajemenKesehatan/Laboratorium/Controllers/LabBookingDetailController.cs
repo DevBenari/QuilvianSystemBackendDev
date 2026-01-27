@@ -35,6 +35,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         private readonly ITTDService _ttdService;
         private readonly ILogger<LabBookingDetailController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly IGenerateInvoiceBillingService _generateInvoiceBillingService;
 
         public LabBookingDetailController(
             ApplicationDbContext applicationDbContext,
@@ -44,7 +45,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             IWebHostEnvironment webHostEnvironment,
             //IConfiguration configuration,
             ITTDService ttdService,
-            IHubContext<LabBookingDetailHub> hubContext)
+            IHubContext<LabBookingDetailHub> hubContext,
+            IGenerateInvoiceBillingService generateInvoiceBillingService)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
@@ -54,6 +56,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             //_uploadUrl = configuration["FileStorage:UploadUrl"];
             _hubContext = hubContext;
             _ttdService = ttdService;
+            _generateInvoiceBillingService = generateInvoiceBillingService;
         }
 
         [HttpGet]
@@ -365,6 +368,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                             HargaItem = pemeriksaan.HargaPemeriksaan ?? 0,
                             QtyItem = 1,
                             SubTotalItem = pemeriksaan.HargaPemeriksaan ?? 0,
+                            InvoiceBilling = await _generateInvoiceBillingService.GetOrCreateAsync(
+                                (Guid)vm.KunjunganId,
+                                DateTime.UtcNow),
+                            IsListWhiteOff = false,
                             BillingKode = "LAB",
                             JenisBilling = "Pemeriksaan Lab",
                             StatusBilling = false,
@@ -680,6 +687,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                 ItemId = pemeriksaan.PemeriksaanLabId,
                                 NamaItem = pemeriksaan.NamaPemeriksaan,
                                 HargaItem = pemeriksaan.HargaPemeriksaan ?? 0,
+                                InvoiceBilling = await _generateInvoiceBillingService.GetOrCreateAsync(
+                                (Guid)vm.KunjunganId,
+                                DateTime.UtcNow),
+                                IsListWhiteOff = false,
                                 QtyItem = 1,
                                 SubTotalItem = pemeriksaan.HargaPemeriksaan ?? 0,
                                 BillingKode = "LAB",

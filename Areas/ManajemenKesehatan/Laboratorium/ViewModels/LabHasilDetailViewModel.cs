@@ -7,7 +7,7 @@
         public Guid? KelasId { get; set; }
         public DateTime? TanggalSelesai { get; set; }
         public string? NoPhotoLab { get; set; }
-        public IFormFile? PhotoLab { get; set; }
+        public List<IFormFile>? PhotoLab { get; set; }
         public string? HasilLabManual { get; set; }
         public string? HasilLabAI { get; set; }
         public string? JumlahFilm { get; set; }

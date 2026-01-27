@@ -2,6 +2,7 @@
 using System.Runtime.Serialization;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Linq;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum
 {
@@ -42,6 +43,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum
 
         [EnumMember(Value = "6 Bulan Terakhir")]
         [Display(Name = "6 Bulan Terakhir")]
-        Last6Months = 8
+        Last6Months = 8,
+
+        [EnumMember(Value = "Kemarin")]
+        [Display(Name = "Kemarin")]
+        Yesterday = 9
     }
 }
