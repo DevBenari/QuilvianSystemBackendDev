@@ -29,6 +29,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         private readonly ITTDService _ttdService;
         private readonly ILogger<TransferPasienController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly IGenerateInvoiceBillingService _generateInvoiceBillingService;
 
         public TransferPasienController(
             ApplicationDbContext applicationDbContext,
@@ -36,7 +37,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             SignInManager<ApplicationUser> signInManager,
             ILogger<TransferPasienController> logger,
             IWebHostEnvironment webHostEnvironment,
-            ITTDService ttdService
+            ITTDService ttdService,
+            IGenerateInvoiceBillingService generateInvoiceBillingService
             )
         {
             _applicationDbContext = applicationDbContext;
@@ -45,6 +47,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
             _ttdService = ttdService;
+            _generateInvoiceBillingService = generateInvoiceBillingService;
         }
 
 
@@ -408,14 +411,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     KunjunganId = vm.KunjunganId,
                     BillingDate = DateTime.UtcNow,
                     BillingKode = billingKode,
-
+                    InvoiceBilling = await _generateInvoiceBillingService.GetOrCreateAsync(
+                                (Guid)vm.KunjunganId,
+                                DateTime.UtcNow),
+                    IsListWhiteOff = false,
                     // Item kamar
                     ItemId = bedInfo.KamarId,
                     NamaItem = $"Kamar Ranap - {(bedInfo.NamaKamar ?? bedInfo.KodeKamar)}",
                     HargaItem = harga,
                     QtyItem = qty,
                     SubTotalItem = subtotal,
-
+                    TanggalInvoice = DateTime.UtcNow,
+                    TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                     JenisBilling = jenisBilling,
 
                     // Penting: simpan hubungan transferId untuk tracking

@@ -16,7 +16,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Services
         public Task<int> MarkBillingAsPaidAsync(Guid kunjunganId)
         {
             return _db.Database.ExecuteSqlInterpolatedAsync($@"
-            UPDATE ""Billings""
+            UPDATE ""Billing""
             SET ""StatusBilling"" = TRUE
             WHERE ""KunjunganId"" = {kunjunganId}
         ");

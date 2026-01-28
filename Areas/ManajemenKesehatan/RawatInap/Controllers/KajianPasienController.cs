@@ -47,7 +47,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             _webHostEnvironment = webHostEnvironment;
         }
         [HttpGet]
-        public async Task<IActionResult> GetAll(int page = 1, int perPage = 10, CancellationToken ct = default)
+        public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
         {
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
@@ -60,7 +60,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 .Where(a => a.IsDelete != true);
 
             // COUNT tanpa join (lebih cepat)
-            var totalRows = await kajianBase.CountAsync(ct);
+            var totalRows = await kajianBase.CountAsync();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
 
             // =========================
@@ -164,7 +164,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             var listData = await pageQuery
                 .Skip((page - 1) * perPage)
                 .Take(perPage)
-                .ToListAsync(ct);
+                .ToListAsync();
 
             if (listData.Count == 0)
                 return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
@@ -190,7 +190,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     p.CreateDateTime
                 })
                 .OrderByDescending(p => p.CreateDateTime)
-                .ToListAsync(ct);
+                .ToListAsync();
 
             // Surat Pengantar (filter IsDelete jika ada)
             var suratPengantar = await _applicationDbContext.SuratPengantarRawatInaps
@@ -201,7 +201,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     s.KunjunganId,
                     s.AsalUnit
                 })
-                .ToListAsync(ct);
+                .ToListAsync();
 
             // =========================
             // 3) Map sekali (lebih hemat daripada ToLookup + ToList per row)
@@ -756,8 +756,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             string? sortDirection = "desc",
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? startDate = null,
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? endDate = null,
-            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null,
-            CancellationToken ct = default
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null
         )
         {
             if (page < 1) page = 1;
@@ -933,7 +932,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             // =====================================================
             // 4) PAGING (DB-side)
             // =====================================================
-            var totalRows = await query.CountAsync(ct);
+            var totalRows = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
 
             if (totalPages > 0 && page > totalPages)
@@ -942,7 +941,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             var rows = await query
                 .Skip((page - 1) * perPage)
                 .Take(perPage)
-                .ToListAsync(ct);
+                .ToListAsync();
 
             // =====================================================
             // 5) Ambil PainAssessment & SuratPengantar batch untuk page ini
@@ -964,7 +963,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                                         .Select(x => x.InheritedDisease)
                                         .FirstOrDefault()
                 })
-                .ToDictionaryAsync(x => x.KunjunganId, x => x.InheritedDisease, ct);
+                .ToDictionaryAsync(x => x.KunjunganId, x => x.InheritedDisease);
 
             // 5b) Surat pengantar (ambil 1 AsalUnit)
             var suratMap = await _applicationDbContext.SuratPengantarRawatInaps
@@ -976,7 +975,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     KunjunganId = g.Key,
                     AsalUnit = g.Select(x => x.AsalUnit).FirstOrDefault()
                 })
-                .ToDictionaryAsync(x => x.KunjunganId, x => x.AsalUnit, ct);
+                .ToDictionaryAsync(x => x.KunjunganId, x => x.AsalUnit);
 
             // =====================================================
             // 6) Gabungkan (tanpa row explosion)

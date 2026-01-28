@@ -20,6 +20,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using SkiaSharp;
@@ -37,7 +38,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-
+        private readonly IGenerateInvoiceBillingService _generateInvoiceBillingService;
         private readonly ILogger<KunjunganController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly IHubContext<KunjunganHub> _hubContext;
@@ -47,7 +48,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-
+            IGenerateInvoiceBillingService generateInvoiceBillingService,
             ILogger<KunjunganController> logger,
             IWebHostEnvironment webHostEnvironment,
             IHubContext<KunjunganHub> hubContext
@@ -59,6 +60,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
             _hubContext = hubContext;
+            _generateInvoiceBillingService = generateInvoiceBillingService;
         }
         private DateTime? TryParseTanggalLahir(string dateString)
         {
@@ -671,10 +673,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         HargaItem = biayaAdmin.NominalBiayaAdministrasi,
                         QtyItem = 1,
                         SubTotalItem = biayaAdmin.NominalBiayaAdministrasi,
+                        InvoiceBilling = await _generateInvoiceBillingService.GetOrCreateAsync(
+                            newKunjungan.KunjunganID,
+                            DateTime.UtcNow),
+                        IsListWhiteOff = false,
                         BillingKode = "001",
                         JenisBilling = "Biaya Admin",
                         StatusBilling = false,
                         BillingDate = DateTime.UtcNow,
+                        TanggalInvoice = DateTime.UtcNow,
+                        TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                         CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = UserActiveId
                     };
@@ -1047,6 +1055,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             BillingKode = "001",
                             JenisBilling = "Biaya Admin",
                             StatusBilling = false,
+                            TanggalInvoice = DateTime.UtcNow,
+                            TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                             BillingDate = DateTime.UtcNow,
                             CreateDateTime = DateTimeOffset.UtcNow,
                             CreateBy = UserActiveId

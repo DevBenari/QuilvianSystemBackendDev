@@ -3,6 +3,9 @@
     public class MainKasirDetailViewModel
     {
         public Guid? MainKasirId { get; set; }
+        public Guid? KunjunganId { get; set; }
+        public Guid? PasienId { get; set; }
+        public decimal? TotalPembayaran { get; set; }
         public Guid? MetodePembayaranId { get; set; }
         public Guid? ReferenceId { get; set; }
         public string? NamaMetode { get; set; }

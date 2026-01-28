@@ -441,7 +441,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             // 1️⃣ QUERY PARENT (PenerimaanDarah)
             // ============================
             var query =
-                from p in _context.PenerimaanDarahs
+                from p in _context.PenerimaanDarahs.AsNoTracking()
                 join s in _context.Suppliers on p.SupplierId equals s.SupplierId into sJoin
                 from sup in sJoin.DefaultIfEmpty()
                 where p.IsDelete == null || p.IsDelete == false
@@ -455,6 +455,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     p.NoPO,
                     p.SupplierId,
                     SupplierNama = sup.SupplierName,
+                    sup.KhususUnit,
                     p.PenerimaId,
                     p.DarahDetailId,
                     p.JumlahKantong,

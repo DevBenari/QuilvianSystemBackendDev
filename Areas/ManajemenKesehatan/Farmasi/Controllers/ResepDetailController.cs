@@ -30,7 +30,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-
         private readonly ILogger<ResepDetailController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly IHubContext<ResepDetailHub> _hubContext;
@@ -690,6 +689,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             JenisBilling = "Obat",
                             StatusPengambilan = true,
                             StatusBilling = false,
+                            TanggalInvoice = DateTime.UtcNow,
+                            TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                             CreateBy = getUserActive.UserActiveId,
                             CreateDateTime = DateTimeOffset.UtcNow
                     };

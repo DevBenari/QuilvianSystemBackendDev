@@ -7,12 +7,14 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.ViewModels;
+using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
@@ -28,7 +30,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-
+        private readonly IGenerateInvoiceBillingService _generateInvoiceBillingService;
         private readonly ILogger<VisitDokterController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
@@ -37,13 +39,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ILogger<VisitDokterController> logger,
-            IWebHostEnvironment webHostEnvironment)
+            IWebHostEnvironment webHostEnvironment,
+            IGenerateInvoiceBillingService generateInvoiceBillingService)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+            _generateInvoiceBillingService = generateInvoiceBillingService;
         }
 
         private DateTime? TryParseTanggalToUtc(string tanggal)
@@ -144,7 +148,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             });
         }
 
-
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] VisitDokterViewModel vm)
         {
@@ -176,22 +179,25 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 var userActiveId = getUserActive.UserActiveId;
 
                 ////// **Cek Duplikasi**
-                var today = DateTime.Now;
-                bool isDuplicate = await _applicationDbContext.VisitDokters
-                                    .AnyAsync(c => c.KunjunganId == vm.KunjunganId
-                                    && c.CreateDateTime == today);
+                //var tanggalOnly = vm.TanggalVisit.Value.Date;
 
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Nama benefit ini telah tersedia" });
-                }
+                //bool isDuplicate = await _applicationDbContext.VisitDokters
+                //    .AnyAsync(c =>
+                //        c.IsDelete != true &&
+                //        c.KunjunganId == vm.KunjunganId &&
+                //        c.TanggalVisit.HasValue &&
+                //        c.TanggalVisit.Value.Date == tanggalOnly
+                //    );
+
+                //if (isDuplicate)
+                //    return Conflict(new { message = "Kunjungan ini telah divisit pada tanggal yang sama." });
 
                 // **Buat Data Baru**
                 var data = new VisitDokter
                 {
                     VisitDokterId = Guid.NewGuid(),
                     WaktuVisit = vm.WaktuVisit,
-                    TanggalVisit = TryParseTanggalToUtc(vm.TanggalVisit),
+                    TanggalVisit = (vm.TanggalVisit),
                     KunjunganId = vm.KunjunganId,
                     PasienId = vm.PasienId,
                     KelasId = vm.KelasId,
@@ -203,6 +209,67 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 };
                 // **Simpan ke Database**
                 _applicationDbContext.VisitDokters.Add(data);
+
+                // simpan ke tabel billing buat visit dokter
+                var dr = await _applicationDbContext.Dokters
+                    .AsNoTracking()
+                    .Where(x => x.DokterId == vm.DokterId)
+                    .Select(x => x.NmDokter)
+                    .SingleOrDefaultAsync();
+                if (dr == null)
+                {
+                    return NotFound(new
+                    {
+                        message = $"Dokter tidak ditemukan."
+                    });
+                }
+
+                var harga = await _applicationDbContext.TarifKelass
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(x => x.DokterId == vm.DokterId && x.KelasId == vm.KelasId);
+                // **Cek jika data tarif tidak ditemukan**
+                if (harga == null)
+                {
+                    return NotFound(new
+                    {
+                        message = $"Tarif tidak ditemukan untuk Dokter dan Kelas yang dipilih."
+                    });
+                }
+
+                int billingCount = await _applicationDbContext.Billings
+                    .CountAsync(b =>
+                        b.KunjunganId == vm.KunjunganId &&
+                        b.JenisBilling != null &&
+                        b.JenisBilling.ToLower() == "visit dokter" &&
+                        b.IsDelete != true
+                    );
+
+                int billingIndex = billingCount + 1;
+
+                var bill = new Billing
+                {
+                    BillingId = Guid.NewGuid(),
+                    KunjunganId = vm.KunjunganId,
+                    ItemId = data.VisitDokterId,
+                    InvoiceBilling = await _generateInvoiceBillingService.GetOrCreateAsync(
+                                (Guid)vm.KunjunganId,
+                                DateTime.UtcNow),
+                    IsListWhiteOff = false,
+                    NamaItem = $"Visit Dokter : {dr ?? null}",
+                    HargaItem = harga?.TarifTotal ?? 0m,
+                    QtyItem = 1,
+                    SubTotalItem = harga?.TarifTotal ?? 0m,
+                    BillingKode = $"{billingIndex:D3}",
+                    JenisBilling = "Visit Dokter",
+                    StatusBilling = false,
+                    BillingDate = DateTime.UtcNow,
+                    //Keterangan = $"Biaya Visit Dokter ID{dr}",
+                    TanggalInvoice = DateTime.UtcNow,
+                    TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
+                    CreateBy = userActiveId,
+                    CreateDateTime = DateTimeOffset.UtcNow,
+                };
+                _applicationDbContext.Billings.Add(bill);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -227,67 +294,155 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] VisitDokterViewModel vm)
         {
+            if (id == Guid.Empty)
+                return BadRequest(new { message = "Id tidak valid." });
+
             if (vm == null || !ModelState.IsValid)
-            {
                 return BadRequest(new { message = "Data tidak valid." });
-            }
+
+            if (!vm.TanggalVisit.HasValue)
+                return BadRequest(new { message = "TanggalVisit wajib diisi." });
 
             try
             {
-                // **Cek koneksi ke database**
+                // Cek koneksi DB
                 if (!_applicationDbContext.Database.CanConnect())
-                {
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
-                }
 
-                // **Ambil User ID dari JWT Claims**
+                // Ambil User ID dari JWT Claims
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
-                {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
-                }
 
-                var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
+                var getUserActive = await _applicationDbContext.UserActives
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+
                 if (getUserActive == null)
-                {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-                }
+
                 var userActiveId = getUserActive.UserActiveId;
 
-                // **Cari Data Lama**
-                var data = await _applicationDbContext.VisitDokters.FindAsync(id);
-                if (data == null)
-                {
-                    return NotFound(new { message = "Data permintaan darah tidak ditemukan." });
-                }
+                // Ambil data existing
+                var data = await _applicationDbContext.VisitDokters
+                    .FirstOrDefaultAsync(x => x.VisitDokterId == id && x.IsDelete != true);
 
-                // **Update Data**
+                if (data == null)
+                    return NotFound(new { message = "Data Visit Dokter tidak ditemukan." });
+
+                // Cek duplikasi (kecuali record yang sedang diupdate)
+                var tanggalOnly = vm.TanggalVisit.Value.Date;
+
+                bool isDuplicate = await _applicationDbContext.VisitDokters
+                    .AnyAsync(c =>
+                        c.IsDelete != true &&
+                        c.VisitDokterId != id &&
+                        c.KunjunganId == vm.KunjunganId &&
+                        c.TanggalVisit.HasValue &&
+                        c.TanggalVisit.Value.Date == tanggalOnly
+                    );
+
+                if (isDuplicate)
+                    return Conflict(new { message = "Kunjungan ini telah divisit pada tanggal yang sama." });
+
+                // Update VisitDokter
                 data.WaktuVisit = vm.WaktuVisit;
-                data.TanggalVisit = TryParseTanggalToUtc(vm.TanggalVisit);
+                data.TanggalVisit = vm.TanggalVisit;
                 data.KunjunganId = vm.KunjunganId;
+                data.PasienId = vm.PasienId;
                 data.KelasId = vm.KelasId;
                 data.DokterId = vm.DokterId;
-                data.PasienId = vm.PasienId;
                 data.Keterangan = vm.Keterangan;
 
-                data.UpdateBy = userActiveId;
-                data.UpdateDateTime = DateTimeOffset.UtcNow;
+                data.UpdateBy = userActiveId; // pastikan kolom ini ada
+                data.UpdateDateTime = DateTimeOffset.UtcNow; // pastikan kolom ini ada
 
-                _applicationDbContext.VisitDokters.Update(data);
-                int result = await _applicationDbContext.SaveChangesAsync();
+                // ===== Update Billing terkait Visit Dokter =====
+                var dr = await _applicationDbContext.Dokters
+                    .AsNoTracking()
+                    .Where(x => x.DokterId == vm.DokterId)
+                    .Select(x => x.NmDokter)
+                    .SingleOrDefaultAsync();
 
-                if (result > 0)
+                var harga = await _applicationDbContext.TarifKelass
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(x => x.DokterId == vm.DokterId && x.KelasId == vm.KelasId);
+
+                // Cari billing yang terkait item visit dokter ini
+                var bill = await _applicationDbContext.Billings
+                    .FirstOrDefaultAsync(b =>
+                        b.IsDelete != true &&
+                        b.KunjunganId == vm.KunjunganId &&
+                        b.ItemId == data.VisitDokterId &&
+                        b.JenisBilling != null &&
+                        b.JenisBilling.ToLower() == "visit dokter"
+                    );
+
+                if (bill != null)
                 {
-                    return Ok(new { message = "Update Data Berhasil || 200 OK" });
+                    bill.NamaItem = $"Visit Dokter : {dr ?? null}";
+                    bill.HargaItem = harga?.TarifTotal ?? 0m;
+                    bill.QtyItem = 1;
+                    bill.SubTotalItem = harga?.TarifTotal ?? 0m;
+                    bill.JenisBilling = "Visit Dokter";
+                    bill.BillingDate = DateTime.UtcNow;
+                    bill.Keterangan = "Biaya Visit Dokter ID";
+
+                    bill.UpdateBy = userActiveId; // pastikan kolom ini ada
+                    bill.UpdateDateTime = DateTimeOffset.UtcNow; // pastikan kolom ini ada
                 }
                 else
                 {
-                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui di database." });
+                    // Kalau kamu MAU: bila billing belum ada, buat baru (opsional)
+                    // Kalau tidak mau, hapus blok ini.
+
+                    int billingCount = await _applicationDbContext.Billings
+                        .CountAsync(b =>
+                            b.KunjunganId == vm.KunjunganId &&
+                            b.JenisBilling != null &&
+                            b.JenisBilling.ToLower() == "visit dokter" &&
+                            b.IsDelete != true
+                        );
+
+                    int billingIndex = billingCount + 1;
+
+                    var newBill = new Billing
+                    {
+                        BillingId = Guid.NewGuid(),
+                        KunjunganId = vm.KunjunganId,
+                        ItemId = data.VisitDokterId,
+                        InvoiceBilling = await _generateInvoiceBillingService.GetOrCreateAsync(
+                            (Guid)vm.KunjunganId,
+                            DateTime.UtcNow),
+                        IsListWhiteOff = false,
+                        NamaItem = $"Visit Dokter : {dr ?? null}",
+                        HargaItem = harga?.TarifTotal ?? 0m,
+                        QtyItem = 1,
+                        SubTotalItem = harga?.TarifTotal ?? 0m,
+                        BillingKode = $"{billingIndex:D3}",
+                        JenisBilling = "Visit Dokter",
+                        StatusBilling = false,
+                        BillingDate = DateTime.UtcNow,
+                        //Keterangan = "Biaya Visit Dokter ID",
+                        TanggalInvoice = DateTime.UtcNow,
+                        TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
+                        CreateBy = userActiveId,
+                        CreateDateTime = DateTimeOffset.UtcNow,
+                    };
+
+                    _applicationDbContext.Billings.Add(newBill);
                 }
+
+                int result = await _applicationDbContext.SaveChangesAsync();
+
+                if (result > 0)
+                    return Ok(new { message = "Update Data Berhasil || 200 OK" });
+
+                return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
             }
             catch (DbUpdateException dbEx)
             {
-                return StatusCode(500, new { message = $"Gagal memperbarui data: {dbEx.InnerException?.Message}" });
+                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
             }
             catch (Exception ex)
             {

@@ -11,6 +11,9 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Models
         public Guid DepartementId { get; set; }
         [Required]
         public string KodeDepartement { get; set; }
+        public Guid? PositionId { get; set; }
+        public string? PositionCode { get; set; }
+        public string? PositionName { get; set; }
         public string? NamaDepartement { get; set; }
         public string? KepalaDepartement { get; set; }
         public string? Lokasi { get; set; }

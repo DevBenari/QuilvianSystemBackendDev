@@ -1,75 +1,64 @@
-﻿using System.Data;
+﻿using System;
+using System.Data;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Interfaces;
 using QuilvianSystemBackendDev.Repositories;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Services
+public class NoKwitansiService : INoKwitansiService
 {
-    public class NoKwitansiService : INoKwitansiService
+    private readonly ApplicationDbContext _db;
+
+    public NoKwitansiService(ApplicationDbContext db)
     {
-        private readonly ApplicationDbContext _db;
+        _db = db;
+    }
 
-        public NoKwitansiService(ApplicationDbContext db)
-        {
-            _db = db;
-        }
+    public async Task<string> GenerateNoKwitansiAsync(DateTimeOffset tglPembayaran, CancellationToken ct = default)
+    {
+        const string prefix = "KWS";
 
-        public async Task<string> GenerateNoKwitansiAsync(DateTime tglPembayaran, CancellationToken ct = default)
-        {
-            // format tanggal: HariBulanTahun dari tanggal pembayaran yang diinput
-            var datePart = tglPembayaran.ToString("ddMMyyyy");
-            var prefix = "KWS";
+        // penting: “tanggal” untuk sequence harian
+        // pakai offset yang dikirim user (biasanya +07)
+        var dateOnly = tglPembayaran.Date; // DateTime
+        var datePart = tglPembayaran.ToString("yyyyMMdd");
 
-            // kunci transaksi per tanggal agar tidak double saat concurrent request
-            // pakai hash yang stabil (int32) untuk pg_advisory_xact_lock
-            var lockKey = StableHash32($"kwitansi:{datePart}");
+        // Pastikan koneksi open
+        var conn = _db.Database.GetDbConnection();
+        if (conn.State != ConnectionState.Open)
+            await conn.OpenAsync(ct);
 
-            var conn = _db.Database.GetDbConnection();
-            if (conn.State != ConnectionState.Open)
-                await conn.OpenAsync(ct);
+        // Pakai transaksi yang sedang berjalan (kalau controller sudah BeginTransactionAsync)
+        var currentTx = _db.Database.CurrentTransaction?.GetDbTransaction();
 
-            await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
+        await using var cmd = conn.CreateCommand();
+        cmd.Transaction = currentTx;
 
-            // advisory lock (berlaku selama transaksi)
-            await _db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock({0});", new object[] { lockKey }, ct);
+        cmd.CommandText = @"
+    INSERT INTO ""KwitansiSequences"" (""KwitansiDate"", ""LastSeq"", ""UpdatedAt"")
+    VALUES (@p_date, 1, @p_now)
+    ON CONFLICT (""KwitansiDate"")
+    DO UPDATE SET
+        ""LastSeq"" = ""KwitansiSequences"".""LastSeq"" + 1,
+        ""UpdatedAt"" = EXCLUDED.""UpdatedAt""
+    RETURNING ""LastSeq"";
+    ";
 
-            // ambil nomor terakhir untuk tanggal tsb (urut desc)
-            // pola: KWS + 4 digit + ddMMyyyy
-            var last = await _db.MainKasirs.AsNoTracking()
-                .Where(x => x.NoKwitansi != null
-                            && x.NoKwitansi.StartsWith(prefix)
-                            && x.NoKwitansi.EndsWith(datePart))
-                .OrderByDescending(x => x.NoKwitansi)
-                .Select(x => x.NoKwitansi)
-                .FirstOrDefaultAsync(ct);
+        var pDate = cmd.CreateParameter();
+        pDate.ParameterName = "@p_date";
+        pDate.Value = dateOnly;         // akan masuk ke kolom type "date"
+        cmd.Parameters.Add(pDate);
 
-            int nextSeq = 1;
+        var pNow = cmd.CreateParameter();
+        pNow.ParameterName = "@p_now";
+        pNow.Value = DateTimeOffset.UtcNow;
+        cmd.Parameters.Add(pNow);
 
-            if (!string.IsNullOrWhiteSpace(last) && last.Length >= (prefix.Length + 4 + datePart.Length))
-            {
-                // substring 4 digit setelah "KWS"
-                var seqStr = last.Substring(prefix.Length, 4);
-                if (int.TryParse(seqStr, out var seq))
-                    nextSeq = seq + 1;
-            }
+        var result = await cmd.ExecuteScalarAsync(ct);
+        var nextSeq = Convert.ToInt32(result);
 
-            var noKwitansi = $"{prefix}{nextSeq:0000}{datePart}";
-
-            await tx.CommitAsync(ct);
-
-            return noKwitansi;
-        }
-
-        // hash stabil ke int32 (tidak pakai string.GetHashCode karena bisa berubah per process)
-        private static int StableHash32(string s)
-        {
-            unchecked
-            {
-                int hash = 23;
-                foreach (var c in s)
-                    hash = (hash * 31) + c;
-                return hash;
-            }
-        }
+        return $"{prefix}{nextSeq:0000}{datePart}";
     }
 }

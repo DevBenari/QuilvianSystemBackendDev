@@ -12,6 +12,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Tindakan.Models;
+using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
@@ -27,7 +28,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-
+        private readonly IGenerateInvoiceBillingService _generateInvoiceBillingService;
         private readonly ILogger<TindakanKunjunganController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
@@ -36,13 +37,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ILogger<TindakanKunjunganController> logger,
-            IWebHostEnvironment webHostEnvironment)
+            IWebHostEnvironment webHostEnvironment,
+            IGenerateInvoiceBillingService generateInvoiceBillingService)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+            _generateInvoiceBillingService = generateInvoiceBillingService;
         }
 
 
@@ -58,7 +61,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             on a.CreateBy equals u.UserActiveId
 
                         // join ke table tindakan
-                        join t in _applicationDbContext.Tindakans
+                        join t in _applicationDbContext.Tindakans.AsNoTracking()
                         on a.TindakanId equals t.TindakanId into tindakanGroup
                         from t in tindakanGroup.DefaultIfEmpty()
 
@@ -250,12 +253,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     BillingKode = billingKode,
                     DiskonId = vm.DiskonId,
                     ItemId = vm.TindakanId,
+                    InvoiceBilling = await _generateInvoiceBillingService.GetOrCreateAsync(
+                                (Guid)vm.KunjunganId,
+                                DateTime.UtcNow),
+                    IsListWhiteOff = false,
                     NamaItem = tindakan.NamaTindakan,
                     QtyItem = vm.Quantity,
                     HargaItem = tarifKelas.TarifTotal,
                     SubTotalItem = totalqty,
                     JenisBilling = "Tindakan", // Menandakan ini adalah billing untuk tindakan
                     StatusBilling= false,
+                    TanggalInvoice = DateTime.UtcNow,
+                    TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                     Keterangan = vm.Keterangan,
@@ -404,6 +413,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         BillingKode = billingKode,
                         DiskonId = vm.DiskonId,
                         ItemId = vm.TindakanId,
+                        InvoiceBilling = await _generateInvoiceBillingService.GetOrCreateAsync(
+                                (Guid)vm.KunjunganId,
+                                DateTime.UtcNow),
+                        IsListWhiteOff = false,
                         NamaItem = tindakan.NamaTindakan,
                         HargaItem = tarifKelas.TarifTotal,
                         QtyItem = vm.Quantity,
@@ -412,6 +425,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         JenisBilling = "Tindakan",
                         StatusPengambilan = true,
                         StatusBilling = false,
+                        TanggalInvoice = DateTime.UtcNow,
+                        TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                         CreateBy = userActiveId,
                         CreateDateTime = DateTimeOffset.UtcNow,
                     };
@@ -519,9 +534,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-    DateTime? startDate = null,
+            DateTime? startDate = null,
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-    DateTime? endDate = null,
+            DateTime? endDate = null,
             [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
             try

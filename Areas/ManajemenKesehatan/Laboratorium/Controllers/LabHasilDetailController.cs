@@ -48,6 +48,36 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             _uploadUrl = configuration["FileStorage:UploadUrl"];
         }
 
+        private static List<string> ToPhotoLabPaths(string? photoLabPath)
+        {
+            if (string.IsNullOrWhiteSpace(photoLabPath))
+                return new List<string>();
+
+            var s = photoLabPath.Trim();
+
+            // Jika JSON array string
+            if (s.StartsWith("[") && s.EndsWith("]"))
+            {
+                try
+                {
+                    return (JsonConvert.DeserializeObject<List<string>>(s) ?? new List<string>())
+                        .Where(p => !string.IsNullOrWhiteSpace(p))
+                        .Select(p => p.Trim())
+                        .ToList();
+                }
+                catch
+                {
+                    return new List<string>();
+                }
+            }
+
+            // Fallback: format CSV "/a,/b,/c"
+            return s.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => x.Trim())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToList();
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
         {
@@ -71,7 +101,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.KelasId,
                              a.TanggalSelesai,
                              a.NoPhotoLab,
-                             a.PhotoLabPath,
+                             PhotoLab = ToPhotoLabPaths(a.PhotoLabPath),
+                             JumlahFoto = ToPhotoLabPaths(a.PhotoLabPath).Count,
                              a.HasilLabManual,
                              a.HasilLabAI,
                              a.JumlahFilm,
@@ -128,18 +159,63 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(Guid id)
+        public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
         {
-            var listdata = _applicationDbContext.LabHasilDetails.Find(id);
-            if (listdata == null)
-            {
+            if (!await _applicationDbContext.Database.CanConnectAsync(ct))
+                return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+
+            var data = await _applicationDbContext.LabHasilDetails
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x =>
+                    x.DetailHasilLabId == id &&
+                    (x.IsDelete == false || x.IsDelete == null), ct);
+
+            if (data == null)
                 return NotFound(new { message = "Data tidak ditemukan." });
-            }
+
 
             return Ok(new
             {
-                message = "Ditemukan || 200 OK",
-                data = listdata
+                status = "success",
+                message = "Data retrieved successfully",
+
+                // opsional: jangan kirim PhotoLabPath string biar FE tidak melihat \"
+                data = new
+                {
+                    data.DetailHasilLabId,
+                    data.HasilLabId,
+                    data.PemeriksaanLabId,
+                    data.KelasId,
+                    data.TanggalSelesai,
+                    data.NoPhotoLab,
+                    PhotoLabPath = ToPhotoLabPaths(data.PhotoLabPath),
+                    JumlahFoto = ToPhotoLabPaths(data.PhotoLabPath).Count,
+                    data.HasilLabManual,
+                    data.HasilLabAI,
+                    data.JumlahFilm,
+                    data.KeadaanSpecimen,
+                    data.AnalisId,
+                    data.IsDefinitif,
+                    data.IsDuplu,
+                    data.HasilMakroskopik,
+                    data.HasilMikroskopik,
+                    data.KesimpulanHasil,
+                    data.NilaiNormal,
+                    data.BloodVolume,
+                    data.SputumVolume,
+                    data.UrineVolume,
+                    data.PusVolume,
+                    data.StoolVolume,
+                    data.JaringanVolume,
+                    data.BodyFluidVolume,
+                    data.PetugasSpecimenId,
+                    data.TanggalSpecimen,
+                    data.JamSpecimen,
+                    data.InfoNReff,
+                    data.Keterangan,
+                    data.CreateBy,
+                    data.CreateDateTime
+                }
             });
         }
 
@@ -154,9 +230,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 if (!_applicationDbContext.Database.CanConnect())
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
 
-                // ==============================
                 // 🔐 Ambil User Aktif dari JWT
-                // ==============================
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
@@ -167,9 +241,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 var userActiveId = getUserActive.UserActiveId;
 
-                // =============================
                 // ✅ Ambil prefix dari tabel MstLab lewat join ke HasilLab
-                // =============================
                 var labData = await (from hl in _applicationDbContext.LabHasils
                                      join ml in _applicationDbContext.Labs on hl.LabId equals ml.LabId
                                      where hl.HasilLabId == vm.HasilLabId
@@ -180,62 +252,75 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 string prefix = labData.KodeKategori ?? "LAB";
 
-                // =============================
                 // ✅ Generate NoPhotoLab unik per jenis lab dan tanggal
-                // =============================
                 var today = DateTime.UtcNow.ToString("yyMMdd");
 
-                int urutan = _applicationDbContext.LabHasilDetails
-                    .Where(a => a.NoPhotoLab.StartsWith(prefix + today))
-                    .Count() + 1;
+                int urutan = await _applicationDbContext.LabHasilDetails
+                    .Where(a => a.NoPhotoLab != null && a.NoPhotoLab.StartsWith(prefix + today))
+                    .CountAsync() + 1;
 
                 string noPhotoLab = $"{prefix}{today}{urutan:0000}";
 
+                // ✅ Upload MULTI FILE ke Flask
+                var photoPaths = new List<string>();
 
-                // ================================================
-                // ✅ Upload File PhotoLab ke Flask
-                // ================================================
-                string photoPath = "";
-                if (vm.PhotoLab != null && vm.PhotoLab.Length > 0)
+                var allowedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png" };
+                var maxSize = 5 * 1024 * 1024; // 5 MB
+
+                if (vm.PhotoLab != null && vm.PhotoLab.Any())
                 {
-                    var allowedExtensions = new List<string> { ".jpg", ".jpeg", ".png" };
-                    var maxSize = 5 * 1024 * 1024; // 5 MB
-                    var ext = Path.GetExtension(vm.PhotoLab.FileName).ToLower();
-
-                    if (!allowedExtensions.Contains(ext))
-                        return BadRequest(new { message = "Format foto tidak valid. Gunakan JPG/PNG." });
-
-                    if (vm.PhotoLab.Length > maxSize)
-                        return BadRequest(new { message = "Ukuran foto terlalu besar! Maks 5MB." });
-
-                    var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
-                    var fileName = $"{noPhotoLab}_{safeTime}{ext}";
-
                     using var client = new HttpClient();
-                    using var ms = new MemoryStream();
-                    await vm.PhotoLab.CopyToAsync(ms);
-                    ms.Position = 0;
 
-                    var content = new MultipartFormDataContent
+                    int i = 0;
+                    foreach (var file in vm.PhotoLab.Where(f => f != null && f.Length > 0))
                     {
-                        { new StreamContent(ms)
-                            { Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.PhotoLab.ContentType) } },
-                            "file", fileName },
-                        { new StringContent("HasilLabPhoto"), "folderTarget" }
-                    };
+                        i++;
 
-                    var flaskResponse = await client.PostAsync(_uploadUrl, content);
-                    if (!flaskResponse.IsSuccessStatusCode)
-                        return StatusCode(500, new { message = "Gagal upload foto hasil lab ke server Flask." });
+                        var ext = Path.GetExtension(file.FileName).ToLower();
+                        if (!allowedExtensions.Contains(ext))
+                            return BadRequest(new { message = $"Format foto tidak valid ({file.FileName}). Gunakan JPG/PNG." });
 
-                    var responseBody = await flaskResponse.Content.ReadAsStringAsync();
-                    dynamic jsonResp = JsonConvert.DeserializeObject(responseBody);
-                    photoPath = jsonResp?.url ?? jsonResp?.fileUrl ?? jsonResp?.path ?? "";
+                        if (file.Length > maxSize)
+                            return BadRequest(new { message = $"Ukuran foto terlalu besar ({file.FileName})! Maks 5MB." });
+
+                        var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmssfff");
+                        var fileName = $"{noPhotoLab}_{i:00}_{safeTime}{ext}";
+
+                        using var ms = new MemoryStream();
+                        await file.CopyToAsync(ms);
+                        ms.Position = 0;
+
+                        using var content = new MultipartFormDataContent
+                {
+                    {
+                        new StreamContent(ms)
+                        {
+                            Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType) }
+                        },
+                        "file", fileName
+                    },
+                    { new StringContent("HasilLabPhoto"), "folderTarget" }
+                };
+
+                        var flaskResponse = await client.PostAsync(_uploadUrl, content);
+                        if (!flaskResponse.IsSuccessStatusCode)
+                            return StatusCode(500, new { message = $"Gagal upload foto ({file.FileName}) ke server Flask." });
+
+                        var responseBody = await flaskResponse.Content.ReadAsStringAsync();
+                        dynamic jsonResp = JsonConvert.DeserializeObject(responseBody);
+
+                        string path = jsonResp?.url ?? jsonResp?.fileUrl ?? jsonResp?.path ?? "";
+                        if (string.IsNullOrWhiteSpace(path))
+                            return StatusCode(500, new { message = $"Upload berhasil tapi path kosong ({file.FileName})." });
+
+                        photoPaths.Add(path);
+                    }
                 }
 
-                // ================================================
+                // ✅ Simpan path multi-foto sebagai JSON array (atau null jika tidak ada foto)
+                string? photoPathJson = photoPaths.Any() ? JsonConvert.SerializeObject(photoPaths) : null;
+
                 // ✅ Simpan ke Database
-                // ================================================
                 var data = new LabHasilDetail
                 {
                     DetailHasilLabId = Guid.NewGuid(),
@@ -244,7 +329,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     KelasId = vm.KelasId,
                     TanggalSelesai = vm.TanggalSelesai ?? DateTime.UtcNow,
                     NoPhotoLab = noPhotoLab,
-                    PhotoLabPath = photoPath,
+
+                    // ✅ menampung banyak path
+                    PhotoLabPath = photoPathJson,
+
                     HasilLabManual = vm.HasilLabManual,
                     HasilLabAI = vm.HasilLabAI,
                     JumlahFilm = vm.JumlahFilm,
@@ -277,7 +365,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
-                    return Created("", new { message = "Tambah Data Berhasil || 201 Created", data });
+                    return Created("", new
+                    {
+                        message = "Tambah Data Berhasil || 201 Created",
+                    });
 
                 return StatusCode(500, new { message = "Gagal menyimpan data ke database." });
             }
@@ -292,17 +383,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             }
         }
 
+
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, [FromForm] LabHasilDetailViewModel vm)
         {
-            if (id == Guid.Empty)
-                return BadRequest(new { message = "Parameter ID tidak valid." });
+            if (vm == null || !ModelState.IsValid)
+                return BadRequest(new { message = "Data tidak valid." });
 
             try
             {
-                // ==================================================
-                // 🔐 Ambil user aktif dari JWT
-                // ==================================================
+                if (!_applicationDbContext.Database.CanConnect())
+                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+
+                // 🔐 Ambil User Aktif dari JWT
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
@@ -311,78 +404,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 if (getUserActive == null)
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
 
-                // ==================================================
-                // 🔎 Cari data lama
-                // ==================================================
+                var userActiveId = getUserActive.UserActiveId;
+
+                // ✅ Ambil data lama
                 var data = await _applicationDbContext.LabHasilDetails
-                    .FirstOrDefaultAsync(a => a.DetailHasilLabId == id && !a.IsDelete);
+                    .FirstOrDefaultAsync(x => x.DetailHasilLabId == id && (x.IsDelete == false || x.IsDelete == null));
 
                 if (data == null)
-                    return NotFound(new { message = "Data tidak ditemukan. || 404 Not Found" });
+                    return NotFound(new { message = "Data tidak ditemukan." });
 
-                // ==================================================
-                // ✅ Ambil prefix dari tabel MstLab lewat join ke HasilLab
-                // ==================================================
-                var labData = await (from hl in _applicationDbContext.LabHasils
-                                     join ml in _applicationDbContext.Labs on hl.LabId equals ml.LabId
-                                     where hl.HasilLabId == vm.HasilLabId
-                                     select new { ml.KodeKategori }).FirstOrDefaultAsync();
-
-                if (labData == null)
-                    return BadRequest(new { message = "Data lab tidak ditemukan atau tidak valid!" });
-
-                string prefix = labData.KodeKategori ?? "LAB";
-
-                // ==================================================
-                // ✅ Upload foto baru (jika ada)
-                // ==================================================
-                string photoPath = data.PhotoLabPath; // default pakai yang lama
-
-                if (vm.PhotoLab != null && vm.PhotoLab.Length > 0)
-                {
-                    var allowedExtensions = new List<string> { ".jpg", ".jpeg", ".png" };
-                    var maxSize = 5 * 1024 * 1024; // 5 MB
-                    var ext = Path.GetExtension(vm.PhotoLab.FileName).ToLower();
-
-                    if (!allowedExtensions.Contains(ext))
-                        return BadRequest(new { message = "Format foto tidak valid. Gunakan JPG/PNG." });
-
-                    if (vm.PhotoLab.Length > maxSize)
-                        return BadRequest(new { message = "Ukuran foto terlalu besar! Maks 5MB." });
-
-                    var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
-                    var fileName = $"{data.NoPhotoLab}_{safeTime}{ext}";
-
-                    using var client = new HttpClient();
-                    using var ms = new MemoryStream();
-                    await vm.PhotoLab.CopyToAsync(ms);
-                    ms.Position = 0;
-
-                    var content = new MultipartFormDataContent
-            {
-                { new StreamContent(ms)
-                    { Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.PhotoLab.ContentType) } },
-                    "file", fileName },
-                { new StringContent("HasilLabPhoto"), "folderTarget" }
-            };
-
-                    var flaskResponse = await client.PostAsync(_uploadUrl, content);
-                    if (!flaskResponse.IsSuccessStatusCode)
-                        return StatusCode(500, new { message = "Gagal upload foto hasil lab ke server Flask." });
-
-                    var responseBody = await flaskResponse.Content.ReadAsStringAsync();
-                    dynamic jsonResp = JsonConvert.DeserializeObject(responseBody);
-                    photoPath = jsonResp?.url ?? jsonResp?.fileUrl ?? jsonResp?.path ?? "";
-                }
-
-                // ==================================================
-                // ✅ Update nilai field
-                // ==================================================
+                // ======================================================
+                // ✅ Update field non-file
+                // ======================================================
                 data.HasilLabId = vm.HasilLabId;
                 data.PemeriksaanLabId = vm.PemeriksaanLabId;
                 data.KelasId = vm.KelasId;
                 data.TanggalSelesai = vm.TanggalSelesai ?? data.TanggalSelesai;
-                data.PhotoLabPath = photoPath;
+
                 data.HasilLabManual = vm.HasilLabManual;
                 data.HasilLabAI = vm.HasilLabAI;
                 data.JumlahFilm = vm.JumlahFilm;
@@ -402,44 +440,103 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 data.JaringanVolume = vm.JaringanVolume;
                 data.BodyFluidVolume = vm.BodyFluidVolume;
                 data.PetugasSpecimenId = vm.PetugasSpecimenId;
+                data.TanggalSpecimen = vm.TanggalSpecimen;
+                data.JamSpecimen = vm.JamSpecimen;
+                data.InfoNReff = vm.InfoNReff;
                 data.Keterangan = vm.Keterangan;
-                data.UpdateBy = getUserActive.UserActiveId;
-                data.UpdateDateTime = DateTime.UtcNow;
 
-                _applicationDbContext.LabHasilDetails.Update(data);
+                // ======================================================
+                // ✅ Upload MULTI FILE (opsional)
+                // - kalau ada foto baru => replace PhotoLabPath
+                // - kalau tidak ada => keep PhotoLabPath lama
+                // ======================================================
+                var allowedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png" };
+                var maxSize = 5 * 1024 * 1024; // 5 MB
+
+                if (vm.PhotoLab != null && vm.PhotoLab.Any(f => f != null && f.Length > 0))
+                {
+                    // Pakai NoPhotoLab lama, kalau kosong fallback generate sederhana
+                    var baseNoPhotoLab = !string.IsNullOrWhiteSpace(data.NoPhotoLab)
+                        ? data.NoPhotoLab
+                        : $"LAB{DateTime.UtcNow:yyMMdd}0001";
+
+                    var photoPaths = new List<string>();
+
+                    using var client = new HttpClient();
+
+                    int i = 0;
+                    foreach (var file in vm.PhotoLab.Where(f => f != null && f.Length > 0))
+                    {
+                        i++;
+
+                        var ext = Path.GetExtension(file.FileName).ToLower();
+                        if (!allowedExtensions.Contains(ext))
+                            return BadRequest(new { message = $"Format foto tidak valid ({file.FileName}). Gunakan JPG/PNG." });
+
+                        if (file.Length > maxSize)
+                            return BadRequest(new { message = $"Ukuran foto terlalu besar ({file.FileName})! Maks 5MB." });
+
+                        var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmssfff");
+                        var fileName = $"{baseNoPhotoLab}_{i:00}_{safeTime}{ext}";
+
+                        using var ms = new MemoryStream();
+                        await file.CopyToAsync(ms);
+                        ms.Position = 0;
+
+                        using var content = new MultipartFormDataContent
+                {
+                    {
+                        new StreamContent(ms)
+                        {
+                            Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType) }
+                        },
+                        "file", fileName
+                    },
+                    { new StringContent("HasilLabPhoto"), "folderTarget" }
+                };
+
+                        var flaskResponse = await client.PostAsync(_uploadUrl, content);
+                        if (!flaskResponse.IsSuccessStatusCode)
+                            return StatusCode(500, new { message = $"Gagal upload foto ({file.FileName}) ke server Flask." });
+
+                        var responseBody = await flaskResponse.Content.ReadAsStringAsync();
+                        dynamic jsonResp = JsonConvert.DeserializeObject(responseBody);
+
+                        string path = jsonResp?.url ?? jsonResp?.fileUrl ?? jsonResp?.path ?? "";
+                        if (string.IsNullOrWhiteSpace(path))
+                            return StatusCode(500, new { message = $"Upload berhasil tapi path kosong ({file.FileName})." });
+
+                        photoPaths.Add(path);
+                    }
+
+                    // ✅ replace path lama
+                    data.PhotoLabPath = photoPaths.Any() ? JsonConvert.SerializeObject(photoPaths) : null;
+                }
+
+                // ======================================================
+                // ✅ Audit update
+                // ======================================================
+                data.UpdateBy = userActiveId;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
+
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
-                {
-                    return Ok(new
-                    {
-                        message = "Data berhasil diperbarui. || 200 OK",
-                        data = new
-                        {
-                            data.DetailHasilLabId,
-                            data.NoPhotoLab,
-                            data.PhotoLabPath,
-                            data.HasilLabManual,
-                            data.HasilLabAI,
-                            data.JumlahFilm,
-                            data.Keterangan,
-                            data.UpdateDateTime,
-                        }
-                    });
-                }
+                    return Ok(new { message = "Edit Data Berhasil || 200 OK" });
 
-                return StatusCode(500, new { message = "Gagal menyimpan perubahan ke database." });
+                return StatusCode(500, new { message = "Data tidak berhasil diupdate ke database." });
             }
             catch (DbUpdateException dbEx)
             {
-                return StatusCode(500, new { message = $"Kesalahan database: {dbEx.InnerException?.Message}" });
+                return StatusCode(500, new { message = $"Kesalahan database: {dbEx.InnerException?.Message ?? dbEx.Message}" });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error saat memperbarui DetailHasilLab");
+                _logger.LogError(ex, "Error saat update DetailHasilLab");
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
@@ -544,7 +641,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.KelasId,
                              a.TanggalSelesai,
                              a.NoPhotoLab,
-                             a.PhotoLabPath,
+                             PhotoLabPath = ToPhotoLabPaths(a.PhotoLabPath),
+                             JumlahFotoLab = ToPhotoLabPaths(a.PhotoLabPath).Count,
                              a.HasilLabManual,
                              a.HasilLabAI,
                              a.JumlahFilm,

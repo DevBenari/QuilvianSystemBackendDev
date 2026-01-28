@@ -339,7 +339,13 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<OperasiTindakan> OperasiTindakans { get; set; }
         public DbSet<RuangBedahBooking> RuangBedahBookings { get; set; }
         public DbSet<RuangBedahBookingDetail> RuangBedahBookingDetails { get; set; }
-
+        public DbSet<CatatanBedah> CatatanBedahs { get; set; }
+        public DbSet<CatatanBedahLokal> CatatanBedahLokals { get; set; }
+        public DbSet<CatatanPemulihan> CatatanPemulihans { get; set; }
+        public DbSet<CatatanPemulihanDetail> CatatanPemulihanDetails { get; set; }
+        public DbSet<LaporanBedah> LaporanBedahs { get; set; }
+        public DbSet<LaporanAnestesi> LaporanAnestesis {  get; set; }
+        public DbSet<LaporanAnestesiDetail> LaporanAnestesiDetails { get; set; }
         #endregion
 
         #region Laborat

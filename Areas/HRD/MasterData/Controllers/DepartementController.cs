@@ -72,6 +72,9 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
                             a.JamBuka,
                             a.JamTutup,
                             a.Layanan,
+                            a.PositionId,
+                            a.PositionName,
+                            a.PositionCode,
                         }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -216,6 +219,7 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateDepartement(Guid id, [FromBody] DepartementViewModel vm)
         {
@@ -341,7 +345,9 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
                             a.JamBuka,
                             a.JamTutup,
                             a.Layanan,
-
+                            a.PositionId,
+                            a.PositionName,
+                            a.PositionCode,
                         };
 
             // Filter berdasarkan search
