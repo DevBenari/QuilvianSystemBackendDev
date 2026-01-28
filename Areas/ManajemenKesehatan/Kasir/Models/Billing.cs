@@ -24,5 +24,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models
         public bool? IsListWhiteOff { get; set; }
         public bool? StatusPengambilan { get; set; }
         public bool? StatusBilling {  get; set; }
+        public DateTime? TanggalInvoice {  get; set; }
+        public DateTime? TanggalJatuhTempo { get; set; }
+        public int? DPD {  get; set; }
     }
 }

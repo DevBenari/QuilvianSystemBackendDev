@@ -292,6 +292,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     SubTotalItem = subtotal,
                     StatusBilling = false,
                     JenisBilling = jenisBilling,
+                    TanggalInvoice = DateTime.UtcNow,
+                    TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                     Keterangan = $"BookingBedRanapId={bookingId};Start={parsedTglMasukRanap:yyyy-MM-dd}",
 
                     CreateBy = userActiveId,

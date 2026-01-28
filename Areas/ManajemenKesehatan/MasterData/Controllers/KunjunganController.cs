@@ -681,6 +681,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         JenisBilling = "Biaya Admin",
                         StatusBilling = false,
                         BillingDate = DateTime.UtcNow,
+                        TanggalInvoice = DateTime.UtcNow,
+                        TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                         CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = UserActiveId
                     };
@@ -1053,6 +1055,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             BillingKode = "001",
                             JenisBilling = "Biaya Admin",
                             StatusBilling = false,
+                            TanggalInvoice = DateTime.UtcNow,
+                            TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                             BillingDate = DateTime.UtcNow,
                             CreateDateTime = DateTimeOffset.UtcNow,
                             CreateBy = UserActiveId

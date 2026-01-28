@@ -264,7 +264,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     StatusBilling = false,
                     BillingDate = DateTime.UtcNow,
                     //Keterangan = $"Biaya Visit Dokter ID{dr}",
-
+                    TanggalInvoice = DateTime.UtcNow,
+                    TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
@@ -422,8 +423,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                         JenisBilling = "Visit Dokter",
                         StatusBilling = false,
                         BillingDate = DateTime.UtcNow,
-                        Keterangan = "Biaya Visit Dokter ID",
-
+                        //Keterangan = "Biaya Visit Dokter ID",
+                        TanggalInvoice = DateTime.UtcNow,
+                        TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                         CreateBy = userActiveId,
                         CreateDateTime = DateTimeOffset.UtcNow,
                     };

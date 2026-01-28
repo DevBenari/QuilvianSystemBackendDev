@@ -376,6 +376,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                             JenisBilling = "Pemeriksaan Lab",
                             StatusBilling = false,
                             BillingDate = DateTime.UtcNow,
+                            TanggalInvoice = DateTime.UtcNow,
+                            TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                             CreateBy = userActiveId,
                             CreateDateTime = DateTimeOffset.UtcNow,
                             Keterangan = $"Booking Lab ({newNoOrder})"
@@ -696,6 +698,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                 BillingKode = "LAB",
                                 JenisBilling = "Pemeriksaan Lab",
                                 BillingDate = DateTime.UtcNow,
+                                TanggalInvoice = DateTime.UtcNow,
+                                TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                                 StatusBilling = false,
                                 CreateBy = userActiveId,
                                 CreateDateTime = DateTimeOffset.UtcNow,

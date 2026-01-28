@@ -661,6 +661,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                 JenisBilling = "Obat",
                                 StatusPengambilan = true,
                                 StatusBilling = false,
+                                TanggalInvoice = DateTime.UtcNow,
+                                TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                                 CreateBy = getUserActive.UserActiveId,
                                 CreateDateTime = DateTimeOffset.UtcNow
                             };
@@ -797,6 +799,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                 JenisBilling = "Obat",
                                 StatusPengambilan = true,
                                 StatusBilling = false,
+                                TanggalInvoice = DateTime.UtcNow,
+                                TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                                 CreateBy = getUserActive.UserActiveId,
                                 CreateDateTime = DateTimeOffset.UtcNow
                             };
@@ -973,6 +977,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             JenisBilling = "Obat",
                             StatusPengambilan = true,
                             StatusBilling = false,
+                            TanggalInvoice = DateTime.UtcNow,
+                            TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                             CreateBy = userId,
                             CreateDateTime = DateTimeOffset.UtcNow
                         };
@@ -1095,6 +1101,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                         JenisBilling = "Obat",
                         StatusPengambilan = true,
                         StatusBilling = false,
+                        TanggalInvoice = DateTime.UtcNow,
+                        TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                         CreateBy = userId,
                         CreateDateTime = DateTimeOffset.UtcNow
                     });

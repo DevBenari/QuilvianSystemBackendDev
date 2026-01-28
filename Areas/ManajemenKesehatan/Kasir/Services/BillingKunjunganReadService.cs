@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Linq;
+using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Interfaces;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
@@ -55,10 +56,14 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         // =========================
         var header = await (
             from k in _db.Kunjungans.AsNoTracking()
-            join p in _db.PendaftaranPasienBarus.AsNoTracking() on k.PasienId equals p.PendaftaranPasienBaruId
-            join d in _db.Dokters.AsNoTracking() on k.DokterId equals d.DokterId
-            join poli in _db.Polikliniks.AsNoTracking() on k.PoliklinikId equals poli.PoliklinikId
-            join a in _db.Asuransis.AsNoTracking() on k.AsuransiId equals a.AsuransiId into ag
+            join p in _db.PendaftaranPasienBarus.AsNoTracking()
+                on k.PasienId equals p.PendaftaranPasienBaruId
+            join d in _db.Dokters.AsNoTracking()
+                on k.DokterId equals d.DokterId
+            join poli in _db.Polikliniks.AsNoTracking()
+                on k.PoliklinikId equals poli.PoliklinikId
+            join a in _db.Asuransis.AsNoTracking()
+                on k.AsuransiId equals a.AsuransiId into ag
             from a in ag.DefaultIfEmpty()
             where k.KunjunganID == kunjunganId && !k.IsDelete
             select new
@@ -68,6 +73,9 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 TanggalKunjungan = k.TglMasuk,
                 k.TipePembayaran,
                 k.PasienId,
+
+                // ✅ supaya bisa cek cover obat berdasarkan kunjungan
+                k.AsuransiId,
 
                 p.NamaLengkap,
                 p.NoRekamMedis,
@@ -97,11 +105,39 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             Umur = HitungUmurLengkap(header.TanggalLahir)
         };
 
+        // init list (jaga-jaga kalau DTO belum init)
+        dto.DaftarVisitDokter ??= new List<object>();
+        dto.DaftarKamarRanap ??= new List<object>();
+
         // KasirId (opsional)
         dto.KasirId = await _db.MainKasirs.AsNoTracking()
             .Where(x => x.KunjunganId == kunjunganId && (x.IsDelete == false || x.IsDelete == null))
             .Select(x => (Guid?)x.KasirId)
             .FirstOrDefaultAsync(ct);
+
+        // =========================
+        // 1B) COVER OBAT ASURANSI (HANYA DARI KUNJUNGAN)
+        // RULE: kalau Kunjungan.AsuransiId kosong -> tidak pakai asuransi saat kunjungan ini
+        // =========================
+        Guid? asuransiIdEfektif = header.AsuransiId;
+
+        // pakai asuransi hanya kalau AsuransiId terisi (kunjungan) dan tipe pembayaran memang "Asuransi"
+        // kalau kamu mau cukup cek AsuransiId saja, ganti jadi: var isAsuransiCase = asuransiIdEfektif.HasValue;
+        var isAsuransiCase =
+            asuransiIdEfektif.HasValue &&
+            string.Equals(dto.TipePembayaran, "Asuransi", StringComparison.OrdinalIgnoreCase);
+
+        HashSet<Guid> coveredObatIds = new();
+        if (isAsuransiCase)
+        {
+            var coveredList = await _db.ObatAsuransis.AsNoTracking()
+                .Where(x => x.AsuransiId == asuransiIdEfektif!.Value && (x.IsDelete == false || x.IsDelete == null))
+                .Select(x => x.ObatId)
+                .ToListAsync(ct);
+
+            coveredObatIds = coveredList.ToHashSet();
+
+        }
 
         // =========================
         // 2) LOAD BILLINGS + MAP
@@ -124,7 +160,6 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             })
             .ToListAsync(ct);
 
-        // lookup latest per (JenisBilling, ItemId)
         var billingMap = billings
             .Where(b => b.ItemId.HasValue && !string.IsNullOrWhiteSpace(b.JenisBilling))
             .GroupBy(b => new { Jenis = b.JenisBilling!, Item = b.ItemId!.Value })
@@ -143,8 +178,6 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         // =========================
         // 3) LAB
         // =========================
-        // TODO: kalau LabBookingDetails ada KunjunganId, ganti filter:
-        // where lbd.KunjunganId == kunjunganId
         var labRows = await (
             from lbd in _db.LabBookingDetails.AsNoTracking()
             where lbd.PasienId == header.PasienId
@@ -195,22 +228,19 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         var resepRows = await (
             from r in _db.Reseps.AsNoTracking()
             where r.KunjunganId == kunjunganId && !r.IsDelete
-            join dr in _db.DetailReseps.AsNoTracking() on r.ResepId equals dr.ResepId
+            join dr in _db.DetailReseps.AsNoTracking()
+                on r.ResepId equals dr.ResepId
             where !dr.IsDelete
-            join o in _db.Obats.AsNoTracking() on dr.ObatId equals o.ObatId into og
+            join o in _db.Obats.AsNoTracking()
+                on dr.ObatId equals o.ObatId into og
             from o in og.DefaultIfEmpty()
-            join rc in _db.Racikans.AsNoTracking() on dr.RacikanId equals rc.RacikanId into rg
+            join rc in _db.Racikans.AsNoTracking()
+                on dr.RacikanId equals rc.RacikanId into rg
             from rc in rg.DefaultIfEmpty()
-            select new
-            {
-                r.ResepId,
-                dr,
-                o,
-                rc
-            }
+            select new { r.ResepId, dr, o, rc }
         ).ToListAsync(ct);
 
-        // OBAT non racikan
+        // 4A) OBAT non-racikan  ✅ tambahkan IsCoverAsuransi
         dto.DaftarObat = resepRows
             .Where(x => x.dr != null && x.o != null && x.dr.IsRacikan != true)
             .GroupBy(x => x.dr.DetailResepId)
@@ -224,12 +254,21 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 var harga = bill?.HargaItem ?? hte;
                 var subtotal = bill?.SubTotalItem ?? (x.dr.Qty * hte);
 
+                var isCoverAsuransi =
+                    isAsuransiCase &&
+                    x.dr.ObatId != null &&
+                    coveredObatIds.Contains(x.dr.ObatId.Value);
+
                 return (object)new
                 {
                     x.ResepId,
                     x.dr.DetailResepId,
                     x.dr.ObatId,
                     x.o.ObatName,
+
+                    // ✅ tambahan
+                    IsCoverAsuransi = isCoverAsuransi,
+
                     Qty = qty,
                     Harga = harga,
                     Subtotal = subtotal,
@@ -245,14 +284,13 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
         dto.TotalObat = dto.DaftarObat.Sum(x => (decimal)((dynamic)x).Subtotal);
 
-        // RACIKAN IDs
+        // 4B) RACIKAN (tanpa cover asuransi)
         var racikanIds = resepRows
             .Where(x => x.dr?.IsRacikan == true && x.dr.RacikanId != null)
             .Select(x => x.dr!.RacikanId!.Value)
             .Distinct()
             .ToList();
 
-        // RacikanDetails
         List<RacikanDetailRow> racikanDetails;
         if (racikanIds.Any())
         {
@@ -408,7 +446,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         dto.TotalAlkes = dto.DaftarAlkes.Sum(x => (decimal)((dynamic)x).Subtotal);
 
         // =========================
-        // 8) VISIT DOKTER
+        // 8) VISIT DOKTER (TarifKelas)
         // =========================
         var visitRows = await _db.VisitDokters.AsNoTracking()
             .Where(v => v.KunjunganId == kunjunganId && (v.IsDelete == false || v.IsDelete == null))
@@ -416,7 +454,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             {
                 v.VisitDokterId,
                 v.DokterId,
-                v.KelasId,          // << penting untuk TarifKelas
+                v.KelasId,
                 v.TanggalVisit,
                 v.WaktuVisit,
                 v.Keterangan
@@ -428,7 +466,6 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
         if (visitRows.Count > 0)
         {
-            // 8.2 billing map untuk visit dokter (ItemId = VisitDokterId)
             var billingVisitMap = billings
                 .Where(b => b.ItemId != null && string.Equals(b.JenisBilling, "Visit Dokter", StringComparison.OrdinalIgnoreCase))
                 .GroupBy(b => b.ItemId!.Value)
@@ -437,7 +474,6 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     g => g.OrderByDescending(x => x.CreateDateTime ?? DateTime.MinValue).First()
                 );
 
-            // 8.3 nama dokter (sekali query)
             var dokterIds = visitRows.Select(x => x.DokterId).Distinct().ToList();
 
             var dokterNameMap = await _db.Dokters.AsNoTracking()
@@ -445,16 +481,13 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 .Select(d => new { d.DokterId, d.NmDokter })
                 .ToDictionaryAsync(x => x.DokterId, x => x.NmDokter, ct);
 
-            // 8.4 tarif kelas (sekali query) untuk pasangan (DokterId, KelasId) yang ada pada visit
-            var pairList = visitRows
+            var kelasIds = visitRows
                 .Where(x => x.KelasId != null)
-                .Select(x => new { x.DokterId, KelasId = x.KelasId!.Value })
+                .Select(x => x.KelasId!.Value)
                 .Distinct()
                 .ToList();
 
-            var kelasIds = pairList.Select(x => x.KelasId).Distinct().ToList();
-
-            // kalau TarifKelas punya IsDelete, filter juga
+            // ✅ pakai DbSet kamu (di kode kamu: TarifKelass)
             var tarifRows = await _db.TarifKelass.AsNoTracking()
                 .Where(t => dokterIds.Contains(t.DokterId) && kelasIds.Contains((Guid)t.KelasId))
                 .Where(t => (t.IsDelete == false || t.IsDelete == null))
@@ -467,7 +500,6 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 })
                 .ToListAsync(ct);
 
-            // ambil tarif terbaru per (DokterId, KelasId)
             var tarifMap = tarifRows
                 .GroupBy(x => (x.DokterId, x.KelasId))
                 .ToDictionary(
@@ -475,19 +507,17 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     g => g.OrderByDescending(x => x.CreateDateTime).First().TarifDokter
                 );
 
-            // 8.5 output: grouping per (DokterId, KelasId) supaya akurat (tarif bisa beda per kelas)
             foreach (var grp in visitRows.GroupBy(x => new { x.DokterId, x.KelasId }))
             {
                 var dokterId = grp.Key.DokterId;
-                var kelasId = grp.Key.KelasId; // bisa null
+                var kelasId = grp.Key.KelasId; // Guid?
 
                 dokterNameMap.TryGetValue((Guid)dokterId, out var nmDokter);
 
                 decimal tarifPerVisit = 0m;
-                if (kelasId != null && tarifMap.TryGetValue((dokterId, kelasId.Value), out var t))
+                if (kelasId.HasValue && tarifMap.TryGetValue((dokterId, kelasId.Value), out var t))
                     tarifPerVisit = t;
 
-                // build list visit detail (per visit dokterId)
                 var visitDetails = grp
                     .OrderBy(x => x.TanggalVisit ?? DateTime.MinValue)
                     .Select(v =>
@@ -525,11 +555,9 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     DokterId = dokterId,
                     NmDokter = nmDokter,
                     KelasId = kelasId,
-
                     Qty = visitDetails.Count,
-                    HargaPerVisit = tarifPerVisit,   // tarif referensi (kalau billing belum ada)
+                    HargaPerVisit = tarifPerVisit,
                     Subtotal = subtotalGroup,
-
                     Visits = visitDetails
                 });
             }
@@ -556,7 +584,6 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     g => g.OrderBy(x => x.TglMasuk ?? x.TglPindah ?? DateTime.MinValue).ToList()
                 );
 
-            // billing kamar terbaru per KamarId (ItemId = KamarId)
             var billingKamarMap = billings
                 .Where(b => b.ItemId != null && string.Equals(b.JenisBilling, "Kamar Ranap", StringComparison.OrdinalIgnoreCase))
                 .GroupBy(b => b.ItemId!.Value)
@@ -584,6 +611,8 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     tglMasukAwal ??= bk.TglMasuk;
 
                     var endTransfer = ResolveEndFromTransfer(bk.BedId, bk.TglMasuk, transferByBed);
+
+                    // endFinal selalu DateTime (bukan nullable), dibatasi <= snap
                     DateTime endFinal = bk.TglKeluar ?? endTransfer ?? snap;
                     if (endFinal > snap) endFinal = snap;
 
@@ -657,6 +686,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
         return dto;
     }
+
 
     // =========================
     // HELPERS (punyamu + overload snapshot)
