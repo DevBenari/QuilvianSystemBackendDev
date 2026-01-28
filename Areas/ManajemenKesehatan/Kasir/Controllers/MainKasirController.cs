@@ -975,7 +975,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     SisaPembayaran = sisaAfter,
 
                     MetodePembayaranId = detail.MetodePembayaranId,
-                    //NoKwitansi = detail.InvoiceBilling,
+                    NoKwitansi = noKwitansi,
 
                     AngsuranKe = angsuranKe, // ✅ hasil generate
                     ReferenceId = detail.ReferenceId,
