@@ -848,21 +848,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                      from a in _applicationDbContext.SOAPs
 
                          // Kunjungan biasanya wajib → boleh tetap inner join
-                     join k in _applicationDbContext.Kunjungans
+                     join k in _applicationDbContext.Kunjungans.AsNoTracking()
                          on a.KunjunganId equals k.KunjunganID
 
                      // LEFT JOIN UserActives
-                     join u0 in _applicationDbContext.UserActives
+                     join u0 in _applicationDbContext.UserActives.AsNoTracking()
                          on a.CreateBy equals u0.UserActiveId into uu
                      from u in uu.DefaultIfEmpty()
 
                          // LEFT JOIN Dokters (karena bisa null/tidak ketemu)
-                     join d0 in _applicationDbContext.Dokters
+                     join d0 in _applicationDbContext.Dokters.AsNoTracking()
                          on k.DokterId equals d0.DokterId into dd
                      from d in dd.DefaultIfEmpty()
 
                          // LEFT JOIN PendaftaranPasienBarus (bisa null/tidak ketemu)
-                     join p0 in _applicationDbContext.PendaftaranPasienBarus
+                     join p0 in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking()
                          on k.PasienId equals p0.PendaftaranPasienBaruId into pp
                      from p in pp.DefaultIfEmpty()
                         where a.IsDelete == false && k.PasienId == pasienid
@@ -870,7 +870,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     {
                         a.CreateDateTime,
                         a.CreateBy,
-                        CreateByName = u.FullName,
+                        CreateByName = u != null ? u.FullName : null,
                         a.SOAPID,
                         a.KunjunganId,
                         PasienId = k.PasienId,
@@ -887,9 +887,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         NamaProfesi = string.Equals(a.Profesi, "null", StringComparison.OrdinalIgnoreCase)
                             ? null
                             : a.Profesi,
-                        NamaDokter = d.NmDokter,
-                        DokterId = d.DokterId,
-                        NamaPasien = p.NamaLengkap
+                        NamaDokter = d != null ? d.NmDokter : null,
+                        DokterId = d != null ? (Guid?)d.DokterId : null,   // <<< kunci perbaikan
+                        NamaPasien = p != null ? p.NamaLengkap : null
                     })
                     .AsNoTracking()
                     .OrderByDescending(x => x.CreateDateTime) // urut terbaru dulu

@@ -27,16 +27,16 @@
         public List<object>? DaftarVisitDokter { get; set; } = new();
         public List<object>? DaftarKamarRanap { get; set; } = new();
 
-        public decimal? TotalPemeriksaanLab { get; set; }
-        public decimal? TotalObat { get; set; }
-        public decimal? TotalRacikan { get; set; }
-        public decimal? TotalTindakan { get; set; }
-        public decimal? TotalBiayaAdmin { get; set; }
-        public decimal? TotalAlkes { get; set; }
+        public decimal TotalPemeriksaanLab { get; set; } = 0m;
+        public decimal TotalObat { get; set; } = 0m;
+        public decimal TotalRacikan { get; set; } = 0m;
+        public decimal TotalTindakan { get; set; } = 0m;
+        public decimal TotalBiayaAdmin { get; set; } = 0m;
+        public decimal TotalAlkes { get; set; } = 0m;
 
-        public decimal? TotalBiayaVisitDokter { get; set; }
-        public decimal? TotalKamarRanap { get; set; }
+        public decimal TotalBiayaVisitDokter { get; set; } = 0m;
+        public decimal TotalKamarRanap { get; set; } = 0m;
 
-        public decimal? TotalKeseluruhan { get; set; }
+        public decimal TotalKeseluruhan { get; set; } = 0m;
     }
 }

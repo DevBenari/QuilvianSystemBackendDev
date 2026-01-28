@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Interfaces;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
 using QuilvianSystemBackendDev.Repositories;
 
@@ -44,6 +45,8 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         public decimal HTEPrice { get; set; }
     }
 
+
+    // buat get by id 
     public async Task<BillingKunjunganDto?> GetBillingKeseluruhanAsync(
         Guid kunjunganId,
         DateTime? asOf = null,
@@ -688,6 +691,33 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
     }
 
 
+    // ================================
+    // GET ALL PAGED
+    // ================================
+    public sealed class BillingPagedQuery
+    {
+        public Guid? KunjunganId { get; set; }
+        public int Page { get; set; } = 1;
+        public int PageSize { get; set; } = 10;
+
+        public DateTime? StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
+        public PeriodeFilter? Periode { get; set; }
+
+        public DateTime? AsOf { get; set; } // untuk kamar ranap sampai waktu ini
+    }
+
+    public sealed class PagedResult<T>
+    {
+        public string Status { get; set; } = "success";
+        public int Page { get; set; }
+        public int PageSize { get; set; }
+        public int TotalKunjungan { get; set; }
+        public int TotalPages { get; set; }
+        public T[] Data { get; set; } = Array.Empty<T>();
+    }
+
+
     // =========================
     // HELPERS (punyamu + overload snapshot)
     // =========================
@@ -782,4 +812,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
         return $"{years} tahun {months} bulan {days} hari";
     }
+
+
+
 }
