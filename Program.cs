@@ -128,6 +128,7 @@ builder.Services.AddSwaggerGen(c =>
     c.SwaggerDoc("manajemen_kesehatan", new OpenApiInfo { Title = "Manajemen Kesehatan API", Version = "v1" });
     c.SwaggerDoc("administrator", new OpenApiInfo { Title = "Administrator API", Version = "v1" });
     c.SwaggerDoc("hrd", new OpenApiInfo { Title = "HRD API", Version = "v1" });
+    c.SwaggerDoc("finance", new OpenApiInfo { Title = "Finance API", Version = "v1" });
     c.SwaggerDoc("master", new OpenApiInfo { Title = "Master API", Version = "v1" });
 
     // JWT Auth
