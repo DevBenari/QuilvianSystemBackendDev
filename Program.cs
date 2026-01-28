@@ -287,6 +287,7 @@ if (app.Environment.IsDevelopment())
         c.SwaggerEndpoint("/swagger/manajemen_kesehatan/swagger.json", "Manajemen Kesehatan API");
         c.SwaggerEndpoint("/swagger/administrator/swagger.json", "Administrator API");
         c.SwaggerEndpoint("/swagger/hrd/swagger.json", "HRD API");
+        c.SwaggerEndpoint("/swagger/finance/swagger.json", "Finance API");
         c.SwaggerEndpoint("/swagger/master/swagger.json", "Master API");
         c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None);
     });
@@ -299,6 +300,7 @@ app.UseSwaggerUI(c =>
     c.SwaggerEndpoint("/swagger/manajemen_kesehatan/swagger.json", "Manajemen Kesehatan API");
     c.SwaggerEndpoint("/swagger/administrator/swagger.json", "Administrator API");
     c.SwaggerEndpoint("/swagger/hrd/swagger.json", "HRD API");
+    c.SwaggerEndpoint("/swagger/finance/swagger.json", "Finance API");
     c.SwaggerEndpoint("/swagger/master/swagger.json", "Master API");
     c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None);
 });
