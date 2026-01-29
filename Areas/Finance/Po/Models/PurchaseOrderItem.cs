@@ -10,9 +10,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Models
         [Key]
         public Guid PurchaseOrderItemId { get; set; }
 
+        [ForeignKey("PurchaseOrder")]
         public Guid PurchaseOrderId { get; set; }
-        public Guid ListPurchaseRequestId { get; set; }
-        public Guid ProductId { get; set; }
 
         public string ProductName { get; set; }
         public string Measurement { get; set; }
@@ -24,7 +23,11 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Models
         public decimal Price { get; set; }
         public decimal Discount { get; set; }
         public decimal SubTotal { get; set; }
+
         public string Keterangan { get; set; }
+
+        // Navigation Property
+        public PurchaseOrder PurchaseOrder { get; set; }
 
     }
 }

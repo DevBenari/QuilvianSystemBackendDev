@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Areas.Finance.Po.Models;
+using QuilvianSystemBackendDev.Areas.Finance.Po.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Repositories;
 using System;
 
@@ -21,97 +23,124 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
         {
             _context = context;
         }
-
-        // =======================
-        // POST Purchase Order SAJA
-        // POST: api/Finance/Po
-        // =======================
+        // =========================
+        // POST: api/purchaseorders
+        // =========================
         [HttpPost]
-        public async Task<IActionResult> CreatePo([FromBody] PurchaseOrder po)
+        public async Task<IActionResult> Create(PurchaseOrderViewModel dto)
         {
-            po.PurchaseOrderId = Guid.NewGuid();
+            // ===============================
+            // 1. Cek / Insert Supplier
+            // ===============================
+            var supplier = await _context.Suppliers
+                .FirstOrDefaultAsync(x => x.SupplierCode == dto.SupplierCode);
+
+            if (supplier == null)
+            {
+                supplier = new Supplier
+                {
+                    SupplierId = Guid.NewGuid(),
+                    SupplierCode = dto.SupplierCode!,
+                    SupplierName = dto.SupplierName!,
+                    IsActive = true
+                };
+
+                _context.Suppliers.Add(supplier);
+                await _context.SaveChangesAsync(); // simpan supplier dulu
+            }
+
+            // ===============================
+            // 2. Insert Purchase Order
+            // ===============================
+            var po = new PurchaseOrder
+            {
+                PurchaseOrderId = Guid.NewGuid(),
+
+                SupplierCode = supplier.SupplierCode,
+                SupplierName = supplier.SupplierName,
+
+                PurchaseRequestNumber = dto.PurchaseRequestNumber,
+                PurchaseOrderNumber = dto.PurchaseOrderNumber,
+                InvoiceDate = dto.InvoiceDate,
+                InvoiceNumber = dto.InvoiceNumber,
+                RequestType = dto.RequestType,
+
+                TermOfPayment = dto.TermOfPayment,
+                ExpiredDate = dto.ExpiredDate,
+
+                RemainingDay = dto.RemainingDay,
+                QtyTotal = dto.QtyTotal,
+                GrandTotal = dto.GrandTotal,
+
+                UserAccess = dto.UserAccess,
+                StatusPO = dto.StatusPO,
+                Keterangan = dto.Keterangan,
+
+                PurchaseOrderItems = dto.Items.Select(i => new PurchaseOrderItem
+                {
+                    PurchaseOrderItemId = Guid.NewGuid(),
+                    ProductName = i.ProductName,
+                    Measurement = i.Measurement,
+                    Category = i.Category,
+                    Qty = i.Qty ?? 0,
+                    Price = i.Price ?? 0,
+                    Discount = i.Discount ?? 0,
+                    SubTotal = i.SubTotal ?? 0,
+                    Keterangan = i.Keterangan
+                }).ToList()
+            };
 
             _context.PurchaseOrders.Add(po);
             await _context.SaveChangesAsync();
 
             return Ok(new
             {
-                message = "Purchase Order berhasil dibuat",
-                po.PurchaseOrderId
+                message = "Purchase Order & Supplier berhasil disimpan",
+                purchaseOrderId = po.PurchaseOrderId,
+                supplierId = supplier.SupplierId
             });
         }
 
-        // =======================
-        // POST Purchase Order Item
-        // POST: api/Finance/Po/item
-        // =======================
-        [HttpPost("item")]
-        public async Task<IActionResult> CreatePoItem([FromBody] PurchaseOrderItem item)
-        {
-            item.PurchaseOrderItemId = Guid.NewGuid();
 
-            _context.PurchaseOrderItems.Add(item);
-            await _context.SaveChangesAsync();
-
-            return Ok(new
-            {
-                message = "Item berhasil dibuat",
-                item.PurchaseOrderItemId
-            });
-        }
-
-        // =======================
-        // GET PO + Items
-        // =======================
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
             var data = await _context.PurchaseOrders
-                .Select(x => new
+                .Include(x => x.PurchaseOrderItems)
+                .OrderByDescending(x => x.PurchaseOrderNumber)
+                .Select(po => new PurchaseOrderViewModel
                 {
-                    x.PurchaseOrderId,
-                    x.PurchaseOrderNumber,
-                    x.PurchaseRequestId,
-                    x.PurchaseRequestNumber,
-                    x.RequestType,
-                    x.SupplierId,
-                    x.TermOfPaymentId,
-                    x.ExpiredDate,
-                    x.RemainingDay,
-                    x.QtyTotal,
-                    x.GrandTotal,
-                    x.Keterangan
-                })
-                .ToListAsync();
+                    PurchaseRequestNumber = po.PurchaseRequestNumber,
+                    PurchaseOrderNumber = po.PurchaseOrderNumber,
+                    InvoiceDate = po.InvoiceDate,
+                    InvoiceNumber = po.InvoiceNumber,
+                    RequestType = po.RequestType,
 
-            return Ok(data);
-        }
+                    SupplierName = po.SupplierName,
+                    SupplierCode = po.SupplierCode,
 
+                    TermOfPayment = po.TermOfPayment,
+                    ExpiredDate = po.ExpiredDate,
 
-        // =======================
-        // GET Items by PO Id
-        // GET: api/Finance/Po/{poId}/items
-        // =======================
-        [HttpGet("item")]
-        public async Task<IActionResult> GetAllItems()
-        {
-            var data = await _context.PurchaseOrderItems
-                .Select(x => new
-                {
-                    x.PurchaseOrderItemId,
-                    x.PurchaseOrderId,
-                    x.ListPurchaseRequestId,
-                    x.ProductId,
-                    x.ProductName,
-                    x.Measurement,
-                    x.Category,
-                    x.Layanan,
-                    x.JenisPermintaan,
-                    x.Qty,
-                    x.Price,
-                    x.Discount,
-                    x.SubTotal,
-                    x.Keterangan
+                    RemainingDay = po.RemainingDay,
+                    QtyTotal = po.QtyTotal,
+                    GrandTotal = po.GrandTotal,
+
+                    UserAccess = po.UserAccess,
+                    StatusPO = po.StatusPO,
+                    Keterangan = po.Keterangan,
+
+                    Items = po.PurchaseOrderItems.Select(i => new PurchaseOrderItemViewModel
+                    {
+                        ProductName = i.ProductName,
+                        Measurement = i.Measurement,
+                        Category = i.Category,
+                        Qty = i.Qty,
+                        Price = i.Price,
+                        Discount = i.Discount,
+                        SubTotal = i.SubTotal,
+                        Keterangan = i.Keterangan
+                    }).ToList()
                 })
                 .ToListAsync();
 
