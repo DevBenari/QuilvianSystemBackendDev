@@ -128,7 +128,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] MainKasirDetailViewModel vm)
+        public async Task<IActionResult> Create([FromBody] MainKasirDetailViewModel vm, CancellationToken ct)
         {
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
@@ -229,7 +229,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     Keterangan = vm.Keterangan,
 
                     // kalau viewmodel kamu punya InvoiceBilling, tinggal isi:
-                    // InvoiceBilling = vm.InvoiceBilling,
+                    NoKwitansi = await _noKwitansiService.GenerateNoKwitansiAsync(tglPembayaran, ct),
 
                     TglPembayaran = tglPembayaran.UtcDateTime,
 
