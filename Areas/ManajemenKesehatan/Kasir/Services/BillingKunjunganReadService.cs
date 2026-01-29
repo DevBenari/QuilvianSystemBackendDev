@@ -75,6 +75,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             where k.KunjunganID == kunjunganId && !k.IsDelete
             select new
             {
+                
                 k.KunjunganID,
                 k.JenisKunjungan,
                 TanggalKunjungan = k.TglMasuk,
@@ -163,6 +164,8 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 HargaItem = b.HargaItem,
                 SubTotalItem = b.SubTotalItem,
                 StatusBilling = b.StatusBilling,
+                
+                
                 CreateDateTime = b.CreateDateTime
             })
             .ToListAsync(ct);

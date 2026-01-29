@@ -469,14 +469,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             // =========================
             // 1) Header (MainKasir)
             // =========================
-            var header = await _applicationDbContext.MainKasirs
-                .AsNoTracking()
-                .Where(x => x.KasirId == id && x.IsDelete != true)
-                .Select(x => new
+            var header = await (
+                from x in _applicationDbContext.MainKasirs.AsNoTracking()
+                join p0 in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking()
+                    on x.PasienId equals p0.PendaftaranPasienBaruId into pGroup
+                from p in pGroup.DefaultIfEmpty()
+
+                where x.KasirId == id && x.IsDelete != true
+                select new
                 {
                     x.KasirId,
                     x.KunjunganId,
                     x.PasienId,
+
+                    // ✅ tambahan pasien
+                    NamaLengkap = p != null ? p.NamaLengkap : null,
+                    NoRekamMedis = p != null ? p.NoRekamMedis : null,
+
                     x.InvoiceBilling,
                     x.JumlahAngsuran,
                     x.StatusPembayaran,
@@ -491,11 +500,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     x.DiskonId,
 
                     x.CreateDateTime,
-                    CreateBy = (Guid?)x.CreateBy,     // aman Guid/Guid?
+                    CreateBy = (Guid?)x.CreateBy,
                     x.UpdateDateTime,
-                    UpdateBy = (Guid?)x.UpdateBy      // aman Guid/Guid?
-                })
-                .FirstOrDefaultAsync();
+                    UpdateBy = (Guid?)x.UpdateBy
+                }
+            ).FirstOrDefaultAsync();
+
 
             if (header == null)
                 return NotFound(new { message = "MainKasir tidak ditemukan." });
@@ -569,6 +579,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         header.KasirId,
                         header.KunjunganId,
                         header.PasienId,
+                        header.NamaLengkap,
+                        header.NoRekamMedis,
                         header.InvoiceBilling,
                         header.JumlahAngsuran,
                         header.StatusPembayaran,
@@ -626,15 +638,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             // =========================
             // 1) Headers (SEMUA MainKasir)
             // =========================
-            var headers = await _applicationDbContext.MainKasirs
-                .AsNoTracking()
-                .Where(x => x.KunjunganId == kunjunganId && x.IsDelete != true)
-                .OrderByDescending(x => x.CreateDateTime)
-                .Select(x => new
+            var headers = await (
+                from x in _applicationDbContext.MainKasirs.AsNoTracking()
+                join p0 in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking()
+                    on x.PasienId equals p0.PendaftaranPasienBaruId into pGroup
+                from p in pGroup.DefaultIfEmpty()
+
+                where x.KunjunganId == kunjunganId && x.IsDelete != true
+                orderby x.CreateDateTime descending
+                select new
                 {
                     x.KasirId,
                     x.KunjunganId,
                     x.PasienId,
+
+                    // ✅ tambahan pasien
+                    NamaLengkap = p != null ? p.NamaLengkap : null,
+                    NoRekamMedis = p != null ? p.NoRekamMedis : null,
+
                     x.InvoiceBilling,
                     x.JumlahAngsuran,
                     x.StatusPembayaran,
@@ -652,8 +673,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     CreateBy = (Guid?)x.CreateBy,
                     x.UpdateDateTime,
                     UpdateBy = (Guid?)x.UpdateBy
-                })
-                .ToListAsync();
+                }
+            ).ToListAsync();
 
             if (headers.Count == 0)
                 return NotFound(new { message = "MainKasir untuk kunjungan ini tidak ditemukan." });
@@ -734,6 +755,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     h.KasirId,
                     h.KunjunganId,
                     h.PasienId,
+                    h.NamaLengkap,
+                    h.NoRekamMedis,
                     h.InvoiceBilling,
                     h.JumlahAngsuran,
                     h.StatusPembayaran,
@@ -1210,12 +1233,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 join u0 in _applicationDbContext.UserActives.AsNoTracking()
                     on a.CreateBy equals u0.UserActiveId into uu
                 from u in uu.DefaultIfEmpty()
+                join p in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking()
+                    on a.PasienId equals p.PendaftaranPasienBaruId into pp
+                from p in pp.DefaultIfEmpty()
                 where a.IsDelete != true
                 select new
                 {
                     a.KasirId,
                     a.KunjunganId,
                     a.PasienId,
+                    p.NamaLengkap,
+                    p.NoRekamMedis,
                     a.InvoiceBilling,
                     a.JumlahAngsuran,
                     a.StatusPembayaran,
@@ -1440,6 +1468,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     h.KasirId,
                     h.KunjunganId,
                     h.PasienId,
+                    h.NamaLengkap,
+                    h.NoRekamMedis,
                     h.InvoiceBilling,
                     h.JumlahAngsuran,
                     h.StatusPembayaran,
