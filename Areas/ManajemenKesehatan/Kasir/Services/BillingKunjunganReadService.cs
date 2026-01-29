@@ -37,6 +37,8 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         public bool? StatusBilling { get; set; }
         public DateTimeOffset? CreateDateTime { get; set; }
         public Guid KunjunganId { get; internal set; }
+        public DateTime? TanggalInvoice { get; set; }
+        public DateTime? TanggalJatuhTempo { get; set; }
     }
 
     private sealed class RacikanDetailRow
@@ -63,39 +65,45 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         // =========================
         var header = await (
             from k in _db.Kunjungans.AsNoTracking()
-            join p in _db.PendaftaranPasienBarus.AsNoTracking()
-                on k.PasienId equals p.PendaftaranPasienBaruId
-            join d in _db.Dokters.AsNoTracking()
-                on k.DokterId equals d.DokterId
-            join poli in _db.Polikliniks.AsNoTracking()
-                on k.PoliklinikId equals poli.PoliklinikId
-            join a in _db.Asuransis.AsNoTracking()
-                on k.AsuransiId equals a.AsuransiId into ag
-            from a in ag.DefaultIfEmpty()
             where k.KunjunganID == kunjunganId && !k.IsDelete
+
+            join p0 in _db.PendaftaranPasienBarus.AsNoTracking()
+                on k.PasienId equals p0.PendaftaranPasienBaruId into pg
+            from p in pg.DefaultIfEmpty()
+
+            join d0 in _db.Dokters.AsNoTracking()
+                on k.DokterId equals d0.DokterId into dg
+            from d in dg.DefaultIfEmpty()
+
+            join poli0 in _db.Polikliniks.AsNoTracking()
+                on k.PoliklinikId equals poli0.PoliklinikId into polig
+            from poli in polig.DefaultIfEmpty()
+
+            join a0 in _db.Asuransis.AsNoTracking()
+                on k.AsuransiId equals a0.AsuransiId into ag
+            from a in ag.DefaultIfEmpty()
+
             select new
             {
-                
                 k.KunjunganID,
                 k.JenisKunjungan,
                 TanggalKunjungan = k.TglMasuk,
                 k.TipePembayaran,
                 k.PasienId,
-
-                // ✅ supaya bisa cek cover obat berdasarkan kunjungan
                 k.AsuransiId,
 
-                p.NamaLengkap,
-                p.NoRekamMedis,
-                p.TanggalLahir,
+                NamaLengkap = p != null ? p.NamaLengkap : null,
+                NoRekamMedis = p != null ? p.NoRekamMedis : null,
+                TanggalLahir = p != null ? p.TanggalLahir : (DateTime?)null,
 
-                d.NmDokter,
-                poli.NamaPoliklinik,
+                NmDokter = d != null ? d.NmDokter : null,
+                NamaPoliklinik = poli != null ? poli.NamaPoliklinik : null,
                 NamaAsuransi = a != null ? a.NamaAsuransi : null
             }
         ).FirstOrDefaultAsync(ct);
 
         if (header == null) return null;
+
 
         var dto = new BillingKunjunganDto
         {
@@ -164,8 +172,10 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 HargaItem = b.HargaItem,
                 SubTotalItem = b.SubTotalItem,
                 StatusBilling = b.StatusBilling,
-                
-                
+                TanggalInvoice = b.TanggalInvoice,
+                TanggalJatuhTempo = b.TanggalJatuhTempo,
+
+
                 CreateDateTime = b.CreateDateTime
             })
             .ToListAsync(ct);
@@ -225,7 +235,12 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     Subtotal = subtotal,
                     BillingId = bill?.BillingId,
                     BillingKode = bill?.BillingKode,
-                    StatusBilling = bill?.StatusBilling
+                    StatusBilling = bill?.StatusBilling,
+                    TanggalInvoice = bill?.TanggalInvoice,
+                    TanggalJatuhTempo = bill?.TanggalJatuhTempo,
+
+                    // ✅ dpd lokal
+                    DPD = HitungDpd(bill?.TanggalJatuhTempo, snap)
                 };
             })
             .ToList();
@@ -285,6 +300,11 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     BillingId = bill?.BillingId,
                     BillingKode = bill?.BillingKode,
                     StatusBilling = bill?.StatusBilling,
+                    TanggalInvoice = bill?.TanggalInvoice,
+                    TanggalJatuhTempo = bill?.TanggalJatuhTempo,
+
+                    // ✅ dpd lokal
+                    DPD = HitungDpd(bill?.TanggalJatuhTempo, snap),
                     x.dr.Signa,
                     x.dr.SignaTambahan,
                     x.dr.StatusPengambilanObat
@@ -350,6 +370,11 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     BillingId = bill?.BillingId,
                     BillingKode = bill?.BillingKode,
                     StatusBilling = bill?.StatusBilling,
+                    TanggalInvoice = bill?.TanggalInvoice,
+                    TanggalJatuhTempo = bill?.TanggalJatuhTempo,
+
+                    // ✅ dpd lokal
+                    DPD = HitungDpd(bill?.TanggalJatuhTempo, snap),
                     x.dr.Signa,
                     x.dr.SignaTambahan,
                     x.dr.StatusPengambilanObat,
@@ -401,7 +426,12 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     Subtotal = subtotal,
                     BillingId = bill?.BillingId,
                     BillingKode = bill?.BillingKode,
-                    StatusBilling = bill?.StatusBilling
+                    StatusBilling = bill?.StatusBilling,
+                    TanggalInvoice = bill?.TanggalInvoice,
+                    TanggalJatuhTempo = bill?.TanggalJatuhTempo,
+
+                    // ✅ dpd lokal
+                    DPD = HitungDpd(bill?.TanggalJatuhTempo, snap)
                 };
             })
             .ToList();
@@ -421,7 +451,12 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 b.QtyItem,
                 b.SubTotalItem,
                 b.BillingKode,
-                b.StatusBilling
+                b.StatusBilling,
+                TanggalInvoice = b?.TanggalInvoice,
+                TanggalJatuhTempo = b?.TanggalJatuhTempo,
+
+                // ✅ dpd lokal
+                DPD = HitungDpd(b?.TanggalJatuhTempo, snap)
             })
             .ToList();
 
@@ -448,7 +483,12 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     Qty = qty,
                     Harga = harga,
                     Subtotal = subtotal,
-                    b.StatusBilling
+                    b.StatusBilling,
+                    TanggalInvoice = b?.TanggalInvoice,
+                    TanggalJatuhTempo = b?.TanggalJatuhTempo,
+
+                    // ✅ dpd lokal
+                    DPD = HitungDpd(b?.TanggalJatuhTempo, snap)
                 };
             })
             .ToList();
@@ -551,7 +591,12 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
                             BillingId = bill?.BillingId,
                             BillingKode = bill?.BillingKode,
-                            StatusBilling = bill?.StatusBilling
+                            StatusBilling = bill?.StatusBilling,
+                            TanggalInvoice = bill?.TanggalInvoice,
+                            TanggalJatuhTempo = bill?.TanggalJatuhTempo,
+
+                            // ✅ dpd lokal
+                            DPD = HitungDpd(bill?.TanggalJatuhTempo, snap)
                         };
                     })
                     .ToList();
@@ -664,6 +709,11 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     BillingId = billKamar?.BillingId,
                     BillingKode = billKamar?.BillingKode,
                     StatusBilling = billKamar?.StatusBilling,
+                    TanggalInvoice = billKamar?.TanggalInvoice,
+                    TanggalJatuhTempo = billKamar?.TanggalJatuhTempo,
+
+                    // ✅ dpd lokal
+                    DPD = HitungDpd(billKamar?.TanggalJatuhTempo, snap),
 
                     KamarId = kamarId,
                     NamaItem = billKamar?.NamaItem,
@@ -781,12 +831,24 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         // ============================================================
         var headers = await (
             from k in _db.Kunjungans.AsNoTracking()
-            join p in _db.PendaftaranPasienBarus.AsNoTracking() on k.PasienId equals p.PendaftaranPasienBaruId
-            join d in _db.Dokters.AsNoTracking() on k.DokterId equals d.DokterId
-            join poli in _db.Polikliniks.AsNoTracking() on k.PoliklinikId equals poli.PoliklinikId
-            join a in _db.Asuransis.AsNoTracking() on k.AsuransiId equals a.AsuransiId into ag
-            from a in ag.DefaultIfEmpty()
             where pageIds.Contains(k.KunjunganID) && !k.IsDelete
+
+            join p0 in _db.PendaftaranPasienBarus.AsNoTracking()
+                on k.PasienId equals p0.PendaftaranPasienBaruId into pg
+            from p in pg.DefaultIfEmpty()
+
+            join d0 in _db.Dokters.AsNoTracking()
+                on k.DokterId equals d0.DokterId into dg
+            from d in dg.DefaultIfEmpty()
+
+            join poli0 in _db.Polikliniks.AsNoTracking()
+                on k.PoliklinikId equals poli0.PoliklinikId into polig
+            from poli in polig.DefaultIfEmpty()
+
+            join a0 in _db.Asuransis.AsNoTracking()
+                on k.AsuransiId equals a0.AsuransiId into ag
+            from a in ag.DefaultIfEmpty()
+
             select new
             {
                 k.KunjunganID,
@@ -797,15 +859,16 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 k.PasienId,
                 k.AsuransiId,
 
-                p.NamaLengkap,
-                p.NoRekamMedis,
-                p.TanggalLahir,
+                NamaLengkap = p != null ? p.NamaLengkap : null,
+                NoRekamMedis = p != null ? p.NoRekamMedis : null,
+                TanggalLahir = p != null ? p.TanggalLahir : (DateTime?)null,
 
-                d.NmDokter,
-                poli.NamaPoliklinik,
+                NmDokter = d != null ? d.NmDokter : null,
+                NamaPoliklinik = poli != null ? poli.NamaPoliklinik : null,
                 NamaAsuransi = a != null ? a.NamaAsuransi : null
             }
         ).ToListAsync(ct);
+
 
         var headerById = headers.ToDictionary(x => x.KunjunganID, x => x);
         var pasienIds = headers.Select(x => x.PasienId).Distinct().ToList();
@@ -1675,6 +1738,18 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             default:
                 return baseQuery;
         }
+    }
+
+
+    // ==========================
+    // HELPERS MENGHITUNG DPD
+    // ==========================
+    private static int HitungDpd(DateTimeOffset? jatuhTempo, DateTimeOffset asOf)
+    {
+        if (!jatuhTempo.HasValue) return 0;
+
+        var diff = (asOf.Date - jatuhTempo.Value.Date).Days;
+        return diff > 0 ? diff : 0;
     }
 
 }
