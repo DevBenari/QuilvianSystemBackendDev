@@ -37,14 +37,14 @@ public class NoKwitansiService : INoKwitansiService
         cmd.Transaction = currentTx;
 
         cmd.CommandText = @"
-    INSERT INTO ""KwitansiSequences"" (""KwitansiDate"", ""LastSeq"", ""UpdatedAt"")
-    VALUES (@p_date, 1, @p_now)
-    ON CONFLICT (""KwitansiDate"")
-    DO UPDATE SET
-        ""LastSeq"" = ""KwitansiSequences"".""LastSeq"" + 1,
-        ""UpdatedAt"" = EXCLUDED.""UpdatedAt""
-    RETURNING ""LastSeq"";
-    ";
+            INSERT INTO ""KwitansiSequences"" (""KwitansiDate"", ""LastSeq"", ""UpdatedAt"")
+            VALUES (@p_date, 1, @p_now)
+            ON CONFLICT (""KwitansiDate"")
+            DO UPDATE SET
+                ""LastSeq"" = ""KwitansiSequences"".""LastSeq"" + 1,
+                ""UpdatedAt"" = EXCLUDED.""UpdatedAt""
+            RETURNING ""LastSeq"";
+            ";
 
         var pDate = cmd.CreateParameter();
         pDate.ParameterName = "@p_date";
