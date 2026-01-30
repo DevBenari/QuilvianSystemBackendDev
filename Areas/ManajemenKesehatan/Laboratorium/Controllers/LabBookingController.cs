@@ -1313,14 +1313,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
             // whitelist sorting (hindari error kalau user kirim field random)
             var allowedOrderBy = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-    {
-        "CreateDateTime",
-        "TglBooking",
-        "TglPemeriksaan",
-        "NoOrder",
-        "StatusBookingLab",
-        "StatusPembayaran"
-    };
+            {
+                "CreateDateTime",
+                "TglBooking",
+                "TglPemeriksaan",
+                "NoOrder",
+                "StatusBookingLab",
+                "StatusPembayaran"
+            };
 
             if (string.IsNullOrWhiteSpace(orderBy) || !allowedOrderBy.Contains(orderBy))
                 orderBy = "CreateDateTime";
@@ -1448,36 +1448,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 parentQuery = parentQuery.Where(b =>
                     b.CreateDateTime >= start && b.CreateDateTime < endExclusive);
-            }
-
-            // Filter by NamaLab (JOIN + Distinct) - case insensitive PostgreSQL
-            if (!string.IsNullOrWhiteSpace(namaLab))
-            {
-                var nl = namaLab.Trim();
-
-                parentQuery =
-                    (from b in parentQuery
-                     join d in _applicationDbContext.LabBookingDetails.AsNoTracking()
-                        on b.BookingLabId equals d.BookingLabId
-                     join lab in _applicationDbContext.Labs.AsNoTracking()
-                        on d.LabId equals lab.LabId
-                     where EF.Functions.ILike(lab.NamaLab, $"%{nl}%")
-                     select b)
-                    .Distinct();
-            }
-
-            // Filter by labId (JOIN + Distinct)
-            if (labId.HasValue)
-            {
-                var lid = labId.Value;
-
-                parentQuery =
-                    (from b in parentQuery
-                     join d in _applicationDbContext.LabBookingDetails.AsNoTracking()
-                        on b.BookingLabId equals d.BookingLabId
-                     where d.LabId == lid
-                     select b)
-                    .Distinct();
             }
 
             // =========================================
@@ -1617,36 +1587,76 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 .ToList();
 
             // =========================================
-            // 6) LOAD DETAILS (AMAN DARI NULL CAST)
+            // 6) LOAD DETAILS (LEFT JOIN dari PARENT -> DETAILS -> MASTER)
             // =========================================
-            var details = await (
-                from d in _applicationDbContext.LabBookingDetails.AsNoTracking()
-                join lp in _applicationDbContext.LabPemeriksaans.AsNoTracking()
-                    on d.PemeriksaanLabId equals lp.PemeriksaanLabId into lpGroup
-                from lp in lpGroup.DefaultIfEmpty()
 
-                join lab in _applicationDbContext.Labs.AsNoTracking()
-                    on d.LabId equals lab.LabId into labGroup
-                from lab in labGroup.DefaultIfEmpty()
+            // siapkan source details yang sudah difilter IsDelete (taruh di sini supaya LEFT JOIN tetap LEFT)
+            var detailSource = _applicationDbContext.LabBookingDetails
+                .AsNoTracking()
+                .Where(d =>
+                    d.BookingLabId.HasValue &&
+                    pagedIds.Contains(d.BookingLabId.Value) &&
+                    (d.IsDelete == false || d.IsDelete == null));
 
-                where d.BookingLabId.HasValue
-                      && pagedIds.Contains(d.BookingLabId.Value)
-                      && (d.IsDelete == false || d.IsDelete == null)
+            var detailQ =
+                from b in _applicationDbContext.LabBookings.AsNoTracking()
+                where pagedIds.Contains(b.BookingLabId)
 
-                select new
+                // LEFT JOIN details
+                join d0 in detailSource
+                    on b.BookingLabId equals d0.BookingLabId!.Value into dg
+                from d in dg.DefaultIfEmpty()
+
+                    // LEFT JOIN pemeriksaan
+                join lp0 in _applicationDbContext.LabPemeriksaans.AsNoTracking()
+                    on d.PemeriksaanLabId equals lp0.PemeriksaanLabId into lpg
+                from lp in lpg.DefaultIfEmpty()
+
+                    // LEFT JOIN lab
+                join lab0 in _applicationDbContext.Labs.AsNoTracking()
+                    on d.LabId equals lab0.LabId into labg
+                from lab in labg.DefaultIfEmpty()
+
+                select new { b.BookingLabId, d, lp, lab };
+
+            // ✅ filter detail berdasarkan namaLab (kalau request namaLab, memang harus match)
+            if (!string.IsNullOrWhiteSpace(namaLab))
+            {
+                var nl = namaLab.Trim();
+                detailQ = detailQ.Where(x =>
+                    x.d != null &&
+                    x.lab != null &&
+                    EF.Functions.ILike(x.lab.NamaLab, $"%{nl}%"));
+            }
+
+            // ✅ filter detail berdasarkan labId
+            if (labId.HasValue)
+            {
+                var lid = labId.Value;
+                detailQ = detailQ.Where(x => x.d != null && x.d.LabId == lid);
+            }
+
+            // Ambil hasil details (buang row hasil left join yang detailnya null)
+            var details = await detailQ
+                .Where(x => x.d != null)
+                .Select(x => new
                 {
-                    BookingLabId = d.BookingLabId.Value,
-                    d.DetailBookingLabId,
-                    d.NoOrder,
-                    NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
-                    HargaPemeriksaan = lp != null ? (decimal?)lp.HargaPemeriksaan : null,
-                    NamaLab = lab != null ? lab.NamaLab : null,
-                    d.Satuan,
-                    d.IsDelete
+                    BookingLabId = x.BookingLabId,
+                    x.d!.DetailBookingLabId,
+                    x.d.NoOrder,
+
+                    // ✅ tampilkan LabId
+                    LabId = x.d.LabId,
+
+                    NamaPemeriksaan = x.lp != null ? x.lp.NamaPemeriksaan : null,
+                    HargaPemeriksaan = x.lp != null ? (decimal?)x.lp.HargaPemeriksaan : null,
+                    NamaLab = x.lab != null ? x.lab.NamaLab : null,
+                    x.d.Satuan,
+                    x.d.IsDelete
                 })
                 .ToListAsync();
 
-            // lookup biar merge cepat (tanpa Where berulang)
+            // lookup biar merge cepat
             var detailLookup = details
                 .GroupBy(x => x.BookingLabId)
                 .ToDictionary(g => g.Key, g => g.ToList());
