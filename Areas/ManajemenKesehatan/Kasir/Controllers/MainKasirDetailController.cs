@@ -432,7 +432,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         public IActionResult Paged(
         int page = 1,
         int perPage = 10,
-        string? search = null,
+        //string? search = null,
+        Guid? kunjunganId = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -443,25 +444,54 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         {
 
             // Query data
-            var query = (from a in _applicationDbContext.MainKasirDetails.AsNoTracking()
-                         where a.IsDelete != true
-                         join u0 in _applicationDbContext.UserActives.AsNoTracking()
-                             on a.CreateBy equals u0.UserActiveId into uj
-                         from u in uj.DefaultIfEmpty()
-                         select new
-                         {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = u != null ? u.FullName : null, // ✅ kalau null tetap tampil
-                             a.MainKasirDetailId,
-                             a.MainKasirId,
-                             a.MetodePembayaranId,
-                             a.ReferenceId,
-                             a.NamaMetode,
-                             a.NominalPembayaran,
-                             a.Keterangan,
-                             a.TglPembayaran,
-                         });
+            var query =
+                from d in _applicationDbContext.MainKasirDetails.AsNoTracking()
+                where d.IsDelete != true
+
+                join mk0 in _applicationDbContext.MainKasirs.AsNoTracking()
+                    on d.MainKasirId equals mk0.KasirId into mkj
+                from mk in mkj.DefaultIfEmpty()
+
+                join pp0 in _applicationDbContext.PendaftaranPasiens.AsNoTracking()
+                    on (Guid?)(mk != null ? mk.PasienId : null) equals pp0.PendaftaranPasienId into ppj
+                from pp in ppj.DefaultIfEmpty()
+
+                join k0 in _applicationDbContext.Kunjungans.AsNoTracking()
+                    on (Guid?)(mk != null ? mk.KunjunganId : null) equals k0.KunjunganID into kj
+                from k in kj.DefaultIfEmpty()
+
+                join a0 in _applicationDbContext.Asuransis.AsNoTracking()
+                    on (Guid?)(k != null ? k.AsuransiId : null) equals a0.AsuransiId into aj
+                from a in aj.DefaultIfEmpty()
+
+                join u0 in _applicationDbContext.UserActives.AsNoTracking()
+                    on d.CreateBy equals u0.UserActiveId into uj
+                from u in uj.DefaultIfEmpty()
+
+                select new
+                {
+                    d.CreateDateTime,
+                    d.CreateBy,
+                    CreateByName = u != null ? u.FullName : null,
+
+                    d.MainKasirDetailId,
+                    d.MainKasirId,
+                    d.MetodePembayaranId,
+                    d.ReferenceId,
+                    d.NamaMetode,
+                    d.NominalPembayaran,
+                    d.Keterangan,
+                    d.TglPembayaran,
+                    d.NoKwitansi,
+                    mk.GrandTotalPembayaran,
+
+                    PasienId = (Guid?)(mk != null ? mk.PasienId : null),
+                    KunjunganId = (Guid?)(mk != null ? mk.KunjunganId : null),
+                    NoRekamMedis = pp != null ? pp.NoRekamMedis : null,
+                    NamaPasien = pp != null ? pp.NamaLengkap : null,
+                    AsuransiId = (Guid?)(k != null ? k.AsuransiId : null),
+                    NamaAsuransi = a != null ? a.NamaAsuransi : null,
+                };
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             //if (!string.IsNullOrWhiteSpace(search))
@@ -471,6 +501,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             //        EF.Functions.ILike(u.NamaDiskon, search)
             //    );
             //}
+
+            // filter based on kunjungan id
+            if (kunjunganId.HasValue)
+            {
+                query = query.Where(u=>u.KunjunganId == kunjunganId.Value);
+            }
 
             //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)

@@ -45,6 +45,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         private readonly INoKwitansiService _noKwitansiService;
         private readonly IGenerateUrutanAngsuran _generateUrutanAngsuran;
         private readonly ICountAngsuran _countAngsuran;
+        private readonly IBillingKunjunganReadService _billingKunjunganReadService;
 
         public MainKasirController(
             ApplicationDbContext applicationDbContext,
@@ -57,7 +58,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             ITTDService ttdService,
             INoKwitansiService noKwitansiService,
             IGenerateUrutanAngsuran generateUrutanAngsuran,
-            ICountAngsuran countAngsuran)
+            ICountAngsuran countAngsuran,
+            IBillingKunjunganReadService billingKunjunganReadService)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
@@ -70,6 +72,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             _noKwitansiService = noKwitansiService;
             _generateUrutanAngsuran = generateUrutanAngsuran;
             _countAngsuran = countAngsuran;
+            _billingKunjunganReadService = billingKunjunganReadService;
         }
 
         public static string HitungUmurLengkap(DateTime? tanggalLahir)
@@ -633,10 +636,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         }
 
         [HttpGet("Billing-Kasir/{kunjunganId}")]
-        public async Task<IActionResult> GetBillingKasirByKunjunganId(Guid kunjunganId)
+        public async Task<IActionResult> GetBillingKasirByKunjunganId(
+            Guid kunjunganId,
+            [FromQuery] DateTime? asOf = null,
+            CancellationToken ct = default)
         {
             // =========================
-            // 1) Headers (SEMUA MainKasir)
+            // 0) Billing keseluruhan (service)
+            // =========================
+            var billingDto = await _billingKunjunganReadService
+                .GetBillingKeseluruhanAsync(kunjunganId, asOf, ct);
+
+            // =========================
+            // 1) Headers (SEMUA MainKasir) + LEFT JOIN Pasien
             // =========================
             var headers = await (
                 from x in _applicationDbContext.MainKasirs.AsNoTracking()
@@ -652,7 +664,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     x.KunjunganId,
                     x.PasienId,
 
-                    // ✅ tambahan pasien
                     NamaLengkap = p != null ? p.NamaLengkap : null,
                     NoRekamMedis = p != null ? p.NoRekamMedis : null,
 
@@ -674,47 +685,54 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     x.UpdateDateTime,
                     UpdateBy = (Guid?)x.UpdateBy
                 }
-            ).ToListAsync();
+            ).ToListAsync(ct);
 
-            if (headers.Count == 0)
-                return NotFound(new { message = "MainKasir untuk kunjungan ini tidak ditemukan." });
-
+            // kalau belum ada mainkasir sama sekali, tetap balikin billing + pembayaran kosong
             var kasirIds = headers.Select(h => h.KasirId).ToList();
 
             // =========================
-            // 2) Details untuk semua KasirId (ONE query)
+            // 2) Details (ONE query) - Opsi B: anonymous -> ToList -> Cast<dynamic>
             // =========================
-            var details = await _applicationDbContext.MainKasirDetails
-                .AsNoTracking()
-                .Where(d => kasirIds.Contains((Guid)d.MainKasirId!) && d.IsDelete != true)
-                .OrderBy(d => d.TglPembayaran ?? DateTime.MaxValue)
-                .ThenBy(d => d.CreateDateTime)
-                .Select(d => new
-                {
-                    d.MainKasirDetailId,
-                    d.MainKasirId,
-                    d.MetodePembayaranId,
-                    d.ReferenceId,
-                    d.KunjunganId,
-                    d.PasienId,
-                    d.TotalPembayaran,
-                    d.SisaPembayaran,
-                    d.NoKwitansi,
-                    d.AngsuranKe,
-                    d.NamaMetode,
-                    d.NominalPembayaran,
-                    d.Keterangan,
-                    d.TglPembayaran,
+            var details = new List<dynamic>();
 
-                    d.CreateDateTime,
-                    CreateBy = (Guid?)d.CreateBy,
-                    d.UpdateDateTime,
-                    UpdateBy = (Guid?)d.UpdateBy
-                })
-                .ToListAsync();
+            if (kasirIds.Count > 0)
+            {
+                var tmpDetails = await _applicationDbContext.MainKasirDetails
+                    .AsNoTracking()
+                    .Where(d => d.MainKasirId != null
+                                && kasirIds.Contains(d.MainKasirId.Value)
+                                && d.IsDelete != true)
+                    .OrderBy(d => d.TglPembayaran ?? DateTime.MaxValue)
+                    .ThenBy(d => d.CreateDateTime)
+                    .Select(d => new
+                    {
+                        d.MainKasirDetailId,
+                        MainKasirId = d.MainKasirId!.Value,
+                        d.MetodePembayaranId,
+                        d.ReferenceId,
+                        d.KunjunganId,
+                        d.PasienId,
+                        d.TotalPembayaran,
+                        d.SisaPembayaran,
+                        d.NoKwitansi,
+                        d.AngsuranKe,
+                        d.NamaMetode,
+                        d.NominalPembayaran,
+                        d.Keterangan,
+                        d.TglPembayaran,
 
-            // lookup details per KasirId (cepat dan aman kalau kosong)
-            var detailLookup = details.ToLookup(x => x.MainKasirId);
+                        d.CreateDateTime,
+                        CreateBy = (Guid?)d.CreateBy,
+                        d.UpdateDateTime,
+                        UpdateBy = (Guid?)d.UpdateBy
+                    })
+                    .ToListAsync(ct);
+
+                details = tmpDetails.Cast<dynamic>().ToList();
+            }
+
+            // lookup detail per KasirId (cepat dan aman kalau kosong)
+            var detailLookup = details.ToLookup(d => (Guid)d.MainKasirId);
 
             // =========================
             // 3) Load nama user sekali (hindari N+1)
@@ -730,8 +748,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
             foreach (var d in details)
             {
-                if (d.CreateBy.HasValue) userIds.Add(d.CreateBy.Value);
-                if (d.UpdateBy.HasValue) userIds.Add(d.UpdateBy.Value);
+                Guid? cb = (Guid?)d.CreateBy;
+                Guid? ub = (Guid?)d.UpdateBy;
+
+                if (cb.HasValue) userIds.Add(cb.Value);
+                if (ub.HasValue) userIds.Add(ub.Value);
             }
 
             var userDict = userIds.Count == 0
@@ -740,7 +761,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     .AsNoTracking()
                     .Where(u => userIds.Contains(u.UserActiveId))
                     .Select(u => new { u.UserActiveId, u.FullName })
-                    .ToDictionaryAsync(x => x.UserActiveId, x => x.FullName);
+                    .ToDictionaryAsync(x => x.UserActiveId, x => x.FullName, ct);
 
             string? GetUserName(Guid? userId)
                 => userId.HasValue && userDict.TryGetValue(userId.Value, out var name) ? name : null;
@@ -748,7 +769,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             // =========================
             // 4) Compose response
             // =========================
-            var rows = headers.Select(h => new
+            var kasirs = headers.Select(h => new
             {
                 Header = new
                 {
@@ -757,6 +778,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     h.PasienId,
                     h.NamaLengkap,
                     h.NoRekamMedis,
+
                     h.InvoiceBilling,
                     h.JumlahAngsuran,
                     h.StatusPembayaran,
@@ -780,41 +802,51 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     UpdateByName = GetUserName(h.UpdateBy),
                 },
 
-                Details = detailLookup[h.KasirId].Select(d => new
-                {
-                    d.MainKasirDetailId,
-                    d.MainKasirId,
-                    d.MetodePembayaranId,
-                    d.ReferenceId,
-                    d.KunjunganId,
-                    d.PasienId,
-                    d.TotalPembayaran,
-                    d.SisaPembayaran,
-                    d.NoKwitansi,
-                    d.AngsuranKe,
-                    d.NamaMetode,
-                    d.NominalPembayaran,
-                    d.Keterangan,
-                    d.TglPembayaran,
+                Details = detailLookup[h.KasirId]
+                    .Select(d => new
+                    {
+                        MainKasirDetailId = (Guid)d.MainKasirDetailId,
+                        MainKasirId = (Guid)d.MainKasirId,
+                        MetodePembayaranId = (Guid?)d.MetodePembayaranId,
+                        ReferenceId = (Guid?)d.ReferenceId,
+                        KunjunganId = (Guid?)d.KunjunganId,
+                        PasienId = (Guid?)d.PasienId,
+                        TotalPembayaran = (decimal?)d.TotalPembayaran,
+                        SisaPembayaran = (decimal?)d.SisaPembayaran,
+                        NoKwitansi = (string?)d.NoKwitansi,
+                        AngsuranKe = (decimal?)d.AngsuranKe,
+                        NamaMetode = (string?)d.NamaMetode,
+                        NominalPembayaran = (decimal?)d.NominalPembayaran,
+                        Keterangan = (string?)d.Keterangan,
+                        TglPembayaran = (DateTime?)d.TglPembayaran,
 
-                    d.CreateDateTime,
-                    d.CreateBy,
-                    CreateByName = GetUserName(d.CreateBy),
+                        CreateDateTime = (DateTimeOffset?)d.CreateDateTime,
+                        CreateBy = (Guid?)d.CreateBy,
+                        CreateByName = GetUserName((Guid?)d.CreateBy),
 
-                    d.UpdateDateTime,
-                    d.UpdateBy,
-                    UpdateByName = GetUserName(d.UpdateBy),
-                }).ToList()
+                        UpdateDateTime = (DateTimeOffset?)d.UpdateDateTime,
+                        UpdateBy = (Guid?)d.UpdateBy,
+                        UpdateByName = GetUserName((Guid?)d.UpdateBy),
+                    })
+                    .ToList()
             }).ToList();
 
             return Ok(new
             {
-                message = "Berhasil mengambil SEMUA MainKasir + Details (by KunjunganId) || 200 OK",
+                status = "success",
                 data = new
                 {
                     KunjunganId = kunjunganId,
-                    TotalKasir = rows.Count,
-                    Kasirs = rows
+
+                    // billing keseluruhan dari service
+                    Billing = billingDto,
+
+                    // pembayaran (kasir+detail) tetap ditampilkan walau detail kosong
+                    Pembayaran = new
+                    {
+                        TotalKasir = kasirs.Count,
+                        Kasirs = kasirs
+                    }
                 }
             });
         }
