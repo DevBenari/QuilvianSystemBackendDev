@@ -83,6 +83,13 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 on k.AsuransiId equals a0.AsuransiId into ag
             from a in ag.DefaultIfEmpty()
 
+            // ✅ LEFT JOIN AsuransiPasien, tapi khusus yang match AsuransiId kunjungan
+            join ap0 in _db.AsuransiPasiens.AsNoTracking()
+                on new { PasienId = k.PasienId, AsuransiId = k.AsuransiId }
+                equals new { PasienId = (Guid?)ap0.PasienId, AsuransiId = (Guid?)ap0.AsuransiId } into apg
+            from ap in apg.DefaultIfEmpty()
+
+
             select new
             {
                 k.KunjunganID,
@@ -98,7 +105,8 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
                 NmDokter = d != null ? d.NmDokter : null,
                 NamaPoliklinik = poli != null ? poli.NamaPoliklinik : null,
-                NamaAsuransi = a != null ? a.NamaAsuransi : null
+                NamaAsuransi = a != null ? a.NamaAsuransi : null,
+                NoPolis = ap != null ? ap.NoPolis : null
             }
         ).FirstOrDefaultAsync(ct);
 
@@ -849,6 +857,11 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 on k.AsuransiId equals a0.AsuransiId into ag
             from a in ag.DefaultIfEmpty()
 
+                // ✅ LEFT JOIN AsuransiPasien, tapi khusus yang match AsuransiId kunjungan
+            join ap0 in _db.AsuransiPasiens.AsNoTracking()
+                on new { PasienId = k.PasienId, AsuransiId = k.AsuransiId }
+                equals new { PasienId = (Guid?)ap0.PasienId, AsuransiId = (Guid?)ap0.AsuransiId } into apg
+            from ap in apg.DefaultIfEmpty()
             select new
             {
                 k.KunjunganID,
@@ -865,7 +878,8 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
                 NmDokter = d != null ? d.NmDokter : null,
                 NamaPoliklinik = poli != null ? poli.NamaPoliklinik : null,
-                NamaAsuransi = a != null ? a.NamaAsuransi : null
+                NamaAsuransi = a != null ? a.NamaAsuransi : null,
+                NoPolis = ap != null ? ap.NoPolis : null,
             }
         ).ToListAsync(ct);
 
