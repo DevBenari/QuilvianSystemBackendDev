@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -12,9 +13,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260129075642_poupadd")]
+    partial class poupadd
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -428,43 +430,42 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<DateTimeOffset>("DeleteDateTime")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime?>("ExpiredDate")
+                    b.Property<DateTime>("ExpiredDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<decimal?>("GrandTotal")
+                    b.Property<decimal>("GrandTotal")
                         .HasColumnType("numeric");
 
-                    b.Property<DateTime?>("InvoiceDate")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<string>("InvoiceNumber")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<bool>("IsDelete")
                         .HasColumnType("boolean");
 
                     b.Property<string>("Keterangan")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("PurchaseOrderNumber")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("PurchaseRequestNumber")
+                        .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<decimal?>("QtyTotal")
+                    b.Property<decimal>("QtyTotal")
                         .HasColumnType("numeric");
 
-                    b.Property<decimal?>("RemainingDay")
+                    b.Property<decimal>("RemainingDay")
                         .HasColumnType("numeric");
 
                     b.Property<string>("RequestType")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("StatusPO")
-                        .HasColumnType("text");
-
-                    b.Property<string>("SupplierCode")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -472,7 +473,11 @@ namespace QuilvianSystemBackendDev.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<DateTime>("TanggalTerimaInvoice")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("TermOfPayment")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<Guid>("UpdateBy")
@@ -482,6 +487,7 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("UserAccess")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.HasKey("PurchaseOrderId");
@@ -496,6 +502,7 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("Category")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<Guid>("CreateBy")
@@ -510,37 +517,42 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<DateTimeOffset>("DeleteDateTime")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<decimal?>("Discount")
+                    b.Property<decimal>("Discount")
                         .HasColumnType("numeric");
 
                     b.Property<bool>("IsDelete")
                         .HasColumnType("boolean");
 
                     b.Property<string>("JenisPermintaan")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("Keterangan")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("Layanan")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("Measurement")
+                        .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<decimal?>("Price")
+                    b.Property<decimal>("Price")
                         .HasColumnType("numeric");
 
                     b.Property<string>("ProductName")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<Guid>("PurchaseOrderId")
                         .HasColumnType("uuid");
 
-                    b.Property<decimal?>("Qty")
+                    b.Property<decimal>("Qty")
                         .HasColumnType("numeric");
 
-                    b.Property<decimal?>("SubTotal")
+                    b.Property<decimal>("SubTotal")
                         .HasColumnType("numeric");
 
                     b.Property<Guid>("UpdateBy")

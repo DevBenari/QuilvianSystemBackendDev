@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -12,9 +13,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260129091500_poupaddnew")]
+    partial class poupaddnew
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -496,6 +498,7 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("Category")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<Guid>("CreateBy")
@@ -510,37 +513,42 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<DateTimeOffset>("DeleteDateTime")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<decimal?>("Discount")
+                    b.Property<decimal>("Discount")
                         .HasColumnType("numeric");
 
                     b.Property<bool>("IsDelete")
                         .HasColumnType("boolean");
 
                     b.Property<string>("JenisPermintaan")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("Keterangan")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("Layanan")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("Measurement")
+                        .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<decimal?>("Price")
+                    b.Property<decimal>("Price")
                         .HasColumnType("numeric");
 
                     b.Property<string>("ProductName")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<Guid>("PurchaseOrderId")
                         .HasColumnType("uuid");
 
-                    b.Property<decimal?>("Qty")
+                    b.Property<decimal>("Qty")
                         .HasColumnType("numeric");
 
-                    b.Property<decimal?>("SubTotal")
+                    b.Property<decimal>("SubTotal")
                         .HasColumnType("numeric");
 
                     b.Property<Guid>("UpdateBy")

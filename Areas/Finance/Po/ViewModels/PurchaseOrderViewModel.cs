@@ -1,15 +1,9 @@
-﻿using QuilvianSystemBackendDev.Models;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using QuilvianSystemBackendDev.Areas.Finance.Po.Models;
 
-namespace QuilvianSystemBackendDev.Areas.Finance.Po.Models
+namespace QuilvianSystemBackendDev.Areas.Finance.Po.ViewModels
 {
-    [Table("PurchaseOrder", Schema = "public")]
-    public class PurchaseOrder : UserActivity
+    public class PurchaseOrderViewModel
     {
-        [Key]
-        public Guid PurchaseOrderId { get; set; }
-
         public string? PurchaseRequestNumber { get; set; }
         public string? PurchaseOrderNumber { get; set; }
         public DateTime? InvoiceDate { get; set; }
@@ -29,8 +23,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Models
         public string? StatusPO { get; set; }
         public string? Keterangan { get; set; }
 
-        // Navigation Property
-        public ICollection<PurchaseOrderItem> PurchaseOrderItems { get; set; }
-
+        // 🔑 INIT supaya tidak null
+        public List<PurchaseOrderItemViewModel> Items { get; set; } = new();
     }
+
 }
