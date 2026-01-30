@@ -42,6 +42,10 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                     SupplierId = Guid.NewGuid(),
                     SupplierCode = dto.SupplierCode!,
                     SupplierName = dto.SupplierName!,
+                    ContactPerson = "-",
+                    Address = "-",
+                    Telepon = "-",
+                    Email = "-",
                     IsActive = true
                 };
 
