@@ -180,6 +180,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
                 var sisaBefore = totalTagihan - totalPaidBefore;
 
+                // jika bayar lebih dri sisa maka di tolak
+                if (vm.NominalPembayaran > sisaBefore)
+                {
+                    return Conflict(new { message = "Biaya pembayaran melebihi tagihan" });
+                }
+
                 // Jika sudah lunas, tolak pembayaran tambahan
                 if (sisaBefore <= 0)
                     return Conflict(new { message = "Tagihan sudah lunas. Tidak dapat menambah pembayaran lagi." });
@@ -295,6 +301,200 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             }
         }
 
+        [HttpPost("split")]
+        public async Task<IActionResult> CreateSplit(
+        [FromBody] List<MainKasirDetailViewModel> vms,
+        CancellationToken ct)
+        {
+            if (vms == null || vms.Count == 0)
+                return BadRequest(new { message = "Data tidak valid / kosong." });
+
+            if (!ModelState.IsValid)
+                return BadRequest(new { message = "ModelState tidak valid." });
+
+            // semua baris harus untuk header yang sama
+            var mainKasirId = vms[0].MainKasirId;
+            if (mainKasirId == Guid.Empty)
+                return BadRequest(new { message = "MainKasirId wajib diisi." });
+
+            if (vms.Any(x => x.MainKasirId != mainKasirId))
+                return BadRequest(new { message = "Semua item harus punya MainKasirId yang sama." });
+
+            if (!await _applicationDbContext.Database.CanConnectAsync(ct))
+                return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+
+            // Ambil User ID dari JWT Claims
+            var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(emailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var userActiveId = await _applicationDbContext.UserActives
+                .Where(u => u.Email == emailLogin)
+                .Select(u => (Guid?)u.UserActiveId)
+                .FirstOrDefaultAsync(ct);
+
+            if (!userActiveId.HasValue)
+                return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+
+            // ✅ disarankan serializable supaya aman dari concurrent split-payment
+            await using var trx = await _applicationDbContext.Database
+                .BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
+
+            try
+            {
+                // 1) Ambil header MainKasir (tracked)
+                var header = await _applicationDbContext.MainKasirs
+                    .FirstOrDefaultAsync(h => h.KasirId == mainKasirId && !h.IsDelete, ct);
+
+                if (header == null)
+                    return NotFound(new { message = "MainKasir (header) tidak ditemukan." });
+
+                if (!header.KunjunganId.HasValue || header.KunjunganId.Value == Guid.Empty)
+                    return StatusCode(500, new { message = "Header tidak memiliki KunjunganId yang valid." });
+
+                var kunjunganId = header.KunjunganId.Value;
+
+                // OPTIONAL: advisory lock per kunjungan (PostgreSQL) biar 100% aman
+                // await _applicationDbContext.Database.ExecuteSqlRawAsync(
+                //     "SELECT pg_advisory_xact_lock({0});",
+                //     new object[] { StableHash32($"kasir:{kunjunganId}") },
+                //     ct);
+
+                // 2) Total tagihan (ambil dari header)
+                var totalTagihan = header.GrandTotalPembayaran ?? 0m;
+                if (totalTagihan <= 0)
+                    return BadRequest(new { message = "GrandTotalPembayaran pada header belum valid (<= 0)." });
+
+                // 3) Total sudah dibayar sebelumnya (histori detail)
+                var totalPaidBefore = await _applicationDbContext.MainKasirDetails
+                    .AsNoTracking()
+                    .Where(d => d.MainKasirId == header.KasirId && d.IsDelete != true)
+                    .SumAsync(d => (decimal?)(d.NominalPembayaran ?? 0m), ct) ?? 0m;
+
+                // total sisa sebelum split (berdasarkan histori)
+                var sisaStart = totalTagihan - totalPaidBefore;
+                if (sisaStart <= 0)
+                    return Conflict(new { message = "Tagihan sudah lunas. Tidak dapat menambah pembayaran lagi." });
+
+                // validasi: total split tidak boleh melebihi sisa (kalau kamu mau strict)
+                var totalSplit = vms.Sum(x => x.NominalPembayaran ?? 0m);
+                if (totalSplit <= 0)
+                    return BadRequest(new { message = "Total NominalPembayaran wajib > 0." });
+
+                if (totalSplit > sisaStart)
+                    return Conflict(new { message = "Total pembayaran melebihi sisa tagihan." });
+
+                // sisa akhir setelah semua metode dibayarkan
+                var sisaAfterFinal = sisaStart - totalSplit;
+
+                // angsuranKe dihitung sekali (karena 1 transaksi = 1 angsuran)
+                var angsuranKe = await _generateUrutanAngsuran.GenerateAsync(
+                    kunjunganId,
+                    sisaAfterFinal,
+                    ct
+                );
+
+                // status header berdasarkan sisa akhir
+                var finalStatus = (sisaAfterFinal <= 0) ? "Lunas" : "Cicil";
+
+                var tglPembayaran = DateTimeOffset.Now;
+
+                // running sisa per detail
+                decimal cumulativePaid = 0m;
+
+                foreach (var vm in vms)
+                {
+                    var bayarNow = vm.NominalPembayaran ?? 0m;
+                    if (bayarNow <= 0) continue;
+
+                    cumulativePaid += bayarNow;
+
+                    var sisaPerDetail = sisaStart - cumulativePaid;
+                    if (sisaPerDetail < 0) sisaPerDetail = 0; // safety
+
+                    var detail = new MainKasirDetail
+                    {
+                        MainKasirDetailId = Guid.NewGuid(),
+                        MainKasirId = header.KasirId,
+
+                        KunjunganId = header.KunjunganId,
+                        PasienId = header.PasienId,
+
+                        TotalPembayaran = totalTagihan,
+                        NominalPembayaran = bayarNow,
+
+                        // ✅ ini yang berubah: sisa per baris sesuai urutan pembayaran
+                        SisaPembayaran = sisaPerDetail,
+
+                        // ✅ semua baris 1 transaksi -> 1 angsuran
+                        AngsuranKe = angsuranKe,
+
+                        MetodePembayaranId = vm.MetodePembayaranId,
+                        ReferenceId = vm.ReferenceId,
+                        NamaMetode = vm.NamaMetode,
+                        Keterangan = vm.Keterangan,
+
+                        // kwitansi unik per baris
+                        NoKwitansi = await _noKwitansiService.GenerateNoKwitansiAsync(tglPembayaran, ct),
+
+                        // kamu bilang tidak mau UTC
+                        TglPembayaran = tglPembayaran.DateTime,
+
+                        CreateBy = userActiveId.Value,
+                        CreateDateTime = DateTimeOffset.Now,
+                    };
+
+                    _applicationDbContext.MainKasirDetails.Add(detail);
+                };
+                // 10) Update header
+                header.StatusPembayaran = finalStatus;
+                header.TglPembayaran = tglPembayaran;
+                header.UpdateBy = userActiveId.Value;
+                header.UpdateDateTime = DateTimeOffset.UtcNow;
+
+                // 11) Save
+                var saved = await _applicationDbContext.SaveChangesAsync(ct);
+                if (saved <= 0)
+                {
+                    await trx.RollbackAsync(ct);
+                    return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
+                }
+
+                // 12) Kalau berubah jadi lunas, update billing
+                int affectedBilling = 0;
+                var becameLunas = (sisaStart > 0 && sisaAfterFinal <= 0);
+                if (becameLunas)
+                {
+                    affectedBilling = await _billingService.MarkBillingAsPaidAsync(kunjunganId);
+                }
+
+                await trx.CommitAsync(ct);
+
+                return Created("", new
+                {
+                    message = "Split payment berhasil || 201 Created",
+                    mainKasirId = header.KasirId,
+                    kunjunganId = kunjunganId,
+                    angsuranKe = angsuranKe,
+                    totalTagihan = totalTagihan,
+                    totalPaidBefore = totalPaidBefore,
+                    sisaPembayaran = sisaAfterFinal,
+                    statusPembayaran = finalStatus,
+
+                    billingUpdated = affectedBilling
+                });
+            }
+            catch (DbUpdateException dbEx)
+            {
+                await trx.RollbackAsync(ct);
+                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message ?? dbEx.Message}" });
+            }
+            catch (Exception ex)
+            {
+                await trx.RollbackAsync(ct);
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
 
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] MainKasirDetailViewModel vm)

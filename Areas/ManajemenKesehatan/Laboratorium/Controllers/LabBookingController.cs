@@ -1313,14 +1313,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
             // whitelist sorting (hindari error kalau user kirim field random)
             var allowedOrderBy = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-            {
-                "CreateDateTime",
-                "TglBooking",
-                "TglPemeriksaan",
-                "NoOrder",
-                "StatusBookingLab",
-                "StatusPembayaran"
-            };
+    {
+        "CreateDateTime",
+        "TglBooking",
+        "TglPemeriksaan",
+        "NoOrder",
+        "StatusBookingLab",
+        "StatusPembayaran"
+    };
 
             if (string.IsNullOrWhiteSpace(orderBy) || !allowedOrderBy.Contains(orderBy))
                 orderBy = "CreateDateTime";
@@ -1353,7 +1353,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         on b.KunjunganId equals k.KunjunganID
                     where k.JenisKunjungan == jk.ToString()
                     select b;
-                // tidak perlu Distinct karena KunjunganID PK (1 booking -> 1 kunjungan)
             }
 
             // Filter periode (range-based)
@@ -1372,7 +1371,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         break;
 
                     case PeriodeFilter.ThisWeek:
-                        // start week = Senin (kalau mau Minggu, ubah rumusnya)
                         int diff = (7 + ((int)todayUtc.DayOfWeek == 0 ? 7 : (int)todayUtc.DayOfWeek) - (int)DayOfWeek.Monday) % 7;
                         var startWeek = todayUtc.AddDays(-diff);
                         rangeStart = startWeek;
@@ -1440,7 +1438,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 }
             }
 
-            // Filter by date range (tanpa tick trick, pakai endExclusive)
+            // Filter by date range (pakai endExclusive)
             if (startDate.HasValue && endDate.HasValue)
             {
                 var start = startDate.Value.Date;
@@ -1448,6 +1446,36 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 parentQuery = parentQuery.Where(b =>
                     b.CreateDateTime >= start && b.CreateDateTime < endExclusive);
+            }
+
+            // ✅ Filter by NamaLab (JOIN + Distinct)
+            if (!string.IsNullOrWhiteSpace(namaLab))
+            {
+                var nl = namaLab.Trim();
+
+                parentQuery =
+                    (from b in parentQuery
+                     join d in _applicationDbContext.LabBookingDetails.AsNoTracking()
+                         on b.BookingLabId equals d.BookingLabId
+                     join lab in _applicationDbContext.Labs.AsNoTracking()
+                         on d.LabId equals lab.LabId
+                     where EF.Functions.ILike(lab.NamaLab, $"%{nl}%")
+                     select b)
+                    .Distinct();
+            }
+
+            // ✅ Filter by labId (JOIN + Distinct)
+            if (labId.HasValue)
+            {
+                var lid = labId.Value;
+
+                parentQuery =
+                    (from b in parentQuery
+                     join d in _applicationDbContext.LabBookingDetails.AsNoTracking()
+                         on b.BookingLabId equals d.BookingLabId
+                     where d.LabId == lid
+                     select b)
+                    .Distinct();
             }
 
             // =========================================
@@ -1491,13 +1519,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 .Select(b => b.BookingLabId)
                 .ToListAsync();
 
-            // mapping untuk jaga urutan sama persis kayak pagedIds
             var orderMap = pagedIds
                 .Select((id, idx) => new { id, idx })
                 .ToDictionary(x => x.id, x => x.idx);
 
             // =========================================
-            // 5) LOAD PARENTS (JOIN USER, KUNJUNGAN, dll)
+            // 5) LOAD PARENTS
             // =========================================
             var parents = await (
                 from b in _applicationDbContext.LabBookings.AsNoTracking()
@@ -1538,8 +1565,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 {
                     b.BookingLabId,
                     b.KunjunganId,
-
-                    // kalau join kunjungan bisa null, buat nullable supaya aman
                     JenisKunjungan = k != null ? k.JenisKunjungan : null,
 
                     b.PasienId,
@@ -1581,71 +1606,48 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 })
                 .ToListAsync();
 
-            // jaga urutan parent sesuai pagedIds
             parents = parents
                 .OrderBy(x => orderMap.TryGetValue(x.BookingLabId, out var idx) ? idx : int.MaxValue)
                 .ToList();
 
             // =========================================
-            // 6) LOAD DETAILS (LEFT JOIN dari PARENT -> DETAILS -> MASTER)
+            // 6) LOAD DETAILS (✅ FILTER IKUT namaLab/labId, + tampilkan LabId)
             // =========================================
-
-            // siapkan source details yang sudah difilter IsDelete (taruh di sini supaya LEFT JOIN tetap LEFT)
-            var detailSource = _applicationDbContext.LabBookingDetails
-                .AsNoTracking()
-                .Where(d =>
-                    d.BookingLabId.HasValue &&
-                    pagedIds.Contains(d.BookingLabId.Value) &&
-                    (d.IsDelete == false || d.IsDelete == null));
-
             var detailQ =
-                from b in _applicationDbContext.LabBookings.AsNoTracking()
-                where pagedIds.Contains(b.BookingLabId)
+                from d in _applicationDbContext.LabBookingDetails.AsNoTracking()
+                where d.BookingLabId.HasValue
+                      && pagedIds.Contains(d.BookingLabId.Value)
+                      && (d.IsDelete == false || d.IsDelete == null)
+                join lp in _applicationDbContext.LabPemeriksaans.AsNoTracking()
+                    on d.PemeriksaanLabId equals lp.PemeriksaanLabId into lpGroup
+                from lp in lpGroup.DefaultIfEmpty()
+                join lab in _applicationDbContext.Labs.AsNoTracking()
+                    on d.LabId equals lab.LabId into labGroup
+                from lab in labGroup.DefaultIfEmpty()
+                select new { d, lp, lab };
 
-                // LEFT JOIN details
-                join d0 in detailSource
-                    on b.BookingLabId equals d0.BookingLabId!.Value into dg
-                from d in dg.DefaultIfEmpty()
-
-                    // LEFT JOIN pemeriksaan
-                join lp0 in _applicationDbContext.LabPemeriksaans.AsNoTracking()
-                    on d.PemeriksaanLabId equals lp0.PemeriksaanLabId into lpg
-                from lp in lpg.DefaultIfEmpty()
-
-                    // LEFT JOIN lab
-                join lab0 in _applicationDbContext.Labs.AsNoTracking()
-                    on d.LabId equals lab0.LabId into labg
-                from lab in labg.DefaultIfEmpty()
-
-                select new { b.BookingLabId, d, lp, lab };
-
-            // ✅ filter detail berdasarkan namaLab (kalau request namaLab, memang harus match)
+            // ✅ filter detail berdasarkan namaLab (supaya tidak “ikut semua keluarga”)
             if (!string.IsNullOrWhiteSpace(namaLab))
             {
                 var nl = namaLab.Trim();
-                detailQ = detailQ.Where(x =>
-                    x.d != null &&
-                    x.lab != null &&
-                    EF.Functions.ILike(x.lab.NamaLab, $"%{nl}%"));
+                detailQ = detailQ.Where(x => x.lab != null && EF.Functions.ILike(x.lab.NamaLab, $"%{nl}%"));
             }
 
             // ✅ filter detail berdasarkan labId
             if (labId.HasValue)
             {
                 var lid = labId.Value;
-                detailQ = detailQ.Where(x => x.d != null && x.d.LabId == lid);
+                detailQ = detailQ.Where(x => x.d.LabId == lid);
             }
 
-            // Ambil hasil details (buang row hasil left join yang detailnya null)
             var details = await detailQ
-                .Where(x => x.d != null)
                 .Select(x => new
                 {
-                    BookingLabId = x.BookingLabId,
-                    x.d!.DetailBookingLabId,
+                    BookingLabId = x.d.BookingLabId!.Value,
+                    x.d.DetailBookingLabId,
                     x.d.NoOrder,
 
-                    // ✅ tampilkan LabId
+                    // ✅ tampilkan labId
                     LabId = x.d.LabId,
 
                     NamaPemeriksaan = x.lp != null ? x.lp.NamaPemeriksaan : null,
@@ -1656,7 +1658,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 })
                 .ToListAsync();
 
-            // lookup biar merge cepat
             var detailLookup = details
                 .GroupBy(x => x.BookingLabId)
                 .ToDictionary(g => g.Key, g => g.ToList());
@@ -1672,7 +1673,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     : new List<object>()
             }).ToList();
 
-
             return Ok(new
             {
                 status = "success",
@@ -1686,6 +1686,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 }
             });
         }
+
 
 
 
