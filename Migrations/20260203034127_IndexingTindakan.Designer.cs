@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -12,9 +13,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260203034127_IndexingTindakan")]
+    partial class IndexingTindakan
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -11314,19 +11316,15 @@ namespace QuilvianSystemBackendDev.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("AccountHolderName")
-                        .HasColumnType("text");
-
                     b.Property<string>("Address")
+                        .IsRequired()
                         .HasColumnType("text");
-
-                    b.Property<Guid?>("BankId")
-                        .HasColumnType("uuid");
 
                     b.Property<string>("City")
                         .HasColumnType("text");
 
                     b.Property<string>("ContactPerson")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<Guid>("CreateBy")
@@ -11342,40 +11340,26 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Email")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<bool?>("IsActive")
                         .HasColumnType("boolean");
 
-                    b.Property<bool?>("IsBloodBankSupplier")
-                        .HasColumnType("boolean");
-
                     b.Property<bool>("IsDelete")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool?>("IsFullPaid")
                         .HasColumnType("boolean");
 
                     b.Property<bool?>("IsPKS")
                         .HasColumnType("boolean");
 
-                    b.Property<string>("LeadTime")
+                    b.Property<string>("KhususUnit")
                         .HasColumnType("text");
-
-                    b.Property<int?>("NoRekening")
-                        .HasColumnType("integer");
 
                     b.Property<string>("Note")
                         .HasColumnType("text");
 
-                    b.Property<decimal?>("PPN")
-                        .HasColumnType("numeric");
-
-                    b.Property<string>("PaymentMethod")
-                        .HasColumnType("text");
-
-                    b.Property<string>("PhoneNumber")
-                        .HasColumnType("text");
+                    b.Property<int>("Ppn")
+                        .HasColumnType("integer");
 
                     b.Property<string>("SupplierCode")
                         .IsRequired()
@@ -11385,7 +11369,14 @@ namespace QuilvianSystemBackendDev.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("TermOfPayment")
+                    b.Property<string>("Telepon")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("TermOfPaymentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TermOfPaymentName")
                         .HasColumnType("text");
 
                     b.Property<Guid>("UpdateBy")
@@ -11816,7 +11807,7 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<bool>("IsDelete")
                         .HasColumnType("boolean");
 
-                    b.Property<Guid>("PoliklinikId")
+                    b.Property<Guid>("PoliId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("TindakanId")
