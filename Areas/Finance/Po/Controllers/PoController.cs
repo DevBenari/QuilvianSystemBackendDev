@@ -42,10 +42,6 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                     SupplierId = Guid.NewGuid(),
                     SupplierCode = dto.SupplierCode!,
                     SupplierName = dto.SupplierName!,
-                    ContactPerson = "-",
-                    Address = "-",
-                    Telepon = "-",
-                    Email = "-",
                     IsActive = true
                 };
 
@@ -149,6 +145,67 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
                 .ToListAsync();
 
             return Ok(data);
+        }
+
+        [HttpGet("search")]
+        public async Task<IActionResult> Search(string? search = null)
+        {
+            var query = _context.PurchaseOrders
+                .Include(x => x.PurchaseOrderItems)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(x =>
+                    x.SupplierName.Contains(search) ||
+                    x.SupplierCode.Contains(search));
+            }
+
+            var data = await query
+                .OrderByDescending(x => x.PurchaseOrderNumber)
+                .GroupBy(x => new
+                {
+                    x.SupplierCode,
+                    x.SupplierName
+                })
+                .Select(g => new
+                {
+                    SupplierCode = g.Key.SupplierCode,
+                    SupplierName = g.Key.SupplierName,
+                    TotalPO = g.Count(),
+                    PurchaseOrders = g.Select(po => new PurchaseOrderViewModel
+                    {
+                        PurchaseRequestNumber = po.PurchaseRequestNumber,
+                        PurchaseOrderNumber = po.PurchaseOrderNumber,
+                        InvoiceDate = po.InvoiceDate,
+                        InvoiceNumber = po.InvoiceNumber,
+                        RequestType = po.RequestType,
+
+                        TermOfPayment = po.TermOfPayment,
+                        ExpiredDate = po.ExpiredDate,
+                        RemainingDay = po.RemainingDay,
+                        QtyTotal = po.QtyTotal,
+                        GrandTotal = po.GrandTotal,
+                        UserAccess = po.UserAccess,
+                        StatusPO = po.StatusPO,
+                        Keterangan = po.Keterangan,
+
+                        Items = po.PurchaseOrderItems.Select(i => new PurchaseOrderItemViewModel
+                        {
+                            ProductName = i.ProductName,
+                            Measurement = i.Measurement,
+                            Category = i.Category,
+                            Qty = i.Qty,
+                            Price = i.Price,
+                            Discount = i.Discount,
+                            SubTotal = i.SubTotal,
+                            Keterangan = i.Keterangan
+                        }).ToList()
+                    }).ToList()
+                })
+                .ToListAsync();
+
+            return Ok(new { message = "Success", data });
         }
 
     }
