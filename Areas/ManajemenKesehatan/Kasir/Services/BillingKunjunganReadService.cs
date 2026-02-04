@@ -19,7 +19,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
     }
 
     // ================================
-    // LITE BILLING FOR LOOKUP
+    // DTO LITE BILLING FOR LOOKUP
     // ================================
     private sealed class BillingLite
     {
@@ -41,6 +41,9 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         public DateTime? TanggalJatuhTempo { get; set; }
     }
 
+    // ================================
+    // DTO LITE BILLING BAGIAN RACIKAN
+    // ================================
     private sealed class RacikanDetailRow
     {
         public Guid RacikanId { get; set; }
@@ -51,8 +54,35 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         public decimal HTEPrice { get; set; }
     }
 
+    // ================================
+    // DTO PAGED BILLING
+    // ================================
+    public sealed class PagedResult<T>
+    {
+        public string Status { get; set; } = "success";
+        public int Page { get; set; }
+        public int PageSize { get; set; }
+        public int TotalKunjungan { get; set; }
+        public int TotalPages { get; set; }
+        public T[] Data { get; set; } = Array.Empty<T>();
+    }
 
-    // buat get by id 
+    public sealed class BillingPagedQuery
+    {
+        public Guid? KunjunganId { get; set; }
+        public int Page { get; set; } = 1;
+        public int PageSize { get; set; } = 10;
+
+        public DateTime? StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
+        public PeriodeFilter? Periode { get; set; }
+
+        public DateTime? AsOf { get; set; } // untuk kamar ranap sampai waktu ini
+    }
+
+    // ============================
+    // FUNCTION buat get by id 
+    // ============================
     public async Task<BillingKunjunganDto?> GetBillingKeseluruhanAsync(
         Guid kunjunganId,
         DateTime? asOf = null,
@@ -757,30 +787,8 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
 
     // ================================
-    // GET ALL PAGED
+    // FUNCTION GET ALL PAGED
     // ================================
-    public sealed class BillingPagedQuery
-    {
-        public Guid? KunjunganId { get; set; }
-        public int Page { get; set; } = 1;
-        public int PageSize { get; set; } = 10;
-
-        public DateTime? StartDate { get; set; }
-        public DateTime? EndDate { get; set; }
-        public PeriodeFilter? Periode { get; set; }
-
-        public DateTime? AsOf { get; set; } // untuk kamar ranap sampai waktu ini
-    }
-
-    public sealed class PagedResult<T>
-    {
-        public string Status { get; set; } = "success";
-        public int Page { get; set; }
-        public int PageSize { get; set; }
-        public int TotalKunjungan { get; set; }
-        public int TotalPages { get; set; }
-        public T[] Data { get; set; } = Array.Empty<T>();
-    }
 
     public async Task<PagedResult<object>> GetBillingPagedAsync(BillingPagedQuery query, CancellationToken ct = default)
     {
@@ -1586,6 +1594,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 .ToArray()
         };
     }
+    
     // =========================
     // HELPERS (punyamu + overload snapshot)
     // =========================
@@ -1681,6 +1690,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         return $"{years} tahun {months} bulan {days} hari";
     }
 
+    // Periode Filter
     private static IQueryable<Kunjungan> ApplyPeriodeFilter(
         IQueryable<Kunjungan> baseQuery,
         PeriodeFilter periode)
@@ -1766,4 +1776,243 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         return diff > 0 ? diff : 0;
     }
 
+    // ======================================================
+    // FUNCTION GET BY ID MAIN KASIR (pembayaran dan detailnya)
+    // =======================================================
+    public async Task<IReadOnlyList<object>> GetMainKasirDanDetailPembayaranAsync(
+        Guid kunjunganId,
+        CancellationToken ct = default)
+    {
+        // =========================
+        // 1) Headers (SEMUA MainKasir) + LEFT JOIN Pasien
+        // =========================
+        var headers = await (
+            from x in _db.MainKasirs.AsNoTracking()
+            join p0 in _db.PendaftaranPasienBarus.AsNoTracking()
+                on x.PasienId equals p0.PendaftaranPasienBaruId into pGroup
+            from p in pGroup.DefaultIfEmpty()
+            where x.KunjunganId == kunjunganId && x.IsDelete != true
+            orderby x.CreateDateTime descending
+            select new
+            {
+                x.KasirId,
+                x.KunjunganId,
+                x.PasienId,
+
+                NamaLengkap = p != null ? p.NamaLengkap : null,
+                NoRekamMedis = p != null ? p.NoRekamMedis : null,
+
+                x.InvoiceBilling,
+                x.JumlahAngsuran,
+                x.StatusPembayaran,
+                x.IsVerified,
+                x.TTDUserVerfiedId,
+                x.PathUserVerified,
+                x.GrandTotalPembayaran,
+                x.TotalBiayaObat,
+                x.TotalBiayaTindakan,
+                x.Keterangan,
+                x.TglPembayaran,
+                x.DiskonId,
+
+                x.CreateDateTime,
+                CreateBy = (Guid?)x.CreateBy,
+                x.UpdateDateTime,
+                UpdateBy = (Guid?)x.UpdateBy
+            }
+        ).ToListAsync(ct);
+
+        if (headers.Count == 0)
+            return Array.Empty<object>();
+
+        var kasirIds = headers.Select(h => h.KasirId).ToList();
+
+        // =========================
+        // 2) Details (ONE query)
+        // =========================
+        var tmpDetails = await _db.MainKasirDetails
+            .AsNoTracking()
+            .Where(d => d.MainKasirId != null
+                        && kasirIds.Contains(d.MainKasirId.Value)
+                        && d.IsDelete != true)
+            .OrderBy(d => d.TglPembayaran ?? DateTime.MaxValue)
+            .ThenBy(d => d.CreateDateTime)
+            .Select(d => new
+            {
+                d.MainKasirDetailId,
+                MainKasirId = d.MainKasirId!.Value,
+
+                d.MetodePembayaranId,
+                d.ReferenceId,
+                d.KunjunganId,
+                d.PasienId,
+                d.TotalPembayaran,
+                d.SisaPembayaran,
+                d.NoKwitansi,
+                d.AngsuranKe,
+                d.NamaMetode,
+                d.NominalPembayaran,
+                d.Keterangan,
+                d.TglPembayaran,
+
+                d.CreateDateTime,
+                CreateBy = (Guid?)d.CreateBy,
+                d.UpdateDateTime,
+                UpdateBy = (Guid?)d.UpdateBy
+            })
+            .ToListAsync(ct);
+
+        var detailLookup = tmpDetails.ToLookup(d => d.MainKasirId);
+
+        // ✅ NEW: ambil "detail terbaru" per KasirId (buat hitung sisa & angsuran)
+        var latestByKasirId = tmpDetails
+            .GroupBy(d => d.MainKasirId)
+            .ToDictionary(
+                g => g.Key,
+                g => g
+                    .OrderByDescending(x => x.TglPembayaran ?? DateTime.MinValue)
+                    .ThenByDescending(x => x.CreateDateTime)
+                    .First()
+            );
+
+        decimal? GetLatestAngsuran(Guid kasirId)
+            => latestByKasirId.TryGetValue(kasirId, out var d) ? d.AngsuranKe : null;
+
+        decimal? GetLatestSisa(Guid kasirId)
+            => latestByKasirId.TryGetValue(kasirId, out var d) ? d.SisaPembayaran : null;
+
+        // =========================
+        // 3) Load nama user sekali (hindari N+1)
+        // =========================
+        var userIds = new HashSet<Guid>();
+
+        foreach (var h in headers)
+        {
+            if (h.CreateBy.HasValue) userIds.Add(h.CreateBy.Value);
+            if (h.UpdateBy.HasValue) userIds.Add(h.UpdateBy.Value);
+            if (h.TTDUserVerfiedId.HasValue) userIds.Add(h.TTDUserVerfiedId.Value);
+        }
+
+        foreach (var d in tmpDetails)
+        {
+            if (d.CreateBy.HasValue) userIds.Add(d.CreateBy.Value);
+            if (d.UpdateBy.HasValue) userIds.Add(d.UpdateBy.Value);
+        }
+
+        var userDict = userIds.Count == 0
+            ? new Dictionary<Guid, string>()
+            : await _db.UserActives
+                .AsNoTracking()
+                .Where(u => userIds.Contains(u.UserActiveId))
+                .Select(u => new { u.UserActiveId, u.FullName })
+                .ToDictionaryAsync(x => x.UserActiveId, x => x.FullName, ct);
+
+        string? GetUserName(Guid? userId)
+            => userId.HasValue && userDict.TryGetValue(userId.Value, out var name) ? name : null;
+
+        // =========================
+        // 4) Compose response
+        // =========================
+        var kasirs = headers.Select(h =>
+        {
+            // ✅ NEW: hasil hitung dari detail terbaru (fallback aman kalau detail kosong)
+            var jumlahAngsuranHitung = GetLatestAngsuran(h.KasirId) ?? 0m;
+            var sisaPembayaranHitung = GetLatestSisa(h.KasirId) ?? (decimal?)h.GrandTotalPembayaran;
+
+            return (object)new
+            {
+                Header = new
+                {
+                    h.KasirId,
+                    h.KunjunganId,
+                    h.PasienId,
+                    h.NamaLengkap,
+                    h.NoRekamMedis,
+
+                    h.InvoiceBilling,
+
+                    // ✅ NEW: yang dipakai dari detail terbaru
+                    JumlahAngsuran = jumlahAngsuranHitung,
+                    SisaPembayaran = sisaPembayaranHitung,
+
+                    // (opsional) kalau kamu masih mau tampilkan nilai asli dari tabel MainKasir:
+                    // JumlahAngsuranDb = h.JumlahAngsuran,
+
+                    h.StatusPembayaran,
+                    h.IsVerified,
+                    h.TTDUserVerfiedId,
+                    VerifiedByName = GetUserName(h.TTDUserVerfiedId),
+                    h.PathUserVerified,
+                    h.GrandTotalPembayaran,
+                    h.TotalBiayaObat,
+                    h.TotalBiayaTindakan,
+                    h.Keterangan,
+                    h.TglPembayaran,
+                    h.DiskonId,
+
+                    h.CreateDateTime,
+                    h.CreateBy,
+                    CreateByName = GetUserName(h.CreateBy),
+
+                    h.UpdateDateTime,
+                    h.UpdateBy,
+                    UpdateByName = GetUserName(h.UpdateBy),
+                },
+
+                // kalau kamu masih mau balikin detail, biarkan bagian ini
+                Details = detailLookup[h.KasirId]
+                    .Select(d => new
+                    {
+                        d.MainKasirDetailId,
+                        d.MainKasirId,
+                        d.MetodePembayaranId,
+                        d.ReferenceId,
+                        d.KunjunganId,
+                        d.PasienId,
+                        d.TotalPembayaran,
+                        d.SisaPembayaran,
+                        d.NoKwitansi,
+                        d.AngsuranKe,
+                        d.NamaMetode,
+                        d.NominalPembayaran,
+                        d.Keterangan,
+                        d.TglPembayaran,
+
+                        d.CreateDateTime,
+                        d.CreateBy,
+                        CreateByName = GetUserName(d.CreateBy),
+
+                        d.UpdateDateTime,
+                        d.UpdateBy,
+                        UpdateByName = GetUserName(d.UpdateBy),
+                    })
+                    .ToList()
+            };
+        }).ToList();
+
+        return kasirs;
+    }
+
+
+    // ========================================================
+    // HELPERS MENGHITUNG SISA PEMBAYARAN + TOTAL ANGSURAN
+    // =======================================================
+
+    private static decimal? GetSisaPembayaranFromLatest(object? latestDetail)
+    {
+        if (latestDetail == null) return null;
+
+        dynamic d = latestDetail;
+        return (decimal?)d.SisaPembayaran;
+    }
+
+    private static decimal? GetAngsuranKeFromLatest(object? latestDetail)
+    {
+        if (latestDetail == null) return null;
+
+        dynamic d = latestDetail;
+        return (decimal?)d.AngsuranKe;
+    }
 }
+
+

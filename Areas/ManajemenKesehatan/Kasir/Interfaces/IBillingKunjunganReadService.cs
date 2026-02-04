@@ -13,5 +13,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Interfaces
         Task<PagedResult<object>> GetBillingPagedAsync(
             BillingPagedQuery query,
             CancellationToken ct = default);
+
+        Task<IReadOnlyList<object>> GetMainKasirDanDetailPembayaranAsync(
+         Guid kunjunganId,
+         CancellationToken ct = default);
     }
 }
