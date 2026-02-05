@@ -286,10 +286,10 @@ app.UseStaticFiles();
 app.UseAuthentication(); // Tambahkan middleware autentikasi
 app.UseAuthorization();
 app.MapControllers();
-app.MapHangfireDashboard("/hangfire", new DashboardOptions
-{
-    Authorization = new[] { new HangfireDashboardAuthFilterController() }
-});
+//app.MapHangfireDashboard("/hangfire", new DashboardOptions
+//{
+//    Authorization = new[] { new HangfireDashboardAuthFilterController() }
+//});
 // Setting Job Hangfire
 //var tz = GetJakartaTimeZone();
 
