@@ -357,11 +357,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 var dateNow = DateTime.UtcNow;
                 var setDateNow = dateNow.ToString("yyMMdd");
+                var start = dateNow.Date;
+                var end = start.AddDays(1);
 
-                var lastCode = _applicationDbContext.Obats
-                    .Where(d => d.CreateDateTime.Date == dateNow.Date)
-                    .OrderByDescending(k => k.CreateDateTime)
-                    .FirstOrDefault();
+                var lastCode = await _applicationDbContext.Obats
+                    .AsNoTracking()
+                    .Where(o => o.CreateDateTime >= start && o.CreateDateTime < end)
+                    .Where(o => o.ObatCode != null && o.ObatCode.StartsWith("OBT"))
+                    .OrderByDescending(o => o.CreateDateTime)
+                    .Select(o => o.ObatCode) // cukup ambil kodenya aja, lebih ringan
+                    .FirstOrDefaultAsync();
 
                 string kode;
                 if (lastCode == null)
@@ -370,15 +375,136 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
                 else
                 {
-                    var lastCodeTrim = lastCode.ObatCode.Substring(3, 6);
+                    var lastCodeTrim = lastCode.Substring(3, 6);
                     if (lastCodeTrim != setDateNow)
                     {
                         kode = $"OBT{setDateNow}0001";
                     }
                     else
                     {
-                        var lastNumber = int.Parse(lastCode.ObatCode.Substring(9));
+                        var lastNumber = int.Parse(lastCode.Substring(9));
                         kode = $"OBT{setDateNow}{(lastNumber + 1).ToString("D4")}";
+                    }
+                }
+
+                bool isDuplicate = _applicationDbContext.Obats
+                    .Any(c => c.ObatName.ToLower() == vm.ObatName.ToLower() && c.IsDelete == false);
+
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
+                }
+
+                var data = new Obat
+                {
+                    ObatId = Guid.NewGuid(),
+                    CreateDateTime = dateNow.Date,
+                    CreateBy = userActiveId,
+                    ObatCode = kode,
+                    ObatName = vm.ObatName,
+                    BentukObatId = vm.BentukSatuanId,
+                    HTEPrice = vm.HTEPrice,
+                    Stock = vm.Stock,
+                    IsActive = vm.IsActive,
+                    Minimal = vm.Minimal,  // Tambahkan properti baru
+                    Maximal = vm.Maximal,
+                    Farmakologi = vm.Farmakologi,
+                    Peringatan = vm.Peringatan,
+                    Indikasi = vm.Indikasi,
+                    Kontraindikasi = vm.Kontraindikasi,
+                    CaraKerja = vm.CaraKerja,
+                    InteraksiObat = vm.InteraksiObat,
+                    Dosis = vm.Dosis,
+                    TakaranDosis = vm.TakaranDosis,
+                    JumlahSatuan = vm.JumlahSatuan,
+                    Note = vm.Note,
+                    Kategori = vm.Kategori,
+                    ItemId = vm.ItemId,
+                    ObatRuteId = vm.ObatRuteId,
+                    KategoriObat = vm.KategoriObat,
+                    IsControlled = vm.IsControlled,
+                };
+
+                _applicationDbContext.Obats.Add(data);
+                int result = await _applicationDbContext.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
+                }
+                else
+                {
+                    return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
+                }
+            }
+            catch (DbUpdateException dbEx)
+            {
+                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
+        [HttpPost("Alkes")]
+        public async Task<IActionResult> CreateAlkes([FromBody] ObatViewModel vm)
+        {
+            if (vm == null || !ModelState.IsValid)
+            {
+                return BadRequest(new { message = "Data tidak valid." });
+            }
+
+            try
+            {
+                if (!_applicationDbContext.Database.CanConnect())
+                {
+                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+                }
+
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
+                if (getUserActive == null)
+                {
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+                }
+                var userActiveId = getUserActive.UserActiveId;
+
+                // set code
+                var dateNow = DateTime.UtcNow;
+                var setDateNow = dateNow.ToString("yyMMdd");
+                var start = dateNow.Date;
+                var end = start.AddDays(1);
+
+                var lastCode = await _applicationDbContext.Obats
+                    .AsNoTracking()
+                    .Where(o => o.CreateDateTime >= start && o.CreateDateTime < end)
+                    .Where(o => o.ObatCode != null && o.ObatCode.StartsWith("ALK"))
+                    .OrderByDescending(o => o.CreateDateTime)
+                    .Select(o => o.ObatCode) // cukup ambil kodenya aja, lebih ringan
+                    .FirstOrDefaultAsync();
+
+                string kode;
+                if (lastCode == null)
+                {
+                    kode = $"ALK{setDateNow}0001";
+                }
+                else
+                {
+                    var lastCodeTrim = lastCode.Substring(3, 6);
+                    if (lastCodeTrim != setDateNow)
+                    {
+                        kode = $"ALK{setDateNow}0001";
+                    }
+                    else
+                    {
+                        var lastNumber = int.Parse(lastCode.Substring(9));
+                        kode = $"ALK{setDateNow}{(lastNumber + 1).ToString("D4")}";
                     }
                 }
 

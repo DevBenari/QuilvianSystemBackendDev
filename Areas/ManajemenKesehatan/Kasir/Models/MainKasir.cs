@@ -23,6 +23,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models
         public string? Keterangan { get; set; }
         public DateTimeOffset? TglPembayaran { get; set; }
         public Guid? DiskonId { get; set; }
+        public decimal? TotalSebelumPajak {  get; set; }
+        public decimal? TotalSebelumAsuransi {  get; set; }
+        public decimal? TotalSetelahAsuransi { get; set; }
     }
 
 }
