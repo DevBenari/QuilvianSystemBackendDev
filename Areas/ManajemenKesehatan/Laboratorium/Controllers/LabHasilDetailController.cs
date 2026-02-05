@@ -620,11 +620,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
 
-                         join b in _applicationDbContext.LabHasils
+                         join b in _applicationDbContext.LabHasils.AsNoTracking()
                          on a.HasilLabId equals b.HasilLabId into bGroup
                          from b in bGroup.DefaultIfEmpty()
 
-                         join c in _applicationDbContext.Labs
+                         join c in _applicationDbContext.Labs.AsNoTracking()
                          on b.LabId equals c.LabId into cGroup
                          from c in cGroup.DefaultIfEmpty()  
 

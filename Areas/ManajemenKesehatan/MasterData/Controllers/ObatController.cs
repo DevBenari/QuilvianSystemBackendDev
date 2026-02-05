@@ -404,6 +404,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     ObatName = vm.ObatName,
                     BentukObatId = vm.BentukSatuanId,
                     HTEPrice = vm.HTEPrice,
+                    HNAPrice = vm.HNAPrice,
                     Stock = vm.Stock,
                     IsActive = vm.IsActive,
                     Minimal = vm.Minimal,  // Tambahkan properti baru
@@ -416,6 +417,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     InteraksiObat = vm.InteraksiObat,
                     Dosis = vm.Dosis,
                     TakaranDosis = vm.TakaranDosis,
+                    SatuanId = vm.SatuanId,
                     JumlahSatuan = vm.JumlahSatuan,
                     Note = vm.Note,
                     Kategori = vm.Kategori,
@@ -525,6 +527,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     ObatName = vm.ObatName,
                     BentukObatId = vm.BentukSatuanId,
                     HTEPrice = vm.HTEPrice,
+                    HNAPrice = vm.HNAPrice,
                     Stock = vm.Stock,
                     IsActive = vm.IsActive,
                     Minimal = vm.Minimal,  // Tambahkan properti baru
@@ -538,6 +541,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     Dosis = vm.Dosis,
                     TakaranDosis = vm.TakaranDosis,
                     JumlahSatuan = vm.JumlahSatuan,
+                    SatuanId = vm.SatuanId,
                     Note = vm.Note,
                     Kategori = vm.Kategori,
                     ItemId = vm.ItemId,
