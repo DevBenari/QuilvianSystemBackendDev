@@ -57,19 +57,19 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =
 });
 
 // BUILDER HANGFIRE
-builder.Services.AddControllers();
+//builder.Services.AddControllers();
 
-// 1) Register Hangfire + Storage
-builder.Services.AddHangfire(config => config
-    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
-    .UseSimpleAssemblyNameTypeSerializer()
-    .UseRecommendedSerializerSettings()
-    .UsePostgreSqlStorage(opts =>
-        opts.UseNpgsqlConnection(builder.Configuration.GetConnectionString("HangfireConnection")))
-);
+//// 1) Register Hangfire + Storage
+//builder.Services.AddHangfire(config => config
+//    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+//    .UseSimpleAssemblyNameTypeSerializer()
+//    .UseRecommendedSerializerSettings()
+//    .UsePostgreSqlStorage(opts =>
+//        opts.UseNpgsqlConnection(builder.Configuration.GetConnectionString("HangfireConnection")))
+//);
 
-// 2) Jalankan Hangfire Server (worker) di proses web ini
-builder.Services.AddHangfireServer();
+//// 2) Jalankan Hangfire Server (worker) di proses web ini
+//builder.Services.AddHangfireServer();
 
 // Tambahkan layanan CORS
 builder.Services.AddCors(options =>
@@ -291,19 +291,19 @@ app.MapHangfireDashboard("/hangfire", new DashboardOptions
     Authorization = new[] { new HangfireDashboardAuthFilterController() }
 });
 // Setting Job Hangfire
-var tz = GetJakartaTimeZone();
+//var tz = GetJakartaTimeZone();
 
-RecurringJob.AddOrUpdate<BillingJob>(
-    "update-dpd-billing",
-    job => job.DPDBillingRunAsync(CancellationToken.None),
-    "5 0 * * *", // 00:05 setiap hari
-    new RecurringJobOptions { TimeZone = tz }
-);
+//RecurringJob.AddOrUpdate<BillingJob>(
+//    "update-dpd-billing",
+//    job => job.DPDBillingRunAsync(CancellationToken.None),
+//    "5 0 * * *", // 00:05 setiap hari
+//    new RecurringJobOptions { TimeZone = tz }
+//);
 
-static TimeZoneInfo GetJakartaTimeZone()
-{
-    try { return TimeZoneInfo.FindSystemTimeZoneById("Asia/Jakarta"); }          // Linux
-    catch { return TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time"); } // Windows
-}
+//static TimeZoneInfo GetJakartaTimeZone()
+//{
+//    try { return TimeZoneInfo.FindSystemTimeZoneById("Asia/Jakarta"); }          // Linux
+//    catch { return TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time"); } // Windows
+//}
 
 app.Run();
