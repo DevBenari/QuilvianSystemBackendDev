@@ -215,7 +215,7 @@ builder.Services.AddSignalR();
 
 var app = builder.Build();
 
-app.UseCors("AllowSpecific"); // Panggil sebelum middleware lainnya
+
 
 // Konfigurasi SignalR
 // signal R kunjungan
@@ -268,7 +268,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
-app.UseSwagger();
+
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "Home");
@@ -281,6 +281,7 @@ app.UseSwaggerUI(c =>
 });
 
 app.UseRouting();
+app.UseCors("AllowSpecific"); // Panggil sebelum middleware lainnya
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseAuthentication(); // Tambahkan middleware autentikasi
