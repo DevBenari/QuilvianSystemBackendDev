@@ -22,7 +22,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels
         public Guid? DiskonId { get; set; }
         public bool? IsResepPulang { get; set; }
         public bool? IsVerifyByDoctor { get; set; }
-
+        public Guid? PetugasFarmasiId { get; set; }
 
     }
 }

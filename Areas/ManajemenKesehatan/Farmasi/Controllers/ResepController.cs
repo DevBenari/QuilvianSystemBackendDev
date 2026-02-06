@@ -14,6 +14,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
@@ -37,6 +38,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         private readonly ILogger<ResepController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly IHubContext<ResepHub> _hubContext;
+        private readonly ITTDService _ttdService;
 
 
         public ResepController(
@@ -46,7 +48,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             ILogger<ResepController> logger,
             IWebHostEnvironment webHostEnvironment,
             IHubContext<ResepHub> hubContext,
-            IGenerateInvoiceBillingService generateInvoiceBillingService
+            IGenerateInvoiceBillingService generateInvoiceBillingService,
+            ITTDService ttdService
             )
         {
             _applicationDbContext = applicationDbContext;
@@ -56,6 +59,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             _webHostEnvironment = webHostEnvironment;
             _hubContext = hubContext;
             _generateInvoiceBillingService = generateInvoiceBillingService;
+            _ttdService = ttdService;
         }
 
         private DateTime? TryParseTanggalToUtc(string tanggal)
@@ -545,6 +549,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     .FirstOrDefaultAsync();
                 int nextAntrian = (lastResep?.AntrianResep ?? 0) + 1;
 
+                // TTD DOKTER
+                var ttdDokter = await _ttdService.CheckTTDAsync((Guid)vm.DokterId);
+
                 var resep = new Resep
                 {
                     ResepId = Guid.NewGuid(),
@@ -557,6 +564,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     NamaPoliklinik = vm.NamaPoliklinik,
                     DokterId = vm.DokterId,
                     NamaDokter = vm.NamaDokter,
+                    PathTTDDokter = ttdDokter?.Path,
                     AntrianResep = nextAntrian,
                     AntrianRegistrasi = antrian,
                     StatusPembuatanResep = vm.StatusPembuatanResep,
@@ -1187,6 +1195,40 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             return Ok(new { message = "Status isFinished berhasil diperbarui." });
         }
 
+        [HttpPut("{id}/is-VerifiedByDokter")]
+        public async Task<IActionResult> UpdateApprovalByFarmasi(Guid id, [FromBody] PetugasFarmasiAprVM request)
+        {
+            var data = await _applicationDbContext.Reseps.FindAsync(id);
+            if (data == null)
+                return NotFound(new { message = "Resep tidak ditemukan." });
+
+            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(EmailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var userId = user?.UserActiveId ?? Guid.Empty;
+
+            // cek ttd
+            var ttd = await _ttdService.CheckTTDAsync((Guid)request.PetugasFarmasiId);
+
+            data.PetugasFarmasiId = request.PetugasFarmasiId;
+            data.PathTTDPetugasFarmasi = ttd?.Path;
+            data.UpdateDateTime = DateTimeOffset.UtcNow;
+            data.UpdateBy = userId;
+            await _applicationDbContext.SaveChangesAsync();
+
+            // Notifikasi signalR
+            await _hubContext.Clients.All.SendAsync("VerifiedChanged", new
+            {
+                Action = "updateIsCancelled",
+                ResepId = id,
+                IsVerifyByDoctor = request
+            });
+
+            return Ok(new { message = "Status isFinished berhasil diperbarui." });
+        }
+
         [HttpPut("{id}/is-taken")]
         public async Task<IActionResult> UpdateStatusAmbilResep(Guid id, [FromBody] StatusPengambilanResepViewModel request)
         {
@@ -1628,6 +1670,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             string? obatCode = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
+            [FromQuery] EnumJenisKunjungan? jenisKunjungan = null,
             [FromQuery] DateTime? startDate = null,
             [FromQuery] DateTime? endDate = null,
             [FromQuery] PeriodeFilter? periode = null,
@@ -1681,6 +1724,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             if (tipeuserid.HasValue)
             {
                 query = query.Where(q => q.User.TipeUserId == tipeuserid.Value);
+            }
+
+            if (jenisKunjungan.HasValue)
+            {
+                query = query.Where(q => q.Kunjungan.JenisKunjungan == jenisKunjungan.ToString());    
             }
 
 
@@ -1944,6 +1992,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 q.Resep.NamaPoliklinik,
                 q.Resep.DokterId,
                 q.Resep.NamaDokter,
+                q.Resep.PathTTDDokter,
+                q.Resep.PetugasFarmasiId,
+                q.Resep.PathTTDPetugasFarmasi,
                 q.Resep.StatusPembuatanResep,
                 q.Resep.StatusPengambilanResep,
                 q.Resep.IsCancelled,
@@ -2008,6 +2059,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             int perPage = 10,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
+            [FromQuery] EnumJenisKunjungan? jenisKunjungan = null,
             [FromQuery] DateTime? startDate = null,
             [FromQuery] DateTime? endDate = null,
             [FromQuery] PeriodeFilter? periode = null,
@@ -2040,6 +2092,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
             if (IsCancelled.HasValue)
                 query = query.Where(q => q.Resep.IsCancelled == IsCancelled.Value);
+
+            if (jenisKunjungan.HasValue)
+            {
+                query = query.Where(q => q.Kunjungan.JenisKunjungan == jenisKunjungan.ToString());
+            }
 
             // 🔎 Filter periode
             if (periode.HasValue)
@@ -2229,6 +2286,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 q.Resep.NamaPoliklinik,
                 q.Resep.DokterId,
                 q.Resep.NamaDokter,
+                q.Resep.PathTTDDokter,
+                q.Resep.PetugasFarmasiId,
+                q.Resep.PathTTDPetugasFarmasi,
                 q.Resep.StatusPembuatanResep,
                 q.Resep.StatusPengambilanResep,
                 q.Resep.IsCancelled,

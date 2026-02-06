@@ -28,5 +28,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
         public Guid? RanapId { get; set; }
         public bool? IsResepPulang { get; set; }
         public bool? IsVerifyByDoctor { get; set; }
+        public Guid? PetugasFarmasiId { get; set; }
+        public string? PathTTDPetugasFarmasi{ get; set; }
+        public string? PathTTDDokter { get; set; }
     }
 }

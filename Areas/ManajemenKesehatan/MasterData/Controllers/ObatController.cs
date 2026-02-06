@@ -618,11 +618,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.ObatName = vm.ObatName;
                 data.BentukObatId = vm.BentukSatuanId;
                 data.HTEPrice = vm.HTEPrice;
+                data.HNAPrice = vm.HNAPrice;
                 data.Stock = vm.Stock;
                 data.IsActive = vm.IsActive;
                 data.Note = vm.Note;
                 data.JumlahSatuan = vm.JumlahSatuan;
-
+                data.SatuanId = vm.SatuanId;
                 data.Minimal = vm.Minimal;  // Tambahkan properti baru
                 data.Maximal = vm.Maximal;
                 data.Farmakologi = vm.Farmakologi;
@@ -850,8 +851,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 // 4. Lakukan paging dan sorting
                 var sortedQuery = orderBy?.ToLower() switch
                 {
-                    "obatcode" => sortDirection?.ToLower() == "desc" ? joinedQuery.OrderByDescending(u => u.ObatCode) : joinedQuery.OrderBy(u => u.ObatCode),
-                    "obatname" => sortDirection?.ToLower() == "desc" ? joinedQuery.OrderByDescending(u => u.ObatName) : joinedQuery.OrderBy(u => u.ObatName),
+                    "stock" => sortDirection?.ToLower() == "desc" ? joinedQuery.OrderByDescending(u => u.Stock) : joinedQuery.OrderBy(u => u.Stock),
                     _ => sortDirection?.ToLower() == "desc" ? joinedQuery.OrderByDescending(u => u.CreateDateTime) : joinedQuery.OrderBy(u => u.CreateDateTime)
                 };
 
