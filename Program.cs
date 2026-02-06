@@ -214,11 +214,14 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSignalR();
 
 var app = builder.Build();
-
+app.UseRouting();
+app.UseCors("AllowSpecific"); // Panggil sebelum middleware lainnya
 
 
 // Konfigurasi SignalR
 // signal R kunjungan
+app.MapControllers();
+
 app.MapHub<KunjunganHub>("/hubs/kunjungan");
 app.MapHub<VitalSignHub>("/hubs/vitalsign");
 app.MapHub<SOAPHub>("/hubs/soap");
@@ -269,6 +272,8 @@ if (app.Environment.IsDevelopment())
 }
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
+
+app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "Home");
@@ -280,13 +285,12 @@ app.UseSwaggerUI(c =>
     c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None);
 });
 
-app.UseRouting();
-app.UseCors("AllowSpecific"); // Panggil sebelum middleware lainnya
+
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseAuthentication(); // Tambahkan middleware autentikasi
 app.UseAuthorization();
-app.MapControllers();
+
 //app.MapHangfireDashboard("/hangfire", new DashboardOptions
 //{
 //    Authorization = new[] { new HangfireDashboardAuthFilterController() }
