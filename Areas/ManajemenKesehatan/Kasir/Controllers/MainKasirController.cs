@@ -642,52 +642,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             CancellationToken ct = default)
         {
             // =========================
-            // 0) Billing keseluruhan (service)
+            // 1) Billing keseluruhan (service)
             // =========================
             var billingDto = await _billingKunjunganReadService
                 .GetBillingKeseluruhanAsync(kunjunganId, asOf, ct);
 
             // =========================
-            // 1) Headers (SEMUA MainKasir) + LEFT JOIN Pasien
+            // 2) MAIN KASIR DAN DETAILNYA
             // =========================
-            var headers = await (
-                from x in _applicationDbContext.MainKasirs.AsNoTracking()
-                join p0 in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking()
-                    on x.PasienId equals p0.PendaftaranPasienBaruId into pGroup
-                from p in pGroup.DefaultIfEmpty()
-
-                where x.KunjunganId == kunjunganId && x.IsDelete != true
-                orderby x.CreateDateTime descending
-                select new
-                {
-                    x.KasirId,
-                    x.KunjunganId,
-                    x.PasienId,
-
-                    NamaLengkap = p != null ? p.NamaLengkap : null,
-                    NoRekamMedis = p != null ? p.NoRekamMedis : null,
-
-                    x.InvoiceBilling,
-                    x.JumlahAngsuran,
-                    x.StatusPembayaran,
-                    x.IsVerified,
-                    x.TTDUserVerfiedId,
-                    x.PathUserVerified,
-                    x.GrandTotalPembayaran,
-                    x.TotalBiayaObat,
-                    x.TotalBiayaTindakan,
-                    x.Keterangan,
-                    x.TglPembayaran,
-                    x.DiskonId,
-
-                    x.CreateDateTime,
-                    CreateBy = (Guid?)x.CreateBy,
-                    x.UpdateDateTime,
-                    UpdateBy = (Guid?)x.UpdateBy
-                }
-            ).ToListAsync(ct);
-
-            // GET DATA PEMBAYARAN DARI MAIN KASIR
             var kasirs = await _billingKunjunganReadService.GetMainKasirDanDetailPembayaranAsync(kunjunganId, ct);
 
             return Ok(new
@@ -1161,12 +1123,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             // =========================
             var query =
                 from a in _applicationDbContext.MainKasirs.AsNoTracking()
+
                 join u0 in _applicationDbContext.UserActives.AsNoTracking()
                     on a.CreateBy equals u0.UserActiveId into uu
                 from u in uu.DefaultIfEmpty()
-                join p in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking()
-                    on a.PasienId equals p.PendaftaranPasienBaruId into pp
+
+                join p0 in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking()
+                    on a.PasienId equals p0.PendaftaranPasienBaruId into pp
                 from p in pp.DefaultIfEmpty()
+
+                    // ✅ join Kunjungan
+                join k0 in _applicationDbContext.Kunjungans.AsNoTracking()
+                    on a.KunjunganId equals k0.KunjunganID into kk
+                from k in kk.DefaultIfEmpty()
+
+                    // ✅ join Asuransi dari Kunjungan
+                join as0 in _applicationDbContext.Asuransis.AsNoTracking()
+                    on k.AsuransiId equals as0.AsuransiId into aa
+                from asu in aa.DefaultIfEmpty()
                 where a.IsDelete != true
                 select new
                 {
@@ -1175,6 +1149,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     a.PasienId,
                     p.NamaLengkap,
                     p.NoRekamMedis,
+                    // ✅ Asuransi (dari Kunjungan)
+                    AsuransiId = (Guid?)k.AsuransiId,
+                    NamaAsuransi = asu != null ? asu.NamaAsuransi : null,
                     a.InvoiceBilling,
                     a.JumlahAngsuran,
                     a.StatusPembayaran,
@@ -1401,6 +1378,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     h.PasienId,
                     h.NamaLengkap,
                     h.NoRekamMedis,
+                    h.AsuransiId,
+                    h.NamaAsuransi,
                     h.InvoiceBilling,
                     h.JumlahAngsuran,
                     h.StatusPembayaran,

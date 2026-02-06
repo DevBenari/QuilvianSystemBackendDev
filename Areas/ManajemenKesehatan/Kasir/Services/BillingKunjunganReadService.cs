@@ -1786,11 +1786,23 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         // =========================
         // 1) Headers (SEMUA MainKasir) + LEFT JOIN Pasien
         // =========================
-        var headers = await (
+        var headers =  await (
             from x in _db.MainKasirs.AsNoTracking()
+
             join p0 in _db.PendaftaranPasienBarus.AsNoTracking()
                 on x.PasienId equals p0.PendaftaranPasienBaruId into pGroup
             from p in pGroup.DefaultIfEmpty()
+
+                // ✅ join Kunjungan
+            join k0 in _db.Kunjungans.AsNoTracking()
+                on x.KunjunganId equals k0.KunjunganID into kGroup
+            from k in kGroup.DefaultIfEmpty()
+
+                // ✅ join Asuransi dari Kunjungan
+            join a0 in _db.Asuransis.AsNoTracking()
+                on k.AsuransiId equals a0.AsuransiId into aGroup
+            from a in aGroup.DefaultIfEmpty()
+
             where x.KunjunganId == kunjunganId && x.IsDelete != true
             orderby x.CreateDateTime descending
             select new
@@ -1801,6 +1813,10 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
                 NamaLengkap = p != null ? p.NamaLengkap : null,
                 NoRekamMedis = p != null ? p.NoRekamMedis : null,
+
+                // ✅ Asuransi dari Kunjungan
+                AsuransiId = (Guid?)k.AsuransiId,
+                NamaAsuransi = a != null ? a.NamaAsuransi : null,
 
                 x.InvoiceBilling,
                 x.JumlahAngsuran,
@@ -1928,15 +1944,14 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     h.PasienId,
                     h.NamaLengkap,
                     h.NoRekamMedis,
-
+                    h.AsuransiId,
+                    h.NamaAsuransi,
                     h.InvoiceBilling,
 
                     // ✅ NEW: yang dipakai dari detail terbaru
                     JumlahAngsuran = jumlahAngsuranHitung,
                     SisaPembayaran = sisaPembayaranHitung,
 
-                    // (opsional) kalau kamu masih mau tampilkan nilai asli dari tabel MainKasir:
-                    // JumlahAngsuranDb = h.JumlahAngsuran,
 
                     h.StatusPembayaran,
                     h.IsVerified,
