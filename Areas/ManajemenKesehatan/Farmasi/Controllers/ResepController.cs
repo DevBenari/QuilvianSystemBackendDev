@@ -1195,7 +1195,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             return Ok(new { message = "Status isFinished berhasil diperbarui." });
         }
 
-        [HttpPut("{id}/is-VerifiedByDokter")]
+        [HttpPut("{id}/ApprovalByFarmasi")]
         public async Task<IActionResult> UpdateApprovalByFarmasi(Guid id, [FromBody] PetugasFarmasiAprVM request)
         {
             var data = await _applicationDbContext.Reseps.FindAsync(id);
