@@ -81,7 +81,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
     }
 
     // ============================
-    // FUNCTION buat get by id 
+    // FUNCTION GET BILLING BY ID 
     // ============================
     public async Task<BillingKunjunganDto?> GetBillingKeseluruhanAsync(
         Guid kunjunganId,
@@ -787,7 +787,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
 
     // ================================
-    // FUNCTION GET ALL PAGED
+    // FUNCTION GET ALL BILLING PAGED
     // ================================
 
     public async Task<PagedResult<object>> GetBillingPagedAsync(BillingPagedQuery query, CancellationToken ct = default)
@@ -1596,7 +1596,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
     }
     
     // =========================
-    // HELPERS (punyamu + overload snapshot)
+    // HELPERS 
     // =========================
     private static bool IsRawatInapIP(string? jenisKunjungan)
     {

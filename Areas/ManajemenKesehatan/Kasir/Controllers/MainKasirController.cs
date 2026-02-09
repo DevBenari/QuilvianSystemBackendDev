@@ -1107,19 +1107,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             int perPage = 10,
             Guid? kunjunganId = null,
             Guid? pasienId = null,
+            string? search = null,              // ✅ search baru
+            string? asuransiNama = null,         // ✅ filter nama asuransi
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
-            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-    DateTime? startDate = null,
-            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-    DateTime? endDate = null,
-            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null
+        )
         {
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
+            if (perPage > 100) perPage = 100;
 
             // =========================
-            // 1) Query Header (MainKasir) - LEFT JOIN UserActives utk CreateByName
+            // 1) Query Header (MainKasir) + Join user/pasien/kunjungan/asuransi
             // =========================
             var query =
                 from a in _applicationDbContext.MainKasirs.AsNoTracking()
@@ -1132,26 +1134,27 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     on a.PasienId equals p0.PendaftaranPasienBaruId into pp
                 from p in pp.DefaultIfEmpty()
 
-                    // ✅ join Kunjungan
                 join k0 in _applicationDbContext.Kunjungans.AsNoTracking()
                     on a.KunjunganId equals k0.KunjunganID into kk
                 from k in kk.DefaultIfEmpty()
 
-                    // ✅ join Asuransi dari Kunjungan
                 join as0 in _applicationDbContext.Asuransis.AsNoTracking()
                     on k.AsuransiId equals as0.AsuransiId into aa
                 from asu in aa.DefaultIfEmpty()
+
                 where a.IsDelete != true
                 select new
                 {
                     a.KasirId,
                     a.KunjunganId,
                     a.PasienId,
+
                     p.NamaLengkap,
                     p.NoRekamMedis,
-                    // ✅ Asuransi (dari Kunjungan)
+
                     AsuransiId = (Guid?)k.AsuransiId,
                     NamaAsuransi = asu != null ? asu.NamaAsuransi : null,
+
                     a.InvoiceBilling,
                     a.JumlahAngsuran,
                     a.StatusPembayaran,
@@ -1173,28 +1176,46 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 };
 
             // =========================
-            // 2) Search
+            // 2) Filter dasar
             // =========================
             if (kunjunganId.HasValue && kunjunganId.Value != Guid.Empty)
-            {
                 query = query.Where(x => x.KunjunganId == kunjunganId.Value);
-            }
 
             if (pasienId.HasValue && pasienId.Value != Guid.Empty)
-            {
                 query = query.Where(x => x.PasienId == pasienId.Value);
-            }
-            //if (!string.IsNullOrWhiteSpace(search))
-            //{
-            //    var like = $"%{search.ToLower()}%";
 
-            //    // catatan: ILIKE ToString() memang tidak secepat search kolom text,
-            //    // tapi ini mempertahankan perilaku yg kamu tulis sebelumnya.
-            //    query = query.Where(x => EF.Functions.ILike(x.KasirId.ToString(), like));
-            //}
+            // ✅ Filter Nama Asuransi
+            if (!string.IsNullOrWhiteSpace(asuransiNama))
+            {
+                var likeAsu = $"%{asuransiNama.Trim()}%";
+                query = query.Where(x =>
+                    x.NamaAsuransi != null && EF.Functions.ILike(x.NamaAsuransi, likeAsu));
+            }
 
             // =========================
-            // 3) Filter tanggal
+            // 3) Search BARU (invoice, nama pasien, no RM, no kwitansi)
+            //     - NoKwitansi ada di MainKasirDetails -> pakai EXISTS/Any
+            // =========================
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var like = $"%{search.Trim()}%";
+
+                query = query.Where(x =>
+                    (x.InvoiceBilling != null && EF.Functions.ILike(x.InvoiceBilling, like)) ||
+                    (x.NamaLengkap != null && EF.Functions.ILike(x.NamaLengkap, like)) ||
+                    (x.NoRekamMedis != null && EF.Functions.ILike(x.NoRekamMedis, like)) ||
+                    _applicationDbContext.MainKasirDetails.AsNoTracking().Any(d =>
+                        d.IsDelete != true &&
+                        d.MainKasirId.HasValue &&
+                        d.MainKasirId.Value == x.KasirId &&
+                        d.NoKwitansi != null &&
+                        EF.Functions.ILike(d.NoKwitansi, like)
+                    )
+                );
+            }
+
+            // =========================
+            // 4) Filter tanggal
             // =========================
             if (startDate.HasValue && endDate.HasValue)
             {
@@ -1205,7 +1226,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             }
 
             // =========================
-            // 4) Filter periode
+            // 5) Filter periode (tetap seperti punyamu)
             // =========================
             if (periode.HasValue)
             {
@@ -1260,7 +1281,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             }
 
             // =========================
-            // 5) Sorting
+            // 6) Sorting
             // =========================
             bool desc = string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase);
 
@@ -1281,7 +1302,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 };
 
             // =========================
-            // 6) Paging Count
+            // 7) Paging Count
             // =========================
             var totalRows = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
@@ -1293,7 +1314,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 return NotFound(new { message = "Page not found." });
 
             // =========================
-            // 7) Fetch page headers -> simpan di variabel "header"
+            // 8) Fetch page headers
             // =========================
             var header = await query
                 .Skip((page - 1) * perPage)
@@ -1303,7 +1324,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             var kasirIds = header.Select(h => h.KasirId).ToList();
 
             // =========================
-            // 8) Fetch details (ONE query) -> simpan di variabel "details"
+            // 9) Fetch details (ONE query)
             // =========================
             var details = await _applicationDbContext.MainKasirDetails
                 .AsNoTracking()
@@ -1334,11 +1355,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 })
                 .ToListAsync();
 
-            // group details per kasirId (cepat, tidak null)
             var detailLookup = details.ToLookup(x => x.MainKasirId);
 
             // =========================
-            // 9) Load nama user sekali (hindari N+1) -> userIds, userDict
+            // 10) Load nama user sekali (hindari N+1)
             // =========================
             var userIds = new HashSet<Guid>();
 
@@ -1367,7 +1387,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 => userId.HasValue && userDict.TryGetValue(userId.Value, out var name) ? name : null;
 
             // =========================
-            // 10) Compose "rows" (paged) : Header + Details
+            // 11) Compose rows
             // =========================
             var rows = header.Select(h => new
             {
@@ -1405,7 +1425,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 Details = detailLookup[h.KasirId].Select(d => new
                 {
                     d.MainKasirDetailId,
-                    MainKasirId = d.MainKasirId,
+                    d.MainKasirId,
                     d.MetodePembayaranId,
                     d.ReferenceId,
                     d.KunjunganId,
@@ -1443,6 +1463,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 }
             });
         }
+
 
     }
 }
