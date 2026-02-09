@@ -105,7 +105,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 // ---- Relasi Poli
                 var poliData = await (
                     from tp in _applicationDbContext.TindakanPolis
-                    join poli in _applicationDbContext.Polikliniks on tp.PoliId equals poli.PoliklinikId
+                    join poli in _applicationDbContext.Polikliniks on tp.PoliklinikId equals poli.PoliklinikId
                     where tindakanIds.Contains(tp.TindakanId)
                     select new
                     {
@@ -251,7 +251,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 var poliData = await (
                     from tp in _applicationDbContext.TindakanPolis
-                    join poli in _applicationDbContext.Polikliniks on tp.PoliId equals poli.PoliklinikId
+                    join poli in _applicationDbContext.Polikliniks on tp.PoliklinikId equals poli.PoliklinikId
                     where tp.TindakanId == id
                     select new
                     {
@@ -539,171 +539,211 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 if (page < 1) page = 1;
                 if (perPage < 1) perPage = 10;
 
+                // Biar Swagger ga "meledak"
+                if (perPage > 100) perPage = 100;
+
                 // ======================================================
-                // 1. BASE QUERY
+                // 1) BASE QUERY (tanpa join duplikasi)
                 // ======================================================
-                var query = _applicationDbContext.Tindakans
+                var baseQuery = _applicationDbContext.Tindakans
                     .AsNoTracking()
                     .Where(t => t.IsDelete == false || t.IsDelete == null);
 
                 if (isRawatInap.HasValue)
-                    query = query.Where(t => t.IsRawatInap == isRawatInap.Value);
+                    baseQuery = baseQuery.Where(t => t.IsRawatInap == isRawatInap.Value);
 
                 if (tindakanId.HasValue)
-                    query = query.Where(t => t.TindakanId == tindakanId.Value);
+                    baseQuery = baseQuery.Where(t => t.TindakanId == tindakanId.Value);
 
+                // Date range (lebih sargable: < endExclusive)
+                if (startDate.HasValue && endDate.HasValue)
+                {
+                    var start = startDate.Value.Date;
+                    var endExclusive = endDate.Value.Date.AddDays(1);
+                    baseQuery = baseQuery.Where(t => t.CreateDateTime >= start && t.CreateDateTime < endExclusive);
+                }
+
+                // ======================================================
+                // 2) FILTER RELASI via EXISTS/Any (lebih ringan)
+                // ======================================================
                 if (kelasId.HasValue)
                 {
                     var kid = kelasId.Value;
-                    query = query.Where(t =>
-                        _applicationDbContext.TarifKelass
-                            .Any(tk => tk.TindakanId == t.TindakanId && tk.KelasId == kid));
+                    baseQuery = baseQuery.Where(t =>
+                        _applicationDbContext.TarifKelass.Any(tk =>
+                            tk.TindakanId == t.TindakanId && tk.KelasId == kid));
                 }
 
                 if (poliId.HasValue)
                 {
                     var pid = poliId.Value;
-                    query = query.Where(t =>
-                        _applicationDbContext.TindakanPolis
-                            .Any(tp => tp.TindakanId == t.TindakanId && tp.PoliId == pid));
-                }
-
-                if (!string.IsNullOrWhiteSpace(search))
-                {
-                    string s = $"%{search.ToLower()}%";
-                    query = query.Where(t =>
-                        EF.Functions.ILike(t.KodeTindakan, s) ||
-                        EF.Functions.ILike(t.NamaTindakan, s));
-                }
-
-                if (startDate.HasValue && endDate.HasValue)
-                {
-                    var start = startDate.Value.Date;
-                    var end = endDate.Value.Date.AddDays(1).AddTicks(-1);
-                    query = query.Where(t => t.CreateDateTime >= start && t.CreateDateTime <= end);
+                    baseQuery = baseQuery.Where(t =>
+                        _applicationDbContext.TindakanPolis.Any(tp =>
+                            tp.TindakanId == t.TindakanId && tp.PoliklinikId == pid));
                 }
 
                 // ======================================================
-                // 2. FILTER POLI (HANYA TINDAKAN DENGAN POLI TERTENTU)
+                // 3) SEARCH (dibuat cocok dengan index lower(...) gin_trgm_ops)
+                //    -> pakai ToLower() pada kolom
+                // ======================================================
+                if (!string.IsNullOrWhiteSpace(search))
+                {
+                    var s = $"%{search.Trim().ToLower()}%";
+
+                    baseQuery = baseQuery.Where(t =>
+                        (t.KodeTindakan != null && EF.Functions.ILike(t.KodeTindakan.ToLower(), s)) ||
+                        (t.NamaTindakan != null && EF.Functions.ILike(t.NamaTindakan.ToLower(), s)));
+                }
+
+                // ======================================================
+                // 4) FILTER poliNama (EXISTS agar tidak duplikasi baris)
+                //    -> juga cocok dengan index lower(NamaPoliklinik)
                 // ======================================================
                 if (!string.IsNullOrWhiteSpace(poliNama))
                 {
-                    var pattern = $"%{poliNama.ToLower()}%";
+                    var pattern = $"%{poliNama.Trim().ToLower()}%";
 
-                    query =
-                        from t in query
-                        join tp in _applicationDbContext.TindakanPolis on t.TindakanId equals tp.TindakanId
-                        join p in _applicationDbContext.Polikliniks on tp.PoliId equals p.PoliklinikId
-                        where EF.Functions.ILike(p.NamaPoliklinik, pattern)
-                        select t;
+                    baseQuery = baseQuery.Where(t =>
+                        (from tp in _applicationDbContext.TindakanPolis
+                         join p in _applicationDbContext.Polikliniks on tp.PoliklinikId equals p.PoliklinikId
+                         where tp.TindakanId == t.TindakanId
+                               && p.NamaPoliklinik != null
+                               && EF.Functions.ILike(p.NamaPoliklinik.ToLower(), pattern)
+                         select 1).Any()
+                    );
                 }
 
                 // ======================================================
-                // 3. SORTING
+                // 5) TOTAL ROWS (lebih ringan karena baseQuery tidak join besar)
                 // ======================================================
-                query = sortDirection?.ToLower() == "desc"
-                    ? orderBy switch
-                    {
-                        "KodeTindakan" => query.OrderByDescending(t => t.KodeTindakan),
-                        "NamaTindakan" => query.OrderByDescending(t => t.NamaTindakan),
-                        _ => query.OrderByDescending(t => t.CreateDateTime)
-                    }
-                    : orderBy switch
-                    {
-                        "KodeTindakan" => query.OrderBy(t => t.KodeTindakan),
-                        "NamaTindakan" => query.OrderBy(t => t.NamaTindakan),
-                        _ => query.OrderBy(t => t.CreateDateTime)
-                    };
-
-                // ======================================================
-                // 4. PAGING
-                // ======================================================
-                var totalRows = await query.CountAsync();
+                var totalRows = await baseQuery.CountAsync();
                 var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
 
-                var tindakanList = await query
+                // ======================================================
+                // 6) SORTING
+                // ======================================================
+                bool desc = (sortDirection ?? "desc").Equals("desc", StringComparison.OrdinalIgnoreCase);
+
+                var sortedQuery = orderBy?.Trim() switch
+                {
+                    "KodeTindakan" => desc ? baseQuery.OrderByDescending(t => t.KodeTindakan) : baseQuery.OrderBy(t => t.KodeTindakan),
+                    "NamaTindakan" => desc ? baseQuery.OrderByDescending(t => t.NamaTindakan) : baseQuery.OrderBy(t => t.NamaTindakan),
+                    _ => desc ? baseQuery.OrderByDescending(t => t.CreateDateTime) : baseQuery.OrderBy(t => t.CreateDateTime),
+                };
+
+                // ======================================================
+                // 7) PAGING: Ambil ID dulu (ringan)
+                // ======================================================
+                var pagedIds = await sortedQuery
                     .Skip((page - 1) * perPage)
                     .Take(perPage)
-                    .Select(t => new
-                    {
-                        t.TindakanId,
-                        t.KodeTindakan,
-                        t.NamaTindakan,
-                        t.IsRawatInap,
-                        t.UnitAsal,
-                        t.CreateDateTime,
-                        t.CreateBy,
-                        CreateByName = _applicationDbContext.UserActives
-                            .Where(u => u.UserActiveId == t.CreateBy)
-                            .Select(u => u.FullName)
-                            .FirstOrDefault()
-                    })
+                    .Select(t => t.TindakanId)
                     .ToListAsync();
 
-                if (!tindakanList.Any())
+                if (pagedIds.Count == 0)
                     return NotFound(new { message = "Data tidak ditemukan." });
 
-                // ======================================================
-                // 5. LOAD RELATIONS (ASURANSI, POLI, TARIF)
-                // ======================================================
-                var tindakanIds = tindakanList.Select(t => t.TindakanId).ToList();
+                var idSet = pagedIds.ToHashSet();
 
+                // ======================================================
+                // 8) LOAD TINDAKAN + CreateByName (HILANGKAN N+1)
+                // ======================================================
+                var tindakanRows = await
+                    (from t in _applicationDbContext.Tindakans.AsNoTracking()
+                     where idSet.Contains(t.TindakanId)
+                     join u in _applicationDbContext.UserActives.AsNoTracking()
+                         on t.CreateBy equals u.UserActiveId into uJoin
+                     from u in uJoin.DefaultIfEmpty()
+                     select new
+                     {
+                         t.TindakanId,
+                         t.KodeTindakan,
+                         t.NamaTindakan,
+                         t.IsRawatInap,
+                         t.UnitAsal,
+                         t.CreateDateTime,
+                         t.CreateBy,
+                         CreateByName = u.FullName
+                     })
+                    .ToListAsync();
+
+                // Jaga urutan sesuai paging
+                var tindakanDict = tindakanRows.ToDictionary(x => x.TindakanId, x => x);
+                var tindakanList = pagedIds
+                    .Where(id => tindakanDict.ContainsKey(id))
+                    .Select(id => tindakanDict[id])
+                    .ToList();
+
+                // ======================================================
+                // 9) LOAD RELATIONS (batch)
+                // ======================================================
                 var asuransiData = await (
-                    from ta in _applicationDbContext.TindakanAsuransis
-                    join asu in _applicationDbContext.Asuransis on ta.AsuransiId equals asu.AsuransiId
-                    where tindakanIds.Contains((Guid)ta.TindakanId)
-                    select new { ta.TindakanId, asu.AsuransiId, asu.NamaAsuransi }
+                    from ta in _applicationDbContext.TindakanAsuransis.AsNoTracking()
+                    join asu in _applicationDbContext.Asuransis.AsNoTracking()
+                        on ta.AsuransiId equals asu.AsuransiId
+                    where idSet.Contains(ta.TindakanId)
+                    select new
+                    {
+                        ta.TindakanId,
+                        asu.AsuransiId,
+                        asu.NamaAsuransi
+                    }
                 ).ToListAsync();
 
                 var poliData = await (
-                    from tp in _applicationDbContext.TindakanPolis
-                    join p in _applicationDbContext.Polikliniks on tp.PoliId equals p.PoliklinikId
-                    where tindakanIds.Contains((Guid)tp.TindakanId)
-                    select new { tp.TindakanId, p.PoliklinikId, p.NamaPoliklinik }
+                    from tp in _applicationDbContext.TindakanPolis.AsNoTracking()
+                    join p in _applicationDbContext.Polikliniks.AsNoTracking()
+                        on tp.PoliklinikId equals p.PoliklinikId
+                    where idSet.Contains(tp.TindakanId)
+                    select new
+                    {
+                        tp.TindakanId,
+                        p.PoliklinikId,
+                        p.NamaPoliklinik
+                    }
                 ).ToListAsync();
 
-                var tarifDataQuery = from tk in _applicationDbContext.TarifKelass
-                                     join k in _applicationDbContext.Kelass on tk.KelasId equals k.KelasId
-                                     where tindakanIds.Contains((Guid)tk.TindakanId)
-                                     select new
-                                     {
-                                         tk.TindakanId,
-                                         tk.KelasId,
-                                         tk.TarifKelasId,
-                                         tk.TarifDokter,
-                                         tk.TarifRs,
-                                         tk.TarifJp,
-                                         tk.TarifTotal,
-                                         k.NamaKelas
-                                     };
+                var tarifQuery =
+                    from tk in _applicationDbContext.TarifKelass.AsNoTracking()
+                    join k in _applicationDbContext.Kelass.AsNoTracking()
+                        on tk.KelasId equals k.KelasId
+                    where idSet.Contains((Guid)tk.TindakanId)
+                    select new
+                    {
+                        tk.TindakanId,
+                        tk.KelasId,
+                        tk.TarifKelasId,
+                        tk.TarifDokter,
+                        tk.TarifRs,
+                        tk.TarifJp,
+                        tk.TarifTotal,
+                        k.NamaKelas
+                    };
 
                 if (kelasId.HasValue)
-                    tarifDataQuery = tarifDataQuery.Where(t => t.KelasId == kelasId.Value);
+                    tarifQuery = tarifQuery.Where(x => x.KelasId == kelasId.Value);
 
-                var tarifData = await tarifDataQuery.ToListAsync();
+                var tarifData = await tarifQuery.ToListAsync();
 
                 // ======================================================
-                // 6. BUILD LOOKUP
+                // 10) BUILD LOOKUP + RESULT (materialize)
                 // ======================================================
                 var asuransiLookup = asuransiData.ToLookup(x => x.TindakanId);
                 var poliLookup = poliData.ToLookup(x => x.TindakanId);
                 var tarifLookup = tarifData.ToLookup(x => x.TindakanId);
 
-                // ======================================================
-                // 7. BUILD RESULT (FILTER PoliNames SECARA IN-MEMORY)
-                // ======================================================
+                // Kalau kamu mau PoliNames yang dikirim hanya yang match poliNama (optional)
+                var poliNamaTrim = poliNama?.Trim();
+
                 var result = tindakanList.Select(t =>
                 {
                     var poliItems = poliLookup[t.TindakanId].ToList();
 
-                    if (!string.IsNullOrWhiteSpace(poliNama))
+                    if (!string.IsNullOrWhiteSpace(poliNamaTrim))
                     {
-                        // filter in-memory, pakai StringComparison, BUKAN EF.Functions.ILike
                         poliItems = poliItems
                             .Where(p => p.NamaPoliklinik != null &&
-                                        p.NamaPoliklinik.Contains(
-                                            poliNama,
-                                            StringComparison.OrdinalIgnoreCase))
+                                        p.NamaPoliklinik.Contains(poliNamaTrim, StringComparison.OrdinalIgnoreCase))
                             .ToList();
                     }
 
@@ -721,10 +761,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         PoliNames = poliItems,
                         TarifKelas = tarifLookup[t.TindakanId].ToList()
                     };
-                });
+                }).ToList();
 
                 // ======================================================
-                // 8. RETURN RESPONSE
+                // 11) RETURN
                 // ======================================================
                 return Ok(new
                 {
@@ -741,9 +781,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+                // untuk dev: boleh tampilkan inner biar jelas, untuk prod: log saja
+                return StatusCode(500, new
+                {
+                    message = $"Terjadi kesalahan internal: {ex.Message}",
+                    inner = ex.InnerException?.Message
+                });
             }
         }
+
+
 
 
 

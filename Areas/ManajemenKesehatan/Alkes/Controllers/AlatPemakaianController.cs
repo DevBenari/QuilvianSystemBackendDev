@@ -376,6 +376,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
                             JenisBilling = "Alkes",
                             StatusPengambilan = true,
                             StatusBilling = false,
+                            TanggalInvoice = DateTime.UtcNow,
+                            TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                             CreateBy = userId,
                             CreateDateTime = DateTimeOffset.UtcNow
                         };
@@ -573,7 +575,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
                             HargaItem = alatDb.TarifRs,
                             QtyItem = qtyInput,
                             SubTotalItem = alatDb.TarifRs * qtyInput,
-
+                            TanggalInvoice = DateTime.UtcNow,
+                            TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                             JenisBilling = "Alkes",
                             StatusPengambilan = true,
                             StatusBilling = false,
@@ -616,203 +619,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
-
-        //[HttpPut("{id}")]
-        //public async Task<IActionResult> UpdateAlatPemakaian(Guid id, [FromBody] AlatPemakaianViewModel vm)
-        //{
-        //    if (vm == null || !ModelState.IsValid)
-        //        return BadRequest(new { message = "Data tidak valid." });
-
-        //    if (vm.KunjunganId == null || vm.PasienId == null)
-        //        return BadRequest(new { message = "KunjunganId dan PasienId wajib diisi." });
-
-        //    if (vm.Details == null || vm.Details.Count == 0)
-        //        return BadRequest(new { message = "Detail pemakaian alat wajib diisi minimal 1 item." });
-
-        //    // Auth
-        //    var emailLogin = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        //    if (string.IsNullOrEmpty(emailLogin))
-        //        return Unauthorized(new { message = "User tidak terautentikasi!" });
-
-        //    var user = await _applicationDbContext.UserActives.FirstOrDefaultAsync(x => x.Email == emailLogin);
-        //    if (user == null)
-        //        return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-
-        //    var userId = user.UserActiveId;
-
-        //    await using var trx = await _applicationDbContext.Database.BeginTransactionAsync();
-        //    try
-        //    {
-        //        // =========================
-        //        // 1) Ambil header
-        //        // =========================
-        //        var header = await _applicationDbContext.AlatPemakaians
-        //            .FirstOrDefaultAsync(x => x.PemakaianAlatId == id);
-
-        //        if (header == null)
-        //            return NotFound(new { message = "Data pemakaian alat tidak ditemukan." });
-
-        //        // =========================
-        //        // 2) Ambil detail existing pakai DbSet detail (tanpa navigation)
-        //        // =========================
-        //        var existingDetails = await _applicationDbContext.AlatPemakaianDetails
-        //            .Where(x => x.PemakaianAlatId == id)
-        //            .ToListAsync();
-
-        //        // Update header
-        //        header.KunjunganId = vm.KunjunganId.Value;
-        //        header.PasienId = vm.PasienId.Value;
-        //        header.TanggalPemakaian = vm.TanggalPemakaian ?? header.TanggalPemakaian;
-        //        header.Keterangan = vm.Keterangan;
-        //        header.UpdateBy = userId;
-        //        header.UpdateDateTime = DateTimeOffset.UtcNow;
-
-        //        // =========================
-        //        // 3) Preload nama alat + tarif (hindari query per loop)
-        //        // =========================
-        //        var alatIds = vm.Details.Where(d => d?.PeralatanId != null).Select(d => d!.PeralatanId!.Value).Distinct().ToList();
-        //        var kelasIds = vm.Details.Where(d => d?.KelasId != null).Select(d => d!.KelasId!.Value).Distinct().ToList();
-
-        //        var namaAlatDict = await _applicationDbContext.Peralatans
-        //            .Where(x => alatIds.Contains(x.PeralatanId))
-        //            .Select(x => new { x.PeralatanId, x.NamaPeralatan })
-        //            .ToDictionaryAsync(x => x.PeralatanId, x => x.NamaPeralatan);
-
-        //        var tarifDict = await _applicationDbContext.TarifKelass
-        //            .Where(x => alatIds.Contains((Guid)x.PeralatanId) && kelasIds.Contains((Guid)x.KelasId))
-        //            .Select(x => new { x.PeralatanId, x.KelasId, x.TarifRs })
-        //            .ToDictionaryAsync(x => (x.PeralatanId, x.KelasId), x => x.TarifRs);
-
-        //        // =========================
-        //        // 4) Billing Index + billing existing (tanpa PemakaianAlatId)
-        //        // =========================
-        //        int billingIndex = await _applicationDbContext.Billings
-        //            .CountAsync(b => b.KunjunganId == vm.KunjunganId.Value && b.JenisBilling.ToLower() == "alkes");
-
-        //        // Billing per item per kunjungan
-        //        var billingDict = await _applicationDbContext.Billings
-        //            .Where(b => b.KunjunganId == vm.KunjunganId.Value && b.JenisBilling.ToLower() == "alkes")
-        //            .ToDictionaryAsync(b => b.ItemId); // key: PeralatanId
-
-        //        // =========================
-        //        // 5) Update/Add detail + billing
-        //        // =========================
-        //        foreach (var d in vm.Details)
-        //        {
-        //            if (d?.PeralatanId == null || d.KelasId == null)
-        //                return BadRequest(new { message = "PeralatanId dan KelasId wajib diisi pada detail." });
-
-        //            var alatId = d.PeralatanId.Value;
-        //            var kelasId = d.KelasId.Value;
-
-        //            if (!tarifDict.TryGetValue((alatId, kelasId), out var tarifRs))
-        //                return BadRequest(new { message = $"Tarif tidak ditemukan untuk PeralatanId={alatId}, KelasId={kelasId}" });
-
-        //            var qty = d.QtyPemakaian ?? 1;
-        //            if (qty <= 0) qty = 1;
-
-        //            var subTotal = (tarifRs * qty);
-
-        //            // --- Update detail jika ada id detail ---
-        //            AlatPemakaianDetail? existingDetail = null;
-        //            if (d.DetailPemakaianAlatId.HasValue)
-        //            {
-        //                existingDetail = existingDetails.FirstOrDefault(x => x.DetailPemakaianAlatId == d.DetailPemakaianAlatId.Value);
-        //            }
-
-        //            if (existingDetail != null)
-        //            {
-        //                existingDetail.PeralatanId = alatId;
-        //                existingDetail.KelasId = kelasId;
-        //                existingDetail.QtyPemakaian = qty;
-        //                existingDetail.HargaPeralatan = tarifRs;
-        //                existingDetail.TotalPemakaianAlat = subTotal;
-        //                existingDetail.Keterangan = d.Keterangan;
-        //                existingDetail.UpdateBy = userId;
-        //                existingDetail.UpdateDateTime = DateTimeOffset.UtcNow;
-        //            }
-        //            else
-        //            {
-        //                // --- Tambah detail baru ---
-        //                var newDetail = new AlatPemakaianDetail
-        //                {
-        //                    DetailPemakaianAlatId = Guid.NewGuid(),
-        //                    PemakaianAlatId = id,
-        //                    PeralatanId = alatId,
-        //                    KelasId = kelasId,
-        //                    QtyPemakaian = qty,
-        //                    HargaPeralatan = tarifRs,
-        //                    TotalPemakaianAlat = subTotal,
-        //                    Keterangan = d.Keterangan,
-        //                    CreateBy = userId,
-        //                    CreateDateTime = DateTimeOffset.UtcNow
-        //                };
-
-        //                _applicationDbContext.AlatPemakaianDetails.Add(newDetail);
-        //                existingDetails.Add(newDetail);
-        //            }
-
-        //            // --- Billing update/add (tanpa reference) ---
-        //            namaAlatDict.TryGetValue(alatId, out var namaAlat);
-        //            namaAlat ??= "Pemakaian Alat";
-
-        //            if (!billingDict.TryGetValue(alatId, out var billing))
-        //            {
-        //                billingIndex++;
-
-        //                billing = new Billing
-        //                {
-        //                    BillingId = Guid.NewGuid(),
-        //                    KunjunganId = vm.KunjunganId.Value,
-        //                    BillingDate = DateTime.UtcNow,
-        //                    BillingKode = $"{billingIndex:D3}",
-        //                    ItemId = alatId,
-        //                    NamaItem = namaAlat,
-        //                    HargaItem = tarifRs,
-        //                    QtyItem = qty,
-        //                    SubTotalItem = tarifRs * qty,
-        //                    JenisBilling = "Alkes",
-        //                    StatusPengambilan = true,
-        //                    CreateBy = userId,
-        //                    CreateDateTime = DateTimeOffset.UtcNow
-        //                };
-
-        //                billingDict[alatId] = billing;
-        //                _applicationDbContext.Billings.Add(billing);
-        //            }
-        //            else
-        //            {
-        //                billing.HargaItem = tarifRs;
-        //                billing.QtyItem = qty; // set sesuai input terbaru (kalau mau akumulasi: +=)
-        //                billing.SubTotalItem = billing.HargaItem * billing.QtyItem;
-        //                billing.UpdateBy = userId;
-        //                billing.UpdateDateTime = DateTimeOffset.UtcNow;
-        //            }
-        //        }
-
-        //        await _applicationDbContext.SaveChangesAsync();
-        //        await trx.CommitAsync();
-
-        //        await _hubContext.Clients.All.SendAsync("Pemakaian alat diupdate", new
-        //        {
-        //            action = "update",
-        //            header.PemakaianAlatId
-        //        });
-
-        //        return Ok(new
-        //        {
-        //            message = "Berhasil update pemakaian alat (detail tidak hilang) + billing ter-update",
-        //            pemakaianAlatId = id,
-        //            totalDetailExisting = existingDetails.Count,
-        //            totalBillingForKunjungan = billingDict.Count
-        //        });
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        await trx.RollbackAsync();
-        //        return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
-        //    }
-        //}
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)

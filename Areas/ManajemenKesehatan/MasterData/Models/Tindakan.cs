@@ -14,7 +14,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string NamaTindakan { get; set; }
         public string? UnitAsal {  get; set; }
         public bool? IsRawatInap {  get; set; }
-        
+
+        // nav
+        //public virtual ICollection<TarifKelas>? TarifKelass { get; set; } = new List<TarifKelas>();
+        //public virtual ICollection<TindakanPoli>? TindakanPolis { get; set; } = new List<TindakanPoli>();
+        //public virtual ICollection<TindakanAsuransi>? TindakanAsuransis { get; set; } = new List<TindakanAsuransi>();
     }
 
     [Table("MstTindakanAsuransi", Schema = "public")]
@@ -23,7 +27,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         [Key]
         public Guid TindakanAsuransiId { get; set; }
         public Guid TindakanId { get; set; }
+       //public virtual Tindakan? Tindakan { get; set; } = null!;
         public Guid AsuransiId { get; set; }
+       //public virtual Asuransi? Asuransi { get; set; } = null!;
         // ============================
         // MARKUP
         // ============================
@@ -64,7 +70,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         [Key]
         public Guid TindakanPoliId { get; set; }
         public Guid TindakanId { get; set; }
-        public Guid PoliId { get; set; }
+        //public virtual Tindakan? Tindakan { get; set; }
+        public Guid PoliklinikId { get; set; }
+       // public virtual Poliklinik? Poliklinik { get; set; }
 
     }
 }

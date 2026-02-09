@@ -263,6 +263,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     SubTotalItem = totalqty,
                     JenisBilling = "Tindakan", // Menandakan ini adalah billing untuk tindakan
                     StatusBilling= false,
+                    TanggalInvoice = DateTime.UtcNow,
+                    TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                     Keterangan = vm.Keterangan,
@@ -423,6 +425,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         JenisBilling = "Tindakan",
                         StatusPengambilan = true,
                         StatusBilling = false,
+                        TanggalInvoice = DateTime.UtcNow,
+                        TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                         CreateBy = userActiveId,
                         CreateDateTime = DateTimeOffset.UtcNow,
                     };
@@ -530,9 +534,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-    DateTime? startDate = null,
+            DateTime? startDate = null,
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-    DateTime? endDate = null,
+            DateTime? endDate = null,
             [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
             try

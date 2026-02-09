@@ -1,5 +1,7 @@
 ﻿using System.Text;
 using System.Text.Json;
+using Hangfire;
+using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -18,6 +20,9 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Interfaces;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.HubSignalR;
+using QuilvianSystemBackendDev.Controllers;
+using QuilvianSystemBackendDev.Hangfire.Controllers;
+using QuilvianSystemBackendDev.Hangfire.Jobs;
 using QuilvianSystemBackendDev.Helpers;
 using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
@@ -51,6 +56,20 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =
     options.SerializerOptions.Converters.Add(new NullableTimeOnlyJsonConverter());
 });
 
+// BUILDER HANGFIRE
+//builder.Services.AddControllers();
+
+//// 1) Register Hangfire + Storage
+//builder.Services.AddHangfire(config => config
+//    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+//    .UseSimpleAssemblyNameTypeSerializer()
+//    .UseRecommendedSerializerSettings()
+//    .UsePostgreSqlStorage(opts =>
+//        opts.UseNpgsqlConnection(builder.Configuration.GetConnectionString("HangfireConnection")))
+//);
+
+//// 2) Jalankan Hangfire Server (worker) di proses web ini
+//builder.Services.AddHangfireServer();
 
 // Tambahkan layanan CORS
 builder.Services.AddCors(options =>
@@ -128,6 +147,7 @@ builder.Services.AddSwaggerGen(c =>
     c.SwaggerDoc("manajemen_kesehatan", new OpenApiInfo { Title = "Manajemen Kesehatan API", Version = "v1" });
     c.SwaggerDoc("administrator", new OpenApiInfo { Title = "Administrator API", Version = "v1" });
     c.SwaggerDoc("hrd", new OpenApiInfo { Title = "HRD API", Version = "v1" });
+    c.SwaggerDoc("finance", new OpenApiInfo { Title = "Finance API", Version = "v1" });
     c.SwaggerDoc("master", new OpenApiInfo { Title = "Master API", Version = "v1" });
 
     // JWT Auth
@@ -194,11 +214,14 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSignalR();
 
 var app = builder.Build();
-
+app.UseRouting();
 app.UseCors("AllowSpecific"); // Panggil sebelum middleware lainnya
+
 
 // Konfigurasi SignalR
 // signal R kunjungan
+app.MapControllers();
+
 app.MapHub<KunjunganHub>("/hubs/kunjungan");
 app.MapHub<VitalSignHub>("/hubs/vitalsign");
 app.MapHub<SOAPHub>("/hubs/soap");
@@ -242,11 +265,14 @@ if (app.Environment.IsDevelopment())
         c.SwaggerEndpoint("/swagger/manajemen_kesehatan/swagger.json", "Manajemen Kesehatan API");
         c.SwaggerEndpoint("/swagger/administrator/swagger.json", "Administrator API");
         c.SwaggerEndpoint("/swagger/hrd/swagger.json", "HRD API");
+        c.SwaggerEndpoint("/swagger/finance/swagger.json", "Finance API");
         c.SwaggerEndpoint("/swagger/master/swagger.json", "Master API");
         c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None);
     });
 }
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
+
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
@@ -254,6 +280,7 @@ app.UseSwaggerUI(c =>
     c.SwaggerEndpoint("/swagger/manajemen_kesehatan/swagger.json", "Manajemen Kesehatan API");
     c.SwaggerEndpoint("/swagger/administrator/swagger.json", "Administrator API");
     c.SwaggerEndpoint("/swagger/hrd/swagger.json", "HRD API");
+    c.SwaggerEndpoint("/swagger/finance/swagger.json", "Finance API");
     c.SwaggerEndpoint("/swagger/master/swagger.json", "Master API");
     c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None);
 });
@@ -263,6 +290,25 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseAuthentication(); // Tambahkan middleware autentikasi
 app.UseAuthorization();
-app.MapControllers();
+
+//app.MapHangfireDashboard("/hangfire", new DashboardOptions
+//{
+//    Authorization = new[] { new HangfireDashboardAuthFilterController() }
+//});
+// Setting Job Hangfire
+//var tz = GetJakartaTimeZone();
+
+//RecurringJob.AddOrUpdate<BillingJob>(
+//    "update-dpd-billing",
+//    job => job.DPDBillingRunAsync(CancellationToken.None),
+//    "5 0 * * *", // 00:05 setiap hari
+//    new RecurringJobOptions { TimeZone = tz }
+//);
+
+//static TimeZoneInfo GetJakartaTimeZone()
+//{
+//    try { return TimeZoneInfo.FindSystemTimeZoneById("Asia/Jakarta"); }          // Linux
+//    catch { return TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time"); } // Windows
+//}
 
 app.Run();

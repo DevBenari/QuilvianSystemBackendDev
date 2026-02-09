@@ -455,7 +455,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     p.NoPO,
                     p.SupplierId,
                     SupplierNama = sup.SupplierName,
-                    sup.KhususUnit,
                     p.PenerimaId,
                     p.DarahDetailId,
                     p.JumlahKantong,

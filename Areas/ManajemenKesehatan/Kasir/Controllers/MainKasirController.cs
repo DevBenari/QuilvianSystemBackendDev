@@ -45,6 +45,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         private readonly INoKwitansiService _noKwitansiService;
         private readonly IGenerateUrutanAngsuran _generateUrutanAngsuran;
         private readonly ICountAngsuran _countAngsuran;
+        private readonly IBillingKunjunganReadService _billingKunjunganReadService;
 
         public MainKasirController(
             ApplicationDbContext applicationDbContext,
@@ -57,7 +58,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             ITTDService ttdService,
             INoKwitansiService noKwitansiService,
             IGenerateUrutanAngsuran generateUrutanAngsuran,
-            ICountAngsuran countAngsuran)
+            ICountAngsuran countAngsuran,
+            IBillingKunjunganReadService billingKunjunganReadService)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
@@ -70,6 +72,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             _noKwitansiService = noKwitansiService;
             _generateUrutanAngsuran = generateUrutanAngsuran;
             _countAngsuran = countAngsuran;
+            _billingKunjunganReadService = billingKunjunganReadService;
         }
 
         public static string HitungUmurLengkap(DateTime? tanggalLahir)
@@ -469,15 +472,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             // =========================
             // 1) Header (MainKasir)
             // =========================
-            var header = await _applicationDbContext.MainKasirs
-                .AsNoTracking()
-                .Where(x => x.KasirId == id && x.IsDelete != true)
-                .Select(x => new
+            var header = await (
+                from x in _applicationDbContext.MainKasirs.AsNoTracking()
+                join p0 in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking()
+                    on x.PasienId equals p0.PendaftaranPasienBaruId into pGroup
+                from p in pGroup.DefaultIfEmpty()
+
+                where x.KasirId == id && x.IsDelete != true
+                select new
                 {
                     x.KasirId,
                     x.KunjunganId,
                     x.PasienId,
-                    x.NoKwitansi,
+
+                    // ✅ tambahan pasien
+                    NamaLengkap = p != null ? p.NamaLengkap : null,
+                    NoRekamMedis = p != null ? p.NoRekamMedis : null,
+
+                    x.InvoiceBilling,
                     x.JumlahAngsuran,
                     x.StatusPembayaran,
                     x.IsVerified,
@@ -491,11 +503,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     x.DiskonId,
 
                     x.CreateDateTime,
-                    CreateBy = (Guid?)x.CreateBy,     // aman Guid/Guid?
+                    CreateBy = (Guid?)x.CreateBy,
                     x.UpdateDateTime,
-                    UpdateBy = (Guid?)x.UpdateBy      // aman Guid/Guid?
-                })
-                .FirstOrDefaultAsync();
+                    UpdateBy = (Guid?)x.UpdateBy
+                }
+            ).FirstOrDefaultAsync();
+
 
             if (header == null)
                 return NotFound(new { message = "MainKasir tidak ditemukan." });
@@ -518,7 +531,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     d.PasienId,
                     d.TotalPembayaran,
                     d.SisaPembayaran,
-                    d.InvoiceBilling,
+                    d.NoKwitansi,
                     d.AngsuranKe,
                     d.NamaMetode,
                     d.NominalPembayaran,
@@ -569,7 +582,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         header.KasirId,
                         header.KunjunganId,
                         header.PasienId,
-                        header.NoKwitansi,
+                        header.NamaLengkap,
+                        header.NoRekamMedis,
+                        header.InvoiceBilling,
                         header.JumlahAngsuran,
                         header.StatusPembayaran,
                         header.IsVerified,
@@ -601,7 +616,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         d.PasienId,
                         d.TotalPembayaran,
                         d.SisaPembayaran,
-                        d.InvoiceBilling,
+                        d.NoKwitansi,
                         d.AngsuranKe,
                         d.NamaMetode,
                         d.NominalPembayaran,
@@ -621,183 +636,44 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         }
 
         [HttpGet("Billing-Kasir/{kunjunganId}")]
-        public async Task<IActionResult> GetBillingKasirByKunjunganId(Guid kunjunganId)
+        public async Task<IActionResult> GetBillingKasirByKunjunganId(
+            Guid kunjunganId,
+            [FromQuery] DateTime? asOf = null,
+            CancellationToken ct = default)
         {
             // =========================
-            // 1) Headers (SEMUA MainKasir)
+            // 1) Billing keseluruhan (service)
             // =========================
-            var headers = await _applicationDbContext.MainKasirs
-                .AsNoTracking()
-                .Where(x => x.KunjunganId == kunjunganId && x.IsDelete != true)
-                .OrderByDescending(x => x.CreateDateTime)
-                .Select(x => new
-                {
-                    x.KasirId,
-                    x.KunjunganId,
-                    x.PasienId,
-                    x.NoKwitansi,
-                    x.JumlahAngsuran,
-                    x.StatusPembayaran,
-                    x.IsVerified,
-                    x.TTDUserVerfiedId,
-                    x.PathUserVerified,
-                    x.GrandTotalPembayaran,
-                    x.TotalBiayaObat,
-                    x.TotalBiayaTindakan,
-                    x.Keterangan,
-                    x.TglPembayaran,
-                    x.DiskonId,
-
-                    x.CreateDateTime,
-                    CreateBy = (Guid?)x.CreateBy,
-                    x.UpdateDateTime,
-                    UpdateBy = (Guid?)x.UpdateBy
-                })
-                .ToListAsync();
-
-            if (headers.Count == 0)
-                return NotFound(new { message = "MainKasir untuk kunjungan ini tidak ditemukan." });
-
-            var kasirIds = headers.Select(h => h.KasirId).ToList();
+            var billingDto = await _billingKunjunganReadService
+                .GetBillingKeseluruhanAsync(kunjunganId, asOf, ct);
 
             // =========================
-            // 2) Details untuk semua KasirId (ONE query)
+            // 2) MAIN KASIR DAN DETAILNYA
             // =========================
-            var details = await _applicationDbContext.MainKasirDetails
-                .AsNoTracking()
-                .Where(d => kasirIds.Contains((Guid)d.MainKasirId!) && d.IsDelete != true)
-                .OrderBy(d => d.TglPembayaran ?? DateTime.MaxValue)
-                .ThenBy(d => d.CreateDateTime)
-                .Select(d => new
-                {
-                    d.MainKasirDetailId,
-                    d.MainKasirId,
-                    d.MetodePembayaranId,
-                    d.ReferenceId,
-                    d.KunjunganId,
-                    d.PasienId,
-                    d.TotalPembayaran,
-                    d.SisaPembayaran,
-                    d.InvoiceBilling,
-                    d.AngsuranKe,
-                    d.NamaMetode,
-                    d.NominalPembayaran,
-                    d.Keterangan,
-                    d.TglPembayaran,
-
-                    d.CreateDateTime,
-                    CreateBy = (Guid?)d.CreateBy,
-                    d.UpdateDateTime,
-                    UpdateBy = (Guid?)d.UpdateBy
-                })
-                .ToListAsync();
-
-            // lookup details per KasirId (cepat dan aman kalau kosong)
-            var detailLookup = details.ToLookup(x => x.MainKasirId);
-
-            // =========================
-            // 3) Load nama user sekali (hindari N+1)
-            // =========================
-            var userIds = new HashSet<Guid>();
-
-            foreach (var h in headers)
-            {
-                if (h.CreateBy.HasValue) userIds.Add(h.CreateBy.Value);
-                if (h.UpdateBy.HasValue) userIds.Add(h.UpdateBy.Value);
-                if (h.TTDUserVerfiedId.HasValue) userIds.Add(h.TTDUserVerfiedId.Value);
-            }
-
-            foreach (var d in details)
-            {
-                if (d.CreateBy.HasValue) userIds.Add(d.CreateBy.Value);
-                if (d.UpdateBy.HasValue) userIds.Add(d.UpdateBy.Value);
-            }
-
-            var userDict = userIds.Count == 0
-                ? new Dictionary<Guid, string>()
-                : await _applicationDbContext.UserActives
-                    .AsNoTracking()
-                    .Where(u => userIds.Contains(u.UserActiveId))
-                    .Select(u => new { u.UserActiveId, u.FullName })
-                    .ToDictionaryAsync(x => x.UserActiveId, x => x.FullName);
-
-            string? GetUserName(Guid? userId)
-                => userId.HasValue && userDict.TryGetValue(userId.Value, out var name) ? name : null;
-
-            // =========================
-            // 4) Compose response
-            // =========================
-            var rows = headers.Select(h => new
-            {
-                Header = new
-                {
-                    h.KasirId,
-                    h.KunjunganId,
-                    h.PasienId,
-                    h.NoKwitansi,
-                    h.JumlahAngsuran,
-                    h.StatusPembayaran,
-                    h.IsVerified,
-                    h.TTDUserVerfiedId,
-                    VerifiedByName = GetUserName(h.TTDUserVerfiedId),
-                    h.PathUserVerified,
-                    h.GrandTotalPembayaran,
-                    h.TotalBiayaObat,
-                    h.TotalBiayaTindakan,
-                    h.Keterangan,
-                    h.TglPembayaran,
-                    h.DiskonId,
-
-                    h.CreateDateTime,
-                    h.CreateBy,
-                    CreateByName = GetUserName(h.CreateBy),
-
-                    h.UpdateDateTime,
-                    h.UpdateBy,
-                    UpdateByName = GetUserName(h.UpdateBy),
-                },
-
-                Details = detailLookup[h.KasirId].Select(d => new
-                {
-                    d.MainKasirDetailId,
-                    d.MainKasirId,
-                    d.MetodePembayaranId,
-                    d.ReferenceId,
-                    d.KunjunganId,
-                    d.PasienId,
-                    d.TotalPembayaran,
-                    d.SisaPembayaran,
-                    d.InvoiceBilling,
-                    d.AngsuranKe,
-                    d.NamaMetode,
-                    d.NominalPembayaran,
-                    d.Keterangan,
-                    d.TglPembayaran,
-
-                    d.CreateDateTime,
-                    d.CreateBy,
-                    CreateByName = GetUserName(d.CreateBy),
-
-                    d.UpdateDateTime,
-                    d.UpdateBy,
-                    UpdateByName = GetUserName(d.UpdateBy),
-                }).ToList()
-            }).ToList();
+            var kasirs = await _billingKunjunganReadService.GetMainKasirDanDetailPembayaranAsync(kunjunganId, ct);
 
             return Ok(new
             {
-                message = "Berhasil mengambil SEMUA MainKasir + Details (by KunjunganId) || 200 OK",
+                status = "success",
                 data = new
                 {
                     KunjunganId = kunjunganId,
-                    TotalKasir = rows.Count,
-                    Kasirs = rows
+
+                    // billing keseluruhan dari service
+                    Billing = billingDto,
+
+                    // pembayaran (kasir+detail) tetap ditampilkan walau detail kosong
+                    Pembayaran = new
+                    {
+                        TotalKasir = kasirs.Count,
+                        Kasirs = kasirs
+                    }
                 }
             });
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] MainKasirViewModel vm)
+        public async Task<IActionResult> Create([FromBody] MainKasirViewModel vm, CancellationToken ct)
         {
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
@@ -897,10 +773,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 }
 
 
-                // 10) TTD
+                // 10) TTD dan invoice billing
                 var ttd = (vm.TTDUserVerfiedId.HasValue)
                     ? await _ttdService.CheckTTDAsync(vm.TTDUserVerfiedId.Value)
                     : null;
+                
+                var ivc = await _applicationDbContext.Billings.AsNoTracking()
+                    .Where(b => b.KunjunganId == vm.KunjunganId)
+                    .Select(b => b.InvoiceBilling)
+                    .FirstOrDefaultAsync();
 
                 // 11) Create / Update header
                 MainKasir headerEntity;
@@ -917,7 +798,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         StatusPembayaran = finalStatus,
                         IsVerified = vm.IsVerified,
 
-                        NoKwitansi = noKwitansi,
+                        InvoiceBilling = ivc,
 
                         DiskonId = vm.DiskonId,
                         GrandTotalPembayaran = vm.GrandTotalPembayaran ?? totalTagihan,
@@ -944,7 +825,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     // Update status & tanggal pembayaran terakhir
                     headerEntity.StatusPembayaran = finalStatus;
                     headerEntity.TglPembayaran = tglPembayaran;
-                    headerEntity.NoKwitansi = noKwitansi;
+                    headerEntity.InvoiceBilling = ivc;
                     // kalau mau update field ini tiap cicilan, silakan; kalau tidak, boleh dihapus
                     headerEntity.IsVerified = vm.IsVerified;
                     headerEntity.TTDUserVerfiedId = vm.TTDUserVerfiedId ?? headerEntity.TTDUserVerfiedId;
@@ -956,52 +837,80 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     _applicationDbContext.MainKasirs.Update(headerEntity);
                 }
 
-                // 12) Insert detail pembayaran (selalu insert baris baru setiap pembayaran)
-                var detailEntities = vm.Details.Select(detail => new MainKasirDetail
+                // 12) INSERT DETAIL (INI YANG DIUBAH):
+                // ✅ running sisa per baris + kwitansi unik per baris + 1 angsuran untuk semua detail dalam request ini
+                decimal cumulativePaidNow = 0m;
+                var detailEntities = new List<MainKasirDetail>();
+
+                foreach (var detailVm in vm.Details)
                 {
-                    MainKasirDetailId = Guid.NewGuid(),
-                    MainKasirId = kasirId,
-                    KunjunganId = kunjunganId,
-                    PasienId = detail.PasienId ?? vm.PasienId,
+                    var bayarNow = detailVm.NominalPembayaran ?? 0m;
+                    if (bayarNow <= 0m) continue;
 
-                    // Konsistenkan total & sisa untuk seluruh transaksi pembayaran ini
-                    TotalPembayaran = totalTagihan,
-                    NominalPembayaran = detail.NominalPembayaran,
-                    SisaPembayaran = sisaAfter,
+                    cumulativePaidNow += bayarNow;
 
-                    MetodePembayaranId = detail.MetodePembayaranId,
-                    InvoiceBilling = detail.InvoiceBilling,
+                    // running sisa berdasarkan sisaBefore (sebelum transaksi ini)
+                    var sisaPerDetail = sisaBefore - cumulativePaidNow;
+                    if (sisaPerDetail < 0m) sisaPerDetail = 0m; // safety (kalau allow overpay)
 
-                    AngsuranKe = angsuranKe, // ✅ hasil generate
-                    ReferenceId = detail.ReferenceId,
-                    NamaMetode = detail.NamaMetode,
-                    Keterangan = detail.Keterangan,
+                    // ✅ kwitansi unik per baris (konsisten dengan CreateSplit)
+                    var noKwitansiPerDetail = await _noKwitansiService.GenerateNoKwitansiAsync(tglPembayaran, ct);
 
-                    TglPembayaran = tglPembayaran.UtcDateTime,
+                    var detail = new MainKasirDetail
+                    {
+                        MainKasirDetailId = Guid.NewGuid(),
+                        MainKasirId = kasirId,
+                        KunjunganId = kunjunganId,
+                        PasienId = detailVm.PasienId ?? vm.PasienId,
 
-                    CreateBy = userActiveId.Value,
-                    CreateDateTime = DateTimeOffset.UtcNow
-                }).ToList();
+                        TotalPembayaran = totalTagihan,
+                        NominalPembayaran = bayarNow,
+
+                        // ✅ sisa per baris (running)
+                        SisaPembayaran = sisaPerDetail,
+
+                        MetodePembayaranId = detailVm.MetodePembayaranId,
+                        NoKwitansi = noKwitansiPerDetail,
+
+                        // ✅ sama untuk semua detail dalam request ini
+                        AngsuranKe = angsuranKe,
+
+                        ReferenceId = detailVm.ReferenceId,
+                        NamaMetode = detailVm.NamaMetode,
+                        Keterangan = detailVm.Keterangan,
+
+                        TglPembayaran = tglPembayaran.UtcDateTime,
+
+                        CreateBy = userActiveId.Value,
+                        CreateDateTime = DateTimeOffset.UtcNow,
+                        IsDelete = false
+                    };
+
+                    detailEntities.Add(detail);
+                }
+
+                if (detailEntities.Count == 0)
+                    return BadRequest(new { message = "Tidak ada detail pembayaran yang valid untuk disimpan." });
 
                 _applicationDbContext.MainKasirDetails.AddRange(detailEntities);
 
                 // 13) Save
-                var saved = await _applicationDbContext.SaveChangesAsync();
+                var saved = await _applicationDbContext.SaveChangesAsync(ct);
                 if (saved <= 0)
                 {
-                    await trx.RollbackAsync();
+                    await trx.RollbackAsync(ct);
                     return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
                 }
 
                 // 14) Update billing hanya saat berubah jadi lunas
                 int affectedBilling = 0;
-                var becameLunas = (sisaBefore > 0 && sisaAfter <= 0);
+                var becameLunas = (sisaBefore > 0m && sisaAfter <= 0m);
                 if (becameLunas)
                 {
                     affectedBilling = await _billingService.MarkBillingAsPaidAsync(kunjunganId);
                 }
 
-                await trx.CommitAsync();
+                await trx.CommitAsync(ct);
 
                 // 15) SignalR
                 await _hubContext.Clients.All.SendAsync("Data pembayaran Created", new
@@ -1012,7 +921,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     angsuranKe = angsuranKe,
                     status = finalStatus,
                     billingUpdated = affectedBilling
-                });
+                }, ct);
+
+                // ✅ karena kwitansi sekarang per baris, return list supaya jelas
+                var noKwitansiDetails = detailEntities.Select(d => new
+                {
+                    d.MetodePembayaranId,
+                    d.NominalPembayaran,
+                    d.NoKwitansi,
+                    d.SisaPembayaran
+                }).ToList();
 
                 return Ok(new
                 {
@@ -1020,7 +938,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     action = isNewHeader ? "create_header" : "append_detail",
                     kasirId = kasirId,
                     kunjunganId = kunjunganId,
-                    noKwitansi = noKwitansi,
+
+                    // kompatibilitas jika frontend butuh 1 field
+                    noKwitansi = noKwitansiDetails.FirstOrDefault()?.NoKwitansi,
+                    noKwitansiDetails = noKwitansiDetails,
+
                     angsuranKe = angsuranKe,
                     statusPembayaran = finalStatus,
                     totalTagihan = totalTagihan,
@@ -1034,16 +956,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             }
             catch (DbUpdateException dbEx)
             {
-                await trx.RollbackAsync();
+                await trx.RollbackAsync(HttpContext.RequestAborted);
                 return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message ?? dbEx.Message}" });
             }
             catch (Exception ex)
             {
-                await trx.RollbackAsync();
+                await trx.RollbackAsync(HttpContext.RequestAborted);
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
-
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] MainKasirViewModel vm)
         {
@@ -1202,16 +1123,36 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             // =========================
             var query =
                 from a in _applicationDbContext.MainKasirs.AsNoTracking()
+
                 join u0 in _applicationDbContext.UserActives.AsNoTracking()
                     on a.CreateBy equals u0.UserActiveId into uu
                 from u in uu.DefaultIfEmpty()
+
+                join p0 in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking()
+                    on a.PasienId equals p0.PendaftaranPasienBaruId into pp
+                from p in pp.DefaultIfEmpty()
+
+                    // ✅ join Kunjungan
+                join k0 in _applicationDbContext.Kunjungans.AsNoTracking()
+                    on a.KunjunganId equals k0.KunjunganID into kk
+                from k in kk.DefaultIfEmpty()
+
+                    // ✅ join Asuransi dari Kunjungan
+                join as0 in _applicationDbContext.Asuransis.AsNoTracking()
+                    on k.AsuransiId equals as0.AsuransiId into aa
+                from asu in aa.DefaultIfEmpty()
                 where a.IsDelete != true
                 select new
                 {
                     a.KasirId,
                     a.KunjunganId,
                     a.PasienId,
-                    a.NoKwitansi,
+                    p.NamaLengkap,
+                    p.NoRekamMedis,
+                    // ✅ Asuransi (dari Kunjungan)
+                    AsuransiId = (Guid?)k.AsuransiId,
+                    NamaAsuransi = asu != null ? asu.NamaAsuransi : null,
+                    a.InvoiceBilling,
                     a.JumlahAngsuran,
                     a.StatusPembayaran,
                     a.IsVerified,
@@ -1379,7 +1320,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     d.PasienId,
                     d.TotalPembayaran,
                     d.SisaPembayaran,
-                    d.InvoiceBilling,
+                    d.NoKwitansi,
                     d.AngsuranKe,
                     d.NamaMetode,
                     d.NominalPembayaran,
@@ -1435,7 +1376,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     h.KasirId,
                     h.KunjunganId,
                     h.PasienId,
-                    h.NoKwitansi,
+                    h.NamaLengkap,
+                    h.NoRekamMedis,
+                    h.AsuransiId,
+                    h.NamaAsuransi,
+                    h.InvoiceBilling,
                     h.JumlahAngsuran,
                     h.StatusPembayaran,
                     h.IsVerified,
@@ -1467,7 +1412,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     d.PasienId,
                     d.TotalPembayaran,
                     d.SisaPembayaran,
-                    d.InvoiceBilling,
+                    d.NoKwitansi,
                     d.AngsuranKe,
                     d.NamaMetode,
                     d.NominalPembayaran,

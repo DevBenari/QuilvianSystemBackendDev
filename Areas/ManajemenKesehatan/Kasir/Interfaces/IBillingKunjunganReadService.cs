@@ -1,4 +1,5 @@
 ﻿using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
+using static BillingKunjunganReadService;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Interfaces
 {
@@ -8,5 +9,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Interfaces
             Guid kunjunganId,
             DateTime? asOf = null,
             CancellationToken ct = default);
+
+        Task<PagedResult<object>> GetBillingPagedAsync(
+            BillingPagedQuery query,
+            CancellationToken ct = default);
+
+        Task<IReadOnlyList<object>> GetMainKasirDanDetailPembayaranAsync(
+         Guid kunjunganId,
+         CancellationToken ct = default);
     }
 }

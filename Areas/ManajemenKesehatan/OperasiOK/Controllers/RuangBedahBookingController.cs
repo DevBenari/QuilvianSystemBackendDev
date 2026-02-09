@@ -389,7 +389,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                                     QtyItem = qty,
                                     HargaItem = tarifTotal,
                                     SubTotalItem = subtotal,
-
+                                    TanggalInvoice = DateTime.UtcNow,
+                                    TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                                     JenisBilling = jenisBillingOperasi,
                                     Keterangan = d.Keterangan,
                                     StatusBilling = false,
@@ -817,7 +818,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                             QtyItem = qty,
                             HargaItem = tarifTotal,
                             SubTotalItem = subTotal,
-
+                            TanggalInvoice = DateTime.UtcNow,
+                            TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                             JenisBilling = jenisBilling,
                             Keterangan = d.Keterangan,
                             StatusBilling = false,

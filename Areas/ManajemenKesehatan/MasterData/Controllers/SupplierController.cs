@@ -1,16 +1,12 @@
 ﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
+using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
-using Swashbuckle.AspNetCore.Annotations;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
@@ -18,453 +14,253 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class SupplierController : Controller
+    public class SupplierController : ControllerBase
     {
-        private readonly ApplicationDbContext _applicationDbContext;
-        private readonly UserManager<ApplicationUser> _userManager;
-        private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly ApplicationDbContext _context;
 
-        private readonly ILogger<SupplierController> _logger;
-        private readonly IWebHostEnvironment _webHostEnvironment;
-
-        public SupplierController(
-           ApplicationDbContext applicationDbContext,
-           UserManager<ApplicationUser> userManager,
-           SignInManager<ApplicationUser> signInManager,
-           ILogger<SupplierController> logger,
-           IWebHostEnvironment webHostEnvironment)
+        public SupplierController(ApplicationDbContext context)
         {
-            _applicationDbContext = applicationDbContext;
-            _userManager = userManager;
-            _signInManager = signInManager;
-            _logger = logger;
-            _webHostEnvironment = webHostEnvironment;
+            _context = context;
         }
 
+        #region Helper
+        private async Task<Guid?> GetUserId()
+        {
+            var email = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(email)) return null;
 
+            return await _context.UserActives
+                .Where(x => x.Email == email)
+                .Select(x => x.UserActiveId)
+                .FirstOrDefaultAsync();
+        }
+        #endregion
+
+        // ========================= GET ALL =========================
         [HttpGet]
-        public async Task<IActionResult> GetAllSupplier(int page = 1, int perPage = 10)
+        public async Task<IActionResult> GetAll()
         {
-            // Validasi agar page dan perPage minimal bernilai 1
-            if (page < 1) page = 1;
-            if (perPage < 1) perPage = 10;
+            var data = await _context.Suppliers
+                .Where(x => !x.IsDelete)
+                .OrderByDescending(x => x.CreateDateTime)
+                .ToListAsync();
 
-            // Query data
-            var query = from a in _applicationDbContext.Suppliers
-                        join u in _applicationDbContext.UserActives
-                        on a.CreateBy equals u.UserActiveId
-                        where a.IsDelete == false
-                        select new
-                        {
-                            CreateDateTime = a.CreateDateTime,
-                            CreateBy = a.CreateBy,
-                            CreateByName = u.FullName,
-                            SupplierId = a.SupplierId,
-                            SupplierName = a.SupplierName,
-                            ContactPerson = a.ContactPerson,
-                            TermOfPaymentId = a.TermOfPaymentId,
-                            TermOfPaymentName = a.TermOfPaymentName,
-                            Ppn = a.Ppn,
-                            Address = a.Address,
-                            City = a.City,
-                            Telepon = a.Telepon,
-                            Email = a.Email,
-                            Note = a.Note,
-                            IsPKS = a.IsPKS,
-                            IsActive = a.IsActive,
-                            a.KhususUnit
-                        };
-
-            // Hitung total data sebelum paginasi
-            var totalRows = query.Count();
-            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-
-            // Ambil data sesuai paging
-            var listdata = query
-                .Skip((page - 1) * perPage)
-                .Take(perPage)
-                .ToList();
-
-            if (!listdata.Any())
-            {
-                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
-            }
-
-            // Return hasil dengan paging info
-            return Ok(new
-            {
-                message = "Berhasil || 200 OK",
-                data = listdata,
-                pagination = new
-                {
-                    CurrentPage = page,
-                    PerPage = perPage,
-                    TotalRows = totalRows,
-                    TotalPages = totalPages
-                }
-            });
+            return Ok(new { message = "OK", data });
         }
 
+        // ========================= GET BY ID =========================
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetSupplierById(Guid id)
+        public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.Suppliers.Find(id);
-            if (listdata == null)
-            {
-                return NotFound(new { message = "Data tidak ditemukan." });
-            }
+            var data = await _context.Suppliers
+                .FirstOrDefaultAsync(x => x.SupplierId == id && !x.IsDelete);
 
-            return Ok(new
-            {
-                message = "Ditemukan || 200 OK",
-                data = listdata
-            });
+            if (data == null)
+                return NotFound(new { message = "Data tidak ditemukan" });
+
+            return Ok(data);
         }
 
-
+        // ========================= CREATE =========================
         [HttpPost]
-        public async Task<IActionResult> CreateSupplier([FromBody] SupplierViewModel vm)
+        public async Task<IActionResult> Create([FromBody] SupplierViewModel vm)
         {
-            if (vm == null || !ModelState.IsValid)
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var userId = await GetUserId();
+            if (userId == null)
+                return Unauthorized();
+
+            var duplicate = await _context.Suppliers
+                .AnyAsync(x => x.SupplierName.ToLower() == vm.SupplierName.ToLower()
+                            && !x.IsDelete);
+
+            if (duplicate)
+                return Conflict(new { message = "Supplier sudah ada" });
+
+            var today = DateTime.UtcNow.ToString("yyMMdd");
+            var lastCode = await _context.Suppliers
+                .Where(x => x.SupplierCode.StartsWith($"SPL{today}"))
+                .OrderByDescending(x => x.SupplierCode)
+                .Select(x => x.SupplierCode)
+                .FirstOrDefaultAsync();
+
+            var newCode = lastCode == null
+                ? $"SPL{today}0001"
+                : $"SPL{today}{(int.Parse(lastCode.Substring(9)) + 1):D4}";
+
+            var data = new Supplier
             {
-                return BadRequest(new { message = "Data tidak valid." });
-            }
+                SupplierId = Guid.NewGuid(),
+                SupplierCode = newCode,
+                SupplierName = vm.SupplierName,
+                ContactPerson = vm.ContactPerson,
+                TermOfPayment = vm.TermOfPayment,
+                LeadTime = vm.LeadTime,
+                Address = vm.Address,
+                City = vm.City,
+                PhoneNumber = vm.PhoneNumber,
+                Email = vm.Email,
+                IsPKS = vm.IsPKS,
+                IsActive = vm.IsActive,
+                BankId = vm.BankId,
+                NoRekening = vm.NoRekening,
+                AccountHolderName = vm.AccountHolderName,
+                IsFullPaid = vm.IsFullPaid,
+                IsBloodBankSupplier = vm.IsBloodBankSupplier,
+                PaymentMethod = vm.PaymentMethod,
+                PPN = vm.PPN,
+                Note = vm.Note,
+                CreateBy = userId.Value,
+                CreateDateTime = DateTimeOffset.UtcNow
+            };
 
-            try
-            {
-                // **Ambil User ID dari JWT Claims**
-                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
-                var UserActiveId = GetUserActive.UserActiveId;
+            _context.Suppliers.Add(data);
+            await _context.SaveChangesAsync();
 
-                if (string.IsNullOrEmpty(EmailLogin))
-                {
-                    return Unauthorized(new { message = "User tidak terautentikasi!" });
-                }
-
-                var dateNow = DateTime.UtcNow; ;
-                var setDateNow = dateNow.ToString("yyMMdd");
-
-                // Ambil data terakhir untuk hari ini (tanpa ToString di query)
-                var lastCode = _applicationDbContext.Suppliers
-                    .Where(d => d.CreateDateTime.Date == dateNow.Date)
-                    .OrderByDescending(k => k.SupplierCode)
-                    .FirstOrDefault();
-
-                string kode;
-                if (lastCode == null)
-                {
-                    kode = $"SPL{setDateNow}0001";
-                }
-                else
-                {
-                    var lastCodeTrim = lastCode.SupplierCode.Substring(3, 6);
-
-                    if (lastCodeTrim != setDateNow)
-                    {
-                        kode = $"SPL{setDateNow}0001";
-                    }
-                    else
-                    {
-                        kode = $"SPL{setDateNow}" + (Convert.ToInt32(lastCode.SupplierCode.Substring(9)) + 1).ToString("D4");
-                    }
-                }
-
-                // Cek Duplikasi
-                var isDuplicate = _applicationDbContext.Suppliers
-                    .Any(c => c.SupplierName.ToLower().Trim() == vm.SupplierName.ToLower().Trim() && c.IsDelete == false);
-
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
-                }
-
-                // Validate ModelState
-                if (ModelState.IsValid)
-                {
-                    // Simpan Data
-                    var data = new Supplier
-                    {
-                        SupplierId = Guid.NewGuid(),
-                        SupplierCode = kode,
-                        SupplierName = vm.SupplierName,
-                        ContactPerson = vm.ContactPerson,
-                        TermOfPaymentId = vm.TermOfPaymentId,
-                        TermOfPaymentName = vm.TermOfPaymentName,
-                        Ppn = vm.Ppn,
-                        Address = vm.Address,
-                        City = vm.City,
-                        Telepon = vm.Telepon,
-                        Email = vm.Email,
-                        Note = vm.Note,
-                        IsPKS = vm.IsPKS,
-                        IsActive = vm.IsActive,
-                        KhususUnit = vm.KhususUnit,
-                        CreateDateTime = DateTimeOffset.UtcNow,
-                        CreateBy = UserActiveId
-                    };
-                  
-                    _applicationDbContext.Suppliers.Add(data);
-                    _applicationDbContext.SaveChanges();
-
-                    return Created("", new
-                    {
-                        message = "Tambah Data Berhasil || 201 Created",
-                    });
-                }
-                else
-                {
-                    return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
-                }
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
-            }
+            return Created("", new { message = "Data berhasil ditambahkan" });
         }
 
+        // ========================= UPDATE =========================
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateSupplier(Guid id, [FromBody] SupplierViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] SupplierViewModel vm)
         {
-            if (vm == null || !ModelState.IsValid)
-            {
-                return BadRequest(new { message = "Data tidak valid." });
-            }
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
-            try
-            {
-                //Ambil User ID dari JWT Claims
-                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
-                var UserActiveId = GetUserActive.UserActiveId;
+            var userId = await GetUserId();
+            if (userId == null)
+                return Unauthorized();
 
-                if (string.IsNullOrEmpty(EmailLogin))
-                {
-                    return Unauthorized(new { message = "User tidak terautentikasi!" });
-                }
+            var data = await _context.Suppliers.FindAsync(id);
+            if (data == null || data.IsDelete)
+                return NotFound();
 
-                // **Cari Data Pasien**
-                var data = _applicationDbContext.Suppliers.Find(id);
-                if (data == null)
-                {
-                    return NotFound(new { message = "Data tidak ditemukan." });
-                }
+            data.SupplierName = vm.SupplierName;
+            data.ContactPerson = vm.ContactPerson;
+            data.TermOfPayment = vm.TermOfPayment;
+            data.LeadTime = vm.LeadTime;
+            data.Address = vm.Address;
+            data.City = vm.City;
+            data.PhoneNumber = vm.PhoneNumber;
+            data.Email = vm.Email;
+            data.IsPKS = vm.IsPKS;
+            data.IsActive = vm.IsActive;
+            data.BankId = vm.BankId;
+            data.NoRekening = vm.NoRekening;
+            data.AccountHolderName = vm.AccountHolderName;
+            data.IsFullPaid = vm.IsFullPaid;
+            data.IsBloodBankSupplier = vm.IsBloodBankSupplier;
+            data.PaymentMethod = vm.PaymentMethod;
+            data.PPN = vm.PPN;
+            data.Note = vm.Note;
 
-                // Cek Duplikasi
-                var isDuplicate = _applicationDbContext.Suppliers
-                    .Any(c => c.SupplierName.ToLower().Trim() == vm.SupplierName.ToLower().Trim() && c.IsDelete == false && c.SupplierId!=id);
+            data.UpdateBy = userId.Value;
+            data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
-                }
+            await _context.SaveChangesAsync();
 
-                // **Update Data Pasien**
-                data.SupplierName = vm.SupplierName;
-                data.ContactPerson = vm.ContactPerson;
-                data.TermOfPaymentId = vm.TermOfPaymentId;
-                data.TermOfPaymentName = vm.TermOfPaymentName;
-                data.Ppn = vm.Ppn;
-                data.Email = vm.Email;
-                data.Telepon = vm.Telepon;
-                data.Address = vm.Address;
-                data.City = vm.City;
-                data.Note = vm.Note;
-                data.IsPKS = vm.IsPKS;
-                data.IsActive = vm.IsActive;
-                data.KhususUnit = vm.KhususUnit;
-
-                data.UpdateBy = UserActiveId;
-                data.UpdateDateTime = DateTimeOffset.UtcNow;
-
-                _applicationDbContext.Suppliers.Update(data);
-                _applicationDbContext.SaveChanges();
-
-                return Ok(new
-                {
-                    message = "Update Data Berhasil || 200 OK",
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
-            }
+            return Ok(new { message = "Data berhasil diupdate" });
         }
 
+        // ========================= DELETE (SOFT) =========================
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteSupplier(Guid id)
+        public async Task<IActionResult> Delete(Guid id)
         {
-            try
-            {
-                //Ambil User ID dari JWT Claims
-                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
-                var UserActiveId = GetUserActive.UserActiveId;
+            var userId = await GetUserId();
+            if (userId == null)
+                return Unauthorized();
 
-                if (string.IsNullOrEmpty(EmailLogin))
-                {
-                    return Unauthorized(new { message = "User tidak terautentikasi!" });
-                }
+            var data = await _context.Suppliers.FindAsync(id);
+            if (data == null || data.IsDelete)
+                return NotFound();
 
-                // **Cari Data Pasien**
-                var data = _applicationDbContext.Suppliers.Find(id);
-                if (data == null)
-                {
-                    return NotFound(new { message = "Data tidak ditemukan." });
-                }
+            data.IsDelete = true;
+            data.DeleteBy = userId.Value;
+            data.DeleteDateTime = DateTimeOffset.UtcNow;
 
-                // **Soft Delete (Tandai Data sebagai Terhapus)**
-                data.DeleteBy = UserActiveId;
-                data.DeleteDateTime = DateTimeOffset.UtcNow;
-                data.IsDelete = true;
+            await _context.SaveChangesAsync();
 
-                _applicationDbContext.Suppliers.Update(data);
-                _applicationDbContext.SaveChanges();
-
-                return Ok(new { message = "Data berhasil dihapus..." });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
-            }
+            return Ok(new { message = "Data berhasil dihapus" });
         }
 
+        // ========================= PAGED =========================
         [HttpGet("paged")]
-        public IActionResult PagedSupplier(
+        public async Task<IActionResult> PagedSupplier(
         int page = 1,
         int perPage = 10,
         string? search = null,
         string? orderBy = "CreateDateTime",
-        string? sortDirection = "desc",
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-        DateTime? startDate = null,
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-        DateTime? endDate = null,
-        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        string? sortDirection = "desc")
         {
-            // Query data
-            var query = from a in _applicationDbContext.Suppliers
-                        join u in _applicationDbContext.UserActives
-                        on a.CreateBy equals u.UserActiveId
-                        where a.IsDelete == false
-                        select new
-                        {
-                            CreateDateTime = a.CreateDateTime,
-                            CreateBy = a.CreateBy,
-                            CreateByName = u.FullName,
-                            SupplierId = a.SupplierId,
-                            SupplierName = a.SupplierName,
-                            ContactPerson = a.ContactPerson,
-                            TermOfPaymentId = a.TermOfPaymentId,
-                            TermOfPaymentName = a.TermOfPaymentName,
-                            Ppn = a.Ppn,
-                            Address = a.Address,
-                            City = a.City,
-                            Telepon = a.Telepon,
-                            Email = a.Email,
-                            Note = a.Note,
-                            IsPKS = a.IsPKS,
-                            IsActive = a.IsActive,
-                            a.KhususUnit
-                        };
+            page = page < 1 ? 1 : page;
+            perPage = perPage < 1 ? 10 : perPage;
 
-            // Filter berdasarkan search
+            var query = _context.Suppliers
+                .Where(x => !x.IsDelete)
+                .Select(s => new
+                {
+                    s.SupplierId,
+                    s.SupplierCode,
+                    s.SupplierName,
+                    s.ContactPerson,
+                    s.TermOfPayment,
+                    s.LeadTime,
+                    s.Address,
+                    s.City,
+                    s.PhoneNumber,
+                    s.Email,
+                    s.IsPKS,
+                    s.IsActive,
+                    s.BankId,
+                    s.NoRekening,
+                    s.AccountHolderName,
+                    s.IsFullPaid,
+                    s.IsBloodBankSupplier,
+                    s.PaymentMethod,
+                    s.PPN,
+                    s.Note,
+                    s.CreateDateTime
+                });
+
+            // ================= SEARCH =================
             if (!string.IsNullOrWhiteSpace(search))
             {
-                query = query.Where(u =>
-                    u.SupplierName.Contains(search) || u.ContactPerson.Contains(search)
-                );
+                query = query.Where(x =>
+                    x.SupplierName.Contains(search) ||
+                    x.ContactPerson.Contains(search) ||
+                    x.PhoneNumber.Contains(search));
             }
 
-            // Filter berdasarkan daterange jika keduanya memiliki nilai
-            if (startDate.HasValue && endDate.HasValue)
-            {
-                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
-                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
-
-                query = query.Where(u =>
-                    u.CreateDateTime >= startUtc &&
-                    u.CreateDateTime <= endUtc);
-            }
-
-
-            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll)
-            if (periode.HasValue)
-            {
-                DateTime today = DateTime.UtcNow.Date;
-
-                switch (periode)
-                {
-                    case PeriodeFilter.Today:
-                        query = query.Where(u => u.CreateDateTime.Date == today);
-                        break;
-                    case PeriodeFilter.ThisWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
-                            u.CreateDateTime.Date <= today
-                        );
-                        break;
-                    case PeriodeFilter.LastWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek))
-                        );
-                        break;
-                    case PeriodeFilter.ThisMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month &&
-                            u.CreateDateTime.Year == today.Year
-                        );
-                        break;
-                    case PeriodeFilter.LastMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month - 1 &&
-                            u.CreateDateTime.Year == today.Year
-                        );
-                        break;
-                    case PeriodeFilter.ThisYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
-                        break;
-                    case PeriodeFilter.LastYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
-                        break;
-                    case PeriodeFilter.Last3Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
-                        break;
-                    case PeriodeFilter.Last6Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
-                        break;
-                }
-            }
-
-            // Sorting Data dengan cara yang lebih aman
+            // ================= SORTING =================
             query = sortDirection?.ToLower() == "desc"
                 ? orderBy switch
                 {
-                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "SupplierName" => query.OrderByDescending(u => u.SupplierName),
-                    "ContactPerson" => query.OrderByDescending(u => u.ContactPerson),
-                    _ => query.OrderByDescending(u => u.CreateDateTime)
+                    "SupplierName" => query.OrderByDescending(x => x.SupplierName),
+                    "City" => query.OrderByDescending(x => x.City),
+                    "CreateDateTime" => query.OrderByDescending(x => x.CreateDateTime),
+                    _ => query.OrderByDescending(x => x.CreateDateTime)
                 }
                 : orderBy switch
                 {
-                    "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    "SupplierName" => query.OrderBy(u => u.SupplierName),
-                    "ContactPerson" => query.OrderBy(u => u.ContactPerson),
-                    _ => query.OrderBy(u => u.CreateDateTime)
+                    "SupplierName" => query.OrderBy(x => x.SupplierName),
+                    "City" => query.OrderBy(x => x.City),
+                    "CreateDateTime" => query.OrderBy(x => x.CreateDateTime),
+                    _ => query.OrderBy(x => x.CreateDateTime)
                 };
 
-            // Pagination
-            var totalRows = query.Count();
+            // ================= PAGINATION =================
+            var totalRows = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
 
-            if (rows.Count == 0 && page > totalPages)
-            {
+            if (page > totalPages && totalRows > 0)
                 return NotFound(new { message = "Page not found." });
-            }
+
+            var rows = await query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToListAsync();
 
             return Ok(new
             {
@@ -480,6 +276,5 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
             });
         }
-
     }
 }

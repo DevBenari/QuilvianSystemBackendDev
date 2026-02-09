@@ -11,7 +11,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models
         public Guid KasirId { get; set; }
         public Guid? KunjunganId { get; set; }
         public Guid? PasienId { get; set; }
-        public string? NoKwitansi {  get; set; }
+        public string? InvoiceBilling {  get; set; }
         public int? JumlahAngsuran {  get; set; }
         public string? StatusPembayaran { get; set; }
         public bool? IsVerified { get; set; }
@@ -23,6 +23,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models
         public string? Keterangan { get; set; }
         public DateTimeOffset? TglPembayaran { get; set; }
         public Guid? DiskonId { get; set; }
+        public decimal? TotalSebelumPajak {  get; set; }
+        public decimal? TotalSebelumAsuransi {  get; set; }
+        public decimal? TotalSetelahAsuransi { get; set; }
     }
 
 }

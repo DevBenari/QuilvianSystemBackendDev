@@ -485,7 +485,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                 // JOIN: Poli
                 var poliData = await (
                     from tp in _applicationDbContext.TindakanPolis
-                    join p in _applicationDbContext.Polikliniks on tp.PoliId equals p.PoliklinikId
+                    join p in _applicationDbContext.Polikliniks on tp.PoliklinikId equals p.PoliklinikId
                     where tindakanIds.Contains((Guid)tp.TindakanId)
                     select new
                     {

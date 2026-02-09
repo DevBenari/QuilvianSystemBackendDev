@@ -421,7 +421,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     HargaItem = harga,
                     QtyItem = qty,
                     SubTotalItem = subtotal,
-
+                    TanggalInvoice = DateTime.UtcNow,
+                    TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                     JenisBilling = jenisBilling,
 
                     // Penting: simpan hubungan transferId untuk tracking
