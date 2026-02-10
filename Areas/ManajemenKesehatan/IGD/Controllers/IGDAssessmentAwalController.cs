@@ -174,8 +174,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 var ttd = await _ttdService.CheckTTDAsync(user.UserActiveId);
 
 
-                // ✅ Upload TTD jika ada
-                string gambarPath = "";
+                // ✅ Upload Gambar Penandaan jika ada
+                var gambarPath = "";
                 if (vm.GambarPenandaan != null && vm.GambarPenandaan.Length > 0)
                 {
                     var maxSize = 1 * 1024 * 1024; // max 1MB
@@ -190,6 +190,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
                     var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
                     var fileName = $"{vm.KunjunganId}_{safeTime}_IGDAssessmentAwal{ext}";
+                    gambarPath = $"/GambarPenandaanIGD/{fileName}";
 
                     using var client = new HttpClient();
                     using var ms = new MemoryStream();
@@ -286,6 +287,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
                 var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
                 var fileName = $"{vm.KunjunganId}_{safeTime}_IGDAssessmentAwal{ext}";
+                gambarPath = $"/GambarPenandaanIGD/{fileName}";
 
                 using var client = new HttpClient();
                 using var ms = new MemoryStream();

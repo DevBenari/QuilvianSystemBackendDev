@@ -232,7 +232,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromForm] CttPemberianObatViewModel vm)
+        public async Task<IActionResult> Create([FromBody] CttPemberianObatViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -439,7 +439,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromForm] CttPemberianObatViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] CttPemberianObatViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {

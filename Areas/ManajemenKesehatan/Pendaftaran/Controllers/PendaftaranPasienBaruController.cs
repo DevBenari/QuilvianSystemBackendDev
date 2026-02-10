@@ -793,8 +793,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 // =============================
                 // ✅ Generate QR Bytes + Upload ke Flask (mirip Lab)
                 // =============================
-                string qrPath = "";
                 string qrCodeFileName = $"{noRekamMedis}_{DateTimeOffset.UtcNow:yyyyMMddHHmmss}.png";
+                string qrPath = $"/QRCodePasienBaru/{qrCodeFileName}";
 
                 // lokasi logo
                 var logoPath = Path.Combine(_webHostEnvironment.WebRootPath, "images", "logo.png");
@@ -804,16 +804,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 using (var qrUploadStream = new MemoryStream(qrCodeBytes))
                 {
                     var qrContent = new MultipartFormDataContent
-            {
-                {
-                    new StreamContent(qrUploadStream)
                     {
-                        Headers = { ContentType = new MediaTypeHeaderValue("image/png") }
-                    },
-                    "file", qrCodeFileName
-                },
-                { new StringContent("QRCodePasienBaru"), "folderTarget" }
-            };
+                        {
+                            new StreamContent(qrUploadStream)
+                            {
+                                Headers = { ContentType = new MediaTypeHeaderValue("image/png") }
+                            },
+                            "file", qrCodeFileName
+                        },
+                        { new StringContent("QRCodePasienBaru"), "folderTarget" }
+                    };
 
                     var flaskRespQR = await clientQR.PostAsync(_uploadUrl, qrContent, ct);
                     if (!flaskRespQR.IsSuccessStatusCode)
@@ -835,8 +835,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     CreateBy = userActiveId,
                     KodePasien = kodePasien,
                     NoRekamMedis = noRekamMedis,
-
-                    // ... field lain tetap
                     TipePasien = vm.TipePasien,
                     TipePendaftaran = vm.TipePendaftaran,
                     TitleId = vm.TitleId,
@@ -1064,7 +1062,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 return Ok(new
                 {
                     message = "Update Data Berhasil || 200 OK",
-                    qrCodeUrl = $"/QRCodePasienBaru/{Path.GetFileName(pasien.QrCode)}",
+                    qrCodeUrl = $"{(pasien.QrCode)}",
                     uploadFotoUrl = $"{pasien.FotoPath}"
                 });
             }

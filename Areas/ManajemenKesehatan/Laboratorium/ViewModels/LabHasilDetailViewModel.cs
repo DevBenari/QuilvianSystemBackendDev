@@ -6,7 +6,6 @@
         public Guid? PemeriksaanLabId { get; set; }
         public Guid? KelasId { get; set; }
         public DateTime? TanggalSelesai { get; set; }
-        public string? NoPhotoLab { get; set; }
         public List<IFormFile>? PhotoLab { get; set; }
         public string? HasilLabManual { get; set; }
         public string? HasilLabAI { get; set; }
