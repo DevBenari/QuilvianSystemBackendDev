@@ -51,7 +51,7 @@ jobs:
           else
             echo "Container does not exist, creating a new one..."
             docker run -d --name $CONTAINER_NAME \
-            -p 80:80 \
+            -p 8080:80 \
             --memory="1g" --memory-swap="1g" \
             --restart unless-stopped \
             -e ASPNETCORE_ENVIRONMENT=Production \
