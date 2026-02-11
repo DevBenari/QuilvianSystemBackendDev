@@ -175,128 +175,117 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             try
             {
                 // =========================================================
-                // 1️⃣ Ambil data dokter utama
+                // 1) Dokter + CreateByName + Email (1 query)
                 // =========================================================
-                var dokter = await _context.Dokters
-                    .AsNoTracking()
-                    .Where(d => !d.IsDelete && d.DokterId == id)
-                    .FirstOrDefaultAsync();
+                var dokterRow = await (
+                    from d in _context.Dokters.AsNoTracking()
+                    where !d.IsDelete && d.DokterId == id
 
-                if (dokter == null)
-                {
-                    return NotFound(new { message = $"Dokter dengan ID {id} tidak ditemukan || 404 Not Found" });
-                }
+                    join cb0 in _context.UserActives.AsNoTracking()
+                        on d.CreateBy equals cb0.UserActiveId into cbJoin
+                    from cb in cbJoin.DefaultIfEmpty()
 
-                // =========================================================
-                // 2️⃣ Ambil nama pembuat (CreateByName)
-                // =========================================================
-                var CreateByName = await _context.UserActives
-                    .Where(u => u.UserActiveId == dokter.CreateBy)
-                    .Select(u => u.FullName)
-                    .FirstOrDefaultAsync();
+                        // Ambil email dokter dari UserActiveId dokter (bukan FullName)
+                    join ua0 in _context.UserActives.AsNoTracking()
+                        on d.UserActiveId equals ua0.UserActiveId into uaJoin
+                    from ua in uaJoin.DefaultIfEmpty()
 
-                // =========================================================
-                // 3️⃣ Ambil Email Dokter berdasarkan NmDokter
-                // =========================================================
-                var Email = await _context.UserActives
-                    .Where(u => u.FullName == dokter.NmDokter)
-                    .Select(u => u.Email)
-                    .FirstOrDefaultAsync();
-
-                // =========================================================
-                // 4️⃣ Ambil Asuransi Dokter (ID & Nama)
-                // =========================================================
-                var asuransiRaw = await (
-                    from da in _context.DokterAsuransis
-                    join a in _context.Asuransis on da.AsuransiId equals a.AsuransiId
-                    where da.DokterId == id && !da.IsDelete
                     select new
                     {
-                        da.AsuransiId,
-                        a.NamaAsuransi
+                        Dokter = d,
+                        CreateByName = cb != null ? cb.FullName : null,
+                        Email = ua != null ? ua.Email : null
                     }
-                ).ToListAsync();
+                ).FirstOrDefaultAsync();
 
-                var AsuransiIds = asuransiRaw
-                    .Select(x => x.AsuransiId)
-                    .Distinct()
-                    .ToList();
+                if (dokterRow == null)
+                    return NotFound(new { message = $"Dokter dengan ID {id} tidak ditemukan || 404 Not Found" });
 
-                var NamaAsuransi = asuransiRaw
-                    .Select(x => x.NamaAsuransi)
-                    .Distinct()
-                    .ToList();
-
+                var dokter = dokterRow.Dokter;
 
                 // =========================================================
-                // 5️⃣ Ambil Poli Dokter (ID & Nama)
+                // 2) Asuransi Dokter (1 query)
                 // =========================================================
-                var poliRaw = await (
-                    from dp in _context.DokterPolis
-                    join p in _context.Polikliniks on dp.PoliId equals p.PoliklinikId
+                var asuransiList = await (
+                    from da in _context.DokterAsuransis.AsNoTracking()
+                    join a in _context.Asuransis.AsNoTracking()
+                        on da.AsuransiId equals a.AsuransiId
+                    where da.DokterId == id && !da.IsDelete
+                    select new { da.AsuransiId, a.NamaAsuransi }
+                ).Distinct().ToListAsync();
+
+                var AsuransiIds = asuransiList.Select(x => x.AsuransiId).ToList();
+                var NamaAsuransi = asuransiList.Select(x => x.NamaAsuransi).ToList();
+
+                // =========================================================
+                // 3) Poli + Jadwal (1 query)
+                // =========================================================
+                var poliJadwalRaw = await (
+                    from dp in _context.DokterPolis.AsNoTracking()
+                    join p in _context.Polikliniks.AsNoTracking()
+                        on dp.PoliId equals p.PoliklinikId
+
+                    // left join jadwal (karena bisa saja belum ada jadwal)
+                    join jp0 in _context.JadwalPrakteks.AsNoTracking()
+                        on dp.DokterPoliId equals jp0.DokterPoliId into jpJoin
+                    from jp in jpJoin.DefaultIfEmpty()
+
                     where dp.DokterId == id && !dp.IsDelete
                     select new
                     {
                         dp.PoliId,
                         p.NamaPoliklinik,
-                        dp.DokterPoliId
+                        dp.DokterPoliId,
+
+                        Jadwal = jp == null || jp.IsDelete
+                            ? null
+                            : new
+                            {
+                                jp.JadwalPraktekId,
+                                jp.HariPraktek,
+                                jp.WaktuPraktek,
+                                jp.JamMulai,
+                                jp.JamBerakhir
+                            }
                     }
                 ).ToListAsync();
 
-                var PoliIds = poliRaw
-                    .Select(p => p.PoliId)
+                var PoliIds = poliJadwalRaw
+                    .Select(x => x.PoliId)
                     .Distinct()
                     .ToList();
 
-                var NamaPoli = poliRaw
-                    .Select(p => p.NamaPoliklinik)
+                var NamaPoli = poliJadwalRaw
+                    .Select(x => x.NamaPoliklinik)
+                    .Where(x => x != null)
                     .Distinct()
                     .ToList();
 
-                var dokterPoliIds = poliRaw
-                    .Select(p => p.DokterPoliId)
+                var JadwalPraktek = poliJadwalRaw
+                    .Where(x => x.Jadwal != null)
+                    .Select(x => x.Jadwal!)
                     .Distinct()
+                    .OrderBy(j => j.HariPraktek)
+                    .ThenBy(j => j.JamMulai)
                     .ToList();
 
-
                 // =========================================================
-                // 6️⃣ Ambil JadwalPraktek
-                // =========================================================
-                var JadwalPraktek = await (
-                    from jp in _context.JadwalPrakteks
-                    where dokterPoliIds.Contains((Guid)jp.DokterPoliId) && !jp.IsDelete
-                    select new
-                    {
-                        jp.JadwalPraktekId,
-                        jp.HariPraktek,
-                        jp.WaktuPraktek,
-                        jp.JamMulai,
-                        jp.JamBerakhir
-                    }
-                )
-                .OrderBy(j => j.HariPraktek)
-                .ThenBy(j => j.JamMulai)
-                .ToListAsync();
-
-
-                // =========================================================
-                // 7️⃣ Format Foto Dokter (imageUrl)
+                // 4) Image URL
                 // =========================================================
                 string imageUrl = !string.IsNullOrEmpty(dokter.FotoName)
                     ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{dokter.FotoName}"
                     : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg";
 
-
                 // =========================================================
-                // 8️⃣ FINAL OBJECT (VARIABEL TETAP SAMA)
+                // 5) Result
                 // =========================================================
                 var result = new
                 {
                     dokter.CreateDateTime,
                     dokter.CreateBy,
-                    CreateByName,
+                    dokterRow.CreateByName,
 
-                    Email,
+                    dokterRow.Email,
 
                     dokter.DokterId,
                     dokter.KdDokter,
@@ -339,6 +328,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
+
         // GET: api/Dokter/by-email?email=xxx@xxx.com
         [HttpGet("by-email")]
         public async Task<IActionResult> GetDokterByEmail([FromQuery] string email)
@@ -351,139 +341,114 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 email = email.Trim().ToLower();
 
                 // =========================================================
-                // 1️⃣ Ambil user aktif berdasarkan email
+                // 1) Dokter + CreateByName + Email (1 query)
+                //    - Cari user active berdasarkan email
+                //    - Ambil dokter berdasarkan Dokter.UserActiveId
                 // =========================================================
-                var userActive = await _context.UserActives
-                    .AsNoTracking()
-                    .Where(u => u.Email.ToLower() == email)
-                    .Select(u => new { u.UserActiveId, u.FullName, u.Email })
-                    .FirstOrDefaultAsync();
+                var dokterRow = await (
+                    from ua in _context.UserActives.AsNoTracking()
+                    where ua.Email != null && ua.Email.ToLower() == email
 
-                if (userActive == null)
-                {
-                    return NotFound(new { message = $"User dengan email {email} tidak ditemukan || 404 Not Found" });
-                }
+                    join d0 in _context.Dokters.AsNoTracking()
+                        on ua.UserActiveId equals d0.UserActiveId
+                    where !d0.IsDelete
 
-                // =========================================================
-                // 2️⃣ Ambil data dokter utama berdasarkan NmDokter = FullName user
-                // =========================================================
-                var dokter = await _context.Dokters
-                    .AsNoTracking()
-                    .Where(d => !d.IsDelete && d.NmDokter == userActive.FullName)
-                    .FirstOrDefaultAsync();
+                    join cb0 in _context.UserActives.AsNoTracking()
+                        on d0.CreateBy equals cb0.UserActiveId into cbJoin
+                    from cb in cbJoin.DefaultIfEmpty()
 
-                if (dokter == null)
+                    select new
+                    {
+                        Dokter = d0,
+                        Email = ua.Email,
+                        CreateByName = cb != null ? cb.FullName : null
+                    }
+                ).FirstOrDefaultAsync();
+
+                if (dokterRow == null)
                 {
                     return NotFound(new
                     {
-                        message = $"Dokter dengan email {email} tidak ditemukan (NmDokter tidak match FullName user) || 404 Not Found",
-                        userFullName = userActive.FullName
+                        message = $"Dokter dengan email {email} tidak ditemukan || 404 Not Found",
+                        hint = "Pastikan Dokter.UserActiveId terisi dan terhubung ke UserActives.UserActiveId"
                     });
                 }
 
-                // =========================================================
-                // 3️⃣ Ambil nama pembuat (CreateByName)
-                // =========================================================
-                var CreateByName = await _context.UserActives
-                    .Where(u => u.UserActiveId == dokter.CreateBy)
-                    .Select(u => u.FullName)
-                    .FirstOrDefaultAsync();
+                var dokter = dokterRow.Dokter;
 
                 // =========================================================
-                // 4️⃣ Email dokter (pakai hasil dari UserActives)
+                // 2) Asuransi Dokter (1 query)
                 // =========================================================
-                var Email = userActive.Email;
-
-                // =========================================================
-                // 5️⃣ Ambil Asuransi Dokter (ID & Nama)
-                // =========================================================
-                var asuransiRaw = await (
-                    from da in _context.DokterAsuransis
-                    join a in _context.Asuransis on da.AsuransiId equals a.AsuransiId
+                var asuransiList = await (
+                    from da in _context.DokterAsuransis.AsNoTracking()
+                    join a in _context.Asuransis.AsNoTracking()
+                        on da.AsuransiId equals a.AsuransiId
                     where da.DokterId == dokter.DokterId && !da.IsDelete
-                    select new
-                    {
-                        da.AsuransiId,
-                        a.NamaAsuransi
-                    }
-                ).ToListAsync();
+                    select new { da.AsuransiId, a.NamaAsuransi }
+                ).Distinct().ToListAsync();
 
-                var AsuransiIds = asuransiRaw
-                    .Select(x => x.AsuransiId)
-                    .Distinct()
-                    .ToList();
-
-                var NamaAsuransi = asuransiRaw
-                    .Select(x => x.NamaAsuransi)
-                    .Distinct()
-                    .ToList();
+                var AsuransiIds = asuransiList.Select(x => x.AsuransiId).ToList();
+                var NamaAsuransi = asuransiList.Select(x => x.NamaAsuransi).ToList();
 
                 // =========================================================
-                // 6️⃣ Ambil Poli Dokter (ID & Nama)
+                // 3) Poli + Jadwal (1 query)
                 // =========================================================
-                var poliRaw = await (
-                    from dp in _context.DokterPolis
-                    join p in _context.Polikliniks on dp.PoliId equals p.PoliklinikId
+                var poliJadwalRaw = await (
+                    from dp in _context.DokterPolis.AsNoTracking()
+                    join p in _context.Polikliniks.AsNoTracking()
+                        on dp.PoliId equals p.PoliklinikId
+
+                    join jp0 in _context.JadwalPrakteks.AsNoTracking()
+                        on dp.DokterPoliId equals jp0.DokterPoliId into jpJoin
+                    from jp in jpJoin.DefaultIfEmpty()
+
                     where dp.DokterId == dokter.DokterId && !dp.IsDelete
                     select new
                     {
                         dp.PoliId,
                         p.NamaPoliklinik,
-                        dp.DokterPoliId
+                        dp.DokterPoliId,
+                        Jadwal = (jp == null || jp.IsDelete)
+                            ? null
+                            : new
+                            {
+                                jp.JadwalPraktekId,
+                                jp.HariPraktek,
+                                jp.WaktuPraktek,
+                                jp.JamMulai,
+                                jp.JamBerakhir
+                            }
                     }
                 ).ToListAsync();
 
-                var PoliIds = poliRaw
-                    .Select(p => p.PoliId)
-                    .Distinct()
-                    .ToList();
+                var PoliIds = poliJadwalRaw.Select(x => x.PoliId).Distinct().ToList();
+                var NamaPoli = poliJadwalRaw.Select(x => x.NamaPoliklinik).Where(x => x != null).Distinct().ToList();
 
-                var NamaPoli = poliRaw
-                    .Select(p => p.NamaPoliklinik)
+                var JadwalPraktek = poliJadwalRaw
+                    .Where(x => x.Jadwal != null)
+                    .Select(x => x.Jadwal!)
                     .Distinct()
-                    .ToList();
-
-                var dokterPoliIds = poliRaw
-                    .Select(p => p.DokterPoliId)
-                    .Distinct()
+                    .OrderBy(j => j.HariPraktek)
+                    .ThenBy(j => j.JamMulai)
                     .ToList();
 
                 // =========================================================
-                // 7️⃣ Ambil JadwalPraktek
-                // =========================================================
-                var JadwalPraktek = await (
-                    from jp in _context.JadwalPrakteks
-                    where dokterPoliIds.Contains((Guid)jp.DokterPoliId) && !jp.IsDelete
-                    select new
-                    {
-                        jp.JadwalPraktekId,
-                        jp.HariPraktek,
-                        jp.WaktuPraktek,
-                        jp.JamMulai,
-                        jp.JamBerakhir
-                    }
-                )
-                .OrderBy(j => j.HariPraktek)
-                .ThenBy(j => j.JamMulai)
-                .ToListAsync();
-
-                // =========================================================
-                // 8️⃣ Format Foto Dokter (imageUrl)
+                // 4) Image URL
                 // =========================================================
                 string imageUrl = !string.IsNullOrEmpty(dokter.FotoName)
                     ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{dokter.FotoName}"
                     : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg";
 
                 // =========================================================
-                // 9️⃣ FINAL OBJECT
+                // 5) FINAL OBJECT
                 // =========================================================
                 var result = new
                 {
                     dokter.CreateDateTime,
                     dokter.CreateBy,
-                    CreateByName,
+                    dokterRow.CreateByName,
 
-                    Email,
+                    Email = dokterRow.Email,
 
                     dokter.DokterId,
                     dokter.KdDokter,
@@ -524,6 +489,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
 
         [HttpGet("get-image/{id}")]
         public async Task<IActionResult> GetImage(Guid id)
@@ -1320,205 +1286,342 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         //}
 
         [HttpGet("paged")]
-        public IActionResult PagedDokter(
-        int page = 1,
-        int perPage = 10,
-        string? search = null,
-        Guid? AsuransiId = null,
-        Guid? PoliId = null,
-        string? orderBy = "CreateDateTime",
-        string? sortDirection = "desc",
-        [FromQuery] DateTime? startDate = null,
-        [FromQuery] DateTime? endDate = null,
-        [FromQuery] PeriodeFilter? periode = null)
+        public async Task<IActionResult> PagedDokter(
+            int page = 1,
+            int perPage = 10,
+            string? search = null,
+            Guid? asuransiId = null,
+            Guid? poliId = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery] DateTime? startDate = null,
+            [FromQuery] DateTime? endDate = null,
+            [FromQuery] PeriodeFilter? periode = null,
+            CancellationToken ct = default)
         {
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
+            if (perPage > 100) perPage = 100; // biar swagger ga “meledak”
 
-            // 1) Base query ke Dokter (belum projection)
-            var baseQuery = _context.Dokters
+            // =========================================
+            // 1) BASE QUERY (Dokter saja, ringan)
+            // =========================================
+            IQueryable<Dokter> baseQuery = _context.Dokters
+                .AsNoTracking()
                 .Where(d => !d.IsDelete);
 
-            // 2) FILTER: by AsuransiId (GUID)
-            if (AsuransiId.HasValue)
+            // Filter AsuransiId via EXISTS (Any)
+            if (asuransiId.HasValue && asuransiId.Value != Guid.Empty)
             {
-                var asu = AsuransiId.Value;
+                var asu = asuransiId.Value;
                 baseQuery = baseQuery.Where(d =>
-                    _context.DokterAsuransis.Any(da => da.DokterId == d.DokterId && da.AsuransiId == asu));
+                    _context.DokterAsuransis.AsNoTracking().Any(da =>
+                        !da.IsDelete && da.DokterId == d.DokterId && da.AsuransiId == asu));
             }
 
-            // 3) FILTER: by PoliId (GUID)
-            if (PoliId.HasValue)
+            // Filter PoliId via EXISTS (Any)
+            if (poliId.HasValue && poliId.Value != Guid.Empty)
             {
-                var poli = PoliId.Value;
+                var poli = poliId.Value;
                 baseQuery = baseQuery.Where(d =>
-                    _context.DokterPolis.Any(dp => dp.DokterId == d.DokterId && dp.PoliId == poli));
+                    _context.DokterPolis.AsNoTracking().Any(dp =>
+                        !dp.IsDelete && dp.DokterId == d.DokterId && dp.PoliId == poli));
             }
 
-            // 4) SEARCH: kode/nama/email (seperti semula) + (opsional) nama asuransi/poli
+            // Search (kode/nama/email + nama asuransi/poli) pakai EXISTS, bukan join besar
             if (!string.IsNullOrWhiteSpace(search))
             {
-                string q = $"%{search.ToLower()}%";
+                var like = $"%{search.Trim()}%";
 
                 baseQuery = baseQuery.Where(d =>
-                    EF.Functions.ILike(d.KdDokter, q) ||
-                    EF.Functions.ILike(d.NmDokter, q) ||
-                    EF.Functions.ILike(d.Email, q) ||
+                    (d.KdDokter != null && EF.Functions.ILike(d.KdDokter, like)) ||
+                    (d.NmDokter != null && EF.Functions.ILike(d.NmDokter, like)) ||
+                    (d.Email != null && EF.Functions.ILike(d.Email, like)) ||
 
-                    // cari di NAMA ASURANSI (join via DokterAsuransis -> Asuransis)
-                    _context.DokterAsuransis
-                        .Join(_context.Asuransis, da => da.AsuransiId, a => a.AsuransiId, (da, a) => new { da.DokterId, a.NamaAsuransi })
-                        .Any(x => x.DokterId == d.DokterId && EF.Functions.ILike(x.NamaAsuransi, q)) ||
-                    // cari di NAMA POLI (join via DokterPolis -> Polikliniks)
-                    _context.DokterPolis
-                        .Join(_context.Polikliniks, dp => dp.PoliId, p => p.PoliklinikId, (dp, p) => new { dp.DokterId, p.NamaPoliklinik })
-                        .Any(x => x.DokterId == d.DokterId && EF.Functions.ILike(x.NamaPoliklinik, q))
+                    // exists nama asuransi
+                    (from da in _context.DokterAsuransis.AsNoTracking()
+                     join a in _context.Asuransis.AsNoTracking() on da.AsuransiId equals a.AsuransiId
+                     where !da.IsDelete && da.DokterId == d.DokterId
+                           && a.NamaAsuransi != null
+                           && EF.Functions.ILike(a.NamaAsuransi, like)
+                     select 1).Any() ||
+
+                    // exists nama poli
+                    (from dp in _context.DokterPolis.AsNoTracking()
+                     join p in _context.Polikliniks.AsNoTracking() on dp.PoliId equals p.PoliklinikId
+                     where !dp.IsDelete && dp.DokterId == d.DokterId
+                           && p.NamaPoliklinik != null
+                           && EF.Functions.ILike(p.NamaPoliklinik, like)
+                     select 1).Any()
                 );
             }
 
-            // 5) FILTER tanggal & periode (tetap)
+            // Filter tanggal (lebih sargable: < endExclusive)
             if (startDate.HasValue && endDate.HasValue)
             {
-                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
-                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
-                baseQuery = baseQuery.Where(d => d.CreateDateTime >= startUtc && d.CreateDateTime <= endUtc);
+                var start = startDate.Value.Date.ToUniversalTime();
+                var endExclusive = endDate.Value.Date.AddDays(1).ToUniversalTime();
+                baseQuery = baseQuery.Where(d => d.CreateDateTime >= start && d.CreateDateTime < endExclusive);
             }
 
+            // Filter periode (usahakan range, bukan .Date)
             if (periode.HasValue)
             {
-                DateTime today = DateTime.UtcNow.Date;
-                switch (periode)
+                var today = DateTime.UtcNow.Date;
+                DateTime start;
+                DateTime endExclusive;
+
+                switch (periode.Value)
                 {
                     case PeriodeFilter.Today:
-                        baseQuery = baseQuery.Where(d => d.CreateDateTime.Date == today); break;
+                        start = today;
+                        endExclusive = today.AddDays(1);
+                        break;
+
+                    case PeriodeFilter.Yesterday:
+                        start = today.AddDays(-1);
+                        endExclusive = today;
+                        break;
+
                     case PeriodeFilter.ThisWeek:
-                        var weekStart = today.AddDays(-(int)today.DayOfWeek);
-                        baseQuery = baseQuery.Where(d => d.CreateDateTime.Date >= weekStart && d.CreateDateTime.Date <= today); break;
+                        start = today.AddDays(-(int)today.DayOfWeek);
+                        endExclusive = today.AddDays(1);
+                        break;
+
                     case PeriodeFilter.LastWeek:
-                        var lastWeekStart = today.AddDays(-7 - (int)today.DayOfWeek);
-                        var lastWeekEnd = lastWeekStart.AddDays(6);
-                        baseQuery = baseQuery.Where(d => d.CreateDateTime.Date >= lastWeekStart && d.CreateDateTime.Date <= lastWeekEnd); break;
+                        var thisWeekStart = today.AddDays(-(int)today.DayOfWeek);
+                        start = thisWeekStart.AddDays(-7);
+                        endExclusive = thisWeekStart;
+                        break;
+
                     case PeriodeFilter.ThisMonth:
-                        baseQuery = baseQuery.Where(d => d.CreateDateTime.Month == today.Month && d.CreateDateTime.Year == today.Year); break;
+                        start = new DateTime(today.Year, today.Month, 1);
+                        endExclusive = start.AddMonths(1);
+                        break;
+
                     case PeriodeFilter.LastMonth:
-                        var lastMonth = today.AddMonths(-1);
-                        baseQuery = baseQuery.Where(d => d.CreateDateTime.Month == lastMonth.Month && d.CreateDateTime.Year == lastMonth.Year); break;
+                        var thisMonthStart = new DateTime(today.Year, today.Month, 1);
+                        start = thisMonthStart.AddMonths(-1);
+                        endExclusive = thisMonthStart;
+                        break;
+
                     case PeriodeFilter.ThisYear:
-                        baseQuery = baseQuery.Where(d => d.CreateDateTime.Year == today.Year); break;
+                        start = new DateTime(today.Year, 1, 1);
+                        endExclusive = start.AddYears(1);
+                        break;
+
                     case PeriodeFilter.LastYear:
-                        baseQuery = baseQuery.Where(d => d.CreateDateTime.Year == today.Year - 1); break;
+                        start = new DateTime(today.Year - 1, 1, 1);
+                        endExclusive = start.AddYears(1);
+                        break;
+
                     case PeriodeFilter.Last3Months:
-                        baseQuery = baseQuery.Where(d => d.CreateDateTime >= today.AddMonths(-3)); break;
+                        start = today.AddMonths(-3);
+                        endExclusive = today.AddDays(1);
+                        break;
+
                     case PeriodeFilter.Last6Months:
-                        baseQuery = baseQuery.Where(d => d.CreateDateTime >= today.AddMonths(-6)); break;
+                        start = today.AddMonths(-6);
+                        endExclusive = today.AddDays(1);
+                        break;
+
+                    default:
+                        start = DateTime.MinValue;
+                        endExclusive = DateTime.MaxValue;
+                        break;
                 }
+
+                baseQuery = baseQuery.Where(d => d.CreateDateTime >= start && d.CreateDateTime < endExclusive);
             }
 
-            // 6) PROJECTION akhir (baru setelah semua filter)
-            var query = baseQuery.Select(d => new
-            {
-                d.CreateDateTime,
-                d.CreateBy,
-                CreateByName = _context.UserActives
-                    .Where(u => u.UserActiveId == d.CreateBy)
-                    .Select(u => u.FullName)
-                    .FirstOrDefault(),
-                d.DokterId,
-                d.KdDokter,
-                d.NmDokter,
-                d.Sip,
-                d.Str,
-                d.TglSip,
-                d.TglStr,
-                d.Spesialis,
-                d.Nik,
-                d.Nohp,
-                d.Alamat,
-                d.Email,
-                d.UserActiveId,
-                d.IsAsuransi,
-                d.IsActive,
-                d.HargaVisit,
-                d.FotoName,
-                d.FotoPath,
-                imageUrl = !string.IsNullOrEmpty(d.FotoName)
-                    ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
-                    : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg",
+            // =========================================
+            // 2) COUNT (hanya baseQuery, ringan)
+            // =========================================
+            var totalRows = await baseQuery.CountAsync(ct);
+            if (totalRows == 0)
+                return NotFound(new { message = "Data tidak ditemukan." });
 
-                AsuransiIds = _context.DokterAsuransis
-                    .Where(da => da.DokterId == d.DokterId)
-                    .Select(da => da.AsuransiId)
-                    .Distinct()
-                    .ToList(),
-
-                NamaAsuransi = _context.DokterAsuransis
-                    .Where(da => da.DokterId == d.DokterId)
-                    .Join(_context.Asuransis, da => da.AsuransiId, a => a.AsuransiId, (da, a) => a.NamaAsuransi)
-                    .Distinct()
-                    .ToList(),
-
-                PoliIds = _context.DokterPolis
-                    .Where(dp => dp.DokterId == d.DokterId)
-                    .Select(dp => dp.PoliId)
-                    .Distinct()
-                    .ToList(),
-
-                NamaPoli = _context.DokterPolis
-                    .Where(dp => dp.DokterId == d.DokterId)
-                    .Join(_context.Polikliniks, dp => dp.PoliId, p => p.PoliklinikId, (dp, p) => p.NamaPoliklinik)
-                    .Distinct()
-                    .ToList(),
-
-                JadwalPraktek = (
-                    from dp in _context.DokterPolis
-                    join jp in _context.JadwalPrakteks on dp.DokterPoliId equals jp.DokterPoliId
-                    join p in _context.Polikliniks on dp.PoliId equals p.PoliklinikId
-                    where dp.DokterId == d.DokterId
-                          && !dp.IsDelete
-                          && !jp.IsDelete
-                    select new
-                    {
-                        jp.JadwalPraktekId,
-                        jp.HariPraktek,
-                        jp.WaktuPraktek,
-                        jp.JamMulai,
-                        jp.JamBerakhir
-                    }
-                )
-                .OrderByDescending(x => x.HariPraktek)
-                .ThenBy(x => x.JamMulai)
-                .ToList()
-
-            });
-
-            // 7) SORTING (tetap; kecil catatan: pakai key lowercase biar konsisten)
-            query = sortDirection?.ToLower() == "desc"
-                ? (orderBy?.ToLower() switch
-                {
-                    "createdatetime" => query.OrderByDescending(d => d.CreateDateTime),
-                    "createbyname" => query.OrderByDescending(d => d.CreateByName),
-                    "Kode Dokter" => query.OrderByDescending(d => d.KdDokter),
-                    "Nama Dokter" => query.OrderByDescending(d => d.NmDokter),
-                    "Email" => query.OrderByDescending(d => d.Email),
-                    _ => query.OrderByDescending(d => d.CreateDateTime)
-                })
-                : (orderBy?.ToLower() switch
-                {
-                    "createdatetime" => query.OrderBy(d => d.CreateDateTime),
-                    "createbyname" => query.OrderBy(d => d.CreateByName),
-                    "Kode Dokter" => query.OrderBy(d => d.KdDokter),
-                    "Nama Dokter" => query.OrderBy(d => d.NmDokter),
-                    "Email" => query.OrderBy(d => d.Email),
-                    _ => query.OrderBy(d => d.CreateDateTime)
-                });
-
-            // 8) Pagination
-            var totalRows = query.Count();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
-
-            if (rows.Count == 0 && page > totalPages)
+            if (page > totalPages)
                 return NotFound(new { message = "Page not found." });
+
+            // =========================================
+            // 3) SORTING (di baseQuery)
+            //    Catatan: sort CreateByName butuh join, jadi saya support basic saja
+            // =========================================
+            bool desc = string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase);
+            var order = (orderBy ?? "CreateDateTime").Trim().ToLowerInvariant();
+
+            IQueryable<Dokter> sortedQuery = order switch
+            {
+                "kddokter" => desc ? baseQuery.OrderByDescending(x => x.KdDokter) : baseQuery.OrderBy(x => x.KdDokter),
+                "nmdokter" => desc ? baseQuery.OrderByDescending(x => x.NmDokter) : baseQuery.OrderBy(x => x.NmDokter),
+                "email" => desc ? baseQuery.OrderByDescending(x => x.Email) : baseQuery.OrderBy(x => x.Email),
+                _ => desc ? baseQuery.OrderByDescending(x => x.CreateDateTime) : baseQuery.OrderBy(x => x.CreateDateTime),
+            };
+
+            // =========================================
+            // 4) PAGE IDS dulu (super ringan)
+            // =========================================
+            var pagedDokterIds = await sortedQuery
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .Select(d => d.DokterId)
+                .ToListAsync(ct);
+
+            if (pagedDokterIds.Count == 0)
+                return NotFound(new { message = "Data tidak ditemukan." });
+
+            var idSet = pagedDokterIds.ToHashSet();
+
+            // =========================================
+            // 5) LOAD DOKTER + CreateByName (1 query)
+            // =========================================
+            var dokterRows = await (
+                from d in _context.Dokters.AsNoTracking()
+                where idSet.Contains(d.DokterId)
+
+                join u0 in _context.UserActives.AsNoTracking()
+                    on d.CreateBy equals u0.UserActiveId into uj
+                from u in uj.DefaultIfEmpty()
+
+                select new
+                {
+                    d.CreateDateTime,
+                    d.CreateBy,
+                    CreateByName = u != null ? u.FullName : null,
+
+                    d.DokterId,
+                    d.KdDokter,
+                    d.NmDokter,
+                    d.Sip,
+                    d.Str,
+                    d.TglSip,
+                    d.TglStr,
+                    d.Spesialis,
+                    d.Nik,
+                    d.Nohp,
+                    d.Alamat,
+                    d.Email,
+                    d.UserActiveId,
+                    d.IsAsuransi,
+                    d.IsActive,
+                    d.HargaVisit,
+                    d.FotoName,
+                    d.FotoPath
+                }
+            ).ToListAsync(ct);
+
+            var dokterDict = dokterRows.ToDictionary(x => x.DokterId, x => x);
+            var dokterPaged = pagedDokterIds.Where(dokterDict.ContainsKey).Select(id => dokterDict[id]).ToList();
+
+            // =========================================
+            // 6) LOAD ASURANSI (1 query)
+            // =========================================
+            var asuransiData = await (
+                from da in _context.DokterAsuransis.AsNoTracking()
+                join a in _context.Asuransis.AsNoTracking()
+                    on da.AsuransiId equals a.AsuransiId
+                where !da.IsDelete && idSet.Contains(da.DokterId)
+                select new { da.DokterId, da.AsuransiId, a.NamaAsuransi }
+            ).ToListAsync(ct);
+
+            // =========================================
+            // 7) LOAD POLI (1 query)
+            // =========================================
+            var poliData = await (
+                from dp in _context.DokterPolis.AsNoTracking()
+                join p in _context.Polikliniks.AsNoTracking()
+                    on dp.PoliId equals p.PoliklinikId
+                where !dp.IsDelete && idSet.Contains(dp.DokterId)
+                select new { dp.DokterId, dp.DokterPoliId, dp.PoliId, p.NamaPoliklinik }
+            ).ToListAsync(ct);
+
+            // =========================================
+            // 8) LOAD JADWAL (1 query)
+            // =========================================
+            var jadwalData = await (
+                from dp in _context.DokterPolis.AsNoTracking()
+                join jp in _context.JadwalPrakteks.AsNoTracking()
+                    on dp.DokterPoliId equals jp.DokterPoliId
+                where !dp.IsDelete && !jp.IsDelete && idSet.Contains(dp.DokterId)
+                select new
+                {
+                    dp.DokterId,
+                    jp.JadwalPraktekId,
+                    jp.HariPraktek,
+                    jp.WaktuPraktek,
+                    jp.JamMulai,
+                    jp.JamBerakhir
+                }
+            ).ToListAsync(ct);
+
+            // =========================================
+            // 9) LOOKUP + BUILD RESULT
+            // =========================================
+            var asuransiLookup = asuransiData.ToLookup(x => x.DokterId);
+            var poliLookup = poliData.ToLookup(x => x.DokterId);
+            var jadwalLookup = jadwalData.ToLookup(x => x.DokterId);
+
+            var baseUrl = $"{Request.Scheme}://{Request.Host}";
+
+            var rows = dokterPaged.Select(d =>
+            {
+                var asuItems = asuransiLookup[d.DokterId].ToList();
+                var poliItems = poliLookup[d.DokterId].ToList();
+                var jadwalItems = jadwalLookup[d.DokterId]
+                    .OrderBy(x => x.HariPraktek)
+                    .ThenBy(x => x.JamMulai)
+                    .Select(x => new
+                    {
+                        x.JadwalPraktekId,
+                        x.HariPraktek,
+                        x.WaktuPraktek,
+                        x.JamMulai,
+                        x.JamBerakhir
+                    })
+                    .ToList();
+
+                var imageUrl = !string.IsNullOrEmpty(d.FotoName)
+                    ? $"{baseUrl}/FotoDokter/{d.FotoName}"
+                    : $"{baseUrl}/FotoDokter/dokter.jpg";
+
+                return new
+                {
+                    d.CreateDateTime,
+                    d.CreateBy,
+                    d.CreateByName,
+
+                    d.DokterId,
+                    d.KdDokter,
+                    d.NmDokter,
+                    d.Sip,
+                    d.Str,
+                    d.TglSip,
+                    d.TglStr,
+                    d.Spesialis,
+                    d.Nik,
+                    d.Nohp,
+                    d.Alamat,
+                    d.Email,
+                    d.UserActiveId,
+                    d.IsAsuransi,
+                    d.IsActive,
+                    d.HargaVisit,
+                    d.FotoName,
+                    d.FotoPath,
+
+                    imageUrl,
+
+                    AsuransiIds = asuItems.Select(x => x.AsuransiId).Distinct().ToList(),
+                    NamaAsuransi = asuItems.Select(x => x.NamaAsuransi).Where(x => x != null).Distinct().ToList(),
+
+                    PoliIds = poliItems.Select(x => x.PoliId).Distinct().ToList(),
+                    NamaPoli = poliItems.Select(x => x.NamaPoliklinik).Where(x => x != null).Distinct().ToList(),
+
+                    JadwalPraktek = jadwalItems
+                };
+            }).ToList();
 
             return Ok(new
             {
@@ -1534,6 +1637,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
             });
         }
+
 
     }
 
