@@ -15,6 +15,7 @@ namespace QuilvianSystemBackendDev.Hangfire.Jobs
 
         // JOB UNTUK UPDATE DPD DI BILLING
         [DisableConcurrentExecution(timeoutInSeconds: 60 * 30)] // cegah double-run barengan
+        [Queue("sync")]
         public async Task DPDBillingRunAsync(CancellationToken ct)
         {
             // DPD = max(0, today_wib - (billing_date_wib + 90 days))
