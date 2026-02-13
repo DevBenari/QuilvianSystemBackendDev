@@ -357,7 +357,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     ManifestasiESO = vm.ManifestasiESO,
                     TglKesudahan = TryParseTanggalToUtc(vm.TglKesudahan),
                     PerawatUserActiveId = vm.PerawatUserActiveId,
-                    TTDPath = ttd.Path,
+                    TTDPath = ttd?.Path,
                     Keterangan = vm.Keterangan,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
@@ -530,7 +530,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Edit(Guid id, [FromForm] CatatanESOViewModel vm)
+        public async Task<IActionResult> Edit(Guid id, [FromBody] CatatanESOViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -644,7 +644,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 existing.ManifestasiESO = vm.ManifestasiESO;
                 existing.TglKesudahan = TryParseTanggalToUtc(vm.TglKesudahan);
                 existing.PerawatUserActiveId = vm.PerawatUserActiveId;
-                existing.TTDPath = ttd.Path;
+                existing.TTDPath = ttd?.Path;
                 existing.Keterangan = vm.Keterangan;
                 existing.UpdateBy = userActiveId;
                 existing.UpdateDateTime = DateTimeOffset.UtcNow;

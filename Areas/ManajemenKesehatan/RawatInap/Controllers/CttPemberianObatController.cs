@@ -89,12 +89,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             if (perPage < 1) perPage = 10;
 
             var query =
-                   from a in _applicationDbContext.CttPemberianObats
+                   from a in _applicationDbContext.CttPemberianObats.AsNoTracking()
                        // LEFT JOIN UserActive (creator)
-                   join u0 in _applicationDbContext.UserActives on a.CreateBy equals u0.UserActiveId into gu0
+                   join u0 in _applicationDbContext.UserActives.AsNoTracking() on a.CreateBy equals u0.UserActiveId into gu0
                    from u in gu0.DefaultIfEmpty()
                        // LEFT JOIN Obat
-                   join o0 in _applicationDbContext.Obats on a.ObatId equals o0.ObatId into go0
+                   join o0 in _applicationDbContext.Obats.AsNoTracking() on a.ObatId equals o0.ObatId into go0
                    from o in go0.DefaultIfEmpty()
 
                    where a.IsDelete == false || a.IsDelete == null
@@ -165,22 +165,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              && (a.IsDelete == false || a.IsDelete == null)
 
                        // LEFT JOIN creator
-                       join u0 in _applicationDbContext.UserActives
+                       join u0 in _applicationDbContext.UserActives.AsNoTracking()
                             on a.CreateBy equals u0.UserActiveId into gu0
                        from u in gu0.DefaultIfEmpty()
 
                            // LEFT JOIN perawat pemberi obat
-                       join p0 in _applicationDbContext.UserActives
+                       join p0 in _applicationDbContext.UserActives.AsNoTracking()
                             on a.UserActiveIdPerawat equals p0.UserActiveId into gp0
                        from perawat in gp0.DefaultIfEmpty()
 
                            // LEFT JOIN obat
-                       join o0 in _applicationDbContext.Obats
+                       join o0 in _applicationDbContext.Obats.AsNoTracking()
                             on a.ObatId equals o0.ObatId into go0
                        from o in go0.DefaultIfEmpty()
 
                            // Left Join Racikan
-                           join r0 in _applicationDbContext.Racikans
+                           join r0 in _applicationDbContext.Racikans.AsNoTracking()
                             on a.RacikanId equals r0.RacikanId into gr0
                        from r in gr0.DefaultIfEmpty()
 
@@ -232,7 +232,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromForm] CttPemberianObatViewModel vm)
+        public async Task<IActionResult> Create([FromBody] CttPemberianObatViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -439,7 +439,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromForm] CttPemberianObatViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] CttPemberianObatViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -661,16 +661,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
             // Query data
             var query =
-                   from a in _applicationDbContext.CttPemberianObats
+                   from a in _applicationDbContext.CttPemberianObats.AsNoTracking()
                        // LEFT JOIN UserActive (creator)
-                   join u0 in _applicationDbContext.UserActives on a.CreateBy equals u0.UserActiveId into gu0
+                   join u0 in _applicationDbContext.UserActives.AsNoTracking() on a.CreateBy equals u0.UserActiveId into gu0
                    from u in gu0.DefaultIfEmpty()
                        // LEFT JOIN Obat
-                   join o0 in _applicationDbContext.Obats on a.ObatId equals o0.ObatId into go0
+                   join o0 in _applicationDbContext.Obats.AsNoTracking() on a.ObatId equals o0.ObatId into go0
                    from o in go0.DefaultIfEmpty()
 
                    // left join racikan
-                   join r0 in _applicationDbContext.Racikans on a.RacikanId equals r0.RacikanId into gr0
+                   join r0 in _applicationDbContext.Racikans.AsNoTracking() on a.RacikanId equals r0.RacikanId into gr0
                    from r in gr0.DefaultIfEmpty()
 
 

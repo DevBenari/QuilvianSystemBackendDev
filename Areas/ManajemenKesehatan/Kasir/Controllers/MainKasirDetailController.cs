@@ -652,8 +652,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     on d.MainKasirId equals mk0.KasirId into mkj
                 from mk in mkj.DefaultIfEmpty()
 
-                join pp0 in _applicationDbContext.PendaftaranPasiens.AsNoTracking()
-                    on (Guid?)(mk != null ? mk.PasienId : null) equals pp0.PendaftaranPasienId into ppj
+                join pp0 in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking()
+                    on (Guid?)(mk != null ? mk.PasienId : null) equals pp0.PendaftaranPasienBaruId into ppj
                 from pp in ppj.DefaultIfEmpty()
 
                 join k0 in _applicationDbContext.Kunjungans.AsNoTracking()

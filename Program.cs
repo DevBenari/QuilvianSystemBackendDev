@@ -31,16 +31,14 @@ using QuilvianSystemBackendDev.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+#region Setting Database
 // Add services to the container.
 // Konfigurasi koneksi database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+#endregion
 
-//builder.Services.AddDbContext<ApplicationDbContext>(options =>
-//{
-//    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
-//});
-
+#region MVC JSON
 builder.Services.Configure<Microsoft.AspNetCore.Mvc.JsonOptions>(options =>
 {
     options.JsonSerializerOptions.Converters.Add(new DateOnlyJsonConverter());
@@ -56,6 +54,9 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =
     options.SerializerOptions.Converters.Add(new NullableTimeOnlyJsonConverter());
 });
 
+#endregion
+
+#region Hangfire
 // BUILDER HANGFIRE
 //builder.Services.AddControllers();
 
@@ -65,12 +66,30 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =
 //    .UseSimpleAssemblyNameTypeSerializer()
 //    .UseRecommendedSerializerSettings()
 //    .UsePostgreSqlStorage(opts =>
-//        opts.UseNpgsqlConnection(builder.Configuration.GetConnectionString("HangfireConnection")))
+//        opts.UseNpgsqlConnection(builder.Configuration.GetConnectionString("DefaultConnection")))
 //);
+
+//static TimeZoneInfo GetJakartaTimeZone()
+//{
+//    try { return TimeZoneInfo.FindSystemTimeZoneById("Asia/Jakarta"); }          // Linux
+//    catch { return TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time"); } // Windows
+//}
+
+//var tz = GetJakartaTimeZone();
 
 //// 2) Jalankan Hangfire Server (worker) di proses web ini
 //builder.Services.AddHangfireServer();
 
+
+//RecurringJob.AddOrUpdate<BillingJob>(
+//    "update-dpd-billing",
+//    job => job.DPDBillingRunAsync(CancellationToken.None),
+//    "5 0 * * *", // 00:05 setiap hari
+//    new RecurringJobOptions { TimeZone = tz }
+//);
+#endregion
+
+#region CORS
 // Tambahkan layanan CORS
 builder.Services.AddCors(options =>
 {
@@ -97,7 +116,9 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 }).AddDefaultTokenProviders().AddEntityFrameworkStores<ApplicationDbContext>();
 
 builder.Services.AddHttpClient();
+#endregion
 
+#region JWT
 // Konfigurasi JWT
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]);
@@ -178,30 +199,32 @@ builder.Services.AddSwaggerGen(c =>
 
 });
 
+#endregion
+
+#region Areas Service Umum
 // add services untuk menampilkan data role
 builder.Services.AddScoped<serviceMasterData>();
-
 // add service untuk cek ttd e master ttd
 builder.Services.AddScoped<ITTDService, TTDService>();
-
 // add service untuk update status billing 
 builder.Services.AddScoped<IBillingService, BillingPaidService>();
-
 // add service untuk generate no rm unique
 builder.Services.AddScoped<INoRMGeneratorService, NoRMGeneratorService>();
-
 // service generate no kwitansi unique
 builder.Services.AddScoped<INoKwitansiService, NoKwitansiService>();
-
 // add service generate no angsuran
 builder.Services.AddScoped<IGenerateUrutanAngsuran, GenerateUrutanAngsuranService>();
-
+// service hitung jumlah angsuran
 builder.Services.AddScoped<ICountAngsuran, CountAngsuranService>();
-
+// service generate invoice di billing
 builder.Services.AddScoped<IGenerateInvoiceBillingService, GenerateInvoiceBillingService>();
+//service get data billing per kunjungan
 builder.Services.AddScoped<IBillingKunjunganReadService, BillingKunjunganReadService>();
+// service get prakiraan billing kunjungan IP
 builder.Services.AddScoped<IPerkiraanBillingRanapService, PerkiraanBillingRanapService>();
+#endregion
 
+#region Setting Container
 // Add services to the container.
 builder.Services.AddControllers(options =>
 {
@@ -209,7 +232,9 @@ builder.Services.AddControllers(options =>
 });
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
+#endregion
 
+#region Setting SignalR
 // Konfigurasi SignalR
 builder.Services.AddSignalR();
 
@@ -221,7 +246,7 @@ app.UseCors("AllowSpecific"); // Panggil sebelum middleware lainnya
 // Konfigurasi SignalR
 // signal R kunjungan
 app.MapControllers();
-
+#region Hubs SignalR
 app.MapHub<KunjunganHub>("/hubs/kunjungan");
 app.MapHub<VitalSignHub>("/hubs/vitalsign");
 app.MapHub<SOAPHub>("/hubs/soap");
@@ -254,7 +279,11 @@ app.MapHub<LabBookingDetailHub>("/hubs/labbookingdetail");
 
 // signal R Alkes
 app.MapHub<AlatPemakaianHub>("/hubs/alatpemakaian");
+#endregion
 
+#endregion
+
+#region Setting HTTP dan Swagger
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -285,6 +314,7 @@ app.UseSwaggerUI(c =>
     c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None);
 });
 
+#endregion
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
@@ -295,20 +325,4 @@ app.UseAuthorization();
 //{
 //    Authorization = new[] { new HangfireDashboardAuthFilterController() }
 //});
-// Setting Job Hangfire
-//var tz = GetJakartaTimeZone();
-
-//RecurringJob.AddOrUpdate<BillingJob>(
-//    "update-dpd-billing",
-//    job => job.DPDBillingRunAsync(CancellationToken.None),
-//    "5 0 * * *", // 00:05 setiap hari
-//    new RecurringJobOptions { TimeZone = tz }
-//);
-
-//static TimeZoneInfo GetJakartaTimeZone()
-//{
-//    try { return TimeZoneInfo.FindSystemTimeZoneById("Asia/Jakarta"); }          // Linux
-//    catch { return TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time"); } // Windows
-//}
-
 app.Run();

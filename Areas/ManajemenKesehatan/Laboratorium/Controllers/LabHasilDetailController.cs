@@ -267,6 +267,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 var allowedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png" };
                 var maxSize = 5 * 1024 * 1024; // 5 MB
 
+                var folderTarget = "HasilLabPhoto";
+
                 if (vm.PhotoLab != null && vm.PhotoLab.Any())
                 {
                     using var client = new HttpClient();
@@ -291,31 +293,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         ms.Position = 0;
 
                         using var content = new MultipartFormDataContent
+        {
+            {
+                new StreamContent(ms)
                 {
-                    {
-                        new StreamContent(ms)
-                        {
-                            Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType) }
-                        },
-                        "file", fileName
-                    },
-                    { new StringContent("HasilLabPhoto"), "folderTarget" }
-                };
+                    Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType) }
+                },
+                "file", fileName
+            },
+            { new StringContent(folderTarget), "folderTarget" }
+        };
 
                         var flaskResponse = await client.PostAsync(_uploadUrl, content);
                         if (!flaskResponse.IsSuccessStatusCode)
                             return StatusCode(500, new { message = $"Gagal upload foto ({file.FileName}) ke server Flask." });
 
-                        var responseBody = await flaskResponse.Content.ReadAsStringAsync();
-                        dynamic jsonResp = JsonConvert.DeserializeObject(responseBody);
-
-                        string path = jsonResp?.url ?? jsonResp?.fileUrl ?? jsonResp?.path ?? "";
-                        if (string.IsNullOrWhiteSpace(path))
-                            return StatusCode(500, new { message = $"Upload berhasil tapi path kosong ({file.FileName})." });
-
-                        photoPaths.Add(path);
+                        // ✅ SIMPAN RELATIVE PATH TANPA /uploads (PASTI konsisten)
+                        photoPaths.Add($"/{folderTarget}/{fileName}");
                     }
                 }
+
 
                 // ✅ Simpan path multi-foto sebagai JSON array (atau null jika tidak ada foto)
                 string? photoPathJson = photoPaths.Any() ? JsonConvert.SerializeObject(photoPaths) : null;
@@ -385,7 +382,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromForm] LabHasilDetailViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromForm] LabHasilDetailViewModel vm, CancellationToken ct)
         {
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
@@ -400,7 +397,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 if (string.IsNullOrEmpty(emailLogin))
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
 
-                var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
+                var getUserActive = await _applicationDbContext.UserActives
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin, ct);
+
                 if (getUserActive == null)
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
 
@@ -408,7 +408,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 // ✅ Ambil data lama
                 var data = await _applicationDbContext.LabHasilDetails
-                    .FirstOrDefaultAsync(x => x.DetailHasilLabId == id && (x.IsDelete == false || x.IsDelete == null));
+                    .FirstOrDefaultAsync(x => x.DetailHasilLabId == id && (x.IsDelete == false || x.IsDelete == null), ct);
 
                 if (data == null)
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -449,13 +449,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 // ✅ Upload MULTI FILE (opsional)
                 // - kalau ada foto baru => replace PhotoLabPath
                 // - kalau tidak ada => keep PhotoLabPath lama
+                // - simpan path final: "/HasilLabPhoto/{fileName}" (tanpa "/uploads")
                 // ======================================================
                 var allowedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png" };
-                var maxSize = 5 * 1024 * 1024; // 5 MB
+                var maxSize = 5 * 1024 * 1024; // 5MB
+                var folderTarget = "HasilLabPhoto";
 
                 if (vm.PhotoLab != null && vm.PhotoLab.Any(f => f != null && f.Length > 0))
                 {
-                    // Pakai NoPhotoLab lama, kalau kosong fallback generate sederhana
+                    // Pakai NoPhotoLab lama, kalau kosong fallback
                     var baseNoPhotoLab = !string.IsNullOrWhiteSpace(data.NoPhotoLab)
                         ? data.NoPhotoLab
                         : $"LAB{DateTime.UtcNow:yyMMdd}0001";
@@ -480,7 +482,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         var fileName = $"{baseNoPhotoLab}_{i:00}_{safeTime}{ext}";
 
                         using var ms = new MemoryStream();
-                        await file.CopyToAsync(ms);
+                        await file.CopyToAsync(ms, ct);
                         ms.Position = 0;
 
                         using var content = new MultipartFormDataContent
@@ -492,24 +494,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         },
                         "file", fileName
                     },
-                    { new StringContent("HasilLabPhoto"), "folderTarget" }
+                    { new StringContent(folderTarget), "folderTarget" }
                 };
 
-                        var flaskResponse = await client.PostAsync(_uploadUrl, content);
+                        var flaskResponse = await client.PostAsync(_uploadUrl, content, ct);
                         if (!flaskResponse.IsSuccessStatusCode)
                             return StatusCode(500, new { message = $"Gagal upload foto ({file.FileName}) ke server Flask." });
 
-                        var responseBody = await flaskResponse.Content.ReadAsStringAsync();
-                        dynamic jsonResp = JsonConvert.DeserializeObject(responseBody);
-
-                        string path = jsonResp?.url ?? jsonResp?.fileUrl ?? jsonResp?.path ?? "";
-                        if (string.IsNullOrWhiteSpace(path))
-                            return StatusCode(500, new { message = $"Upload berhasil tapi path kosong ({file.FileName})." });
-
-                        photoPaths.Add(path);
+                        // ✅ SIMPAN PATH STANDAR (tanpa /uploads)
+                        photoPaths.Add($"/{folderTarget}/{fileName}");
                     }
 
-                    // ✅ replace path lama
+                    // ✅ replace path lama (JSON array)
                     data.PhotoLabPath = photoPaths.Any() ? JsonConvert.SerializeObject(photoPaths) : null;
                 }
 
@@ -519,7 +515,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                int result = await _applicationDbContext.SaveChangesAsync();
+                var result = await _applicationDbContext.SaveChangesAsync(ct);
 
                 if (result > 0)
                     return Ok(new { message = "Edit Data Berhasil || 200 OK" });
@@ -536,6 +532,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
 
 
         [HttpDelete("{id}")]

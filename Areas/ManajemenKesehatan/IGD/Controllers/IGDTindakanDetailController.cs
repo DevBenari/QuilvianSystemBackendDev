@@ -133,7 +133,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] IGDTindakanDetailViewModel vm) // FromForm agar bisa menerima file
+        public async Task<IActionResult> Create([FromBody] IGDTindakanDetailViewModel vm) 
         {
             if (vm == null || !ModelState.IsValid)
             {
