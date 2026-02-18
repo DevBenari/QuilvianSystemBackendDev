@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using Humanizer;
 using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Interfaces;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
@@ -2007,6 +2008,122 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
         return kasirs;
     }
+
+
+    public async Task<IReadOnlyList<object>>
+        GetRiwayatBillingPasienByNoRmFastAsync(
+            string noRekamMedis,
+            DateTime? asOf = null,
+            CancellationToken ct = default)
+    {
+        var snap = asOf ?? DateTime.Now;
+
+        // =========================
+        // 1️⃣ Ambil semua kunjungan pasien (DESC)
+        // =========================
+        var kunjungans = await (
+            from p in _db.PendaftaranPasienBarus.AsNoTracking()
+            join k in _db.Kunjungans.AsNoTracking()
+                on p.PendaftaranPasienBaruId equals k.PasienId
+                into kj
+            from k in kj.DefaultIfEmpty()
+            where p.NoRekamMedis == noRekamMedis
+                  && (k == null || !k.IsDelete)
+            orderby k.CreateDateTime descending
+            select new
+            {
+                KunjunganID = k != null ? k.KunjunganID : (Guid?)null,
+                CreateDateTime = k.CreateDateTime,
+                PasienId = p.PendaftaranPasienBaruId
+            }
+        ).ToListAsync(ct);
+
+        if (kunjungans.Count == 0)
+            return Array.Empty<object>();
+
+        var kunjunganIds = kunjungans.Select(x => x.KunjunganID).ToList();
+
+        // =========================
+        // 2️⃣ Ambil semua Billing sekaligus
+        // =========================
+        var billings = await _db.Billings
+            .AsNoTracking()
+            .Where(b => kunjunganIds.Contains((Guid)b.KunjunganId)
+                        && b.StatusBilling != true
+                        && (b.IsDelete == false || b.IsDelete == null))
+            .ToListAsync(ct);
+
+        var billingLookup = billings
+            .GroupBy(b => b.KunjunganId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        // =========================
+        // 3️⃣ Ambil semua MainKasir sekaligus
+        // =========================
+        var mainKasirs = await _db.MainKasirs
+            .AsNoTracking()
+            .Where(x => kunjunganIds.Contains((Guid)x.KunjunganId)
+                        && x.IsDelete != true)
+            .ToListAsync(ct);
+
+        var kasirLookup = mainKasirs
+            .GroupBy(x => x.KunjunganId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        var kasirIds = mainKasirs.Select(x => x.KasirId).ToList();
+
+        // =========================
+        // 4️⃣ Ambil semua Detail Kasir sekaligus
+        // =========================
+        var kasirDetails = await _db.MainKasirDetails
+            .AsNoTracking()
+            .Where(d => d.MainKasirId != null
+                        && kasirIds.Contains(d.MainKasirId.Value)
+                        && d.IsDelete != true)
+            .ToListAsync(ct);
+
+        var detailLookup = kasirDetails
+            .GroupBy(d => d.MainKasirId!.Value)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        // =========================
+        // 5️⃣ Compose Result
+        // =========================
+        var result = new List<object>();
+
+        foreach (var k in kunjungans)
+        {
+            billingLookup.TryGetValue(k.KunjunganID, out var billingPerKunjungan);
+            kasirLookup.TryGetValue(k.KunjunganID, out var kasirPerKunjungan);
+
+            var kasirResult = new List<object>();
+
+            if (kasirPerKunjungan != null)
+            {
+                foreach (var kasir in kasirPerKunjungan)
+                {
+                    detailLookup.TryGetValue(kasir.KasirId, out var details);
+
+                    kasirResult.Add(new
+                    {
+                        Header = kasir,
+                        Details = details ?? new List<MainKasirDetail>()
+                    });
+                }
+            }
+
+            result.Add(new
+            {
+                KunjunganId = k.KunjunganID,
+                TanggalKunjungan = k.CreateDateTime,
+                Billings = billingPerKunjungan ?? new List<Billing>(),
+                Kasir = kasirResult
+            });
+        }
+
+        return result;
+    }
+
 
 
     // ========================================================

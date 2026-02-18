@@ -635,7 +635,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             });
         }
 
-        [HttpGet("Billing-Kasir/{kunjunganId}")]
+        [HttpGet("Billing-Kasir/{kunjunganId:guid}")]
         public async Task<IActionResult> GetBillingKasirByKunjunganId(
             Guid kunjunganId,
             [FromQuery] DateTime? asOf = null,
@@ -668,6 +668,36 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         TotalKasir = kasirs.Count,
                         Kasirs = kasirs
                     }
+                }
+            });
+        }
+
+        [HttpGet("Billing-Kasir/{NoRM}")]
+        public async Task<IActionResult> GetRiwayatBillingPasienByNoRm(
+        string NoRM,
+        [FromQuery] DateTime? asOf = null,
+        CancellationToken ct = default)
+        {
+            // =========================
+            // 1️⃣ Ambil riwayat billing dari service
+            // =========================
+            var riwayat = await _billingKunjunganReadService
+                .GetRiwayatBillingPasienByNoRmFastAsync(NoRM, asOf, ct);
+
+            // =========================
+            // 2️⃣ Safety null handling
+            // =========================
+            riwayat ??= new List<object>();
+
+            return Ok(new
+            {
+                status = "success",
+                data = new
+                {
+                    NoRekamMedis = NoRM,
+                    AsOf = asOf ?? DateTime.Now,
+                    TotalKunjungan = riwayat.Count,
+                    Riwayat = riwayat
                 }
             });
         }
