@@ -6,6 +6,7 @@
 
         public Guid? KunjunganID { get; set; }
         public string? JenisKunjungan { get; set; }
+        public string? AsalKunjungan { get; set; }
         public DateTime? TanggalKunjungan { get; set; }
         public Guid? KasirId { get; set; }
 

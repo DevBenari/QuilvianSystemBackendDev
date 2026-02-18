@@ -125,6 +125,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             {
                 k.KunjunganID,
                 k.JenisKunjungan,
+                k.AsalKunjungan,
                 TanggalKunjungan = k.TglMasuk,
                 k.TipePembayaran,
                 k.PasienId,
@@ -150,7 +151,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             KunjunganID = header.KunjunganID,
             JenisKunjungan = header.JenisKunjungan,
             TanggalKunjungan = header.TanggalKunjungan,
-
+            AsalKunjungan = header.AsalKunjungan,
             NamaLengkap = header.NamaLengkap,
             NoRekamMedis = header.NoRekamMedis,
             NmDokter = header.NmDokter,
@@ -876,6 +877,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 k.KunjunganID,
                 k.CreateDateTime,
                 k.JenisKunjungan,
+                k.AsalKunjungan,
                 TanggalKunjungan = k.TglMasuk,
                 k.TipePembayaran,
                 k.PasienId,
@@ -1166,6 +1168,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 AsOf = snap,
                 KunjunganID = h.KunjunganID,
                 JenisKunjungan = h.JenisKunjungan,
+                AsalKunjungan = h.AsalKunjungan,
                 TanggalKunjungan = h.TanggalKunjungan,
                 KasirId = kasirMap.TryGetValue(kid, out var kasirId) ? kasirId : null,
 
@@ -1552,6 +1555,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 dto.KunjunganID,
                 CreateDateTime = h.CreateDateTime,
                 dto.JenisKunjungan,
+                dto.AsalKunjungan,
                 dto.TanggalKunjungan,
                 dto.KasirId,
                 dto.NamaLengkap,
