@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System.Drawing.Printing;
+using System.Globalization;
 using System.Linq;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
@@ -25,6 +26,7 @@ using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using SkiaSharp;
 using Swashbuckle.AspNetCore.Annotations;
+using static BillingKunjunganReadService;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 {
@@ -495,6 +497,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     x.IsVerified,
                     x.TTDUserVerfiedId,
                     x.PathUserVerified,
+                    x.Deposito,
+                    x.SubTotalAsuransi,
+                    x.SubTotalMandiri,
+                    x.TotalPembayaran,
                     x.GrandTotalPembayaran,
                     x.TotalBiayaObat,
                     x.TotalBiayaTindakan,
@@ -1131,368 +1137,454 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             }
         }
 
+
         [HttpGet("paged")]
         public async Task<IActionResult> PagedKasir(
             int page = 1,
             int perPage = 10,
             Guid? kunjunganId = null,
             Guid? pasienId = null,
-            string? search = null,              // ✅ search baru
-            string? asuransiNama = null,         // ✅ filter nama asuransi
+            string? search = null,
+            string? asuransiNama = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
-            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? startDate = null,
-            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? endDate = null,
-            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null
+            [FromQuery] DateTime? startDate = null,
+            [FromQuery] DateTime? endDate = null,
+            [FromQuery] PeriodeFilter? periode = null,
+            [FromQuery] DateTime? asOf = null,
+            CancellationToken ct = default
         )
         {
-            if (page < 1) page = 1;
-            if (perPage < 1) perPage = 10;
-            if (perPage > 100) perPage = 100;
-
-            // =========================
-            // 1) Query Header (MainKasir) + Join user/pasien/kunjungan/asuransi
-            // =========================
-            var query =
-                from a in _applicationDbContext.MainKasirs.AsNoTracking()
-
-                join u0 in _applicationDbContext.UserActives.AsNoTracking()
-                    on a.CreateBy equals u0.UserActiveId into uu
-                from u in uu.DefaultIfEmpty()
-
-                join p0 in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking()
-                    on a.PasienId equals p0.PendaftaranPasienBaruId into pp
-                from p in pp.DefaultIfEmpty()
-
-                join k0 in _applicationDbContext.Kunjungans.AsNoTracking()
-                    on a.KunjunganId equals k0.KunjunganID into kk
-                from k in kk.DefaultIfEmpty()
-
-                join as0 in _applicationDbContext.Asuransis.AsNoTracking()
-                    on k.AsuransiId equals as0.AsuransiId into aa
-                from asu in aa.DefaultIfEmpty()
-
-                where a.IsDelete != true
-                select new
-                {
-                    a.KasirId,
-                    a.KunjunganId,
-                    a.PasienId,
-
-                    p.NamaLengkap,
-                    p.NoRekamMedis,
-
-                    AsuransiId = (Guid?)k.AsuransiId,
-                    NamaAsuransi = asu != null ? asu.NamaAsuransi : null,
-
-                    a.InvoiceBilling,
-                    a.JumlahAngsuran,
-                    a.StatusPembayaran,
-                    a.IsVerified,
-                    a.TTDUserVerfiedId,
-                    a.PathUserVerified,
-                    a.GrandTotalPembayaran,
-                    a.TotalBiayaObat,
-                    a.TotalBiayaTindakan,
-                    a.Keterangan,
-                    a.TglPembayaran,
-                    a.DiskonId,
-
-                    a.CreateDateTime,
-                    CreateBy = (Guid?)a.CreateBy,
-                    CreateByName = u != null ? u.FullName : null,
-                    a.UpdateDateTime,
-                    UpdateBy = (Guid?)a.UpdateBy
-                };
-
-            // =========================
-            // 2) Filter dasar
-            // =========================
-            if (kunjunganId.HasValue && kunjunganId.Value != Guid.Empty)
-                query = query.Where(x => x.KunjunganId == kunjunganId.Value);
-
-            if (pasienId.HasValue && pasienId.Value != Guid.Empty)
-                query = query.Where(x => x.PasienId == pasienId.Value);
-
-            // ✅ Filter Nama Asuransi
-            if (!string.IsNullOrWhiteSpace(asuransiNama))
+            // 1) Billing paged (kamu sudah punya)
+            var paged = await _billingKunjunganReadService.GetBillingPagedAsync(new BillingPagedQuery
             {
-                var likeAsu = $"%{asuransiNama.Trim()}%";
-                query = query.Where(x =>
-                    x.NamaAsuransi != null && EF.Functions.ILike(x.NamaAsuransi, likeAsu));
+                Page = page,
+                PageSize = perPage,
+                KunjunganId = kunjunganId,
+                StartDate = startDate,
+                EndDate = endDate,
+                Periode = periode,
+                AsOf = asOf
+            }, ct);
+
+            if (paged.TotalKunjungan == 0 || paged.Data == null || !paged.Data.Any())
+            {
+                return Ok(new
+                {
+                    status = "success",
+                    data = new
+                    {
+                        Page = page,
+                        PerPage = perPage,
+                        TotalData = 0,
+                        TotalPage = 0,
+                        Items = new List<object>()
+                    }
+                });
             }
 
-            // =========================
-            // 3) Search BARU (invoice, nama pasien, no RM, no kwitansi)
-            //     - NoKwitansi ada di MainKasirDetails -> pakai EXISTS/Any
-            // =========================
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                var like = $"%{search.Trim()}%";
+            // 2) Items: isi sama seperti Billing-Kasir/{kunjunganId}
+            var items = new List<object>();
 
-                query = query.Where(x =>
-                    (x.InvoiceBilling != null && EF.Functions.ILike(x.InvoiceBilling, like)) ||
-                    (x.NamaLengkap != null && EF.Functions.ILike(x.NamaLengkap, like)) ||
-                    (x.NoRekamMedis != null && EF.Functions.ILike(x.NoRekamMedis, like)) ||
-                    _applicationDbContext.MainKasirDetails.AsNoTracking().Any(d =>
-                        d.IsDelete != true &&
-                        d.MainKasirId.HasValue &&
-                        d.MainKasirId.Value == x.KasirId &&
-                        d.NoKwitansi != null &&
-                        EF.Functions.ILike(d.NoKwitansi, like)
-                    )
-                );
+            foreach (var billingObj in paged.Data)
+            {
+                // di output GetBillingPagedAsync kamu pakai KunjunganID
+                var kid = (Guid)((dynamic)billingObj).KunjunganID;
+
+                // penting: ini SEQUENTIAL supaya DbContext aman
+                var kasirs = await _billingKunjunganReadService
+                    .GetMainKasirDanDetailPembayaranAsync(kid, ct);
+
+                items.Add(new
+                {
+                    KunjunganId = kid,
+                    Billing = billingObj, // <- billing detail (mirip GetBillingKeseluruhanAsync versi paged kamu)
+                    Pembayaran = new
+                    {
+                        TotalKasir = kasirs?.Count ?? 0,
+                        Kasirs = kasirs ?? Array.Empty<object>()
+                    }
+                });
             }
-
-            // =========================
-            // 4) Filter tanggal
-            // =========================
-            if (startDate.HasValue && endDate.HasValue)
-            {
-                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
-                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
-
-                query = query.Where(x => x.CreateDateTime >= startUtc && x.CreateDateTime <= endUtc);
-            }
-
-            // =========================
-            // 5) Filter periode (tetap seperti punyamu)
-            // =========================
-            if (periode.HasValue)
-            {
-                DateTime today = DateTime.UtcNow.Date;
-
-                switch (periode)
-                {
-                    case PeriodeFilter.Today:
-                        query = query.Where(x => x.CreateDateTime.Date == today);
-                        break;
-
-                    case PeriodeFilter.ThisWeek:
-                        query = query.Where(x =>
-                            x.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
-                            x.CreateDateTime.Date <= today);
-                        break;
-
-                    case PeriodeFilter.LastWeek:
-                        query = query.Where(x =>
-                            x.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                            x.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek));
-                        break;
-
-                    case PeriodeFilter.ThisMonth:
-                        query = query.Where(x =>
-                            x.CreateDateTime.Month == today.Month &&
-                            x.CreateDateTime.Year == today.Year);
-                        break;
-
-                    case PeriodeFilter.LastMonth:
-                        query = query.Where(x =>
-                            x.CreateDateTime.Month == today.Month - 1 &&
-                            x.CreateDateTime.Year == today.Year);
-                        break;
-
-                    case PeriodeFilter.ThisYear:
-                        query = query.Where(x => x.CreateDateTime.Year == today.Year);
-                        break;
-
-                    case PeriodeFilter.LastYear:
-                        query = query.Where(x => x.CreateDateTime.Year == today.Year - 1);
-                        break;
-
-                    case PeriodeFilter.Last3Months:
-                        query = query.Where(x => x.CreateDateTime >= today.AddMonths(-3));
-                        break;
-
-                    case PeriodeFilter.Last6Months:
-                        query = query.Where(x => x.CreateDateTime >= today.AddMonths(-6));
-                        break;
-                }
-            }
-
-            // =========================
-            // 6) Sorting
-            // =========================
-            bool desc = string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase);
-
-            query = desc
-                ? orderBy switch
-                {
-                    "CreateDateTime" => query.OrderByDescending(x => x.CreateDateTime),
-                    "CreateByName" => query.OrderByDescending(x => x.CreateByName),
-                    "KasirId" => query.OrderByDescending(x => x.KasirId),
-                    _ => query.OrderByDescending(x => x.CreateDateTime)
-                }
-                : orderBy switch
-                {
-                    "CreateDateTime" => query.OrderBy(x => x.CreateDateTime),
-                    "CreateByName" => query.OrderBy(x => x.CreateByName),
-                    "KasirId" => query.OrderBy(x => x.KasirId),
-                    _ => query.OrderBy(x => x.CreateDateTime)
-                };
-
-            // =========================
-            // 7) Paging Count
-            // =========================
-            var totalRows = await query.CountAsync();
-            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-
-            if (totalRows == 0)
-                return NotFound(new { message = "Data tidak ditemukan." });
-
-            if (page > totalPages)
-                return NotFound(new { message = "Page not found." });
-
-            // =========================
-            // 8) Fetch page headers
-            // =========================
-            var header = await query
-                .Skip((page - 1) * perPage)
-                .Take(perPage)
-                .ToListAsync();
-
-            var kasirIds = header.Select(h => h.KasirId).ToList();
-
-            // =========================
-            // 9) Fetch details (ONE query)
-            // =========================
-            var details = await _applicationDbContext.MainKasirDetails
-                .AsNoTracking()
-                .Where(d => d.IsDelete != true && d.MainKasirId.HasValue && kasirIds.Contains(d.MainKasirId.Value))
-                .OrderBy(d => d.TglPembayaran ?? DateTime.MaxValue)
-                .ThenBy(d => d.CreateDateTime)
-                .Select(d => new
-                {
-                    d.MainKasirDetailId,
-                    MainKasirId = d.MainKasirId.Value,
-                    d.MetodePembayaranId,
-                    d.ReferenceId,
-                    d.KunjunganId,
-                    d.PasienId,
-                    d.TotalPembayaran,
-                    d.SisaPembayaran,
-                    d.NoKwitansi,
-                    d.AngsuranKe,
-                    d.NamaMetode,
-                    d.NominalPembayaran,
-                    d.Keterangan,
-                    d.TglPembayaran,
-
-                    d.CreateDateTime,
-                    CreateBy = (Guid?)d.CreateBy,
-                    d.UpdateDateTime,
-                    UpdateBy = (Guid?)d.UpdateBy
-                })
-                .ToListAsync();
-
-            var detailLookup = details.ToLookup(x => x.MainKasirId);
-
-            // =========================
-            // 10) Load nama user sekali (hindari N+1)
-            // =========================
-            var userIds = new HashSet<Guid>();
-
-            foreach (var h in header)
-            {
-                if (h.CreateBy.HasValue) userIds.Add(h.CreateBy.Value);
-                if (h.UpdateBy.HasValue) userIds.Add(h.UpdateBy.Value);
-                if (h.TTDUserVerfiedId.HasValue) userIds.Add(h.TTDUserVerfiedId.Value);
-            }
-
-            foreach (var d in details)
-            {
-                if (d.CreateBy.HasValue) userIds.Add(d.CreateBy.Value);
-                if (d.UpdateBy.HasValue) userIds.Add(d.UpdateBy.Value);
-            }
-
-            var userDict = userIds.Count == 0
-                ? new Dictionary<Guid, string>()
-                : await _applicationDbContext.UserActives
-                    .AsNoTracking()
-                    .Where(u => userIds.Contains(u.UserActiveId))
-                    .Select(u => new { u.UserActiveId, u.FullName })
-                    .ToDictionaryAsync(x => x.UserActiveId, x => x.FullName);
-
-            string? GetUserName(Guid? userId)
-                => userId.HasValue && userDict.TryGetValue(userId.Value, out var name) ? name : null;
-
-            // =========================
-            // 11) Compose rows
-            // =========================
-            var rows = header.Select(h => new
-            {
-                Header = new
-                {
-                    h.KasirId,
-                    h.KunjunganId,
-                    h.PasienId,
-                    h.NamaLengkap,
-                    h.NoRekamMedis,
-                    h.AsuransiId,
-                    h.NamaAsuransi,
-                    h.InvoiceBilling,
-                    h.JumlahAngsuran,
-                    h.StatusPembayaran,
-                    h.IsVerified,
-                    h.TTDUserVerfiedId,
-                    VerifiedByName = GetUserName(h.TTDUserVerfiedId),
-                    h.PathUserVerified,
-                    h.GrandTotalPembayaran,
-                    h.TotalBiayaObat,
-                    h.TotalBiayaTindakan,
-                    h.Keterangan,
-                    h.TglPembayaran,
-                    h.DiskonId,
-
-                    h.CreateDateTime,
-                    h.CreateBy,
-                    CreateByName = h.CreateByName ?? GetUserName(h.CreateBy),
-
-                    h.UpdateDateTime,
-                    h.UpdateBy,
-                    UpdateByName = GetUserName(h.UpdateBy),
-                },
-                Details = detailLookup[h.KasirId].Select(d => new
-                {
-                    d.MainKasirDetailId,
-                    d.MainKasirId,
-                    d.MetodePembayaranId,
-                    d.ReferenceId,
-                    d.KunjunganId,
-                    d.PasienId,
-                    d.TotalPembayaran,
-                    d.SisaPembayaran,
-                    d.NoKwitansi,
-                    d.AngsuranKe,
-                    d.NamaMetode,
-                    d.NominalPembayaran,
-                    d.Keterangan,
-                    d.TglPembayaran,
-
-                    d.CreateDateTime,
-                    d.CreateBy,
-                    CreateByName = GetUserName(d.CreateBy),
-
-                    d.UpdateDateTime,
-                    d.UpdateBy,
-                    UpdateByName = GetUserName(d.UpdateBy),
-                }).ToList()
-            }).ToList();
 
             return Ok(new
             {
                 status = "success",
-                message = "Data retrieved successfully",
                 data = new
                 {
-                    Rows = rows,
-                    TotalRows = totalRows,
-                    CurrentPage = page,
-                    PerPage = perPage,
-                    TotalPages = totalPages
+                    Page = paged.Page,
+                    PerPage = paged.PageSize,
+                    TotalData = paged.TotalKunjungan,
+                    TotalPage = paged.TotalPages,
+                    Items = items
                 }
             });
         }
+
+
+
+        //[HttpGet("paged")]
+        //public async Task<IActionResult> PagedKasir(
+        //    int page = 1,
+        //    int perPage = 10,
+        //    Guid? kunjunganId = null,
+        //    Guid? pasienId = null,
+        //    string? search = null,              // ✅ search baru
+        //    string? asuransiNama = null,         // ✅ filter nama asuransi
+        //    string? orderBy = "CreateDateTime",
+        //    string? sortDirection = "desc",
+        //    [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? startDate = null,
+        //    [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? endDate = null,
+        //    [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null
+        //)
+        //{
+        //    if (page < 1) page = 1;
+        //    if (perPage < 1) perPage = 10;
+        //    if (perPage > 100) perPage = 100;
+
+        //    // =========================
+        //    // 1) Query Header (MainKasir) + Join user/pasien/kunjungan/asuransi
+        //    // =========================
+        //    var query =
+        //        from a in _applicationDbContext.MainKasirs.AsNoTracking()
+
+        //        join u0 in _applicationDbContext.UserActives.AsNoTracking()
+        //            on a.CreateBy equals u0.UserActiveId into uu
+        //        from u in uu.DefaultIfEmpty()
+
+        //        join p0 in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking()
+        //            on a.PasienId equals p0.PendaftaranPasienBaruId into pp
+        //        from p in pp.DefaultIfEmpty()
+
+        //        join k0 in _applicationDbContext.Kunjungans.AsNoTracking()
+        //            on a.KunjunganId equals k0.KunjunganID into kk
+        //        from k in kk.DefaultIfEmpty()
+
+        //        join as0 in _applicationDbContext.Asuransis.AsNoTracking()
+        //            on k.AsuransiId equals as0.AsuransiId into aa
+        //        from asu in aa.DefaultIfEmpty()
+
+        //        where a.IsDelete != true
+        //        select new
+        //        {
+        //            a.KasirId,
+        //            a.KunjunganId,
+        //            a.PasienId,
+
+        //            p.NamaLengkap,
+        //            p.NoRekamMedis,
+
+        //            AsuransiId = (Guid?)k.AsuransiId,
+        //            NamaAsuransi = asu != null ? asu.NamaAsuransi : null,
+
+        //            a.InvoiceBilling,
+        //            a.JumlahAngsuran,
+        //            a.StatusPembayaran,
+        //            a.IsVerified,
+        //            a.TTDUserVerfiedId,
+        //            a.PathUserVerified,
+        //            a.GrandTotalPembayaran,
+        //            a.TotalBiayaObat,
+        //            a.TotalBiayaTindakan,
+        //            a.Keterangan,
+        //            a.TglPembayaran,
+        //            a.DiskonId,
+
+        //            a.CreateDateTime,
+        //            CreateBy = (Guid?)a.CreateBy,
+        //            CreateByName = u != null ? u.FullName : null,
+        //            a.UpdateDateTime,
+        //            UpdateBy = (Guid?)a.UpdateBy
+        //        };
+
+        //    // =========================
+        //    // 2) Filter dasar
+        //    // =========================
+        //    if (kunjunganId.HasValue && kunjunganId.Value != Guid.Empty)
+        //        query = query.Where(x => x.KunjunganId == kunjunganId.Value);
+
+        //    if (pasienId.HasValue && pasienId.Value != Guid.Empty)
+        //        query = query.Where(x => x.PasienId == pasienId.Value);
+
+        //    // ✅ Filter Nama Asuransi
+        //    if (!string.IsNullOrWhiteSpace(asuransiNama))
+        //    {
+        //        var likeAsu = $"%{asuransiNama.Trim()}%";
+        //        query = query.Where(x =>
+        //            x.NamaAsuransi != null && EF.Functions.ILike(x.NamaAsuransi, likeAsu));
+        //    }
+
+        //    // =========================
+        //    // 3) Search BARU (invoice, nama pasien, no RM, no kwitansi)
+        //    //     - NoKwitansi ada di MainKasirDetails -> pakai EXISTS/Any
+        //    // =========================
+        //    if (!string.IsNullOrWhiteSpace(search))
+        //    {
+        //        var like = $"%{search.Trim()}%";
+
+        //        query = query.Where(x =>
+        //            (x.InvoiceBilling != null && EF.Functions.ILike(x.InvoiceBilling, like)) ||
+        //            (x.NamaLengkap != null && EF.Functions.ILike(x.NamaLengkap, like)) ||
+        //            (x.NoRekamMedis != null && EF.Functions.ILike(x.NoRekamMedis, like)) ||
+        //            _applicationDbContext.MainKasirDetails.AsNoTracking().Any(d =>
+        //                d.IsDelete != true &&
+        //                d.MainKasirId.HasValue &&
+        //                d.MainKasirId.Value == x.KasirId &&
+        //                d.NoKwitansi != null &&
+        //                EF.Functions.ILike(d.NoKwitansi, like)
+        //            )
+        //        );
+        //    }
+
+        //    // =========================
+        //    // 4) Filter tanggal
+        //    // =========================
+        //    if (startDate.HasValue && endDate.HasValue)
+        //    {
+        //        DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
+        //        DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+
+        //        query = query.Where(x => x.CreateDateTime >= startUtc && x.CreateDateTime <= endUtc);
+        //    }
+
+        //    // =========================
+        //    // 5) Filter periode (tetap seperti punyamu)
+        //    // =========================
+        //    if (periode.HasValue)
+        //    {
+        //        DateTime today = DateTime.UtcNow.Date;
+
+        //        switch (periode)
+        //        {
+        //            case PeriodeFilter.Today:
+        //                query = query.Where(x => x.CreateDateTime.Date == today);
+        //                break;
+
+        //            case PeriodeFilter.ThisWeek:
+        //                query = query.Where(x =>
+        //                    x.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
+        //                    x.CreateDateTime.Date <= today);
+        //                break;
+
+        //            case PeriodeFilter.LastWeek:
+        //                query = query.Where(x =>
+        //                    x.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
+        //                    x.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek));
+        //                break;
+
+        //            case PeriodeFilter.ThisMonth:
+        //                query = query.Where(x =>
+        //                    x.CreateDateTime.Month == today.Month &&
+        //                    x.CreateDateTime.Year == today.Year);
+        //                break;
+
+        //            case PeriodeFilter.LastMonth:
+        //                query = query.Where(x =>
+        //                    x.CreateDateTime.Month == today.Month - 1 &&
+        //                    x.CreateDateTime.Year == today.Year);
+        //                break;
+
+        //            case PeriodeFilter.ThisYear:
+        //                query = query.Where(x => x.CreateDateTime.Year == today.Year);
+        //                break;
+
+        //            case PeriodeFilter.LastYear:
+        //                query = query.Where(x => x.CreateDateTime.Year == today.Year - 1);
+        //                break;
+
+        //            case PeriodeFilter.Last3Months:
+        //                query = query.Where(x => x.CreateDateTime >= today.AddMonths(-3));
+        //                break;
+
+        //            case PeriodeFilter.Last6Months:
+        //                query = query.Where(x => x.CreateDateTime >= today.AddMonths(-6));
+        //                break;
+        //        }
+        //    }
+
+        //    // =========================
+        //    // 6) Sorting
+        //    // =========================
+        //    bool desc = string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase);
+
+        //    query = desc
+        //        ? orderBy switch
+        //        {
+        //            "CreateDateTime" => query.OrderByDescending(x => x.CreateDateTime),
+        //            "CreateByName" => query.OrderByDescending(x => x.CreateByName),
+        //            "KasirId" => query.OrderByDescending(x => x.KasirId),
+        //            _ => query.OrderByDescending(x => x.CreateDateTime)
+        //        }
+        //        : orderBy switch
+        //        {
+        //            "CreateDateTime" => query.OrderBy(x => x.CreateDateTime),
+        //            "CreateByName" => query.OrderBy(x => x.CreateByName),
+        //            "KasirId" => query.OrderBy(x => x.KasirId),
+        //            _ => query.OrderBy(x => x.CreateDateTime)
+        //        };
+
+        //    // =========================
+        //    // 7) Paging Count
+        //    // =========================
+        //    var totalRows = await query.CountAsync();
+        //    var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+        //    if (totalRows == 0)
+        //        return NotFound(new { message = "Data tidak ditemukan." });
+
+        //    if (page > totalPages)
+        //        return NotFound(new { message = "Page not found." });
+
+        //    // =========================
+        //    // 8) Fetch page headers
+        //    // =========================
+        //    var header = await query
+        //        .Skip((page - 1) * perPage)
+        //        .Take(perPage)
+        //        .ToListAsync();
+
+        //    var kasirIds = header.Select(h => h.KasirId).ToList();
+
+        //    // =========================
+        //    // 9) Fetch details (ONE query)
+        //    // =========================
+        //    var details = await _applicationDbContext.MainKasirDetails
+        //        .AsNoTracking()
+        //        .Where(d => d.IsDelete != true && d.MainKasirId.HasValue && kasirIds.Contains(d.MainKasirId.Value))
+        //        .OrderBy(d => d.TglPembayaran ?? DateTime.MaxValue)
+        //        .ThenBy(d => d.CreateDateTime)
+        //        .Select(d => new
+        //        {
+        //            d.MainKasirDetailId,
+        //            MainKasirId = d.MainKasirId.Value,
+        //            d.MetodePembayaranId,
+        //            d.ReferenceId,
+        //            d.KunjunganId,
+        //            d.PasienId,
+        //            d.TotalPembayaran,
+        //            d.SisaPembayaran,
+        //            d.NoKwitansi,
+        //            d.AngsuranKe,
+        //            d.NamaMetode,
+        //            d.NominalPembayaran,
+        //            d.Keterangan,
+        //            d.TglPembayaran,
+
+        //            d.CreateDateTime,
+        //            CreateBy = (Guid?)d.CreateBy,
+        //            d.UpdateDateTime,
+        //            UpdateBy = (Guid?)d.UpdateBy
+        //        })
+        //        .ToListAsync();
+
+        //    var detailLookup = details.ToLookup(x => x.MainKasirId);
+
+        //    // =========================
+        //    // 10) Load nama user sekali (hindari N+1)
+        //    // =========================
+        //    var userIds = new HashSet<Guid>();
+
+        //    foreach (var h in header)
+        //    {
+        //        if (h.CreateBy.HasValue) userIds.Add(h.CreateBy.Value);
+        //        if (h.UpdateBy.HasValue) userIds.Add(h.UpdateBy.Value);
+        //        if (h.TTDUserVerfiedId.HasValue) userIds.Add(h.TTDUserVerfiedId.Value);
+        //    }
+
+        //    foreach (var d in details)
+        //    {
+        //        if (d.CreateBy.HasValue) userIds.Add(d.CreateBy.Value);
+        //        if (d.UpdateBy.HasValue) userIds.Add(d.UpdateBy.Value);
+        //    }
+
+        //    var userDict = userIds.Count == 0
+        //        ? new Dictionary<Guid, string>()
+        //        : await _applicationDbContext.UserActives
+        //            .AsNoTracking()
+        //            .Where(u => userIds.Contains(u.UserActiveId))
+        //            .Select(u => new { u.UserActiveId, u.FullName })
+        //            .ToDictionaryAsync(x => x.UserActiveId, x => x.FullName);
+
+        //    string? GetUserName(Guid? userId)
+        //        => userId.HasValue && userDict.TryGetValue(userId.Value, out var name) ? name : null;
+
+        //    // =========================
+        //    // 11) Compose rows
+        //    // =========================
+        //    var rows = header.Select(h => new
+        //    {
+        //        Header = new
+        //        {
+        //            h.KasirId,
+        //            h.KunjunganId,
+        //            h.PasienId,
+        //            h.NamaLengkap,
+        //            h.NoRekamMedis,
+        //            h.AsuransiId,
+        //            h.NamaAsuransi,
+        //            h.InvoiceBilling,
+        //            h.JumlahAngsuran,
+        //            h.StatusPembayaran,
+        //            h.IsVerified,
+        //            h.TTDUserVerfiedId,
+        //            VerifiedByName = GetUserName(h.TTDUserVerfiedId),
+        //            h.PathUserVerified,
+        //            h.GrandTotalPembayaran,
+        //            h.TotalBiayaObat,
+        //            h.TotalBiayaTindakan,
+        //            h.Keterangan,
+        //            h.TglPembayaran,
+        //            h.DiskonId,
+
+        //            h.CreateDateTime,
+        //            h.CreateBy,
+        //            CreateByName = h.CreateByName ?? GetUserName(h.CreateBy),
+
+        //            h.UpdateDateTime,
+        //            h.UpdateBy,
+        //            UpdateByName = GetUserName(h.UpdateBy),
+        //        },
+        //        Details = detailLookup[h.KasirId].Select(d => new
+        //        {
+        //            d.MainKasirDetailId,
+        //            d.MainKasirId,
+        //            d.MetodePembayaranId,
+        //            d.ReferenceId,
+        //            d.KunjunganId,
+        //            d.PasienId,
+        //            d.TotalPembayaran,
+        //            d.SisaPembayaran,
+        //            d.NoKwitansi,
+        //            d.AngsuranKe,
+        //            d.NamaMetode,
+        //            d.NominalPembayaran,
+        //            d.Keterangan,
+        //            d.TglPembayaran,
+
+        //            d.CreateDateTime,
+        //            d.CreateBy,
+        //            CreateByName = GetUserName(d.CreateBy),
+
+        //            d.UpdateDateTime,
+        //            d.UpdateBy,
+        //            UpdateByName = GetUserName(d.UpdateBy),
+        //        }).ToList()
+        //    }).ToList();
+
+        //    return Ok(new
+        //    {
+        //        status = "success",
+        //        message = "Data retrieved successfully",
+        //        data = new
+        //        {
+        //            Rows = rows,
+        //            TotalRows = totalRows,
+        //            CurrentPage = page,
+        //            PerPage = perPage,
+        //            TotalPages = totalPages
+        //        }
+        //    });
+        //}
 
 
     }

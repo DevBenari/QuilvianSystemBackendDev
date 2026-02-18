@@ -1829,6 +1829,10 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 x.IsVerified,
                 x.TTDUserVerfiedId,
                 x.PathUserVerified,
+                x.Deposito,
+                x.SubTotalAsuransi,
+                x.SubTotalMandiri,
+                x.TotalPembayaran,
                 x.GrandTotalPembayaran,
                 x.TotalBiayaObat,
                 x.TotalBiayaTindakan,
@@ -1963,6 +1967,10 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     h.TTDUserVerfiedId,
                     VerifiedByName = GetUserName(h.TTDUserVerfiedId),
                     h.PathUserVerified,
+                    h.Deposito,
+                    h.SubTotalAsuransi,
+                    h.SubTotalMandiri,
+                    h.TotalPembayaran,
                     h.GrandTotalPembayaran,
                     h.TotalBiayaObat,
                     h.TotalBiayaTindakan,
@@ -2013,7 +2021,9 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         return kasirs;
     }
 
-
+    // =====================
+    // GET BILLING BY NO RM
+    // =====================
     public async Task<IReadOnlyList<object>>
         GetRiwayatBillingPasienByNoRmFastAsync(
             string noRekamMedis,
