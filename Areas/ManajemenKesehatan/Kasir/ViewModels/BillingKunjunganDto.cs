@@ -16,6 +16,7 @@
         public string? NamaPoliklinik { get; set; }
         public string? TipePembayaran { get; set; }
         public string? NamaAsuransi { get; set; }
+        public bool? IsPKS { get; set; }
         public string? Umur { get; set; }
 
         public List<object>? DaftarPemeriksaanLab { get; set; } = new();

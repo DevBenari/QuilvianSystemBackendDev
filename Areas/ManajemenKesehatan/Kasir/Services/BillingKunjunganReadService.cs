@@ -138,7 +138,8 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 NmDokter = d != null ? d.NmDokter : null,
                 NamaPoliklinik = poli != null ? poli.NamaPoliklinik : null,
                 NamaAsuransi = a != null ? a.NamaAsuransi : null,
-                NoPolis = ap != null ? ap.NoPolis : null
+                NoPolis = ap != null ? ap.NoPolis : null,
+                IsPKS = a != null ? a.IsPKS : null,
             }
         ).FirstOrDefaultAsync(ct);
 
@@ -158,6 +159,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             NamaPoliklinik = header.NamaPoliklinik,
             TipePembayaran = header.TipePembayaran,
             NamaAsuransi = header.NamaAsuransi,
+            IsPKS = header.IsPKS,
             Umur = HitungUmurLengkap(header.TanggalLahir)
         };
 
@@ -791,7 +793,6 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
     // ================================
     // FUNCTION GET ALL BILLING PAGED
     // ================================
-
     public async Task<PagedResult<object>> GetBillingPagedAsync(BillingPagedQuery query, CancellationToken ct = default)
     {
         var page = query.Page <= 0 ? 1 : query.Page;
@@ -890,6 +891,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 NmDokter = d != null ? d.NmDokter : null,
                 NamaPoliklinik = poli != null ? poli.NamaPoliklinik : null,
                 NamaAsuransi = a != null ? a.NamaAsuransi : null,
+                IsPKS = a != null ? a.IsPKS : null,
                 NoPolis = ap != null ? ap.NoPolis : null,
             }
         ).ToListAsync(ct);
@@ -1178,6 +1180,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 NamaPoliklinik = h.NamaPoliklinik,
                 TipePembayaran = h.TipePembayaran,
                 NamaAsuransi = h.NamaAsuransi,
+                IsPKS = h.IsPKS,
                 Umur = HitungUmurLengkap(h.TanggalLahir),
 
                 DaftarPemeriksaanLab = new List<object>(),
@@ -1564,6 +1567,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 dto.NamaPoliklinik,
                 dto.TipePembayaran,
                 dto.NamaAsuransi,
+                dto.IsPKS,
                 dto.Umur,
                 dto.AsOf,
 
