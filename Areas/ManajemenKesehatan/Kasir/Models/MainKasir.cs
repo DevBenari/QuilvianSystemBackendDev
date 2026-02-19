@@ -26,6 +26,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models
         public decimal? SubTotalMandiri {  get; set; }
         public decimal? SubTotalAsuransi { get;  set; }
         public decimal? Deposito { get;  set; }
+        public decimal? SisaDeposito { get; set; }
         public decimal? TotalPembayaran { get; set; }
     }
 

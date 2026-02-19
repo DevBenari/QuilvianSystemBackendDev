@@ -740,7 +740,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             {
                 var kunjunganId = vm.KunjunganId.Value;
 
-                // 1) Validasi kunjungan
+                // 1) Validasi kunjungan dan cari deposit
                 var kunjunganOk = await _applicationDbContext.Kunjungans
                     .AsNoTracking()
                     .AnyAsync(k => k.KunjunganID == kunjunganId && !k.IsDelete);
@@ -748,6 +748,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 if (!kunjunganOk)
                     return NotFound(new { message = "Kunjungan tidak ditemukan atau sudah dihapus." });
 
+                decimal? dp = await _applicationDbContext.Kunjungans
+                    .Where(k => k.KunjunganID == kunjunganId)
+                    .Select(k => k.DepositRanap)
+                    .FirstOrDefaultAsync();
+                    
                 // 2) Ambil header kalau sudah ada (header dibuat sekali)
                 var existingHeader = await _applicationDbContext.MainKasirs
                     .FirstOrDefaultAsync(k => k.KunjunganId == kunjunganId && !k.IsDelete);
@@ -763,6 +768,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     (existingHeader?.GrandTotalPembayaran)
                     ?? (vm.GrandTotalPembayaran)
                     ?? (vm.Details.Max(d => d.TotalPembayaran ?? 0m));
+
+                // jika user punya deposit, maka total tagihan - deposit
+                decimal? sisaDp=0;
+                if (totalTagihan >= dp)
+                {
+                    totalTagihan = (decimal)(totalTagihan - dp);
+                    sisaDp = 0;
+                }
+                else if (dp >= totalTagihan)
+                {
+                    dp = dp - totalTagihan;
+                    sisaDp = dp;
+                    totalTagihan = 0;
+                }
 
                 // 5) Total bayar yang sudah pernah masuk (kalau header sudah ada)
                 decimal totalPaidBefore = 0m;
@@ -830,24 +849,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         KunjunganId = kunjunganId,
                         PasienId = vm.PasienId,
                         JumlahAngsuran = await _countAngsuran.CountAsync((Guid)vm.KunjunganId),
-
                         StatusPembayaran = finalStatus,
                         IsVerified = vm.IsVerified,
-
                         InvoiceBilling = ivc,
-
                         DiskonId = vm.DiskonId,
                         SubTotalAsuransi = vm.SubTotalAsuransi,
                         SubTotalMandiri = vm.SubTotalMandiri,
                         TotalPembayaran = vm.TotalPembayaran,
-                        Deposito = vm.Deposito,
+                        Deposito = dp,
+                        SisaDeposito = sisaDp,
                         GrandTotalPembayaran = vm.GrandTotalPembayaran ?? totalTagihan,
                         TotalBiayaObat = vm.TotalBiayaObat,
                         TotalBiayaTindakan = vm.TotalBiayaTindakan,
                         Keterangan = vm.Keterangan,
-
                         TglPembayaran = tglPembayaran,
-
                         IsDelete = false,
                         TTDUserVerfiedId = vm.TTDUserVerfiedId,
                         PathUserVerified = ttd?.Path,
@@ -1005,6 +1020,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+        
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] MainKasirViewModel vm)
         {
@@ -1056,7 +1072,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 existingKasir.SubTotalAsuransi = vm.SubTotalAsuransi;
                 existingKasir.SubTotalMandiri = vm.SubTotalMandiri;
                 existingKasir.TotalPembayaran = vm.TotalPembayaran;
-                existingKasir.Deposito = vm.Deposito;
                 existingKasir.GrandTotalPembayaran = vm.GrandTotalPembayaran;
                 existingKasir.TotalBiayaObat = vm.TotalBiayaObat;
                 existingKasir.Keterangan = vm.Keterangan;
