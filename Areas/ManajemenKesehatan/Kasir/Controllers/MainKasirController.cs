@@ -671,7 +671,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     // pembayaran (kasir+detail) tetap ditampilkan walau detail kosong
                     Pembayaran = new
                     {
-                        TotalKasir = kasirs.Count,
+                        //TotalKasir = kasirs.Count,
                         Kasirs = kasirs
                     }
                 }
@@ -837,6 +837,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         InvoiceBilling = ivc,
 
                         DiskonId = vm.DiskonId,
+                        SubTotalAsuransi = vm.SubTotalAsuransi,
+                        SubTotalMandiri = vm.SubTotalMandiri,
+                        TotalPembayaran = vm.TotalPembayaran,
+                        Deposito = vm.Deposito,
                         GrandTotalPembayaran = vm.GrandTotalPembayaran ?? totalTagihan,
                         TotalBiayaObat = vm.TotalBiayaObat,
                         TotalBiayaTindakan = vm.TotalBiayaTindakan,
@@ -1049,6 +1053,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 // Update data MainKasir
                 existingKasir.KunjunganId = vm.KunjunganId;
                 existingKasir.DiskonId = vm.DiskonId;
+                existingKasir.SubTotalAsuransi = vm.SubTotalAsuransi;
+                existingKasir.SubTotalMandiri = vm.SubTotalMandiri;
+                existingKasir.TotalPembayaran = vm.TotalPembayaran;
+                existingKasir.Deposito = vm.Deposito;
                 existingKasir.GrandTotalPembayaran = vm.GrandTotalPembayaran;
                 existingKasir.TotalBiayaObat = vm.TotalBiayaObat;
                 existingKasir.Keterangan = vm.Keterangan;
@@ -1137,7 +1145,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             }
         }
 
-
         [HttpGet("paged")]
         public async Task<IActionResult> PagedKasir(
             int page = 1,
@@ -1220,8 +1227,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 }
             });
         }
-
-
 
         //[HttpGet("paged")]
         //public async Task<IActionResult> PagedKasir(
