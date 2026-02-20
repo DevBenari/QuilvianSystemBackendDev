@@ -105,39 +105,39 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 var pemeriksaanIds = mainData.Select(x => x.PemeriksaanLabId).ToList();
 
                 // 🔹 Ambil semua tarif kelas sekaligus (1 query)
-                var tarifKelas = await (
-                    from tk in _applicationDbContext.TarifKelass
-                    join kl in _applicationDbContext.Kelass on tk.KelasId equals kl.KelasId
-                    where pemeriksaanIds.Contains((Guid)tk.PemeriksaanLabId)
-                    select new 
-                    {
-                        TarifKelasId = tk.TarifKelasId,
-                        KelasId = tk.KelasId,
-                        NamaKelas = kl.NamaKelas,
+                //var tarifKelas = await (
+                //    from tk in _applicationDbContext.TarifKelass
+                //    join kl in _applicationDbContext.Kelass on tk.KelasId equals kl.KelasId
+                //    where pemeriksaanIds.Contains((Guid)tk.PemeriksaanLabId)
+                //    select new 
+                //    {
+                //        TarifKelasId = tk.TarifKelasId,
+                //        KelasId = tk.KelasId,
+                //        NamaKelas = kl.NamaKelas,
 
-                        TarifDokter = tk.TarifDokter,
-                        TarifRs = tk.TarifRs,
-                        TarifJp = tk.TarifJp,
-                        TarifBahp = tk.TarifBahp,
-                        TarifLain = tk.TarifLain,
-                        TarifTotal = tk.TarifTotal,
-                        KSO = tk.KSO,
+                //        TarifDokter = tk.TarifDokter,
+                //        TarifRs = tk.TarifRs,
+                //        TarifJp = tk.TarifJp,
+                //        TarifBahp = tk.TarifBahp,
+                //        TarifLain = tk.TarifLain,
+                //        TarifTotal = tk.TarifTotal,
+                //        KSO = tk.KSO,
 
-                        // mapping PM Lab Id
-                        PemeriksaanLabId = tk.PemeriksaanLabId
-                    }
-                ).ToListAsync();
+                //        // mapping PM Lab Id
+                //        PemeriksaanLabId = tk.PemeriksaanLabId
+                //    }
+                //).ToListAsync();
 
                 // 🔹 Gabungkan tarif kelas ke pemeriksaan
-                foreach (var item in mainData)
-                {
-                    var tk = tarifKelas
-                        .Where(x => x.PemeriksaanLabId == item.PemeriksaanLabId)
-                        .Cast<object>()
-                        .ToList();
+                //foreach (var item in mainData)
+                //{
+                //    var tk = tarifKelas
+                //        .Where(x => x.PemeriksaanLabId == item.PemeriksaanLabId)
+                //        .Cast<object>()
+                //        .ToList();
 
-                    item.TarifKelas.AddRange(tk);
-                }
+                //    item.TarifKelas.AddRange(tk);
+                //}
 
                 // 🔹 Total data (tanpa paging)
                 int totalData = await _applicationDbContext.LabPemeriksaans
@@ -201,24 +201,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 }
 
                 // 🔹 2️⃣ Ambil semua tarif kelas terkait sekali query (tanpa N+1)
-                var tarifKelasList = await (
-                    from tk in _applicationDbContext.TarifKelass
-                    join kl in _applicationDbContext.Kelass on tk.KelasId equals kl.KelasId
-                    where tk.PemeriksaanLabId == id
-                    select new
-                    {
-                        tk.KelasId,
-                        tk.TarifKelasId,
-                        tk.TarifDokter,
-                        tk.TarifRs,
-                        tk.TarifJp,
-                        tk.TarifBahp,
-                        tk.TarifLain,
-                        tk.TarifTotal,
-                        tk.KSO,
-                        NamaKelas = kl.NamaKelas
-                    }
-                ).ToListAsync();
+                //var tarifKelasList = await (
+                //    from tk in _applicationDbContext.TarifKelass
+                //    join kl in _applicationDbContext.Kelass on tk.KelasId equals kl.KelasId
+                //    where tk.PemeriksaanLabId == id
+                //    select new
+                //    {
+                //        tk.KelasId,
+                //        tk.TarifKelasId,
+                //        tk.TarifDokter,
+                //        tk.TarifRs,
+                //        tk.TarifJp,
+                //        tk.TarifBahp,
+                //        tk.TarifLain,
+                //        tk.TarifTotal,
+                //        tk.KSO,
+                //        NamaKelas = kl.NamaKelas
+                //    }
+                //).ToListAsync();
 
                 // 🔹 3️⃣ Gabungkan hasil ke satu objek
                 var result = new
@@ -237,7 +237,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     mainData.LabId,
                     mainData.NamaLab,
                     mainData.KodeLab,
-                    TarifKelas = tarifKelasList
+                    //TarifKelas = tarifKelasList
                 };
 
                 // ✅ Return hasil
@@ -606,15 +606,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     query = query.Where(u => u.LabId == Labid.Value);
 
                 // ✅ FILTER KELAS DI DB (tanpa load allTarifKelas dulu)
-                if (kelasId.HasValue)
-                {
-                    var kid = kelasId.Value;
-                    query = query.Where(u =>
-                        _applicationDbContext.TarifKelass.Any(tk =>
-                            tk.PemeriksaanLabId == u.PemeriksaanLabId && tk.KelasId == kid
-                        )
-                    );
-                }
+                //if (kelasId.HasValue)
+                //{
+                //    var kid = kelasId.Value;
+                //    query = query.Where(u =>
+                //        _applicationDbContext.TarifKelass.Any(tk =>
+                //            tk.PemeriksaanLabId == u.PemeriksaanLabId && tk.KelasId == kid
+                //        )
+                //    );
+                //}
 
                 if (startDate.HasValue && endDate.HasValue)
                 {
@@ -726,32 +726,32 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 // ======================================================
                 var pemeriksaanIds = rows.Select(r => r.PemeriksaanLabId).Distinct().ToList();
 
-                var allTarifKelasQuery =
-                    from tk in _applicationDbContext.TarifKelass.AsNoTracking()
-                    join kl in _applicationDbContext.Kelass.AsNoTracking() on tk.KelasId equals kl.KelasId
-                    where pemeriksaanIds.Contains((Guid)tk.PemeriksaanLabId)
-                    select new
-                    {
-                        tk.PemeriksaanLabId,
-                        tk.KelasId,
-                        tk.TarifKelasId,
-                        tk.TarifDokter,
-                        tk.TarifRs,
-                        tk.TarifJp,
-                        tk.TarifBahp,
-                        tk.TarifLain,
-                        tk.TarifTotal,
-                        tk.KSO,
-                        NamaKelas = kl.NamaKelas
-                    };
+                //var allTarifKelasQuery =
+                //    from tk in _applicationDbContext.TarifKelass.AsNoTracking()
+                //    join kl in _applicationDbContext.Kelass.AsNoTracking() on tk.KelasId equals kl.KelasId
+                //    where pemeriksaanIds.Contains((Guid)tk.PemeriksaanLabId)
+                //    select new
+                //    {
+                //        tk.PemeriksaanLabId,
+                //        tk.KelasId,
+                //        tk.TarifKelasId,
+                //        tk.TarifDokter,
+                //        tk.TarifRs,
+                //        tk.TarifJp,
+                //        tk.TarifBahp,
+                //        tk.TarifLain,
+                //        tk.TarifTotal,
+                //        tk.KSO,
+                //        NamaKelas = kl.NamaKelas
+                //    };
 
-                if (kelasId.HasValue)
-                    allTarifKelasQuery = allTarifKelasQuery.Where(t => t.KelasId == kelasId.Value);
+                //if (kelasId.HasValue)
+                //    allTarifKelasQuery = allTarifKelasQuery.Where(t => t.KelasId == kelasId.Value);
 
-                var allTarifKelas = await allTarifKelasQuery.ToListAsync();
+                //var allTarifKelas = await allTarifKelasQuery.ToListAsync();
 
                 // ✅ lookup supaya bukan O(n*m)
-                var tarifLookup = allTarifKelas.ToLookup(t => t.PemeriksaanLabId);
+                //var tarifLookup = allTarifKelas.ToLookup(t => t.PemeriksaanLabId);
 
                 // ======================================================
                 // 6) BUILD RESULT (TARIF DARI LOOKUP)
@@ -768,7 +768,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     r.CreateDateTime,
                     r.CreateByName,
                     r.Keterangan,
-                    TarifKelas = tarifLookup[r.PemeriksaanLabId].ToList()
+                    //TarifKelas = tarifLookup[r.PemeriksaanLabId].ToList()
                 });
 
                 return Ok(new

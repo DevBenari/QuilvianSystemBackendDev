@@ -70,9 +70,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.TarifLain,
                             a.TarifTotal,
                             a.KSO,
-                            a.PemeriksaanLabId,
-                            a.PeralatanId,
-                            a.DokterId,
+                            //a.PemeriksaanLabId,
+                            //a.PeralatanId,
+                            //a.DokterId,
                         }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -187,9 +187,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     TarifLain = vm.TarifLain,
                     TarifTotal = total,
                     KSO = vm.KSO,
-                    PemeriksaanLabId = vm.PemeriksaanLabId,
-                    PeralatanId = vm.PeralatanId,
-                    DokterId = vm.DokterId,
+                    //PemeriksaanLabId = vm.PemeriksaanLabId,
+                    //PeralatanId = vm.PeralatanId,
+                    //DokterId = vm.DokterId,
 
                     // **User Activity**
                     CreateBy = userActiveId,
@@ -260,8 +260,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 // **Update Data**
                 data.TindakanId = vm.TindakanId;
                 data.KelasId = vm.KelasId;
-                data.PemeriksaanLabId = vm.PemeriksaanLabId;
-                data.PeralatanId = vm.PeralatanId;
+                //data.PemeriksaanLabId = vm.PemeriksaanLabId;
+                //data.PeralatanId = vm.PeralatanId;
                 data.TarifDokter = vm.TarifDokter;
                 data.TarifRs = vm.TarifRs;
                 data.TarifJp = vm.TarifJp;
@@ -273,7 +273,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     (vm.TarifBahp ?? 0) +
                     (vm.TarifLain ?? 0);
                 data.KSO = vm.KSO;
-                data.DokterId = vm.DokterId;
+                //data.DokterId = vm.DokterId;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -405,9 +405,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     on a.KelasId equals kls.KelasId
 
                 // Dokter bisa nullable => LEFT JOIN
-                join d in _applicationDbContext.Dokters.AsNoTracking()
-                    on a.DokterId equals d.DokterId into dokterGroup
-                from d in dokterGroup.DefaultIfEmpty()
+                //join d in _applicationDbContext.Dokters.AsNoTracking()
+                //    on a.DokterId equals d.DokterId into dokterGroup
+                //from d in dokterGroup.DefaultIfEmpty()
 
                     // CreateBy bisa nullable => LEFT JOIN
                 join u in _applicationDbContext.UserActives.AsNoTracking()
@@ -425,11 +425,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     a.TarifKelasId,
                     a.TindakanId,
                     a.KelasId,
-                    a.DokterId,
+                    //a.DokterId,
 
                     NamaTindakan = t.NamaTindakan,
                     NamaKelas = kls.NamaKelas,
-                    NamaDokter = d != null ? d.NmDokter : null,
+                    //NamaDokter = d != null ? d.NmDokter : null,
 
                     a.TarifDokter,
                     a.TarifRs,
@@ -454,8 +454,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 q = q.Where(x =>
                     (x.NamaTindakan != null && EF.Functions.ILike(x.NamaTindakan, pattern)) ||
-                    (x.NamaKelas != null && EF.Functions.ILike(x.NamaKelas, pattern)) ||
-                    (x.NamaDokter != null && EF.Functions.ILike(x.NamaDokter, pattern))
+                    (x.NamaKelas != null && EF.Functions.ILike(x.NamaKelas, pattern)) 
                 );
             }
 
@@ -474,11 +473,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 q = q.Where(x => x.NamaKelas != null && EF.Functions.ILike(x.NamaKelas, p));
             }
 
-            if (!string.IsNullOrWhiteSpace(namaDokter))
-            {
-                var p = $"%{namaDokter.Trim().ToLower()}%";
-                q = q.Where(x => x.NamaDokter != null && EF.Functions.ILike(x.NamaDokter, p));
-            }
+            //if (!string.IsNullOrWhiteSpace(namaDokter))
+            //{
+            //    var p = $"%{namaDokter.Trim().ToLower()}%";
+            //    q = q.Where(x => x.NamaDokter != null && EF.Functions.ILike(x.NamaDokter, p));
+            //}
 
             // =========================
             // FILTER: tanggal range (pakai boundary, jangan .Date)
@@ -581,7 +580,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 "CreateByName" => desc ? q.OrderByDescending(x => x.CreateByName) : q.OrderBy(x => x.CreateByName),
                 "NamaTindakan" => desc ? q.OrderByDescending(x => x.NamaTindakan) : q.OrderBy(x => x.NamaTindakan),
                 "NamaKelas" => desc ? q.OrderByDescending(x => x.NamaKelas) : q.OrderBy(x => x.NamaKelas),
-                "NamaDokter" => desc ? q.OrderByDescending(x => x.NamaDokter) : q.OrderBy(x => x.NamaDokter),
+                //"NamaDokter" => desc ? q.OrderByDescending(x => x.NamaDokter) : q.OrderBy(x => x.NamaDokter),
                 _ => desc ? q.OrderByDescending(x => x.CreateDateTime) : q.OrderBy(x => x.CreateDateTime)
             };
 

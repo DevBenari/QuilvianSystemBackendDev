@@ -151,18 +151,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             // =========================
             // GET TARIF KELAS (BANYAK)
             // =========================
-            var tarifKelas = await (
-                from t in _applicationDbContext.TarifKelass.AsNoTracking()
-                join kl in _applicationDbContext.Kelass on t.KelasId equals kl.KelasId
-                where t.PeralatanId == id
-                select new
-                {
-                    t.TarifKelasId,
-                    t.KelasId,
-                    kl.NamaKelas,
-                    t.TarifRs
-                }
-            ).ToListAsync();
+            //var tarifKelas = await (
+            //    from t in _applicationDbContext.TarifKelass.AsNoTracking()
+            //    join kl in _applicationDbContext.Kelass on t.KelasId equals kl.KelasId
+            //    where t.PeralatanId == id
+            //    select new
+            //    {
+            //        t.TarifKelasId,
+            //        t.KelasId,
+            //        kl.NamaKelas,
+            //        t.TarifRs
+            //    }
+            //).ToListAsync();
 
             return Ok(new
             {
@@ -189,7 +189,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     NamaKategoriPeralatan = kategori?.NamaKategoriPeralatan,
 
                     // list tarif kelas (banyak)
-                    TarifKelas = tarifKelas  // ← tetap array (sesuai kebutuhan paged)
+                    //TarifKelas = tarifKelas  // ← tetap array (sesuai kebutuhan paged)
                 }
             });
         }
@@ -433,16 +433,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     q = q.Where(a => a.KategoriPeralatanId == kategoriId.Value);
 
                 // ✅ FILTER berdasarkan kelasId (EXISTS on TarifKelass)
-                if (kelasId.HasValue)
-                {
-                    q = q.Where(a =>
-                        _applicationDbContext.TarifKelass.Any(t =>
-                            t.PeralatanId == a.PeralatanId &&
-                            t.KelasId == kelasId.Value &&
-                            (t.IsDelete == false || t.IsDelete == null)
-                        )
-                    );
-                }
+                //if (kelasId.HasValue)
+                //{
+                //    q = q.Where(a =>
+                //        _applicationDbContext.TarifKelass.Any(t =>
+                //            t.PeralatanId == a.PeralatanId &&
+                //            t.KelasId == kelasId.Value &&
+                //            (t.IsDelete == false || t.IsDelete == null)
+                //        )
+                //    );
+                //}
 
                 // SEARCH
                 if (!string.IsNullOrWhiteSpace(search))
@@ -596,26 +596,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 // =============================
                 // TARIF KELAS (bulk)
                 // =============================
-                var tarifListQuery =
-                    from t in _applicationDbContext.TarifKelass.AsNoTracking()
-                    join kl in _applicationDbContext.Kelass.AsNoTracking() on t.KelasId equals kl.KelasId
-                    where t.PeralatanId.HasValue
-                          && peralatanIds.Contains(t.PeralatanId.Value)
-                          && (t.IsDelete == false || t.IsDelete == null)
-                    select new
-                    {
-                        t.PeralatanId,
-                        t.TarifKelasId,
-                        t.KelasId,
-                        kl.NamaKelas,
-                        t.TarifRs
-                    };
+                //var tarifListQuery =
+                //    from t in _applicationDbContext.TarifKelass.AsNoTracking()
+                //    join kl in _applicationDbContext.Kelass.AsNoTracking() on t.KelasId equals kl.KelasId
+                //    where t.PeralatanId.HasValue
+                //          && peralatanIds.Contains(t.PeralatanId.Value)
+                //          && (t.IsDelete == false || t.IsDelete == null)
+                //    select new
+                //    {
+                //        t.PeralatanId,
+                //        t.TarifKelasId,
+                //        t.KelasId,
+                //        kl.NamaKelas,
+                //        t.TarifRs
+                //    };
 
-                if (kelasId.HasValue)
-                    tarifListQuery = tarifListQuery.Where(t => t.KelasId == kelasId.Value);
+                //if (kelasId.HasValue)
+                //    tarifListQuery = tarifListQuery.Where(t => t.KelasId == kelasId.Value);
 
-                var tarifList = await tarifListQuery.ToListAsync();
-                var tarifLookup = tarifList.ToLookup(t => t.PeralatanId);
+                //var tarifList = await tarifListQuery.ToListAsync();
+                //var tarifLookup = tarifList.ToLookup(t => t.PeralatanId);
 
                 // =============================
                 // FINAL RESULT
@@ -645,7 +645,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             ? namaKategori
                             : null,
 
-                    TarifKelas = tarifLookup[h.PeralatanId].ToList()
+                    //TarifKelas = tarifLookup[h.PeralatanId].ToList()
                 });
 
                 return Ok(new
