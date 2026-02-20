@@ -4,6 +4,7 @@
     {
         public DateTime? AsOf { get; set; }
 
+        public Guid? PasienId { get; set; }
         public Guid? KunjunganID { get; set; }
         public string? JenisKunjungan { get; set; }
         public string? AsalKunjungan { get; set; }

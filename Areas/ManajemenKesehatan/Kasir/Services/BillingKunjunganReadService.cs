@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Interfaces;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
@@ -71,6 +72,9 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
     public sealed class BillingPagedQuery
     {
         public Guid? KunjunganId { get; set; }
+        public Guid? PasienId { get; set; }
+        public EnumJenisKunjungan? jk {  get; set; }
+        public string? asal { get; set; }
         public int Page { get; set; } = 1;
         public int PageSize { get; set; } = 10;
 
@@ -807,6 +811,21 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         if (query.KunjunganId.HasValue && query.KunjunganId.Value != Guid.Empty)
             baseQuery = baseQuery.Where(k => k.KunjunganID == query.KunjunganId.Value);
 
+        if (query.PasienId.HasValue && query.PasienId.Value != Guid.Empty)
+            baseQuery = baseQuery.Where(k => k.PasienId == query.PasienId.Value);
+
+        if (query.jk.HasValue)
+            baseQuery = baseQuery.Where(k => k.JenisKunjungan == query.jk.Value.ToString());
+
+        if (!string.IsNullOrWhiteSpace(query.asal))
+        {
+            var asalQ = query.asal.Trim();
+            baseQuery = baseQuery.Where(k =>
+                k.AsalKunjungan != null &&
+                EF.Functions.ILike(k.AsalKunjungan, $"%{asalQ}%"));
+        }
+
+
         // date range
         if (query.StartDate.HasValue && query.EndDate.HasValue)
         {
@@ -883,7 +902,6 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 k.TipePembayaran,
                 k.PasienId,
                 k.AsuransiId,
-
                 NamaLengkap = p != null ? p.NamaLengkap : null,
                 NoRekamMedis = p != null ? p.NoRekamMedis : null,
                 TanggalLahir = p != null ? p.TanggalLahir : (DateTime?)null,
@@ -1169,6 +1187,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             {
                 AsOf = snap,
                 KunjunganID = h.KunjunganID,
+                PasienId = h.PasienId,
                 JenisKunjungan = h.JenisKunjungan,
                 AsalKunjungan = h.AsalKunjungan,
                 TanggalKunjungan = h.TanggalKunjungan,
@@ -1556,6 +1575,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             output.Add(new
             {
                 dto.KunjunganID,
+                dto.PasienId,
                 CreateDateTime = h.CreateDateTime,
                 dto.JenisKunjungan,
                 dto.AsalKunjungan,

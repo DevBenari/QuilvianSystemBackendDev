@@ -791,39 +791,33 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 var noRekamMedis = await _noRmGenerator.GenerateNoRekamMedisAsync(ct);
 
                 // =============================
-                // ✅ Generate QR Bytes + Upload ke Flask (mirip Lab)
+                // ✅ Generate QR Bytes + Upload ke Flask (tanpa /uploads)
                 // =============================
-                string qrCodeFileName = $"{noRekamMedis}_{DateTimeOffset.UtcNow:yyyyMMddHHmmss}.png";
-                string qrPath = $"/QRCodePasienBaru/{qrCodeFileName}";
+                var folderTarget = "QRCodePasienBaru";
+                var safeTimeQR = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
+                var qrCodeFileName = $"{noRekamMedis}_{safeTimeQR}.png";
+
+                // Path yang kamu simpan di DB / response API (tanpa /uploads)
+                var qrPath = $"/{folderTarget}/{qrCodeFileName}";
 
                 // lokasi logo
                 var logoPath = Path.Combine(_webHostEnvironment.WebRootPath, "images", "logo.png");
                 var qrCodeBytes = QrCodeHelper.GenerateQrCodeWithLogoPngBytes(noRekamMedis, logoPath);
 
-                using (var clientQR = new HttpClient())
-                using (var qrUploadStream = new MemoryStream(qrCodeBytes))
-                {
-                    var qrContent = new MultipartFormDataContent
-                    {
-                        {
-                            new StreamContent(qrUploadStream)
-                            {
-                                Headers = { ContentType = new MediaTypeHeaderValue("image/png") }
-                            },
-                            "file", qrCodeFileName
-                        },
-                        { new StringContent("QRCodePasienBaru"), "folderTarget" }
-                    };
+                using var clientQR = new HttpClient();
+                using var qrUploadStream = new MemoryStream(qrCodeBytes);
+                qrUploadStream.Position = 0;
 
-                    var flaskRespQR = await clientQR.PostAsync(_uploadUrl, qrContent, ct);
-                    if (!flaskRespQR.IsSuccessStatusCode)
-                        return StatusCode(500, new { message = "Gagal upload QR Code pasien ke server Flask." });
+                var fileContent = new StreamContent(qrUploadStream);
+                fileContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");
 
-                    var respBodyQr = await flaskRespQR.Content.ReadAsStringAsync(ct);
-                    dynamic jsonQr = JsonConvert.DeserializeObject(respBodyQr);
+                using var form = new MultipartFormDataContent();
+                form.Add(fileContent, "file", qrCodeFileName);
+                form.Add(new StringContent(folderTarget), "folderTarget");
 
-                    qrPath = jsonQr?.url ?? jsonQr?.fileUrl ?? jsonQr?.path ?? "";
-                }
+                var flaskRespQR = await clientQR.PostAsync(_uploadUrl, form, ct);
+                if (!flaskRespQR.IsSuccessStatusCode)
+                    return StatusCode(500, new { message = "Gagal upload QR Code pasien ke server Flask." });
 
                 // =============================
                 // ✅ Simpan Data

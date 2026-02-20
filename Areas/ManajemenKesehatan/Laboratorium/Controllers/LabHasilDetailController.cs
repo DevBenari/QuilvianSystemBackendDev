@@ -293,16 +293,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         ms.Position = 0;
 
                         using var content = new MultipartFormDataContent
-        {
-            {
-                new StreamContent(ms)
-                {
-                    Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType) }
-                },
-                "file", fileName
-            },
-            { new StringContent(folderTarget), "folderTarget" }
-        };
+                        {
+                            {
+                                new StreamContent(ms)
+                                {
+                                    Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType) }
+                                },
+                                "file", fileName
+                            },
+                            { new StringContent(folderTarget), "folderTarget" }
+                        };
 
                         var flaskResponse = await client.PostAsync(_uploadUrl, content);
                         if (!flaskResponse.IsSuccessStatusCode)

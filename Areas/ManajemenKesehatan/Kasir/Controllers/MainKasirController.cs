@@ -18,6 +18,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Services;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
@@ -1166,10 +1167,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             int perPage = 10,
             Guid? kunjunganId = null,
             Guid? pasienId = null,
-            string? search = null,
-            string? asuransiNama = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
+            [FromQuery] EnumJenisKunjungan? jenisKunjungan = null,
             [FromQuery] DateTime? startDate = null,
             [FromQuery] DateTime? endDate = null,
             [FromQuery] PeriodeFilter? periode = null,
@@ -1183,6 +1183,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 Page = page,
                 PageSize = perPage,
                 KunjunganId = kunjunganId,
+                PasienId = pasienId,
+                jk = jenisKunjungan,
                 StartDate = startDate,
                 EndDate = endDate,
                 Periode = periode,
