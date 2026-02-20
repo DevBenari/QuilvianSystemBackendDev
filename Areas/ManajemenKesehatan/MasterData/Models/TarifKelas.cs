@@ -14,6 +14,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public Guid? PemeriksaanLabId { get; set; }
         public Guid? PeralatanId { get; set; }
         public Guid? DokterId { get; set; }
+        public Guid? LayananId { get; set; }
         public decimal? TarifDokter { get; set; }
         public decimal? TarifRs { get; set; }
         public decimal? TarifJp { get; set; }
