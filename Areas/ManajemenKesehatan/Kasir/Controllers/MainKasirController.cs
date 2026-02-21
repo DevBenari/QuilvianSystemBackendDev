@@ -322,7 +322,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                             };
                         }).ToList();
 
-                    var totalLab = daftarLab.Sum(x => x.Subtotal );
+                    var totalLab = daftarLab.Sum(x => x.Subtotal);
 
 
                     // OBAT NON RACIKAN
@@ -753,7 +753,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     .Where(k => k.KunjunganID == kunjunganId)
                     .Select(k => k.DepositRanap)
                     .FirstOrDefaultAsync();
-                    
+
                 // 2) Ambil header kalau sudah ada (header dibuat sekali)
                 var existingHeader = await _applicationDbContext.MainKasirs
                     .FirstOrDefaultAsync(k => k.KunjunganId == kunjunganId && !k.IsDelete);
@@ -762,7 +762,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 var kasirId = isNewHeader ? Guid.NewGuid() : existingHeader!.KasirId;
 
                 // 3) Tentukan Tgl Pembayaran
-                var tglPembayaran =  DateTimeOffset.UtcNow;
+                var tglPembayaran = DateTimeOffset.UtcNow;
 
                 // 4) Total tagihan (prioritas: header -> vm -> detail)
                 decimal totalTagihan =
@@ -771,7 +771,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     ?? (vm.Details.Max(d => d.TotalPembayaran ?? 0m));
 
                 // jika user punya deposit, maka total tagihan - deposit
-                decimal? sisaDp=0;
+                decimal? sisaDp = 0;
                 if (totalTagihan >= dp)
                 {
                     totalTagihan = (decimal)(totalTagihan - dp);
@@ -833,7 +833,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 var ttd = (vm.TTDUserVerfiedId.HasValue)
                     ? await _ttdService.CheckTTDAsync(vm.TTDUserVerfiedId.Value)
                     : null;
-                
+
                 var ivc = await _applicationDbContext.Billings.AsNoTracking()
                     .Where(b => b.KunjunganId == vm.KunjunganId)
                     .Select(b => b.InvoiceBilling)
@@ -1021,102 +1021,297 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
-        
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] MainKasirViewModel vm)
+
+        [HttpPut("{kasirId}")]
+        public async Task<IActionResult> Update(Guid kasirId, [FromBody] MainKasirViewModel vm, CancellationToken ct)
         {
             if (vm == null || !ModelState.IsValid)
-            {
                 return BadRequest(new { message = "Data tidak valid." });
-            }
 
+            if (!vm.KunjunganId.HasValue || vm.KunjunganId.Value == Guid.Empty)
+                return BadRequest(new { message = "KunjunganId wajib diisi." });
+
+            if (!await _applicationDbContext.Database.CanConnectAsync(ct))
+                return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+
+            var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(emailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var userActiveId = await _applicationDbContext.UserActives
+                .Where(u => u.Email == emailLogin)
+                .Select(u => (Guid?)u.UserActiveId)
+                .FirstOrDefaultAsync(ct);
+
+            if (!userActiveId.HasValue)
+                return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+
+            await using var trx = await _applicationDbContext.Database.BeginTransactionAsync(ct);
             try
             {
-                if (!_applicationDbContext.Database.CanConnect())
-                {
-                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
-                }
+                var kunjunganId = vm.KunjunganId.Value;
 
-                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(emailLogin))
-                {
-                    return Unauthorized(new { message = "User tidak terautentikasi!" });
-                }
+                // 1) Ambil header kasir
+                var headerEntity = await _applicationDbContext.MainKasirs
+                    .FirstOrDefaultAsync(k => k.KasirId == kasirId && !k.IsDelete, ct);
 
-                var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
-                if (getUserActive == null)
-                {
-                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-                }
-                var userActiveId = getUserActive.UserActiveId;
+                if (headerEntity == null)
+                    return NotFound(new { message = "Header kasir tidak ditemukan." });
 
-                // Cek data MainKasir
-                var existingKasir = await _applicationDbContext.MainKasirs
-                    .FirstOrDefaultAsync(k => k.KasirId == id && !k.IsDelete);
+                if (headerEntity.KunjunganId != kunjunganId)
+                    return BadRequest(new { message = "KunjunganId tidak sesuai dengan header kasir." });
 
-                if (existingKasir == null)
-                {
-                    return NotFound(new { message = "Data kasir tidak ditemukan." });
-                }
+                // 2) Validasi kunjungan
+                var kunjunganOk = await _applicationDbContext.Kunjungans
+                    .AsNoTracking()
+                    .AnyAsync(k => k.KunjunganID == kunjunganId && !k.IsDelete, ct);
 
-                // Cek kunjungan masih valid
-                var datakunjungan = await _applicationDbContext.Kunjungans
-                    .FirstOrDefaultAsync(k => k.KunjunganID == vm.KunjunganId && !k.IsDelete);
-                if (datakunjungan == null)
-                {
+                if (!kunjunganOk)
                     return NotFound(new { message = "Kunjungan tidak ditemukan atau sudah dihapus." });
+
+                // 3) Ambil deposit (anggap 0 jika null)
+                var dp = await _applicationDbContext.Kunjungans
+                    .Where(k => k.KunjunganID == kunjunganId)
+                    .Select(k => (decimal?)k.DepositRanap)
+                    .FirstOrDefaultAsync(ct) ?? 0m;
+
+                // 4) Cek apakah detail sudah ada
+                var detailCount = await _applicationDbContext.MainKasirDetails
+                    .AsNoTracking()
+                    .CountAsync(d => d.MainKasirId == kasirId && !d.IsDelete, ct);
+
+                var tglPembayaran = DateTimeOffset.UtcNow;
+
+                // 5) Invoice billing
+                var ivc = await _applicationDbContext.Billings
+                    .AsNoTracking()
+                    .Where(b => b.KunjunganId == kunjunganId)
+                    .Select(b => b.InvoiceBilling)
+                    .FirstOrDefaultAsync(ct);
+
+                // 6) Total tagihan (prioritas: header -> vm -> detailVm.TotalPembayaran)
+                decimal totalTagihan =
+                    (headerEntity.GrandTotalPembayaran)
+                    ?? (vm.GrandTotalPembayaran)
+                    ?? (vm.Details?.Max(d => d.TotalPembayaran ?? 0m) ?? 0m);
+
+                // 7) Apply deposit -> tagihan net + sisa deposito
+                decimal totalTagihanNet = totalTagihan;
+                decimal sisaDp;
+
+                if (totalTagihanNet >= dp)
+                {
+                    totalTagihanNet -= dp;
+                    sisaDp = 0m;
+                }
+                else
+                {
+                    sisaDp = dp - totalTagihanNet;
+                    totalTagihanNet = 0m;
                 }
 
-                // Update data MainKasir
-                existingKasir.KunjunganId = vm.KunjunganId;
-                existingKasir.DiskonId = vm.DiskonId;
-                existingKasir.SubTotalAsuransi = vm.SubTotalAsuransi;
-                existingKasir.SubTotalMandiri = vm.SubTotalMandiri;
-                existingKasir.TotalPembayaran = vm.TotalPembayaran;
-                existingKasir.GrandTotalPembayaran = vm.GrandTotalPembayaran;
-                existingKasir.TotalBiayaObat = vm.TotalBiayaObat;
-                existingKasir.Keterangan = vm.Keterangan;
-                existingKasir.TglPembayaran = DateTimeOffset.UtcNow;
-                existingKasir.UpdateBy = userActiveId;
-                existingKasir.UpdateDateTime = DateTimeOffset.UtcNow;
+                // status lama untuk billing update
+                var wasLunas = string.Equals(headerEntity.StatusPembayaran, "Lunas", StringComparison.OrdinalIgnoreCase);
 
-                // Hapus detail lama
-                var existingDetails = _applicationDbContext.MainKasirDetails
-                    .Where(d => d.MainKasirId == id);
-                _applicationDbContext.MainKasirDetails.RemoveRange(existingDetails);
+                // ==========================
+                // A) JIKA DETAIL SUDAH ADA -> BIARKAN DETAIL (ABAIAKAN vm.Details)
+                // ==========================
+                decimal totalPaid = 0m;
+                decimal sisaAfter = 0m;
+                int? angsuranKe = null;
+                string? warning = null;
 
-                // Tambahkan detail baru jika ada
-                if (vm.Details != null && vm.Details.Any())
+                if (detailCount > 0)
                 {
-                    var newDetails = vm.Details.Select(detail => new MainKasirDetail
+                    warning = (vm.Details != null && vm.Details.Any())
+                        ? "Detail pembayaran sudah ada, data Details pada request diabaikan (tidak menambah/mengubah detail)."
+                        : null;
+
+                    totalPaid = await _applicationDbContext.MainKasirDetails
+                        .AsNoTracking()
+                        .Where(d => d.MainKasirId == kasirId && !d.IsDelete)
+                        .SumAsync(d => (decimal?)(d.NominalPembayaran ?? 0m), ct) ?? 0m;
+
+                    var rawSisa = totalTagihanNet - totalPaid;
+                    sisaAfter = rawSisa < 0 ? 0m : rawSisa; // safety
+                }
+                else
+                {
+                    // ==========================
+                    // B) JIKA DETAIL BELUM ADA -> TAMBAH BARU DARI vm.Details
+                    // ==========================
+                    if (vm.Details == null || !vm.Details.Any())
+                        return BadRequest(new { message = "Detail pembayaran wajib diisi minimal 1 item." });
+
+                    // total bayar sekarang
+                    var totalNominalBayarNow = vm.Details.Sum(d => d.NominalPembayaran ?? 0m);
+
+                    // ❌ RULE: tidak boleh bayar lebih dari tagihan/sisa
+                    if (totalNominalBayarNow > totalTagihanNet)
+                        return BadRequest(new
+                        {
+                            message = "Jumlah yang dibayar tidak boleh lebih dari tagihan.",
+                            sisaTagihan = totalTagihanNet,
+                            totalDibayar = totalNominalBayarNow
+                        });
+
+                    // sisa setelah bayar (pasti >= 0)
+                    sisaAfter = totalTagihanNet - totalNominalBayarNow;
+
+                    // generate angsuran utk batch ini
+                    angsuranKe = await _generateUrutanAngsuran.GenerateAsync(
+                        kunjunganId,
+                        sisaAfter,
+                        ct
+                    );
+
+                    // insert detail + running sisa per baris + kwitansi per baris
+                    decimal cumulativePaid = 0m;
+                    var detailEntities = new List<MainKasirDetail>();
+
+                    foreach (var dvm in vm.Details)
                     {
-                        MainKasirDetailId = Guid.NewGuid(),
-                        MainKasirId = id,
-                        MetodePembayaranId = detail.MetodePembayaranId,
-                        ReferenceId = detail.ReferenceId,
-                        NamaMetode = detail.NamaMetode,
-                        NominalPembayaran = detail.NominalPembayaran,
-                        Keterangan = detail.Keterangan,
-                    }).ToList();
+                        var bayarNow = dvm.NominalPembayaran ?? 0m;
+                        if (bayarNow <= 0m) continue;
 
-                    _applicationDbContext.MainKasirDetails.AddRange(newDetails);
+                        cumulativePaid += bayarNow;
+
+                        var sisaPerDetail = totalTagihanNet - cumulativePaid;
+                        if (sisaPerDetail < 0m) sisaPerDetail = 0m;
+
+                        var noKwitansiPerDetail = await _noKwitansiService.GenerateNoKwitansiAsync(tglPembayaran, ct);
+
+                        detailEntities.Add(new MainKasirDetail
+                        {
+                            MainKasirDetailId = Guid.NewGuid(),
+                            MainKasirId = kasirId,
+                            KunjunganId = kunjunganId,
+                            PasienId = dvm.PasienId ?? vm.PasienId,
+
+                            TotalPembayaran = totalTagihanNet,
+                            NominalPembayaran = bayarNow,
+                            SisaPembayaran = sisaPerDetail,
+
+                            MetodePembayaranId = dvm.MetodePembayaranId,
+                            NoKwitansi = noKwitansiPerDetail,
+                            AngsuranKe = angsuranKe,
+
+                            ReferenceId = dvm.ReferenceId,
+                            NamaMetode = dvm.NamaMetode,
+                            Keterangan = dvm.Keterangan,
+
+                            TglPembayaran = tglPembayaran.UtcDateTime,
+
+                            CreateBy = userActiveId.Value,
+                            CreateDateTime = DateTimeOffset.UtcNow,
+                            IsDelete = false
+                        });
+                    }
+
+                    if (detailEntities.Count == 0)
+                        return BadRequest(new { message = "Tidak ada detail pembayaran yang valid untuk disimpan." });
+
+                    _applicationDbContext.MainKasirDetails.AddRange(detailEntities);
+
+                    totalPaid = totalNominalBayarNow;
                 }
 
-                await _applicationDbContext.SaveChangesAsync();
-                await _hubContext.Clients.All.SendAsync("Data pembayaran Created", new
-                {
-                    Action = "update",
-                    data = existingKasir.KasirId,
-                });
+                // 8) Final status (otomatis berdasarkan sisaAfter)
+                var statusFromVm = (vm.StatusPembayaran ?? "").Trim();
+                var finalStatus = (sisaAfter <= 0m)
+                    ? "Lunas"
+                    : (string.IsNullOrWhiteSpace(statusFromVm) ? "Cicil" : statusFromVm);
 
-                return Ok(new { message = "Update Data Berhasil || 200 OK" });
+                // 9) TTD (opsional)
+                var ttd = (vm.TTDUserVerfiedId.HasValue)
+                    ? await _ttdService.CheckTTDAsync(vm.TTDUserVerfiedId.Value)
+                    : null;
+
+                // 10) Update header (selalu)
+                headerEntity.PasienId = vm.PasienId ?? headerEntity.PasienId;
+                headerEntity.JumlahAngsuran = await _countAngsuran.CountAsync(kunjunganId);
+                headerEntity.StatusPembayaran = finalStatus;
+                headerEntity.IsVerified = vm.IsVerified;
+
+                headerEntity.InvoiceBilling = ivc;
+                headerEntity.DiskonId = vm.DiskonId;
+                headerEntity.SubTotalAsuransi = vm.SubTotalAsuransi;
+                headerEntity.SubTotalMandiri = vm.SubTotalMandiri;
+                headerEntity.TotalPembayaran = vm.TotalPembayaran;
+
+                headerEntity.Deposito = dp;
+                headerEntity.SisaDeposito = sisaDp;
+
+                // Kalau vm.GrandTotalPembayaran null, pertahankan yang lama
+                headerEntity.GrandTotalPembayaran = vm.GrandTotalPembayaran ?? headerEntity.GrandTotalPembayaran ?? totalTagihanNet;
+
+                headerEntity.TotalBiayaObat = vm.TotalBiayaObat;
+                headerEntity.TotalBiayaTindakan = vm.TotalBiayaTindakan;
+                headerEntity.Keterangan = vm.Keterangan ?? headerEntity.Keterangan;
+
+                headerEntity.TglPembayaran = tglPembayaran;
+
+                headerEntity.TTDUserVerfiedId = vm.TTDUserVerfiedId ?? headerEntity.TTDUserVerfiedId;
+                headerEntity.PathUserVerified = (ttd?.Path) ?? headerEntity.PathUserVerified;
+
+                headerEntity.UpdateBy = userActiveId.Value;
+                headerEntity.UpdateDateTime = DateTimeOffset.UtcNow;
+
+                _applicationDbContext.MainKasirs.Update(headerEntity);
+
+                // 11) Save
+                var saved = await _applicationDbContext.SaveChangesAsync(ct);
+                if (saved <= 0)
+                {
+                    await trx.RollbackAsync(ct);
+                    return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
+                }
+
+                // 12) Update billing hanya saat berubah jadi lunas
+                int affectedBilling = 0;
+                var isLunasNow = string.Equals(finalStatus, "Lunas", StringComparison.OrdinalIgnoreCase);
+                if (!wasLunas && isLunasNow)
+                {
+                    affectedBilling = await _billingService.MarkBillingAsPaidAsync(kunjunganId);
+                }
+
+                await trx.CommitAsync(ct);
+
+                // 13) SignalR
+                await _hubContext.Clients.All.SendAsync("Data pembayaran Updated", new
+                {
+                    Action = detailCount > 0 ? "update_header_only" : "update_header_and_insert_detail",
+                    kasirId,
+                    kunjunganId,
+                    angsuranKe,
+                    status = finalStatus,
+                    billingUpdated = affectedBilling
+                }, ct);
+
+                return Ok(new
+                {
+                    message = detailCount > 0
+                        ? "Header diperbarui. Detail sudah ada, tidak ditambah."
+                        : "Header diperbarui & detail baru berhasil ditambahkan.",
+                    warning,
+                    action = detailCount > 0 ? "update_header_only" : "update_header_and_insert_detail",
+                    kasirId,
+                    kunjunganId,
+                    statusPembayaran = finalStatus,
+                    totalTagihan = totalTagihanNet,
+                    totalPaid,
+                    sisaPembayaran = sisaAfter,
+                    billingUpdated = affectedBilling
+                });
             }
             catch (DbUpdateException dbEx)
             {
-                return StatusCode(500, new { message = $"Gagal memperbarui data: {dbEx.InnerException?.Message}" });
+                await trx.RollbackAsync(ct);
+                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message ?? dbEx.Message}" });
             }
             catch (Exception ex)
             {
+                await trx.RollbackAsync(ct);
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }

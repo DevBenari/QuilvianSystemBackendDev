@@ -687,6 +687,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         CreateBy = UserActiveId
                     };
                     _applicationDbContext.Billings.Add(bill);
+
+                    var dataKasir = new MainKasir
+                    {
+                        KasirId = Guid.NewGuid(),
+                        KunjunganId = newKunjungan.KunjunganID,
+                        GrandTotalPembayaran = biayaAdmin.NominalBiayaAdministrasi,
+                        CreateDateTime = DateTimeOffset.UtcNow,
+                        CreateBy = UserActiveId
+                    };
                 }
 
                 await _applicationDbContext.SaveChangesAsync();
