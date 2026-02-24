@@ -29,6 +29,7 @@
 
         public List<object>? DaftarVisitDokter { get; set; } = new();
         public List<object>? DaftarKamarRanap { get; set; } = new();
+        public object? DPRanap { get; set; } = 0m;
 
         public decimal TotalPemeriksaanLab { get; set; } = 0m;
         public decimal TotalObat { get; set; } = 0m;
@@ -39,7 +40,7 @@
 
         public decimal TotalBiayaVisitDokter { get; set; } = 0m;
         public decimal TotalKamarRanap { get; set; } = 0m;
-
+        public decimal TotalDPRanap { get; set; } = 0m;
         public decimal TotalKeseluruhan { get; set; } = 0m;
     }
 }

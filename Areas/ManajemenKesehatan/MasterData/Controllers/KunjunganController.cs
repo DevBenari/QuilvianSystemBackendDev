@@ -665,39 +665,68 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 if (biayaAdmin != null)
                 {
-                    var bill = new Billing
+                    Billing bill;
+                    if (kodeJenis == "OP")
                     {
-                        BillingId = Guid.NewGuid(),
-                        KunjunganId = newKunjungan.KunjunganID,
-                        ItemId = biayaAdmin.BiayaAdministrasiId,
-                        NamaItem = biayaAdmin.NamaBiayaAdministrasi,
-                        HargaItem = biayaAdmin.NominalBiayaAdministrasi,
-                        QtyItem = 1,
-                        SubTotalItem = biayaAdmin.NominalBiayaAdministrasi,
-                        InvoiceBilling = await _generateInvoiceBillingService.GetOrCreateAsync(
-                            newKunjungan.KunjunganID,
-                            DateTime.UtcNow),
-                        IsListWhiteOff = false,
-                        BillingKode = "001",
-                        JenisBilling = "Biaya Admin",
-                        StatusBilling = false,
-                        BillingDate = DateTime.UtcNow,
-                        TanggalInvoice = DateTime.UtcNow,
-                        TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
-                        CreateDateTime = DateTimeOffset.UtcNow,
-                        CreateBy = UserActiveId
-                    };
+                        bill = new Billing
+                        {
+                            BillingId = Guid.NewGuid(),
+                            KunjunganId = newKunjungan.KunjunganID,
+                            ItemId = biayaAdmin.BiayaAdministrasiId,
+                            NamaItem = biayaAdmin.NamaBiayaAdministrasi,
+                            HargaItem = biayaAdmin.NominalBiayaAdministrasi,
+                            QtyItem = 1,
+                            SubTotalItem = biayaAdmin.NominalBiayaAdministrasi,
+                            InvoiceBilling = await _generateInvoiceBillingService.GetOrCreateAsync(
+                                    newKunjungan.KunjunganID,
+                                    DateTime.UtcNow),
+                            IsListWhiteOff = false,
+                            BillingKode = "001",
+                            JenisBilling = "Biaya Admin",
+                            StatusBilling = false,
+                            BillingDate = DateTime.UtcNow,
+                            TanggalInvoice = DateTime.UtcNow,
+                            TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
+                            CreateDateTime = DateTimeOffset.UtcNow,
+                            CreateBy = UserActiveId
+                        };
+                    }
+                    else
+                    {
+                        bill = new Billing
+                        {
+                            BillingId = Guid.NewGuid(),
+                            KunjunganId = newKunjungan.KunjunganID,
+                            ItemId = null,
+                            NamaItem = "Deposito Ranap",
+                            HargaItem = newKunjungan.DepositRanap,
+                            QtyItem = 1,
+                            SubTotalItem = newKunjungan.DepositRanap,
+                            InvoiceBilling = await _generateInvoiceBillingService.GetOrCreateAsync(
+                                    newKunjungan.KunjunganID,
+                                    DateTime.UtcNow),
+                            IsListWhiteOff = false,
+                            BillingKode = "DP",
+                            JenisBilling = "DepositRanap",
+                            StatusBilling = false,
+                            BillingDate = DateTime.UtcNow,
+                            TanggalInvoice = DateTime.UtcNow,
+                            TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
+                            CreateDateTime = DateTimeOffset.UtcNow,
+                            CreateBy = UserActiveId
+                        };
+                    }
                     _applicationDbContext.Billings.Add(bill);
 
-                    var dataKasir = new MainKasir
-                    {
-                        KasirId = Guid.NewGuid(),
-                        KunjunganId = newKunjungan.KunjunganID,
-                        GrandTotalPembayaran = biayaAdmin.NominalBiayaAdministrasi,
-                        Deposito = newKunjungan.DepositRanap,
-                        CreateDateTime = DateTimeOffset.UtcNow,
-                        CreateBy = UserActiveId
-                    };
+                    //var dataKasir = new MainKasir
+                    //{
+                    //    KasirId = Guid.NewGuid(),
+                    //    KunjunganId = newKunjungan.KunjunganID,
+                    //    GrandTotalPembayaran = biayaAdmin.NominalBiayaAdministrasi,
+                    //    Deposito = newKunjungan.DepositRanap,
+                    //    CreateDateTime = DateTimeOffset.UtcNow,
+                    //    CreateBy = UserActiveId
+                    //};
                 }
 
                 await _applicationDbContext.SaveChangesAsync();

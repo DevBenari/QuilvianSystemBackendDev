@@ -15,6 +15,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         //public Guid? PeralatanId { get; set; }
         //public Guid? DokterId { get; set; }
         public Guid? LayananId { get; set; }
+        public string? KodeLayanan { get; set; }
         public decimal? TarifDokter { get; set; }
         public decimal? TarifRs { get; set; }
         public decimal? TarifJp { get; set; }
@@ -22,7 +23,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public decimal? TarifLain { get; set; }
         public decimal? TarifTotal { get; set; }
         public decimal? KSO { get; set; }
-
+        
 
     }
 }

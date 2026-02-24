@@ -227,19 +227,19 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             .ToListAsync(ct);
 
         var billingMap = billings
-            .Where(b => b.ItemId.HasValue && !string.IsNullOrWhiteSpace(b.JenisBilling))
-            .GroupBy(b => new { Jenis = b.JenisBilling!, Item = b.ItemId!.Value })
-            .ToDictionary(
-                g => (g.Key.Jenis, g.Key.Item),
-                g => g.OrderByDescending(x => x.CreateDateTime ?? DateTime.MinValue).First()
-            );
+        .Where(b => !string.IsNullOrWhiteSpace(b.JenisBilling))
+        .GroupBy(b => new { Jenis = b.JenisBilling!, Item = b.ItemId }) // Item = Guid? (boleh null)
+        .ToDictionary(
+            g => (g.Key.Jenis, g.Key.Item), // key = (string, Guid?)
+            g => g.OrderByDescending(x => x.CreateDateTime ?? DateTimeOffset.MinValue).First()
+        );
 
+         // ✅ FindBilling sekarang boleh itemId null
         BillingLite? FindBilling(string jenis, Guid? itemId)
         {
-            if (!itemId.HasValue) return null;
-            billingMap.TryGetValue((jenis, itemId.Value), out var b);
-            return b;
-        }
+           billingMap.TryGetValue((jenis, itemId), out var b);
+           return b;
+         }
 
         // =========================
         // 3) LAB
@@ -777,9 +777,36 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             }
         }
 
+        // =============================
+        // 10) Deposito Ranap
+        // ==============================
+        var depositoBill =
+            FindBilling("DepositRanap", null);
+
+        if (depositoBill != null)
+        {
+            dto.DPRanap = new
+            {
+                depositoBill.BillingId,
+                depositoBill.BillingKode,
+                depositoBill.JenisBilling,
+                depositoBill.NamaItem,
+                depositoBill.HargaItem,
+                depositoBill.QtyItem,
+                depositoBill.SubTotalItem,
+                depositoBill.StatusBilling,
+                depositoBill.TanggalInvoice,
+                depositoBill.TanggalJatuhTempo,
+                DPD = HitungDpd(depositoBill.TanggalJatuhTempo, snap)
+            };
+
+           dto.TotalDPRanap = depositoBill.SubTotalItem ?? 0m;
+        }
+        
         // =========================
-        // 10) TOTAL KESELURUHAN
+        // 11) TOTAL KESELURUHAN
         // =========================
+        var DepositRanap = dto.TotalDPRanap;
         dto.TotalKeseluruhan =
             dto.TotalPemeriksaanLab +
             dto.TotalObat +
@@ -951,6 +978,8 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 HargaItem = b.HargaItem,
                 SubTotalItem = b.SubTotalItem,
                 StatusBilling = b.StatusBilling,
+                TanggalInvoice = b.TanggalInvoice,
+                TanggalJatuhTempo = b.TanggalJatuhTempo,
                 CreateDateTime = b.CreateDateTime
             })
             .ToListAsync(ct);
@@ -1562,6 +1591,46 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 }
             }
 
+            // ============================================================
+            // DEPOSITO RANAP bulk: ItemId == null (ambil yang paling baru)
+            // ============================================================
+            var dpRanapMap = billings
+                .Where(b =>
+                    b.ItemId == null &&
+                    (
+                        string.Equals(b.JenisBilling, "DepositRanap", StringComparison.OrdinalIgnoreCase)
+                    )
+                )
+                .GroupBy(b => b.KunjunganId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.OrderByDescending(x => x.CreateDateTime ?? DateTimeOffset.MinValue).First()
+                );
+
+            dto.DPRanap = null;
+            dto.TotalDPRanap = 0m;
+
+            if (dpRanapMap.TryGetValue(kid, out var dp))
+            {
+                dto.DPRanap = new
+                {
+                    dp.BillingId,
+                    dp.BillingKode,
+                    dp.JenisBilling,
+                    dp.NamaItem,
+                    dp.HargaItem,
+                    dp.QtyItem,
+                    dp.SubTotalItem,
+                    dp.StatusBilling,
+                    dp.TanggalInvoice,
+                    dp.TanggalJatuhTempo,
+                    DPD = HitungDpd(dp.TanggalJatuhTempo, snap)
+                };
+
+                dto.TotalDPRanap = dp.SubTotalItem ?? 0m;
+            }
+
+
             dto.TotalKeseluruhan =
                 dto.TotalPemeriksaanLab +
                 dto.TotalObat +
@@ -1599,7 +1668,8 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 dto.DaftarAlkes,
                 dto.DaftarVisitDokter,
                 dto.DaftarKamarRanap,
-
+                dto.DPRanap,
+                dto.TotalDPRanap,
                 dto.TotalPemeriksaanLab,
                 dto.TotalObat,
                 dto.TotalRacikan,
