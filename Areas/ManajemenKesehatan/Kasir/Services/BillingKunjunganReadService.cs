@@ -136,6 +136,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 k.AsuransiId,
 
                 NamaLengkap = p != null ? p.NamaLengkap : null,
+                NoHp = p != null ? p.NoPasien : null,
                 NoRekamMedis = p != null ? p.NoRekamMedis : null,
                 TanggalLahir = p != null ? p.TanggalLahir : (DateTime?)null,
 
@@ -158,6 +159,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             TanggalKunjungan = header.TanggalKunjungan,
             AsalKunjungan = header.AsalKunjungan,
             NamaLengkap = header.NamaLengkap,
+            NoHP = header.NoHp,
             NoRekamMedis = header.NoRekamMedis,
             NmDokter = header.NmDokter,
             NamaPoliklinik = header.NamaPoliklinik,
@@ -932,7 +934,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 NamaLengkap = p != null ? p.NamaLengkap : null,
                 NoRekamMedis = p != null ? p.NoRekamMedis : null,
                 TanggalLahir = p != null ? p.TanggalLahir : (DateTime?)null,
-
+                NoHp = p != null ? p.NoPasien : null,
                 NmDokter = d != null ? d.NmDokter : null,
                 NamaPoliklinik = poli != null ? poli.NamaPoliklinik : null,
                 NamaAsuransi = a != null ? a.NamaAsuransi : null,
@@ -1224,6 +1226,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
                 NamaLengkap = h.NamaLengkap,
                 NoRekamMedis = h.NoRekamMedis,
+                NoHP = h.NoHp,
                 NmDokter = h.NmDokter,
                 NamaPoliklinik = h.NamaPoliklinik,
                 TipePembayaran = h.TipePembayaran,

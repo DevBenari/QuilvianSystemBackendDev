@@ -751,7 +751,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 if (kunjunganOk==null)
                     return NotFound(new { message = "Kunjungan tidak ditemukan atau sudah dihapus." });
 
-                decimal? dp = kunjunganOk.DepositRanap;
+                decimal? dp = kunjunganOk.DepositRanap ?? 0m;
 
                 // 2) Ambil header kalau sudah ada (header dibuat sekali)
                 var existingHeader = await _applicationDbContext.MainKasirs
@@ -770,6 +770,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     ?? (vm.Details.Max(d => d.TotalPembayaran ?? 0m));
 
                 // jika user punya deposit, maka total tagihan - deposit
+                const decimal taxRate = 0.11m;
+                totalTagihan =totalTagihan +
+                    Math.Round(totalTagihan * taxRate, 0, MidpointRounding.AwayFromZero);
                 decimal? sisaDp = 0;
                 if (totalTagihan >= dp)
                 {
@@ -826,7 +829,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 {
                     noKwitansi = await _noKwitansiService.GenerateNoKwitansiAsync(tglPembayaran, HttpContext.RequestAborted);
                 }
-
 
                 // 10) TTD dan invoice billing
                 var ttd = (vm.TTDUserVerfiedId.HasValue)
@@ -1062,53 +1064,53 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
                 // 2) Validasi kunjungan
                 var kunjunganOk = await _applicationDbContext.Kunjungans
-                    .AsNoTracking()
-                    .AnyAsync(k => k.KunjunganID == kunjunganId && !k.IsDelete, ct);
+                        .AsNoTracking()
+                        .Where(k => k.KunjunganID == kunjunganId && !k.IsDelete)
+                        .Select(k => new { k.KunjunganID, k.DepositRanap })
+                        .FirstOrDefaultAsync();
 
-                if (!kunjunganOk)
+                if (kunjunganOk == null)
                     return NotFound(new { message = "Kunjungan tidak ditemukan atau sudah dihapus." });
 
-                // 3) Ambil deposit (anggap 0 jika null)
-                //var dp = await _applicationDbContext.Kunjungans
-                //    .Where(k => k.KunjunganID == kunjunganId)
-                //    .Select(k => (decimal?)k.DepositRanap)
-                //    .FirstOrDefaultAsync(ct) ?? 0m;
+                var dp = kunjunganOk.DepositRanap ?? 0m;
 
-                var dp = headerEntity.Deposito ?? 0m;
-
-                // 4) Cek apakah detail sudah ada
+                // 3) Cek apakah detail sudah ada
                 var detailCount = await _applicationDbContext.MainKasirDetails
                     .AsNoTracking()
                     .CountAsync(d => d.MainKasirId == kasirId && !d.IsDelete, ct);
 
                 var tglPembayaran = DateTimeOffset.UtcNow;
 
-                // 5) Invoice billing
+                // 4) Invoice billing
                 var ivc = await _applicationDbContext.Billings
                     .AsNoTracking()
                     .Where(b => b.KunjunganId == kunjunganId)
                     .Select(b => b.InvoiceBilling)
                     .FirstOrDefaultAsync(ct);
 
-                // 6) Total tagihan (prioritas: header -> vm -> detailVm.TotalPembayaran)
+                // 5) Total tagihan (prioritas: header -> vm -> detailVm.TotalPembayaran)
                 decimal totalTagihan =
                     (headerEntity.GrandTotalPembayaran)
                     ?? (vm.GrandTotalPembayaran)
                     ?? (vm.Details?.Max(d => d.TotalPembayaran ?? 0m) ?? 0m);
 
-                // 7) Apply deposit -> tagihan net + sisa deposito
+                // 6) Apply deposit -> tagihan net + sisa deposito
                 decimal totalTagihanNet = totalTagihan;
-                decimal sisaDp;
-
+                decimal? sisaDp = 0m;
+                const decimal taxRate = 0.11m;
+                totalTagihanNet = totalTagihanNet +
+                    Math.Round(totalTagihanNet * taxRate, 0, MidpointRounding.AwayFromZero);
+                
                 if (totalTagihanNet >= dp)
                 {
-                    totalTagihanNet -= dp;
-                    sisaDp = 0m;
+                    totalTagihanNet = (decimal)(totalTagihanNet - dp);
+                    sisaDp = 0;
                 }
-                else
+                else if (dp >= totalTagihanNet)
                 {
-                    sisaDp = dp - totalTagihanNet;
-                    totalTagihanNet = 0m;
+                    dp = dp - totalTagihanNet;
+                    sisaDp = dp;
+                    totalTagihanNet = 0;
                 }
 
                 // status lama untuk billing update

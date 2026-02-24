@@ -12,6 +12,7 @@
         public Guid? KasirId { get; set; }
 
         public string? NamaLengkap { get; set; }
+        public string? NoHP { get; set; }
         public string? NoRekamMedis { get; set; }
         public string? NmDokter { get; set; }
         public string? NamaPoliklinik { get; set; }
