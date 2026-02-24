@@ -743,16 +743,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
                 // 1) Validasi kunjungan dan cari deposit
                 var kunjunganOk = await _applicationDbContext.Kunjungans
-                    .AsNoTracking()
-                    .AnyAsync(k => k.KunjunganID == kunjunganId && !k.IsDelete);
+                        .AsNoTracking()
+                        .Where(k => k.KunjunganID == kunjunganId && !k.IsDelete)
+                        .Select(k => new { k.KunjunganID, k.DepositRanap })
+                        .FirstOrDefaultAsync();
 
-                if (!kunjunganOk)
+                if (kunjunganOk==null)
                     return NotFound(new { message = "Kunjungan tidak ditemukan atau sudah dihapus." });
 
-                decimal? dp = await _applicationDbContext.Kunjungans
-                    .Where(k => k.KunjunganID == kunjunganId)
-                    .Select(k => k.DepositRanap)
-                    .FirstOrDefaultAsync();
+                decimal? dp = kunjunganOk.DepositRanap;
 
                 // 2) Ambil header kalau sudah ada (header dibuat sekali)
                 var existingHeader = await _applicationDbContext.MainKasirs
@@ -1148,7 +1147,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     // total bayar sekarang
                     var totalNominalBayarNow = vm.Details.Sum(d => d.NominalPembayaran ?? 0m);
 
-                    // ❌ RULE: tidak boleh bayar lebih dari tagihan/sisa
+                    //  RULE: tidak boleh bayar lebih dari tagihan/sisa
                     if (totalNominalBayarNow > totalTagihanNet)
                         return BadRequest(new
                         {
