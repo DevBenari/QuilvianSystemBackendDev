@@ -645,6 +645,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     IsFinishedKasir = false,
                     IsTriage = false,
                     IsCTTPasienIGD = false,
+                    IsClosed = false,
                     Antrian = nomorAntrianFormatted, // null jika IGD
                     AsalKunjungan = request.AsalKunjungan,
                     TglMasuk = request.TglMasuk,
@@ -693,6 +694,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         KasirId = Guid.NewGuid(),
                         KunjunganId = newKunjungan.KunjunganID,
                         GrandTotalPembayaran = biayaAdmin.NominalBiayaAdministrasi,
+                        Deposito = newKunjungan.DepositRanap,
                         CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = UserActiveId
                     };
@@ -1137,6 +1139,36 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             });
 
             return Ok(new { message = "Status isFinished berhasil diperbarui." });
+        }
+
+        [HttpPut("{id}/is-closed")]
+        public async Task<IActionResult> UpdateIsClosed(Guid id, [FromBody] UpdateIsFinishedViewModel request)
+        {
+            var kunjungan = await _applicationDbContext.Kunjungans.FindAsync(id);
+            if (kunjungan == null)
+                return NotFound(new { message = "Kunjungan tidak ditemukan." });
+
+            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(EmailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var userId = user?.UserActiveId ?? Guid.Empty;
+
+            kunjungan.IsClosed = request.IsFinished;
+            kunjungan.UpdateDateTime = DateTimeOffset.UtcNow;
+            kunjungan.UpdateBy = userId;
+            await _applicationDbContext.SaveChangesAsync();
+
+            // Notifikasi SignalR
+            await _hubContext.Clients.All.SendAsync("IsClosedChanged", new
+            {
+                action = "updateIsClosed",
+                kunjunganId = kunjungan.KunjunganID,
+                IsClosed = request.IsFinished
+            });
+
+            return Ok(new { message = "Status IsClosed berhasil diperbarui." });
         }
 
         [HttpPut("{id}/is-screening")]

@@ -1070,10 +1070,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     return NotFound(new { message = "Kunjungan tidak ditemukan atau sudah dihapus." });
 
                 // 3) Ambil deposit (anggap 0 jika null)
-                var dp = await _applicationDbContext.Kunjungans
-                    .Where(k => k.KunjunganID == kunjunganId)
-                    .Select(k => (decimal?)k.DepositRanap)
-                    .FirstOrDefaultAsync(ct) ?? 0m;
+                //var dp = await _applicationDbContext.Kunjungans
+                //    .Where(k => k.KunjunganID == kunjunganId)
+                //    .Select(k => (decimal?)k.DepositRanap)
+                //    .FirstOrDefaultAsync(ct) ?? 0m;
+
+                var dp = headerEntity.Deposito ?? 0m;
 
                 // 4) Cek apakah detail sudah ada
                 var detailCount = await _applicationDbContext.MainKasirDetails
