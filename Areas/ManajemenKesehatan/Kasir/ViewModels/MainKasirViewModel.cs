@@ -11,6 +11,8 @@ public class MainKasirViewModel
     public string? StatusPembayaran { get; set; }
     public bool? IsVerified { get; set; }
     public Guid? TTDUserVerfiedId { get; set; }
+    public decimal? DepositRanap {  get; set; }
+    public decimal? SisaDeposit {  get; set; }
     public decimal? TotalBiayaObat { get; set; }
     public decimal? TotalBiayaTindakan { get; set; }
     public decimal? SubTotalMandiri { get; set; }

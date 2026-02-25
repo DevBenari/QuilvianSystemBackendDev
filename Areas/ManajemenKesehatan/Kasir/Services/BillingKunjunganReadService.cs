@@ -826,6 +826,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
     // ================================
     // FUNCTION GET ALL BILLING PAGED
     // ================================
+
     public async Task<PagedResult<object>> GetBillingPagedAsync(BillingPagedQuery query, CancellationToken ct = default)
     {
         var page = query.Page <= 0 ? 1 : query.Page;
@@ -1654,6 +1655,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 dto.TanggalKunjungan,
                 dto.KasirId,
                 dto.NamaLengkap,
+                dto.NoHP,
                 dto.NoRekamMedis,
                 dto.NmDokter,
                 dto.NamaPoliklinik,

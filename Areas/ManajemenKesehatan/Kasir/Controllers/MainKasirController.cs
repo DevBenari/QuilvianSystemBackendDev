@@ -745,13 +745,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 var kunjunganOk = await _applicationDbContext.Kunjungans
                         .AsNoTracking()
                         .Where(k => k.KunjunganID == kunjunganId && !k.IsDelete)
-                        .Select(k => new { k.KunjunganID, k.DepositRanap })
+                        .Select(k => new { k.KunjunganID})
                         .FirstOrDefaultAsync();
 
                 if (kunjunganOk==null)
                     return NotFound(new { message = "Kunjungan tidak ditemukan atau sudah dihapus." });
-
-                decimal? dp = kunjunganOk.DepositRanap ?? 0m;
 
                 // 2) Ambil header kalau sudah ada (header dibuat sekali)
                 var existingHeader = await _applicationDbContext.MainKasirs
@@ -768,23 +766,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     (existingHeader?.GrandTotalPembayaran)
                     ?? (vm.GrandTotalPembayaran)
                     ?? (vm.Details.Max(d => d.TotalPembayaran ?? 0m));
-
-                // jika user punya deposit, maka total tagihan - deposit
-                const decimal taxRate = 0.11m;
-                totalTagihan =totalTagihan +
-                    Math.Round(totalTagihan * taxRate, 0, MidpointRounding.AwayFromZero);
-                decimal? sisaDp = 0;
-                if (totalTagihan >= dp)
-                {
-                    totalTagihan = (decimal)(totalTagihan - dp);
-                    sisaDp = 0;
-                }
-                else if (dp >= totalTagihan)
-                {
-                    dp = dp - totalTagihan;
-                    sisaDp = dp;
-                    totalTagihan = 0;
-                }
 
                 // 5) Total bayar yang sudah pernah masuk (kalau header sudah ada)
                 decimal totalPaidBefore = 0m;
@@ -858,8 +839,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         SubTotalAsuransi = vm.SubTotalAsuransi,
                         SubTotalMandiri = vm.SubTotalMandiri,
                         TotalPembayaran = vm.TotalPembayaran,
-                        Deposito = dp,
-                        SisaDeposito = sisaDp,
+                        Deposito = vm.DepositRanap,
+                        SisaDeposito = vm.SisaDeposit,
                         GrandTotalPembayaran = vm.GrandTotalPembayaran ?? totalTagihan,
                         TotalBiayaObat = vm.TotalBiayaObat,
                         TotalBiayaTindakan = vm.TotalBiayaTindakan,
@@ -1066,13 +1047,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 var kunjunganOk = await _applicationDbContext.Kunjungans
                         .AsNoTracking()
                         .Where(k => k.KunjunganID == kunjunganId && !k.IsDelete)
-                        .Select(k => new { k.KunjunganID, k.DepositRanap })
+                        .Select(k => new { k.KunjunganID})
                         .FirstOrDefaultAsync();
 
                 if (kunjunganOk == null)
                     return NotFound(new { message = "Kunjungan tidak ditemukan atau sudah dihapus." });
 
-                var dp = kunjunganOk.DepositRanap ?? 0m;
+                //var dp = kunjunganOk.DepositRanap ?? 0m;
 
                 // 3) Cek apakah detail sudah ada
                 var detailCount = await _applicationDbContext.MainKasirDetails
@@ -1093,25 +1074,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     (headerEntity.GrandTotalPembayaran)
                     ?? (vm.GrandTotalPembayaran)
                     ?? (vm.Details?.Max(d => d.TotalPembayaran ?? 0m) ?? 0m);
-
-                // 6) Apply deposit -> tagihan net + sisa deposito
                 decimal totalTagihanNet = totalTagihan;
-                decimal? sisaDp = 0m;
-                const decimal taxRate = 0.11m;
-                totalTagihanNet = totalTagihanNet +
-                    Math.Round(totalTagihanNet * taxRate, 0, MidpointRounding.AwayFromZero);
-                
-                if (totalTagihanNet >= dp)
-                {
-                    totalTagihanNet = (decimal)(totalTagihanNet - dp);
-                    sisaDp = 0;
-                }
-                else if (dp >= totalTagihanNet)
-                {
-                    dp = dp - totalTagihanNet;
-                    sisaDp = dp;
-                    totalTagihanNet = 0;
-                }
 
                 // status lama untuk billing update
                 var wasLunas = string.Equals(headerEntity.StatusPembayaran, "Lunas", StringComparison.OrdinalIgnoreCase);
@@ -1219,18 +1182,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     totalPaid = totalNominalBayarNow;
                 }
 
-                // 8) Final status (otomatis berdasarkan sisaAfter)
+                // 6) Final status (otomatis berdasarkan sisaAfter)
                 var statusFromVm = (vm.StatusPembayaran ?? "").Trim();
                 var finalStatus = (sisaAfter <= 0m)
                     ? "Lunas"
                     : (string.IsNullOrWhiteSpace(statusFromVm) ? "Cicil" : statusFromVm);
 
-                // 9) TTD (opsional)
+                // 7) TTD (opsional)
                 var ttd = (vm.TTDUserVerfiedId.HasValue)
                     ? await _ttdService.CheckTTDAsync(vm.TTDUserVerfiedId.Value)
                     : null;
 
-                // 10) Update header (selalu)
+                // 8) Update header (selalu)
                 headerEntity.PasienId = vm.PasienId ?? headerEntity.PasienId;
                 headerEntity.JumlahAngsuran = await _countAngsuran.CountAsync(kunjunganId);
                 headerEntity.StatusPembayaran = finalStatus;
@@ -1242,8 +1205,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 headerEntity.SubTotalMandiri = vm.SubTotalMandiri;
                 headerEntity.TotalPembayaran = vm.TotalPembayaran;
 
-                headerEntity.Deposito = dp;
-                headerEntity.SisaDeposito = sisaDp;
+                headerEntity.Deposito = vm.DepositRanap;
+                headerEntity.SisaDeposito = vm.SisaDeposit;
 
                 // Kalau vm.GrandTotalPembayaran null, pertahankan yang lama
                 headerEntity.GrandTotalPembayaran = vm.GrandTotalPembayaran ?? headerEntity.GrandTotalPembayaran ?? totalTagihanNet;
@@ -1262,7 +1225,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
                 _applicationDbContext.MainKasirs.Update(headerEntity);
 
-                // 11) Save
+                // 9) Save
                 var saved = await _applicationDbContext.SaveChangesAsync(ct);
                 if (saved <= 0)
                 {
@@ -1270,7 +1233,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
                 }
 
-                // 12) Update billing hanya saat berubah jadi lunas
+                // 10) Update billing hanya saat berubah jadi lunas
                 int affectedBilling = 0;
                 var isLunasNow = string.Equals(finalStatus, "Lunas", StringComparison.OrdinalIgnoreCase);
                 if (!wasLunas && isLunasNow)
@@ -1280,7 +1243,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
                 await trx.CommitAsync(ct);
 
-                // 13) SignalR
+                // 11) SignalR
                 await _hubContext.Clients.All.SendAsync("Data pembayaran Updated", new
                 {
                     Action = detailCount > 0 ? "update_header_only" : "update_header_and_insert_detail",
