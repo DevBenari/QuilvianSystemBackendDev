@@ -69,8 +69,20 @@ namespace QuilvianSystemBackendDev.Repositories
             modelBuilder.Entity<PendaftaranPasienBaru>()
                 .HasIndex(x => x.NoRekamMedis)
                 .IsUnique();
-        }
 
+            modelBuilder.Entity<LabHasilDetail>(entity =>
+            {
+                entity.HasKey(e => e.DetailHasilLabId);
+
+                // Kolom string (PostgreSQL: text)
+                entity.Property(e => e.HasilImunoHistokimiaJson)
+                      .HasColumnType("text")
+                      .HasColumnName("HasilImunoHistokimia"); // <-- nama kolom DB yang kamu minta
+
+                // Wrapper tidak dimapping ke DB
+                entity.Ignore(e => e.HasilImunoHistokimia);
+            });
+        }
 
         public DbSet<UserActive> UserActives { get; set; }
         public DbSet<Setting> Settings { get; set; }

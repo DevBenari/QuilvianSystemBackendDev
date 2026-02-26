@@ -1,4 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using QuilvianSystemBackendDev.Models;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
@@ -40,6 +42,28 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public string? Rincian {  get; set; }
         public string? Anjuran { get; set; }
         public string? DiagnosisPA { get; set; }
+        public string? HasilImunoHistokimiaJson { get; set; }
+        [JsonIgnore]
+        public List<HasilImunoHistokimiaItem> HasilImunoHistokimia
+        {
+            get
+            {
+                if (string.IsNullOrWhiteSpace(HasilImunoHistokimiaJson))
+                    return new List<HasilImunoHistokimiaItem>();
+
+                return JsonSerializer.Deserialize<List<HasilImunoHistokimiaItem>>(
+                           HasilImunoHistokimiaJson,
+                           new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                       ) ?? new List<HasilImunoHistokimiaItem>();
+            }
+            set
+            {
+                HasilImunoHistokimiaJson = JsonSerializer.Serialize(
+                    value ?? new List<HasilImunoHistokimiaItem>(),
+                    new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
+                );
+            }
+        }
         public string? Keterangan {  get; set; }
     }
 }

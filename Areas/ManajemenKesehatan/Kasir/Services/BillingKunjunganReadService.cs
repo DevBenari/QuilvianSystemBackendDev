@@ -2,6 +2,7 @@
 using System.Security.Cryptography;
 using Humanizer;
 using Microsoft.EntityFrameworkCore;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Interfaces;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
@@ -73,6 +74,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
     {
         public Guid? KunjunganId { get; set; }
         public Guid? PasienId { get; set; }
+        public StatusBayarEnum? sb {  get; set; }
         public EnumJenisKunjungan? jk {  get; set; }
         public string? asal { get; set; }
         public int Page { get; set; } = 1;
@@ -130,6 +132,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 k.KunjunganID,
                 k.JenisKunjungan,
                 k.AsalKunjungan,
+                k.IsClosed,
                 TanggalKunjungan = k.TglMasuk,
                 k.TipePembayaran,
                 k.PasienId,
@@ -158,6 +161,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             JenisKunjungan = header.JenisKunjungan,
             TanggalKunjungan = header.TanggalKunjungan,
             AsalKunjungan = header.AsalKunjungan,
+            IsClosed = header.IsClosed,
             NamaLengkap = header.NamaLengkap,
             NoHP = header.NoHp,
             NoRekamMedis = header.NoRekamMedis,
@@ -849,6 +853,44 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         if (query.jk.HasValue)
             baseQuery = baseQuery.Where(k => k.JenisKunjungan == query.jk.Value.ToString());
 
+        if (query.sb.HasValue)
+        {
+            // sesuaikan string di DB kamu
+            var wantedStatus = query.sb.Value switch
+            {
+                StatusBayarEnum.Lunas => "Lunas",
+                StatusBayarEnum.Cicil => "Cicil",
+                StatusBayarEnum.BelumBayar => "Belum Lunas", 
+                _ => null
+            };
+
+            if (!string.IsNullOrWhiteSpace(wantedStatus))
+            {
+                wantedStatus = wantedStatus.Trim();
+
+                // ✅ perbaiki precedence + pastikan KunjunganId non-null
+                var kasirQ = _db.MainKasirs.AsNoTracking()
+                    .Where(m => (m.IsDelete == false || m.IsDelete == null) && m.KunjunganId != null);
+
+                if (query.sb.Value == StatusBayarEnum.BelumBayar)
+                {
+                    // Belum bayar = belum ada kasir sama sekali
+                    // (+ opsional: atau ada status "Belum Lunas" kalau memang dipakai)
+                    baseQuery = baseQuery.Where(k =>
+                        !kasirQ.Any(m => m.KunjunganId == k.KunjunganID)
+                        || kasirQ.Any(m => m.KunjunganId == k.KunjunganID && (m.StatusPembayaran ?? "").Trim() == wantedStatus)
+                    );
+                }
+                else
+                {
+                    // Lunas/Cicil = harus ada kasir dengan status tsb
+                    baseQuery = baseQuery.Where(k =>
+                        kasirQ.Any(m => m.KunjunganId == k.KunjunganID && (m.StatusPembayaran ?? "").Trim() == wantedStatus)
+                    );
+                }
+            }
+        }
+
         if (!string.IsNullOrWhiteSpace(query.asal))
         {
             var asalQ = query.asal.Trim();
@@ -856,7 +898,6 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 k.AsalKunjungan != null &&
                 EF.Functions.ILike(k.AsalKunjungan, $"%{asalQ}%"));
         }
-
 
         // date range
         if (query.StartDate.HasValue && query.EndDate.HasValue)

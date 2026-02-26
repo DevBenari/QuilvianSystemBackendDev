@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using OpenCvSharp;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Interfaces;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
@@ -1365,6 +1366,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
             [FromQuery] EnumJenisKunjungan? jenisKunjungan = null,
+            [FromQuery] StatusBayarEnum? status = null,
             [FromQuery] DateTime? startDate = null,
             [FromQuery] DateTime? endDate = null,
             [FromQuery] PeriodeFilter? periode = null,
@@ -1378,6 +1380,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 Page = page,
                 PageSize = perPage,
                 KunjunganId = kunjunganId,
+                sb = status,
                 PasienId = pasienId,
                 asal = asalKunjungan,
                 jk = jenisKunjungan,

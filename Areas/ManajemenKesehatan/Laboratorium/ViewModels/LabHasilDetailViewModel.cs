@@ -1,4 +1,6 @@
-﻿namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.ViewModels
+﻿using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
+
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.ViewModels
 {
     public class LabHasilDetailViewModel
     {
@@ -34,6 +36,7 @@
         public string? Rincian { get; set; }
         public string? Anjuran { get; set; }
         public string? DiagnosisPA { get; set; }
+        public List<HasilImunoHistokimiaItem>? HasilImunoHistokimia { get; set; } = new();
         public string? Keterangan { get; set; }
     }
 }

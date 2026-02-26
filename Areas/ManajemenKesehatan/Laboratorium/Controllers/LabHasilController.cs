@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Linq;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
@@ -44,6 +45,36 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+        }
+
+        private static List<string> ToPhotoLabPaths(string? photoLabPath)
+        {
+            if (string.IsNullOrWhiteSpace(photoLabPath))
+                return new List<string>();
+
+            var s = photoLabPath.Trim();
+
+            // Jika JSON array string
+            if (s.StartsWith("[") && s.EndsWith("]"))
+            {
+                try
+                {
+                    return (JsonConvert.DeserializeObject<List<string>>(s) ?? new List<string>())
+                        .Where(p => !string.IsNullOrWhiteSpace(p))
+                        .Select(p => p.Trim())
+                        .ToList();
+                }
+                catch
+                {
+                    return new List<string>();
+                }
+            }
+
+            // Fallback: format CSV "/a,/b,/c"
+            return s.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => x.Trim())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToList();
         }
 
         [HttpGet]
@@ -367,155 +398,361 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
         [HttpGet("paged")]
         public async Task<IActionResult> Paged(
-        int page = 1,
-        int perPage = 10,
-        [FromQuery] EnumJenisKunjungan? JenisKunjungan = null,
-        [FromQuery] Guid? kunjunganId = null,
-        [FromQuery] string? namaLab = null,
-        string? orderBy = "CreateDateTime",
-        string? sortDirection = "desc",
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                        DateTime? startDate = null,
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                        DateTime? endDate = null,
-        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+            int page = 1,
+            int perPage = 10,
+            [FromQuery] EnumJenisKunjungan? JenisKunjungan = null,
+            [FromQuery] Guid? kunjunganId = null,
+            [FromQuery] Guid? labbookingid = null,
+            [FromQuery] string? namaLab = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null,
+            CancellationToken ct = default)
         {
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
 
-            // Query data
-            var query = (from a in _applicationDbContext.LabHasils
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
+            // =========================
+            // 1) BASE QUERY (PARENT)
+            // =========================
+            var query = from a in _applicationDbContext.LabHasils.AsNoTracking()
+                        join u0 in _applicationDbContext.UserActives.AsNoTracking()
+                            on a.CreateBy equals u0.UserActiveId into uGroup
+                        from u in uGroup.DefaultIfEmpty()
 
-                         join k in _applicationDbContext.Kunjungans
-                         on a.KunjunganId equals k.KunjunganID into kGroup
-                         from k in kGroup.DefaultIfEmpty()
+                        join k0 in _applicationDbContext.Kunjungans.AsNoTracking()
+                            on a.KunjunganId equals k0.KunjunganID into kGroup
+                        from k in kGroup.DefaultIfEmpty()
 
-                         join l in _applicationDbContext.Labs
-                         on a.LabId equals l.LabId into lGroup
-                         from l in lGroup.DefaultIfEmpty()
+                        join l0 in _applicationDbContext.Labs.AsNoTracking()
+                            on a.LabId equals l0.LabId into lGroup
+                        from l in lGroup.DefaultIfEmpty()
 
-                         where a.IsDelete == false || a.IsDelete == null orderby a.CreateDateTime descending
-                         select new
-                         {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = u.FullName,
-                             a.HasilLabId,
-                             a.KunjunganId,
-                             k.JenisKunjungan,
-                             a.LabId,
-                             NamaLab=l.NamaLab ?? null,
-                             a.LabBookingId,
-                             a.UserActiveId,
-                             a.PenanggungJawabId,
-                             a.PenanggungJawabAnalisId,
-                             a.TanggalPemeriksaan,
-                             a.Keterangan,
-                         });
+                        where (a.IsDelete == false || a.IsDelete == null)
+                        select new
+                        {
+                            a.CreateDateTime,
+                            a.CreateBy,
+                            CreateByName = u.FullName,
 
-            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
+                            a.HasilLabId,
+                            a.KunjunganId,
+                            JenisKunjungan = k.JenisKunjungan,
+
+                            a.LabId,
+                            NamaLab = l.NamaLab,
+
+                            a.LabBookingId,
+                            a.UserActiveId,
+                            a.PenanggungJawabId,
+                            a.PenanggungJawabAnalisId,
+                            a.TanggalPemeriksaan,
+                            a.Keterangan
+                        };
+
+            // =========================
+            // FILTERS
+            // =========================
             if (!string.IsNullOrWhiteSpace(namaLab))
             {
-                namaLab = $"%{namaLab.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-                query = query.Where(u =>
-                    EF.Functions.ILike(u.NamaLab, namaLab)
-                );
+                var pattern = $"%{namaLab.ToLower()}%";
+                query = query.Where(x => EF.Functions.ILike(x.NamaLab, pattern));
             }
 
-            // filter based on kunjungan id
             if (kunjunganId.HasValue)
-            {
-                query = query.Where(u=>u.KunjunganId == kunjunganId.Value);
-            }
+                query = query.Where(x => x.KunjunganId == kunjunganId.Value);
 
-            // filter based on jenis kunjungan
-            if (JenisKunjungan.HasValue) query = query.Where(u => u.JenisKunjungan == JenisKunjungan.Value.ToString());
+            if (labbookingid.HasValue)
+                query = query.Where(x => x.LabBookingId == labbookingid.Value);
 
+            if (JenisKunjungan.HasValue)
+                query = query.Where(x => x.JenisKunjungan == JenisKunjungan.Value.ToString());
 
-            //// **Filter berdasarkan tanggal**
+            // Filter tanggal (range UTC)
             if (startDate.HasValue && endDate.HasValue)
             {
-                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
-                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
-
-                query = query.Where(u =>
-                    u.CreateDateTime >= startUtc &&
-                    u.CreateDateTime <= endUtc);
+                var startUtc = new DateTimeOffset(startDate.Value.Date, TimeSpan.Zero);
+                var endUtc = new DateTimeOffset(endDate.Value.Date.AddDays(1), TimeSpan.Zero); // exclusive
+                query = query.Where(x => x.CreateDateTime >= startUtc && x.CreateDateTime < endUtc);
             }
 
-            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
+            // Filter periode (range; lebih ramah index dibanding .Date)
             if (periode.HasValue)
             {
-                DateTime today = DateTime.UtcNow.Date;
+                var now = DateTimeOffset.UtcNow;
+                var todayStart = new DateTimeOffset(now.Year, now.Month, now.Day, 0, 0, 0, TimeSpan.Zero);
 
-                switch (periode)
+                DateTimeOffset start;
+                DateTimeOffset end; // exclusive
+
+                switch (periode.Value)
                 {
                     case PeriodeFilter.Today:
-                        query = query.Where(u => u.CreateDateTime.Date == today);
+                        start = todayStart;
+                        end = todayStart.AddDays(1);
                         break;
+
                     case PeriodeFilter.ThisWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date <= today
-                        );
+                        start = todayStart.AddDays(-(int)todayStart.DayOfWeek);
+                        end = todayStart.AddDays(1);
                         break;
+
                     case PeriodeFilter.LastWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)
-                        );
+                        var thisWeekStart = todayStart.AddDays(-(int)todayStart.DayOfWeek);
+                        start = thisWeekStart.AddDays(-7);
+                        end = thisWeekStart;
                         break;
+
                     case PeriodeFilter.ThisMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month &&
-                            u.CreateDateTime.Year == today.Year
-                        );
+                        start = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
+                        end = start.AddMonths(1);
                         break;
+
                     case PeriodeFilter.LastMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month - 1 &&
-                            u.CreateDateTime.Year == today.Year
-                        );
+                        var thisMonthStart = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
+                        start = thisMonthStart.AddMonths(-1);
+                        end = thisMonthStart;
                         break;
+
                     case PeriodeFilter.ThisYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
+                        start = new DateTimeOffset(now.Year, 1, 1, 0, 0, 0, TimeSpan.Zero);
+                        end = start.AddYears(1);
                         break;
+
                     case PeriodeFilter.LastYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
+                        var thisYearStart = new DateTimeOffset(now.Year, 1, 1, 0, 0, 0, TimeSpan.Zero);
+                        start = thisYearStart.AddYears(-1);
+                        end = thisYearStart;
                         break;
+
                     case PeriodeFilter.Last3Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
+                        start = todayStart.AddMonths(-3);
+                        end = todayStart.AddDays(1);
                         break;
+
                     case PeriodeFilter.Last6Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
+                        start = todayStart.AddMonths(-6);
+                        end = todayStart.AddDays(1);
+                        break;
+
+                    default:
+                        start = DateTimeOffset.MinValue;
+                        end = DateTimeOffset.MaxValue;
                         break;
                 }
+
+                query = query.Where(x => x.CreateDateTime >= start && x.CreateDateTime < end);
             }
 
-            // Sorting Data dengan cara yang lebih aman
-            query = sortDirection?.ToLower() == "desc"
-                ? orderBy switch
-                {
-                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    _ => query.OrderByDescending(u => u.CreateDateTime)
-                }
-                : orderBy switch
-                {
-                    "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    _ => query.OrderBy(u => u.CreateDateTime)
-                };
+            // =========================
+            // SORTING (aman)
+            // =========================
+            bool desc = (sortDirection ?? "desc").ToLower() == "desc";
 
-            // Pagination
-            var totalRows = query.Count();
-            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
-
-            if (rows.Count == 0 && page > totalPages)
+            query = (orderBy ?? "CreateDateTime") switch
             {
+                "CreateDateTime" => desc ? query.OrderByDescending(x => x.CreateDateTime) : query.OrderBy(x => x.CreateDateTime),
+                "CreateByName" => desc ? query.OrderByDescending(x => x.CreateByName) : query.OrderBy(x => x.CreateByName),
+                "NamaLab" => desc ? query.OrderByDescending(x => x.NamaLab) : query.OrderBy(x => x.NamaLab),
+                _ => desc ? query.OrderByDescending(x => x.CreateDateTime) : query.OrderBy(x => x.CreateDateTime)
+            };
+
+            // =========================
+            // PAGINATION (async)
+            // =========================
+            var totalRows = await query.CountAsync(ct);
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            var parentRows = await query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToListAsync(ct);
+
+            if (parentRows.Count == 0 && page > totalPages && totalRows > 0)
                 return NotFound(new { message = "Page not found." });
+
+            // =========================
+            // 2) DETAILS (batch, 1 query)
+            // =========================
+            var hasilLabIds = parentRows.Select(x => x.HasilLabId).Distinct().ToList();
+
+            // Kalau page kosong, langsung return
+            if (hasilLabIds.Count == 0)
+            {
+                return Ok(new
+                {
+                    status = "success",
+                    message = "Data retrieved successfully",
+                    data = new
+                    {
+                        Rows = parentRows.Select(p => new
+                        {
+                            p.CreateDateTime,
+                            p.CreateBy,
+                            p.CreateByName,
+                            p.HasilLabId,
+                            p.KunjunganId,
+                            p.JenisKunjungan,
+                            p.LabId,
+                            p.NamaLab,
+                            p.LabBookingId,
+                            p.UserActiveId,
+                            p.PenanggungJawabId,
+                            p.PenanggungJawabAnalisId,
+                            p.TanggalPemeriksaan,
+                            p.Keterangan,
+                            Details = new List<object>()
+                        }).ToList(),
+                        TotalRows = totalRows,
+                        CurrentPage = page,
+                        PerPage = perPage,
+                        TotalPages = totalPages
+                    }
+                });
             }
+
+            var detailRaw = await (
+                from d in _applicationDbContext.LabHasilDetails.AsNoTracking()
+                join u0 in _applicationDbContext.UserActives.AsNoTracking()
+                    on d.CreateBy equals u0.UserActiveId into uGroup
+                from u in uGroup.DefaultIfEmpty()
+
+                join lp in _applicationDbContext.LabPemeriksaans.AsNoTracking()
+                    on d.PemeriksaanLabId equals lp.PemeriksaanLabId into lpgroup
+                from lp in lpgroup.DefaultIfEmpty()
+
+                join k in _applicationDbContext.Kelass.AsNoTracking()
+                    on d.KelasId equals k.KelasId into kgroup
+                from k in kgroup.DefaultIfEmpty()
+
+                where (d.IsDelete == false || d.IsDelete == null)
+                      && hasilLabIds.Contains((Guid)d.HasilLabId)
+                select new
+                {
+                    d.CreateDateTime,
+                    d.CreateBy,
+                    CreateByName = u.FullName,
+
+                    d.DetailHasilLabId,
+                    d.HasilLabId,
+                    d.PemeriksaanLabId,
+                    NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
+                    d.KelasId,
+                    NamaKelas = k != null ? k.NamaKelas : null,
+                    d.TanggalSelesai,
+                    d.NoPhotoLab,
+
+                    PhotoLabPathRaw = d.PhotoLabPath, // string raw, diproses setelah ToList
+
+                    d.HasilLabManual,
+                    d.HasilLabAI,
+                    d.JumlahFilm,
+                    d.KeadaanSpecimen,
+                    d.AnalisId,
+                    d.IsDefinitif,
+                    d.IsDuplu,
+                    d.HasilMakroskopik,
+                    d.HasilMikroskopik,
+                    d.KesimpulanHasil,
+                    d.NilaiNormal,
+                    d.BloodVolume,
+                    d.SputumVolume,
+                    d.UrineVolume,
+                    d.PusVolume,
+                    d.StoolVolume,
+                    d.JaringanVolume,
+                    d.BodyFluidVolume,
+                    d.PetugasSpecimenId,
+                    d.TanggalSpecimen,
+                    d.JamSpecimen,
+                    d.InfoNReff,
+                    d.Kondisi,
+                    d.KategoriGC,
+                    d.Rincian,
+                    d.Anjuran,
+                    d.DiagnosisPA,
+                    d.Keterangan
+                }
+            ).ToListAsync(ct);
+
+            // Process Photo paths in-memory + group per HasilLabId
+            var detailsLookup = detailRaw
+                .Select(x =>
+                {
+                    var paths = ToPhotoLabPaths(x.PhotoLabPathRaw);
+                    return new
+                    {
+                        x.HasilLabId,
+                        Row = new
+                        {
+                            x.CreateDateTime,
+                            x.CreateBy,
+                            x.CreateByName,
+                            x.DetailHasilLabId,
+                            x.HasilLabId,
+                            x.PemeriksaanLabId,
+                            x.KelasId,
+                            x.TanggalSelesai,
+                            x.NoPhotoLab,
+                            PhotoLabPath = paths,
+                            JumlahFotoLab = paths.Count,
+                            x.HasilLabManual,
+                            x.HasilLabAI,
+                            x.JumlahFilm,
+                            x.KeadaanSpecimen,
+                            x.AnalisId,
+                            x.IsDefinitif,
+                            x.IsDuplu,
+                            x.HasilMakroskopik,
+                            x.HasilMikroskopik,
+                            x.KesimpulanHasil,
+                            x.NilaiNormal,
+                            x.BloodVolume,
+                            x.SputumVolume,
+                            x.UrineVolume,
+                            x.PusVolume,
+                            x.StoolVolume,
+                            x.JaringanVolume,
+                            x.BodyFluidVolume,
+                            x.PetugasSpecimenId,
+                            x.TanggalSpecimen,
+                            x.JamSpecimen,
+                            x.InfoNReff,
+                            x.Kondisi,
+                            x.KategoriGC,
+                            x.Rincian,
+                            x.Anjuran,
+                            x.DiagnosisPA,
+                            x.Keterangan
+                        }
+                    };
+                })
+                .GroupBy(x => x.HasilLabId)
+                .ToDictionary(g => g.Key, g => g.Select(v => (object)v.Row).ToList());
+
+            // =========================
+            // 3) FINAL: parent + details
+            // =========================
+            var rows = parentRows.Select(p => new
+            {
+                p.CreateDateTime,
+                p.CreateBy,
+                p.CreateByName,
+                p.HasilLabId,
+                p.KunjunganId,
+                p.JenisKunjungan,
+                p.LabId,
+                p.NamaLab,
+                p.LabBookingId,
+                p.UserActiveId,
+                p.PenanggungJawabId,
+                p.PenanggungJawabAnalisId,
+                p.TanggalPemeriksaan,
+                p.Keterangan,
+                Details = detailsLookup.TryGetValue(p.HasilLabId, out var det) ? det : new List<object>()
+            }).ToList();
 
             return Ok(new
             {
@@ -533,902 +770,210 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         }
 
 
-
-        [HttpGet("pagedRadiologi")]
-            public async Task<IActionResult> PagedRadiologi(
+        [HttpGet("paged-HasilLabRadiologi")]
+        public async Task<IActionResult> PagedRadiologi(
             int page = 1,
             int perPage = 10,
-            Guid? kunjunganId = null,
-            Guid? labBookingId = null,
+            [FromQuery] EnumJenisKunjungan? JenisKunjungan = null,
+            [FromQuery] Guid? kunjunganId = null,
+            [FromQuery] Guid? labbookingid = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
-            [FromQuery] DateTime? startDate = null,
-            [FromQuery] DateTime? endDate = null,
-            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null,
-            CancellationToken ct = default)
-            {
-                if (page < 1) page = 1;
-                if (perPage < 1) perPage = 10;
-
-                // =============================
-                // 0) Ambil LabId radiologi (sekali)
-                // =============================
-                var radiologiLabIds = await _applicationDbContext.Labs
-                    .AsNoTracking()
-                    .Where(l => l.NamaLab != null &&
-                                l.NamaLab.ToLower().Replace(" ", "") == "radiologi")
-                    .Select(l => l.LabId)
-                    .ToListAsync(ct);
-
-                if (radiologiLabIds.Count == 0)
-                {
-                    return Ok(new
-                    {
-                        status = "success",
-                        message = "Data Radiologi retrieved successfully",
-                        data = new
-                        {
-                            Rows = new List<object>(),
-                            TotalRows = 0,
-                            CurrentPage = page,
-                            PerPage = perPage,
-                            TotalPages = 0
-                        }
-                    });
-                }
-
-                // =============================
-                // 1) BASE QUERY: LabBookings (filter & EXISTS detail radiologi)
-                // =============================
-                var baseQuery = _applicationDbContext.LabBookings
-                    .AsNoTracking()
-                    .Where(b => b.IsDelete == false || b.IsDelete == null);
-
-                if (kunjunganId.HasValue)
-                    baseQuery = baseQuery.Where(b => b.KunjunganId == kunjunganId.Value);
-
-                if (labBookingId.HasValue)
-                    baseQuery = baseQuery.Where(b => b.BookingLabId == labBookingId.Value);
-
-                if (startDate.HasValue && endDate.HasValue)
-                {
-                    // inclusive start, exclusive end+1 hari (lebih aman daripada ticks)
-                    var start = startDate.Value.Date;
-                    var endExclusive = endDate.Value.Date.AddDays(1);
-
-                    baseQuery = baseQuery.Where(b =>
-                        b.CreateDateTime >= start &&
-                        b.CreateDateTime < endExclusive);
-                }
-
-                if (periode.HasValue)
-                {
-                    var today = DateTime.UtcNow.Date;
-
-                    DateTime start;
-                    DateTime endExclusive;
-
-                    switch (periode.Value)
-                    {
-                        case PeriodeFilter.Today:
-                            start = today;
-                            endExclusive = today.AddDays(1);
-                            break;
-
-                        case PeriodeFilter.Yesterday:
-                            start = today.AddDays(-1);
-                            endExclusive = today;
-                            break;
-
-                        case PeriodeFilter.ThisWeek:
-                            // start week: Minggu (Sunday) default .NET DayOfWeek
-                            start = today.AddDays(-(int)today.DayOfWeek);
-                            endExclusive = today.AddDays(1);
-                            break;
-
-                        case PeriodeFilter.LastWeek:
-                            var startThisWeek = today.AddDays(-(int)today.DayOfWeek);
-                            start = startThisWeek.AddDays(-7);
-                            endExclusive = startThisWeek;
-                            break;
-
-                        case PeriodeFilter.ThisMonth:
-                            start = new DateTime(today.Year, today.Month, 1);
-                            endExclusive = start.AddMonths(1);
-                            break;
-
-                        case PeriodeFilter.LastMonth:
-                            var startThisMonth = new DateTime(today.Year, today.Month, 1);
-                            start = startThisMonth.AddMonths(-1);
-                            endExclusive = startThisMonth;
-                            break;
-
-                        case PeriodeFilter.ThisYear:
-                            start = new DateTime(today.Year, 1, 1);
-                            endExclusive = start.AddYears(1);
-                            break;
-
-                        case PeriodeFilter.LastYear:
-                            var startThisYear2 = new DateTime(today.Year, 1, 1);
-                            start = startThisYear2.AddYears(-1);
-                            endExclusive = startThisYear2;
-                            break;
-
-                        case PeriodeFilter.Last3Months:
-                            start = today.AddMonths(-3);
-                            endExclusive = today.AddDays(1);
-                            break;
-
-                        case PeriodeFilter.Last6Months:
-                            start = today.AddMonths(-6);
-                            endExclusive = today.AddDays(1);
-                            break;
-
-                        default:
-                            start = DateTime.MinValue;
-                            endExclusive = DateTime.MaxValue;
-                            break;
-                    }
-
-                    baseQuery = baseQuery.Where(x => x.CreateDateTime >= start && x.CreateDateTime < endExclusive);
-                }
-
-                // Filter booking yang punya detail radiologi (detail tidak delete)
-                baseQuery = baseQuery.Where(b =>
-                        _applicationDbContext.LabBookingDetails.Any(d =>
-                            d.BookingLabId == b.BookingLabId
-                            && (d.IsDelete == false || d.IsDelete == null)
-                            && d.LabId.HasValue
-                            && radiologiLabIds.Contains(d.LabId.Value)
-                        )
-                    );
-
-                // =============================
-                // 2) TOTAL rows
-                // =============================
-                var totalRows = await baseQuery.CountAsync(ct);
-                var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-
-                // =============================
-                // 3) SORTING (aman)
-                // =============================
-                bool desc = (sortDirection ?? "desc")
-                    .Equals("desc", StringComparison.OrdinalIgnoreCase);
-
-                IQueryable<LabBooking> sortedQuery = (orderBy ?? "CreateDateTime").Trim() switch
-                {
-                    "TglBooking" =>
-                        desc ? baseQuery.OrderByDescending(x => x.TglBooking) : baseQuery.OrderBy(x => x.TglBooking),
-
-                    "TglPemeriksaan" =>
-                        desc ? baseQuery.OrderByDescending(x => x.TglPemeriksaan) : baseQuery.OrderBy(x => x.TglPemeriksaan),
-
-                    _ =>
-                        desc ? baseQuery.OrderByDescending(x => x.CreateDateTime) : baseQuery.OrderBy(x => x.CreateDateTime),
-                };
-
-                // =============================
-                // 4) PAGING: ambil ID dulu
-                // =============================
-                var pagedParentIds = await sortedQuery
-                    .Skip((page - 1) * perPage)
-                    .Take(perPage)
-                    .Select(b => b.BookingLabId)
-                    .ToListAsync(ct);
-
-                if (pagedParentIds.Count == 0)
-                {
-                    return Ok(new
-                    {
-                        status = "success",
-                        message = "Data Radiologi retrieved successfully",
-                        data = new
-                        {
-                            Rows = new List<object>(),
-                            TotalRows = totalRows,
-                            CurrentPage = page,
-                            PerPage = perPage,
-                            TotalPages = totalPages
-                        }
-                    });
-                }
-
-                var pagedIdSet = pagedParentIds.ToHashSet();
-
-                // =============================
-                // 5) LOAD PARENT DATA (hanya untuk page ini)
-                // =============================
-                var parents = await (
-                    from b in _applicationDbContext.LabBookings.AsNoTracking()
-                    where pagedIdSet.Contains(b.BookingLabId)
-
-                    join u in _applicationDbContext.UserActives.AsNoTracking()
-                        on b.CreateBy equals u.UserActiveId into uJoin
-                    from u in uJoin.DefaultIfEmpty()
-
-                    join k in _applicationDbContext.Kunjungans.AsNoTracking()
-                        on b.KunjunganId equals k.KunjunganID into kJoin
-                    from k in kJoin.DefaultIfEmpty()
-
-                    join a in _applicationDbContext.Asuransis.AsNoTracking()
-                        on b.AsuransiId equals a.AsuransiId into aJoin
-                    from a in aJoin.DefaultIfEmpty()
-
-                    join p in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking()
-                        on b.PasienId equals p.PendaftaranPasienBaruId into pJoin
-                    from p in pJoin.DefaultIfEmpty()
-
-                    join d1 in _applicationDbContext.Dokters.AsNoTracking()
-                        on b.DokterId equals d1.DokterId into dJoin
-                    from d1 in dJoin.DefaultIfEmpty()
-
-                    join d2 in _applicationDbContext.Dokters.AsNoTracking()
-                        on b.DokterKonsulenId equals d2.DokterId into d2Join
-                    from d2 in d2Join.DefaultIfEmpty()
-
-                    join po in _applicationDbContext.Polikliniks.AsNoTracking()
-                        on k.PoliklinikId equals po.PoliklinikId into poJoin
-                    from po in poJoin.DefaultIfEmpty()
-
-                    join kl in _applicationDbContext.Kelass.AsNoTracking()
-                        on b.KelasId equals kl.KelasId into klJoin
-                    from kl in klJoin.DefaultIfEmpty()
-                    
-                    select new
-                    {
-                        b.BookingLabId,
-                        b.KunjunganId,
-                        PoliklinikId = (Guid?)k.PoliklinikId,
-                        k.AsalKunjungan,
-                        b.PasienId,
-                        NamaLengkap = p.NamaLengkap,
-                        b.NoOrder,
-                        NoRekamMedis = p.NoRekamMedis,
-                        b.AsuransiId,
-                        AsuransiNama = a.NamaAsuransi,
-                        b.DokterId,
-                        DokterNama = d1.NmDokter,
-                        PoliNama = po.NamaPoliklinik,
-                        b.TglPemeriksaan,
-                        b.TglBooking,
-                        b.AlasanPembatalan,
-                        b.StatusBookingLab,
-                        b.StatusPembayaran,
-                        b.KelasId,
-                        NamaKelas = kl.NamaKelas,
-                        b.HemodialisaKe,
-                        b.StatusPemeriksaan,
-                        b.NomorSuratJaminan,
-                        b.DokterKonsulenId,
-                        NamaDokterKonsulen = d2.NmDokter,
-                        b.DiagnosaAwal,
-                        b.Keterangan,
-                        b.TTDPathPembatalan,
-                        b.PetugasPembatalan,
-                        b.CreateDateTime,
-                        b.TindakLanjut,
-                        b.HasilPenunjangLab,
-                        b.AnjuranDiet,
-                        b.IsDelete,
-                        b.IsCito,
-                        CreateByName = u.FullName
-                    }
-                ).ToListAsync(ct);
-
-                var parentLookup = parents.ToDictionary(x => x.BookingLabId, x => x);
-
-                // =============================
-                // 6) LOAD DETAIL (hanya untuk page ini + radiologi)
-                // =============================
-                var details = await (
-                    from d in _applicationDbContext.LabBookingDetails.AsNoTracking()
-                    join lab in _applicationDbContext.Labs.AsNoTracking()
-                        on d.LabId equals lab.LabId into labJoin
-                    from lab in labJoin.DefaultIfEmpty()
-
-                    join lp in _applicationDbContext.LabPemeriksaans.AsNoTracking()
-                        on d.PemeriksaanLabId equals lp.PemeriksaanLabId into lpJoin
-                    from lp in lpJoin.DefaultIfEmpty()
-
-                    where d.BookingLabId.HasValue
-                          && pagedIdSet.Contains(d.BookingLabId.Value)
-                          && (d.IsDelete == false || d.IsDelete == null)
-                          && d.LabId.HasValue
-                          && radiologiLabIds.Contains(d.LabId.Value)
-
-                    select new
-                    {
-                        BookingLabId = d.BookingLabId.Value,
-                        d.DetailBookingLabId,
-                        d.NoOrder,
-                        NamaPemeriksaan = lp.NamaPemeriksaan,
-                        HargaPemeriksaan = lp.HargaPemeriksaan,
-                        NamaLab = lab.NamaLab,
-                        d.Satuan
-                    }
-                ).ToListAsync(ct);
-
-                // ✅ ubah jadi Dictionary<Guid, List<object>>
-                var detailLookup = details
-                    .GroupBy(x => x.BookingLabId)
-                    .ToDictionary(
-                        g => g.Key,
-                        g => g.Select(x => (object)x).ToList()
-                    );
-
-                // =============================
-                // 7) MERGE (urut sesuai paging)
-                // =============================
-                var merged = pagedParentIds
-                    .Where(id => parentLookup.ContainsKey(id))
-                    .Select(id => new
-                    {
-                        Parent = parentLookup[id],
-                        Details = detailLookup.TryGetValue(id, out var det) ? det : new List<object>()
-                    })
-                    .ToList();
-
-                // =============================
-                // 8) RETURN
-                // =============================
-                return Ok(new
-                    {
-                        status = "success",
-                        message = "Data Radiologi retrieved successfully",
-                        data = new
-                        {
-                            Rows = merged,
-                            TotalRows = totalRows,
-                            CurrentPage = page,
-                            PerPage = perPage,
-                            TotalPages = totalPages
-                        }
-                    });
-            }
-
-        [HttpGet("pagedRehabMedis")]
-            public async Task<IActionResult> PagedRehabMedis(
-            int page = 1,
-            int perPage = 10,
-            Guid? kunjunganId = null,
-            Guid? labBookingId = null,
-            string? orderBy = "CreateDateTime",
-            string? sortDirection = "desc",
-            [FromQuery] DateTime? startDate = null,
-            [FromQuery] DateTime? endDate = null,
-            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null,
-            CancellationToken ct = default)
-                {
-                    if (page < 1) page = 1;
-                    if (perPage < 1) perPage = 10;
-
-                    // =============================
-                    // 0) Ambil LabId rehabmedis (sekali)
-                    // =============================
-                    var rehabmedisLabIds = await _applicationDbContext.Labs
-                            .AsNoTracking()
-                            .Where(l => l.NamaLab != null &&
-                                        l.NamaLab.ToLower().Replace(" ", "") == "rehabmedis")
-                            .Select(l => l.LabId)
-                            .ToListAsync(ct);
-
-                    if (rehabmedisLabIds.Count == 0)
-                    {
-                        return Ok(new
-                        {
-                            status = "success",
-                            message = "Data Rehab Medis retrieved successfully",
-                            data = new
-                            {
-                                Rows = new List<object>(),
-                                TotalRows = 0,
-                                CurrentPage = page,
-                                PerPage = perPage,
-                                TotalPages = 0
-                            }
-                        });
-                    }
-
-                    // =============================
-                    // 1) BASE QUERY: LabBookings (filter & EXISTS detail radiologi)
-                    // =============================
-                    var baseQuery = _applicationDbContext.LabBookings
-                        .AsNoTracking()
-                        .Where(b => b.IsDelete == false || b.IsDelete == null);
-
-                    if (kunjunganId.HasValue)
-                        baseQuery = baseQuery.Where(b => b.KunjunganId == kunjunganId.Value);
-
-                    if (labBookingId.HasValue)
-                        baseQuery = baseQuery.Where(b => b.BookingLabId == labBookingId.Value);
-
-                    if (startDate.HasValue && endDate.HasValue)
-                    {
-                        // inclusive start, exclusive end+1 hari (lebih aman daripada ticks)
-                        var start = startDate.Value.Date;
-                        var endExclusive = endDate.Value.Date.AddDays(1);
-
-                        baseQuery = baseQuery.Where(b =>
-                            b.CreateDateTime >= start &&
-                            b.CreateDateTime < endExclusive);
-                    }
-
-                if (periode.HasValue)
-                {
-                    var today = DateTime.UtcNow.Date;
-
-                    DateTime start;
-                    DateTime endExclusive;
-
-                    switch (periode.Value)
-                    {
-                        case PeriodeFilter.Today:
-                            start = today;
-                            endExclusive = today.AddDays(1);
-                            break;
-
-                        case PeriodeFilter.Yesterday:
-                            start = today.AddDays(-1);
-                            endExclusive = today;
-                            break;
-
-                        case PeriodeFilter.ThisWeek:
-                            // start week: Minggu (Sunday) default .NET DayOfWeek
-                            start = today.AddDays(-(int)today.DayOfWeek);
-                            endExclusive = today.AddDays(1);
-                            break;
-
-                        case PeriodeFilter.LastWeek:
-                            var startThisWeek = today.AddDays(-(int)today.DayOfWeek);
-                            start = startThisWeek.AddDays(-7);
-                            endExclusive = startThisWeek;
-                            break;
-
-                        case PeriodeFilter.ThisMonth:
-                            start = new DateTime(today.Year, today.Month, 1);
-                            endExclusive = start.AddMonths(1);
-                            break;
-
-                        case PeriodeFilter.LastMonth:
-                            var startThisMonth = new DateTime(today.Year, today.Month, 1);
-                            start = startThisMonth.AddMonths(-1);
-                            endExclusive = startThisMonth;
-                            break;
-
-                        case PeriodeFilter.ThisYear:
-                            start = new DateTime(today.Year, 1, 1);
-                            endExclusive = start.AddYears(1);
-                            break;
-
-                        case PeriodeFilter.LastYear:
-                            var startThisYear2 = new DateTime(today.Year, 1, 1);
-                            start = startThisYear2.AddYears(-1);
-                            endExclusive = startThisYear2;
-                            break;
-
-                        case PeriodeFilter.Last3Months:
-                            start = today.AddMonths(-3);
-                            endExclusive = today.AddDays(1);
-                            break;
-
-                        case PeriodeFilter.Last6Months:
-                            start = today.AddMonths(-6);
-                            endExclusive = today.AddDays(1);
-                            break;
-
-                        default:
-                            start = DateTime.MinValue;
-                            endExclusive = DateTime.MaxValue;
-                            break;
-                    }
-
-                    baseQuery = baseQuery.Where(x => x.CreateDateTime >= start && x.CreateDateTime < endExclusive);
-                }
-
-                // Filter booking yang punya detail rehabmedis (detail tidak delete)
-                baseQuery = baseQuery.Where(b =>
-                                _applicationDbContext.LabBookingDetails.Any(d =>
-                                    d.BookingLabId == b.BookingLabId
-                                    && (d.IsDelete == false || d.IsDelete == null)
-                                    && d.LabId.HasValue
-                                    && rehabmedisLabIds.Contains(d.LabId.Value)
-                                )
-                );
-
-                    // =============================
-                    // 2) TOTAL rows
-                    // =============================
-                    var totalRows = await baseQuery.CountAsync(ct);
-                    var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-
-                    // =============================
-                    // 3) SORTING (aman)
-                    // =============================
-                    bool desc = (sortDirection ?? "desc")
-                        .Equals("desc", StringComparison.OrdinalIgnoreCase);
-
-                    IQueryable<LabBooking> sortedQuery = (orderBy ?? "CreateDateTime").Trim() switch
-                    {
-                        "TglBooking" =>
-                            desc ? baseQuery.OrderByDescending(x => x.TglBooking) : baseQuery.OrderBy(x => x.TglBooking),
-
-                        "TglPemeriksaan" =>
-                            desc ? baseQuery.OrderByDescending(x => x.TglPemeriksaan) : baseQuery.OrderBy(x => x.TglPemeriksaan),
-
-                        _ =>
-                            desc ? baseQuery.OrderByDescending(x => x.CreateDateTime) : baseQuery.OrderBy(x => x.CreateDateTime),
-                    };
-
-                    // =============================
-                    // 4) PAGING: ambil ID dulu
-                    // =============================
-                    var pagedParentIds = await sortedQuery
-                        .Skip((page - 1) * perPage)
-                        .Take(perPage)
-                        .Select(b => b.BookingLabId)
-                        .ToListAsync(ct);
-
-                    if (pagedParentIds.Count == 0)
-                    {
-                        return Ok(new
-                        {
-                            status = "success",
-                            message = "Data Rehab Medis retrieved successfully",
-                            data = new
-                            {
-                                Rows = new List<object>(),
-                                TotalRows = totalRows,
-                                CurrentPage = page,
-                                PerPage = perPage,
-                                TotalPages = totalPages
-                            }
-                        });
-                    }
-
-                    var pagedIdSet = pagedParentIds.ToHashSet();
-
-                    // =============================
-                    // 5) LOAD PARENT DATA (hanya untuk page ini)
-                    // =============================
-                    var parents = await (
-                        from b in _applicationDbContext.LabBookings.AsNoTracking()
-                        where pagedIdSet.Contains(b.BookingLabId)
-
-                        join u in _applicationDbContext.UserActives.AsNoTracking()
-                            on b.CreateBy equals u.UserActiveId into uJoin
-                        from u in uJoin.DefaultIfEmpty()
-
-                        join k in _applicationDbContext.Kunjungans.AsNoTracking()
-                            on b.KunjunganId equals k.KunjunganID into kJoin
-                        from k in kJoin.DefaultIfEmpty()
-
-                        join a in _applicationDbContext.Asuransis.AsNoTracking()
-                            on b.AsuransiId equals a.AsuransiId into aJoin
-                        from a in aJoin.DefaultIfEmpty()
-
-                        join p in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking()
-                            on b.PasienId equals p.PendaftaranPasienBaruId into pJoin
-                        from p in pJoin.DefaultIfEmpty()
-
-                        join d1 in _applicationDbContext.Dokters.AsNoTracking()
-                            on b.DokterId equals d1.DokterId into dJoin
-                        from d1 in dJoin.DefaultIfEmpty()
-
-                        join d2 in _applicationDbContext.Dokters.AsNoTracking()
-                            on b.DokterKonsulenId equals d2.DokterId into d2Join
-                        from d2 in d2Join.DefaultIfEmpty()
-
-                        join po in _applicationDbContext.Polikliniks.AsNoTracking()
-                            on k.PoliklinikId equals po.PoliklinikId into poJoin
-                        from po in poJoin.DefaultIfEmpty()
-
-                        join kl in _applicationDbContext.Kelass.AsNoTracking()
-                            on b.KelasId equals kl.KelasId into klJoin
-                        from kl in klJoin.DefaultIfEmpty()
-
-                        select new
-                        {
-                            b.BookingLabId,
-                            b.KunjunganId,
-                            PoliklinikId = (Guid?)k.PoliklinikId,
-                            k.AsalKunjungan,
-                            b.PasienId,
-                            NamaLengkap = p.NamaLengkap,
-                            b.NoOrder,
-                            NoRekamMedis = p.NoRekamMedis,
-                            b.AsuransiId,
-                            AsuransiNama = a.NamaAsuransi,
-                            b.DokterId,
-                            DokterNama = d1.NmDokter,
-                            PoliNama = po.NamaPoliklinik,
-                            b.TglPemeriksaan,
-                            b.TglBooking,
-                            b.AlasanPembatalan,
-                            b.StatusBookingLab,
-                            b.StatusPembayaran,
-                            b.KelasId,
-                            NamaKelas = kl.NamaKelas,
-                            b.HemodialisaKe,
-                            b.StatusPemeriksaan,
-                            b.NomorSuratJaminan,
-                            b.DokterKonsulenId,
-                            NamaDokterKonsulen = d2.NmDokter,
-                            b.DiagnosaAwal,
-                            b.Keterangan,
-                            b.TTDPathPembatalan,
-                            b.PetugasPembatalan,
-                            b.CreateDateTime,
-                            b.TindakLanjut,
-                            b.HasilPenunjangLab,
-                            b.AnjuranDiet,
-                            b.IsDelete,
-                            b.IsCito,
-                            CreateByName = u.FullName
-                        }
-                    ).ToListAsync(ct);
-
-                    var parentLookup = parents.ToDictionary(x => x.BookingLabId, x => x);
-
-                    // =============================
-                    // 6) LOAD DETAIL (hanya untuk page ini + rehabmedis)
-                    // =============================
-                    var details = await (
-                        from d in _applicationDbContext.LabBookingDetails.AsNoTracking()
-                        join lab in _applicationDbContext.Labs.AsNoTracking()
-                            on d.LabId equals lab.LabId into labJoin
-                        from lab in labJoin.DefaultIfEmpty()
-
-                        join lp in _applicationDbContext.LabPemeriksaans.AsNoTracking()
-                            on d.PemeriksaanLabId equals lp.PemeriksaanLabId into lpJoin
-                        from lp in lpJoin.DefaultIfEmpty()
-
-                        where d.BookingLabId.HasValue
-                              && pagedIdSet.Contains(d.BookingLabId.Value)
-                              && (d.IsDelete == false || d.IsDelete == null)
-                              && d.LabId.HasValue
-                              && rehabmedisLabIds.Contains(d.LabId.Value)
-
-                        select new
-                        {
-                            BookingLabId = d.BookingLabId.Value,
-                            d.DetailBookingLabId,
-                            d.NoOrder,
-                            NamaPemeriksaan = lp.NamaPemeriksaan,
-                            HargaPemeriksaan = lp.HargaPemeriksaan,
-                            NamaLab = lab.NamaLab,
-                            d.Satuan
-                        }
-                    ).ToListAsync(ct);
-
-                    // ✅ ubah jadi Dictionary<Guid, List<object>>
-                    var detailLookup = details
-                        .GroupBy(x => x.BookingLabId)
-                        .ToDictionary(
-                            g => g.Key,
-                            g => g.Select(x => (object)x).ToList()
-                        );
-
-                    // =============================
-                    // 7) MERGE (urut sesuai paging)
-                    // =============================
-                    var merged = pagedParentIds
-                        .Where(id => parentLookup.ContainsKey(id))
-                        .Select(id => new
-                        {
-                            Parent = parentLookup[id],
-                            Details = detailLookup.TryGetValue(id, out var det) ? det : new List<object>()
-                        })
-                        .ToList();
-
-                    // =============================
-                    // 8) RETURN
-                    // =============================
-                    return Ok(new
-                    {
-                        status = "success",
-                        message = "Data Rehab Medis retrieved successfully",
-                        data = new
-                        {
-                            Rows = merged,
-                            TotalRows = totalRows,
-                            CurrentPage = page,
-                            PerPage = perPage,
-                            TotalPages = totalPages
-                        }
-                    });
-                }
-
-        [HttpGet("pagedLabGizi")]
-        public async Task<IActionResult> PagedLabGizi(
-            int page = 1,
-            int perPage = 10,
-            Guid? kunjunganId = null,
-            Guid? labBookingId = null,
-            string? orderBy = "CreateDateTime",
-            string? sortDirection = "desc",
-            [FromQuery] DateTime? startDate = null,
-            [FromQuery] DateTime? endDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? endDate = null,
             [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null,
             CancellationToken ct = default)
         {
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
+            if (perPage > 100) perPage = 100;
 
-            // =============================
-            // 0) Ambil LabId gizi (sekali)
-            // =============================
-            var giziLabIds = await _applicationDbContext.Labs
-                    .AsNoTracking()
-                    .Where(l => l.NamaLab != null &&
-                                l.NamaLab.ToLower().Replace(" ", "") == "gizi")
-                    .Select(l => l.LabId)
-                    .ToListAsync(ct);
+            // =========================
+            // 1) BASE QUERY (PARENT) - KHUSUS RADIOLOGI
+            // =========================
+            var query =
+                from a in _applicationDbContext.LabHasils.AsNoTracking()
 
-            if (giziLabIds.Count == 0)
-            {
-                return Ok(new
+                join u0 in _applicationDbContext.UserActives.AsNoTracking()
+                    on a.CreateBy equals u0.UserActiveId into uGroup
+                from u in uGroup.DefaultIfEmpty()
+
+                join k0 in _applicationDbContext.Kunjungans.AsNoTracking()
+                    on a.KunjunganId equals k0.KunjunganID into kGroup
+                from k in kGroup.DefaultIfEmpty()
+
+                join l0 in _applicationDbContext.Labs.AsNoTracking()
+                    on a.LabId equals l0.LabId into lGroup
+                from l in lGroup.DefaultIfEmpty()
+
+                where (a.IsDelete == false || a.IsDelete == null)
+                      && l != null
+                      && l.NamaLab.ToLower().Replace(" ", "") == "radiologi"
+                select new
                 {
-                    status = "success",
-                    message = "Data Gizi retrieved successfully",
-                    data = new
-                    {
-                        Rows = new List<object>(),
-                        TotalRows = 0,
-                        CurrentPage = page,
-                        PerPage = perPage,
-                        TotalPages = 0
-                    }
-                });
-            }
+                    a.CreateDateTime,
+                    a.CreateBy,
+                    CreateByName = u.FullName,
 
-            // =============================
-            // 1) BASE QUERY: LabBookings (filter & EXISTS detail radiologi)
-            // =============================
-            var baseQuery = _applicationDbContext.LabBookings
-                .AsNoTracking()
-                .Where(b => b.IsDelete == false || b.IsDelete == null);
+                    a.HasilLabId,
+                    a.KunjunganId,
+                    JenisKunjungan = k.JenisKunjungan,
 
+                    a.LabId,
+                    NamaLab = l.NamaLab,
+
+                    a.LabBookingId,
+                    a.UserActiveId,
+                    a.PenanggungJawabId,
+                    a.PenanggungJawabAnalisId,
+                    a.TanggalPemeriksaan,
+                    a.Keterangan
+                };
+
+            // =========================
+            // FILTERS OPSIONAL
+            // =========================
             if (kunjunganId.HasValue)
-                baseQuery = baseQuery.Where(b => b.KunjunganId == kunjunganId.Value);
+                query = query.Where(x => x.KunjunganId == kunjunganId.Value);
 
-            if (labBookingId.HasValue)
-                baseQuery = baseQuery.Where(b => b.BookingLabId == labBookingId.Value);
+            if (labbookingid.HasValue)
+                query = query.Where(x => x.LabBookingId == labbookingid.Value);
 
+            if (JenisKunjungan.HasValue)
+                query = query.Where(x => x.JenisKunjungan == JenisKunjungan.Value.ToString());
+
+            // Filter tanggal (range UTC)
             if (startDate.HasValue && endDate.HasValue)
             {
-                // inclusive start, exclusive end+1 hari (lebih aman daripada ticks)
-                var start = startDate.Value.Date;
-                var endExclusive = endDate.Value.Date.AddDays(1);
-
-                baseQuery = baseQuery.Where(b =>
-                    b.CreateDateTime >= start &&
-                    b.CreateDateTime < endExclusive);
+                var startUtc = new DateTimeOffset(startDate.Value.Date, TimeSpan.Zero);
+                var endUtc = new DateTimeOffset(endDate.Value.Date.AddDays(1), TimeSpan.Zero); // exclusive
+                query = query.Where(x => x.CreateDateTime >= startUtc && x.CreateDateTime < endUtc);
             }
 
+            // Filter periode (range)
             if (periode.HasValue)
             {
-                var today = DateTime.UtcNow.Date;
+                var now = DateTimeOffset.UtcNow;
+                var todayStart = new DateTimeOffset(now.Year, now.Month, now.Day, 0, 0, 0, TimeSpan.Zero);
 
-                DateTime start;
-                DateTime endExclusive;
+                DateTimeOffset start;
+                DateTimeOffset end; // exclusive
 
                 switch (periode.Value)
                 {
                     case PeriodeFilter.Today:
-                        start = today;
-                        endExclusive = today.AddDays(1);
-                        break;
-
-                    case PeriodeFilter.Yesterday:
-                        start = today.AddDays(-1);
-                        endExclusive = today;
-                        break;
+                        start = todayStart; end = todayStart.AddDays(1); break;
 
                     case PeriodeFilter.ThisWeek:
-                        // start week: Minggu (Sunday) default .NET DayOfWeek
-                        start = today.AddDays(-(int)today.DayOfWeek);
-                        endExclusive = today.AddDays(1);
+                        start = todayStart.AddDays(-(int)todayStart.DayOfWeek);
+                        end = todayStart.AddDays(1);
                         break;
 
                     case PeriodeFilter.LastWeek:
-                        var startThisWeek = today.AddDays(-(int)today.DayOfWeek);
-                        start = startThisWeek.AddDays(-7);
-                        endExclusive = startThisWeek;
+                        var thisWeekStart = todayStart.AddDays(-(int)todayStart.DayOfWeek);
+                        start = thisWeekStart.AddDays(-7);
+                        end = thisWeekStart;
                         break;
 
                     case PeriodeFilter.ThisMonth:
-                        start = new DateTime(today.Year, today.Month, 1);
-                        endExclusive = start.AddMonths(1);
+                        start = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
+                        end = start.AddMonths(1);
                         break;
 
                     case PeriodeFilter.LastMonth:
-                        var startThisMonth = new DateTime(today.Year, today.Month, 1);
-                        start = startThisMonth.AddMonths(-1);
-                        endExclusive = startThisMonth;
+                        var thisMonthStart = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
+                        start = thisMonthStart.AddMonths(-1);
+                        end = thisMonthStart;
                         break;
 
                     case PeriodeFilter.ThisYear:
-                        start = new DateTime(today.Year, 1, 1);
-                        endExclusive = start.AddYears(1);
+                        start = new DateTimeOffset(now.Year, 1, 1, 0, 0, 0, TimeSpan.Zero);
+                        end = start.AddYears(1);
                         break;
 
                     case PeriodeFilter.LastYear:
-                        var startThisYear2 = new DateTime(today.Year, 1, 1);
-                        start = startThisYear2.AddYears(-1);
-                        endExclusive = startThisYear2;
+                        var thisYearStart = new DateTimeOffset(now.Year, 1, 1, 0, 0, 0, TimeSpan.Zero);
+                        start = thisYearStart.AddYears(-1);
+                        end = thisYearStart;
                         break;
 
                     case PeriodeFilter.Last3Months:
-                        start = today.AddMonths(-3);
-                        endExclusive = today.AddDays(1);
+                        start = todayStart.AddMonths(-3);
+                        end = todayStart.AddDays(1);
                         break;
 
                     case PeriodeFilter.Last6Months:
-                        start = today.AddMonths(-6);
-                        endExclusive = today.AddDays(1);
+                        start = todayStart.AddMonths(-6);
+                        end = todayStart.AddDays(1);
                         break;
 
                     default:
-                        start = DateTime.MinValue;
-                        endExclusive = DateTime.MaxValue;
+                        start = DateTimeOffset.MinValue;
+                        end = DateTimeOffset.MaxValue;
                         break;
                 }
 
-                baseQuery = baseQuery.Where(x => x.CreateDateTime >= start && x.CreateDateTime < endExclusive);
+                query = query.Where(x => x.CreateDateTime >= start && x.CreateDateTime < end);
             }
 
-            // Filter booking yang punya detail gizi (detail tidak delete)
-            baseQuery = baseQuery.Where(b =>
-                    _applicationDbContext.LabBookingDetails.Any(d =>
-                        d.BookingLabId == b.BookingLabId
-                        && (d.IsDelete == false || d.IsDelete == null)
-                        && d.LabId.HasValue
-                        && giziLabIds.Contains(d.LabId.Value)
-                    )
-            );
+            // =========================
+            // SORTING
+            // =========================
+            bool desc = (sortDirection ?? "desc").ToLower() == "desc";
 
-            // =============================
-            // 2) TOTAL rows
-            // =============================
-            var totalRows = await baseQuery.CountAsync(ct);
-            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-
-            // =============================
-            // 3) SORTING (aman)
-            // =============================
-            bool desc = (sortDirection ?? "desc")
-                .Equals("desc", StringComparison.OrdinalIgnoreCase);
-
-            IQueryable<LabBooking> sortedQuery = (orderBy ?? "CreateDateTime").Trim() switch
+            query = (orderBy ?? "CreateDateTime") switch
             {
-                "TglBooking" =>
-                    desc ? baseQuery.OrderByDescending(x => x.TglBooking) : baseQuery.OrderBy(x => x.TglBooking),
-
-                "TglPemeriksaan" =>
-                    desc ? baseQuery.OrderByDescending(x => x.TglPemeriksaan) : baseQuery.OrderBy(x => x.TglPemeriksaan),
-
-                _ =>
-                    desc ? baseQuery.OrderByDescending(x => x.CreateDateTime) : baseQuery.OrderBy(x => x.CreateDateTime),
+                "CreateDateTime" => desc ? query.OrderByDescending(x => x.CreateDateTime) : query.OrderBy(x => x.CreateDateTime),
+                "CreateByName" => desc ? query.OrderByDescending(x => x.CreateByName) : query.OrderBy(x => x.CreateByName),
+                "NamaLab" => desc ? query.OrderByDescending(x => x.NamaLab) : query.OrderBy(x => x.NamaLab),
+                _ => desc ? query.OrderByDescending(x => x.CreateDateTime) : query.OrderBy(x => x.CreateDateTime)
             };
 
-            // =============================
-            // 4) PAGING: ambil ID dulu
-            // =============================
-            var pagedParentIds = await sortedQuery
+            // =========================
+            // PAGINATION
+            // =========================
+            var totalRows = await query.CountAsync(ct);
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            var parentRows = await query
                 .Skip((page - 1) * perPage)
                 .Take(perPage)
-                .Select(b => b.BookingLabId)
                 .ToListAsync(ct);
 
-            if (pagedParentIds.Count == 0)
+            if (parentRows.Count == 0 && page > totalPages && totalRows > 0)
+                return NotFound(new { message = "Page not found." });
+
+            // =========================
+            // 2) DETAILS (batch)
+            // =========================
+            var hasilLabIds = parentRows.Select(x => x.HasilLabId).Distinct().ToList();
+
+            if (hasilLabIds.Count == 0)
             {
                 return Ok(new
                 {
                     status = "success",
-                    message = "Data Gizi retrieved successfully",
+                    message = "Data retrieved successfully",
                     data = new
                     {
-                        Rows = new List<object>(),
+                        Rows = parentRows.Select(p => new
+                        {
+                            p.CreateDateTime,
+                            p.CreateBy,
+                            p.CreateByName,
+                            p.HasilLabId,
+                            p.KunjunganId,
+                            p.JenisKunjungan,
+                            p.LabId,
+                            p.NamaLab,
+                            p.LabBookingId,
+                            p.UserActiveId,
+                            p.PenanggungJawabId,
+                            p.PenanggungJawabAnalisId,
+                            p.TanggalPemeriksaan,
+                            p.Keterangan,
+                            Details = new List<object>()
+                        }).ToList(),
                         TotalRows = totalRows,
                         CurrentPage = page,
                         PerPage = perPage,
@@ -1437,151 +982,1254 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 });
             }
 
-            var pagedIdSet = pagedParentIds.ToHashSet();
+            var detailRaw = await (
+                from d in _applicationDbContext.LabHasilDetails.AsNoTracking()
 
-            // =============================
-            // 5) LOAD PARENT DATA (hanya untuk page ini)
-            // =============================
-            var parents = await (
-                from b in _applicationDbContext.LabBookings.AsNoTracking()
-                where pagedIdSet.Contains(b.BookingLabId)
+                join u0 in _applicationDbContext.UserActives.AsNoTracking()
+                    on d.CreateBy equals u0.UserActiveId into uGroup
+                from u in uGroup.DefaultIfEmpty()
 
-                join u in _applicationDbContext.UserActives.AsNoTracking()
-                    on b.CreateBy equals u.UserActiveId into uJoin
-                from u in uJoin.DefaultIfEmpty()
+                join lp0 in _applicationDbContext.LabPemeriksaans.AsNoTracking()
+                    on d.PemeriksaanLabId equals lp0.PemeriksaanLabId into lpGroup
+                from lp in lpGroup.DefaultIfEmpty()
 
-                join k in _applicationDbContext.Kunjungans.AsNoTracking()
-                    on b.KunjunganId equals k.KunjunganID into kJoin
-                from k in kJoin.DefaultIfEmpty()
+                join k0 in _applicationDbContext.Kelass.AsNoTracking()
+                    on d.KelasId equals k0.KelasId into kGroup
+                from kk in kGroup.DefaultIfEmpty()
 
-                join a in _applicationDbContext.Asuransis.AsNoTracking()
-                    on b.AsuransiId equals a.AsuransiId into aJoin
-                from a in aJoin.DefaultIfEmpty()
-
-                join p in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking()
-                    on b.PasienId equals p.PendaftaranPasienBaruId into pJoin
-                from p in pJoin.DefaultIfEmpty()
-
-                join d1 in _applicationDbContext.Dokters.AsNoTracking()
-                    on b.DokterId equals d1.DokterId into dJoin
-                from d1 in dJoin.DefaultIfEmpty()
-
-                join d2 in _applicationDbContext.Dokters.AsNoTracking()
-                    on b.DokterKonsulenId equals d2.DokterId into d2Join
-                from d2 in d2Join.DefaultIfEmpty()
-
-                join po in _applicationDbContext.Polikliniks.AsNoTracking()
-                    on k.PoliklinikId equals po.PoliklinikId into poJoin
-                from po in poJoin.DefaultIfEmpty()
-
-                join kl in _applicationDbContext.Kelass.AsNoTracking()
-                    on b.KelasId equals kl.KelasId into klJoin
-                from kl in klJoin.DefaultIfEmpty()
-
+                where (d.IsDelete == false || d.IsDelete == null)
+                      && hasilLabIds.Contains((Guid)d.HasilLabId) // kalau Guid? lihat catatan di bawah
                 select new
                 {
-                    b.BookingLabId,
-                    b.KunjunganId,
-                    PoliklinikId = (Guid?)k.PoliklinikId,
-                    k.AsalKunjungan,
-                    b.PasienId,
-                    NamaLengkap = p.NamaLengkap,
-                    b.NoOrder,
-                    NoRekamMedis = p.NoRekamMedis,
-                    b.AsuransiId,
-                    AsuransiNama = a.NamaAsuransi,
-                    b.DokterId,
-                    DokterNama = d1.NmDokter,
-                    PoliNama = po.NamaPoliklinik,
-                    b.TglPemeriksaan,
-                    b.TglBooking,
-                    b.AlasanPembatalan,
-                    b.StatusBookingLab,
-                    b.StatusPembayaran,
-                    b.KelasId,
-                    NamaKelas = kl.NamaKelas,
-                    b.HemodialisaKe,
-                    b.StatusPemeriksaan,
-                    b.NomorSuratJaminan,
-                    b.DokterKonsulenId,
-                    NamaDokterKonsulen = d2.NmDokter,
-                    b.DiagnosaAwal,
-                    b.Keterangan,
-                    b.TTDPathPembatalan,
-                    b.PetugasPembatalan,
-                    b.CreateDateTime,
-                    b.TindakLanjut,
-                    b.HasilPenunjangLab,
-                    b.AnjuranDiet,
-                    b.IsDelete,
-                    b.IsCito,
-                    CreateByName = u.FullName
+                    d.CreateDateTime,
+                    d.CreateBy,
+                    CreateByName = u.FullName,
+
+                    d.DetailHasilLabId,
+                    d.HasilLabId,
+                    d.PemeriksaanLabId,
+                    NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
+                    d.KelasId,
+                    NamaKelas = kk != null ? kk.NamaKelas : null,
+                    d.TanggalSelesai,
+                    d.NoPhotoLab,
+
+                    PhotoLabPathRaw = d.PhotoLabPath,
+
+                    d.HasilLabManual,
+                    d.HasilLabAI,
+                    d.JumlahFilm,
+                    d.KeadaanSpecimen,
+                    d.AnalisId,
+                    d.IsDefinitif,
+                    d.IsDuplu,
+                    d.HasilMakroskopik,
+                    d.HasilMikroskopik,
+                    d.KesimpulanHasil,
+                    d.NilaiNormal,
+                    d.BloodVolume,
+                    d.SputumVolume,
+                    d.UrineVolume,
+                    d.PusVolume,
+                    d.StoolVolume,
+                    d.JaringanVolume,
+                    d.BodyFluidVolume,
+                    d.PetugasSpecimenId,
+                    d.TanggalSpecimen,
+                    d.JamSpecimen,
+                    d.InfoNReff,
+                    d.Kondisi,
+                    d.KategoriGC,
+                    d.Rincian,
+                    d.Anjuran,
+                    d.DiagnosisPA,
+                    d.Keterangan
                 }
             ).ToListAsync(ct);
 
-            var parentLookup = parents.ToDictionary(x => x.BookingLabId, x => x);
-
-            // =============================
-            // 6) LOAD DETAIL (hanya untuk page ini + gizi)
-            // =============================
-            var details = await (
-                from d in _applicationDbContext.LabBookingDetails.AsNoTracking()
-                join lab in _applicationDbContext.Labs.AsNoTracking()
-                    on d.LabId equals lab.LabId into labJoin
-                from lab in labJoin.DefaultIfEmpty()
-
-                join lp in _applicationDbContext.LabPemeriksaans.AsNoTracking()
-                    on d.PemeriksaanLabId equals lp.PemeriksaanLabId into lpJoin
-                from lp in lpJoin.DefaultIfEmpty()
-
-                where d.BookingLabId.HasValue
-                      && pagedIdSet.Contains(d.BookingLabId.Value)
-                      && (d.IsDelete == false || d.IsDelete == null)
-                      && d.LabId.HasValue
-                      && giziLabIds.Contains(d.LabId.Value)
-
-                select new
+            var detailsLookup = detailRaw
+                .Select(x =>
                 {
-                    BookingLabId = d.BookingLabId.Value,
-                    d.DetailBookingLabId,
-                    d.NoOrder,
-                    NamaPemeriksaan = lp.NamaPemeriksaan,
-                    HargaPemeriksaan = lp.HargaPemeriksaan,
-                    NamaLab = lab.NamaLab,
-                    d.Satuan
-                }
-            ).ToListAsync(ct);
-
-            // ✅ ubah jadi Dictionary<Guid, List<object>>
-            var detailLookup = details
-                .GroupBy(x => x.BookingLabId)
-                .ToDictionary(
-                    g => g.Key,
-                    g => g.Select(x => (object)x).ToList()
-                );
-
-            // =============================
-            // 7) MERGE (urut sesuai paging)
-            // =============================
-            var merged = pagedParentIds
-                .Where(id => parentLookup.ContainsKey(id))
-                .Select(id => new
-                {
-                    Parent = parentLookup[id],
-                    Details = detailLookup.TryGetValue(id, out var det) ? det : new List<object>()
+                    var paths = ToPhotoLabPaths(x.PhotoLabPathRaw);
+                    return new
+                    {
+                        x.HasilLabId,
+                        Row = new
+                        {
+                            x.CreateDateTime,
+                            x.CreateBy,
+                            x.CreateByName,
+                            x.DetailHasilLabId,
+                            x.HasilLabId,
+                            x.PemeriksaanLabId,
+                            x.NamaPemeriksaan,
+                            x.KelasId,
+                            x.NamaKelas,
+                            x.TanggalSelesai,
+                            x.NoPhotoLab,
+                            PhotoLabPath = paths,
+                            JumlahFotoLab = paths.Count,
+                            x.HasilLabManual,
+                            x.HasilLabAI,
+                            x.JumlahFilm,
+                            x.KeadaanSpecimen,
+                            x.AnalisId,
+                            x.IsDefinitif,
+                            x.IsDuplu,
+                            x.HasilMakroskopik,
+                            x.HasilMikroskopik,
+                            x.KesimpulanHasil,
+                            x.NilaiNormal,
+                            x.BloodVolume,
+                            x.SputumVolume,
+                            x.UrineVolume,
+                            x.PusVolume,
+                            x.StoolVolume,
+                            x.JaringanVolume,
+                            x.BodyFluidVolume,
+                            x.PetugasSpecimenId,
+                            x.TanggalSpecimen,
+                            x.JamSpecimen,
+                            x.InfoNReff,
+                            x.Kondisi,
+                            x.KategoriGC,
+                            x.Rincian,
+                            x.Anjuran,
+                            x.DiagnosisPA,
+                            x.Keterangan
+                        }
+                    };
                 })
-                .ToList();
+                .GroupBy(x => x.HasilLabId)
+                .ToDictionary(g => g.Key, g => g.Select(v => (object)v.Row).ToList());
 
-            // =============================
-            // 8) RETURN
-            // =============================
+            var rows = parentRows.Select(p => new
+            {
+                p.CreateDateTime,
+                p.CreateBy,
+                p.CreateByName,
+                p.HasilLabId,
+                p.KunjunganId,
+                p.JenisKunjungan,
+                p.LabId,
+                p.NamaLab,
+                p.LabBookingId,
+                p.UserActiveId,
+                p.PenanggungJawabId,
+                p.PenanggungJawabAnalisId,
+                p.TanggalPemeriksaan,
+                p.Keterangan,
+                Details = detailsLookup.TryGetValue(p.HasilLabId, out var det) ? det : new List<object>()
+            }).ToList();
+
             return Ok(new
             {
                 status = "success",
-                message = "Data Gizi retrieved successfully",
+                message = "Data retrieved successfully",
                 data = new
                 {
-                    Rows = merged,
+                    Rows = rows,
+                    TotalRows = totalRows,
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalPages = totalPages
+                }
+            });
+        }
+
+        [HttpGet("paged-HasilLabMCU")]
+        public async Task<IActionResult> PagedMCU(
+            int page = 1,
+            int perPage = 10,
+            [FromQuery] EnumJenisKunjungan? JenisKunjungan = null,
+            [FromQuery] Guid? kunjunganId = null,
+            [FromQuery] Guid? labbookingid = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null,
+            CancellationToken ct = default)
+        {
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
+            if (perPage > 100) perPage = 100;
+
+            // =========================
+            // 1) BASE QUERY (PARENT) - KHUSUS MCU
+            // =========================
+            var query =
+                from a in _applicationDbContext.LabHasils.AsNoTracking()
+
+                join u0 in _applicationDbContext.UserActives.AsNoTracking()
+                    on a.CreateBy equals u0.UserActiveId into uGroup
+                from u in uGroup.DefaultIfEmpty()
+
+                join k0 in _applicationDbContext.Kunjungans.AsNoTracking()
+                    on a.KunjunganId equals k0.KunjunganID into kGroup
+                from k in kGroup.DefaultIfEmpty()
+
+                join l0 in _applicationDbContext.Labs.AsNoTracking()
+                    on a.LabId equals l0.LabId into lGroup
+                from l in lGroup.DefaultIfEmpty()
+
+                where (a.IsDelete == false || a.IsDelete == null)
+                      && l != null
+                      && l.NamaLab.ToLower().Replace(" ", "") == "mcu"
+                select new
+                {
+                    a.CreateDateTime,
+                    a.CreateBy,
+                    CreateByName = u.FullName,
+
+                    a.HasilLabId,
+                    a.KunjunganId,
+                    JenisKunjungan = k.JenisKunjungan,
+
+                    a.LabId,
+                    NamaLab = l.NamaLab,
+
+                    a.LabBookingId,
+                    a.UserActiveId,
+                    a.PenanggungJawabId,
+                    a.PenanggungJawabAnalisId,
+                    a.TanggalPemeriksaan,
+                    a.Keterangan
+                };
+
+            // =========================
+            // FILTERS OPSIONAL
+            // =========================
+            if (kunjunganId.HasValue)
+                query = query.Where(x => x.KunjunganId == kunjunganId.Value);
+
+            if (labbookingid.HasValue)
+                query = query.Where(x => x.LabBookingId == labbookingid.Value);
+
+            if (JenisKunjungan.HasValue)
+                query = query.Where(x => x.JenisKunjungan == JenisKunjungan.Value.ToString());
+
+            // Filter tanggal (range UTC)
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                var startUtc = new DateTimeOffset(startDate.Value.Date, TimeSpan.Zero);
+                var endUtc = new DateTimeOffset(endDate.Value.Date.AddDays(1), TimeSpan.Zero); // exclusive
+                query = query.Where(x => x.CreateDateTime >= startUtc && x.CreateDateTime < endUtc);
+            }
+
+            // Filter periode (range)
+            if (periode.HasValue)
+            {
+                var now = DateTimeOffset.UtcNow;
+                var todayStart = new DateTimeOffset(now.Year, now.Month, now.Day, 0, 0, 0, TimeSpan.Zero);
+
+                DateTimeOffset start;
+                DateTimeOffset end; // exclusive
+
+                switch (periode.Value)
+                {
+                    case PeriodeFilter.Today:
+                        start = todayStart; end = todayStart.AddDays(1); break;
+
+                    case PeriodeFilter.ThisWeek:
+                        start = todayStart.AddDays(-(int)todayStart.DayOfWeek);
+                        end = todayStart.AddDays(1);
+                        break;
+
+                    case PeriodeFilter.LastWeek:
+                        var thisWeekStart = todayStart.AddDays(-(int)todayStart.DayOfWeek);
+                        start = thisWeekStart.AddDays(-7);
+                        end = thisWeekStart;
+                        break;
+
+                    case PeriodeFilter.ThisMonth:
+                        start = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
+                        end = start.AddMonths(1);
+                        break;
+
+                    case PeriodeFilter.LastMonth:
+                        var thisMonthStart = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
+                        start = thisMonthStart.AddMonths(-1);
+                        end = thisMonthStart;
+                        break;
+
+                    case PeriodeFilter.ThisYear:
+                        start = new DateTimeOffset(now.Year, 1, 1, 0, 0, 0, TimeSpan.Zero);
+                        end = start.AddYears(1);
+                        break;
+
+                    case PeriodeFilter.LastYear:
+                        var thisYearStart = new DateTimeOffset(now.Year, 1, 1, 0, 0, 0, TimeSpan.Zero);
+                        start = thisYearStart.AddYears(-1);
+                        end = thisYearStart;
+                        break;
+
+                    case PeriodeFilter.Last3Months:
+                        start = todayStart.AddMonths(-3);
+                        end = todayStart.AddDays(1);
+                        break;
+
+                    case PeriodeFilter.Last6Months:
+                        start = todayStart.AddMonths(-6);
+                        end = todayStart.AddDays(1);
+                        break;
+
+                    default:
+                        start = DateTimeOffset.MinValue;
+                        end = DateTimeOffset.MaxValue;
+                        break;
+                }
+
+                query = query.Where(x => x.CreateDateTime >= start && x.CreateDateTime < end);
+            }
+
+            // =========================
+            // SORTING
+            // =========================
+            bool desc = (sortDirection ?? "desc").ToLower() == "desc";
+
+            query = (orderBy ?? "CreateDateTime") switch
+            {
+                "CreateDateTime" => desc ? query.OrderByDescending(x => x.CreateDateTime) : query.OrderBy(x => x.CreateDateTime),
+                "CreateByName" => desc ? query.OrderByDescending(x => x.CreateByName) : query.OrderBy(x => x.CreateByName),
+                "NamaLab" => desc ? query.OrderByDescending(x => x.NamaLab) : query.OrderBy(x => x.NamaLab),
+                _ => desc ? query.OrderByDescending(x => x.CreateDateTime) : query.OrderBy(x => x.CreateDateTime)
+            };
+
+            // =========================
+            // PAGINATION
+            // =========================
+            var totalRows = await query.CountAsync(ct);
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            var parentRows = await query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToListAsync(ct);
+
+            if (parentRows.Count == 0 && page > totalPages && totalRows > 0)
+                return NotFound(new { message = "Page not found." });
+
+            // =========================
+            // 2) DETAILS (batch)
+            // =========================
+            var hasilLabIds = parentRows.Select(x => x.HasilLabId).Distinct().ToList();
+
+            if (hasilLabIds.Count == 0)
+            {
+                return Ok(new
+                {
+                    status = "success",
+                    message = "Data retrieved successfully",
+                    data = new
+                    {
+                        Rows = parentRows.Select(p => new
+                        {
+                            p.CreateDateTime,
+                            p.CreateBy,
+                            p.CreateByName,
+                            p.HasilLabId,
+                            p.KunjunganId,
+                            p.JenisKunjungan,
+                            p.LabId,
+                            p.NamaLab,
+                            p.LabBookingId,
+                            p.UserActiveId,
+                            p.PenanggungJawabId,
+                            p.PenanggungJawabAnalisId,
+                            p.TanggalPemeriksaan,
+                            p.Keterangan,
+                            Details = new List<object>()
+                        }).ToList(),
+                        TotalRows = totalRows,
+                        CurrentPage = page,
+                        PerPage = perPage,
+                        TotalPages = totalPages
+                    }
+                });
+            }
+
+            var detailRaw = await (
+                from d in _applicationDbContext.LabHasilDetails.AsNoTracking()
+
+                join u0 in _applicationDbContext.UserActives.AsNoTracking()
+                    on d.CreateBy equals u0.UserActiveId into uGroup
+                from u in uGroup.DefaultIfEmpty()
+
+                join lp0 in _applicationDbContext.LabPemeriksaans.AsNoTracking()
+                    on d.PemeriksaanLabId equals lp0.PemeriksaanLabId into lpGroup
+                from lp in lpGroup.DefaultIfEmpty()
+
+                join k0 in _applicationDbContext.Kelass.AsNoTracking()
+                    on d.KelasId equals k0.KelasId into kGroup
+                from kk in kGroup.DefaultIfEmpty()
+
+                where (d.IsDelete == false || d.IsDelete == null)
+                      && hasilLabIds.Contains((Guid)d.HasilLabId) // kalau Guid? lihat catatan di bawah
+                select new
+                {
+                    d.CreateDateTime,
+                    d.CreateBy,
+                    CreateByName = u.FullName,
+
+                    d.DetailHasilLabId,
+                    d.HasilLabId,
+                    d.PemeriksaanLabId,
+                    NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
+                    d.KelasId,
+                    NamaKelas = kk != null ? kk.NamaKelas : null,
+                    d.TanggalSelesai,
+                    d.NoPhotoLab,
+
+                    PhotoLabPathRaw = d.PhotoLabPath,
+
+                    d.HasilLabManual,
+                    d.HasilLabAI,
+                    d.JumlahFilm,
+                    d.KeadaanSpecimen,
+                    d.AnalisId,
+                    d.IsDefinitif,
+                    d.IsDuplu,
+                    d.HasilMakroskopik,
+                    d.HasilMikroskopik,
+                    d.KesimpulanHasil,
+                    d.NilaiNormal,
+                    d.BloodVolume,
+                    d.SputumVolume,
+                    d.UrineVolume,
+                    d.PusVolume,
+                    d.StoolVolume,
+                    d.JaringanVolume,
+                    d.BodyFluidVolume,
+                    d.PetugasSpecimenId,
+                    d.TanggalSpecimen,
+                    d.JamSpecimen,
+                    d.InfoNReff,
+                    d.Kondisi,
+                    d.KategoriGC,
+                    d.Rincian,
+                    d.Anjuran,
+                    d.DiagnosisPA,
+                    d.Keterangan
+                }
+            ).ToListAsync(ct);
+
+            var detailsLookup = detailRaw
+                .Select(x =>
+                {
+                    var paths = ToPhotoLabPaths(x.PhotoLabPathRaw);
+                    return new
+                    {
+                        x.HasilLabId,
+                        Row = new
+                        {
+                            x.CreateDateTime,
+                            x.CreateBy,
+                            x.CreateByName,
+                            x.DetailHasilLabId,
+                            x.HasilLabId,
+                            x.PemeriksaanLabId,
+                            x.NamaPemeriksaan,
+                            x.KelasId,
+                            x.NamaKelas,
+                            x.TanggalSelesai,
+                            x.NoPhotoLab,
+                            PhotoLabPath = paths,
+                            JumlahFotoLab = paths.Count,
+                            x.HasilLabManual,
+                            x.HasilLabAI,
+                            x.JumlahFilm,
+                            x.KeadaanSpecimen,
+                            x.AnalisId,
+                            x.IsDefinitif,
+                            x.IsDuplu,
+                            x.HasilMakroskopik,
+                            x.HasilMikroskopik,
+                            x.KesimpulanHasil,
+                            x.NilaiNormal,
+                            x.BloodVolume,
+                            x.SputumVolume,
+                            x.UrineVolume,
+                            x.PusVolume,
+                            x.StoolVolume,
+                            x.JaringanVolume,
+                            x.BodyFluidVolume,
+                            x.PetugasSpecimenId,
+                            x.TanggalSpecimen,
+                            x.JamSpecimen,
+                            x.InfoNReff,
+                            x.Kondisi,
+                            x.KategoriGC,
+                            x.Rincian,
+                            x.Anjuran,
+                            x.DiagnosisPA,
+                            x.Keterangan
+                        }
+                    };
+                })
+                .GroupBy(x => x.HasilLabId)
+                .ToDictionary(g => g.Key, g => g.Select(v => (object)v.Row).ToList());
+
+            var rows = parentRows.Select(p => new
+            {
+                p.CreateDateTime,
+                p.CreateBy,
+                p.CreateByName,
+                p.HasilLabId,
+                p.KunjunganId,
+                p.JenisKunjungan,
+                p.LabId,
+                p.NamaLab,
+                p.LabBookingId,
+                p.UserActiveId,
+                p.PenanggungJawabId,
+                p.PenanggungJawabAnalisId,
+                p.TanggalPemeriksaan,
+                p.Keterangan,
+                Details = detailsLookup.TryGetValue(p.HasilLabId, out var det) ? det : new List<object>()
+            }).ToList();
+
+            return Ok(new
+            {
+                status = "success",
+                message = "Data retrieved successfully",
+                data = new
+                {
+                    Rows = rows,
+                    TotalRows = totalRows,
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalPages = totalPages
+                }
+            });
+        }
+
+        [HttpGet("paged-HasilLabGizi")]
+        public async Task<IActionResult> PagedGizi(
+            int page = 1,
+            int perPage = 10,
+            [FromQuery] EnumJenisKunjungan? JenisKunjungan = null,
+            [FromQuery] Guid? kunjunganId = null,
+            [FromQuery] Guid? labbookingid = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null,
+            CancellationToken ct = default)
+        {
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
+            if (perPage > 100) perPage = 100;
+
+            // =========================
+            // 1) BASE QUERY (PARENT) - KHUSUS MCU
+            // =========================
+            var query =
+                from a in _applicationDbContext.LabHasils.AsNoTracking()
+
+                join u0 in _applicationDbContext.UserActives.AsNoTracking()
+                    on a.CreateBy equals u0.UserActiveId into uGroup
+                from u in uGroup.DefaultIfEmpty()
+
+                join k0 in _applicationDbContext.Kunjungans.AsNoTracking()
+                    on a.KunjunganId equals k0.KunjunganID into kGroup
+                from k in kGroup.DefaultIfEmpty()
+
+                join l0 in _applicationDbContext.Labs.AsNoTracking()
+                    on a.LabId equals l0.LabId into lGroup
+                from l in lGroup.DefaultIfEmpty()
+
+                where (a.IsDelete == false || a.IsDelete == null)
+                      && l != null
+                      && l.NamaLab.ToLower().Replace(" ", "") == "gizi"
+                select new
+                {
+                    a.CreateDateTime,
+                    a.CreateBy,
+                    CreateByName = u.FullName,
+
+                    a.HasilLabId,
+                    a.KunjunganId,
+                    JenisKunjungan = k.JenisKunjungan,
+
+                    a.LabId,
+                    NamaLab = l.NamaLab,
+
+                    a.LabBookingId,
+                    a.UserActiveId,
+                    a.PenanggungJawabId,
+                    a.PenanggungJawabAnalisId,
+                    a.TanggalPemeriksaan,
+                    a.Keterangan
+                };
+
+            // =========================
+            // FILTERS OPSIONAL
+            // =========================
+            if (kunjunganId.HasValue)
+                query = query.Where(x => x.KunjunganId == kunjunganId.Value);
+
+            if (labbookingid.HasValue)
+                query = query.Where(x => x.LabBookingId == labbookingid.Value);
+
+            if (JenisKunjungan.HasValue)
+                query = query.Where(x => x.JenisKunjungan == JenisKunjungan.Value.ToString());
+
+            // Filter tanggal (range UTC)
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                var startUtc = new DateTimeOffset(startDate.Value.Date, TimeSpan.Zero);
+                var endUtc = new DateTimeOffset(endDate.Value.Date.AddDays(1), TimeSpan.Zero); // exclusive
+                query = query.Where(x => x.CreateDateTime >= startUtc && x.CreateDateTime < endUtc);
+            }
+
+            // Filter periode (range)
+            if (periode.HasValue)
+            {
+                var now = DateTimeOffset.UtcNow;
+                var todayStart = new DateTimeOffset(now.Year, now.Month, now.Day, 0, 0, 0, TimeSpan.Zero);
+
+                DateTimeOffset start;
+                DateTimeOffset end; // exclusive
+
+                switch (periode.Value)
+                {
+                    case PeriodeFilter.Today:
+                        start = todayStart; end = todayStart.AddDays(1); break;
+
+                    case PeriodeFilter.ThisWeek:
+                        start = todayStart.AddDays(-(int)todayStart.DayOfWeek);
+                        end = todayStart.AddDays(1);
+                        break;
+
+                    case PeriodeFilter.LastWeek:
+                        var thisWeekStart = todayStart.AddDays(-(int)todayStart.DayOfWeek);
+                        start = thisWeekStart.AddDays(-7);
+                        end = thisWeekStart;
+                        break;
+
+                    case PeriodeFilter.ThisMonth:
+                        start = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
+                        end = start.AddMonths(1);
+                        break;
+
+                    case PeriodeFilter.LastMonth:
+                        var thisMonthStart = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
+                        start = thisMonthStart.AddMonths(-1);
+                        end = thisMonthStart;
+                        break;
+
+                    case PeriodeFilter.ThisYear:
+                        start = new DateTimeOffset(now.Year, 1, 1, 0, 0, 0, TimeSpan.Zero);
+                        end = start.AddYears(1);
+                        break;
+
+                    case PeriodeFilter.LastYear:
+                        var thisYearStart = new DateTimeOffset(now.Year, 1, 1, 0, 0, 0, TimeSpan.Zero);
+                        start = thisYearStart.AddYears(-1);
+                        end = thisYearStart;
+                        break;
+
+                    case PeriodeFilter.Last3Months:
+                        start = todayStart.AddMonths(-3);
+                        end = todayStart.AddDays(1);
+                        break;
+
+                    case PeriodeFilter.Last6Months:
+                        start = todayStart.AddMonths(-6);
+                        end = todayStart.AddDays(1);
+                        break;
+
+                    default:
+                        start = DateTimeOffset.MinValue;
+                        end = DateTimeOffset.MaxValue;
+                        break;
+                }
+
+                query = query.Where(x => x.CreateDateTime >= start && x.CreateDateTime < end);
+            }
+
+            // =========================
+            // SORTING
+            // =========================
+            bool desc = (sortDirection ?? "desc").ToLower() == "desc";
+
+            query = (orderBy ?? "CreateDateTime") switch
+            {
+                "CreateDateTime" => desc ? query.OrderByDescending(x => x.CreateDateTime) : query.OrderBy(x => x.CreateDateTime),
+                "CreateByName" => desc ? query.OrderByDescending(x => x.CreateByName) : query.OrderBy(x => x.CreateByName),
+                "NamaLab" => desc ? query.OrderByDescending(x => x.NamaLab) : query.OrderBy(x => x.NamaLab),
+                _ => desc ? query.OrderByDescending(x => x.CreateDateTime) : query.OrderBy(x => x.CreateDateTime)
+            };
+
+            // =========================
+            // PAGINATION
+            // =========================
+            var totalRows = await query.CountAsync(ct);
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            var parentRows = await query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToListAsync(ct);
+
+            if (parentRows.Count == 0 && page > totalPages && totalRows > 0)
+                return NotFound(new { message = "Page not found." });
+
+            // =========================
+            // 2) DETAILS (batch)
+            // =========================
+            var hasilLabIds = parentRows.Select(x => x.HasilLabId).Distinct().ToList();
+
+            if (hasilLabIds.Count == 0)
+            {
+                return Ok(new
+                {
+                    status = "success",
+                    message = "Data retrieved successfully",
+                    data = new
+                    {
+                        Rows = parentRows.Select(p => new
+                        {
+                            p.CreateDateTime,
+                            p.CreateBy,
+                            p.CreateByName,
+                            p.HasilLabId,
+                            p.KunjunganId,
+                            p.JenisKunjungan,
+                            p.LabId,
+                            p.NamaLab,
+                            p.LabBookingId,
+                            p.UserActiveId,
+                            p.PenanggungJawabId,
+                            p.PenanggungJawabAnalisId,
+                            p.TanggalPemeriksaan,
+                            p.Keterangan,
+                            Details = new List<object>()
+                        }).ToList(),
+                        TotalRows = totalRows,
+                        CurrentPage = page,
+                        PerPage = perPage,
+                        TotalPages = totalPages
+                    }
+                });
+            }
+
+            var detailRaw = await (
+                from d in _applicationDbContext.LabHasilDetails.AsNoTracking()
+
+                join u0 in _applicationDbContext.UserActives.AsNoTracking()
+                    on d.CreateBy equals u0.UserActiveId into uGroup
+                from u in uGroup.DefaultIfEmpty()
+
+                join lp0 in _applicationDbContext.LabPemeriksaans.AsNoTracking()
+                    on d.PemeriksaanLabId equals lp0.PemeriksaanLabId into lpGroup
+                from lp in lpGroup.DefaultIfEmpty()
+
+                join k0 in _applicationDbContext.Kelass.AsNoTracking()
+                    on d.KelasId equals k0.KelasId into kGroup
+                from kk in kGroup.DefaultIfEmpty()
+
+                where (d.IsDelete == false || d.IsDelete == null)
+                      && hasilLabIds.Contains((Guid)d.HasilLabId) // kalau Guid? lihat catatan di bawah
+                select new
+                {
+                    d.CreateDateTime,
+                    d.CreateBy,
+                    CreateByName = u.FullName,
+
+                    d.DetailHasilLabId,
+                    d.HasilLabId,
+                    d.PemeriksaanLabId,
+                    NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
+                    d.KelasId,
+                    NamaKelas = kk != null ? kk.NamaKelas : null,
+                    d.TanggalSelesai,
+                    d.NoPhotoLab,
+
+                    PhotoLabPathRaw = d.PhotoLabPath,
+
+                    d.HasilLabManual,
+                    d.HasilLabAI,
+                    d.JumlahFilm,
+                    d.KeadaanSpecimen,
+                    d.AnalisId,
+                    d.IsDefinitif,
+                    d.IsDuplu,
+                    d.HasilMakroskopik,
+                    d.HasilMikroskopik,
+                    d.KesimpulanHasil,
+                    d.NilaiNormal,
+                    d.BloodVolume,
+                    d.SputumVolume,
+                    d.UrineVolume,
+                    d.PusVolume,
+                    d.StoolVolume,
+                    d.JaringanVolume,
+                    d.BodyFluidVolume,
+                    d.PetugasSpecimenId,
+                    d.TanggalSpecimen,
+                    d.JamSpecimen,
+                    d.InfoNReff,
+                    d.Kondisi,
+                    d.KategoriGC,
+                    d.Rincian,
+                    d.Anjuran,
+                    d.DiagnosisPA,
+                    d.Keterangan
+                }
+            ).ToListAsync(ct);
+
+            var detailsLookup = detailRaw
+                .Select(x =>
+                {
+                    var paths = ToPhotoLabPaths(x.PhotoLabPathRaw);
+                    return new
+                    {
+                        x.HasilLabId,
+                        Row = new
+                        {
+                            x.CreateDateTime,
+                            x.CreateBy,
+                            x.CreateByName,
+                            x.DetailHasilLabId,
+                            x.HasilLabId,
+                            x.PemeriksaanLabId,
+                            x.NamaPemeriksaan,
+                            x.KelasId,
+                            x.NamaKelas,
+                            x.TanggalSelesai,
+                            x.NoPhotoLab,
+                            PhotoLabPath = paths,
+                            JumlahFotoLab = paths.Count,
+                            x.HasilLabManual,
+                            x.HasilLabAI,
+                            x.JumlahFilm,
+                            x.KeadaanSpecimen,
+                            x.AnalisId,
+                            x.IsDefinitif,
+                            x.IsDuplu,
+                            x.HasilMakroskopik,
+                            x.HasilMikroskopik,
+                            x.KesimpulanHasil,
+                            x.NilaiNormal,
+                            x.BloodVolume,
+                            x.SputumVolume,
+                            x.UrineVolume,
+                            x.PusVolume,
+                            x.StoolVolume,
+                            x.JaringanVolume,
+                            x.BodyFluidVolume,
+                            x.PetugasSpecimenId,
+                            x.TanggalSpecimen,
+                            x.JamSpecimen,
+                            x.InfoNReff,
+                            x.Kondisi,
+                            x.KategoriGC,
+                            x.Rincian,
+                            x.Anjuran,
+                            x.DiagnosisPA,
+                            x.Keterangan
+                        }
+                    };
+                })
+                .GroupBy(x => x.HasilLabId)
+                .ToDictionary(g => g.Key, g => g.Select(v => (object)v.Row).ToList());
+
+            var rows = parentRows.Select(p => new
+            {
+                p.CreateDateTime,
+                p.CreateBy,
+                p.CreateByName,
+                p.HasilLabId,
+                p.KunjunganId,
+                p.JenisKunjungan,
+                p.LabId,
+                p.NamaLab,
+                p.LabBookingId,
+                p.UserActiveId,
+                p.PenanggungJawabId,
+                p.PenanggungJawabAnalisId,
+                p.TanggalPemeriksaan,
+                p.Keterangan,
+                Details = detailsLookup.TryGetValue(p.HasilLabId, out var det) ? det : new List<object>()
+            }).ToList();
+
+            return Ok(new
+            {
+                status = "success",
+                message = "Data retrieved successfully",
+                data = new
+                {
+                    Rows = rows,
+                    TotalRows = totalRows,
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalPages = totalPages
+                }
+            });
+        }
+
+        [HttpGet("paged-HasilLabRehabMedis")]
+        public async Task<IActionResult> PagedRehabMedis(
+            int page = 1,
+            int perPage = 10,
+            [FromQuery] EnumJenisKunjungan? JenisKunjungan = null,
+            [FromQuery] Guid? kunjunganId = null,
+            [FromQuery] Guid? labbookingid = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null,
+            CancellationToken ct = default)
+        {
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
+            if (perPage > 100) perPage = 100;
+
+            // =========================
+            // 1) BASE QUERY (PARENT) - KHUSUS MCU
+            // =========================
+            var query =
+                from a in _applicationDbContext.LabHasils.AsNoTracking()
+
+                join u0 in _applicationDbContext.UserActives.AsNoTracking()
+                    on a.CreateBy equals u0.UserActiveId into uGroup
+                from u in uGroup.DefaultIfEmpty()
+
+                join k0 in _applicationDbContext.Kunjungans.AsNoTracking()
+                    on a.KunjunganId equals k0.KunjunganID into kGroup
+                from k in kGroup.DefaultIfEmpty()
+
+                join l0 in _applicationDbContext.Labs.AsNoTracking()
+                    on a.LabId equals l0.LabId into lGroup
+                from l in lGroup.DefaultIfEmpty()
+
+                where (a.IsDelete == false || a.IsDelete == null)
+                      && l != null
+                      && l.NamaLab.ToLower().Replace(" ", "") == "rehabmedis"
+                select new
+                {
+                    a.CreateDateTime,
+                    a.CreateBy,
+                    CreateByName = u.FullName,
+
+                    a.HasilLabId,
+                    a.KunjunganId,
+                    JenisKunjungan = k.JenisKunjungan,
+
+                    a.LabId,
+                    NamaLab = l.NamaLab,
+
+                    a.LabBookingId,
+                    a.UserActiveId,
+                    a.PenanggungJawabId,
+                    a.PenanggungJawabAnalisId,
+                    a.TanggalPemeriksaan,
+                    a.Keterangan
+                };
+
+            // =========================
+            // FILTERS OPSIONAL
+            // =========================
+            if (kunjunganId.HasValue)
+                query = query.Where(x => x.KunjunganId == kunjunganId.Value);
+
+            if (labbookingid.HasValue)
+                query = query.Where(x => x.LabBookingId == labbookingid.Value);
+
+            if (JenisKunjungan.HasValue)
+                query = query.Where(x => x.JenisKunjungan == JenisKunjungan.Value.ToString());
+
+            // Filter tanggal (range UTC)
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                var startUtc = new DateTimeOffset(startDate.Value.Date, TimeSpan.Zero);
+                var endUtc = new DateTimeOffset(endDate.Value.Date.AddDays(1), TimeSpan.Zero); // exclusive
+                query = query.Where(x => x.CreateDateTime >= startUtc && x.CreateDateTime < endUtc);
+            }
+
+            // Filter periode (range)
+            if (periode.HasValue)
+            {
+                var now = DateTimeOffset.UtcNow;
+                var todayStart = new DateTimeOffset(now.Year, now.Month, now.Day, 0, 0, 0, TimeSpan.Zero);
+
+                DateTimeOffset start;
+                DateTimeOffset end; // exclusive
+
+                switch (periode.Value)
+                {
+                    case PeriodeFilter.Today:
+                        start = todayStart; end = todayStart.AddDays(1); break;
+
+                    case PeriodeFilter.ThisWeek:
+                        start = todayStart.AddDays(-(int)todayStart.DayOfWeek);
+                        end = todayStart.AddDays(1);
+                        break;
+
+                    case PeriodeFilter.LastWeek:
+                        var thisWeekStart = todayStart.AddDays(-(int)todayStart.DayOfWeek);
+                        start = thisWeekStart.AddDays(-7);
+                        end = thisWeekStart;
+                        break;
+
+                    case PeriodeFilter.ThisMonth:
+                        start = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
+                        end = start.AddMonths(1);
+                        break;
+
+                    case PeriodeFilter.LastMonth:
+                        var thisMonthStart = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
+                        start = thisMonthStart.AddMonths(-1);
+                        end = thisMonthStart;
+                        break;
+
+                    case PeriodeFilter.ThisYear:
+                        start = new DateTimeOffset(now.Year, 1, 1, 0, 0, 0, TimeSpan.Zero);
+                        end = start.AddYears(1);
+                        break;
+
+                    case PeriodeFilter.LastYear:
+                        var thisYearStart = new DateTimeOffset(now.Year, 1, 1, 0, 0, 0, TimeSpan.Zero);
+                        start = thisYearStart.AddYears(-1);
+                        end = thisYearStart;
+                        break;
+
+                    case PeriodeFilter.Last3Months:
+                        start = todayStart.AddMonths(-3);
+                        end = todayStart.AddDays(1);
+                        break;
+
+                    case PeriodeFilter.Last6Months:
+                        start = todayStart.AddMonths(-6);
+                        end = todayStart.AddDays(1);
+                        break;
+
+                    default:
+                        start = DateTimeOffset.MinValue;
+                        end = DateTimeOffset.MaxValue;
+                        break;
+                }
+
+                query = query.Where(x => x.CreateDateTime >= start && x.CreateDateTime < end);
+            }
+
+            // =========================
+            // SORTING
+            // =========================
+            bool desc = (sortDirection ?? "desc").ToLower() == "desc";
+
+            query = (orderBy ?? "CreateDateTime") switch
+            {
+                "CreateDateTime" => desc ? query.OrderByDescending(x => x.CreateDateTime) : query.OrderBy(x => x.CreateDateTime),
+                "CreateByName" => desc ? query.OrderByDescending(x => x.CreateByName) : query.OrderBy(x => x.CreateByName),
+                "NamaLab" => desc ? query.OrderByDescending(x => x.NamaLab) : query.OrderBy(x => x.NamaLab),
+                _ => desc ? query.OrderByDescending(x => x.CreateDateTime) : query.OrderBy(x => x.CreateDateTime)
+            };
+
+            // =========================
+            // PAGINATION
+            // =========================
+            var totalRows = await query.CountAsync(ct);
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            var parentRows = await query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToListAsync(ct);
+
+            if (parentRows.Count == 0 && page > totalPages && totalRows > 0)
+                return NotFound(new { message = "Page not found." });
+
+            // =========================
+            // 2) DETAILS (batch)
+            // =========================
+            var hasilLabIds = parentRows.Select(x => x.HasilLabId).Distinct().ToList();
+
+            if (hasilLabIds.Count == 0)
+            {
+                return Ok(new
+                {
+                    status = "success",
+                    message = "Data retrieved successfully",
+                    data = new
+                    {
+                        Rows = parentRows.Select(p => new
+                        {
+                            p.CreateDateTime,
+                            p.CreateBy,
+                            p.CreateByName,
+                            p.HasilLabId,
+                            p.KunjunganId,
+                            p.JenisKunjungan,
+                            p.LabId,
+                            p.NamaLab,
+                            p.LabBookingId,
+                            p.UserActiveId,
+                            p.PenanggungJawabId,
+                            p.PenanggungJawabAnalisId,
+                            p.TanggalPemeriksaan,
+                            p.Keterangan,
+                            Details = new List<object>()
+                        }).ToList(),
+                        TotalRows = totalRows,
+                        CurrentPage = page,
+                        PerPage = perPage,
+                        TotalPages = totalPages
+                    }
+                });
+            }
+
+            var detailRaw = await (
+                from d in _applicationDbContext.LabHasilDetails.AsNoTracking()
+
+                join u0 in _applicationDbContext.UserActives.AsNoTracking()
+                    on d.CreateBy equals u0.UserActiveId into uGroup
+                from u in uGroup.DefaultIfEmpty()
+
+                join lp0 in _applicationDbContext.LabPemeriksaans.AsNoTracking()
+                    on d.PemeriksaanLabId equals lp0.PemeriksaanLabId into lpGroup
+                from lp in lpGroup.DefaultIfEmpty()
+
+                join k0 in _applicationDbContext.Kelass.AsNoTracking()
+                    on d.KelasId equals k0.KelasId into kGroup
+                from kk in kGroup.DefaultIfEmpty()
+
+                where (d.IsDelete == false || d.IsDelete == null)
+                      && hasilLabIds.Contains((Guid)d.HasilLabId) // kalau Guid? lihat catatan di bawah
+                select new
+                {
+                    d.CreateDateTime,
+                    d.CreateBy,
+                    CreateByName = u.FullName,
+
+                    d.DetailHasilLabId,
+                    d.HasilLabId,
+                    d.PemeriksaanLabId,
+                    NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
+                    d.KelasId,
+                    NamaKelas = kk != null ? kk.NamaKelas : null,
+                    d.TanggalSelesai,
+                    d.NoPhotoLab,
+
+                    PhotoLabPathRaw = d.PhotoLabPath,
+
+                    d.HasilLabManual,
+                    d.HasilLabAI,
+                    d.JumlahFilm,
+                    d.KeadaanSpecimen,
+                    d.AnalisId,
+                    d.IsDefinitif,
+                    d.IsDuplu,
+                    d.HasilMakroskopik,
+                    d.HasilMikroskopik,
+                    d.KesimpulanHasil,
+                    d.NilaiNormal,
+                    d.BloodVolume,
+                    d.SputumVolume,
+                    d.UrineVolume,
+                    d.PusVolume,
+                    d.StoolVolume,
+                    d.JaringanVolume,
+                    d.BodyFluidVolume,
+                    d.PetugasSpecimenId,
+                    d.TanggalSpecimen,
+                    d.JamSpecimen,
+                    d.InfoNReff,
+                    d.Kondisi,
+                    d.KategoriGC,
+                    d.Rincian,
+                    d.Anjuran,
+                    d.DiagnosisPA,
+                    d.Keterangan
+                }
+            ).ToListAsync(ct);
+
+            var detailsLookup = detailRaw
+                .Select(x =>
+                {
+                    var paths = ToPhotoLabPaths(x.PhotoLabPathRaw);
+                    return new
+                    {
+                        x.HasilLabId,
+                        Row = new
+                        {
+                            x.CreateDateTime,
+                            x.CreateBy,
+                            x.CreateByName,
+                            x.DetailHasilLabId,
+                            x.HasilLabId,
+                            x.PemeriksaanLabId,
+                            x.NamaPemeriksaan,
+                            x.KelasId,
+                            x.NamaKelas,
+                            x.TanggalSelesai,
+                            x.NoPhotoLab,
+                            PhotoLabPath = paths,
+                            JumlahFotoLab = paths.Count,
+                            x.HasilLabManual,
+                            x.HasilLabAI,
+                            x.JumlahFilm,
+                            x.KeadaanSpecimen,
+                            x.AnalisId,
+                            x.IsDefinitif,
+                            x.IsDuplu,
+                            x.HasilMakroskopik,
+                            x.HasilMikroskopik,
+                            x.KesimpulanHasil,
+                            x.NilaiNormal,
+                            x.BloodVolume,
+                            x.SputumVolume,
+                            x.UrineVolume,
+                            x.PusVolume,
+                            x.StoolVolume,
+                            x.JaringanVolume,
+                            x.BodyFluidVolume,
+                            x.PetugasSpecimenId,
+                            x.TanggalSpecimen,
+                            x.JamSpecimen,
+                            x.InfoNReff,
+                            x.Kondisi,
+                            x.KategoriGC,
+                            x.Rincian,
+                            x.Anjuran,
+                            x.DiagnosisPA,
+                            x.Keterangan
+                        }
+                    };
+                })
+                .GroupBy(x => x.HasilLabId)
+                .ToDictionary(g => g.Key, g => g.Select(v => (object)v.Row).ToList());
+
+            var rows = parentRows.Select(p => new
+            {
+                p.CreateDateTime,
+                p.CreateBy,
+                p.CreateByName,
+                p.HasilLabId,
+                p.KunjunganId,
+                p.JenisKunjungan,
+                p.LabId,
+                p.NamaLab,
+                p.LabBookingId,
+                p.UserActiveId,
+                p.PenanggungJawabId,
+                p.PenanggungJawabAnalisId,
+                p.TanggalPemeriksaan,
+                p.Keterangan,
+                Details = detailsLookup.TryGetValue(p.HasilLabId, out var det) ? det : new List<object>()
+            }).ToList();
+
+            return Ok(new
+            {
+                status = "success",
+                message = "Data retrieved successfully",
+                data = new
+                {
+                    Rows = rows,
                     TotalRows = totalRows,
                     CurrentPage = page,
                     PerPage = perPage,
@@ -1591,197 +2239,210 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         }
 
 
-        [HttpGet("pagedLabMCU")]
-        public async Task<IActionResult> PagedLabMCU(
+        [HttpGet("paged-HasilLabPatologiAnatomi")]
+        public async Task<IActionResult> PagedPatologiAnatomi(
             int page = 1,
             int perPage = 10,
-            Guid? kunjunganId = null,
-            Guid? labBookingId = null,
+            [FromQuery] EnumJenisKunjungan? JenisKunjungan = null,
+            [FromQuery] Guid? kunjunganId = null,
+            [FromQuery] Guid? labbookingid = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
-            [FromQuery] DateTime? startDate = null,
-            [FromQuery] DateTime? endDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? endDate = null,
             [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null,
             CancellationToken ct = default)
         {
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
+            if (perPage > 100) perPage = 100;
 
-            // =============================
-            // 0) Ambil LabId MCU (sekali)
-            // =============================
-            var MCULabIds = await _applicationDbContext.Labs
-                    .AsNoTracking()
-                    .Where(l => l.NamaLab != null &&
-                                l.NamaLab.ToLower().Replace(" ", "") == "mcu")
-                    .Select(l => l.LabId)
-                    .ToListAsync(ct);
+            // =========================
+            // 1) BASE QUERY (PARENT) - KHUSUS MCU
+            // =========================
+            var query =
+                from a in _applicationDbContext.LabHasils.AsNoTracking()
 
-            if (MCULabIds.Count == 0)
-            {
-                return Ok(new
+                join u0 in _applicationDbContext.UserActives.AsNoTracking()
+                    on a.CreateBy equals u0.UserActiveId into uGroup
+                from u in uGroup.DefaultIfEmpty()
+
+                join k0 in _applicationDbContext.Kunjungans.AsNoTracking()
+                    on a.KunjunganId equals k0.KunjunganID into kGroup
+                from k in kGroup.DefaultIfEmpty()
+
+                join l0 in _applicationDbContext.Labs.AsNoTracking()
+                    on a.LabId equals l0.LabId into lGroup
+                from l in lGroup.DefaultIfEmpty()
+
+                where (a.IsDelete == false || a.IsDelete == null)
+                      && l != null
+                      && l.NamaLab.ToLower().Replace(" ", "") == "patologianatomi"
+                select new
                 {
-                    status = "success",
-                    message = "Data MCU retrieved successfully",
-                    data = new
-                    {
-                        Rows = new List<object>(),
-                        TotalRows = 0,
-                        CurrentPage = page,
-                        PerPage = perPage,
-                        TotalPages = 0
-                    }
-                });
-            }
+                    a.CreateDateTime,
+                    a.CreateBy,
+                    CreateByName = u.FullName,
 
-            // =============================
-            // 1) BASE QUERY: LabBookings (filter & EXISTS detail radiologi)
-            // =============================
-            var baseQuery = _applicationDbContext.LabBookings
-                .AsNoTracking()
-                .Where(b => b.IsDelete == false || b.IsDelete == null);
+                    a.HasilLabId,
+                    a.KunjunganId,
+                    JenisKunjungan = k.JenisKunjungan,
 
+                    a.LabId,
+                    NamaLab = l.NamaLab,
+
+                    a.LabBookingId,
+                    a.UserActiveId,
+                    a.PenanggungJawabId,
+                    a.PenanggungJawabAnalisId,
+                    a.TanggalPemeriksaan,
+                    a.Keterangan
+                };
+
+            // =========================
+            // FILTERS OPSIONAL
+            // =========================
             if (kunjunganId.HasValue)
-                baseQuery = baseQuery.Where(b => b.KunjunganId == kunjunganId.Value);
+                query = query.Where(x => x.KunjunganId == kunjunganId.Value);
 
-            if (labBookingId.HasValue)
-                baseQuery = baseQuery.Where(b => b.BookingLabId == labBookingId.Value);
+            if (labbookingid.HasValue)
+                query = query.Where(x => x.LabBookingId == labbookingid.Value);
 
+            if (JenisKunjungan.HasValue)
+                query = query.Where(x => x.JenisKunjungan == JenisKunjungan.Value.ToString());
+
+            // Filter tanggal (range UTC)
             if (startDate.HasValue && endDate.HasValue)
             {
-                // inclusive start, exclusive end+1 hari (lebih aman daripada ticks)
-                var start = startDate.Value.Date;
-                var endExclusive = endDate.Value.Date.AddDays(1);
-
-                baseQuery = baseQuery.Where(b =>
-                    b.CreateDateTime >= start &&
-                    b.CreateDateTime < endExclusive);
+                var startUtc = new DateTimeOffset(startDate.Value.Date, TimeSpan.Zero);
+                var endUtc = new DateTimeOffset(endDate.Value.Date.AddDays(1), TimeSpan.Zero); // exclusive
+                query = query.Where(x => x.CreateDateTime >= startUtc && x.CreateDateTime < endUtc);
             }
 
+            // Filter periode (range)
             if (periode.HasValue)
             {
-                var today = DateTime.UtcNow.Date;
+                var now = DateTimeOffset.UtcNow;
+                var todayStart = new DateTimeOffset(now.Year, now.Month, now.Day, 0, 0, 0, TimeSpan.Zero);
 
-                DateTime start;
-                DateTime endExclusive;
+                DateTimeOffset start;
+                DateTimeOffset end; // exclusive
 
                 switch (periode.Value)
                 {
                     case PeriodeFilter.Today:
-                        start = today;
-                        endExclusive = today.AddDays(1);
-                        break;
-
-                    case PeriodeFilter.Yesterday:
-                        start = today.AddDays(-1);
-                        endExclusive = today;
-                        break;
+                        start = todayStart; end = todayStart.AddDays(1); break;
 
                     case PeriodeFilter.ThisWeek:
-                        // start week: Minggu (Sunday) default .NET DayOfWeek
-                        start = today.AddDays(-(int)today.DayOfWeek);
-                        endExclusive = today.AddDays(1);
+                        start = todayStart.AddDays(-(int)todayStart.DayOfWeek);
+                        end = todayStart.AddDays(1);
                         break;
 
                     case PeriodeFilter.LastWeek:
-                        var startThisWeek = today.AddDays(-(int)today.DayOfWeek);
-                        start = startThisWeek.AddDays(-7);
-                        endExclusive = startThisWeek;
+                        var thisWeekStart = todayStart.AddDays(-(int)todayStart.DayOfWeek);
+                        start = thisWeekStart.AddDays(-7);
+                        end = thisWeekStart;
                         break;
 
                     case PeriodeFilter.ThisMonth:
-                        start = new DateTime(today.Year, today.Month, 1);
-                        endExclusive = start.AddMonths(1);
+                        start = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
+                        end = start.AddMonths(1);
                         break;
 
                     case PeriodeFilter.LastMonth:
-                        var startThisMonth = new DateTime(today.Year, today.Month, 1);
-                        start = startThisMonth.AddMonths(-1);
-                        endExclusive = startThisMonth;
+                        var thisMonthStart = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
+                        start = thisMonthStart.AddMonths(-1);
+                        end = thisMonthStart;
                         break;
 
                     case PeriodeFilter.ThisYear:
-                        start = new DateTime(today.Year, 1, 1);
-                        endExclusive = start.AddYears(1);
+                        start = new DateTimeOffset(now.Year, 1, 1, 0, 0, 0, TimeSpan.Zero);
+                        end = start.AddYears(1);
                         break;
 
                     case PeriodeFilter.LastYear:
-                        var startThisYear2 = new DateTime(today.Year, 1, 1);
-                        start = startThisYear2.AddYears(-1);
-                        endExclusive = startThisYear2;
+                        var thisYearStart = new DateTimeOffset(now.Year, 1, 1, 0, 0, 0, TimeSpan.Zero);
+                        start = thisYearStart.AddYears(-1);
+                        end = thisYearStart;
                         break;
 
                     case PeriodeFilter.Last3Months:
-                        start = today.AddMonths(-3);
-                        endExclusive = today.AddDays(1);
+                        start = todayStart.AddMonths(-3);
+                        end = todayStart.AddDays(1);
                         break;
 
                     case PeriodeFilter.Last6Months:
-                        start = today.AddMonths(-6);
-                        endExclusive = today.AddDays(1);
+                        start = todayStart.AddMonths(-6);
+                        end = todayStart.AddDays(1);
                         break;
 
                     default:
-                        start = DateTime.MinValue;
-                        endExclusive = DateTime.MaxValue;
+                        start = DateTimeOffset.MinValue;
+                        end = DateTimeOffset.MaxValue;
                         break;
                 }
 
-                baseQuery = baseQuery.Where(x => x.CreateDateTime >= start && x.CreateDateTime < endExclusive);
+                query = query.Where(x => x.CreateDateTime >= start && x.CreateDateTime < end);
             }
 
-            // Filter booking yang punya detail MCU (detail tidak delete)
-            baseQuery = baseQuery.Where(b =>
-                    _applicationDbContext.LabBookingDetails.Any(d =>
-                        d.BookingLabId == b.BookingLabId
-                        && (d.IsDelete == false || d.IsDelete == null)
-                        && d.LabId.HasValue
-                        && MCULabIds.Contains(d.LabId.Value)
-                    )
-            );
+            // =========================
+            // SORTING
+            // =========================
+            bool desc = (sortDirection ?? "desc").ToLower() == "desc";
 
-            // =============================
-            // 2) TOTAL rows
-            // =============================
-            var totalRows = await baseQuery.CountAsync(ct);
-            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-
-            // =============================
-            // 3) SORTING (aman)
-            // =============================
-            bool desc = (sortDirection ?? "desc")
-                .Equals("desc", StringComparison.OrdinalIgnoreCase);
-
-            IQueryable<LabBooking> sortedQuery = (orderBy ?? "CreateDateTime").Trim() switch
+            query = (orderBy ?? "CreateDateTime") switch
             {
-                "TglBooking" =>
-                    desc ? baseQuery.OrderByDescending(x => x.TglBooking) : baseQuery.OrderBy(x => x.TglBooking),
-
-                "TglPemeriksaan" =>
-                    desc ? baseQuery.OrderByDescending(x => x.TglPemeriksaan) : baseQuery.OrderBy(x => x.TglPemeriksaan),
-
-                _ =>
-                    desc ? baseQuery.OrderByDescending(x => x.CreateDateTime) : baseQuery.OrderBy(x => x.CreateDateTime),
+                "CreateDateTime" => desc ? query.OrderByDescending(x => x.CreateDateTime) : query.OrderBy(x => x.CreateDateTime),
+                "CreateByName" => desc ? query.OrderByDescending(x => x.CreateByName) : query.OrderBy(x => x.CreateByName),
+                "NamaLab" => desc ? query.OrderByDescending(x => x.NamaLab) : query.OrderBy(x => x.NamaLab),
+                _ => desc ? query.OrderByDescending(x => x.CreateDateTime) : query.OrderBy(x => x.CreateDateTime)
             };
 
-            // =============================
-            // 4) PAGING: ambil ID dulu
-            // =============================
-            var pagedParentIds = await sortedQuery
+            // =========================
+            // PAGINATION
+            // =========================
+            var totalRows = await query.CountAsync(ct);
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            var parentRows = await query
                 .Skip((page - 1) * perPage)
                 .Take(perPage)
-                .Select(b => b.BookingLabId)
                 .ToListAsync(ct);
 
-            if (pagedParentIds.Count == 0)
+            if (parentRows.Count == 0 && page > totalPages && totalRows > 0)
+                return NotFound(new { message = "Page not found." });
+
+            // =========================
+            // 2) DETAILS (batch)
+            // =========================
+            var hasilLabIds = parentRows.Select(x => x.HasilLabId).Distinct().ToList();
+
+            if (hasilLabIds.Count == 0)
             {
                 return Ok(new
                 {
                     status = "success",
-                    message = "Data MCU retrieved successfully",
+                    message = "Data retrieved successfully",
                     data = new
                     {
-                        Rows = new List<object>(),
+                        Rows = parentRows.Select(p => new
+                        {
+                            p.CreateDateTime,
+                            p.CreateBy,
+                            p.CreateByName,
+                            p.HasilLabId,
+                            p.KunjunganId,
+                            p.JenisKunjungan,
+                            p.LabId,
+                            p.NamaLab,
+                            p.LabBookingId,
+                            p.UserActiveId,
+                            p.PenanggungJawabId,
+                            p.PenanggungJawabAnalisId,
+                            p.TanggalPemeriksaan,
+                            p.Keterangan,
+                            Details = new List<object>()
+                        }).ToList(),
                         TotalRows = totalRows,
                         CurrentPage = page,
                         PerPage = perPage,
@@ -1790,151 +2451,520 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 });
             }
 
-            var pagedIdSet = pagedParentIds.ToHashSet();
+            var detailRaw = await (
+                from d in _applicationDbContext.LabHasilDetails.AsNoTracking()
 
-            // =============================
-            // 5) LOAD PARENT DATA (hanya untuk page ini)
-            // =============================
-            var parents = await (
-                from b in _applicationDbContext.LabBookings.AsNoTracking()
-                where pagedIdSet.Contains(b.BookingLabId)
+                join u0 in _applicationDbContext.UserActives.AsNoTracking()
+                    on d.CreateBy equals u0.UserActiveId into uGroup
+                from u in uGroup.DefaultIfEmpty()
 
-                join u in _applicationDbContext.UserActives.AsNoTracking()
-                    on b.CreateBy equals u.UserActiveId into uJoin
-                from u in uJoin.DefaultIfEmpty()
+                join lp0 in _applicationDbContext.LabPemeriksaans.AsNoTracking()
+                    on d.PemeriksaanLabId equals lp0.PemeriksaanLabId into lpGroup
+                from lp in lpGroup.DefaultIfEmpty()
 
-                join k in _applicationDbContext.Kunjungans.AsNoTracking()
-                    on b.KunjunganId equals k.KunjunganID into kJoin
-                from k in kJoin.DefaultIfEmpty()
+                join k0 in _applicationDbContext.Kelass.AsNoTracking()
+                    on d.KelasId equals k0.KelasId into kGroup
+                from kk in kGroup.DefaultIfEmpty()
 
-                join a in _applicationDbContext.Asuransis.AsNoTracking()
-                    on b.AsuransiId equals a.AsuransiId into aJoin
-                from a in aJoin.DefaultIfEmpty()
-
-                join p in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking()
-                    on b.PasienId equals p.PendaftaranPasienBaruId into pJoin
-                from p in pJoin.DefaultIfEmpty()
-
-                join d1 in _applicationDbContext.Dokters.AsNoTracking()
-                    on b.DokterId equals d1.DokterId into dJoin
-                from d1 in dJoin.DefaultIfEmpty()
-
-                join d2 in _applicationDbContext.Dokters.AsNoTracking()
-                    on b.DokterKonsulenId equals d2.DokterId into d2Join
-                from d2 in d2Join.DefaultIfEmpty()
-
-                join po in _applicationDbContext.Polikliniks.AsNoTracking()
-                    on k.PoliklinikId equals po.PoliklinikId into poJoin
-                from po in poJoin.DefaultIfEmpty()
-
-                join kl in _applicationDbContext.Kelass.AsNoTracking()
-                    on b.KelasId equals kl.KelasId into klJoin
-                from kl in klJoin.DefaultIfEmpty()
-
+                where (d.IsDelete == false || d.IsDelete == null)
+                      && hasilLabIds.Contains((Guid)d.HasilLabId) // kalau Guid? lihat catatan di bawah
                 select new
                 {
-                    b.BookingLabId,
-                    b.KunjunganId,
-                    PoliklinikId = (Guid?)k.PoliklinikId,
-                    k.AsalKunjungan,
-                    b.PasienId,
-                    NamaLengkap = p.NamaLengkap,
-                    b.NoOrder,
-                    NoRekamMedis = p.NoRekamMedis,
-                    b.AsuransiId,
-                    AsuransiNama = a.NamaAsuransi,
-                    b.DokterId,
-                    DokterNama = d1.NmDokter,
-                    PoliNama = po.NamaPoliklinik,
-                    b.TglPemeriksaan,
-                    b.TglBooking,
-                    b.AlasanPembatalan,
-                    b.StatusBookingLab,
-                    b.StatusPembayaran,
-                    b.KelasId,
-                    NamaKelas = kl.NamaKelas,
-                    b.HemodialisaKe,
-                    b.StatusPemeriksaan,
-                    b.NomorSuratJaminan,
-                    b.DokterKonsulenId,
-                    NamaDokterKonsulen = d2.NmDokter,
-                    b.DiagnosaAwal,
-                    b.Keterangan,
-                    b.TTDPathPembatalan,
-                    b.PetugasPembatalan,
-                    b.CreateDateTime,
-                    b.TindakLanjut,
-                    b.HasilPenunjangLab,
-                    b.AnjuranDiet,
-                    b.IsDelete,
-                    b.IsCito,
-                    CreateByName = u.FullName
+                    d.CreateDateTime,
+                    d.CreateBy,
+                    CreateByName = u.FullName,
+
+                    d.DetailHasilLabId,
+                    d.HasilLabId,
+                    d.PemeriksaanLabId,
+                    NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
+                    d.KelasId,
+                    NamaKelas = kk != null ? kk.NamaKelas : null,
+                    d.TanggalSelesai,
+                    d.NoPhotoLab,
+
+                    PhotoLabPathRaw = d.PhotoLabPath,
+
+                    d.HasilLabManual,
+                    d.HasilLabAI,
+                    d.JumlahFilm,
+                    d.KeadaanSpecimen,
+                    d.AnalisId,
+                    d.IsDefinitif,
+                    d.IsDuplu,
+                    d.HasilMakroskopik,
+                    d.HasilMikroskopik,
+                    d.KesimpulanHasil,
+                    d.NilaiNormal,
+                    d.BloodVolume,
+                    d.SputumVolume,
+                    d.UrineVolume,
+                    d.PusVolume,
+                    d.StoolVolume,
+                    d.JaringanVolume,
+                    d.BodyFluidVolume,
+                    d.PetugasSpecimenId,
+                    d.TanggalSpecimen,
+                    d.JamSpecimen,
+                    d.InfoNReff,
+                    d.Kondisi,
+                    d.KategoriGC,
+                    d.Rincian,
+                    d.Anjuran,
+                    d.DiagnosisPA,
+                    d.Keterangan
                 }
             ).ToListAsync(ct);
 
-            var parentLookup = parents.ToDictionary(x => x.BookingLabId, x => x);
-
-            // =============================
-            // 6) LOAD DETAIL (hanya untuk page ini + MCU)
-            // =============================
-            var details = await (
-                from d in _applicationDbContext.LabBookingDetails.AsNoTracking()
-                join lab in _applicationDbContext.Labs.AsNoTracking()
-                    on d.LabId equals lab.LabId into labJoin
-                from lab in labJoin.DefaultIfEmpty()
-
-                join lp in _applicationDbContext.LabPemeriksaans.AsNoTracking()
-                    on d.PemeriksaanLabId equals lp.PemeriksaanLabId into lpJoin
-                from lp in lpJoin.DefaultIfEmpty()
-
-                where d.BookingLabId.HasValue
-                      && pagedIdSet.Contains(d.BookingLabId.Value)
-                      && (d.IsDelete == false || d.IsDelete == null)
-                      && d.LabId.HasValue
-                      && MCULabIds.Contains(d.LabId.Value)
-
-                select new
+            var detailsLookup = detailRaw
+                .Select(x =>
                 {
-                    BookingLabId = d.BookingLabId.Value,
-                    d.DetailBookingLabId,
-                    d.NoOrder,
-                    NamaPemeriksaan = lp.NamaPemeriksaan,
-                    HargaPemeriksaan = lp.HargaPemeriksaan,
-                    NamaLab = lab.NamaLab,
-                    d.Satuan
-                }
-            ).ToListAsync(ct);
-
-            // ✅ ubah jadi Dictionary<Guid, List<object>>
-            var detailLookup = details
-                .GroupBy(x => x.BookingLabId)
-                .ToDictionary(
-                    g => g.Key,
-                    g => g.Select(x => (object)x).ToList()
-                );
-
-            // =============================
-            // 7) MERGE (urut sesuai paging)
-            // =============================
-            var merged = pagedParentIds
-                .Where(id => parentLookup.ContainsKey(id))
-                .Select(id => new
-                {
-                    Parent = parentLookup[id],
-                    Details = detailLookup.TryGetValue(id, out var det) ? det : new List<object>()
+                    var paths = ToPhotoLabPaths(x.PhotoLabPathRaw);
+                    return new
+                    {
+                        x.HasilLabId,
+                        Row = new
+                        {
+                            x.CreateDateTime,
+                            x.CreateBy,
+                            x.CreateByName,
+                            x.DetailHasilLabId,
+                            x.HasilLabId,
+                            x.PemeriksaanLabId,
+                            x.NamaPemeriksaan,
+                            x.KelasId,
+                            x.NamaKelas,
+                            x.TanggalSelesai,
+                            x.NoPhotoLab,
+                            PhotoLabPath = paths,
+                            JumlahFotoLab = paths.Count,
+                            x.HasilLabManual,
+                            x.HasilLabAI,
+                            x.JumlahFilm,
+                            x.KeadaanSpecimen,
+                            x.AnalisId,
+                            x.IsDefinitif,
+                            x.IsDuplu,
+                            x.HasilMakroskopik,
+                            x.HasilMikroskopik,
+                            x.KesimpulanHasil,
+                            x.NilaiNormal,
+                            x.BloodVolume,
+                            x.SputumVolume,
+                            x.UrineVolume,
+                            x.PusVolume,
+                            x.StoolVolume,
+                            x.JaringanVolume,
+                            x.BodyFluidVolume,
+                            x.PetugasSpecimenId,
+                            x.TanggalSpecimen,
+                            x.JamSpecimen,
+                            x.InfoNReff,
+                            x.Kondisi,
+                            x.KategoriGC,
+                            x.Rincian,
+                            x.Anjuran,
+                            x.DiagnosisPA,
+                            x.Keterangan
+                        }
+                    };
                 })
-                .ToList();
+                .GroupBy(x => x.HasilLabId)
+                .ToDictionary(g => g.Key, g => g.Select(v => (object)v.Row).ToList());
 
-            // =============================
-            // 8) RETURN
-            // =============================
+            var rows = parentRows.Select(p => new
+            {
+                p.CreateDateTime,
+                p.CreateBy,
+                p.CreateByName,
+                p.HasilLabId,
+                p.KunjunganId,
+                p.JenisKunjungan,
+                p.LabId,
+                p.NamaLab,
+                p.LabBookingId,
+                p.UserActiveId,
+                p.PenanggungJawabId,
+                p.PenanggungJawabAnalisId,
+                p.TanggalPemeriksaan,
+                p.Keterangan,
+                Details = detailsLookup.TryGetValue(p.HasilLabId, out var det) ? det : new List<object>()
+            }).ToList();
+
             return Ok(new
             {
                 status = "success",
-                message = "Data MCU retrieved successfully",
+                message = "Data retrieved successfully",
                 data = new
                 {
-                    Rows = merged,
+                    Rows = rows,
+                    TotalRows = totalRows,
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalPages = totalPages
+                }
+            });
+        }
+
+        [HttpGet("paged-HasilLabMicrobiologi")]
+        public async Task<IActionResult> PagedMicrobiologi(
+            int page = 1,
+            int perPage = 10,
+            [FromQuery] EnumJenisKunjungan? JenisKunjungan = null,
+            [FromQuery] Guid? kunjunganId = null,
+            [FromQuery] Guid? labbookingid = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null,
+            CancellationToken ct = default)
+        {
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
+            if (perPage > 100) perPage = 100;
+
+            // =========================
+            // 1) BASE QUERY (PARENT) - KHUSUS MCU
+            // =========================
+            var query =
+                from a in _applicationDbContext.LabHasils.AsNoTracking()
+
+                join u0 in _applicationDbContext.UserActives.AsNoTracking()
+                    on a.CreateBy equals u0.UserActiveId into uGroup
+                from u in uGroup.DefaultIfEmpty()
+
+                join k0 in _applicationDbContext.Kunjungans.AsNoTracking()
+                    on a.KunjunganId equals k0.KunjunganID into kGroup
+                from k in kGroup.DefaultIfEmpty()
+
+                join l0 in _applicationDbContext.Labs.AsNoTracking()
+                    on a.LabId equals l0.LabId into lGroup
+                from l in lGroup.DefaultIfEmpty()
+
+                where (a.IsDelete == false || a.IsDelete == null)
+                      && l != null
+                      && l.NamaLab.ToLower().Replace(" ", "") == "microbiologi"
+                select new
+                {
+                    a.CreateDateTime,
+                    a.CreateBy,
+                    CreateByName = u.FullName,
+
+                    a.HasilLabId,
+                    a.KunjunganId,
+                    JenisKunjungan = k.JenisKunjungan,
+
+                    a.LabId,
+                    NamaLab = l.NamaLab,
+
+                    a.LabBookingId,
+                    a.UserActiveId,
+                    a.PenanggungJawabId,
+                    a.PenanggungJawabAnalisId,
+                    a.TanggalPemeriksaan,
+                    a.Keterangan
+                };
+
+            // =========================
+            // FILTERS OPSIONAL
+            // =========================
+            if (kunjunganId.HasValue)
+                query = query.Where(x => x.KunjunganId == kunjunganId.Value);
+
+            if (labbookingid.HasValue)
+                query = query.Where(x => x.LabBookingId == labbookingid.Value);
+
+            if (JenisKunjungan.HasValue)
+                query = query.Where(x => x.JenisKunjungan == JenisKunjungan.Value.ToString());
+
+            // Filter tanggal (range UTC)
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                var startUtc = new DateTimeOffset(startDate.Value.Date, TimeSpan.Zero);
+                var endUtc = new DateTimeOffset(endDate.Value.Date.AddDays(1), TimeSpan.Zero); // exclusive
+                query = query.Where(x => x.CreateDateTime >= startUtc && x.CreateDateTime < endUtc);
+            }
+
+            // Filter periode (range)
+            if (periode.HasValue)
+            {
+                var now = DateTimeOffset.UtcNow;
+                var todayStart = new DateTimeOffset(now.Year, now.Month, now.Day, 0, 0, 0, TimeSpan.Zero);
+
+                DateTimeOffset start;
+                DateTimeOffset end; // exclusive
+
+                switch (periode.Value)
+                {
+                    case PeriodeFilter.Today:
+                        start = todayStart; end = todayStart.AddDays(1); break;
+
+                    case PeriodeFilter.ThisWeek:
+                        start = todayStart.AddDays(-(int)todayStart.DayOfWeek);
+                        end = todayStart.AddDays(1);
+                        break;
+
+                    case PeriodeFilter.LastWeek:
+                        var thisWeekStart = todayStart.AddDays(-(int)todayStart.DayOfWeek);
+                        start = thisWeekStart.AddDays(-7);
+                        end = thisWeekStart;
+                        break;
+
+                    case PeriodeFilter.ThisMonth:
+                        start = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
+                        end = start.AddMonths(1);
+                        break;
+
+                    case PeriodeFilter.LastMonth:
+                        var thisMonthStart = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
+                        start = thisMonthStart.AddMonths(-1);
+                        end = thisMonthStart;
+                        break;
+
+                    case PeriodeFilter.ThisYear:
+                        start = new DateTimeOffset(now.Year, 1, 1, 0, 0, 0, TimeSpan.Zero);
+                        end = start.AddYears(1);
+                        break;
+
+                    case PeriodeFilter.LastYear:
+                        var thisYearStart = new DateTimeOffset(now.Year, 1, 1, 0, 0, 0, TimeSpan.Zero);
+                        start = thisYearStart.AddYears(-1);
+                        end = thisYearStart;
+                        break;
+
+                    case PeriodeFilter.Last3Months:
+                        start = todayStart.AddMonths(-3);
+                        end = todayStart.AddDays(1);
+                        break;
+
+                    case PeriodeFilter.Last6Months:
+                        start = todayStart.AddMonths(-6);
+                        end = todayStart.AddDays(1);
+                        break;
+
+                    default:
+                        start = DateTimeOffset.MinValue;
+                        end = DateTimeOffset.MaxValue;
+                        break;
+                }
+
+                query = query.Where(x => x.CreateDateTime >= start && x.CreateDateTime < end);
+            }
+
+            // =========================
+            // SORTING
+            // =========================
+            bool desc = (sortDirection ?? "desc").ToLower() == "desc";
+
+            query = (orderBy ?? "CreateDateTime") switch
+            {
+                "CreateDateTime" => desc ? query.OrderByDescending(x => x.CreateDateTime) : query.OrderBy(x => x.CreateDateTime),
+                "CreateByName" => desc ? query.OrderByDescending(x => x.CreateByName) : query.OrderBy(x => x.CreateByName),
+                "NamaLab" => desc ? query.OrderByDescending(x => x.NamaLab) : query.OrderBy(x => x.NamaLab),
+                _ => desc ? query.OrderByDescending(x => x.CreateDateTime) : query.OrderBy(x => x.CreateDateTime)
+            };
+
+            // =========================
+            // PAGINATION
+            // =========================
+            var totalRows = await query.CountAsync(ct);
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            var parentRows = await query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToListAsync(ct);
+
+            if (parentRows.Count == 0 && page > totalPages && totalRows > 0)
+                return NotFound(new { message = "Page not found." });
+
+            // =========================
+            // 2) DETAILS (batch)
+            // =========================
+            var hasilLabIds = parentRows.Select(x => x.HasilLabId).Distinct().ToList();
+
+            if (hasilLabIds.Count == 0)
+            {
+                return Ok(new
+                {
+                    status = "success",
+                    message = "Data retrieved successfully",
+                    data = new
+                    {
+                        Rows = parentRows.Select(p => new
+                        {
+                            p.CreateDateTime,
+                            p.CreateBy,
+                            p.CreateByName,
+                            p.HasilLabId,
+                            p.KunjunganId,
+                            p.JenisKunjungan,
+                            p.LabId,
+                            p.NamaLab,
+                            p.LabBookingId,
+                            p.UserActiveId,
+                            p.PenanggungJawabId,
+                            p.PenanggungJawabAnalisId,
+                            p.TanggalPemeriksaan,
+                            p.Keterangan,
+                            Details = new List<object>()
+                        }).ToList(),
+                        TotalRows = totalRows,
+                        CurrentPage = page,
+                        PerPage = perPage,
+                        TotalPages = totalPages
+                    }
+                });
+            }
+
+            var detailRaw = await (
+                from d in _applicationDbContext.LabHasilDetails.AsNoTracking()
+
+                join u0 in _applicationDbContext.UserActives.AsNoTracking()
+                    on d.CreateBy equals u0.UserActiveId into uGroup
+                from u in uGroup.DefaultIfEmpty()
+
+                join lp0 in _applicationDbContext.LabPemeriksaans.AsNoTracking()
+                    on d.PemeriksaanLabId equals lp0.PemeriksaanLabId into lpGroup
+                from lp in lpGroup.DefaultIfEmpty()
+
+                join k0 in _applicationDbContext.Kelass.AsNoTracking()
+                    on d.KelasId equals k0.KelasId into kGroup
+                from kk in kGroup.DefaultIfEmpty()
+
+                where (d.IsDelete == false || d.IsDelete == null)
+                      && hasilLabIds.Contains((Guid)d.HasilLabId) // kalau Guid? lihat catatan di bawah
+                select new
+                {
+                    d.CreateDateTime,
+                    d.CreateBy,
+                    CreateByName = u.FullName,
+
+                    d.DetailHasilLabId,
+                    d.HasilLabId,
+                    d.PemeriksaanLabId,
+                    NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
+                    d.KelasId,
+                    NamaKelas = kk != null ? kk.NamaKelas : null,
+                    d.TanggalSelesai,
+                    d.NoPhotoLab,
+
+                    PhotoLabPathRaw = d.PhotoLabPath,
+
+                    d.HasilLabManual,
+                    d.HasilLabAI,
+                    d.JumlahFilm,
+                    d.KeadaanSpecimen,
+                    d.AnalisId,
+                    d.IsDefinitif,
+                    d.IsDuplu,
+                    d.HasilMakroskopik,
+                    d.HasilMikroskopik,
+                    d.KesimpulanHasil,
+                    d.NilaiNormal,
+                    d.BloodVolume,
+                    d.SputumVolume,
+                    d.UrineVolume,
+                    d.PusVolume,
+                    d.StoolVolume,
+                    d.JaringanVolume,
+                    d.BodyFluidVolume,
+                    d.PetugasSpecimenId,
+                    d.TanggalSpecimen,
+                    d.JamSpecimen,
+                    d.InfoNReff,
+                    d.Kondisi,
+                    d.KategoriGC,
+                    d.Rincian,
+                    d.Anjuran,
+                    d.DiagnosisPA,
+                    d.Keterangan
+                }
+            ).ToListAsync(ct);
+
+            var detailsLookup = detailRaw
+                .Select(x =>
+                {
+                    var paths = ToPhotoLabPaths(x.PhotoLabPathRaw);
+                    return new
+                    {
+                        x.HasilLabId,
+                        Row = new
+                        {
+                            x.CreateDateTime,
+                            x.CreateBy,
+                            x.CreateByName,
+                            x.DetailHasilLabId,
+                            x.HasilLabId,
+                            x.PemeriksaanLabId,
+                            x.NamaPemeriksaan,
+                            x.KelasId,
+                            x.NamaKelas,
+                            x.TanggalSelesai,
+                            x.NoPhotoLab,
+                            PhotoLabPath = paths,
+                            JumlahFotoLab = paths.Count,
+                            x.HasilLabManual,
+                            x.HasilLabAI,
+                            x.JumlahFilm,
+                            x.KeadaanSpecimen,
+                            x.AnalisId,
+                            x.IsDefinitif,
+                            x.IsDuplu,
+                            x.HasilMakroskopik,
+                            x.HasilMikroskopik,
+                            x.KesimpulanHasil,
+                            x.NilaiNormal,
+                            x.BloodVolume,
+                            x.SputumVolume,
+                            x.UrineVolume,
+                            x.PusVolume,
+                            x.StoolVolume,
+                            x.JaringanVolume,
+                            x.BodyFluidVolume,
+                            x.PetugasSpecimenId,
+                            x.TanggalSpecimen,
+                            x.JamSpecimen,
+                            x.InfoNReff,
+                            x.Kondisi,
+                            x.KategoriGC,
+                            x.Rincian,
+                            x.Anjuran,
+                            x.DiagnosisPA,
+                            x.Keterangan
+                        }
+                    };
+                })
+                .GroupBy(x => x.HasilLabId)
+                .ToDictionary(g => g.Key, g => g.Select(v => (object)v.Row).ToList());
+
+            var rows = parentRows.Select(p => new
+            {
+                p.CreateDateTime,
+                p.CreateBy,
+                p.CreateByName,
+                p.HasilLabId,
+                p.KunjunganId,
+                p.JenisKunjungan,
+                p.LabId,
+                p.NamaLab,
+                p.LabBookingId,
+                p.UserActiveId,
+                p.PenanggungJawabId,
+                p.PenanggungJawabAnalisId,
+                p.TanggalPemeriksaan,
+                p.Keterangan,
+                Details = detailsLookup.TryGetValue(p.HasilLabId, out var det) ? det : new List<object>()
+            }).ToList();
+
+            return Ok(new
+            {
+                status = "success",
+                message = "Data retrieved successfully",
+                data = new
+                {
+                    Rows = rows,
                     TotalRows = totalRows,
                     CurrentPage = page,
                     PerPage = perPage,

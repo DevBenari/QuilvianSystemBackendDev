@@ -449,6 +449,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.IsScreening,
                         a.IsPresent,
                         a.IsTriage,
+                        a.IsClosed,
                         a.IsCTTPasienIGD,
                         a.Antrian,
                         a.DepositRanap,
@@ -1178,7 +1179,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPut("{id}/is-closed")]
-        public async Task<IActionResult> UpdateIsClosed(Guid id, [FromBody] UpdateIsFinishedViewModel request)
+        public async Task<IActionResult> UpdateIsClosed(Guid id, [FromBody] UpdateIsClosedViewModel request)
         {
             var kunjungan = await _applicationDbContext.Kunjungans.FindAsync(id);
             if (kunjungan == null)
@@ -1191,7 +1192,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
             var userId = user?.UserActiveId ?? Guid.Empty;
 
-            kunjungan.IsClosed = request.IsFinished;
+            kunjungan.IsClosed = request.IsClosed;
             kunjungan.UpdateDateTime = DateTimeOffset.UtcNow;
             kunjungan.UpdateBy = userId;
             await _applicationDbContext.SaveChangesAsync();
@@ -1201,7 +1202,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             {
                 action = "updateIsClosed",
                 kunjunganId = kunjungan.KunjunganID,
-                IsClosed = request.IsFinished
+                IsClosed = request.IsClosed
             });
 
             return Ok(new { message = "Status IsClosed berhasil diperbarui." });
@@ -1965,6 +1966,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.IsScreening,
                         a.IsPresent,
                         a.IsTriage,
+                        a.IsClosed,
                         a.IsCTTPasienIGD,
                         a.Antrian,
                         a.DepositRanap,
@@ -2174,6 +2176,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         r.IsScreening,
                         r.IsPresent,
                         r.IsTriage,
+                        r.IsClosed,
                         r.IsCTTPasienIGD,
                         r.Antrian,
                         r.DepositRanap,

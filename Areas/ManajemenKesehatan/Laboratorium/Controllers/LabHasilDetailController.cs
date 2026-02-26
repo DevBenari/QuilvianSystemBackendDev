@@ -362,6 +362,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     Rincian = vm.Rincian,
                     Anjuran = vm.Anjuran,
                     DiagnosisPA = vm.DiagnosisPA,
+                    HasilImunoHistokimia = vm.HasilImunoHistokimia ?? new List<HasilImunoHistokimiaItem>(), 
                     Keterangan = vm.Keterangan,
 
                     CreateBy = userActiveId,
@@ -458,6 +459,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 data.Rincian = vm.Rincian;
                 data.Anjuran = vm.Anjuran;
                 data.DiagnosisPA = vm.DiagnosisPA;
+                data.HasilImunoHistokimia = vm.HasilImunoHistokimia ?? new List<HasilImunoHistokimiaItem>();
                 data.Keterangan = vm.Keterangan;
 
                 // ======================================================
@@ -548,8 +550,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             }
         }
 
-
-
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
@@ -612,7 +612,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         }
 
         [HttpGet("paged")]
-        public IActionResult Paged(
+        public async Task<IActionResult> Paged(
         int page = 1,
         int perPage = 10,
         Guid? kunjunganId = null,
