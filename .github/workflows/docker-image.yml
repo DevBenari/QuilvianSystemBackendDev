@@ -61,8 +61,8 @@ jobs:
           fi
 
           echo "Cleaning up unused Docker images..."
-          # docker system prune -af
-          docker image prune -f
+          docker system prune -af
+          #docker image prune -f
 
           echo "Deployment completed!"
 
