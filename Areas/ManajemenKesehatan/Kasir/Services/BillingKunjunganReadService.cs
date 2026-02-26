@@ -257,6 +257,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             from la in lg.DefaultIfEmpty()
             select new
             {
+                lbd.BookingLabId,
                 lbd.DetailBookingLabId,
                 NamaLab = la != null ? la.NamaLab : null,
                 NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
@@ -275,6 +276,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
                 return (object)new
                 {
+                    x.BookingLabId,
                     x.DetailBookingLabId,
                     x.NamaLab,
                     x.NamaPemeriksaan,
@@ -1041,6 +1043,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             select new
             {
                 lbd.PasienId,
+                lbd.BookingLabId,
                 lbd.DetailBookingLabId,
                 NamaLab = la != null ? la.NamaLab : null,
                 NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
@@ -1259,6 +1262,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
                         return (object)new
                         {
+                            x.BookingLabId,
                             x.DetailBookingLabId,
                             x.NamaLab,
                             x.NamaPemeriksaan,
@@ -1928,6 +1932,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 x.IsVerified,
                 x.TTDUserVerfiedId,
                 x.PathUserVerified,
+                x.JumlahPajak,
                 x.Deposito,
                 x.SisaDeposito,
                 x.SubTotalAsuransi,
@@ -2067,6 +2072,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     h.TTDUserVerfiedId,
                     VerifiedByName = GetUserName(h.TTDUserVerfiedId),
                     h.PathUserVerified,
+                    h.JumlahPajak,
                     h.Deposito,
                     h.SisaDeposito,
                     h.SubTotalAsuransi,

@@ -212,6 +212,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     data.TanggalSpecimen,
                     data.JamSpecimen,
                     data.InfoNReff,
+                    data.Kondisi,
+                    data.KategoriGC,
+                    data.Rincian,
+                    data.Anjuran,
+                    data.DiagnosisPA,
                     data.Keterangan,
                     data.CreateBy,
                     data.CreateDateTime
@@ -352,6 +357,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     TanggalSpecimen = vm.TanggalSpecimen,
                     JamSpecimen = vm.JamSpecimen,
                     InfoNReff = vm.InfoNReff,
+                    Kondisi = vm.Kondisi,
+                    KategoriGC = vm.KategoriGC,
+                    Rincian = vm.Rincian,
+                    Anjuran = vm.Anjuran,
+                    DiagnosisPA = vm.DiagnosisPA,
                     Keterangan = vm.Keterangan,
 
                     CreateBy = userActiveId,
@@ -443,6 +453,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 data.TanggalSpecimen = vm.TanggalSpecimen;
                 data.JamSpecimen = vm.JamSpecimen;
                 data.InfoNReff = vm.InfoNReff;
+                data.Kondisi = vm.Kondisi;
+                data.KategoriGC = vm.KategoriGC;
+                data.Rincian = vm.Rincian;
+                data.Anjuran = vm.Anjuran;
+                data.DiagnosisPA = vm.DiagnosisPA;
                 data.Keterangan = vm.Keterangan;
 
                 // ======================================================
@@ -662,6 +677,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.TanggalSpecimen,
                              a.JamSpecimen,
                              a.InfoNReff,
+                             a.Kondisi,
+                             a.KategoriGC,
+                             a.Rincian,
+                             a.Anjuran,
+                             a.DiagnosisPA,
                              a.Keterangan,
 
                              // ttg Lab hasil

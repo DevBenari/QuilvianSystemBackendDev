@@ -663,70 +663,77 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     .Where(b => b.BiayaAdministrasiKode == kodeJenis)
                     .FirstOrDefaultAsync();
 
+                // Ambil / buat invoice sekali saja untuk semua billing yang akan dibuat
+                var invoice = await _generateInvoiceBillingService.GetOrCreateAsync(
+                    newKunjungan.KunjunganID,
+                    DateTime.UtcNow
+                );
+
+                // Jika ada biaya admin, tambahkan billingnya
                 if (biayaAdmin != null)
                 {
-                    Billing bill;
-                    if (kodeJenis == "OP")
+                    var bill = new Billing
                     {
-                        bill = new Billing
-                        {
-                            BillingId = Guid.NewGuid(),
-                            KunjunganId = newKunjungan.KunjunganID,
-                            ItemId = biayaAdmin.BiayaAdministrasiId,
-                            NamaItem = biayaAdmin.NamaBiayaAdministrasi,
-                            HargaItem = biayaAdmin.NominalBiayaAdministrasi,
-                            QtyItem = 1,
-                            SubTotalItem = biayaAdmin.NominalBiayaAdministrasi,
-                            InvoiceBilling = await _generateInvoiceBillingService.GetOrCreateAsync(
-                                    newKunjungan.KunjunganID,
-                                    DateTime.UtcNow),
-                            IsListWhiteOff = false,
-                            BillingKode = "001",
-                            JenisBilling = "Biaya Admin",
-                            StatusBilling = false,
-                            BillingDate = DateTime.UtcNow,
-                            TanggalInvoice = DateTime.UtcNow,
-                            TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
-                            CreateDateTime = DateTimeOffset.UtcNow,
-                            CreateBy = UserActiveId
-                        };
-                    }
-                    else
-                    {
-                        bill = new Billing
-                        {
-                            BillingId = Guid.NewGuid(),
-                            KunjunganId = newKunjungan.KunjunganID,
-                            ItemId = null,
-                            NamaItem = "Deposito Ranap",
-                            HargaItem = newKunjungan.DepositRanap,
-                            QtyItem = 1,
-                            SubTotalItem = newKunjungan.DepositRanap,
-                            InvoiceBilling = await _generateInvoiceBillingService.GetOrCreateAsync(
-                                    newKunjungan.KunjunganID,
-                                    DateTime.UtcNow),
-                            IsListWhiteOff = false,
-                            BillingKode = "DP",
-                            JenisBilling = "DepositRanap",
-                            StatusBilling = false,
-                            BillingDate = DateTime.UtcNow,
-                            TanggalInvoice = DateTime.UtcNow,
-                            TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
-                            CreateDateTime = DateTimeOffset.UtcNow,
-                            CreateBy = UserActiveId
-                        };
-                    }
-                    _applicationDbContext.Billings.Add(bill);
+                        BillingId = Guid.NewGuid(),
+                        KunjunganId = newKunjungan.KunjunganID,
+                        ItemId = biayaAdmin.BiayaAdministrasiId,
+                        NamaItem = biayaAdmin.NamaBiayaAdministrasi,
+                        HargaItem = biayaAdmin.NominalBiayaAdministrasi,
+                        QtyItem = 1,
+                        SubTotalItem = biayaAdmin.NominalBiayaAdministrasi,
 
-                    //var dataKasir = new MainKasir
-                    //{
-                    //    KasirId = Guid.NewGuid(),
-                    //    KunjunganId = newKunjungan.KunjunganID,
-                    //    GrandTotalPembayaran = biayaAdmin.NominalBiayaAdministrasi,
-                    //    Deposito = newKunjungan.DepositRanap,
-                    //    CreateDateTime = DateTimeOffset.UtcNow,
-                    //    CreateBy = UserActiveId
-                    //};
+                        InvoiceBilling = invoice,
+                        IsListWhiteOff = false,
+                        BillingKode = "001",
+                        JenisBilling = "Biaya Admin",
+                        StatusBilling = false,
+                        BillingDate = DateTime.UtcNow,
+                        TanggalInvoice = DateTime.UtcNow,
+                        TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
+                        CreateDateTime = DateTimeOffset.UtcNow,
+                        CreateBy = UserActiveId
+                    };
+
+                    _applicationDbContext.Billings.Add(bill);
+                }
+
+                // =============================================
+                // 🏥 Deposit wajib untuk kunjungan IP
+                // =============================================
+                if (kodeJenis == "IP")
+                {
+                    // WARNING / VALIDASI
+                    if (newKunjungan.DepositRanap == null || newKunjungan.DepositRanap <= 0)
+                    {
+                        // kamu bisa ganti dengan return sesuai pola API kamu (ProblemDetails / ModelState)
+                        return BadRequest(new
+                        {
+                            message = "Kunjungan IP (rawat inap) wajib mengisi nominal deposit. "
+                        });
+                    }
+
+                    var depo = new Billing
+                    {
+                        BillingId = Guid.NewGuid(),
+                        KunjunganId = newKunjungan.KunjunganID,
+                        ItemId = null,
+                        NamaItem = "Deposito Ranap",
+                        HargaItem = newKunjungan.DepositRanap.Value,
+                        QtyItem = 1,
+                        SubTotalItem = newKunjungan.DepositRanap.Value,
+                        //InvoiceBilling = invoice,
+                        IsListWhiteOff = false,
+                        BillingKode = "DP",
+                        JenisBilling = "DepositRanap",
+                        StatusBilling = false,
+                        BillingDate = DateTime.UtcNow,
+                        TanggalInvoice = DateTime.UtcNow,
+                        TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
+                        CreateDateTime = DateTimeOffset.UtcNow,
+                        CreateBy = UserActiveId
+                    };
+
+                    _applicationDbContext.Billings.Add(depo);
                 }
 
                 await _applicationDbContext.SaveChangesAsync();

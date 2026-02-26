@@ -1047,18 +1047,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 var kunjunganOk = await _applicationDbContext.Kunjungans
                         .AsNoTracking()
                         .Where(k => k.KunjunganID == kunjunganId && !k.IsDelete)
-                        .Select(k => new { k.KunjunganID})
-                        .FirstOrDefaultAsync();
+                        .Select(k => new { k.KunjunganID })
+                        .FirstOrDefaultAsync(); // <== sengaja tidak pakai ct (sesuai instruksi kamu)
 
                 if (kunjunganOk == null)
                     return NotFound(new { message = "Kunjungan tidak ditemukan atau sudah dihapus." });
 
-                //var dp = kunjunganOk.DepositRanap ?? 0m;
-
-                // 3) Cek apakah detail sudah ada
-                var detailCount = await _applicationDbContext.MainKasirDetails
+                // 3) Cek apakah detail sudah ada (pakai AnyAsync)
+                var hasDetail = await _applicationDbContext.MainKasirDetails
                     .AsNoTracking()
-                    .CountAsync(d => d.MainKasirId == kasirId && !d.IsDelete, ct);
+                    .AnyAsync(d => d.MainKasirId == kasirId && !d.IsDelete, ct);
 
                 var tglPembayaran = DateTimeOffset.UtcNow;
 
@@ -1074,20 +1072,25 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     (headerEntity.GrandTotalPembayaran)
                     ?? (vm.GrandTotalPembayaran)
                     ?? (vm.Details?.Max(d => d.TotalPembayaran ?? 0m) ?? 0m);
+
                 decimal totalTagihanNet = totalTagihan;
+
+                // batas maksimum = total awal yang tersimpan (anggap “resep/ketetapan awal”)
+                decimal maxAllowedTotal = headerEntity.GrandTotalPembayaran ?? totalTagihanNet;
 
                 // status lama untuk billing update
                 var wasLunas = string.Equals(headerEntity.StatusPembayaran, "Lunas", StringComparison.OrdinalIgnoreCase);
 
                 // ==========================
-                // A) JIKA DETAIL SUDAH ADA -> BIARKAN DETAIL (ABAIAKAN vm.Details)
+                // A) JIKA DETAIL SUDAH ADA -> ABAIKAN vm.Details, BOLEH TURUN TOTAL (DENGAN BATAS)
                 // ==========================
                 decimal totalPaid = 0m;
                 decimal sisaAfter = 0m;
                 int? angsuranKe = null;
                 string? warning = null;
+                decimal kembalian = 0m;
 
-                if (detailCount > 0)
+                if (hasDetail)
                 {
                     warning = (vm.Details != null && vm.Details.Any())
                         ? "Detail pembayaran sudah ada, data Details pada request diabaikan (tidak menambah/mengubah detail)."
@@ -1098,8 +1101,39 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         .Where(d => d.MainKasirId == kasirId && !d.IsDelete)
                         .SumAsync(d => (decimal?)(d.NominalPembayaran ?? 0m), ct) ?? 0m;
 
+                    // Jika FE kirim total baru (misal qty obat ditebus berkurang), boleh turun ASAL:
+                    // - tidak boleh naik melebihi maxAllowedTotal
+                    // - tidak boleh turun di bawah totalPaid (karena endpoint ini tidak handle refund)
+                    if (vm.GrandTotalPembayaran.HasValue)
+                    {
+                        var requestedTotal = vm.GrandTotalPembayaran.Value;
+
+                        if (requestedTotal > maxAllowedTotal)
+                            return BadRequest(new
+                            {
+                                message = "Total tagihan tidak boleh melebihi batas maksimum (resep/ketetapan awal).",
+                                maxAllowedTotal,
+                                requestedTotal
+                            });
+
+                        if (requestedTotal < totalPaid)
+                            return BadRequest(new
+                            {
+                                message = "Total tagihan tidak boleh lebih kecil dari total yang sudah dibayar (tidak ada mekanisme refund pada endpoint ini).",
+                                totalPaid,
+                                requestedTotal
+                            });
+
+                        totalTagihanNet = requestedTotal; // ✅ terima penurunan / tetap
+                    }
+                    else
+                    {
+                        // tidak ada update total dari FE => pakai total tersimpan
+                        totalTagihanNet = headerEntity.GrandTotalPembayaran ?? totalTagihanNet;
+                    }
+
                     var rawSisa = totalTagihanNet - totalPaid;
-                    sisaAfter = rawSisa < 0 ? 0m : rawSisa; // safety
+                    sisaAfter = rawSisa < 0 ? 0m : rawSisa;
                 }
                 else
                 {
@@ -1112,17 +1146,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     // total bayar sekarang
                     var totalNominalBayarNow = vm.Details.Sum(d => d.NominalPembayaran ?? 0m);
 
-                    //  RULE: tidak boleh bayar lebih dari tagihan/sisa
-                    if (totalNominalBayarNow > totalTagihanNet)
-                        return BadRequest(new
-                        {
-                            message = "Jumlah yang dibayar tidak boleh lebih dari tagihan.",
-                            sisaTagihan = totalTagihanNet,
-                            totalDibayar = totalNominalBayarNow
-                        });
-
-                    // sisa setelah bayar (pasti >= 0)
-                    sisaAfter = totalTagihanNet - totalNominalBayarNow;
+                    // ✅ konsisten dengan POST: boleh overpay => kembalian
+                    var rawSisa = totalTagihanNet - totalNominalBayarNow;
+                    kembalian = rawSisa < 0 ? Math.Abs(rawSisa) : 0m;
+                    sisaAfter = rawSisa < 0 ? 0m : rawSisa;
 
                     // generate angsuran utk batch ini
                     angsuranKe = await _generateUrutanAngsuran.GenerateAsync(
@@ -1142,6 +1169,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
                         cumulativePaid += bayarNow;
 
+                        // running sisa (kalau overpay, sisaPerDetail dibuat 0)
                         var sisaPerDetail = totalTagihanNet - cumulativePaid;
                         if (sisaPerDetail < 0m) sisaPerDetail = 0m;
 
@@ -1203,13 +1231,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 headerEntity.DiskonId = vm.DiskonId;
                 headerEntity.SubTotalAsuransi = vm.SubTotalAsuransi;
                 headerEntity.SubTotalMandiri = vm.SubTotalMandiri;
-                headerEntity.TotalPembayaran = vm.TotalPembayaran;
+
+                // TotalPembayaran: hanya update kalau belum ada detail (biar tidak “geser” setelah ada pembayaran)
+                if (!hasDetail)
+                    headerEntity.TotalPembayaran = vm.TotalPembayaran;
 
                 headerEntity.Deposito = vm.DepositRanap;
                 headerEntity.SisaDeposito = vm.SisaDeposit;
 
-                // Kalau vm.GrandTotalPembayaran null, pertahankan yang lama
-                headerEntity.GrandTotalPembayaran = vm.GrandTotalPembayaran ?? headerEntity.GrandTotalPembayaran ?? totalTagihanNet;
+                // ✅ GrandTotalPembayaran selalu pakai totalTagihanNet (sudah tervalidasi turun/tetap)
+                headerEntity.GrandTotalPembayaran = totalTagihanNet;
 
                 headerEntity.TotalBiayaObat = vm.TotalBiayaObat;
                 headerEntity.TotalBiayaTindakan = vm.TotalBiayaTindakan;
@@ -1246,7 +1277,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 // 11) SignalR
                 await _hubContext.Clients.All.SendAsync("Data pembayaran Updated", new
                 {
-                    Action = detailCount > 0 ? "update_header_only" : "update_header_and_insert_detail",
+                    Action = hasDetail ? "update_header_only" : "update_header_and_insert_detail",
                     kasirId,
                     kunjunganId,
                     angsuranKe,
@@ -1256,17 +1287,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
                 return Ok(new
                 {
-                    message = detailCount > 0
+                    message = hasDetail
                         ? "Header diperbarui. Detail sudah ada, tidak ditambah."
                         : "Header diperbarui & detail baru berhasil ditambahkan.",
                     warning,
-                    action = detailCount > 0 ? "update_header_only" : "update_header_and_insert_detail",
+                    action = hasDetail ? "update_header_only" : "update_header_and_insert_detail",
                     kasirId,
                     kunjunganId,
                     statusPembayaran = finalStatus,
                     totalTagihan = totalTagihanNet,
                     totalPaid,
                     sisaPembayaran = sisaAfter,
+                    kembalian,
+                    maxAllowedTotal, // opsional, biar FE tahu batas maksimum
                     billingUpdated = affectedBilling
                 });
             }

@@ -17,6 +17,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models
         public bool? IsVerified { get; set; }
         public Guid? TTDUserVerfiedId { get; set; }
         public string? PathUserVerified { get; set; }
+        public decimal? JumlahPajak {  get; set; }
         public decimal? GrandTotalPembayaran { get; set; }
         public decimal? TotalBiayaObat { get; set; }
         public decimal? TotalBiayaTindakan { get; set; }

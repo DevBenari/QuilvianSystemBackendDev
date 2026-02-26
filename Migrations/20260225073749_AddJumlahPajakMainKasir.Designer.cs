@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -12,9 +13,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260225073749_AddJumlahPajakMainKasir")]
+    partial class AddJumlahPajakMainKasir
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -6491,9 +6493,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<Guid?>("AnalisId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Anjuran")
-                        .HasColumnType("text");
-
                     b.Property<decimal?>("BloodVolume")
                         .HasColumnType("numeric");
 
@@ -6511,9 +6510,6 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.Property<DateTimeOffset>("DeleteDateTime")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("DiagnosisPA")
-                        .HasColumnType("text");
 
                     b.Property<string>("HasilLabAI")
                         .HasColumnType("text");
@@ -6551,9 +6547,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("JumlahFilm")
                         .HasColumnType("text");
 
-                    b.Property<string>("KategoriGC")
-                        .HasColumnType("text");
-
                     b.Property<string>("KeadaanSpecimen")
                         .HasColumnType("text");
 
@@ -6564,9 +6557,6 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("Keterangan")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Kondisi")
                         .HasColumnType("text");
 
                     b.Property<decimal?>("NilaiNormal")
@@ -6586,9 +6576,6 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.Property<decimal?>("PusVolume")
                         .HasColumnType("numeric");
-
-                    b.Property<string>("Rincian")
-                        .HasColumnType("text");
 
                     b.Property<decimal?>("SputumVolume")
                         .HasColumnType("numeric");

@@ -13,6 +13,7 @@ public class MainKasirViewModel
     public Guid? TTDUserVerfiedId { get; set; }
     public decimal? DepositRanap {  get; set; }
     public decimal? SisaDeposit {  get; set; }
+    public decimal? JumlahPajak {  get; set; }
     public decimal? TotalBiayaObat { get; set; }
     public decimal? TotalBiayaTindakan { get; set; }
     public decimal? SubTotalMandiri { get; set; }
