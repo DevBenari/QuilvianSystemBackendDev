@@ -18,7 +18,7 @@ COPY . ./
 # Publish the app to a directory in the container
 # RUN dotnet publish -c Release -o out
 # ✅ Sesudah
-RUN dotnet publish -c Release -o out --no-restore /maxcpucount:1
+RUN dotnet publish -c Release -o out --no-restore /maxcpucount:6
 # Use the official ASP.NET image for runtime
 FROM mcr.microsoft.com/dotnet/aspnet:6.0
 
