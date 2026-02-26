@@ -828,7 +828,6 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         return dto;
     }
 
-
     // ================================
     // FUNCTION GET ALL BILLING PAGED
     // ================================
