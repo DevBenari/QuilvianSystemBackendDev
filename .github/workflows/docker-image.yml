@@ -87,7 +87,6 @@ jobs:
               Deployment dilakukan Backend Branch *$PUSHER*%0A
               🔄 Container telah diperbarui dan berjalan dengan baik. 🎉"
           EOF
-
 # name: QuilvianSystemBackendDevQuilvianDev
 # on:
 #   push:
