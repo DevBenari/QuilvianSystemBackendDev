@@ -970,6 +970,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 k.CreateDateTime,
                 k.JenisKunjungan,
                 k.AsalKunjungan,
+                k.IsClosed,
                 TanggalKunjungan = k.TglMasuk,
                 k.TipePembayaran,
                 k.PasienId,
@@ -1265,6 +1266,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 PasienId = h.PasienId,
                 JenisKunjungan = h.JenisKunjungan,
                 AsalKunjungan = h.AsalKunjungan,
+                IsClosed = h.IsClosed,
                 TanggalKunjungan = h.TanggalKunjungan,
                 KasirId = kasirMap.TryGetValue(kid, out var kasirId) ? kasirId : null,
 
@@ -1696,6 +1698,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 CreateDateTime = h.CreateDateTime,
                 dto.JenisKunjungan,
                 dto.AsalKunjungan,
+                dto.IsClosed,
                 dto.TanggalKunjungan,
                 dto.KasirId,
                 dto.NamaLengkap,
