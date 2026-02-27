@@ -1790,7 +1790,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             [FromQuery] bool? isFinished = null,
             [FromQuery] bool? isScreening = null,
             [FromQuery] bool? isPresent = null,
-            [FromQuery] bool? isFinishedKasir = null,
+            [FromQuery] bool? isFinishedKasir = null, 
+            [FromQuery] bool? isClosed = null,
             [FromQuery] TipePasienFilter? TipePasien = null,
             [FromQuery] EnumJenisKunjungan? JenisKunjungan = null,
             [FromQuery] string? AsalKunjungan = null,
@@ -2016,6 +2017,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 if (isPresent.HasValue) baseQuery = baseQuery.Where(x => x.IsPresent == isPresent.Value);
                 if (isScreening.HasValue) baseQuery = baseQuery.Where(x => x.IsScreening == isScreening.Value);
                 if (isFinishedKasir.HasValue) baseQuery = baseQuery.Where(x => x.IsFinishedKasir == isFinishedKasir.Value);
+                if (isClosed.HasValue) baseQuery = baseQuery.Where(x => x.IsClosed == isClosed.Value);
 
                 if (TipePasien.HasValue) baseQuery = baseQuery.Where(x => x.TipePasien == TipePasien.Value.ToString());
                 if (JenisKunjungan.HasValue) baseQuery = baseQuery.Where(x => x.JenisKunjungan == JenisKunjungan.Value.ToString());

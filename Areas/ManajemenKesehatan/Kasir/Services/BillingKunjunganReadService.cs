@@ -76,6 +76,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         public Guid? PasienId { get; set; }
         public StatusBayarEnum? sb {  get; set; }
         public EnumJenisKunjungan? jk {  get; set; }
+        public bool? isClosed { get; set; }
         public string? asal { get; set; }
         public int Page { get; set; } = 1;
         public int PageSize { get; set; } = 10;
@@ -851,6 +852,9 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
         if (query.jk.HasValue)
             baseQuery = baseQuery.Where(k => k.JenisKunjungan == query.jk.Value.ToString());
+
+        if (query.isClosed.HasValue)
+            baseQuery = baseQuery.Where(k => k.IsClosed == query.isClosed);
 
         if (query.sb.HasValue)
         {
