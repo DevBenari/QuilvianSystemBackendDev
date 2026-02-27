@@ -160,7 +160,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             }
         }
 
-
         [HttpGet("{id}")]
         public async Task<IActionResult> GetLabPemeriksaanById(Guid id)
         {
