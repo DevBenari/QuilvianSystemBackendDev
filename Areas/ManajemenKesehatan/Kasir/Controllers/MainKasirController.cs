@@ -840,6 +840,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         SubTotalAsuransi = vm.SubTotalAsuransi,
                         SubTotalMandiri = vm.SubTotalMandiri,
                         TotalPembayaran = vm.TotalPembayaran,
+                        JumlahPajak = vm.JumlahPajak,
                         Deposito = vm.DepositRanap,
                         SisaDeposito = vm.SisaDeposit,
                         GrandTotalPembayaran = vm.GrandTotalPembayaran ?? totalTagihan,
@@ -1242,7 +1243,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
                 // ✅ GrandTotalPembayaran selalu pakai totalTagihanNet (sudah tervalidasi turun/tetap)
                 headerEntity.GrandTotalPembayaran = totalTagihanNet;
-
+                headerEntity.JumlahPajak = vm.JumlahPajak;
                 headerEntity.TotalBiayaObat = vm.TotalBiayaObat;
                 headerEntity.TotalBiayaTindakan = vm.TotalBiayaTindakan;
                 headerEntity.Keterangan = vm.Keterangan ?? headerEntity.Keterangan;
