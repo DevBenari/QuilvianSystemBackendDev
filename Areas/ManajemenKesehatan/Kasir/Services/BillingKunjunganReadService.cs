@@ -77,6 +77,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         public StatusBayarEnum? sb {  get; set; }
         public EnumJenisKunjungan? jk {  get; set; }
         public bool? isClosed { get; set; }
+        public bool? isPks { get; set; }
         public string? asal { get; set; }
         public int Page { get; set; } = 1;
         public int PageSize { get; set; } = 10;
@@ -892,6 +893,23 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     );
                 }
             }
+        }
+
+        if (query.isPks.HasValue)
+        {
+            var wanted = query.isPks.Value;
+
+            // IsPKS hanya relevan kalau ada AsuransiId (opsional: juga TipePembayaran == "Asuransi")
+            baseQuery = baseQuery.Where(k =>
+                k.AsuransiId != null &&
+                _db.Asuransis.AsNoTracking().Any(a =>
+                    a.AsuransiId == k.AsuransiId.Value
+                    // kalau Asuransi punya IsDelete, pakai ini (kalau tidak ada, hapus baris ini)
+                    && (a.IsDelete == false || a.IsDelete == null)
+                    // treat null as false biar aman
+                    && (a.IsPKS ?? false) == wanted
+                )
+            );
         }
 
         if (!string.IsNullOrWhiteSpace(query.asal))

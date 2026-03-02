@@ -50,6 +50,7 @@ namespace QuilvianSystemBackendDev.Repositories
                 //}
             };
 
+            #region Dictionary Hemodialisa
             modelBuilder.Entity<HemodialisaHasil>()
                 .Property(x => x.LaporanNaCl)
                 .HasColumnType("jsonb")
@@ -65,7 +66,9 @@ namespace QuilvianSystemBackendDev.Repositories
                     v => JsonSerializer.Serialize(v, jsonOptions),
                     v => JsonSerializer.Deserialize<Dictionary<string, decimal>>(v, jsonOptions)
                 );
+            #endregion
 
+            #region Unique No Rekam Medis
             modelBuilder.Entity<PendaftaranPasienBaru>()
                 .HasIndex(x => x.NoRekamMedis)
                 .IsUnique();
@@ -82,6 +85,28 @@ namespace QuilvianSystemBackendDev.Repositories
                 // Wrapper tidak dimapping ke DB
                 entity.Ignore(e => e.HasilImunoHistokimia);
             });
+            #endregion
+
+            #region Anti-Race Citext Agama
+            // enable extension citext (dibantu oleh provider Npgsql)
+            modelBuilder.HasPostgresExtension("citext");
+
+            modelBuilder.Entity<Agama>(e =>
+            {
+                e.HasKey(x => x.AgamaId);
+
+                // kolom Nama jadi citext (case-insensitive)
+                e.Property(x => x.NamaAgama)
+                 .HasColumnType("citext")
+                 .IsRequired();
+
+                // Unique hanya untuk data aktif (IsDelete=false atau null)
+                e.HasIndex(x => x.NamaAgama)
+                 .IsUnique()
+                 .HasDatabaseName("UX_Agamas_Nama_Active")
+                 .HasFilter(@"""IsDelete"" = false OR ""IsDelete"" IS NULL");
+            });
+            #endregion
         }
 
         public DbSet<UserActive> UserActives { get; set; }
