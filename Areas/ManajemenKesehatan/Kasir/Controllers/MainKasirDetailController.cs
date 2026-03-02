@@ -633,6 +633,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         int page = 1,
         int perPage = 10,
         //string? search = null,
+        Guid? kasirId = null,
         Guid? kunjunganId = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
@@ -691,6 +692,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     NamaPasien = pp != null ? pp.NamaLengkap : null,
                     AsuransiId = (Guid?)(k != null ? k.AsuransiId : null),
                     NamaAsuransi = a != null ? a.NamaAsuransi : null,
+                    IsPks = a != null ? a.IsPKS : null,
                 };
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
@@ -706,6 +708,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             if (kunjunganId.HasValue)
             {
                 query = query.Where(u=>u.KunjunganId == kunjunganId.Value);
+            }
+            // filter based on kasir id
+            if (kasirId.HasValue)
+            {
+                query = query.Where(u=>u.MainKasirId == kasirId.Value);
             }
 
             //// **Filter berdasarkan tanggal**
