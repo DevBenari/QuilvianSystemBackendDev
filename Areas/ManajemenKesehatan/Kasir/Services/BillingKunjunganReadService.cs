@@ -21,6 +21,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         _db = db;
     }
 
+    #region DTO CLASS AND LIST
     // ================================
     // DTO LITE BILLING FOR LOOKUP
     // ================================
@@ -88,6 +89,19 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
         public DateTime? AsOf { get; set; } // untuk kamar ranap sampai waktu ini
     }
+
+    // ======================
+    // DTO COVERAGE LIST
+    // =====================
+    private sealed class CoverageLookup
+    {
+        public HashSet<Guid> ObatIds { get; init; } = new();
+        public Dictionary<Guid, decimal> KamarMarkup { get; init; } = new();      // key: KamarId
+        public Dictionary<Guid, decimal> LabMarkup { get; init; } = new();        // key: PemeriksaanLabId
+        public Dictionary<Guid, decimal> TindakanMarkup { get; init; } = new();   // key: TindakanId
+    }
+    #endregion
+
 
     // ============================
     // FUNCTION GET BILLING BY ID 
@@ -197,17 +211,9 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             asuransiIdEfektif.HasValue &&
             string.Equals(dto.TipePembayaran, "Asuransi", StringComparison.OrdinalIgnoreCase);
 
-        HashSet<Guid> coveredObatIds = new();
+        CoverageLookup cover = new();
         if (isAsuransiCase)
-        {
-            var coveredList = await _db.ObatAsuransis.AsNoTracking()
-                .Where(x => x.AsuransiId == asuransiIdEfektif!.Value && (x.IsDelete == false || x.IsDelete == null))
-                .Select(x => x.ObatId)
-                .ToListAsync(ct);
-
-            coveredObatIds = coveredList.ToHashSet();
-
-        }
+            cover = await LoadCoverageLookupAsync(asuransiIdEfektif!.Value, snap, ct);
 
         // =========================
         // 2) LOAD BILLINGS + MAP
@@ -265,6 +271,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             {
                 lbd.BookingLabId,
                 lbd.DetailBookingLabId,
+                PemeriksaanLabId = lbd.PemeriksaanLabId,
                 NamaLab = la != null ? la.NamaLab : null,
                 NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
                 HargaPemeriksaan = (decimal?)lp.HargaPemeriksaan ?? 0m
@@ -277,6 +284,10 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             {
                 var x = g.First();
                 var bill = FindBilling("Pemeriksaan Lab", x.DetailBookingLabId);
+                var isCovered =
+                    isAsuransiCase &&
+                    x.PemeriksaanLabId != null &&
+                    cover.LabMarkup.ContainsKey(x.PemeriksaanLabId.Value);
                 var qty = bill?.QtyItem ?? 1;
                 var subtotal = bill?.SubTotalItem ?? x.HargaPemeriksaan;
 
@@ -286,6 +297,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     x.DetailBookingLabId,
                     x.NamaLab,
                     x.NamaPemeriksaan,
+                    IsCovered = isCovered,
                     HargaPemeriksaan = x.HargaPemeriksaan,
                     Qty = qty,
                     Subtotal = subtotal,
@@ -335,10 +347,10 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 var harga = bill?.HargaItem ?? hte;
                 var subtotal = bill?.SubTotalItem ?? (x.dr.Qty * hte);
 
-                var isCoverAsuransi =
+                var isCovered =
                     isAsuransiCase &&
                     x.dr.ObatId != null &&
-                    coveredObatIds.Contains(x.dr.ObatId.Value);
+                    cover.ObatIds.Contains(x.dr.ObatId.Value);
 
                 return (object)new
                 {
@@ -348,7 +360,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     x.o.ObatName,
 
                     // ✅ tambahan
-                    IsCoverAsuransi = isCoverAsuransi,
+                    IsCovered = isCovered,
 
                     Qty = qty,
                     Harga = harga,
@@ -451,48 +463,80 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         // =========================
         // 5) TINDAKAN
         // =========================
-        var tindakanRows = await (
+        var tindakanLogs = await (
             from tk in _db.TindakanKunjungans.AsNoTracking()
             where tk.KunjunganId == kunjunganId
             join t in _db.Tindakans.AsNoTracking()
                 on tk.TindakanId equals t.TindakanId into tg
             from t in tg.DefaultIfEmpty()
-            select new { tk, t }
+            select new
+            {
+                tk.TindakanId,
+                NamaTindakan = t != null ? t.NamaTindakan : null,
+                Qty = tk.Quantity ?? 1,
+                HargaLog = (decimal?)tk.Total ?? 0m, // asumsi: harga satuan (sesuai pola lama kamu)
+                tk.CreateDateTime
+            }
         ).ToListAsync(ct);
 
-        dto.DaftarTindakan = tindakanRows
-            .Where(x => x.tk != null && x.t != null)
-            .GroupBy(x => x.tk.TindakanKunjunganId)
+        dto.DaftarTindakan = tindakanLogs
+            .Where(x => x.TindakanId != null)
+            .GroupBy(x => x.TindakanId) // ✅ 1 baris per master tindakan
             .Select(g =>
             {
-                var x = g.First();
-                var bill = FindBilling("Tindakan", x.tk.TindakanId);
+                var tindakanId = g.Key;
+                var nama = g.First().NamaTindakan;
 
-                var qty = bill?.QtyItem ?? x.tk.Quantity ?? 1;
-                var totalTindakan = (decimal?)x.tk.Total ?? 0m;
-                var harga = bill?.HargaItem ?? totalTindakan;
-                var subtotal = bill?.SubTotalItem ?? ((x.tk.Quantity ?? 1) * totalTindakan);
+                // total tindakan yang sama dilakukan berapa kali
+                var qtyLogTotal = g.Sum(x => x.Qty);
+
+                // harga log terbaru (fallback kalau billing & markup tidak ada)
+                var hargaLogTerbaru = g
+                    .OrderByDescending(x => x.CreateDateTime)
+                    .First().HargaLog;
+
+                // billing hanya 1x per tindakan master
+                var bill = FindBilling("Tindakan", tindakanId);
+
+                // cover: markup per tindakan master
+                var isCovered =
+                    isAsuransiCase &&
+                    cover.TindakanMarkup.TryGetValue(tindakanId, out var markup);
+
+                // harga: Billing > Markup cover > harga log
+                var hargaEfektif =
+                    bill?.HargaItem;
+                    //?? (isCovered ? markup : hargaLogTerbaru);
+
+                // qty final: billing qty kalau ada, kalau tidak pakai hasil agregasi log
+                var qtyFinal = bill?.QtyItem ?? qtyLogTotal;
+
+                // subtotal final: billing subtotal kalau ada, kalau tidak hitung sendiri
+                var subtotal = bill?.SubTotalItem ?? (qtyFinal * hargaEfektif);
 
                 return (object)new
                 {
-                    x.t!.TindakanId,
-                    x.t.NamaTindakan,
-                    Qty = qty,
-                    Harga = harga,
+                    TindakanId = tindakanId,
+                    NamaTindakan = nama,
+
+                    IsCovered = isCovered,
+
+                    Qty = qtyFinal,
+                    Harga = hargaEfektif,
                     Subtotal = subtotal,
+
                     BillingId = bill?.BillingId,
                     BillingKode = bill?.BillingKode,
                     StatusBilling = bill?.StatusBilling,
                     TanggalInvoice = bill?.TanggalInvoice,
                     TanggalJatuhTempo = bill?.TanggalJatuhTempo,
-
-                    // ✅ dpd lokal
                     DPD = HitungDpd(bill?.TanggalJatuhTempo, snap)
                 };
             })
             .ToList();
 
         dto.TotalTindakan = dto.DaftarTindakan.Sum(x => (decimal)((dynamic)x).Subtotal);
+
 
         // =========================
         // 6) BIAYA ADMIN (dari billings)
@@ -817,15 +861,35 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         // 11) TOTAL KESELURUHAN
         // =========================
         var DepositRanap = dto.TotalDPRanap;
-        dto.TotalKeseluruhan =
-            dto.TotalPemeriksaanLab +
-            dto.TotalObat +
-            dto.TotalRacikan +
-            dto.TotalTindakan +
-            dto.TotalBiayaAdmin +
-            dto.TotalAlkes +
-            dto.TotalBiayaVisitDokter +
-            dto.TotalKamarRanap;
+        var asuransi =
+            SumCovered(dto.DaftarPemeriksaanLab) +
+            SumCovered(dto.DaftarObat) +
+            SumCovered(dto.DaftarTindakan) +
+            SumCovered(dto.DaftarKamarRanap);
+
+        var mandiri =
+            SumUncovered(dto.DaftarPemeriksaanLab) +
+            SumUncovered(dto.DaftarObat) +
+            SumUncovered(dto.DaftarTindakan) +
+            SumUncovered(dto.DaftarKamarRanap)
+            // komponen yang memang tidak punya IsCovered → anggap mandiri
+            + dto.TotalRacikan
+            + dto.TotalBiayaAdmin
+            + dto.TotalAlkes
+            + dto.TotalBiayaVisitDokter;
+
+        dto.SubTotalAsuransi = asuransi;
+        dto.SubTotalMandiri = mandiri;
+        //dto.TotalKeseluruhan = mandiri + Math.Round(mandiri * 0.11m);
+        //dto.TotalKeseluruhan =
+        //    dto.TotalPemeriksaanLab +
+        //    dto.TotalObat +
+        //    dto.TotalRacikan +
+        //    dto.TotalTindakan +
+        //    dto.TotalBiayaAdmin +
+        //    dto.TotalAlkes +
+        //    dto.TotalBiayaVisitDokter +
+        //    dto.TotalKamarRanap;
 
         return dto;
     }
@@ -1767,187 +1831,6 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 .ToArray()
         };
     }
-    
-    // =========================
-    // HELPERS 
-    // =========================
-    private static bool IsRawatInapIP(string? jenisKunjungan)
-    {
-        var j = (jenisKunjungan ?? "").Trim().ToUpperInvariant();
-        return j == "IP" || j == "RAWAT INAP" || j == "INAP";
-    }
-
-    private static int HitungJumlahHariRanap(DateTime? tglMasuk, DateTime? tglKeluarFinal, DateTime asOf)
-    {
-        if (!tglMasuk.HasValue) return 1;
-
-        var start = tglMasuk.Value;
-        var end = tglKeluarFinal ?? asOf;
-        if (end > asOf) end = asOf;
-        if (end < start) end = start;
-
-        var durasi = end - start;
-        var hari = (int)Math.Ceiling(durasi.TotalDays);
-        if (hari < 1) hari = 1;
-        return hari;
-    }
-
-    private static DateTime? ResolveEndFromTransfer(
-        Guid? bedId,
-        DateTime? start,
-        Dictionary<Guid, List<TransferPasien>> transferByBed)
-    {
-        if (!bedId.HasValue) return null;
-        if (!transferByBed.TryGetValue(bedId.Value, out var list) || list.Count == 0) return null;
-
-        var s = start ?? DateTime.MinValue;
-
-        var candidate = list
-            .Select(t => new { Transfer = t, Anchor = t.TglMasuk ?? t.TglPindah })
-            .Where(x => x.Anchor.HasValue && x.Anchor.Value >= s)
-            .OrderBy(x => x.Anchor!.Value)
-            .FirstOrDefault();
-
-        if (candidate == null) return null;
-
-        return candidate.Transfer.TglKeluar ?? candidate.Transfer.TglPindah;
-    }
-
-    private static List<TransferPasien> GetTransfersForSegment(
-        Guid? bedId,
-        DateTime? segStart,
-        DateTime? segEnd,
-        Dictionary<Guid, List<TransferPasien>> transferByBed)
-    {
-        if (!bedId.HasValue) return new List<TransferPasien>();
-        if (!transferByBed.TryGetValue(bedId.Value, out var list) || list.Count == 0) return new List<TransferPasien>();
-
-        var start = segStart ?? DateTime.MinValue;
-
-        return list
-            .Where(t =>
-            {
-                var anchor = t.TglMasuk ?? t.TglPindah ?? DateTime.MinValue;
-                if (anchor < start) return false;
-                if (segEnd.HasValue && anchor > segEnd.Value) return false;
-                return true;
-            })
-            .OrderBy(t => t.TglMasuk ?? t.TglPindah ?? DateTime.MinValue)
-            .ToList();
-    }
-
-    private static string HitungUmurLengkap(DateTime? tanggalLahir)
-    {
-        if (!tanggalLahir.HasValue) return "-";
-
-        var today = DateTime.Today;
-        var dob = tanggalLahir.Value.Date;
-
-        int years = today.Year - dob.Year;
-        int months = today.Month - dob.Month;
-        int days = today.Day - dob.Day;
-
-        if (days < 0)
-        {
-            var prevMonth = today.AddMonths(-1);
-            days += DateTime.DaysInMonth(prevMonth.Year, prevMonth.Month);
-            months--;
-        }
-
-        if (months < 0)
-        {
-            months += 12;
-            years--;
-        }
-
-        return $"{years} tahun {months} bulan {days} hari";
-    }
-
-    // Periode Filter
-    private static IQueryable<Kunjungan> ApplyPeriodeFilter(
-        IQueryable<Kunjungan> baseQuery,
-        PeriodeFilter periode)
-    {
-        var today = DateTime.UtcNow.Date;
-
-        DateTimeOffset rangeStartUtc;
-        DateTimeOffset rangeEndUtc;
-
-        switch (periode)
-        {
-            case PeriodeFilter.Today:
-                rangeStartUtc = new DateTimeOffset(DateTime.SpecifyKind(today, DateTimeKind.Utc));
-                rangeEndUtc = new DateTimeOffset(DateTime.SpecifyKind(today.AddDays(1).AddTicks(-1), DateTimeKind.Utc));
-                return baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc && k.CreateDateTime <= rangeEndUtc);
-
-            case PeriodeFilter.Yesterday:
-                var y = today.AddDays(-1);
-                rangeStartUtc = new DateTimeOffset(DateTime.SpecifyKind(y, DateTimeKind.Utc));
-                rangeEndUtc = new DateTimeOffset(DateTime.SpecifyKind(y.AddDays(1).AddTicks(-1), DateTimeKind.Utc));
-                return baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc && k.CreateDateTime <= rangeEndUtc);
-
-            case PeriodeFilter.ThisWeek:
-                var weekStart = today.AddDays(-(int)today.DayOfWeek);
-                rangeStartUtc = new DateTimeOffset(DateTime.SpecifyKind(weekStart, DateTimeKind.Utc));
-                rangeEndUtc = new DateTimeOffset(DateTime.SpecifyKind(today.AddDays(1).AddTicks(-1), DateTimeKind.Utc));
-                return baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc && k.CreateDateTime <= rangeEndUtc);
-
-            case PeriodeFilter.LastWeek:
-                var lastWeekStart = today.AddDays(-7 - (int)today.DayOfWeek);
-                var lastWeekEnd = lastWeekStart.AddDays(6);
-                rangeStartUtc = new DateTimeOffset(DateTime.SpecifyKind(lastWeekStart, DateTimeKind.Utc));
-                rangeEndUtc = new DateTimeOffset(DateTime.SpecifyKind(lastWeekEnd.AddDays(1).AddTicks(-1), DateTimeKind.Utc));
-                return baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc && k.CreateDateTime <= rangeEndUtc);
-
-            case PeriodeFilter.ThisMonth:
-                var thisMonthStart = new DateTime(today.Year, today.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-                rangeStartUtc = new DateTimeOffset(thisMonthStart);
-                rangeEndUtc = new DateTimeOffset(thisMonthStart.AddMonths(1).AddTicks(-1));
-                return baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc && k.CreateDateTime <= rangeEndUtc);
-
-            case PeriodeFilter.LastMonth:
-                var lm = today.AddMonths(-1);
-                var lastMonthStart = new DateTime(lm.Year, lm.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-                rangeStartUtc = new DateTimeOffset(lastMonthStart);
-                rangeEndUtc = new DateTimeOffset(lastMonthStart.AddMonths(1).AddTicks(-1));
-                return baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc && k.CreateDateTime <= rangeEndUtc);
-
-            case PeriodeFilter.ThisYear:
-                var thisYearStart = new DateTime(today.Year, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-                rangeStartUtc = new DateTimeOffset(thisYearStart);
-                rangeEndUtc = new DateTimeOffset(thisYearStart.AddYears(1).AddTicks(-1));
-                return baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc && k.CreateDateTime <= rangeEndUtc);
-
-            case PeriodeFilter.LastYear:
-                var lastYearStart = new DateTime(today.Year - 1, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-                rangeStartUtc = new DateTimeOffset(lastYearStart);
-                rangeEndUtc = new DateTimeOffset(lastYearStart.AddYears(1).AddTicks(-1));
-                return baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc && k.CreateDateTime <= rangeEndUtc);
-
-            case PeriodeFilter.Last3Months:
-                rangeStartUtc = new DateTimeOffset(DateTime.SpecifyKind(today.AddMonths(-3), DateTimeKind.Utc));
-                return baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc);
-
-            case PeriodeFilter.Last6Months:
-                rangeStartUtc = new DateTimeOffset(DateTime.SpecifyKind(today.AddMonths(-6), DateTimeKind.Utc));
-                return baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc);
-
-            default:
-                return baseQuery;
-        }
-    }
-
-
-    // ==========================
-    // HELPERS MENGHITUNG DPD
-    // ==========================
-    private static int HitungDpd(DateTimeOffset? jatuhTempo, DateTimeOffset asOf)
-    {
-        if (!jatuhTempo.HasValue) return 0;
-
-        var diff = (asOf.Date - jatuhTempo.Value.Date).Days;
-        return diff > 0 ? diff : 0;
-    }
 
     // ======================================================
     // FUNCTION GET BY ID MAIN KASIR (pembayaran dan detailnya)
@@ -1959,7 +1842,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         // =========================
         // 1) Headers (SEMUA MainKasir) + LEFT JOIN Pasien
         // =========================
-        var headers =  await (
+        var headers = await (
             from x in _db.MainKasirs.AsNoTracking()
 
             join p0 in _db.PendaftaranPasienBarus.AsNoTracking()
@@ -2310,12 +2193,190 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         return result;
     }
 
+    #region HELPERS
 
+    #region Hitung Biaya Ranap
+    private static bool IsRawatInapIP(string? jenisKunjungan)
+    {
+        var j = (jenisKunjungan ?? "").Trim().ToUpperInvariant();
+        return j == "IP" || j == "RAWAT INAP" || j == "INAP";
+    }
 
-    // ========================================================
-    // HELPERS MENGHITUNG SISA PEMBAYARAN + TOTAL ANGSURAN
-    // =======================================================
+    private static int HitungJumlahHariRanap(DateTime? tglMasuk, DateTime? tglKeluarFinal, DateTime asOf)
+    {
+        if (!tglMasuk.HasValue) return 1;
 
+        var start = tglMasuk.Value;
+        var end = tglKeluarFinal ?? asOf;
+        if (end > asOf) end = asOf;
+        if (end < start) end = start;
+
+        var durasi = end - start;
+        var hari = (int)Math.Ceiling(durasi.TotalDays);
+        if (hari < 1) hari = 1;
+        return hari;
+    }
+
+    private static DateTime? ResolveEndFromTransfer(
+        Guid? bedId,
+        DateTime? start,
+        Dictionary<Guid, List<TransferPasien>> transferByBed)
+    {
+        if (!bedId.HasValue) return null;
+        if (!transferByBed.TryGetValue(bedId.Value, out var list) || list.Count == 0) return null;
+
+        var s = start ?? DateTime.MinValue;
+
+        var candidate = list
+            .Select(t => new { Transfer = t, Anchor = t.TglMasuk ?? t.TglPindah })
+            .Where(x => x.Anchor.HasValue && x.Anchor.Value >= s)
+            .OrderBy(x => x.Anchor!.Value)
+            .FirstOrDefault();
+
+        if (candidate == null) return null;
+
+        return candidate.Transfer.TglKeluar ?? candidate.Transfer.TglPindah;
+    }
+
+    private static List<TransferPasien> GetTransfersForSegment(
+        Guid? bedId,
+        DateTime? segStart,
+        DateTime? segEnd,
+        Dictionary<Guid, List<TransferPasien>> transferByBed)
+    {
+        if (!bedId.HasValue) return new List<TransferPasien>();
+        if (!transferByBed.TryGetValue(bedId.Value, out var list) || list.Count == 0) return new List<TransferPasien>();
+
+        var start = segStart ?? DateTime.MinValue;
+
+        return list
+            .Where(t =>
+            {
+                var anchor = t.TglMasuk ?? t.TglPindah ?? DateTime.MinValue;
+                if (anchor < start) return false;
+                if (segEnd.HasValue && anchor > segEnd.Value) return false;
+                return true;
+            })
+            .OrderBy(t => t.TglMasuk ?? t.TglPindah ?? DateTime.MinValue)
+            .ToList();
+    }
+    #endregion
+
+    #region Hitung Umur
+    private static string HitungUmurLengkap(DateTime? tanggalLahir)
+    {
+        if (!tanggalLahir.HasValue) return "-";
+
+        var today = DateTime.Today;
+        var dob = tanggalLahir.Value.Date;
+
+        int years = today.Year - dob.Year;
+        int months = today.Month - dob.Month;
+        int days = today.Day - dob.Day;
+
+        if (days < 0)
+        {
+            var prevMonth = today.AddMonths(-1);
+            days += DateTime.DaysInMonth(prevMonth.Year, prevMonth.Month);
+            months--;
+        }
+
+        if (months < 0)
+        {
+            months += 12;
+            years--;
+        }
+
+        return $"{years} tahun {months} bulan {days} hari";
+    }
+    #endregion
+
+    #region Periode Filter Paged
+    private static IQueryable<Kunjungan> ApplyPeriodeFilter(
+        IQueryable<Kunjungan> baseQuery,
+        PeriodeFilter periode)
+    {
+        var today = DateTime.UtcNow.Date;
+
+        DateTimeOffset rangeStartUtc;
+        DateTimeOffset rangeEndUtc;
+
+        switch (periode)
+        {
+            case PeriodeFilter.Today:
+                rangeStartUtc = new DateTimeOffset(DateTime.SpecifyKind(today, DateTimeKind.Utc));
+                rangeEndUtc = new DateTimeOffset(DateTime.SpecifyKind(today.AddDays(1).AddTicks(-1), DateTimeKind.Utc));
+                return baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc && k.CreateDateTime <= rangeEndUtc);
+
+            case PeriodeFilter.Yesterday:
+                var y = today.AddDays(-1);
+                rangeStartUtc = new DateTimeOffset(DateTime.SpecifyKind(y, DateTimeKind.Utc));
+                rangeEndUtc = new DateTimeOffset(DateTime.SpecifyKind(y.AddDays(1).AddTicks(-1), DateTimeKind.Utc));
+                return baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc && k.CreateDateTime <= rangeEndUtc);
+
+            case PeriodeFilter.ThisWeek:
+                var weekStart = today.AddDays(-(int)today.DayOfWeek);
+                rangeStartUtc = new DateTimeOffset(DateTime.SpecifyKind(weekStart, DateTimeKind.Utc));
+                rangeEndUtc = new DateTimeOffset(DateTime.SpecifyKind(today.AddDays(1).AddTicks(-1), DateTimeKind.Utc));
+                return baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc && k.CreateDateTime <= rangeEndUtc);
+
+            case PeriodeFilter.LastWeek:
+                var lastWeekStart = today.AddDays(-7 - (int)today.DayOfWeek);
+                var lastWeekEnd = lastWeekStart.AddDays(6);
+                rangeStartUtc = new DateTimeOffset(DateTime.SpecifyKind(lastWeekStart, DateTimeKind.Utc));
+                rangeEndUtc = new DateTimeOffset(DateTime.SpecifyKind(lastWeekEnd.AddDays(1).AddTicks(-1), DateTimeKind.Utc));
+                return baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc && k.CreateDateTime <= rangeEndUtc);
+
+            case PeriodeFilter.ThisMonth:
+                var thisMonthStart = new DateTime(today.Year, today.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+                rangeStartUtc = new DateTimeOffset(thisMonthStart);
+                rangeEndUtc = new DateTimeOffset(thisMonthStart.AddMonths(1).AddTicks(-1));
+                return baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc && k.CreateDateTime <= rangeEndUtc);
+
+            case PeriodeFilter.LastMonth:
+                var lm = today.AddMonths(-1);
+                var lastMonthStart = new DateTime(lm.Year, lm.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+                rangeStartUtc = new DateTimeOffset(lastMonthStart);
+                rangeEndUtc = new DateTimeOffset(lastMonthStart.AddMonths(1).AddTicks(-1));
+                return baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc && k.CreateDateTime <= rangeEndUtc);
+
+            case PeriodeFilter.ThisYear:
+                var thisYearStart = new DateTime(today.Year, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                rangeStartUtc = new DateTimeOffset(thisYearStart);
+                rangeEndUtc = new DateTimeOffset(thisYearStart.AddYears(1).AddTicks(-1));
+                return baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc && k.CreateDateTime <= rangeEndUtc);
+
+            case PeriodeFilter.LastYear:
+                var lastYearStart = new DateTime(today.Year - 1, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                rangeStartUtc = new DateTimeOffset(lastYearStart);
+                rangeEndUtc = new DateTimeOffset(lastYearStart.AddYears(1).AddTicks(-1));
+                return baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc && k.CreateDateTime <= rangeEndUtc);
+
+            case PeriodeFilter.Last3Months:
+                rangeStartUtc = new DateTimeOffset(DateTime.SpecifyKind(today.AddMonths(-3), DateTimeKind.Utc));
+                return baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc);
+
+            case PeriodeFilter.Last6Months:
+                rangeStartUtc = new DateTimeOffset(DateTime.SpecifyKind(today.AddMonths(-6), DateTimeKind.Utc));
+                return baseQuery.Where(k => k.CreateDateTime >= rangeStartUtc);
+
+            default:
+                return baseQuery;
+        }
+    }
+    #endregion
+
+    #region Hitung DPD
+    private static int HitungDpd(DateTimeOffset? jatuhTempo, DateTimeOffset asOf)
+    {
+        if (!jatuhTempo.HasValue) return 0;
+
+        var diff = (asOf.Date - jatuhTempo.Value.Date).Days;
+        return diff > 0 ? diff : 0;
+    }
+    #endregion
+
+    #region Hitung Sisa Pembayaran + Get Angsuran
     private static decimal? GetSisaPembayaranFromLatest(object? latestDetail)
     {
         if (latestDetail == null) return null;
@@ -2331,6 +2392,132 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         dynamic d = latestDetail;
         return (decimal?)d.AngsuranKe;
     }
+    #endregion
+
+    #region List Covered Asuransi
+    private async Task<CoverageLookup> LoadCoverageLookupAsync(
+    Guid asuransiId,
+    DateTime snap,
+    CancellationToken ct)
+    {
+        // OBAT (cukup membership)
+        var obatIds = (await _db.ObatAsuransis.AsNoTracking()
+                .Where(x => x.AsuransiId == asuransiId && (x.IsDelete == false || x.IsDelete == null))
+                .Select(x => x.ObatId)
+                .ToListAsync(ct))
+            .ToHashSet();
+
+        //// KAMAR (ambil MarkupTotal, kalau ada banyak versi ambil yang terbaru)
+        var kamarRows = await _db.KamarAsuransis.AsNoTracking()
+            .Where(x => x.AsuransiId == asuransiId && (x.IsDelete == false || x.IsDelete == null))
+            .Where(x => x.KamarId != null)
+            .Select(x => new
+            {
+                Id = x.KamarId!.Value,                         // ✅ jadi Guid
+                MarkupTotal = (decimal?)x.MarkupTotal ?? 0m,    // ✅ pastikan kolom ada
+                x.CreateDateTime
+            })
+            .ToListAsync(ct);
+
+        var kamarMarkup = kamarRows
+            .GroupBy(x => x.Id)
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderByDescending(r => r.CreateDateTime).First().MarkupTotal
+            );
+
+        // LAB (MstPemeriksaanAsuransi): key PemeriksaanLabId
+        var labRows = await _db.PemeriksaanLabAsuransis.AsNoTracking()
+               .Where(x => x.AsuransiId == asuransiId && (x.IsDelete == false || x.IsDelete == null))
+               .Where(x => x.PemeriksaanLabId != null)
+               .Select(x => new
+               {
+                   Id = x.PemeriksaanLabId!.Value,
+                   MarkupTotal = (decimal?)x.MarkupTotal ?? 0m,
+                   x.CreateDateTime
+               })
+               .ToListAsync(ct);
+
+        var labMarkup = labRows
+            .GroupBy(x => x.Id)
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderByDescending(r => r.CreateDateTime).First().MarkupTotal
+            );
+
+        //  TINDAKAN: ambil markup terbaru per TindakanId (hindari key Guid?)
+        var tindakanRows = await _db.TindakanAsuransis.AsNoTracking()
+            .Where(x => x.AsuransiId == asuransiId && (x.IsDelete == false || x.IsDelete == null))
+            .Where(x => x.TindakanId != null)
+            .Select(x => new
+            {
+                Id = x.TindakanId,
+                MarkupTotal = (decimal?)x.MarkupTotal ?? 0m,
+                x.CreateDateTime
+            })
+            .ToListAsync(ct);
+
+        var tindakanMarkup = tindakanRows
+            .GroupBy(x => x.Id)
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderByDescending(r => r.CreateDateTime).First().MarkupTotal
+            );
+
+        return new CoverageLookup
+        {
+            ObatIds = obatIds,
+            KamarMarkup = kamarMarkup,
+            LabMarkup = labMarkup,
+            TindakanMarkup = tindakanMarkup
+        };
+    }
+
+    #endregion
+
+    #region Hitung Sub total mandiri + asuransi
+    private static bool GetBoolProp(object o, string propName)
+    {
+        var p = o.GetType().GetProperty(propName);
+        if (p == null) return false;
+        var v = p.GetValue(o);
+        return v is bool b && b;
+    }
+
+    private static decimal GetDecimalProp(object o, string propName)
+    {
+        var p = o.GetType().GetProperty(propName);
+        if (p == null) return 0m;
+        var v = p.GetValue(o);
+        if (v == null) return 0m;
+        return Convert.ToDecimal(v);
+    }
+
+    private static decimal SumCovered(IEnumerable<object>? rows)
+    {
+        if (rows == null) return 0m;
+        decimal sum = 0m;
+        foreach (var r in rows)
+            if (GetBoolProp(r, "IsCovered"))
+                sum += GetDecimalProp(r, "Subtotal");
+        return sum;
+    }
+
+    private static decimal SumUncovered(IEnumerable<object>? rows)
+    {
+        if (rows == null) return 0m;
+        decimal sum = 0m;
+        foreach (var r in rows)
+            if (!GetBoolProp(r, "IsCovered")) // kalau prop tidak ada => false => masuk mandiri
+                sum += GetDecimalProp(r, "Subtotal");
+        return sum;
+    }
+    #endregion
+    #endregion
+
+
+
+
 }
 
 

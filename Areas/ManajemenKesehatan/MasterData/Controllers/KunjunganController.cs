@@ -735,6 +735,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     };
 
                     _applicationDbContext.Billings.Add(depo);
+
+                    MainKasir kasir;
+                    kasir = new MainKasir
+                    {
+                        KasirId = Guid.NewGuid(),
+                        KunjunganId = newKunjungan.KunjunganID,
+                        Deposito = newKunjungan.DepositRanap.Value,
+                    };
                 }
 
                 await _applicationDbContext.SaveChangesAsync();

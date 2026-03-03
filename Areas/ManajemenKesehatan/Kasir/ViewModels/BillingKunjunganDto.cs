@@ -40,6 +40,9 @@
         public decimal TotalBiayaAdmin { get; set; } = 0m;
         public decimal TotalAlkes { get; set; } = 0m;
 
+        public decimal? SubTotalMandiri { get; set; } = 0m;
+        public decimal? SubTotalAsuransi { get; set; } = 0m;
+
         public decimal TotalBiayaVisitDokter { get; set; } = 0m;
         public decimal TotalKamarRanap { get; set; } = 0m;
         public decimal TotalDPRanap { get; set; } = 0m;
