@@ -237,6 +237,9 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<KasirTebusResep> KasirTebusReseps { get; set; }
         public DbSet<MainKasirDetail> MainKasirDetails { get; set; }
         public DbSet<Billing> Billings { get; set; }
+        public DbSet<MasterDenominasi> MasterDenominasies { get; set; }
+        public DbSet<ShiftDenominasi> ShiftDenominasies { get; set; }
+        public DbSet<PergantianShift> PergantianShifts { get; set; }
         #endregion
 
         #region Areas Hrd
