@@ -240,6 +240,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<MasterDenominasi> MasterDenominasies { get; set; }
         public DbSet<ShiftDenominasi> ShiftDenominasies { get; set; }
         public DbSet<PergantianShift> PergantianShifts { get; set; }
+        public DbSet<VoucherPettyCash> VoucherPettyCashes { get; set; }
         #endregion
 
         #region Areas Hrd
