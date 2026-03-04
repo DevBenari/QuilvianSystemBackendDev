@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 
@@ -377,6 +378,280 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
+        [HttpGet("paged")]
+        public async Task<IActionResult> PagedPemeriksaanLabAsuransi(
+            int page = 1,
+            int perPage = 10,
+            string? search = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery] Guid? asuransiId = null,
+            [FromQuery] Guid? pemeriksaanLabId = null,
+            [FromQuery] Guid? labId = null,
+            [FromQuery] DateTime? startDate = null,
+            [FromQuery] DateTime? endDate = null,
+            [FromQuery] PeriodeFilter? periode = null,
+            CancellationToken ct = default)
+        {
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
+            if (perPage > 100) perPage = 100;
+
+            // =====================================================
+            // 1) BASE ROWS (dipakai untuk filter/search, lalu digroup jadi parent)
+            //    Source utama tetap PemeriksaanLabAsuransis (mapping)
+            // =====================================================
+            var rowsQ =
+                from a in _applicationDbContext.PemeriksaanLabAsuransis.AsNoTracking()
+                where (a.IsDelete == false || a.IsDelete == null)
+
+                join u0 in _applicationDbContext.UserActives.AsNoTracking()
+                    on a.CreateBy equals u0.UserActiveId into ug
+                from u in ug.DefaultIfEmpty()
+
+                    // Asuransi (LEFT JOIN) - untuk search/filter & nanti child query
+                join as0 in _applicationDbContext.Asuransis.AsNoTracking()
+                    on a.AsuransiId equals as0.AsuransiId into ag
+                from asu in ag.DefaultIfEmpty()
+
+                    // Pemeriksaan (LEFT JOIN)
+                join lp0 in _applicationDbContext.LabPemeriksaans.AsNoTracking()
+                    on a.PemeriksaanLabId equals lp0.PemeriksaanLabId into lpg
+                from lp in lpg.DefaultIfEmpty()
+
+                    // Kategori (LEFT JOIN)
+                join k0 in _applicationDbContext.LabKategoriPemeriksaans.AsNoTracking()
+                    on lp.KategoriPemeriksaanId equals k0.KategoriPemeriksaanId into kg
+                from k in kg.DefaultIfEmpty()
+
+                    // Lab (LEFT JOIN)
+                join l0 in _applicationDbContext.Labs.AsNoTracking()
+                    on k.LabId equals l0.LabId into lg
+                from l in lg.DefaultIfEmpty()
+
+                select new
+                {
+                    a.CreateDateTime,
+                    a.AsuransiId,
+                    NamaAsuransi = asu != null ? asu.NamaAsuransi : null,
+
+                    a.PemeriksaanLabId,
+                    NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
+
+                    LabId = (Guid?)l.LabId,
+                    NamaLab = l != null ? l.NamaLab : null,
+
+                    CreateByName = u != null ? u.FullName : null,
+                };
+
+            // =====================================================
+            // FILTERS (server-side)
+            // =====================================================
+            if (asuransiId.HasValue && asuransiId.Value != Guid.Empty)
+                rowsQ = rowsQ.Where(x => x.AsuransiId == asuransiId.Value);
+
+            if (pemeriksaanLabId.HasValue && pemeriksaanLabId.Value != Guid.Empty)
+                rowsQ = rowsQ.Where(x => x.PemeriksaanLabId == pemeriksaanLabId.Value);
+
+            if (labId.HasValue && labId.Value != Guid.Empty)
+                rowsQ = rowsQ.Where(x => x.LabId == labId.Value);
+
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                var startUtc = new DateTimeOffset(startDate.Value.Date, TimeSpan.Zero);
+                var endUtc = new DateTimeOffset(endDate.Value.Date.AddDays(1), TimeSpan.Zero); // exclusive
+                rowsQ = rowsQ.Where(x => x.CreateDateTime >= startUtc && x.CreateDateTime < endUtc);
+            }
+
+            if (periode.HasValue)
+            {
+                var now = DateTimeOffset.UtcNow;
+                var todayStart = new DateTimeOffset(now.Year, now.Month, now.Day, 0, 0, 0, TimeSpan.Zero);
+
+                DateTimeOffset start;
+                DateTimeOffset end;
+
+                switch (periode.Value)
+                {
+                    case PeriodeFilter.Today:
+                        start = todayStart; end = todayStart.AddDays(1); break;
+                    case PeriodeFilter.Yesterday:
+                        start = todayStart.AddDays(-1); end = todayStart; break;
+                    case PeriodeFilter.ThisWeek:
+                        start = todayStart.AddDays(-(int)todayStart.DayOfWeek);
+                        end = todayStart.AddDays(1);
+                        break;
+                    case PeriodeFilter.LastWeek:
+                        var thisWeekStart = todayStart.AddDays(-(int)todayStart.DayOfWeek);
+                        start = thisWeekStart.AddDays(-7);
+                        end = thisWeekStart;
+                        break;
+                    case PeriodeFilter.ThisMonth:
+                        start = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
+                        end = start.AddMonths(1);
+                        break;
+                    case PeriodeFilter.LastMonth:
+                        var thisMonthStart = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
+                        start = thisMonthStart.AddMonths(-1);
+                        end = thisMonthStart;
+                        break;
+                    case PeriodeFilter.ThisYear:
+                        start = new DateTimeOffset(now.Year, 1, 1, 0, 0, 0, TimeSpan.Zero);
+                        end = start.AddYears(1);
+                        break;
+                    case PeriodeFilter.LastYear:
+                        var thisYearStart = new DateTimeOffset(now.Year, 1, 1, 0, 0, 0, TimeSpan.Zero);
+                        start = thisYearStart.AddYears(-1);
+                        end = thisYearStart;
+                        break;
+                    case PeriodeFilter.Last3Months:
+                        start = todayStart.AddMonths(-3);
+                        end = todayStart.AddDays(1);
+                        break;
+                    case PeriodeFilter.Last6Months:
+                        start = todayStart.AddMonths(-6);
+                        end = todayStart.AddDays(1);
+                        break;
+                    default:
+                        start = DateTimeOffset.MinValue;
+                        end = DateTimeOffset.MaxValue;
+                        break;
+                }
+
+                rowsQ = rowsQ.Where(x => x.CreateDateTime >= start && x.CreateDateTime < end);
+            }
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var pattern = $"%{search.Trim()}%";
+                rowsQ = rowsQ.Where(x =>
+                    EF.Functions.ILike(x.NamaAsuransi ?? "", pattern) ||
+                    EF.Functions.ILike(x.NamaLab ?? "", pattern) ||
+                    EF.Functions.ILike(x.NamaPemeriksaan ?? "", pattern) ||
+                    EF.Functions.ILike(x.CreateByName ?? "", pattern)
+                );
+            }
+
+            // =====================================================
+            // 2) PARENT QUERY: group per PemeriksaanLabId (1 pemeriksaan tampil 1x)
+            //    Sort default pakai latest CreateDateTime mapping (paling masuk akal)
+            // =====================================================
+            var parentQ =
+                from r in rowsQ
+                group r by new { r.PemeriksaanLabId, r.NamaPemeriksaan, r.LabId, r.NamaLab } into g
+                select new
+                {
+                    g.Key.PemeriksaanLabId,
+                    g.Key.NamaPemeriksaan,
+                    g.Key.LabId,
+                    g.Key.NamaLab,
+                    LastCreateDateTime = g.Max(x => x.CreateDateTime)
+                };
+
+            bool desc = (sortDirection ?? "desc").ToLower() == "desc";
+            parentQ = (orderBy ?? "CreateDateTime") switch
+            {
+                "NamaLab" => desc ? parentQ.OrderByDescending(x => x.NamaLab) : parentQ.OrderBy(x => x.NamaLab),
+                "NamaPemeriksaan" => desc ? parentQ.OrderByDescending(x => x.NamaPemeriksaan) : parentQ.OrderBy(x => x.NamaPemeriksaan),
+                "CreateDateTime" or _ => desc ? parentQ.OrderByDescending(x => x.LastCreateDateTime) : parentQ.OrderBy(x => x.LastCreateDateTime),
+            };
+
+            var totalRows = await parentQ.CountAsync(ct);
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            var parents = await parentQ
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToListAsync(ct);
+
+            if (parents.Count == 0)
+                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
+
+            var pemeriksaanIds = parents.Select(x => x.PemeriksaanLabId).Distinct().ToList();
+
+            // =====================================================
+            // 3) CHILD QUERY: ambil semua Asuransi untuk pemeriksaan yang tampil (bulk)
+            //    (ini yang kamu maksud “lookup AsuransiId”)
+            // =====================================================
+            var childRows = await (
+                from a in _applicationDbContext.PemeriksaanLabAsuransis.AsNoTracking()
+                where (a.IsDelete == false || a.IsDelete == null)
+                      && a.PemeriksaanLabId != null
+                      && pemeriksaanIds.Contains(a.PemeriksaanLabId.Value)
+
+                join as0 in _applicationDbContext.Asuransis.AsNoTracking()
+                    on a.AsuransiId equals as0.AsuransiId into ag
+                from asu in ag.DefaultIfEmpty()
+
+                select new
+                {
+                    PemeriksaanLabId = a.PemeriksaanLabId!.Value,
+                    a.PemeriksaanLabAsuransiId,
+                    a.AsuransiId,
+                    NamaAsuransi = asu != null ? asu.NamaAsuransi : null,
+
+                    // MARKUP
+                    a.MarkupDokter,
+                    a.MarkupRs,
+                    a.MarkupJp,
+                    a.MarkupBahp,
+                    a.MarkupLainnya,
+                    a.MarkupTotal,
+                    a.IsMarkupBerlaku,
+                    a.MarkupDari,
+                    a.MarkupSampai,
+
+                    // DISKON
+                    a.DiskonDokter,
+                    a.DiskonRs,
+                    a.DiskonJp,
+                    a.DiskonBahp,
+                    a.DiskonTotal,
+                    a.IsDiskonBerlaku,
+                    a.DiskonDari,
+                    a.DiskonSampai,
+
+                    a.CreateDateTime
+                }
+            ).ToListAsync(ct);
+
+            var childLookup = childRows
+                .GroupBy(x => x.PemeriksaanLabId)
+                .ToDictionary(g => g.Key, g => g
+                    .OrderByDescending(x => x.CreateDateTime) // opsional
+                    .Select(x => (object)x)
+                    .ToList());
+
+            // =====================================================
+            // 4) Build output: 1 parent + list asuransi cover
+            // =====================================================
+            var result = parents.Select(p => new
+            {
+                p.PemeriksaanLabId,
+                p.NamaPemeriksaan,
+                p.LabId,
+                p.NamaLab,
+                p.LastCreateDateTime,
+
+                AsuransiCover = childLookup.TryGetValue((Guid)p.PemeriksaanLabId, out var list)
+                    ? list
+                    : new List<object>()
+            }).ToList();
+
+            return Ok(new
+            {
+                status = "success",
+                message = "Data berhasil diambil.",
+                data = new
+                {
+                    Rows = result,
+                    TotalRows = totalRows,
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalPages = totalPages
+                }
+            });
+        }
 
     }
 }

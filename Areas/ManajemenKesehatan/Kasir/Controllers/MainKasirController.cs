@@ -710,6 +710,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             });
         }
 
+        [HttpGet("RekapHarian")]
+        public async Task<IActionResult> GetPendapatanHarian(
+           [FromQuery] Guid kasirUserId,
+           [FromQuery] DateTime? tanggal,
+           CancellationToken ct)
+        {
+            if (kasirUserId == Guid.Empty)
+                return BadRequest(new { message = "kasirUserId wajib diisi." });
+
+            var result = await _billingKunjunganReadService.GetPendapatanKasirHarianAsync(kasirUserId, tanggal, ct);
+
+            return Ok(new
+            {
+                status = "success",
+                data = result
+            });
+        }
+
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] MainKasirViewModel vm, CancellationToken ct)
         {

@@ -2218,6 +2218,65 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         return result;
     }
 
+    // =======================
+    // Pendapatan Kasir Harian
+    // =======================
+    public async Task<PendapatanKasirHarianDto> GetPendapatanKasirHarianAsync(
+    Guid kasirUserId,
+    DateTime? tanggal = null,
+    CancellationToken ct = default)
+    {
+        var day = (tanggal ?? DateTime.Now).Date;
+
+        // pakai offset server saat ini (biasanya +07:00 kalau server di WIB)
+        var offset = DateTimeOffset.Now.Offset;
+        var start = new DateTimeOffset(day, offset);
+        var end = start.AddDays(1);
+
+        // 1) Pendapatan Tunai & Non-Tunai dari MainKasirDetail (berdasarkan CreateBy kasir & tanggal)
+        // NOTE: kalau kamu mau pakai TglPembayaran sebagai acuan, ganti d.CreateDateTime -> d.TglPembayaran (jika tipe sama & nullable)
+        var payAgg = await _db.MainKasirDetails.AsNoTracking()
+            .Where(d => d.CreateBy == kasirUserId && d.IsDelete != true)
+            .Where(d => d.CreateDateTime >= start && d.CreateDateTime < end)
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                Tunai = g.Sum(d =>
+                    (d.NamaMetode != null && EF.Functions.ILike(d.NamaMetode, "Tunai"))
+                        ? (d.NominalPembayaran ?? 0m)
+                        : 0m),
+
+                NonTunai = g.Sum(d =>
+                    (d.NamaMetode != null && !EF.Functions.ILike(d.NamaMetode, "Tunai"))
+                        ? (d.NominalPembayaran ?? 0m)
+                        : 0m)
+            })
+            .FirstOrDefaultAsync(ct);
+
+        var pendapatanTunai = payAgg?.Tunai ?? 0m;
+        var pendapatanNonTunai = payAgg?.NonTunai ?? 0m;
+
+        // 2) Piutang Asuransi dari MainKasir header (SubTotalAsuransi)
+        // filter by CreateBy kasir & tanggal (shift harian)
+        var piutangAsuransi = await _db.MainKasirs.AsNoTracking()
+            .Where(h => h.CreateBy == kasirUserId && h.IsDelete != true)
+            .Where(h => h.CreateDateTime >= start && h.CreateDateTime < end)
+            .SumAsync(h => (decimal?)(h.SubTotalAsuransi ?? 0m), ct) ?? 0m;
+
+        return new PendapatanKasirHarianDto
+        {
+            KasirUserId = kasirUserId,
+            Tanggal = day,
+
+            PendapatanTunai = pendapatanTunai,
+            PendapatanNonTunai = pendapatanNonTunai,
+            PiutangAsuransi = piutangAsuransi,
+
+            TotalPendapatan = pendapatanTunai + pendapatanNonTunai + piutangAsuransi,
+        };
+    }
+
+
     #region HELPERS
 
     #region Hitung Biaya Ranap
