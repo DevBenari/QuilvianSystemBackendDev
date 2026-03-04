@@ -699,7 +699,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // =============================================
-                // 🏥 Deposit wajib untuk kunjungan IP
+                //  Deposit wajib untuk kunjungan IP
                 // =============================================
                 if (kodeJenis == "IP")
                 {
@@ -742,7 +742,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         KasirId = Guid.NewGuid(),
                         KunjunganId = newKunjungan.KunjunganID,
                         Deposito = newKunjungan.DepositRanap.Value,
+                        StatusPembayaran = "Belum Lunas"
                     };
+                    _applicationDbContext.MainKasirs.Add(kasir);
                 }
 
                 await _applicationDbContext.SaveChangesAsync();

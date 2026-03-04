@@ -77,6 +77,8 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         public Guid? PasienId { get; set; }
         public StatusBayarEnum? sb {  get; set; }
         public EnumJenisKunjungan? jk {  get; set; }
+        public string? Nama { get; set; }
+        public string? NoHp { get; set; }
         public bool? isClosed { get; set; }
         public bool? isPks { get; set; }
         public string? asal { get; set; }
@@ -982,6 +984,29 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             baseQuery = baseQuery.Where(k =>
                 k.AsalKunjungan != null &&
                 EF.Functions.ILike(k.AsalKunjungan, $"%{asalQ}%"));
+        }
+
+        // ============================================================
+        // FILTER NAMA & NO HP (pasang di baseQuery supaya paging benar)
+        // ============================================================
+        if (!string.IsNullOrWhiteSpace(query.Nama) || !string.IsNullOrWhiteSpace(query.NoHp))
+        {
+            var namaQ = query.Nama?.Trim();
+            var hpQ = query.NoHp?.Trim();
+
+            baseQuery =
+                from k in baseQuery
+                join p0 in _db.PendaftaranPasienBarus.AsNoTracking()
+                    on k.PasienId equals p0.PendaftaranPasienBaruId into pg
+                from p in pg.DefaultIfEmpty()
+                where p != null
+                      && (string.IsNullOrEmpty(namaQ)
+                          || (p.NamaLengkap != null && EF.Functions.ILike(p.NamaLengkap, $"%{namaQ}%")))
+                      // NOTE: di code kamu "NoHp" diambil dari p.NoPasien.
+                      // Kalau di tabel kamu ada kolom Phone (misal p.NoHp), ganti p.NoPasien -> p.NoHp
+                      && (string.IsNullOrEmpty(hpQ)
+                          || (p.NoPasien != null && EF.Functions.ILike(p.NoPasien, $"%{hpQ}%")))
+                select k;
         }
 
         // date range
