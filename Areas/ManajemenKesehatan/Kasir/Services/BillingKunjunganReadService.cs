@@ -879,8 +879,12 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             + dto.TotalAlkes
             + dto.TotalBiayaVisitDokter;
 
+        var ppnRate = dto.PPN / 100m;
         dto.SubTotalAsuransi = asuransi;
-        dto.SubTotalMandiri = mandiri;
+        dto.SebelumTaxTotalMandiri = Math.Round(mandiri, 2, MidpointRounding.AwayFromZero);
+        dto.PajakTotalMandiri = Math.Round((dto.SebelumTaxTotalMandiri ?? 0m) * ppnRate, 2, MidpointRounding.AwayFromZero);
+        dto.SubTotalMandiri = Math.Round((dto.SebelumTaxTotalMandiri ?? 0m) + (dto.PajakTotalMandiri ?? 0m), 2, MidpointRounding.AwayFromZero);
+        
         //dto.TotalKeseluruhan = mandiri + Math.Round(mandiri * 0.11m);
         //dto.TotalKeseluruhan =
         //    dto.TotalPemeriksaanLab +
@@ -1791,16 +1795,29 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             }
 
 
-            dto.TotalKeseluruhan =
-                dto.TotalPemeriksaanLab +
-                dto.TotalObat +
-                dto.TotalRacikan +
-                dto.TotalTindakan +
-                dto.TotalBiayaAdmin +
-                dto.TotalAlkes +
-                dto.TotalBiayaVisitDokter +
-                dto.TotalKamarRanap;
+            var DepositRanap = dto.TotalDPRanap;
+            var asuransi =
+                SumCovered(dto.DaftarPemeriksaanLab) +
+                SumCovered(dto.DaftarObat) +
+                SumCovered(dto.DaftarTindakan) +
+                SumCovered(dto.DaftarKamarRanap);
 
+            var mandiri =
+                SumUncovered(dto.DaftarPemeriksaanLab) +
+                SumUncovered(dto.DaftarObat) +
+                SumUncovered(dto.DaftarTindakan) +
+                SumUncovered(dto.DaftarKamarRanap)
+                // komponen yang memang tidak punya IsCovered → anggap mandiri
+                + dto.TotalRacikan
+                + dto.TotalBiayaAdmin
+                + dto.TotalAlkes
+                + dto.TotalBiayaVisitDokter;
+
+            var ppnRate = dto.PPN / 100m;
+            dto.SubTotalAsuransi = asuransi;
+            dto.SebelumTaxTotalMandiri = Math.Round(mandiri, 2, MidpointRounding.AwayFromZero);
+            dto.PajakTotalMandiri = Math.Round((dto.SebelumTaxTotalMandiri ?? 0m) * ppnRate, 2, MidpointRounding.AwayFromZero);
+            dto.SubTotalMandiri = Math.Round((dto.SebelumTaxTotalMandiri ?? 0m) + (dto.PajakTotalMandiri ?? 0m), 2, MidpointRounding.AwayFromZero);
             output.Add(new
             {
                 dto.KunjunganID,
@@ -1840,7 +1857,11 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 dto.TotalAlkes,
                 dto.TotalBiayaVisitDokter,
                 dto.TotalKamarRanap,
-                dto.TotalKeseluruhan
+                dto.SubTotalAsuransi,
+                dto.SebelumTaxTotalMandiri,
+                dto.PajakTotalMandiri,
+                dto.SubTotalMandiri,
+                dto.PPN,
             });
         }
 
