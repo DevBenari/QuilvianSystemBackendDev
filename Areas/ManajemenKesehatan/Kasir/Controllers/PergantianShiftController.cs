@@ -267,11 +267,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 {
                     Rows = rows.Select(x => new
                     {
+                        x.PergantianShiftId,
+                        x.KodeRegistrasi,
                         x.LayananId,
+                        x.KasirId,
+                        x.ShiftPergantian,
                         x.WaktuMulai,
                         x.WaktuAkhir,
-                        x.KasirId,
-                        x.TanggalPergantian
+                        x.TanggalPergantian,
+                        x.SaldoAwal,
+                        x.PendapatanTunai,
+                        x.KasFisik,
+                        x.SelisihPendapatanTunai,
+                        x.TotalPendapatan,
+                        x.PendapatanNonTunai,
+                        x.Keterangan
                     }),
                     TotalRows = totalRows,
                     CurrentPage = page,
