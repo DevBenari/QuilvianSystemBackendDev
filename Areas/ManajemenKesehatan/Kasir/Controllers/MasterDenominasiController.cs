@@ -99,8 +99,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             var data = await _db.MasterDenominasies.FindAsync(id);
             if (data == null) return NotFound(new { message = "Data tidak ditemukan" });
 
-            var userActiveId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? Guid.Empty.ToString());
-            bool isDuplicate = await _db.MasterDenominasies.AnyAsync(c => c.KodeDenominasi.ToLower() == vm.KodeDenominasi.ToLower() && c.DenominasiId != id && c.IsDelete == false);
+            var emailLogin = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            var getUserActive = await _db.UserActives
+                .FirstOrDefaultAsync(u => u.Email == emailLogin);
+
+            if (getUserActive == null)
+                return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+
+            var userActiveId = getUserActive.UserActiveId;
+
+            bool isDuplicate = await _db.MasterDenominasies
+                .AnyAsync(c => c.KodeDenominasi.ToLower() == vm.KodeDenominasi.ToLower()
+                && c.DenominasiId != id && c.IsDelete == false);
+
             if (isDuplicate) return Conflict(new { message = "Kode Denominasi sudah ada" });
 
             data.KodeDenominasi = vm.KodeDenominasi;
@@ -112,6 +124,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
             _db.MasterDenominasies.Update(data);
             await _db.SaveChangesAsync();
+
             return Ok(new { message = "Update Data Berhasil" });
         }
 
@@ -121,13 +134,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             var data = await _db.MasterDenominasies.FindAsync(id);
             if (data == null) return NotFound(new { message = "Data tidak ditemukan" });
 
-            var userActiveId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? Guid.Empty.ToString());
+            var emailLogin = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            var getUserActive = await _db.UserActives
+                .FirstOrDefaultAsync(u => u.Email == emailLogin);
+
+            if (getUserActive == null)
+                return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+
+            var userActiveId = getUserActive.UserActiveId;
+
             data.IsDelete = true;
             data.DeleteBy = userActiveId;
             data.DeleteDateTime = DateTimeOffset.UtcNow;
 
             _db.MasterDenominasies.Update(data);
             await _db.SaveChangesAsync();
+
             return Ok(new { message = "Data berhasil dihapus (soft delete)" });
         }
     }

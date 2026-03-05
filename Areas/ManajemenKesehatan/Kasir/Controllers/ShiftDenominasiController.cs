@@ -100,9 +100,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         public async Task<IActionResult> Update(Guid id, [FromBody] ShiftDenominasiViewModel vm)
         {
             var data = await _db.ShiftDenominasies.FindAsync(id);
-            if (data == null) return NotFound(new { message = "Data tidak ditemukan" });
+            if (data == null)
+                return NotFound(new { message = "Data tidak ditemukan" });
 
-            var userActiveId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? Guid.Empty.ToString());
+            var emailLogin = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            var getUserActive = await _db.UserActives
+                .FirstOrDefaultAsync(u => u.Email == emailLogin);
+
+            if (getUserActive == null)
+                return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+
+            var userActiveId = getUserActive.UserActiveId;
 
             data.KodeShiftDenominasi = vm.KodeShiftDenominasi;
             data.LayananId = vm.LayananId;
@@ -117,6 +126,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
             _db.ShiftDenominasies.Update(data);
             await _db.SaveChangesAsync();
+
             return Ok(new { message = "Update Data Berhasil" });
         }
 
@@ -124,15 +134,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         public async Task<IActionResult> Delete(Guid id)
         {
             var data = await _db.ShiftDenominasies.FindAsync(id);
-            if (data == null) return NotFound(new { message = "Data tidak ditemukan" });
+            if (data == null)
+                return NotFound(new { message = "Data tidak ditemukan" });
 
-            var userActiveId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? Guid.Empty.ToString());
+            var emailLogin = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            var getUserActive = await _db.UserActives
+                .FirstOrDefaultAsync(u => u.Email == emailLogin);
+
+            if (getUserActive == null)
+                return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+
+            var userActiveId = getUserActive.UserActiveId;
+
             data.IsDelete = true;
             data.DeleteBy = userActiveId;
             data.DeleteDateTime = DateTimeOffset.UtcNow;
 
             _db.ShiftDenominasies.Update(data);
             await _db.SaveChangesAsync();
+
             return Ok(new { message = "Data berhasil dihapus (soft delete)" });
         }
     }
