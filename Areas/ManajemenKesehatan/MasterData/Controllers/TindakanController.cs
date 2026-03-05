@@ -525,6 +525,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             Guid? tindakanId = null,
             Guid? kelasId = null,
             Guid? poliId = null,
+            Guid? asuransiId = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
             DateTime? startDate = null,
@@ -580,6 +581,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     baseQuery = baseQuery.Where(t =>
                         _applicationDbContext.TindakanPolis.Any(tp =>
                             tp.TindakanId == t.TindakanId && tp.PoliklinikId == pid));
+                }
+
+                if (asuransiId.HasValue)
+                {
+                    var aid = asuransiId.Value;
+
+                    baseQuery = baseQuery.Where(t =>
+                        _applicationDbContext.TindakanAsuransis.Any(ta =>
+                            (ta.IsDelete == false || ta.IsDelete == null) &&   // kalau tabel ini punya soft delete
+                            ta.TindakanId == t.TindakanId &&
+                            ta.AsuransiId == aid
+                        )
+                    );
                 }
 
                 // ======================================================
@@ -677,7 +691,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 // ======================================================
                 // 9) LOAD RELATIONS (batch)
                 // ======================================================
-                var asuransiData = await (
+                var asuransiQuery =
                     from ta in _applicationDbContext.TindakanAsuransis.AsNoTracking()
                     join asu in _applicationDbContext.Asuransis.AsNoTracking()
                         on ta.AsuransiId equals asu.AsuransiId
@@ -687,8 +701,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         ta.TindakanId,
                         asu.AsuransiId,
                         asu.NamaAsuransi
-                    }
-                ).ToListAsync();
+                    };
+
+                if (asuransiId.HasValue)
+                    asuransiQuery = asuransiQuery.Where(x => x.AsuransiId == asuransiId.Value);
+
+                var asuransiData = await asuransiQuery.ToListAsync();
 
                 var poliData = await (
                     from tp in _applicationDbContext.TindakanPolis.AsNoTracking()

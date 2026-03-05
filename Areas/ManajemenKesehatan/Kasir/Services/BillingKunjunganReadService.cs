@@ -77,8 +77,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         public Guid? PasienId { get; set; }
         public StatusBayarEnum? sb {  get; set; }
         public EnumJenisKunjungan? jk {  get; set; }
-        public string? Nama { get; set; }
-        public string? NoHp { get; set; }
+        public string? Search { get; set; }
         public bool? isClosed { get; set; }
         public bool? isPks { get; set; }
         public string? asal { get; set; }
@@ -987,12 +986,12 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         }
 
         // ============================================================
-        // FILTER NAMA & NO HP (pasang di baseQuery supaya paging benar)
+        // FILTER NAMA & NO HP 
         // ============================================================
-        if (!string.IsNullOrWhiteSpace(query.Nama) || !string.IsNullOrWhiteSpace(query.NoHp))
+        if (!string.IsNullOrWhiteSpace(query.Search))
         {
-            var namaQ = query.Nama?.Trim();
-            var hpQ = query.NoHp?.Trim();
+            var s = query.Search.Trim();
+            var isNumeric = s.All(char.IsDigit);
 
             baseQuery =
                 from k in baseQuery
@@ -1000,12 +999,12 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     on k.PasienId equals p0.PendaftaranPasienBaruId into pg
                 from p in pg.DefaultIfEmpty()
                 where p != null
-                      && (string.IsNullOrEmpty(namaQ)
-                          || (p.NamaLengkap != null && EF.Functions.ILike(p.NamaLengkap, $"%{namaQ}%")))
-                      // NOTE: di code kamu "NoHp" diambil dari p.NoPasien.
-                      // Kalau di tabel kamu ada kolom Phone (misal p.NoHp), ganti p.NoPasien -> p.NoHp
-                      && (string.IsNullOrEmpty(hpQ)
-                          || (p.NoPasien != null && EF.Functions.ILike(p.NoPasien, $"%{hpQ}%")))
+                      && (
+                          isNumeric
+                              ? (p.NoPasien != null && EF.Functions.ILike(p.NoPasien, $"%{s}%"))
+                              : ((p.NamaLengkap != null && EF.Functions.ILike(p.NamaLengkap, $"%{s}%"))
+                                 || (p.NoPasien != null && EF.Functions.ILike(p.NoPasien, $"%{s}%")))
+                         )
                 select k;
         }
 
@@ -2217,6 +2216,72 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
         return result;
     }
+
+    // =======================
+    // Pendapatan Kasir Harian
+    // =======================
+    public async Task<PendapatanKasirHarianDto> GetPendapatanKasirHarianAsync(
+    Guid kasirUserId,
+    DateTime? tanggal = null,
+    CancellationToken ct = default)
+    {
+        var day = (tanggal ?? DateTime.Now).Date;
+
+        // pakai offset server saat ini (biasanya +07:00 kalau server di WIB)
+        var offset = DateTimeOffset.Now.Offset;
+        var start = new DateTimeOffset(day, offset);
+        var end = start.AddDays(1);
+
+        // get nama petugas kasir
+        var namaKasir = await _db.UserActives.AsNoTracking()
+            .Where(u => u.UserActiveId == kasirUserId)
+            .Select(u => u.FullName)
+            .FirstOrDefaultAsync(ct);
+
+        // 1) Pendapatan Tunai & Non-Tunai dari MainKasirDetail (berdasarkan CreateBy kasir & tanggal)
+        // NOTE: kalau kamu mau pakai TglPembayaran sebagai acuan, ganti d.CreateDateTime -> d.TglPembayaran (jika tipe sama & nullable)
+        var payAgg = await _db.MainKasirDetails.AsNoTracking()
+            .Where(d => d.CreateBy == kasirUserId && d.IsDelete != true)
+            .Where(d => d.CreateDateTime >= start && d.CreateDateTime < end)
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                Tunai = g.Sum(d =>
+                    (d.NamaMetode != null && EF.Functions.ILike(d.NamaMetode, "Tunai"))
+                        ? (d.NominalPembayaran ?? 0m)
+                        : 0m),
+
+                NonTunai = g.Sum(d =>
+                    (d.NamaMetode != null && !EF.Functions.ILike(d.NamaMetode, "Tunai"))
+                        ? (d.NominalPembayaran ?? 0m)
+                        : 0m)
+            })
+            .FirstOrDefaultAsync(ct);
+
+        var pendapatanTunai = payAgg?.Tunai ?? 0m;
+        var pendapatanNonTunai = payAgg?.NonTunai ?? 0m;
+
+        // 2) Piutang Asuransi dari MainKasir header (SubTotalAsuransi)
+        // filter by CreateBy kasir & tanggal (shift harian)
+        var piutangAsuransi = await _db.MainKasirs.AsNoTracking()
+            .Where(h => h.CreateBy == kasirUserId && h.IsDelete != true)
+            .Where(h => h.CreateDateTime >= start && h.CreateDateTime < end)
+            .SumAsync(h => (decimal?)(h.SubTotalAsuransi ?? 0m), ct) ?? 0m;
+
+        return new PendapatanKasirHarianDto
+        {
+            KasirUserId = kasirUserId,
+            PetugasKasir = namaKasir,
+            Tanggal = day,
+
+            PendapatanTunai = pendapatanTunai,
+            PendapatanNonTunai = pendapatanNonTunai,
+            PiutangAsuransi = piutangAsuransi,
+
+            TotalPendapatan = pendapatanTunai + pendapatanNonTunai + piutangAsuransi,
+        };
+    }
+
 
     #region HELPERS
 
