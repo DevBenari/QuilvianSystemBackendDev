@@ -708,7 +708,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 var asuransiData = await asuransiQuery.ToListAsync();
 
-                var poliData = await (
+                var poliQuery =
                     from tp in _applicationDbContext.TindakanPolis.AsNoTracking()
                     join p in _applicationDbContext.Polikliniks.AsNoTracking()
                         on tp.PoliklinikId equals p.PoliklinikId
@@ -718,8 +718,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         tp.TindakanId,
                         p.PoliklinikId,
                         p.NamaPoliklinik
-                    }
-                ).ToListAsync();
+                    };
+
+                if (poliId.HasValue)
+                    poliQuery = poliQuery.Where(x => x.PoliklinikId == poliId.Value);
+
+                if (!string.IsNullOrWhiteSpace(poliNama))
+                {
+                    var pattern = $"%{poliNama.Trim()}%";
+                    poliQuery = poliQuery.Where(x => x.NamaPoliklinik != null && EF.Functions.ILike(x.NamaPoliklinik, pattern));
+                }
+
+                var poliData = await poliQuery.ToListAsync();
 
                 var tarifQuery =
                     from tk in _applicationDbContext.TarifKelass.AsNoTracking()

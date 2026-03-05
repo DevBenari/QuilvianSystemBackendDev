@@ -437,6 +437,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                     a.PemeriksaanLabId,
                     NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
+                    KodePemeriksaan = lp != null ? lp.KodePemeriksaan : null,
+                    HargaPemeriksaan = lp.HargaPemeriksaan,
+
+                    KategoriId = k.KategoriPemeriksaanId,
+                    NamaKategori = k.NamaKategori,
 
                     LabId = (Guid?)l.LabId,
                     NamaLab = l != null ? l.NamaLab : null,
