@@ -27,5 +27,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Interfaces
             Guid kasirUserId,
             DateTime? tanggal = null,
             CancellationToken ct = default);
+
+        Task<PagedRekapResult<PendapatanKasirHarianDto>> GetPendapatanHarianPagedAsync(
+            PendapatanHarianPagedQuery q,
+            CancellationToken ct = default);
     }
 }

@@ -101,6 +101,28 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         public Dictionary<Guid, decimal> LabMarkup { get; init; } = new();        // key: PemeriksaanLabId
         public Dictionary<Guid, decimal> TindakanMarkup { get; init; } = new();   // key: TindakanId
     }
+
+
+    // =================================
+    // DTO PAGED PENDAPATAN HARIAN KASIR
+    // =================================
+    public sealed class PendapatanHarianPagedQuery
+    {
+        public DateTime? StartDate { get; set; }   // inclusive
+        public DateTime? EndDate { get; set; }     // inclusive
+        public int Page { get; set; } = 1;
+        public int PageSize { get; set; } = 10;
+    }
+
+    public sealed class PagedRekapResult<T>
+    {
+        public int Page { get; set; }
+        public int PageSize { get; set; }
+        public int TotalRows { get; set; }     // jumlah hari
+        public int TotalPages { get; set; }
+        public IReadOnlyList<T> Data { get; set; } = Array.Empty<T>();
+    }
+
     #endregion
 
 
@@ -2303,6 +2325,110 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         };
     }
 
+
+    // =============================
+    // Pendapatan Kasir Harian Paged
+    // =============================
+    public async Task<PagedRekapResult<PendapatanKasirHarianDto>> GetPendapatanHarianPagedAsync(
+    PendapatanHarianPagedQuery q,
+    CancellationToken ct = default)
+    {
+        var page = q.Page <= 0 ? 1 : q.Page;
+        var pageSize = q.PageSize <= 0 ? 10 : q.PageSize;
+        if (pageSize > 100) pageSize = 100;
+
+        // default: hari ini
+        var startDay = (q.StartDate ?? DateTime.Now).Date;
+        var endDay = (q.EndDate ?? startDay).Date;
+
+        // sargable range: >= start && < endExclusive
+        var offset = DateTimeOffset.Now.Offset;
+        var start = new DateTimeOffset(startDay, offset);
+        var endExclusive = new DateTimeOffset(endDay.AddDays(1), offset);
+
+        // ==========================
+        // 1) AGG MainKasirDetail: Tunai & NonTunai per hari
+        // ==========================
+        var detailAgg = await _db.MainKasirDetails.AsNoTracking()
+            .Where(d => d.IsDelete != true)
+            .Where(d => d.CreateDateTime >= start && d.CreateDateTime < endExclusive)
+            .GroupBy(d => d.CreateDateTime.Date)
+            .Select(g => new
+            {
+                Tanggal = g.Key,
+                Tunai = g.Sum(d =>
+                    (d.NamaMetode != null && EF.Functions.ILike(d.NamaMetode, "Tunai"))
+                        ? (d.NominalPembayaran ?? 0m)
+                        : 0m),
+                NonTunai = g.Sum(d =>
+                    (d.NamaMetode != null && !EF.Functions.ILike(d.NamaMetode, "Tunai"))
+                        ? (d.NominalPembayaran ?? 0m)
+                        : 0m)
+            })
+            .ToListAsync(ct);
+
+        // ==========================
+        // 2) AGG MainKasir: Piutang Asuransi per hari
+        // ==========================
+        var asuransiAgg = await _db.MainKasirs.AsNoTracking()
+            .Where(h => h.IsDelete != true)
+            .Where(h => h.CreateDateTime >= start && h.CreateDateTime < endExclusive)
+            .GroupBy(h => h.CreateDateTime.Date)
+            .Select(g => new
+            {
+                Tanggal = g.Key,
+                Piutang = g.Sum(x => (decimal?)(x.SubTotalAsuransi ?? 0m)) ?? 0m
+            })
+            .ToListAsync(ct);
+
+        // ==========================
+        // 3) MERGE per hari + paging
+        // ==========================
+        var detailMap = detailAgg.ToDictionary(x => x.Tanggal, x => x);
+        var asuMap = asuransiAgg.ToDictionary(x => x.Tanggal, x => x.Piutang);
+
+        var allDays = detailMap.Keys
+            .Union(asuMap.Keys)
+            .Distinct()
+            .OrderByDescending(d => d)
+            .ToList();
+
+        var totalRows = allDays.Count;
+        var totalPages = (int)Math.Ceiling(totalRows / (double)pageSize);
+
+        var pagedDays = allDays
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+
+        var data = pagedDays.Select(day =>
+        {
+            detailMap.TryGetValue(day, out var d);
+            asuMap.TryGetValue(day, out var piutang);
+
+            var tunai = d?.Tunai ?? 0m;
+            var nonTunai = d?.NonTunai ?? 0m;
+            var asuransi = piutang;
+
+            return new PendapatanKasirHarianDto
+            {
+                Tanggal = day,
+                PendapatanTunai = tunai,
+                PendapatanNonTunai = nonTunai,
+                PiutangAsuransi = asuransi,
+                TotalPendapatan = tunai + nonTunai + asuransi
+            };
+        }).ToList();
+
+        return new PagedRekapResult<PendapatanKasirHarianDto>
+        {
+            Page = page,
+            PageSize = pageSize,
+            TotalRows = totalRows,
+            TotalPages = totalPages,
+            Data = data.ToArray()
+        };
+    }
 
     #region HELPERS
 

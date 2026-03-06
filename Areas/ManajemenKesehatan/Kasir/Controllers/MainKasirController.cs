@@ -1469,6 +1469,31 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             });
         }
 
+        [HttpGet("pendapatan-harian/paged")]
+        public async Task<IActionResult> GetPendapatanHarianPaged(
+            [FromQuery] DateTime? startDate,
+            [FromQuery] DateTime? endDate,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10,
+            CancellationToken ct = default)
+        {
+            var q = new PendapatanHarianPagedQuery
+            {
+                StartDate = startDate,
+                EndDate = endDate,
+                Page = page,
+                PageSize = pageSize
+            };
+
+            var result = await _billingKunjunganReadService.GetPendapatanHarianPagedAsync(q, ct);
+
+            return Ok(new
+            {
+                status = "success",
+                data = result
+            });
+        }
+
         //[HttpGet("paged")]
         //public async Task<IActionResult> PagedKasir(
         //    int page = 1,

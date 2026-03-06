@@ -2,7 +2,7 @@
 {
     public sealed class PendapatanKasirHarianDto
     {
-        public Guid KasirUserId { get; set; }
+        public Guid? KasirUserId { get; set; }
         public string? PetugasKasir {  get; set; }
         public DateTime Tanggal { get; set; }
         public decimal PendapatanTunai { get; set; }
