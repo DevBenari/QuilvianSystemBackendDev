@@ -675,7 +675,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             }
         }
 
-        [HttpPost]
+        [HttpPost("BarangLain")]
         public async Task<IActionResult> PostBilling([FromBody] BillingManualVM vm)
         {
             if (vm == null || !ModelState.IsValid)
@@ -713,18 +713,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 // buat billing kode
                 string kode;
                 int billingIndex = await _applicationDbContext.Billings
-                       .CountAsync(b => b.KunjunganId == vm.KunjunganId && b.JenisBilling.ToLower() == "bnhp");
+                       .CountAsync(b => b.KunjunganId == vm.KunjunganId && b.JenisBilling.ToLower() == "biaya lain-lain");
                 if (billingIndex == 0)
                 {
-                    kode = "BNHP001";
+                    kode = "BGLL001";
                 }
                 else
                 {
                     //Tentukan indeks berikutnya
                     int nextIndex = billingIndex + 1;
 
-                    //Format menjadi BNHP001, BNHP002, dst.
-                    kode = $"BNHP{nextIndex:D3}";
+                    //Format menjadi BGLL001, BGLL002, dst.
+                    kode = $"BGLL{nextIndex:D3}";
                 }
 
                     var data = new Billing
@@ -736,11 +736,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         HargaItem = vm.HargaItem,
                         QtyItem = vm.QtyItem ?? 1,
                         SubTotalItem = vm.HargaItem * vm.QtyItem,
-                        JenisBilling = vm.JenisBilling,
+                        SubBiayaLainnya = vm.SubBiayaLainnya,
+                        JenisBilling = "Biaya Lain - Lain",
                         BillingKode = kode,
                         InvoiceBilling = invoice,
                         IsListWhiteOff = false,
                         StatusBilling = false,
+                        StatusBiayaLainnya = false,
                         BillingDate = DateTime.UtcNow,
                         TanggalInvoice = DateTime.UtcNow,
                         TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),

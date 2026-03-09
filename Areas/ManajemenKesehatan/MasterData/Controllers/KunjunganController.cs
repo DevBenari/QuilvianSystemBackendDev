@@ -1293,6 +1293,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             var userId = user?.UserActiveId ?? Guid.Empty;
 
             kunjungan.IsFinishedKasir = request.IsFinishedKasir;
+            kunjungan.TglFinishedKasir = DateTime.UtcNow;
+
             kunjungan.UpdateDateTime = DateTimeOffset.UtcNow;
             kunjungan.UpdateBy = userId;
             await _applicationDbContext.SaveChangesAsync();
@@ -2245,6 +2247,58 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
+        [HttpGet("KunjunganLunasToday/paged")]
+        public async Task<IActionResult> GetKunjunganLunasToday(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        CancellationToken ct = default,
+        [FromQuery] string? sortDirection = "desc")
+        {
+            if (page <= 0) page = 1;
+            if (pageSize <= 0) pageSize = 10;
+
+            var today = DateTime.Today;
+            var tomorrow = today.AddDays(1);
+
+            var query =
+                from k in _applicationDbContext.Kunjungans.AsNoTracking()
+                join p in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking()
+                    on k.PasienId equals p.PendaftaranPasienBaruId into pasienGroup
+                from p in pasienGroup.DefaultIfEmpty() // LEFT JOIN
+                where !k.IsDelete
+                      && k.IsFinished == true
+                      && k.TglFinishedKasir >= today
+                      && k.TglFinishedKasir < tomorrow
+                select new
+                {
+                    k.CreateDateTime,
+                    k.KunjunganID,
+                    k.PasienId,
+                    NamaPasien = p != null ? p.NamaLengkap : null, // sesuaikan dengan nama field pasien
+                    NoRM = p != null ? p.NoRekamMedis : null,
+ 
+                };
+
+            query = sortDirection?.ToLower() == "asc"
+                ? query.OrderBy(x => x.CreateDateTime)
+                : query.OrderByDescending(x => x.CreateDateTime);
+
+            var totalData = await query.CountAsync(ct);
+
+            var data = await query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(ct);
+
+            return Ok(new
+            {
+                page,
+                pageSize,
+                totalData,
+                totalPage = (int)Math.Ceiling((double)totalData / pageSize),
+                items = data
+            });
+        }
 
     }
 }

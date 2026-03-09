@@ -22,6 +22,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public bool? IsScreening { get; set; }
         public bool? IsPresent { get; set; }
         public bool? IsFinishedKasir { get; set; }
+        public DateTime? TglFinishedKasir { get; set; }
         public string? StatusPengkajian { get; set; }
         public string? AsalKunjungan { get; set; }
         public DateTime? TglMasuk {  get; set; }
