@@ -784,6 +784,11 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 var segments = new List<object>();
 
                 var bookingsKamar = kamarGroup.OrderBy(x => x.TglMasuk ?? DateTime.MinValue).ToList();
+                // ✅ cover kamar + markup
+                var isCoveredKamar =
+                    isAsuransiCase &&
+                    kamarId.HasValue &&
+                    cover.KamarMarkup.TryGetValue(kamarId.Value, out var kamarMarkup);
                 foreach (var bk in bookingsKamar)
                 {
                     tglMasukAwal ??= bk.TglMasuk;
@@ -839,6 +844,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     DPD = HitungDpd(billKamar?.TanggalJatuhTempo, snap),
 
                     KamarId = kamarId,
+                    IsCovered = isCoveredKamar,
                     NamaItem = billKamar?.NamaItem,
 
                     HargaPerHari = tarifPerHari,
@@ -881,7 +887,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         }
         
         // =========================
-        // 11) TOTAL KESELURUHAN
+        // 11) TOTAL KESELURUHAN (asuransi dan mandiri)
         // =========================
         var DepositRanap = dto.TotalDPRanap;
         var asuransi =
@@ -1181,9 +1187,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             return b;
         }
 
-        // ============================================================
-        // COVER OBAT ASURANSI bulk
-        // ============================================================
+        // Set Coveran Asuransi
         var asuransiAktifIds = headers
             .Where(h => h.AsuransiId.HasValue
                         && string.Equals(h.TipePembayaran, "Asuransi", StringComparison.OrdinalIgnoreCase))
@@ -1191,19 +1195,29 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             .Distinct()
             .ToList();
 
-        var coveredObatByAsuransi = new Dictionary<Guid, HashSet<Guid>>();
-        if (asuransiAktifIds.Any())
+        var coverageByAsuransi = new Dictionary<Guid, CoverageLookup>();
+        foreach (var aid in asuransiAktifIds)
         {
-            var coveredRows = await _db.ObatAsuransis.AsNoTracking()
-                .Where(x => asuransiAktifIds.Contains(x.AsuransiId)
-                            && (x.IsDelete == false || x.IsDelete == null))
-                .Select(x => new { x.AsuransiId, x.ObatId })
-                .ToListAsync(ct);
-
-            coveredObatByAsuransi = coveredRows
-                .GroupBy(x => x.AsuransiId)
-                .ToDictionary(g => g.Key, g => g.Select(x => x.ObatId).ToHashSet());
+            coverageByAsuransi[aid] = await LoadCoverageLookupAsync(aid, snap, ct);
         }
+
+        // ============================================================
+        // COVER OBAT ASURANSI bulk
+        // ============================================================
+
+        //var coveredObatByAsuransi = new Dictionary<Guid, HashSet<Guid>>();
+        //if (asuransiAktifIds.Any())
+        //{
+        //    var coveredRows = await _db.ObatAsuransis.AsNoTracking()
+        //        .Where(x => asuransiAktifIds.Contains(x.AsuransiId)
+        //                    && (x.IsDelete == false || x.IsDelete == null))
+        //        .Select(x => new { x.AsuransiId, x.ObatId })
+        //        .ToListAsync(ct);
+
+        //    coveredObatByAsuransi = coveredRows
+        //        .GroupBy(x => x.AsuransiId)
+        //        .ToDictionary(g => g.Key, g => g.Select(x => x.ObatId).ToHashSet());
+        //}
 
         // ============================================================
         // LAB bulk (filter by PasienId seperti function kamu)
@@ -1222,6 +1236,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 lbd.PasienId,
                 lbd.BookingLabId,
                 lbd.DetailBookingLabId,
+                PemeriksaanLabId = lbd.PemeriksaanLabId, 
                 NamaLab = la != null ? la.NamaLab : null,
                 NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
                 HargaPemeriksaan = (decimal?)lp.HargaPemeriksaan ?? 0m
@@ -1392,8 +1407,9 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 h.AsuransiId.HasValue &&
                 string.Equals(h.TipePembayaran, "Asuransi", StringComparison.OrdinalIgnoreCase);
 
-            coveredObatByAsuransi.TryGetValue(h.AsuransiId ?? Guid.Empty, out var coveredSet);
-            coveredSet ??= new HashSet<Guid>();
+            CoverageLookup cover = new();
+            if (isAsuransiCase && h.AsuransiId.HasValue && coverageByAsuransi.TryGetValue(h.AsuransiId.Value, out var c))
+                cover = c;
 
             var dto = new BillingKunjunganDto
             {
@@ -1438,12 +1454,18 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                         var qty = bill?.QtyItem ?? 1;
                         var subtotal = bill?.SubTotalItem ?? x.HargaPemeriksaan;
 
+                        var isCovered =
+                            isAsuransiCase &&
+                            x.PemeriksaanLabId.HasValue &&
+                            cover.LabMarkup.ContainsKey(x.PemeriksaanLabId.Value);
+
                         return (object)new
                         {
                             x.BookingLabId,
                             x.DetailBookingLabId,
                             x.NamaLab,
                             x.NamaPemeriksaan,
+                            IsCovered = isCovered,
                             HargaPemeriksaan = x.HargaPemeriksaan,
                             Qty = qty,
                             Subtotal = subtotal,
@@ -1476,7 +1498,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                         var isCover =
                             isAsuransiCase &&
                             x.dr.ObatId != null &&
-                            coveredSet.Contains(x.dr.ObatId.Value);
+                            cover.ObatIds.Contains(x.dr.ObatId.Value);
 
                         return (object)new
                         {
@@ -1484,7 +1506,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                             x.dr.DetailResepId,
                             x.dr.ObatId,
                             x.o.ObatName,
-                            IsCoverAsuransi = isCover,
+                            IsCovered = isCover,
                             Qty = qty,
                             Harga = harga,
                             Subtotal = subtotal,
@@ -1556,10 +1578,14 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                         var harga = bill?.HargaItem ?? totalTindakan;
                         var subtotal = bill?.SubTotalItem ?? ((x.tk.Quantity ?? 1) * totalTindakan);
 
+                        var isCovered =
+                            isAsuransiCase &&
+                            cover.TindakanMarkup.ContainsKey(x.tk.TindakanId);
                         return (object)new
                         {
                             x.t!.TindakanId,
                             x.t.NamaTindakan,
+                            IsCovered = isCovered,
                             Qty = qty,
                             Harga = harga,
                             Subtotal = subtotal,
@@ -1717,6 +1743,13 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     DateTime? tglMasukAwal = null;
                     DateTime? tglKeluarAkhir = null;
                     var segments = new List<object>();
+                    // ✅ cover kamar + markup
+                    var isCoveredKamar =
+                        isAsuransiCase &&
+                        cover.KamarMarkup.TryGetValue(kamarId.Value, out var kamarMarkup);
+
+                    //if (isCoveredKamar && kamarMarkup > 0m)
+                    //    tarifPerHari = kamarMarkup; // ✅ pakai markup total kamar untuk harga asuransi
 
                     foreach (var bk in kamarGroup.OrderBy(x => x.TglMasuk ?? DateTime.MinValue))
                     {
@@ -1754,6 +1787,8 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                                 t.Keterangan
                             }).ToList()
                         });
+
+
                     }
 
                     var subtotal = tarifPerHari * totalHari;
@@ -1765,6 +1800,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                         BillingKode = billKamar?.BillingKode,
                         StatusBilling = billKamar?.StatusBilling,
                         KamarId = kamarId,
+                        IsCovered = isCoveredKamar,
                         NamaItem = billKamar?.NamaItem,
                         HargaPerHari = tarifPerHari,
                         JumlahHari = totalHari,
@@ -1840,6 +1876,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             dto.SebelumTaxTotalMandiri = Math.Round(mandiri, 2, MidpointRounding.AwayFromZero);
             dto.PajakTotalMandiri = Math.Round((dto.SebelumTaxTotalMandiri ?? 0m) * ppnRate, 2, MidpointRounding.AwayFromZero);
             dto.SubTotalMandiri = Math.Round((dto.SebelumTaxTotalMandiri ?? 0m) + (dto.PajakTotalMandiri ?? 0m), 2, MidpointRounding.AwayFromZero);
+
             output.Add(new
             {
                 dto.KunjunganID,

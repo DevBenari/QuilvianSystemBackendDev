@@ -1,11 +1,13 @@
 ﻿using System.Globalization;
 using System.Linq;
 using System.Security.Claims;
+using Microsoft.AspNet.SignalR.Client.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Interfaces;
@@ -14,6 +16,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
+using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using SkiaSharp;
@@ -34,6 +37,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         private readonly ILogger<BillingController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly IPerkiraanBillingRanapService _perkiraanRanap;
+        private readonly IGenerateInvoiceBillingService _generateInvoiceBillingService;
 
         public BillingController(
             ApplicationDbContext applicationDbContext,
@@ -42,7 +46,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             ILogger<BillingController> logger,
             IWebHostEnvironment webHostEnvironment,
             IBillingKunjunganReadService billingKunjunganReadService,
-            IPerkiraanBillingRanapService perkiraanRanap)
+            IPerkiraanBillingRanapService perkiraanRanap,
+            IGenerateInvoiceBillingService generateInvoiceBillingService
+            )
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
@@ -51,6 +57,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             _webHostEnvironment = webHostEnvironment;
             _billingKunjunganReadService = billingKunjunganReadService;
             _perkiraanRanap = perkiraanRanap;
+            _generateInvoiceBillingService = generateInvoiceBillingService;
         }
 
         public static string HitungUmurLengkap(DateTime? tanggalLahir)
@@ -668,6 +675,99 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             }
         }
 
+        [HttpPost]
+        public async Task<IActionResult> PostBilling([FromBody] BillingManualVM vm)
+        {
+            if (vm == null || !ModelState.IsValid)
+            {
+                return BadRequest(new { message = "Data tidak valid." });
+            }
+
+            try
+            {
+                // cek koneksi ke database
+                if (!_applicationDbContext.Database.CanConnect())
+                {
+                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+
+                }
+
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin)){
+                    return Unauthorized(new { message = "Usert tidak terautentikasi!" });
+                }
+
+                var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
+                if (getUserActive == null)
+                {
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+                }
+                var userActiveId = getUserActive.UserActiveId;
+
+                // Ambil / buat invoice sekali saja untuk semua billing yang akan dibuat
+                var invoice = await _generateInvoiceBillingService.GetOrCreateAsync(
+                    (Guid)vm.KunjunganId,
+                    DateTime.UtcNow
+                );
+
+                // buat billing kode
+                string kode;
+                int billingIndex = await _applicationDbContext.Billings
+                       .CountAsync(b => b.KunjunganId == vm.KunjunganId && b.JenisBilling.ToLower() == "bnhp");
+                if (billingIndex == 0)
+                {
+                    kode = "BNHP001";
+                }
+                else
+                {
+                    //Tentukan indeks berikutnya
+                    int nextIndex = billingIndex + 1;
+
+                    //Format menjadi BNHP001, BNHP002, dst.
+                    kode = $"BNHP{nextIndex:D3}";
+                }
+
+                    var data = new Billing
+                    {
+                        BillingId = Guid.NewGuid(),
+                        KunjunganId = vm.KunjunganId,
+                        DiskonId = vm.DiskonId,
+                        NamaItem = vm.NamaItem,
+                        HargaItem = vm.HargaItem,
+                        QtyItem = vm.QtyItem ?? 1,
+                        SubTotalItem = vm.HargaItem * vm.QtyItem,
+                        JenisBilling = vm.JenisBilling,
+                        BillingKode = kode,
+                        InvoiceBilling = invoice,
+                        IsListWhiteOff = false,
+                        StatusBilling = false,
+                        BillingDate = DateTime.UtcNow,
+                        TanggalInvoice = DateTime.UtcNow,
+                        TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
+
+                        CreateDateTime = DateTimeOffset.UtcNow,
+                        CreateBy = userActiveId
+                    };
+                _applicationDbContext.Billings.Add(data);
+                await _applicationDbContext.SaveChangesAsync();
+                return Ok(new
+                {
+                    message = "Item billing baru berhasil ditambahkan.",
+                    data = new
+                    {
+                        vm.KunjunganId,
+                    }
+                });
+            }
+            catch (DbUpdateException dbEx)
+            {
+                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
 
         [HttpGet("GetBillingPaged")]
         public async Task<IActionResult> GetBillingPaged(
