@@ -2252,10 +2252,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
         [HttpGet("KunjunganLunasToday/paged")]
         public async Task<IActionResult> GetKunjunganLunasToday(
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 10,
-        CancellationToken ct = default,
-        [FromQuery] string? sortDirection = "desc")
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] Guid? dokterId = null,
+            [FromQuery] EnumJenisKunjungan? jenisKunjungan = null,
+            [FromQuery] string? asalKunjungan = null,
+            [FromQuery] string? search = null,
+            [FromQuery] Guid? pasienId = null,
+            [FromQuery] Guid? kunjunganId = null,
+            CancellationToken ct = default,
+            [FromQuery] string? sortDirection = "desc")
         {
             if (page <= 0) page = 1;
             if (pageSize <= 0) pageSize = 10;
@@ -2267,7 +2273,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 from k in _applicationDbContext.Kunjungans.AsNoTracking()
                 join p in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking()
                     on k.PasienId equals p.PendaftaranPasienBaruId into pasienGroup
-                from p in pasienGroup.DefaultIfEmpty() // LEFT JOIN
+                from p in pasienGroup.DefaultIfEmpty()
                 where !k.IsDelete
                       && k.IsFinishedKasir == true
                       && k.TglFinishedKasir >= today
@@ -2277,12 +2283,48 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     k.CreateDateTime,
                     k.KunjunganID,
                     k.PasienId,
+                    k.DokterId,
                     k.IsFinishedKasir,
                     k.TglFinishedKasir,
+                    k.JenisKunjungan,
+                    k.AsalKunjungan,
                     NamaPasien = p != null ? p.NamaLengkap : null,
                     NoRM = p != null ? p.NoRekamMedis : null,
- 
                 };
+
+            if (dokterId.HasValue)
+            {
+                query = query.Where(x => x.DokterId == dokterId.Value);
+            }
+
+            if (jenisKunjungan.HasValue)
+            {
+                query = query.Where(x => x.JenisKunjungan == jenisKunjungan.Value.ToString());
+            }
+
+            if (!string.IsNullOrWhiteSpace(asalKunjungan))
+            {
+                query = query.Where(x => x.AsalKunjungan != null &&
+                                         x.AsalKunjungan.ToLower() == asalKunjungan.ToLower());
+            }
+
+            if (pasienId.HasValue)
+            {
+                query = query.Where(x => x.PasienId == pasienId.Value);
+            }
+
+            if (kunjunganId.HasValue)
+            {
+                query = query.Where(x => x.KunjunganID == kunjunganId.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+                query = query.Where(u =>
+                    EF.Functions.ILike(u.NamaPasien, search)
+                );
+            }
 
             query = sortDirection?.ToLower() == "asc"
                 ? query.OrderBy(x => x.CreateDateTime)

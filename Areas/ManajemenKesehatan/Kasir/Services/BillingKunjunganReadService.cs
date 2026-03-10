@@ -122,9 +122,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         public int TotalPages { get; set; }
         public IReadOnlyList<T> Data { get; set; } = Array.Empty<T>();
     }
-
     #endregion
-
 
     // ============================
     // FUNCTION GET BILLING BY ID 
@@ -2789,6 +2787,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         return sum;
     }
     #endregion
+
     #endregion
 
 
