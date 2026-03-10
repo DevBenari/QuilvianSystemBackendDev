@@ -2269,7 +2269,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     on k.PasienId equals p.PendaftaranPasienBaruId into pasienGroup
                 from p in pasienGroup.DefaultIfEmpty() // LEFT JOIN
                 where !k.IsDelete
-                      && k.IsFinished == true
+                      && k.IsFinishedKasir == true
                       && k.TglFinishedKasir >= today
                       && k.TglFinishedKasir < tomorrow
                 select new
@@ -2277,9 +2277,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     k.CreateDateTime,
                     k.KunjunganID,
                     k.PasienId,
-                    k.IsFinished,
+                    k.IsFinishedKasir,
                     k.TglFinishedKasir,
-                    NamaPasien = p != null ? p.NamaLengkap : null, // sesuaikan dengan nama field pasien
+                    NamaPasien = p != null ? p.NamaLengkap : null,
                     NoRM = p != null ? p.NoRekamMedis : null,
  
                 };
