@@ -864,6 +864,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         GrandTotalPembayaran = vm.GrandTotalPembayaran ?? totalTagihan,
                         TotalBiayaObat = vm.TotalBiayaObat,
                         TotalBiayaTindakan = vm.TotalBiayaTindakan,
+                        HargaDiskon = vm.HargaDiskon,
                         Keterangan = vm.Keterangan,
                         TglPembayaran = tglPembayaran,
                         IsDelete = false,
@@ -1265,7 +1266,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 headerEntity.TotalBiayaObat = vm.TotalBiayaObat;
                 headerEntity.TotalBiayaTindakan = vm.TotalBiayaTindakan;
                 headerEntity.Keterangan = vm.Keterangan ?? headerEntity.Keterangan;
-
+                headerEntity.HargaDiskon = vm.HargaDiskon ?? headerEntity.HargaDiskon;
                 headerEntity.TglPembayaran = tglPembayaran;
 
                 headerEntity.TTDUserVerfiedId = vm.TTDUserVerfiedId ?? headerEntity.TTDUserVerfiedId;

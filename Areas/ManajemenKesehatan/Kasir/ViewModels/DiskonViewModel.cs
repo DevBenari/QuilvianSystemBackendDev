@@ -10,5 +10,6 @@
         public decimal? PersenDiskon { get; set; }
         public decimal? NominalDiskon { get; set; }
         public string? Keterangan { get; set; }
+        public List<DetailDiskonViewModel>? Details { get; set; }
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Linq;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
@@ -48,75 +49,188 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
         {
-            // Validasi agar page dan perPage minimal bernilai 1
-            if (page < 1) page = 1;
-            if (perPage < 1) perPage = 10;
-
-            // Query data
-            var query = (from a in _applicationDbContext.Diskons
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false || a.IsDelete == null
-                         select new
-                         {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = u.FullName,
-                             a.DiskonId,
-                             a.NamaDiskon,
-                             a.TglBerlaku,
-                             a.TglBerakhir,
-                             a.IsAsuransi,
-                             a.AsuransiId,
-                             a.PersenDiskon,
-                             a.NominalDiskon,
-                             a.Keterangan,
-                         }).OrderByDescending(a => a.CreateDateTime);
-
-            // Hitung total data sebelum paginasi
-            var totalRows = query.Count();
-            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-
-            // Ambil data sesuai paging
-            var listdata = query
-                .Skip((page - 1) * perPage)
-                .Take(perPage)
-                .ToList();
-
-            if (!listdata.Any())
+            try
             {
-                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
-            }
+                if (page < 1) page = 1;
+                if (perPage < 1) perPage = 10;
 
-            // Return hasil dengan paging info
-            return Ok(new
-            {
-                message = "Berhasil || 200 OK",
-                data = listdata,
-                pagination = new
+                var baseQuery =
+                    from a in _applicationDbContext.Diskons.AsNoTracking()
+                    join u in _applicationDbContext.UserActives.AsNoTracking()
+                        on a.CreateBy equals u.UserActiveId into userGroup
+                    from u in userGroup.DefaultIfEmpty()
+                    where a.IsDelete == false || a.IsDelete == null
+                    select new
+                    {
+                        a.DiskonId,
+                        a.NamaDiskon,
+                        a.TglBerlaku,
+                        a.TglBerakhir,
+                        a.IsAsuransi,
+                        a.AsuransiId,
+                        a.PersenDiskon,
+                        a.NominalDiskon,
+                        a.Keterangan,
+                        a.CreateBy,
+                        CreateByName = u != null ? u.FullName : null,
+                        a.CreateDateTime,
+                        a.UpdateBy,
+                        a.UpdateDateTime
+                    };
+
+                var totalRows = await baseQuery.CountAsync();
+                var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+                var headers = await baseQuery
+                    .OrderByDescending(a => a.CreateDateTime)
+                    .Skip((page - 1) * perPage)
+                    .Take(perPage)
+                    .ToListAsync();
+
+                if (!headers.Any())
                 {
-                    CurrentPage = page,
-                    PerPage = perPage,
-                    TotalRows = totalRows,
-                    TotalPages = totalPages
+                    return NotFound(new
+                    {
+                        message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found"
+                    });
                 }
-            });
+
+                var diskonIds = headers.Select(x => x.DiskonId).ToList();
+
+                var details = await _applicationDbContext.DiskonDetails
+                    .AsNoTracking()
+                    .Where(d => diskonIds.Contains((Guid)d.DiskonId) && (d.IsDelete == false || d.IsDelete == null))
+                    .Select(d => new
+                    {
+                        d.DetailDiskonId,
+                        d.DiskonId,
+                        d.LayananId,
+                        d.KodeLayanan,
+                        d.KategoriLayanan,
+                        d.MaxQty,
+                        d.MaxHarga,
+                        d.Keterangan,
+                        d.CreateBy,
+                        d.CreateDateTime,
+                        d.UpdateBy,
+                        d.UpdateDateTime
+                    })
+                    .OrderByDescending(d => d.CreateDateTime)
+                    .ToListAsync();
+
+                var result = headers.Select(h => new
+                {
+                    h.DiskonId,
+                    h.NamaDiskon,
+                    h.TglBerlaku,
+                    h.TglBerakhir,
+                    h.IsAsuransi,
+                    h.AsuransiId,
+                    h.PersenDiskon,
+                    h.NominalDiskon,
+                    h.Keterangan,
+                    h.CreateBy,
+                    h.CreateByName,
+                    h.CreateDateTime,
+                    h.UpdateBy,
+                    h.UpdateDateTime,
+                    Details = details
+                        .Where(d => d.DiskonId == h.DiskonId)
+                        .ToList()
+                }).ToList();
+
+                return Ok(new
+                {
+                    message = "Berhasil || 200 OK",
+                    data = result,
+                    pagination = new
+                    {
+                        CurrentPage = page,
+                        PerPage = perPage,
+                        TotalRows = totalRows,
+                        TotalPages = totalPages
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = $"Terjadi kesalahan internal: {ex.Message}"
+                });
+            }
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.Diskons.Find(id);
-            if (listdata == null)
+            try
             {
-                return NotFound(new { message = "Data tidak ditemukan." });
-            }
+                var header = await (
+                    from a in _applicationDbContext.Diskons.AsNoTracking()
+                    join u in _applicationDbContext.UserActives.AsNoTracking()
+                        on a.CreateBy equals u.UserActiveId into userGroup
+                    from u in userGroup.DefaultIfEmpty()
+                    where a.DiskonId == id && (a.IsDelete == false || a.IsDelete == null)
+                    select new
+                    {
+                        a.DiskonId,
+                        a.NamaDiskon,
+                        a.TglBerlaku,
+                        a.TglBerakhir,
+                        a.IsAsuransi,
+                        a.AsuransiId,
+                        a.PersenDiskon,
+                        a.NominalDiskon,
+                        a.Keterangan,
+                        a.CreateBy,
+                        CreateByName = u != null ? u.FullName : null,
+                        a.CreateDateTime,
+                        a.UpdateBy,
+                        a.UpdateDateTime
+                    }
+                ).FirstOrDefaultAsync();
 
-            return Ok(new
+                if (header == null)
+                {
+                    return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                var details = await (
+                    from d in _applicationDbContext.DiskonDetails.AsNoTracking()
+                    where d.DiskonId == id && (d.IsDelete == false || d.IsDelete == null)
+                    select new
+                    {
+                        d.DetailDiskonId,
+                        d.DiskonId,
+                        d.LayananId,
+                        d.KodeLayanan,
+                        d.KategoriLayanan,
+                        d.MaxQty,
+                        d.MaxHarga,
+                        d.Keterangan,
+                        d.CreateBy,
+                        d.CreateDateTime
+                    }
+                ).ToListAsync();
+
+                return Ok(new
+                {
+                    message = "Ditemukan || 200 OK",
+                    data = new
+                    {
+                        header,
+                        details
+                    }
+                });
+            }
+            catch (Exception ex)
             {
-                message = "Ditemukan || 200 OK",
-                data = listdata
-            });
+                return StatusCode(500, new
+                {
+                    message = $"Terjadi kesalahan internal: {ex.Message}"
+                });
+            }
         }
 
         [HttpPost]
@@ -129,40 +243,53 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
             try
             {
-                // **Cek koneksi ke database**
                 if (!_applicationDbContext.Database.CanConnect())
                 {
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
                 }
 
-                // **Ambil User ID dari JWT Claims**
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+
                 if (getUserActive == null)
                 {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
                 }
+
                 var userActiveId = getUserActive.UserActiveId;
 
-                //// **Cek Duplikasi**
+                if (string.IsNullOrWhiteSpace(vm.NamaDiskon))
+                {
+                    return BadRequest(new { message = "Nama diskon wajib diisi." });
+                }
+
+                if (vm.TglBerlaku.HasValue && vm.TglBerakhir.HasValue && vm.TglBerakhir < vm.TglBerlaku)
+                {
+                    return BadRequest(new { message = "Tanggal berakhir tidak boleh lebih kecil dari tanggal berlaku." });
+                }
+
                 bool isDuplicate = await _applicationDbContext.Diskons
-                                    .AnyAsync(c => c.NamaDiskon.ToLower().Trim() == vm.NamaDiskon.ToLower().Trim()
-                                    && c.IsDelete==false);
+                    .AnyAsync(c => c.NamaDiskon.ToLower().Trim() == vm.NamaDiskon.ToLower().Trim()
+                                && c.IsDelete == false);
 
                 if (isDuplicate)
                 {
-                    return Conflict(new { message = "Nama diskon ini telah tersedia" });
+                    return Conflict(new { message = "Nama diskon ini telah tersedia." });
                 }
 
-                // **Buat Data Baru**
+                await using var transaction = await _applicationDbContext.Database.BeginTransactionAsync();
+
+                var diskonId = Guid.NewGuid();
+
                 var data = new Diskon
                 {
-                    DiskonId = Guid.NewGuid(),
+                    DiskonId = diskonId,
                     NamaDiskon = vm.NamaDiskon,
                     TglBerlaku = vm.TglBerlaku,
                     TglBerakhir = vm.TglBerakhir,
@@ -173,28 +300,59 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     Keterangan = vm.Keterangan,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
+                    IsDelete = false
                 };
 
-                // **Simpan ke Database**
                 _applicationDbContext.Diskons.Add(data);
-                int result = await _applicationDbContext.SaveChangesAsync();
+
+                if (vm.Details != null && vm.Details.Any())
+                {
+                    var detailEntities = vm.Details.Select(d => new DiskonDetail
+                    {
+                        DetailDiskonId = Guid.NewGuid(),
+                        DiskonId = diskonId,
+                        LayananId = d.LayananId,
+                        KodeLayanan = d.KodeLayanan,
+                        KategoriLayanan = d.KategoriLayanan,
+                        MaxQty = d.MaxQty,
+                        MaxHarga = d.MaxHarga,
+                        Keterangan = d.Keterangan,
+                        CreateBy = userActiveId,
+                        CreateDateTime = DateTimeOffset.UtcNow,
+                        IsDelete = false
+                    }).ToList();
+
+                    _applicationDbContext.DiskonDetails.AddRange(detailEntities);
+                }
+
+                var result = await _applicationDbContext.SaveChangesAsync();
+
+                await transaction.CommitAsync();
 
                 if (result > 0)
                 {
-                    return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
+                    return Created("", new
+                    {
+                        message = "Tambah Data Berhasil || 201 Created",
+                        diskonId = diskonId
+                    });
                 }
-                else
-                {
-                    return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
-                }
+
+                return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
             }
             catch (DbUpdateException dbEx)
             {
-                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+                return StatusCode(500, new
+                {
+                    message = $"Gagal menyimpan data: {dbEx.InnerException?.Message ?? dbEx.Message}"
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+                return StatusCode(500, new
+                {
+                    message = $"Terjadi kesalahan internal: {ex.Message}"
+                });
             }
         }
 
@@ -208,76 +366,152 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
             try
             {
-                // **Cek koneksi ke database**
-                if (!await _applicationDbContext.Database.CanConnectAsync())
+                // cek koneksi database
+                if (!_applicationDbContext.Database.CanConnect())
                 {
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
                 }
 
-                // **Ambil User ID dari JWT Claims**
+                // ambil email user login dari claim
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
+                // ambil user active
                 var getUserActive = await _applicationDbContext.UserActives
                     .FirstOrDefaultAsync(u => u.Email == emailLogin);
+
                 if (getUserActive == null)
                 {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
                 }
+
                 var userActiveId = getUserActive.UserActiveId;
 
-                // **Cari Data**
-                var data = await _applicationDbContext.Diskons.FindAsync(id);
-                if (data == null)
+                // validasi nama diskon
+                if (string.IsNullOrWhiteSpace(vm.NamaDiskon))
                 {
-                    return NotFound(new { message = "Data tidak ditemukan." });
+                    return BadRequest(new { message = "Nama diskon wajib diisi." });
                 }
 
-                //// **Cek Duplikasi**
+                // validasi tanggal
+                if (vm.TglBerlaku.HasValue && vm.TglBerakhir.HasValue && vm.TglBerakhir < vm.TglBerlaku)
+                {
+                    return BadRequest(new { message = "Tanggal berakhir tidak boleh lebih kecil dari tanggal berlaku." });
+                }
+
+                // cek data diskon
+                var existingDiskon = await _applicationDbContext.Diskons
+                    .FirstOrDefaultAsync(x => x.DiskonId == id && x.IsDelete == false);
+
+                if (existingDiskon == null)
+                {
+                    return NotFound(new { message = "Data diskon tidak ditemukan." });
+                }
+
+                // cek duplikasi nama diskon selain id yang sedang diedit
                 bool isDuplicate = await _applicationDbContext.Diskons
-                                    .AnyAsync(c => c.NamaDiskon.ToLower().Trim() == vm.NamaDiskon.ToLower().Trim()
-                                    && c.IsDelete == false && c.DiskonId!=id);
+                    .AnyAsync(c =>
+                        c.DiskonId != id &&
+                        c.NamaDiskon.ToLower().Trim() == vm.NamaDiskon.ToLower().Trim() &&
+                        c.IsDelete == false);
 
                 if (isDuplicate)
                 {
-                    return Conflict(new { message = "Nama diskon ini telah tersedia" });
+                    return Conflict(new { message = "Nama diskon ini telah tersedia." });
                 }
 
-                // **Update Data**
-                data.NamaDiskon = vm.NamaDiskon;
-                data.TglBerlaku = vm.TglBerlaku;
-                data.TglBerakhir = vm.TglBerakhir;
-                data.IsAsuransi = vm.IsAsuransi;
-                data.AsuransiId = vm.AsuransiId;
-                data.PersenDiskon = vm.PersenDiskon;
-                data.NominalDiskon = vm.NominalDiskon;
-                data.Keterangan = vm.Keterangan;
+                await using var transaction = await _applicationDbContext.Database.BeginTransactionAsync();
 
-                data.UpdateBy = userActiveId;
-                data.UpdateDateTime = DateTimeOffset.UtcNow;
+                // update header diskon
+                existingDiskon.NamaDiskon = vm.NamaDiskon;
+                existingDiskon.TglBerlaku = vm.TglBerlaku;
+                existingDiskon.TglBerakhir = vm.TglBerakhir;
+                existingDiskon.IsAsuransi = vm.IsAsuransi;
+                existingDiskon.AsuransiId = vm.AsuransiId;
+                existingDiskon.PersenDiskon = vm.PersenDiskon;
+                existingDiskon.NominalDiskon = vm.NominalDiskon;
+                existingDiskon.Keterangan = vm.Keterangan;
+                existingDiskon.UpdateBy = userActiveId;
+                existingDiskon.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.Diskons.Update(data);
-                int result = await _applicationDbContext.SaveChangesAsync();
+                // tambah detail baru tanpa menghapus detail lama
+                if (vm.Details != null && vm.Details.Any())
+                {
+                    var existingDetails = await _applicationDbContext.DiskonDetails
+                        .Where(x => x.DiskonId == id && x.IsDelete == false)
+                        .ToListAsync();
+
+                    var newDetails = new List<DiskonDetail>();
+
+                    foreach (var d in vm.Details)
+                    {
+                        bool detailSudahAda = existingDetails.Any(x =>
+                            x.LayananId == d.LayananId &&
+                            x.KodeLayanan == d.KodeLayanan &&
+                            x.KategoriLayanan == d.KategoriLayanan &&
+                            x.MaxQty == d.MaxQty &&
+                            x.MaxHarga == d.MaxHarga &&
+                            x.IsDelete == false);
+
+                        if (!detailSudahAda)
+                        {
+                            newDetails.Add(new DiskonDetail
+                            {
+                                DetailDiskonId = Guid.NewGuid(),
+                                DiskonId = id,
+                                LayananId = d.LayananId,
+                                KodeLayanan = d.KodeLayanan,
+                                KategoriLayanan = d.KategoriLayanan,
+                                MaxQty = d.MaxQty,
+                                MaxHarga = d.MaxHarga,
+                                Keterangan = d.Keterangan,
+                                CreateBy = userActiveId,
+                                CreateDateTime = DateTimeOffset.UtcNow,
+                                IsDelete = false
+                            });
+                        }
+                    }
+
+                    if (newDetails.Any())
+                    {
+                        await _applicationDbContext.DiskonDetails.AddRangeAsync(newDetails);
+                    }
+                }
+
+                var result = await _applicationDbContext.SaveChangesAsync();
+                await transaction.CommitAsync();
 
                 if (result > 0)
                 {
-                    return Ok(new { message = "Update Data Berhasil || 200 OK" });
+                    return Ok(new
+                    {
+                        message = "Ubah Data Berhasil || 200 OK",
+                        diskonId = id
+                    });
                 }
-                else
+
+                return Ok(new
                 {
-                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
-                }
+                    message = "Tidak ada perubahan data.",
+                    diskonId = id
+                });
             }
             catch (DbUpdateException dbEx)
             {
-                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+                return StatusCode(500, new
+                {
+                    message = $"Gagal menyimpan data: {dbEx.InnerException?.Message ?? dbEx.Message}"
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+                return StatusCode(500, new
+                {
+                    message = $"Terjadi kesalahan internal: {ex.Message}"
+                });
             }
         }
 
@@ -286,13 +520,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         {
             try
             {
-                // **Cek koneksi ke database**
                 if (!await _applicationDbContext.Database.CanConnectAsync())
                 {
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
                 }
 
-                // **Ambil User ID dari JWT Claims**
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
                 {
@@ -301,191 +533,301 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
                 var getUserActive = await _applicationDbContext.UserActives
                     .FirstOrDefaultAsync(u => u.Email == emailLogin);
+
                 if (getUserActive == null)
                 {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
                 }
+
                 var userActiveId = getUserActive.UserActiveId;
 
-                // **Cari Data**
-                var data = await _applicationDbContext.Diskons.FindAsync(id);
+                await using var transaction = await _applicationDbContext.Database.BeginTransactionAsync();
+
+                var data = await _applicationDbContext.Diskons
+                    .FirstOrDefaultAsync(x => x.DiskonId == id && x.IsDelete == false);
+
                 if (data == null)
                 {
-                    return NotFound(new { message = "Data tidak ditemukan." });
+                    return NotFound(new { message = "Data diskon tidak ditemukan." });
                 }
 
-                // **Soft Delete (Tandai Data sebagai Terhapus)**
+                var details = await _applicationDbContext.DiskonDetails
+                    .Where(x => x.DiskonId == id && x.IsDelete == false)
+                    .ToListAsync();
+
+                data.IsDelete = true;
                 data.DeleteBy = userActiveId;
                 data.DeleteDateTime = DateTimeOffset.UtcNow;
 
-                data.IsDelete = true;
+                if (details.Any())
+                {
+                    foreach (var item in details)
+                    {
+                        item.IsDelete = true;
+                        item.DeleteBy = userActiveId;
+                        item.DeleteDateTime = DateTimeOffset.UtcNow;
+                    }
+
+                    _applicationDbContext.DiskonDetails.UpdateRange(details);
+                }
 
                 _applicationDbContext.Diskons.Update(data);
-                int result = await _applicationDbContext.SaveChangesAsync();
+
+                var result = await _applicationDbContext.SaveChangesAsync();
+                await transaction.CommitAsync();
 
                 if (result > 0)
                 {
-                    return Ok(new { message = "Data berhasil dihapus (soft delete) || 200 OK" });
+                    return Ok(new
+                    {
+                        message = "Data header dan detail berhasil dihapus (soft delete) || 200 OK",
+                        diskonId = id
+                    });
                 }
-                else
-                {
-                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
-                }
+
+                return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
             }
             catch (DbUpdateException dbEx)
             {
-                return StatusCode(500, new { message = $"Gagal menghapus data: {dbEx.InnerException?.Message}" });
+                return StatusCode(500, new
+                {
+                    message = $"Gagal menghapus data: {dbEx.InnerException?.Message ?? dbEx.Message}"
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+                return StatusCode(500, new
+                {
+                    message = $"Terjadi kesalahan internal: {ex.Message}"
+                });
             }
         }
 
         [HttpGet("paged")]
         public async Task<IActionResult> Paged(
-        int page = 1,
-        int perPage = 10,
-        string? search = null,
-        string? orderBy = "CreateDateTime",
-        string? sortDirection = "desc",
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                DateTime? startDate = null,
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                DateTime? endDate = null,
-        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+            int page = 1,
+            int perPage = 10,
+            string? search = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+            DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+            DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
-
-            // Query data
-            var query = from a in _applicationDbContext.Diskons
-                        join u in _applicationDbContext.UserActives
-                        on a.CreateBy equals u.UserActiveId
-                        where a.IsDelete == false || a.IsDelete == null
-                        select new
-                        {
-                            a.CreateDateTime,
-                            a.CreateBy,
-                            CreateByName = u.FullName,
-                            a.DiskonId,
-                            a.NamaDiskon,
-                            a.TglBerlaku,
-                            a.TglBerakhir,
-                            a.IsAsuransi,
-                            a.AsuransiId,
-                            a.PersenDiskon,
-                            a.NominalDiskon,
-                            a.Keterangan,
-                        };
-
-            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-            if (!string.IsNullOrWhiteSpace(search))
+            try
             {
-                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-                query = query.Where(u =>
-                    EF.Functions.ILike(u.NamaDiskon, search)
-                );
-            }
+                if (page < 1) page = 1;
+                if (perPage < 1) perPage = 10;
 
-            //// **Filter berdasarkan tanggal**
-            if (startDate.HasValue && endDate.HasValue)
-            {
-                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
-                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+                var query = from a in _applicationDbContext.Diskons.AsNoTracking()
+                            join u in _applicationDbContext.UserActives.AsNoTracking()
+                                on a.CreateBy equals u.UserActiveId into userGroup
+                            from u in userGroup.DefaultIfEmpty()
+                            where a.IsDelete == false || a.IsDelete == null
+                            select new
+                            {
+                                a.CreateDateTime,
+                                a.CreateBy,
+                                CreateByName = u != null ? u.FullName : null,
+                                a.DiskonId,
+                                a.NamaDiskon,
+                                a.TglBerlaku,
+                                a.TglBerakhir,
+                                a.IsAsuransi,
+                                a.AsuransiId,
+                                a.PersenDiskon,
+                                a.NominalDiskon,
+                                a.Keterangan,
+                                a.UpdateBy,
+                                a.UpdateDateTime
+                            };
 
-                query = query.Where(u =>
-                    u.CreateDateTime >= startUtc &&
-                    u.CreateDateTime <= endUtc);
-            }
-
-            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
-            if (periode.HasValue)
-            {
-                DateTime today = DateTime.UtcNow.Date;
-
-                switch (periode)
+                if (!string.IsNullOrWhiteSpace(search))
                 {
-                    case PeriodeFilter.Today:
-                        query = query.Where(u => u.CreateDateTime.Date == today);
-                        break;
-                    case PeriodeFilter.ThisWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date <= today
-                        );
-                        break;
-                    case PeriodeFilter.LastWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)
-                        );
-                        break;
-                    case PeriodeFilter.ThisMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month &&
-                            u.CreateDateTime.Year == today.Year
-                        );
-                        break;
-                    case PeriodeFilter.LastMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month - 1 &&
-                            u.CreateDateTime.Year == today.Year
-                        );
-                        break;
-                    case PeriodeFilter.ThisYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
-                        break;
-                    case PeriodeFilter.LastYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
-                        break;
-                    case PeriodeFilter.Last3Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
-                        break;
-                    case PeriodeFilter.Last6Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
-                        break;
+                    search = $"%{search.Trim()}%";
+                    query = query.Where(u =>
+                        EF.Functions.ILike(u.NamaDiskon!, search) ||
+                        EF.Functions.ILike(u.CreateByName!, search) ||
+                        EF.Functions.ILike(u.Keterangan!, search));
                 }
-            }
 
-            // Sorting Data dengan cara yang lebih aman
-            query = sortDirection?.ToLower() == "desc"
-                ? orderBy switch
+                if (startDate.HasValue && endDate.HasValue)
                 {
-                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "NamaDiskon" => query.OrderByDescending(u => u.NamaDiskon),
-                    _ => query.OrderByDescending(u => u.CreateDateTime)
+                    var startUtc = startDate.Value.Date.ToUniversalTime();
+                    var endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+
+                    query = query.Where(u =>
+                        u.CreateDateTime >= startUtc &&
+                        u.CreateDateTime <= endUtc);
                 }
-                : orderBy switch
+                else if (startDate.HasValue)
                 {
-                    "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    "NamaDiskon" => query.OrderBy(u => u.NamaDiskon),
-                    _ => query.OrderBy(u => u.CreateDateTime)
-                };
-
-            // Pagination
-            var totalRows = query.Count();
-            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
-
-            if (rows.Count == 0 && page > totalPages)
-            {
-                return NotFound(new { message = "Page not found." });
-            }
-
-            return Ok(new
-            {
-                status = "success",
-                message = "Data retrieved successfully",
-                data = new
-                {
-                    Rows = rows,
-                    TotalRows = totalRows,
-                    CurrentPage = page,
-                    PerPage = perPage,
-                    TotalPages = totalPages
+                    var startUtc = startDate.Value.Date.ToUniversalTime();
+                    query = query.Where(u => u.CreateDateTime >= startUtc);
                 }
-            });
+                else if (endDate.HasValue)
+                {
+                    var endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+                    query = query.Where(u => u.CreateDateTime <= endUtc);
+                }
+
+                if (periode.HasValue)
+                {
+                    var today = DateTime.UtcNow.Date;
+
+                    switch (periode.Value)
+                    {
+                        case PeriodeFilter.Today:
+                            query = query.Where(u => u.CreateDateTime.Date == today);
+                            break;
+
+                        case PeriodeFilter.ThisWeek:
+                            var startOfWeek = today.AddDays(-(int)today.DayOfWeek);
+                            query = query.Where(u =>
+                                u.CreateDateTime.Date >= startOfWeek &&
+                                u.CreateDateTime.Date <= today);
+                            break;
+
+                        case PeriodeFilter.LastWeek:
+                            var startLastWeek = today.AddDays(-7 - (int)today.DayOfWeek);
+                            var endLastWeek = today.AddDays(-(int)today.DayOfWeek);
+                            query = query.Where(u =>
+                                u.CreateDateTime.Date >= startLastWeek &&
+                                u.CreateDateTime.Date < endLastWeek);
+                            break;
+
+                        case PeriodeFilter.ThisMonth:
+                            query = query.Where(u =>
+                                u.CreateDateTime.Month == today.Month &&
+                                u.CreateDateTime.Year == today.Year);
+                            break;
+
+                        case PeriodeFilter.LastMonth:
+                            var lastMonthDate = today.AddMonths(-1);
+                            query = query.Where(u =>
+                                u.CreateDateTime.Month == lastMonthDate.Month &&
+                                u.CreateDateTime.Year == lastMonthDate.Year);
+                            break;
+
+                        case PeriodeFilter.ThisYear:
+                            query = query.Where(u => u.CreateDateTime.Year == today.Year);
+                            break;
+
+                        case PeriodeFilter.LastYear:
+                            query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
+                            break;
+
+                        case PeriodeFilter.Last3Months:
+                            query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
+                            break;
+
+                        case PeriodeFilter.Last6Months:
+                            query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
+                            break;
+                    }
+                }
+
+                query = sortDirection?.ToLower() == "asc"
+                    ? orderBy switch
+                    {
+                        "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
+                        "CreateByName" => query.OrderBy(u => u.CreateByName),
+                        "NamaDiskon" => query.OrderBy(u => u.NamaDiskon),
+                        "TglBerlaku" => query.OrderBy(u => u.TglBerlaku),
+                        "TglBerakhir" => query.OrderBy(u => u.TglBerakhir),
+                        _ => query.OrderBy(u => u.CreateDateTime)
+                    }
+                    : orderBy switch
+                    {
+                        "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
+                        "CreateByName" => query.OrderByDescending(u => u.CreateByName),
+                        "NamaDiskon" => query.OrderByDescending(u => u.NamaDiskon),
+                        "TglBerlaku" => query.OrderByDescending(u => u.TglBerlaku),
+                        "TglBerakhir" => query.OrderByDescending(u => u.TglBerakhir),
+                        _ => query.OrderByDescending(u => u.CreateDateTime)
+                    };
+
+                var totalRows = await query.CountAsync();
+                var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+                var headers = await query
+                    .Skip((page - 1) * perPage)
+                    .Take(perPage)
+                    .ToListAsync();
+
+                if (headers.Count == 0 && page > totalPages && totalRows > 0)
+                {
+                    return NotFound(new { message = "Page not found." });
+                }
+
+                var diskonIds = headers.Select(x => x.DiskonId).ToList();
+
+                var details = await _applicationDbContext.DiskonDetails
+                    .AsNoTracking()
+                    .Where(d => diskonIds.Contains((Guid)d.DiskonId) && (d.IsDelete == false || d.IsDelete == null))
+                    .Select(d => new
+                    {
+                        d.DetailDiskonId,
+                        d.DiskonId,
+                        d.LayananId,
+                        d.KodeLayanan,
+                        d.KategoriLayanan,
+                        d.MaxQty,
+                        d.MaxHarga,
+                        d.Keterangan,
+                        d.CreateBy,
+                        d.CreateDateTime,
+                        d.UpdateBy,
+                        d.UpdateDateTime
+                    })
+                    .OrderByDescending(d => d.CreateDateTime)
+                    .ToListAsync();
+
+                var rows = headers.Select(h => new
+                {
+                    h.CreateDateTime,
+                    h.CreateBy,
+                    h.CreateByName,
+                    h.DiskonId,
+                    h.NamaDiskon,
+                    h.TglBerlaku,
+                    h.TglBerakhir,
+                    h.IsAsuransi,
+                    h.AsuransiId,
+                    h.PersenDiskon,
+                    h.NominalDiskon,
+                    h.Keterangan,
+                    h.UpdateBy,
+                    h.UpdateDateTime,
+                    Details = details
+                        .Where(d => d.DiskonId == h.DiskonId)
+                        .ToList()
+                }).ToList();
+
+                return Ok(new
+                {
+                    status = "success",
+                    message = "Data retrieved successfully",
+                    data = new
+                    {
+                        Rows = rows,
+                        TotalRows = totalRows,
+                        CurrentPage = page,
+                        PerPage = perPage,
+                        TotalPages = totalPages
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    status = "error",
+                    message = $"Terjadi kesalahan internal: {ex.Message}"
+                });
+            }
         }
     }
 }

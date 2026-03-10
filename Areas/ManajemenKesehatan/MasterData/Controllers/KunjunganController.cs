@@ -446,6 +446,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.CreateDateTime,
                         a.CreateBy,
                         a.IsFinished,
+                        a.TglFinishedKasir,
                         a.IsScreening,
                         a.IsPresent,
                         a.IsTriage,
@@ -1976,6 +1977,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         CreateByName = u != null ? u.FullName : null,
 
                         a.IsFinished,
+                        a.TglFinishedKasir,
                         a.IsScreening,
                         a.IsPresent,
                         a.IsTriage,
@@ -2187,6 +2189,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         r.CreateByName,
 
                         r.IsFinished,
+                        r.TglFinishedKasir,
                         r.IsScreening,
                         r.IsPresent,
                         r.IsTriage,
@@ -2274,6 +2277,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     k.CreateDateTime,
                     k.KunjunganID,
                     k.PasienId,
+                    k.IsFinished,
+                    k.TglFinishedKasir,
                     NamaPasien = p != null ? p.NamaLengkap : null, // sesuaikan dengan nama field pasien
                     NoRM = p != null ? p.NoRekamMedis : null,
  

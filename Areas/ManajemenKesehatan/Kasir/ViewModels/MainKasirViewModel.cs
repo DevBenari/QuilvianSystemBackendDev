@@ -18,6 +18,7 @@ public class MainKasirViewModel
     public decimal? TotalBiayaTindakan { get; set; }
     public decimal? SubTotalMandiri { get; set; }
     public decimal? SubTotalAsuransi { get; set; }
+    public decimal? HargaDiskon { get; set; }
     public decimal? TotalPembayaran { get; set; }
     public decimal? GrandTotalPembayaran { get; set; }
     public string? Keterangan { get; set; }
