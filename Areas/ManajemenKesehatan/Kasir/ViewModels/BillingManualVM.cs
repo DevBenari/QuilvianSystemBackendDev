@@ -8,6 +8,5 @@
         public decimal? HargaItem { get; set; }
         public int? QtyItem { get; set; }
         public decimal? SubBiayaLainnya { get; set; }
-        public int? DPD { get; set; }
     }
 }

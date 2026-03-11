@@ -27,6 +27,7 @@
         public List<object>? DaftarRacikan { get; set; } = new();
         public List<object>? DaftarTindakan { get; set; } = new();
         public List<object>? DaftarBiayaAdmin { get; set; } = new();
+        public List<object>? DaftarBiayaLain { get; set; } = new();
         public List<object>? DaftarAlkes { get; set; } = new();
 
         public List<object>? DaftarVisitDokter { get; set; } = new();
@@ -38,6 +39,7 @@
         public decimal TotalRacikan { get; set; } = 0m;
         public decimal TotalTindakan { get; set; } = 0m;
         public decimal TotalBiayaAdmin { get; set; } = 0m;
+        public decimal TotalBiayaLain { get; set; } = 0m;
         public decimal TotalAlkes { get; set; } = 0m;
 
         public decimal? SubTotalMandiri { get; set; } = 0m;

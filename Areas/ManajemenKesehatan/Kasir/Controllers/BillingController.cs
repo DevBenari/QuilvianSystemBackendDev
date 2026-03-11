@@ -713,7 +713,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 // buat billing kode
                 string kode;
                 int billingIndex = await _applicationDbContext.Billings
-                       .CountAsync(b => b.KunjunganId == vm.KunjunganId && b.JenisBilling.ToLower() == "biaya lain-lain");
+                       .CountAsync(b => b.KunjunganId == vm.KunjunganId && b.JenisBilling.ToLower() == "biaya lain - lain");
                 if (billingIndex == 0)
                 {
                     kode = "BGLL001";

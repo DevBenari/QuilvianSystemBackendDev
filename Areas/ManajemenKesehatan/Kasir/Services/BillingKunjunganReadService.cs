@@ -325,6 +325,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     BillingId = bill?.BillingId,
                     BillingKode = bill?.BillingKode,
                     StatusBilling = bill?.StatusBilling,
+                    jenisBilling = bill?.JenisBilling,
                     TanggalInvoice = bill?.TanggalInvoice,
                     TanggalJatuhTempo = bill?.TanggalJatuhTempo,
 
@@ -389,6 +390,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     BillingId = bill?.BillingId,
                     BillingKode = bill?.BillingKode,
                     StatusBilling = bill?.StatusBilling,
+                    jenisBilling = bill?.JenisBilling,
                     TanggalInvoice = bill?.TanggalInvoice,
                     TanggalJatuhTempo = bill?.TanggalJatuhTempo,
 
@@ -458,6 +460,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     Subtotal = bill?.SubTotalItem ?? 0m,
                     BillingId = bill?.BillingId,
                     BillingKode = bill?.BillingKode,
+                    jenisBilling = bill?.JenisBilling,
                     StatusBilling = bill?.StatusBilling,
                     TanggalInvoice = bill?.TanggalInvoice,
                     TanggalJatuhTempo = bill?.TanggalJatuhTempo,
@@ -545,10 +548,10 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     Qty = qtyFinal,
                     Harga = hargaEfektif,
                     Subtotal = subtotal,
-
                     BillingId = bill?.BillingId,
                     BillingKode = bill?.BillingKode,
                     StatusBilling = bill?.StatusBilling,
+                    jenisBilling = bill?.JenisBilling,
                     TanggalInvoice = bill?.TanggalInvoice,
                     TanggalJatuhTempo = bill?.TanggalJatuhTempo,
                     DPD = HitungDpd(bill?.TanggalJatuhTempo, snap)
@@ -573,6 +576,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 b.SubTotalItem,
                 b.BillingKode,
                 b.StatusBilling,
+                b.JenisBilling,
                 TanggalInvoice = b?.TanggalInvoice,
                 TanggalJatuhTempo = b?.TanggalJatuhTempo,
 
@@ -834,6 +838,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 {
                     BillingId = billKamar?.BillingId,
                     BillingKode = billKamar?.BillingKode,
+                    jenisBilling = billKamar?.JenisBilling,
                     StatusBilling = billKamar?.StatusBilling,
                     TanggalInvoice = billKamar?.TanggalInvoice,
                     TanggalJatuhTempo = billKamar?.TanggalJatuhTempo,
@@ -883,7 +888,32 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
            dto.TotalDPRanap = depositoBill.SubTotalItem ?? 0m;
         }
-        
+
+        // ================
+        // 11) Biaya lain2
+        // ================
+        dto.DaftarBiayaLain = billings
+            .Where(b => string.Equals(b.JenisBilling, "Biaya Lain - Lain", StringComparison.OrdinalIgnoreCase))
+            .Select(b => (object)new
+            {
+                b.BillingId,
+                b.NamaItem,
+                b.HargaItem,
+                b.QtyItem,
+                b.SubTotalItem,
+                b.BillingKode,
+                b.StatusBilling,
+                b.JenisBilling,
+                TanggalInvoice = b?.TanggalInvoice,
+                TanggalJatuhTempo = b?.TanggalJatuhTempo,
+
+                // ✅ dpd lokal
+                DPD = HitungDpd(b?.TanggalJatuhTempo, snap)
+            })
+            .ToList();
+
+        dto.TotalBiayaLain = dto.DaftarBiayaLain.Sum(x => (decimal?)((dynamic)x).SubTotalItem ?? 0m);
+
         // =========================
         // 11) TOTAL KESELURUHAN (asuransi dan mandiri)
         // =========================
@@ -1469,7 +1499,8 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                             Subtotal = subtotal,
                             BillingId = bill?.BillingId,
                             BillingKode = bill?.BillingKode,
-                            StatusBilling = bill?.StatusBilling
+                            StatusBilling = bill?.StatusBilling,
+                            jenisBilling = bill?.JenisBilling,
                         };
                     })
                     .ToList();
@@ -1511,6 +1542,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                             BillingId = bill?.BillingId,
                             BillingKode = bill?.BillingKode,
                             StatusBilling = bill?.StatusBilling,
+                            jenisBilling = bill?.JenisBilling,
                             x.dr.Signa,
                             x.dr.SignaTambahan,
                             x.dr.StatusPengambilanObat
@@ -1542,6 +1574,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                             BillingId = bill?.BillingId,
                             BillingKode = bill?.BillingKode,
                             StatusBilling = bill?.StatusBilling,
+                            jenisBilling = bill?.JenisBilling,
                             x.dr.Signa,
                             x.dr.SignaTambahan,
                             x.dr.StatusPengambilanObat,
@@ -1589,7 +1622,8 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                             Subtotal = subtotal,
                             BillingId = bill?.BillingId,
                             BillingKode = bill?.BillingKode,
-                            StatusBilling = bill?.StatusBilling
+                            StatusBilling = bill?.StatusBilling,
+                            jenisBilling = bill?.JenisBilling,
                         };
                     })
                     .ToList();
@@ -1608,7 +1642,8 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     b.QtyItem,
                     b.SubTotalItem,
                     b.BillingKode,
-                    b.StatusBilling
+                    b.StatusBilling,
+                    b.JenisBilling,
                 })
                 .ToList();
 
@@ -1633,7 +1668,8 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                         Qty = qty,
                         Harga = harga,
                         Subtotal = subtotal,
-                        b.StatusBilling
+                        b.StatusBilling,
+                        b.JenisBilling
                     };
                 })
                 .ToList();
@@ -1850,6 +1886,23 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 dto.TotalDPRanap = dp.SubTotalItem ?? 0m;
             }
 
+            // Biaya lain2 (dari billings)
+            dto.DaftarBiayaLain = billings
+                .Where(b => b.KunjunganId == kid && string.Equals(b.JenisBilling, "Biaya Lain - Lain", StringComparison.OrdinalIgnoreCase))
+                .Select(b => (object)new
+                {
+                    b.BillingId,
+                    b.NamaItem,
+                    b.HargaItem,
+                    b.QtyItem,
+                    b.SubTotalItem,
+                    b.BillingKode,
+                    b.StatusBilling,
+                    b.JenisBilling,
+                })
+                .ToList();
+
+            dto.TotalBiayaLain = dto.DaftarBiayaLain.Sum(x => (decimal?)((dynamic)x).SubTotalItem ?? 0m);
 
             var DepositRanap = dto.TotalDPRanap;
             var asuransi =
@@ -1904,6 +1957,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 dto.DaftarAlkes,
                 dto.DaftarVisitDokter,
                 dto.DaftarKamarRanap,
+                dto.DaftarBiayaLain,
                 dto.DPRanap,
                 dto.TotalDPRanap,
                 dto.TotalPemeriksaanLab,
@@ -1914,6 +1968,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 dto.TotalAlkes,
                 dto.TotalBiayaVisitDokter,
                 dto.TotalKamarRanap,
+                dto.TotalBiayaLain,
                 dto.SubTotalAsuransi,
                 dto.SebelumTaxTotalMandiri,
                 dto.PajakTotalMandiri,
