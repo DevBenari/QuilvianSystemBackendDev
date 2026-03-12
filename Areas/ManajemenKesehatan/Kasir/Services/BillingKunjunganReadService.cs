@@ -933,7 +933,8 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             + dto.TotalRacikan
             + dto.TotalBiayaAdmin
             + dto.TotalAlkes
-            + dto.TotalBiayaVisitDokter;
+            + dto.TotalBiayaVisitDokter
+            + dto.TotalBiayaLain;
 
         var ppnRate = dto.PPN / 100m;
         dto.SubTotalAsuransi = asuransi;
@@ -1919,6 +1920,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 // komponen yang memang tidak punya IsCovered → anggap mandiri
                 + dto.TotalRacikan
                 + dto.TotalBiayaAdmin
+                + dto.TotalBiayaLain
                 + dto.TotalAlkes
                 + dto.TotalBiayaVisitDokter;
 

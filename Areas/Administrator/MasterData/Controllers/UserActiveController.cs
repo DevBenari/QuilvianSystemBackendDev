@@ -420,14 +420,25 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                 var fotoFileName = isDokter ? "dokter.jpg" : "user.jpg";
 
                 // Cek Duplikasi
-                var isDuplicate = _applicationDbContext.UserActives
-                    .Any(c => c.UserActiveCode == kode && c.Email == vm.Email);
+                var id = Guid.NewGuid();
 
-                if (isDuplicate)
+                var isDuplicateUserActive = await _applicationDbContext.UserActives
+                    .AnyAsync(c => c.UserActiveCode == kode && c.Email == vm.Email);
+
+                var isDuplicateKaryawan = await _applicationDbContext.Karyawans
+                    .AnyAsync(c => c.NoIdentitas.ToLower().Trim() == vm.IdentityNumber.ToLower().Trim()
+                                && c.UserActiveId == id
+                                && c.IsDelete == false);
+
+                if (isDuplicateUserActive || isDuplicateKaryawan)
                 {
-                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
+                    return Conflict(new
+                    {
+                        message = isDuplicateUserActive
+                            ? "Terdapat duplikasi data user aktif! || 409 Conflict Data"
+                            : "Data karyawan ini telah tersedia"
+                    });
                 }
-
 
                 // Validate ModelState
                 if (ModelState.IsValid)
@@ -442,7 +453,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                         PhoneNumber = vm.Handphone,
                         IsActive = true
                     };
-                    var id = Guid.NewGuid();
+                    
                     var user = new UserActive
                     {
                         CreateDateTime = DateTimeOffset.UtcNow,
@@ -505,6 +516,32 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                     }
                     else
                     {
+                        string noKaryawan = "";
+
+                        var lastKaryawan = _applicationDbContext.Karyawans
+                            .Where(k => k.CreateDateTime.Date == dateNow.Date)
+                            .OrderByDescending(k => k.NoKaryawan)
+                            .FirstOrDefault();
+
+                        if (lastKaryawan == null)
+                        {
+                            noKaryawan = "KRY" + setDateNow + "0001";
+                        }
+                        else
+                        {
+                            var lastCodeTrim = lastKaryawan.NoKaryawan.Substring(3, 6);
+
+                            if (lastCodeTrim != setDateNow)
+                            {
+                                noKaryawan = "KRY" + setDateNow + "0001";
+                            }
+                            else
+                            {
+                                noKaryawan = "KRY" + setDateNow +
+                                    (Convert.ToInt32(lastKaryawan.NoKaryawan.Substring(9)) + 1).ToString("D4");
+                            }
+                        }
+
                         var kr = new Karyawan
                         {
                             KaryawanId = Guid.NewGuid(),
@@ -512,6 +549,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                             NoIdentitas = user.IdentityNumber,
                             Alamat = user.Address,
                             NoHandphone = user.Handphone,
+                            NoKaryawan = noKaryawan,
                             Email = user.Email,
                             DepartementId = user.DepartemenId,
                             InstalasiUnitId = user.InstalasiUnitId,

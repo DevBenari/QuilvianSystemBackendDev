@@ -17,6 +17,7 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Models
         public string? NoIdentitas { get; set; }
         public string? KodeKaryawan { get; set; }
         public string? NoRekening { get; set; }
+        public string? NoKaryawan { get; set; }
         public string? BankId { get; set; }
 
         public DateTime? TanggalKontrak { get; set; }
