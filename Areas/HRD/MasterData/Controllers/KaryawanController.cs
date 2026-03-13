@@ -92,7 +92,7 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
             });
         }
 
-        [HttpGet("{noKaryawan}")]
+        [HttpGet("by-NoKaryawan/{noKaryawan}")]
         public async Task<IActionResult> GetByNoKaryawan(string noKaryawan)
         {
             if (string.IsNullOrWhiteSpace(noKaryawan))

@@ -15,7 +15,6 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MCU.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Models;

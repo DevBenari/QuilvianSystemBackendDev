@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using QuilvianSystemBackendDev.Models;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
 {
     [Table("Diskon", Schema = "public")]
     public class Diskon : UserActivity

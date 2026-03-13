@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
@@ -20,20 +19,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class DetailDiskonController : Controller
+    public class DiskonPersentaseController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-
-        private readonly ILogger<DetailDiskonController> _logger;
+        private readonly ILogger<DiskonPersentaseController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public DetailDiskonController(
+        public DiskonPersentaseController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<DetailDiskonController> logger,
+            ILogger<DiskonPersentaseController> logger,
             IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
@@ -46,7 +44,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.DiskonDetails.Find(id);
+            var listdata = _applicationDbContext.DiskonPersentases.Find(id);
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -60,7 +58,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] DetailDiskonViewModel vm)
+        public async Task<IActionResult> Create([FromBody] DiskonPersentaseViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -89,34 +87,29 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
-                //// **Cek Duplikasi**
-                //bool isDuplicate = await _applicationDbContext.Diskons
-                //                    .AnyAsync(c => c.NamaDiskon.ToLower().Trim() == vm.NamaDiskon.ToLower().Trim()
-                //                    && c.IsDelete == false);
+                //cek duplikasi
+                bool isDuplicate = await _applicationDbContext.DiskonPersentases
+                    .AnyAsync(c => c.NominalPersentase
+                    == vm.NominalPersentase && c.IsDelete == false);
 
-                //if (isDuplicate)
-                //{
-                //    return Conflict(new { message = "Nama diskon ini telah tersedia" });
-                //}
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Nominal persentase diskon ini telah tersedia" });
+                }
 
                 // **Buat Data Baru**
-                var data = new DiskonDetail
+                var data = new DiskonPersentase
                 {
-                    DetailDiskonId = Guid.NewGuid(),
-                    DiskonId = vm.DiskonId,
-                    LayananId = vm.LayananId,
-                    KodeLayanan = vm.KodeLayanan,
-                    KategoriLayanan = vm.KategoriLayanan,
-                    MaxHarga = vm.MaxHarga,
-                    MaxQty = vm.MaxQty,
+                    DiskonPercentaseId = Guid.NewGuid(),
+                    NominalPersentase = vm.NominalPersentase,
                     Keterangan = vm.Keterangan,
-                    
+
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
 
                 // **Simpan ke Database**
-                _applicationDbContext.DiskonDetails.Add(data);
+                _applicationDbContext.DiskonPersentases.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -138,10 +131,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-        [HttpPut("{id}")] 
-        public async Task<IActionResult> Update(Guid id, [FromBody] DetailDiskonViewModel vm)
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(Guid id, [FromBody] DiskonPersentaseViewModel vm)
         {
-            // 1. Validasi awal
             if (vm == null || !ModelState.IsValid)
             {
                 return BadRequest(new { message = "Data tidak valid." });
@@ -150,7 +143,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             try
             {
                 // **Cek koneksi ke database**
-                if (!_applicationDbContext.Database.CanConnect())
+                if (!await _applicationDbContext.Database.CanConnectAsync())
                 {
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
                 }
@@ -162,57 +155,60 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var getUserActive = await _applicationDbContext.UserActives.FirstOrDefaultAsync(u => u.Email == emailLogin);
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
                 if (getUserActive == null)
                 {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
-                // **Cari data lama di database**
-                var existingData = await _applicationDbContext.DiskonDetails
-                    .FirstOrDefaultAsync(d => d.DetailDiskonId == id);
-
-                if (existingData == null)
+                // **Cari Data**
+                var data = await _applicationDbContext.DiskonPersentases.FindAsync(id);
+                if (data == null)
                 {
-                    return NotFound(new { message = "Data tidak ditemukan atau sudah dihapus." });
+                    return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
-                // **Update Field yang Diperlukan**
-                existingData.DiskonId = vm.DiskonId;
-                existingData.LayananId = vm.LayananId;
-                existingData.KodeLayanan = vm.KodeLayanan;
-                existingData.KategoriLayanan = vm.KategoriLayanan;
-                existingData.MaxHarga = vm.MaxHarga;
-                existingData.MaxQty = vm.MaxQty;
-                existingData.Keterangan = vm.Keterangan;
+                //cek duplikasi
+                bool isDuplicate = await _applicationDbContext.DiskonPersentases
+                    .AnyAsync(c => c.NominalPersentase
+                    == vm.NominalPersentase && c.DiskonPercentaseId != id);
 
-                // **Audit Fields untuk Update**
-                existingData.UpdateBy = userActiveId; // Pastikan property ini ada di model Anda
-                existingData.UpdateDateTime = DateTimeOffset.UtcNow;
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Tipe anastesi ini telah tersedia" });
+                }
 
-                // **Simpan Perubahan**
-                // EF Core akan mendeteksi perubahan pada objek 'existingData' secara otomatis
+                // **Update Data**
+                data.NominalPersentase = vm.NominalPersentase;
+                data.Keterangan = vm.Keterangan;
+
+                data.UpdateBy = userActiveId;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
+
+                _applicationDbContext.DiskonPersentases.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
-                if (result >= 0) // Gunakan >= 0 karena jika tidak ada perubahan data, result bisa 0 tapi tidak error
+                if (result > 0)
                 {
                     return Ok(new { message = "Update Data Berhasil || 200 OK" });
                 }
                 else
                 {
-                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui ke database." });
+                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
                 }
             }
             catch (DbUpdateException dbEx)
             {
-                return StatusCode(500, new { message = $"Gagal memperbarui data: {dbEx.InnerException?.Message ?? dbEx.Message}" });
+                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
             }
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
@@ -241,7 +237,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.DiskonDetails.FindAsync(id);
+                var data = await _applicationDbContext.DiskonPersentases.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -253,7 +249,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 data.IsDelete = true;
 
-                _applicationDbContext.DiskonDetails.Update(data);
+                _applicationDbContext.DiskonPersentases.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -277,38 +273,39 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
 
         [HttpGet("paged")]
-        public async Task<IActionResult> Paged(
+        public IActionResult Paged(
             int page = 1,
             int perPage = 10,
+            [FromQuery] decimal? nominal = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                            DateTime? startDate = null,
+                                    DateTime? startDate = null,
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                            DateTime? endDate = null,
+                                    DateTime? endDate = null,
             [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
 
             // Query data
-            var query = from a in _applicationDbContext.DiskonDetails
-                        join u in _applicationDbContext.UserActives
-                        on a.CreateBy equals u.UserActiveId
-                        where a.IsDelete == false || a.IsDelete == null
-                        select new
-                        {
-                            a.CreateDateTime,
-                            a.CreateBy,
-                            CreateByName = u.FullName,
-                            a.DetailDiskonId,
-                            a.DiskonId,
-                            a.LayananId,
-                            a.KodeLayanan,
-                            a.KategoriLayanan,
-                            a.MaxHarga,
-                            a.MaxQty,
-                            a.Keterangan,
-                        };
+            var query = (from a in _applicationDbContext.DiskonPersentases
+                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
+                         on a.CreateBy equals u.UserActiveId
+                         where a.IsDelete == false || a.IsDelete == null
+                         select new
+                         {
+                             a.CreateDateTime,
+                             a.CreateBy,
+                             CreateByName = u.FullName,
+                             a.DiskonPercentaseId,
+                             a.NominalPersentase,
+                             a.Keterangan,
+                         });
 
+            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
+            if (nominal.HasValue)
+            {
+                query = query.Where(x => x.NominalPersentase == nominal.Value);
+            }
 
             //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
@@ -409,14 +406,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
             });
         }
-
-
-
-
-
-
-
-
 
 
 
