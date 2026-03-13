@@ -1,9 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Interfaces;
 using QuilvianSystemBackendDev.Repositories;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Services
 {
-    public class DepositRanapNumberService
+    public class DepositRanapNumberService : IDepositRanapNumberService
     {
         private readonly ApplicationDbContext _applicationDbContext;
 

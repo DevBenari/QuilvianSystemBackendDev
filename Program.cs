@@ -228,6 +228,8 @@ builder.Services.AddScoped<IGenerateInvoiceBillingService, GenerateInvoiceBillin
 builder.Services.AddScoped<IBillingKunjunganReadService, BillingKunjunganReadService>();
 // service get prakiraan billing kunjungan IP
 builder.Services.AddScoped<IPerkiraanBillingRanapService, PerkiraanBillingRanapService>();
+// service kwitansi deposit ranap
+builder.Services.AddScoped<IDepositRanapNumberService, DepositRanapNumberService>();
 #endregion
 
 #region Setting Container

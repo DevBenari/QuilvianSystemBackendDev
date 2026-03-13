@@ -15,6 +15,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MCU.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Models;
@@ -245,6 +246,10 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<TarifKelasKamar> TarifKelasKamars { get; set; }
         public DbSet<Layanan> Layanans { get; set; }
         public DbSet<DiskonDetail> DiskonDetails { get; set; }
+        public DbSet<PaketLayanan> PaketLayanans { get; set; }
+        public DbSet<PaketLayananDetail> PaketLayananDetails { get; set; }
+        public DbSet<PaketLayananAsuransi> PaketLayananAsuransis { get; set; }
+        public DbSet<PaketLayananDiskon> PaketLayananDiskons { get; set; }
         #endregion
 
         #region Areas Keuangan
@@ -259,6 +264,11 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<ShiftDenominasi> ShiftDenominasies { get; set; }
         public DbSet<PergantianShift> PergantianShifts { get; set; }
         public DbSet<VoucherPettyCash> VoucherPettyCashes { get; set; }
+        public DbSet<DepositRanap> DepositRanaps { get; set; }
+        public DbSet<DepositPersentase> DepositPersentases { get; set; }
+        public DbSet<DiskonPersentase> DiskonPersentases { get; set; }
+
+
         #endregion
 
         #region Areas Hrd
@@ -380,7 +390,6 @@ namespace QuilvianSystemBackendDev.Repositories
             public DbSet<HandoverPasien> HandoverPasiens { get; set; }
             public DbSet<HandoverPasienDetail> HandoverPasienDetails { get; set; }
             public DbSet<SelisihBiaya> SelisihBiayas { get; set; }
-            public DbSet<DepositRanap> DepositRanaps { get; set; }
             #endregion
 
             #region Farmasi

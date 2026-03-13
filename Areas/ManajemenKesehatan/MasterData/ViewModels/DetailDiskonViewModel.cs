@@ -1,4 +1,4 @@
-﻿namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels
+﻿namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels
 {
     public class DetailDiskonViewModel
     {
