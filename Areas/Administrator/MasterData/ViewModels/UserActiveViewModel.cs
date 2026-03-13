@@ -13,6 +13,7 @@
         public Guid? DepartemenId { get; set; }
         public Guid? PositionId { get; set; }
         public Guid? TipeUserId { get; set; }
+        public Guid? InstalasiUnitId {  get; set; }
         // untuk foto
         //public string? FotoName { get; set; }
         //public string? FotoPath { get; set; }

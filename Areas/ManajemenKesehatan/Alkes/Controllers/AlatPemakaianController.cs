@@ -320,20 +320,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
                     if (qtyInput <= 0) qtyInput = 1;
 
                     // Ambil nama & harga alat (sesuaikan tabel/kolomnya)
-                    var alatDb = await _applicationDbContext.TarifKelass
-                        .Where(x => x.PeralatanId == alatId && x.KelasId == d.KelasId )
-                        .FirstOrDefaultAsync();
+                    //var alatDb = await _applicationDbContext.TarifKelass
+                    //    .Where(x => x.PeralatanId == alatId && x.KelasId == d.KelasId )
+                    //    .FirstOrDefaultAsync();
 
                     var namaAlat = await _applicationDbContext.Peralatans
                         .Where(x=>x.PeralatanId == alatId)
                         .Select(x=>x.NamaPeralatan)
                         .FirstOrDefaultAsync();
 
-                    if (alatDb == null && namaAlat==null)
-                        return BadRequest(new { message = $"Peralatan tidak ditemukan: {alatId}" });
+                    //if (alatDb == null && namaAlat==null)
+                    //    return BadRequest(new { message = $"Peralatan tidak ditemukan: {alatId}" });
 
-                    //var harga = d.HargaPeralatan ?? alatDb.Harga;
-                    var subTotal = (alatDb.TarifRs * qtyInput);
+                    ////var harga = d.HargaPeralatan ?? alatDb.Harga;
+                    //var subTotal = (alatDb.TarifRs * qtyInput);
 
                     // ---- DETAIL ----
                     detailEntities.Add(new AlatPemakaianDetail
@@ -343,8 +343,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
                         PeralatanId = alatId,
                         KelasId = d.KelasId,
                         QtyPemakaian = qtyInput,
-                        HargaPeralatan = alatDb.TarifRs,
-                        TotalPemakaianAlat = subTotal,
+                        //HargaPeralatan = alatDb.TarifRs,
+                        //TotalPemakaianAlat = subTotal,
                         Keterangan = d.Keterangan,
                         CreateBy = userId,
                         CreateDateTime = DateTimeOffset.UtcNow
@@ -369,9 +369,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
                             ItemId = alatId,
                             NamaItem = namaAlat,
 
-                            HargaItem = alatDb.TarifRs,
+                            //HargaItem = alatDb.TarifRs,
                             QtyItem = qtyInput,
-                            SubTotalItem = alatDb.TarifRs * qtyInput,
+                            //SubTotalItem = alatDb.TarifRs * qtyInput,
 
                             JenisBilling = "Alkes",
                             StatusPengambilan = true,
@@ -522,21 +522,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
                     if (qtyInput <= 0) qtyInput = 1;
 
                     // Ambil tarif per kelas
-                    var alatDb = await _applicationDbContext.TarifKelass
-                        .FirstOrDefaultAsync(x => x.PeralatanId == alatId && x.KelasId == d.KelasId);
+                    //var alatDb = await _applicationDbContext.TarifKelass
+                    //    .FirstOrDefaultAsync(x => x.PeralatanId == alatId && x.KelasId == d.KelasId);
 
                     var namaAlat = await _applicationDbContext.Peralatans
                         .Where(x => x.PeralatanId == alatId)
                         .Select(x => x.NamaPeralatan)
                         .FirstOrDefaultAsync();
 
-                    if (alatDb == null && namaAlat == null)
-                        return BadRequest(new { message = $"Peralatan tidak ditemukan: {alatId}" });
+                    //if (alatDb == null && namaAlat == null)
+                    //    return BadRequest(new { message = $"Peralatan tidak ditemukan: {alatId}" });
 
-                    if (alatDb == null)
-                        return BadRequest(new { message = $"Tarif alat belum tersedia untuk PeralatanId {alatId} dan KelasId {d.KelasId}." });
+                    //if (alatDb == null)
+                    //    return BadRequest(new { message = $"Tarif alat belum tersedia untuk PeralatanId {alatId} dan KelasId {d.KelasId}." });
 
-                    var subTotal = alatDb.TarifRs * qtyInput;
+                    //var subTotal = alatDb.TarifRs * qtyInput;
 
                     // ---- DETAIL ----
                     detailEntities.Add(new AlatPemakaianDetail
@@ -546,8 +546,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
                         PeralatanId = alatId,
                         KelasId = d.KelasId,
                         QtyPemakaian = qtyInput,
-                        HargaPeralatan = alatDb.TarifRs,
-                        TotalPemakaianAlat = subTotal,
+                        //HargaPeralatan = alatDb.TarifRs,
+                        //TotalPemakaianAlat = subTotal,
                         Keterangan = d.Keterangan,
                         CreateBy = userId,
                         CreateDateTime = DateTimeOffset.UtcNow
@@ -572,9 +572,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
                             ItemId = alatId,
                             NamaItem = namaAlat,
 
-                            HargaItem = alatDb.TarifRs,
+                            //HargaItem = alatDb.TarifRs,
                             QtyItem = qtyInput,
-                            SubTotalItem = alatDb.TarifRs * qtyInput,
+                            //SubTotalItem = alatDb.TarifRs * qtyInput,
                             TanggalInvoice = DateTime.UtcNow,
                             TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                             JenisBilling = "Alkes",

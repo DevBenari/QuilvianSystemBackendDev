@@ -68,6 +68,7 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
                                 k.JabatanId,
                                 k.NoIdentitas,
                                 k.KodeKaryawan,
+                                k.NoKaryawan,
                                 k.NoRekening,
                                 k.BankId,
                                 k.TanggalKontrak,
@@ -89,6 +90,73 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
                 message = "Ditemukan || 200 OK",
                 data = listdata
             });
+        }
+
+        [HttpGet("by-NoKaryawan/{noKaryawan}")]
+        public async Task<IActionResult> GetByNoKaryawan(string noKaryawan)
+        {
+            if (string.IsNullOrWhiteSpace(noKaryawan))
+            {
+                return BadRequest(new { message = "NoKaryawan wajib diisi." });
+            }
+
+            try
+            {
+                var data = await (
+                    from k in _applicationDbContext.Karyawans.AsNoTracking()
+                    where (k.IsDelete == false || k.IsDelete == null)
+                          && k.NoKaryawan == noKaryawan
+
+                    join u0 in _applicationDbContext.UserActives.AsNoTracking()
+                        on k.UserActiveId equals u0.UserActiveId into ug
+                    from u in ug.DefaultIfEmpty()
+
+                    join fn0 in _applicationDbContext.UserActives.AsNoTracking()
+                        on k.CreateBy equals fn0.UserActiveId into fng
+                    from fn in fng.DefaultIfEmpty()
+
+                    select new
+                    {
+                        k.KaryawanId,
+                        k.UserActiveId,
+                        NamaKaryawan = u != null ? u.FullName : null,
+                        k.DepartementId,
+                        k.InstalasiUnitId,
+                        k.JabatanId,
+                        k.NoIdentitas,
+                        k.KodeKaryawan,
+                        k.NoKaryawan,
+                        k.NoRekening,
+                        k.BankId,
+                        k.TanggalKontrak,
+                        k.TanggalAwalKerja,
+                        k.TanggalAkhirKerja,
+                        k.NoHandphone,
+                        k.Email,
+                        k.Alamat,
+                        CreateBy = fn != null ? fn.FullName : null,
+                        k.CreateDateTime
+                    }
+                ).FirstOrDefaultAsync();
+
+                if (data == null)
+                {
+                    return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                return Ok(new
+                {
+                    message = "Ditemukan || 200 OK",
+                    data
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = $"Terjadi kesalahan internal: {ex.Message}"
+                });
+            }
         }
 
         [HttpPost]
@@ -368,6 +436,7 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
                                   k.NoIdentitas,
                                   k.KodeKaryawan,
                                   k.NoRekening,
+                                  k.NoKaryawan,
                                   k.BankId,
                                   k.TanggalKontrak,
                                   k.TanggalAwalKerja,

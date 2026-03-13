@@ -212,6 +212,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     data.TanggalSpecimen,
                     data.JamSpecimen,
                     data.InfoNReff,
+                    data.Kondisi,
+                    data.KategoriGC,
+                    data.Rincian,
+                    data.Anjuran,
+                    data.DiagnosisPA,
                     data.Keterangan,
                     data.CreateBy,
                     data.CreateDateTime
@@ -293,16 +298,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         ms.Position = 0;
 
                         using var content = new MultipartFormDataContent
-        {
-            {
-                new StreamContent(ms)
-                {
-                    Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType) }
-                },
-                "file", fileName
-            },
-            { new StringContent(folderTarget), "folderTarget" }
-        };
+                        {
+                            {
+                                new StreamContent(ms)
+                                {
+                                    Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType) }
+                                },
+                                "file", fileName
+                            },
+                            { new StringContent(folderTarget), "folderTarget" }
+                        };
 
                         var flaskResponse = await client.PostAsync(_uploadUrl, content);
                         if (!flaskResponse.IsSuccessStatusCode)
@@ -352,6 +357,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     TanggalSpecimen = vm.TanggalSpecimen,
                     JamSpecimen = vm.JamSpecimen,
                     InfoNReff = vm.InfoNReff,
+                    Kondisi = vm.Kondisi,
+                    KategoriGC = vm.KategoriGC,
+                    Rincian = vm.Rincian,
+                    Anjuran = vm.Anjuran,
+                    DiagnosisPA = vm.DiagnosisPA,
+                    HasilImunoHistokimia = vm.HasilImunoHistokimia ?? new List<HasilImunoHistokimiaItem>(), 
                     Keterangan = vm.Keterangan,
 
                     CreateBy = userActiveId,
@@ -443,6 +454,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 data.TanggalSpecimen = vm.TanggalSpecimen;
                 data.JamSpecimen = vm.JamSpecimen;
                 data.InfoNReff = vm.InfoNReff;
+                data.Kondisi = vm.Kondisi;
+                data.KategoriGC = vm.KategoriGC;
+                data.Rincian = vm.Rincian;
+                data.Anjuran = vm.Anjuran;
+                data.DiagnosisPA = vm.DiagnosisPA;
+                data.HasilImunoHistokimia = vm.HasilImunoHistokimia ?? new List<HasilImunoHistokimiaItem>();
                 data.Keterangan = vm.Keterangan;
 
                 // ======================================================
@@ -533,8 +550,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             }
         }
 
-
-
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
@@ -597,7 +612,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         }
 
         [HttpGet("paged")]
-        public IActionResult Paged(
+        public async Task<IActionResult> Paged(
         int page = 1,
         int perPage = 10,
         Guid? kunjunganId = null,
@@ -662,6 +677,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.TanggalSpecimen,
                              a.JamSpecimen,
                              a.InfoNReff,
+                             a.Kondisi,
+                             a.KategoriGC,
+                             a.Rincian,
+                             a.Anjuran,
+                             a.DiagnosisPA,
                              a.Keterangan,
 
                              // ttg Lab hasil

@@ -438,67 +438,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             var userActiveId = getUserActive.UserActiveId;
 
             // ==================================================
-            // ✅ PROSES UPLOAD TTD PEMBATALAN
-            // ==================================================
-            //    string ttdPath = "";
-
-            //    if (vm.TTDPembatalan != null && vm.TTDPembatalan.Length > 0)
-            //    {
-            //        var maxSize = 1 * 1024 * 1024; // 1 MB
-            //        var allowedExtensions = new List<string> { ".jpg", ".jpeg" };
-            //        var fileExtension = Path.GetExtension(vm.TTDPembatalan.FileName).ToLower();
-
-            //        if (vm.TTDPembatalan.Length > maxSize)
-            //            return BadRequest(new { message = "Ukuran file tanda tangan terlalu besar! Maksimal 1MB." });
-
-            //        if (!allowedExtensions.Contains(fileExtension))
-            //            return BadRequest(new { message = "Format tanda tangan tidak valid! Gunakan JPG atau JPEG." });
-
-            //        var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
-            //        var ttdFileName = $"{getUserActive.FullName}_{safeTime}_TTDBatal{fileExtension}";
-
-            //        using var client = new HttpClient();
-            //        using var ms = new MemoryStream();
-            //        await vm.TTDPembatalan.CopyToAsync(ms);
-            //        ms.Position = 0;
-
-            //        var content = new MultipartFormDataContent {
-            //    {
-            //        new StreamContent(ms) {
-            //            Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.TTDPembatalan.ContentType) }
-            //        },
-            //        "file", ttdFileName
-            //    },
-            //    { new StringContent("TTDPembatalan"), "folderTarget" }
-            //};
-
-            //        HttpResponseMessage flaskResponse;
-            //        try
-            //        {
-            //            flaskResponse = await client.PostAsync(_uploadUrl, content);
-            //        }
-            //        catch (Exception ex)
-            //        {
-            //            _logger.LogError(ex, "Gagal koneksi ke server Flask untuk upload TTD pembatalan.");
-            //            return StatusCode(500, new { message = "Tidak dapat terhubung ke server Flask untuk upload tanda tangan." });
-            //        }
-
-            //        if (!flaskResponse.IsSuccessStatusCode)
-            //            return StatusCode(500, new { message = "Gagal upload tanda tangan ke server Flask." });
-
-            //        var responseBody = await flaskResponse.Content.ReadAsStringAsync();
-            //        dynamic jsonResp = JsonConvert.DeserializeObject(responseBody);
-            //        ttdPath = jsonResp?.url ?? jsonResp?.fileUrl ?? jsonResp?.path ?? "";
-
-            //        if (string.IsNullOrEmpty(ttdPath))
-            //            return StatusCode(500, new { message = "Gagal mendapatkan path TTD dari server Flask." });
-            //    }
-            //    else
-            //    {
-            //        return BadRequest(new { message = "Tanda tangan pembatalan harus diisi." });
-            //    }
-
-            // ==================================================
             // ✅ UPDATE DATA BOOKING MENJADI DIBATALKAN
             // ==================================================
 

@@ -14,6 +14,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion.Internal;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json.Converters;
 using OpenCvSharp;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Interfaces;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.HubSignalR;
@@ -42,6 +43,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         private readonly ILogger<KunjunganController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly IHubContext<KunjunganHub> _hubContext;
+        private readonly IDepositRanapNumberService _depositRanapNumberService;
+
 
         public KunjunganController
         (
@@ -51,7 +54,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             IGenerateInvoiceBillingService generateInvoiceBillingService,
             ILogger<KunjunganController> logger,
             IWebHostEnvironment webHostEnvironment,
-            IHubContext<KunjunganHub> hubContext
+            IHubContext<KunjunganHub> hubContext,
+            IDepositRanapNumberService depositRanapNumberService
+
         )
         {
             _applicationDbContext = context;
@@ -61,6 +66,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             _webHostEnvironment = webHostEnvironment;
             _hubContext = hubContext;
             _generateInvoiceBillingService = generateInvoiceBillingService;
+            _depositRanapNumberService = depositRanapNumberService;
         }
         private DateTime? TryParseTanggalLahir(string dateString)
         {
@@ -211,7 +217,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         TglMasukKunjungan = a.TglMasuk,
                         a.CaraMasukRS,
                         a.KondisiKeluar,
-                        a.DepositRanap,
                         d.NmDokter,
                         gambardokter = !string.IsNullOrEmpty(d.FotoName)
                             ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
@@ -446,12 +451,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.CreateDateTime,
                         a.CreateBy,
                         a.IsFinished,
+                        a.TglFinishedKasir,
                         a.IsScreening,
                         a.IsPresent,
                         a.IsTriage,
+                        a.IsClosed,
                         a.IsCTTPasienIGD,
                         a.Antrian,
-                        a.DepositRanap,
                         TglMasukKunjungan = a.TglMasuk,
                         a.CaraMasukRS,
                         a.KondisiKeluar,
@@ -645,12 +651,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     IsFinishedKasir = false,
                     IsTriage = false,
                     IsCTTPasienIGD = false,
+                    IsClosed = false,
                     Antrian = nomorAntrianFormatted, // null jika IGD
                     AsalKunjungan = request.AsalKunjungan,
                     TglMasuk = request.TglMasuk,
                     CaraMasukRS = request.CaraMasukRS,
                     KondisiKeluar = request.KondisiKeluar,
-                    DepositRanap = request.DepositRanap,
                 };
 
                 _applicationDbContext.Kunjungans.Add(newKunjungan);
@@ -662,6 +668,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     .Where(b => b.BiayaAdministrasiKode == kodeJenis)
                     .FirstOrDefaultAsync();
 
+                // Ambil / buat invoice sekali saja untuk semua billing yang akan dibuat
+                var invoice = await _generateInvoiceBillingService.GetOrCreateAsync(
+                    newKunjungan.KunjunganID,
+                    DateTime.UtcNow
+                );
+
+                // Jika ada biaya admin, tambahkan billingnya
                 if (biayaAdmin != null)
                 {
                     var bill = new Billing
@@ -673,9 +686,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         HargaItem = biayaAdmin.NominalBiayaAdministrasi,
                         QtyItem = 1,
                         SubTotalItem = biayaAdmin.NominalBiayaAdministrasi,
-                        InvoiceBilling = await _generateInvoiceBillingService.GetOrCreateAsync(
-                            newKunjungan.KunjunganID,
-                            DateTime.UtcNow),
+
+                        InvoiceBilling = invoice,
                         IsListWhiteOff = false,
                         BillingKode = "001",
                         JenisBilling = "Biaya Admin",
@@ -686,7 +698,51 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = UserActiveId
                     };
+
                     _applicationDbContext.Billings.Add(bill);
+                }
+
+                // =============================================
+                //  Deposit wajib untuk kunjungan IP
+                // =============================================
+                if (kodeJenis == "IP")
+                {
+                    // WARNING / VALIDASI
+                    if (request.DepositRanap == null || request.DepositRanap <= 0)
+                    {
+                        // kamu bisa ganti dengan return sesuai pola API kamu (ProblemDetails / ModelState)
+                        return BadRequest(new
+                        {
+                            message = "Kunjungan IP (rawat inap) wajib mengisi nominal deposit. "
+                        });
+                    }
+
+                    var noKwitansi = await _depositRanapNumberService.GenerateNoKwitansiAsync();
+
+                    var depo = new DepositRanap
+                    {
+                        DepositRanapId = Guid.NewGuid(),
+                        KunjunganId = newKunjungan.KunjunganID,
+                        TglTransaksi = DateTime.UtcNow,
+                        NominalMasuk = request.DepositRanap,
+                        SaldoDeposit = request.DepositRanap,
+                        NoKwitansi = noKwitansi,
+                        StatusDeposit = "Pemasukkan",
+
+                        CreateDateTime = DateTimeOffset.UtcNow,
+                        CreateBy = UserActiveId
+                    };
+
+                    _applicationDbContext.DepositRanaps.Add(depo);
+
+                    MainKasir kasir;
+                    kasir = new MainKasir
+                    {
+                        KasirId = Guid.NewGuid(),
+                        KunjunganId = newKunjungan.KunjunganID,
+                        StatusPembayaran = "Belum Lunas"
+                    };
+                    _applicationDbContext.MainKasirs.Add(kasir);
                 }
 
                 await _applicationDbContext.SaveChangesAsync();
@@ -1012,7 +1068,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 existing.TglMasuk = request.TglMasuk;
                 existing.CaraMasukRS = request.CaraMasukRS;
                 existing.KondisiKeluar = request.KondisiKeluar;
-                existing.DepositRanap = request.DepositRanap;
 
                 existing.UpdateDateTime = DateTimeOffset.UtcNow;
                 existing.UpdateBy = UserActiveId;
@@ -1130,6 +1185,36 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             return Ok(new { message = "Status isFinished berhasil diperbarui." });
         }
 
+        [HttpPut("{id}/is-closed")]
+        public async Task<IActionResult> UpdateIsClosed(Guid id, [FromBody] UpdateIsClosedViewModel request)
+        {
+            var kunjungan = await _applicationDbContext.Kunjungans.FindAsync(id);
+            if (kunjungan == null)
+                return NotFound(new { message = "Kunjungan tidak ditemukan." });
+
+            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(EmailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var userId = user?.UserActiveId ?? Guid.Empty;
+
+            kunjungan.IsClosed = request.IsClosed;
+            kunjungan.UpdateDateTime = DateTimeOffset.UtcNow;
+            kunjungan.UpdateBy = userId;
+            await _applicationDbContext.SaveChangesAsync();
+
+            // Notifikasi SignalR
+            await _hubContext.Clients.All.SendAsync("IsClosedChanged", new
+            {
+                action = "updateIsClosed",
+                kunjunganId = kunjungan.KunjunganID,
+                IsClosed = request.IsClosed
+            });
+
+            return Ok(new { message = "Status IsClosed berhasil diperbarui." });
+        }
+
         [HttpPut("{id}/is-screening")]
         public async Task<IActionResult> UpdateIsScreening(Guid id, [FromBody] UpdateIsScreeningViewModel request)
         {
@@ -1205,6 +1290,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             var userId = user?.UserActiveId ?? Guid.Empty;
 
             kunjungan.IsFinishedKasir = request.IsFinishedKasir;
+            kunjungan.TglFinishedKasir = DateTime.UtcNow;
+
             kunjungan.UpdateDateTime = DateTimeOffset.UtcNow;
             kunjungan.UpdateBy = userId;
             await _applicationDbContext.SaveChangesAsync();
@@ -1712,7 +1799,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             [FromQuery] bool? isFinished = null,
             [FromQuery] bool? isScreening = null,
             [FromQuery] bool? isPresent = null,
-            [FromQuery] bool? isFinishedKasir = null,
+            [FromQuery] bool? isFinishedKasir = null, 
+            [FromQuery] bool? isClosed = null,
             [FromQuery] TipePasienFilter? TipePasien = null,
             [FromQuery] EnumJenisKunjungan? JenisKunjungan = null,
             [FromQuery] string? AsalKunjungan = null,
@@ -1885,12 +1973,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         CreateByName = u != null ? u.FullName : null,
 
                         a.IsFinished,
+                        a.TglFinishedKasir,
                         a.IsScreening,
                         a.IsPresent,
                         a.IsTriage,
+                        a.IsClosed,
                         a.IsCTTPasienIGD,
                         a.Antrian,
-                        a.DepositRanap,
                         TglMasukKunjungan = a.TglMasuk,
                         a.CaraMasukRS,
                         a.KondisiKeluar,
@@ -1937,6 +2026,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 if (isPresent.HasValue) baseQuery = baseQuery.Where(x => x.IsPresent == isPresent.Value);
                 if (isScreening.HasValue) baseQuery = baseQuery.Where(x => x.IsScreening == isScreening.Value);
                 if (isFinishedKasir.HasValue) baseQuery = baseQuery.Where(x => x.IsFinishedKasir == isFinishedKasir.Value);
+                if (isClosed.HasValue) baseQuery = baseQuery.Where(x => x.IsClosed == isClosed.Value);
 
                 if (TipePasien.HasValue) baseQuery = baseQuery.Where(x => x.TipePasien == TipePasien.Value.ToString());
                 if (JenisKunjungan.HasValue) baseQuery = baseQuery.Where(x => x.JenisKunjungan == JenisKunjungan.Value.ToString());
@@ -2094,12 +2184,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         r.CreateByName,
 
                         r.IsFinished,
+                        r.TglFinishedKasir,
                         r.IsScreening,
                         r.IsPresent,
                         r.IsTriage,
+                        r.IsClosed,
                         r.IsCTTPasienIGD,
                         r.Antrian,
-                        r.DepositRanap,
                         r.TglMasukKunjungan,
                         r.CaraMasukRS,
                         r.KondisiKeluar,
@@ -2153,6 +2244,102 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
+        [HttpGet("KunjunganLunasToday/paged")]
+        public async Task<IActionResult> GetKunjunganLunasToday(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] Guid? dokterId = null,
+            [FromQuery] EnumJenisKunjungan? jenisKunjungan = null,
+            [FromQuery] string? asalKunjungan = null,
+            [FromQuery] string? search = null,
+            [FromQuery] Guid? pasienId = null,
+            [FromQuery] Guid? kunjunganId = null,
+            CancellationToken ct = default,
+            [FromQuery] string? sortDirection = "desc")
+        {
+            if (page <= 0) page = 1;
+            if (pageSize <= 0) pageSize = 10;
+
+            var today = DateTime.Today;
+            var tomorrow = today.AddDays(1);
+
+            var query =
+                from k in _applicationDbContext.Kunjungans.AsNoTracking()
+                join p in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking()
+                    on k.PasienId equals p.PendaftaranPasienBaruId into pasienGroup
+                from p in pasienGroup.DefaultIfEmpty()
+                where !k.IsDelete
+                      && k.IsFinishedKasir == true
+                      && k.TglFinishedKasir >= today
+                      && k.TglFinishedKasir < tomorrow
+                select new
+                {
+                    k.CreateDateTime,
+                    k.KunjunganID,
+                    k.PasienId,
+                    k.DokterId,
+                    k.IsFinishedKasir,
+                    k.TglFinishedKasir,
+                    k.JenisKunjungan,
+                    k.AsalKunjungan,
+                    NamaPasien = p != null ? p.NamaLengkap : null,
+                    NoRM = p != null ? p.NoRekamMedis : null,
+                };
+
+            if (dokterId.HasValue)
+            {
+                query = query.Where(x => x.DokterId == dokterId.Value);
+            }
+
+            if (jenisKunjungan.HasValue)
+            {
+                query = query.Where(x => x.JenisKunjungan == jenisKunjungan.Value.ToString());
+            }
+
+            if (!string.IsNullOrWhiteSpace(asalKunjungan))
+            {
+                query = query.Where(x => x.AsalKunjungan != null &&
+                                         x.AsalKunjungan.ToLower() == asalKunjungan.ToLower());
+            }
+
+            if (pasienId.HasValue)
+            {
+                query = query.Where(x => x.PasienId == pasienId.Value);
+            }
+
+            if (kunjunganId.HasValue)
+            {
+                query = query.Where(x => x.KunjunganID == kunjunganId.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+                query = query.Where(u =>
+                    EF.Functions.ILike(u.NamaPasien, search)
+                );
+            }
+
+            query = sortDirection?.ToLower() == "asc"
+                ? query.OrderBy(x => x.CreateDateTime)
+                : query.OrderByDescending(x => x.CreateDateTime);
+
+            var totalData = await query.CountAsync(ct);
+
+            var data = await query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(ct);
+
+            return Ok(new
+            {
+                page,
+                pageSize,
+                totalData,
+                totalPage = (int)Math.Ceiling((double)totalData / pageSize),
+                items = data
+            });
+        }
 
     }
 }

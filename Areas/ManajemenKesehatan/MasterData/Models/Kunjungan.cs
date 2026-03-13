@@ -22,6 +22,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public bool? IsScreening { get; set; }
         public bool? IsPresent { get; set; }
         public bool? IsFinishedKasir { get; set; }
+        public DateTime? TglFinishedKasir { get; set; }
         public string? StatusPengkajian { get; set; }
         public string? AsalKunjungan { get; set; }
         public DateTime? TglMasuk {  get; set; }
@@ -29,8 +30,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? KondisiKeluar {  get; set; }
         public bool? IsTriage {  get; set; }
         public bool? IsCTTPasienIGD { get; set; }
-        public decimal? DepositRanap {  get; set; }
         public Guid? KelasId { get; set; }
+        public bool? IsClosed { get; set; }
         // ttg rawat inap
         //public DateTime? TglMasukRanap { get; set; }
         //public DateTime? TglKeluarRanap { get; set; }

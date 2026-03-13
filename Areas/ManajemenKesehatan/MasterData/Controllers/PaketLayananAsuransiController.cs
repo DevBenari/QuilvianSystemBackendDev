@@ -6,9 +6,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
@@ -16,26 +13,26 @@ using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class DiskonController : Controller
+    public class PaketLayananAsuransiController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<DiskonController> _logger;
+        private readonly ILogger<PaketLayananAsuransiController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public DiskonController(
+        public PaketLayananAsuransiController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<DiskonController> logger,
+            ILogger<PaketLayananAsuransiController> logger,
             IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
@@ -45,68 +42,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             _webHostEnvironment = webHostEnvironment;
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
-        {
-            // Validasi agar page dan perPage minimal bernilai 1
-            if (page < 1) page = 1;
-            if (perPage < 1) perPage = 10;
-
-            // Query data
-            var query = (from a in _applicationDbContext.Diskons
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false || a.IsDelete == null
-                         select new
-                         {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = u.FullName,
-                             a.DiskonId,
-                             a.NamaDiskon,
-                             a.TglBerlaku,
-                             a.TglBerakhir,
-                             a.IsAsuransi,
-                             a.AsuransiId,
-                             a.PersenDiskon,
-                             a.NominalDiskon,
-                             a.Keterangan,
-                         }).OrderByDescending(a => a.CreateDateTime);
-
-            // Hitung total data sebelum paginasi
-            var totalRows = query.Count();
-            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-
-            // Ambil data sesuai paging
-            var listdata = query
-                .Skip((page - 1) * perPage)
-                .Take(perPage)
-                .ToList();
-
-            if (!listdata.Any())
-            {
-                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
-            }
-
-            // Return hasil dengan paging info
-            return Ok(new
-            {
-                message = "Berhasil || 200 OK",
-                data = listdata,
-                pagination = new
-                {
-                    CurrentPage = page,
-                    PerPage = perPage,
-                    TotalRows = totalRows,
-                    TotalPages = totalPages
-                }
-            });
-        }
-
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.Diskons.Find(id);
+            var listdata = _applicationDbContext.PaketLayananAsuransis.Find(id);
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -119,8 +58,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             });
         }
 
+
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] DiskonViewModel vm)
+        public async Task<IActionResult> Create([FromBody] PaketLayananAsuransiVM vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -149,34 +89,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
-                //// **Cek Duplikasi**
-                bool isDuplicate = await _applicationDbContext.Diskons
-                                    .AnyAsync(c => c.NamaDiskon.ToLower().Trim() == vm.NamaDiskon.ToLower().Trim()
-                                    && c.IsDelete==false);
-
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Nama diskon ini telah tersedia" });
-                }
-
                 // **Buat Data Baru**
-                var data = new Diskon
+                var data = new PaketLayananAsuransi
                 {
-                    DiskonId = Guid.NewGuid(),
-                    NamaDiskon = vm.NamaDiskon,
-                    TglBerlaku = vm.TglBerlaku,
-                    TglBerakhir = vm.TglBerakhir,
-                    IsAsuransi = vm.IsAsuransi,
+                    PaketLayananAsuransiId = Guid.NewGuid(),
+                    PaketLayananId = vm.PaketLayananId,
                     AsuransiId = vm.AsuransiId,
-                    PersenDiskon = vm.PersenDiskon,
-                    NominalDiskon = vm.NominalDiskon,
+                    CorporateId = vm.CorporateId,
+                    TglPembuatan = DateTime.UtcNow,
                     Keterangan = vm.Keterangan,
+
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
 
                 // **Simpan ke Database**
-                _applicationDbContext.Diskons.Add(data);
+                _applicationDbContext.PaketLayananAsuransis.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -198,8 +126,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             }
         }
 
+
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] DiskonViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] PaketLayananAsuransiVM vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -230,36 +159,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.Diskons.FindAsync(id);
+                var data = await _applicationDbContext.PaketLayananAsuransis.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
-                //// **Cek Duplikasi**
-                bool isDuplicate = await _applicationDbContext.Diskons
-                                    .AnyAsync(c => c.NamaDiskon.ToLower().Trim() == vm.NamaDiskon.ToLower().Trim()
-                                    && c.IsDelete == false && c.DiskonId!=id);
-
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Nama diskon ini telah tersedia" });
-                }
-
                 // **Update Data**
-                data.NamaDiskon = vm.NamaDiskon;
-                data.TglBerlaku = vm.TglBerlaku;
-                data.TglBerakhir = vm.TglBerakhir;
-                data.IsAsuransi = vm.IsAsuransi;
+                data.PaketLayananId = vm.PaketLayananId;
                 data.AsuransiId = vm.AsuransiId;
-                data.PersenDiskon = vm.PersenDiskon;
-                data.NominalDiskon = vm.NominalDiskon;
+                data.CorporateId = vm.CorporateId;
+                data.TglPembuatan = vm.TglPembuatan;
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.Diskons.Update(data);
+                _applicationDbContext.PaketLayananAsuransis.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -308,7 +224,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.Diskons.FindAsync(id);
+                var data = await _applicationDbContext.PaketLayananAsuransis.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -320,7 +236,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
                 data.IsDelete = true;
 
-                _applicationDbContext.Diskons.Update(data);
+                _applicationDbContext.PaketLayananAsuransis.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -342,48 +258,57 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             }
         }
 
+
         [HttpGet("paged")]
-        public IActionResult Paged(
-        int page = 1,
-        int perPage = 10,
-        string? search = null,
-        string? orderBy = "CreateDateTime",
-        string? sortDirection = "desc",
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                DateTime? startDate = null,
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                DateTime? endDate = null,
-        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        public async Task<IActionResult> Paged(
+            int page = 1,
+            int perPage = 10,
+            Guid? pLayananId = null,
+            Guid? asuransiId = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+                                    DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+                                    DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
 
             // Query data
-            var query = from a in _applicationDbContext.Diskons
-                        join u in _applicationDbContext.UserActives
-                        on a.CreateBy equals u.UserActiveId
-                        where a.IsDelete == false || a.IsDelete == null
-                        select new
-                        {
-                            a.CreateDateTime,
-                            a.CreateBy,
-                            CreateByName = u.FullName,
-                            a.DiskonId,
-                            a.NamaDiskon,
-                            a.TglBerlaku,
-                            a.TglBerakhir,
-                            a.IsAsuransi,
-                            a.AsuransiId,
-                            a.PersenDiskon,
-                            a.NominalDiskon,
-                            a.Keterangan,
-                        };
+            var query = (from a in _applicationDbContext.PaketLayananAsuransis
+                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
+                         on a.CreateBy equals u.UserActiveId
+                         where a.IsDelete == false || a.IsDelete == null
+                         select new
+                         {
+                             a.CreateDateTime,
+                             a.CreateBy,
+                             CreateByName = u.FullName,
+                             a.PaketLayananAsuransiId,
+                             a.PaketLayananId,
+                             a.AsuransiId,
+                             a.CorporateId,
+                             a.TglPembuatan,
+                             a.Keterangan,
+                         });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-            if (!string.IsNullOrWhiteSpace(search))
+            //if (!string.IsNullOrWhiteSpace(search))
+            //{
+            //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+            //    query = query.Where(u =>
+            //        EF.Functions.ILike(u.NamaTipeAnastesi, search)
+            //    );
+            //}
+
+            if (pLayananId != null)
             {
-                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-                query = query.Where(u =>
-                    EF.Functions.ILike(u.NamaDiskon, search)
-                );
+                query = query.Where(u=>u.PaketLayananId == pLayananId);
+            }
+
+            if (asuransiId != null)
+            {
+                query = query.Where(u => u.AsuransiId == asuransiId);
             }
 
             //// **Filter berdasarkan tanggal**
@@ -452,14 +377,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "NamaDiskon" => query.OrderByDescending(u => u.NamaDiskon),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
                     "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
                     "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    "NamaDiskon" => query.OrderBy(u => u.NamaDiskon),
                     _ => query.OrderBy(u => u.CreateDateTime)
                 };
 

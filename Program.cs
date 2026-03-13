@@ -5,6 +5,7 @@ using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
@@ -53,6 +54,11 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =
     options.SerializerOptions.Converters.Add(new TimeOnlyJsonConverter());
     options.SerializerOptions.Converters.Add(new NullableTimeOnlyJsonConverter());
 });
+
+//builder.Services.Configure<NilaiPPN>(
+//    builder.Configuration.GetSection("PPN")
+//    );
+
 
 #endregion
 
@@ -222,6 +228,8 @@ builder.Services.AddScoped<IGenerateInvoiceBillingService, GenerateInvoiceBillin
 builder.Services.AddScoped<IBillingKunjunganReadService, BillingKunjunganReadService>();
 // service get prakiraan billing kunjungan IP
 builder.Services.AddScoped<IPerkiraanBillingRanapService, PerkiraanBillingRanapService>();
+// service kwitansi deposit ranap
+builder.Services.AddScoped<IDepositRanapNumberService, DepositRanapNumberService>();
 #endregion
 
 #region Setting Container

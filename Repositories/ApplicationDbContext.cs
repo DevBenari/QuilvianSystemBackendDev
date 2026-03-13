@@ -50,6 +50,7 @@ namespace QuilvianSystemBackendDev.Repositories
                 //}
             };
 
+            #region Dictionary Hemodialisa
             modelBuilder.Entity<HemodialisaHasil>()
                 .Property(x => x.LaporanNaCl)
                 .HasColumnType("jsonb")
@@ -65,12 +66,65 @@ namespace QuilvianSystemBackendDev.Repositories
                     v => JsonSerializer.Serialize(v, jsonOptions),
                     v => JsonSerializer.Deserialize<Dictionary<string, decimal>>(v, jsonOptions)
                 );
+            #endregion
 
+            #region Unique No Rekam Medis
             modelBuilder.Entity<PendaftaranPasienBaru>()
                 .HasIndex(x => x.NoRekamMedis)
                 .IsUnique();
-        }
 
+            modelBuilder.Entity<LabHasilDetail>(entity =>
+            {
+                entity.HasKey(e => e.DetailHasilLabId);
+
+                // Kolom string (PostgreSQL: text)
+                entity.Property(e => e.HasilImunoHistokimiaJson)
+                      .HasColumnType("text")
+                      .HasColumnName("HasilImunoHistokimia"); // <-- nama kolom DB yang kamu minta
+
+                // Wrapper tidak dimapping ke DB
+                entity.Ignore(e => e.HasilImunoHistokimia);
+            });
+            #endregion
+
+            #region Unique NoKwitansi Deposit
+            modelBuilder.Entity<PendaftaranPasienBaru>()
+                .HasIndex(x => x.NoRekamMedis)
+                .IsUnique();
+
+            modelBuilder.Entity<DepositRanap>(entity =>
+            {
+                entity.HasKey(e => e.DepositRanapId);
+
+                entity.Property(e => e.NoKwitansi)
+                    .IsRequired();
+
+                entity.HasIndex(e => e.NoKwitansi)
+                    .IsUnique();
+            });
+            #endregion
+
+            #region Anti-Race Citext Agama
+            // enable extension citext (dibantu oleh provider Npgsql)
+            modelBuilder.HasPostgresExtension("citext");
+
+            modelBuilder.Entity<Agama>(e =>
+            {
+                e.HasKey(x => x.AgamaId);
+
+                // kolom Nama jadi citext (case-insensitive)
+                e.Property(x => x.NamaAgama)
+                 .HasColumnType("citext")
+                 .IsRequired();
+
+                // Unique hanya untuk data aktif (IsDelete=false atau null)
+                e.HasIndex(x => x.NamaAgama)
+                 .IsUnique()
+                 .HasDatabaseName("UX_Agamas_Nama_Active")
+                 .HasFilter(@"""IsDelete"" = false OR ""IsDelete"" IS NULL");
+            });
+            #endregion
+        }
 
         public DbSet<UserActive> UserActives { get; set; }
         public DbSet<Setting> Settings { get; set; }
@@ -189,6 +243,12 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<InformasiPenundaan> InformasiPenundaans {  get; set; }
         public DbSet<PelunasanDeposit> PelunasanDeposits { get; set; }
         public DbSet<TarifKelasKamar> TarifKelasKamars { get; set; }
+        public DbSet<Layanan> Layanans { get; set; }
+        public DbSet<DiskonDetail> DiskonDetails { get; set; }
+        public DbSet<PaketLayanan> PaketLayanans { get; set; }
+        public DbSet<PaketLayananDetail> PaketLayananDetails { get; set; }
+        public DbSet<PaketLayananAsuransi> PaketLayananAsuransis { get; set; }
+        public DbSet<PaketLayananDiskon> PaketLayananDiskons { get; set; }
         #endregion
 
         #region Areas Keuangan
@@ -199,6 +259,15 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<KasirTebusResep> KasirTebusReseps { get; set; }
         public DbSet<MainKasirDetail> MainKasirDetails { get; set; }
         public DbSet<Billing> Billings { get; set; }
+        public DbSet<MasterDenominasi> MasterDenominasies { get; set; }
+        public DbSet<ShiftDenominasi> ShiftDenominasies { get; set; }
+        public DbSet<PergantianShift> PergantianShifts { get; set; }
+        public DbSet<VoucherPettyCash> VoucherPettyCashes { get; set; }
+        public DbSet<DepositRanap> DepositRanaps { get; set; }
+        public DbSet<DepositPersentase> DepositPersentases { get; set; }
+        public DbSet<DiskonPersentase> DiskonPersentases { get; set; }
+
+
         #endregion
 
         #region Areas Hrd

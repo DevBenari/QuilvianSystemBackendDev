@@ -1,4 +1,4 @@
-﻿namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels
+﻿namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels
 {
     public class DiskonViewModel
     {
@@ -10,5 +10,6 @@
         public decimal? PersenDiskon { get; set; }
         public decimal? NominalDiskon { get; set; }
         public string? Keterangan { get; set; }
+        public List<DetailDiskonViewModel>? Details { get; set; }
     }
 }

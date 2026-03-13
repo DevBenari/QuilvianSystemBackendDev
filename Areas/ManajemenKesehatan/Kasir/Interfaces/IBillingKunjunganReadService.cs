@@ -17,5 +17,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Interfaces
         Task<IReadOnlyList<object>> GetMainKasirDanDetailPembayaranAsync(
          Guid kunjunganId,
          CancellationToken ct = default);
+
+        Task<IReadOnlyList<object>> GetRiwayatBillingPasienByNoRmFastAsync(
+            string noRekamMedis,
+            DateTime? asOf = null,
+            CancellationToken ct = default);
+
+        Task<PendapatanKasirHarianDto> GetPendapatanKasirHarianAsync(
+            Guid kasirUserId,
+            DateTime? tanggal = null,
+            CancellationToken ct = default);
+
+        Task<PagedRekapResult<PendapatanKasirHarianDto>> GetPendapatanHarianPagedAsync(
+            PendapatanHarianPagedQuery q,
+            CancellationToken ct = default);
     }
 }

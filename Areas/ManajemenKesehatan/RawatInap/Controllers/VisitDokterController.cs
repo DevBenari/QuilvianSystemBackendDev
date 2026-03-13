@@ -224,17 +224,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     });
                 }
 
-                var harga = await _applicationDbContext.TarifKelass
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(x => x.DokterId == vm.DokterId && x.KelasId == vm.KelasId);
+                //var harga = await _applicationDbContext.TarifKelass
+                //    .AsNoTracking()
+                //    .FirstOrDefaultAsync(x => x.DokterId == vm.DokterId && x.KelasId == vm.KelasId);
                 // **Cek jika data tarif tidak ditemukan**
-                if (harga == null)
-                {
-                    return NotFound(new
-                    {
-                        message = $"Tarif tidak ditemukan untuk Dokter dan Kelas yang dipilih."
-                    });
-                }
+                //if (harga == null)
+                //{
+                //    return NotFound(new
+                //    {
+                //        message = $"Tarif tidak ditemukan untuk Dokter dan Kelas yang dipilih."
+                //    });
+                //}
 
                 int billingCount = await _applicationDbContext.Billings
                     .CountAsync(b =>
@@ -256,9 +256,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                                 DateTime.UtcNow),
                     IsListWhiteOff = false,
                     NamaItem = $"Visit Dokter : {dr ?? null}",
-                    HargaItem = harga?.TarifTotal ?? 0m,
+                    //HargaItem = harga?.TarifTotal ?? 0m,
                     QtyItem = 1,
-                    SubTotalItem = harga?.TarifTotal ?? 0m,
+                    //SubTotalItem = harga?.TarifTotal ?? 0m,
                     BillingKode = $"{billingIndex:D3}",
                     JenisBilling = "Visit Dokter",
                     StatusBilling = false,
@@ -364,9 +364,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     .Select(x => x.NmDokter)
                     .SingleOrDefaultAsync();
 
-                var harga = await _applicationDbContext.TarifKelass
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(x => x.DokterId == vm.DokterId && x.KelasId == vm.KelasId);
+                //var harga = await _applicationDbContext.TarifKelass
+                //    .AsNoTracking()
+                //    .FirstOrDefaultAsync(x => x.DokterId == vm.DokterId && x.KelasId == vm.KelasId);
 
                 // Cari billing yang terkait item visit dokter ini
                 var bill = await _applicationDbContext.Billings
@@ -381,9 +381,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 if (bill != null)
                 {
                     bill.NamaItem = $"Visit Dokter : {dr ?? null}";
-                    bill.HargaItem = harga?.TarifTotal ?? 0m;
+                    //bill.HargaItem = harga?.TarifTotal ?? 0m;
                     bill.QtyItem = 1;
-                    bill.SubTotalItem = harga?.TarifTotal ?? 0m;
+                    //bill.SubTotalItem = harga?.TarifTotal ?? 0m;
                     bill.JenisBilling = "Visit Dokter";
                     bill.BillingDate = DateTime.UtcNow;
                     bill.Keterangan = "Biaya Visit Dokter ID";
@@ -416,9 +416,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                             DateTime.UtcNow),
                         IsListWhiteOff = false,
                         NamaItem = $"Visit Dokter : {dr ?? null}",
-                        HargaItem = harga?.TarifTotal ?? 0m,
+                        //HargaItem = harga?.TarifTotal ?? 0m,
                         QtyItem = 1,
-                        SubTotalItem = harga?.TarifTotal ?? 0m,
+                        //SubTotalItem = harga?.TarifTotal ?? 0m,
                         BillingKode = $"{billingIndex:D3}",
                         JenisBilling = "Visit Dokter",
                         StatusBilling = false,
