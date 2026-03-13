@@ -473,6 +473,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                         DepartemenId = vm.DepartemenId,
                         PositionId = vm.PositionId,
                         TipeUserId = vm.TipeUserId,
+                        InstalasiUnitId = vm.InstalasiUnitId,
                         NoSTR = vm.NoSTR,
                         StatusPegawai = vm.StatusPegawai,
                     };

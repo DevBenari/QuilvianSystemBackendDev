@@ -14,6 +14,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion.Internal;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json.Converters;
 using OpenCvSharp;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Interfaces;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.HubSignalR;
@@ -42,6 +43,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         private readonly ILogger<KunjunganController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly IHubContext<KunjunganHub> _hubContext;
+        private readonly IDepositRanapNumberService _depositRanapNumberService;
+
 
         public KunjunganController
         (
@@ -51,7 +54,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             IGenerateInvoiceBillingService generateInvoiceBillingService,
             ILogger<KunjunganController> logger,
             IWebHostEnvironment webHostEnvironment,
-            IHubContext<KunjunganHub> hubContext
+            IHubContext<KunjunganHub> hubContext,
+            IDepositRanapNumberService depositRanapNumberService
+
         )
         {
             _applicationDbContext = context;
@@ -61,6 +66,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             _webHostEnvironment = webHostEnvironment;
             _hubContext = hubContext;
             _generateInvoiceBillingService = generateInvoiceBillingService;
+            _depositRanapNumberService = depositRanapNumberService;
         }
         private DateTime? TryParseTanggalLahir(string dateString)
         {
@@ -211,7 +217,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         TglMasukKunjungan = a.TglMasuk,
                         a.CaraMasukRS,
                         a.KondisiKeluar,
-                        a.DepositRanap,
                         d.NmDokter,
                         gambardokter = !string.IsNullOrEmpty(d.FotoName)
                             ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
@@ -453,7 +458,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.IsClosed,
                         a.IsCTTPasienIGD,
                         a.Antrian,
-                        a.DepositRanap,
                         TglMasukKunjungan = a.TglMasuk,
                         a.CaraMasukRS,
                         a.KondisiKeluar,
@@ -653,7 +657,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     TglMasuk = request.TglMasuk,
                     CaraMasukRS = request.CaraMasukRS,
                     KondisiKeluar = request.KondisiKeluar,
-                    DepositRanap = request.DepositRanap,
                 };
 
                 _applicationDbContext.Kunjungans.Add(newKunjungan);
@@ -705,7 +708,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 if (kodeJenis == "IP")
                 {
                     // WARNING / VALIDASI
-                    if (newKunjungan.DepositRanap == null || newKunjungan.DepositRanap <= 0)
+                    if (request.DepositRanap == null || request.DepositRanap <= 0)
                     {
                         // kamu bisa ganti dengan return sesuai pola API kamu (ProblemDetails / ModelState)
                         return BadRequest(new
@@ -714,35 +717,29 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         });
                     }
 
-                    var depo = new Billing
+                    var noKwitansi = await _depositRanapNumberService.GenerateNoKwitansiAsync();
+
+                    var depo = new DepositRanap
                     {
-                        BillingId = Guid.NewGuid(),
+                        DepositRanapId = Guid.NewGuid(),
                         KunjunganId = newKunjungan.KunjunganID,
-                        ItemId = null,
-                        NamaItem = "Deposito Ranap",
-                        HargaItem = newKunjungan.DepositRanap.Value,
-                        QtyItem = 1,
-                        SubTotalItem = newKunjungan.DepositRanap.Value,
-                        //InvoiceBilling = invoice,
-                        IsListWhiteOff = false,
-                        BillingKode = "DP",
-                        JenisBilling = "DepositRanap",
-                        StatusBilling = false,
-                        BillingDate = DateTime.UtcNow,
-                        TanggalInvoice = DateTime.UtcNow,
-                        TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
+                        TglTransaksi = DateTime.UtcNow,
+                        NominalMasuk = request.DepositRanap,
+                        SaldoDeposit = request.DepositRanap,
+                        NoKwitansi = noKwitansi,
+                        StatusDeposit = "Pemasukkan",
+
                         CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = UserActiveId
                     };
 
-                    _applicationDbContext.Billings.Add(depo);
+                    _applicationDbContext.DepositRanaps.Add(depo);
 
                     MainKasir kasir;
                     kasir = new MainKasir
                     {
                         KasirId = Guid.NewGuid(),
                         KunjunganId = newKunjungan.KunjunganID,
-                        Deposito = newKunjungan.DepositRanap.Value,
                         StatusPembayaran = "Belum Lunas"
                     };
                     _applicationDbContext.MainKasirs.Add(kasir);
@@ -1071,7 +1068,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 existing.TglMasuk = request.TglMasuk;
                 existing.CaraMasukRS = request.CaraMasukRS;
                 existing.KondisiKeluar = request.KondisiKeluar;
-                existing.DepositRanap = request.DepositRanap;
 
                 existing.UpdateDateTime = DateTimeOffset.UtcNow;
                 existing.UpdateBy = UserActiveId;
@@ -1984,7 +1980,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.IsClosed,
                         a.IsCTTPasienIGD,
                         a.Antrian,
-                        a.DepositRanap,
                         TglMasukKunjungan = a.TglMasuk,
                         a.CaraMasukRS,
                         a.KondisiKeluar,
@@ -2196,7 +2191,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         r.IsClosed,
                         r.IsCTTPasienIGD,
                         r.Antrian,
-                        r.DepositRanap,
                         r.TglMasukKunjungan,
                         r.CaraMasukRS,
                         r.KondisiKeluar,

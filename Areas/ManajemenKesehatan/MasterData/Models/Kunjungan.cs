@@ -30,7 +30,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? KondisiKeluar {  get; set; }
         public bool? IsTriage {  get; set; }
         public bool? IsCTTPasienIGD { get; set; }
-        public decimal? DepositRanap {  get; set; }
         public Guid? KelasId { get; set; }
         public bool? IsClosed { get; set; }
         // ttg rawat inap

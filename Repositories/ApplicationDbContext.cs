@@ -87,6 +87,23 @@ namespace QuilvianSystemBackendDev.Repositories
             });
             #endregion
 
+            #region Unique NoKwitansi Deposit
+            modelBuilder.Entity<PendaftaranPasienBaru>()
+                .HasIndex(x => x.NoRekamMedis)
+                .IsUnique();
+
+            modelBuilder.Entity<DepositRanap>(entity =>
+            {
+                entity.HasKey(e => e.DepositRanapId);
+
+                entity.Property(e => e.NoKwitansi)
+                    .IsRequired();
+
+                entity.HasIndex(e => e.NoKwitansi)
+                    .IsUnique();
+            });
+            #endregion
+
             #region Anti-Race Citext Agama
             // enable extension citext (dibantu oleh provider Npgsql)
             modelBuilder.HasPostgresExtension("citext");
@@ -363,6 +380,7 @@ namespace QuilvianSystemBackendDev.Repositories
             public DbSet<HandoverPasien> HandoverPasiens { get; set; }
             public DbSet<HandoverPasienDetail> HandoverPasienDetails { get; set; }
             public DbSet<SelisihBiaya> SelisihBiayas { get; set; }
+            public DbSet<DepositRanap> DepositRanaps { get; set; }
             #endregion
 
             #region Farmasi

@@ -866,29 +866,11 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         // =============================
         // 10) Deposito Ranap
         // ==============================
-        var depositoBill =
-            FindBilling("DepositRanap", null);
+        var lastSaldoDp =
+            await GetLastSaldoByKunjunganIdAsync(_db,kunjunganId,ct);
 
-        if (depositoBill != null)
-        {
-            dto.DPRanap = new
-            {
-                depositoBill.BillingId,
-                depositoBill.BillingKode,
-                depositoBill.JenisBilling,
-                depositoBill.NamaItem,
-                depositoBill.HargaItem,
-                depositoBill.QtyItem,
-                depositoBill.SubTotalItem,
-                depositoBill.StatusBilling,
-                depositoBill.TanggalInvoice,
-                depositoBill.TanggalJatuhTempo,
-                DPD = HitungDpd(depositoBill.TanggalJatuhTempo, snap)
-            };
-
-           dto.TotalDPRanap = depositoBill.SubTotalItem ?? 0m;
-        }
-
+         dto.TotalSaldoDeposito = lastSaldoDp;
+        
         // ================
         // 11) Biaya lain2
         // ================
@@ -917,7 +899,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         // =========================
         // 11) TOTAL KESELURUHAN (asuransi dan mandiri)
         // =========================
-        var DepositRanap = dto.TotalDPRanap;
+        var DepositRanap = dto.TotalSaldoDeposito;
         var asuransi =
             SumCovered(dto.DaftarPemeriksaanLab) +
             SumCovered(dto.DaftarObat) +
@@ -1229,24 +1211,6 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         {
             coverageByAsuransi[aid] = await LoadCoverageLookupAsync(aid, snap, ct);
         }
-
-        // ============================================================
-        // COVER OBAT ASURANSI bulk
-        // ============================================================
-
-        //var coveredObatByAsuransi = new Dictionary<Guid, HashSet<Guid>>();
-        //if (asuransiAktifIds.Any())
-        //{
-        //    var coveredRows = await _db.ObatAsuransis.AsNoTracking()
-        //        .Where(x => asuransiAktifIds.Contains(x.AsuransiId)
-        //                    && (x.IsDelete == false || x.IsDelete == null))
-        //        .Select(x => new { x.AsuransiId, x.ObatId })
-        //        .ToListAsync(ct);
-
-        //    coveredObatByAsuransi = coveredRows
-        //        .GroupBy(x => x.AsuransiId)
-        //        .ToDictionary(g => g.Key, g => g.Select(x => x.ObatId).ToHashSet());
-        //}
 
         // ============================================================
         // LAB bulk (filter by PasienId seperti function kamu)
@@ -1849,43 +1813,32 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             }
 
             // ============================================================
-            // DEPOSITO RANAP bulk: ItemId == null (ambil yang paling baru)
+            // SALDO DEPOSITO TERBARU bulk per kunjungan
             // ============================================================
-            var dpRanapMap = billings
-                .Where(b =>
-                    b.ItemId == null &&
-                    (
-                        string.Equals(b.JenisBilling, "DepositRanap", StringComparison.OrdinalIgnoreCase)
-                    )
-                )
-                .GroupBy(b => b.KunjunganId)
-                .ToDictionary(
-                    g => g.Key,
-                    g => g.OrderByDescending(x => x.CreateDateTime ?? DateTimeOffset.MinValue).First()
-                );
+            var latestSaldoDepositRows = await _db.DepositRanaps.AsNoTracking()
+                .Where(x => x.KunjunganId != null
+                            && pageIds.Contains(x.KunjunganId.Value)
+                            && (x.IsDelete == false || x.IsDelete == null))
+                .GroupBy(x => x.KunjunganId)
+                .Select(g => g
+                    .OrderByDescending(x => x.TglTransaksi)
+                    .ThenByDescending(x => x.CreateDateTime)
+                    .ThenByDescending(x => x.DepositRanapId)
+                    .Select(x => new
+                    {
+                        x.KunjunganId,
+                        SaldoDeposit = x.SaldoDeposit ?? 0m
+                    })
+                    .FirstOrDefault())
+                .ToListAsync(ct);
 
-            dto.DPRanap = null;
-            dto.TotalDPRanap = 0m;
+            var saldoDepositMap = latestSaldoDepositRows
+                .Where(x => x != null && x.KunjunganId.HasValue)
+                .ToDictionary(x => x!.KunjunganId!.Value, x => x!.SaldoDeposit);
 
-            if (dpRanapMap.TryGetValue(kid, out var dp))
-            {
-                dto.DPRanap = new
-                {
-                    dp.BillingId,
-                    dp.BillingKode,
-                    dp.JenisBilling,
-                    dp.NamaItem,
-                    dp.HargaItem,
-                    dp.QtyItem,
-                    dp.SubTotalItem,
-                    dp.StatusBilling,
-                    dp.TanggalInvoice,
-                    dp.TanggalJatuhTempo,
-                    DPD = HitungDpd(dp.TanggalJatuhTempo, snap)
-                };
-
-                dto.TotalDPRanap = dp.SubTotalItem ?? 0m;
-            }
+            dto.TotalSaldoDeposito = saldoDepositMap.TryGetValue(kid, out var saldoDepositTerbaru)
+                ? saldoDepositTerbaru
+                : 0m;
 
             // Biaya lain2 (dari billings)
             dto.DaftarBiayaLain = billings
@@ -1905,7 +1858,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
             dto.TotalBiayaLain = dto.DaftarBiayaLain.Sum(x => (decimal?)((dynamic)x).SubTotalItem ?? 0m);
 
-            var DepositRanap = dto.TotalDPRanap;
+            var DepositRanap = dto.TotalSaldoDeposito;
             var asuransi =
                 SumCovered(dto.DaftarPemeriksaanLab) +
                 SumCovered(dto.DaftarObat) +
@@ -1961,7 +1914,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 dto.DaftarKamarRanap,
                 dto.DaftarBiayaLain,
                 dto.DPRanap,
-                dto.TotalDPRanap,
+                dto.TotalSaldoDeposito,
                 dto.TotalPemeriksaanLab,
                 dto.TotalObat,
                 dto.TotalRacikan,
@@ -2843,6 +2796,62 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 sum += GetDecimalProp(r, "Subtotal");
         return sum;
     }
+    #endregion
+
+    #region Get Latest Saldo Deposit Ranap
+    public static async Task<decimal> GetLastSaldoByKunjunganIdAsync(
+    ApplicationDbContext dbContext,
+    Guid kunjunganId,
+    CancellationToken cancellationToken = default)
+    {
+        var lastSaldo = await dbContext.DepositRanaps
+            .AsNoTracking()
+            .Where(x => x.KunjunganId == kunjunganId && (x.IsDelete == false || x.IsDelete == null))
+            .OrderByDescending(x => x.TglTransaksi)
+            .ThenByDescending(x => x.CreateDateTime)
+            .Select(x => (decimal?)x.SaldoDeposit)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return lastSaldo ?? 0m;
+    }
+
+    public static async Task<Dictionary<Guid, decimal>> GetLatestSaldoByKunjunganIdsAsync(
+    ApplicationDbContext dbContext,
+    IEnumerable<Guid> kunjunganIds,
+    CancellationToken cancellationToken = default)
+    {
+        var ids = kunjunganIds
+            .Where(x => x != Guid.Empty)
+            .Distinct()
+            .ToList();
+
+        if (!ids.Any())
+        {
+            return new Dictionary<Guid, decimal>();
+        }
+
+        var latestRows = await dbContext.DepositRanaps
+            .AsNoTracking()
+            .Where(x => x.KunjunganId.HasValue && ids.Contains(x.KunjunganId.Value))
+            .Where(x => x.IsDelete == false || x.IsDelete == null)
+            .GroupBy(x => x.KunjunganId)
+            .Select(g => g
+                .OrderByDescending(x => x.TglTransaksi)
+                .ThenByDescending(x => x.CreateDateTime)
+                .ThenByDescending(x => x.DepositRanapId)
+                .Select(x => new
+                {
+                    x.KunjunganId,
+                    SaldoDeposit = x.SaldoDeposit ?? 0m
+                })
+                .FirstOrDefault())
+            .ToListAsync(cancellationToken);
+
+        return latestRows
+            .Where(x => x != null && x.KunjunganId.HasValue)
+            .ToDictionary(x => x!.KunjunganId!.Value, x => x!.SaldoDeposit);
+    }
+
     #endregion
 
     #endregion
