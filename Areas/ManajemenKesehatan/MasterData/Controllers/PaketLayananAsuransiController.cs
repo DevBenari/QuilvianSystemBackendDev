@@ -6,41 +6,36 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
-using QuilvianSystemBackendDev.Helpers;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class DepositPersentaseController : Controller
+    public class PaketLayananAsuransiController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-        private readonly ILogger<DepositPersentaseController> _logger;
+
+        private readonly ILogger<PaketLayananAsuransiController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public DepositPersentaseController
-        (
-            ApplicationDbContext context,
+        public PaketLayananAsuransiController(
+            ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<DepositPersentaseController> logger,
-            IWebHostEnvironment webHostEnvironment
-        )
+            ILogger<PaketLayananAsuransiController> logger,
+            IWebHostEnvironment webHostEnvironment)
         {
-            _applicationDbContext = context;
+            _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
@@ -50,7 +45,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.DepositPersentases.Find(id);
+            var listdata = _applicationDbContext.PaketLayananAsuransis.Find(id);
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -63,13 +58,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             });
         }
 
+
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] DepositPersentaseViewModel vm)
+        public async Task<IActionResult> Create([FromBody] PaketLayananAsuransiVM vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
                 return BadRequest(new { message = "Data tidak valid." });
             }
+
             try
             {
                 // **Cek koneksi ke database**
@@ -92,31 +89,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
-                bool isDuplicate = await _applicationDbContext.DepositPersentases
-                    .AnyAsync(c => c.LimitPersentase
-                    == vm.LimitPersentase && c.IsDelete == false);
-
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "limit persentase deposit ini telah tersedia" });
-                }
-
                 // **Buat Data Baru**
-                var data = new DepositPersentase
+                var data = new PaketLayananAsuransi
                 {
-                    PersentaseDeposidId = Guid.NewGuid(),
-                    LimitPersentase = vm.LimitPersentase,
-                    AwalPeriode = vm.AwalPeriode,
-                    AkhirPeriode = vm.AkhirPeriode,
+                    PaketLayananAsuransiId = Guid.NewGuid(),
+                    PaketLayananId = vm.PaketLayananId,
+                    AsuransiId = vm.AsuransiId,
+                    CorporateId = vm.CorporateId,
+                    TglPembuatan = DateTime.UtcNow,
                     Keterangan = vm.Keterangan,
 
-                    CreateDateTime = DateTimeOffset.UtcNow,
                     CreateBy = userActiveId,
-
+                    CreateDateTime = DateTimeOffset.UtcNow,
                 };
 
                 // **Simpan ke Database**
-                _applicationDbContext.DepositPersentases.Add(data);
+                _applicationDbContext.PaketLayananAsuransis.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -128,14 +116,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
                 }
             }
+            catch (DbUpdateException dbEx)
+            {
+                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+            }
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
 
+
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] DepositPersentaseViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] PaketLayananAsuransiVM vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -166,32 +159,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.DepositPersentases.FindAsync(id);
+                var data = await _applicationDbContext.PaketLayananAsuransis.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
-                bool isDuplicate = await _applicationDbContext.DepositPersentases
-                    .AnyAsync(c => c.LimitPersentase
-                    == vm.LimitPersentase && c.IsDelete == false && c.PersentaseDeposidId != id);
-
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "limit persentase deposit ini telah tersedia" });
-                }
-
-
                 // **Update Data**
-                data.LimitPersentase = vm.LimitPersentase;
-                data.AwalPeriode = vm.AwalPeriode;
-                data.AkhirPeriode = vm.AkhirPeriode;
+                data.PaketLayananId = vm.PaketLayananId;
+                data.AsuransiId = vm.AsuransiId;
+                data.CorporateId = vm.CorporateId;
+                data.TglPembuatan = vm.TglPembuatan;
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.DepositPersentases.Update(data);
+                _applicationDbContext.PaketLayananAsuransis.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -240,7 +224,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.DepositPersentases.FindAsync(id);
+                var data = await _applicationDbContext.PaketLayananAsuransis.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -252,7 +236,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
                 data.IsDelete = true;
 
-                _applicationDbContext.DepositPersentases.Update(data);
+                _applicationDbContext.PaketLayananAsuransis.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -274,22 +258,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             }
         }
 
+
         [HttpGet("paged")]
         public async Task<IActionResult> Paged(
-        int page = 1,
-        int perPage = 10,
-        [FromQuery] decimal? limitPersentase = null,
-        string? orderBy = "CreateDateTime",
-        string? sortDirection = "desc",
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                                DateTime? startDate = null,
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                                DateTime? endDate = null,
-        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+            int page = 1,
+            int perPage = 10,
+            Guid? pLayananId = null,
+            Guid? asuransiId = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+                                    DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+                                    DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
 
             // Query data
-            var query = (from a in _applicationDbContext.DepositPersentases
+            var query = (from a in _applicationDbContext.PaketLayananAsuransis
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
                          where a.IsDelete == false || a.IsDelete == null
@@ -298,17 +284,31 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
-                             a.PersentaseDeposidId,
-                             a.LimitPersentase,
-                             a.AwalPeriode,
-                             a.AkhirPeriode,
+                             a.PaketLayananAsuransiId,
+                             a.PaketLayananId,
+                             a.AsuransiId,
+                             a.CorporateId,
+                             a.TglPembuatan,
                              a.Keterangan,
                          });
 
-            // filter exact decimal
-            if (limitPersentase.HasValue)
+            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
+            //if (!string.IsNullOrWhiteSpace(search))
+            //{
+            //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+            //    query = query.Where(u =>
+            //        EF.Functions.ILike(u.NamaTipeAnastesi, search)
+            //    );
+            //}
+
+            if (pLayananId != null)
             {
-                query = query.Where(x => x.LimitPersentase == limitPersentase.Value);
+                query = query.Where(u=>u.PaketLayananId == pLayananId);
+            }
+
+            if (asuransiId != null)
+            {
+                query = query.Where(u => u.AsuransiId == asuransiId);
             }
 
             //// **Filter berdasarkan tanggal**

@@ -2,7 +2,6 @@
 {
     public class PaketLayananDiskonVM
     {
-        public string? KodeDiskonPaket { get; set; }
         public Guid? PaketLayananId { get; set; }
         public Guid? PaketLayananAsuransiId { get; set; }
         public Guid? DiskonPercentageId { get; set; }

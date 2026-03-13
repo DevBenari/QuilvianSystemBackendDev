@@ -273,7 +273,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
 
         [HttpGet("paged")]
-        public IActionResult Paged(
+        public async Task<IActionResult> Paged(
             int page = 1,
             int perPage = 10,
             [FromQuery] decimal? nominal = null,
