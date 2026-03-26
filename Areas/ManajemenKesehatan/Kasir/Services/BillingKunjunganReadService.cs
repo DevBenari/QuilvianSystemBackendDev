@@ -869,8 +869,10 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         var lastSaldoDp =
             await GetLastSaldoByKunjunganIdAsync(_db,kunjunganId,ct);
 
-         dto.TotalSaldoDeposito = lastSaldoDp;
-        
+        dto.TotalSaldoDeposito = lastSaldoDp.SaldoDeposit;
+        dto.NominalKeluar = lastSaldoDp.NominalKeluar;
+        dto.NominalMasuk = lastSaldoDp.NominalMasuk;
+
         // ================
         // 11) Biaya lain2
         // ================
@@ -941,7 +943,6 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
     // ================================
     // FUNCTION GET ALL BILLING PAGED
     // ================================
-
     public async Task<PagedResult<object>> GetBillingPagedAsync(BillingPagedQuery query, CancellationToken ct = default)
     {
         var page = query.Page <= 0 ? 1 : query.Page;
@@ -1088,6 +1089,14 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 Data = Array.Empty<object>()
             };
         }
+
+        // ============================================================
+        // DEPOSIT RANAP TERBARU bulk per kunjungan
+        // ============================================================
+        var depositMap = await GetLatestSaldoByKunjunganIdsAsync(
+            _db,
+            pageIds,
+            ct);
 
         // ============================================================
         // HEADERS bulk (seperti GetBillingKeseluruhanAsync)
@@ -1433,7 +1442,22 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 DaftarAlkes = new List<object>(),
                 DaftarVisitDokter = new List<object>(),
                 DaftarKamarRanap = new List<object>(),
+
             };
+
+            // DEPOSIT TERBARU
+            if (depositMap.TryGetValue(kid, out var deposit))
+            {
+                dto.TotalSaldoDeposito = deposit.SaldoDeposit;
+                dto.NominalMasuk = deposit.NominalMasuk;
+                dto.NominalKeluar = deposit.NominalKeluar;
+            }
+            else
+            {
+                dto.TotalSaldoDeposito = 0m;
+                dto.NominalMasuk = 0m;
+                dto.NominalKeluar = 0m;
+            }
 
             // LAB
             if (labByPasien.TryGetValue(h.PasienId, out var labsForPasien))
@@ -1812,33 +1836,6 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 }
             }
 
-            // ============================================================
-            // SALDO DEPOSITO TERBARU bulk per kunjungan
-            // ============================================================
-            var latestSaldoDepositRows = await _db.DepositRanaps.AsNoTracking()
-                .Where(x => x.KunjunganId != null
-                            && pageIds.Contains(x.KunjunganId.Value)
-                            && (x.IsDelete == false || x.IsDelete == null))
-                .GroupBy(x => x.KunjunganId)
-                .Select(g => g
-                    .OrderByDescending(x => x.TglTransaksi)
-                    .ThenByDescending(x => x.CreateDateTime)
-                    .ThenByDescending(x => x.DepositRanapId)
-                    .Select(x => new
-                    {
-                        x.KunjunganId,
-                        SaldoDeposit = x.SaldoDeposit ?? 0m
-                    })
-                    .FirstOrDefault())
-                .ToListAsync(ct);
-
-            var saldoDepositMap = latestSaldoDepositRows
-                .Where(x => x != null && x.KunjunganId.HasValue)
-                .ToDictionary(x => x!.KunjunganId!.Value, x => x!.SaldoDeposit);
-
-            dto.TotalSaldoDeposito = saldoDepositMap.TryGetValue(kid, out var saldoDepositTerbaru)
-                ? saldoDepositTerbaru
-                : 0m;
 
             // Biaya lain2 (dari billings)
             dto.DaftarBiayaLain = billings
@@ -1915,6 +1912,8 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 dto.DaftarBiayaLain,
                 dto.DPRanap,
                 dto.TotalSaldoDeposito,
+                dto.NominalMasuk,
+                dto.NominalKeluar,
                 dto.TotalPemeriksaanLab,
                 dto.TotalObat,
                 dto.TotalRacikan,
@@ -2799,26 +2798,35 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
     #endregion
 
     #region Get Latest Saldo Deposit Ranap
-    public static async Task<decimal> GetLastSaldoByKunjunganIdAsync(
-    ApplicationDbContext dbContext,
-    Guid kunjunganId,
-    CancellationToken cancellationToken = default)
+    public static async Task<(decimal SaldoDeposit, decimal NominalMasuk, decimal NominalKeluar)> GetLastSaldoByKunjunganIdAsync(
+        ApplicationDbContext dbContext,
+        Guid kunjunganId,
+        CancellationToken cancellationToken = default)
     {
-        var lastSaldo = await dbContext.DepositRanaps
+        var lastData = await dbContext.DepositRanaps
             .AsNoTracking()
             .Where(x => x.KunjunganId == kunjunganId && (x.IsDelete == false || x.IsDelete == null))
             .OrderByDescending(x => x.TglTransaksi)
             .ThenByDescending(x => x.CreateDateTime)
-            .Select(x => (decimal?)x.SaldoDeposit)
+            .Select(x => new
+            {
+                SaldoDeposit = (decimal?)x.SaldoDeposit,
+                NominalMasuk = (decimal?)x.NominalMasuk,
+                NominalKeluar = (decimal?)x.NominalKeluar
+            })
             .FirstOrDefaultAsync(cancellationToken);
 
-        return lastSaldo ?? 0m;
+        return (
+            SaldoDeposit: lastData?.SaldoDeposit ?? 0m,
+            NominalMasuk: lastData?.NominalMasuk ?? 0m,
+            NominalKeluar: lastData?.NominalKeluar ?? 0m
+        );
     }
 
-    public static async Task<Dictionary<Guid, decimal>> GetLatestSaldoByKunjunganIdsAsync(
-    ApplicationDbContext dbContext,
-    IEnumerable<Guid> kunjunganIds,
-    CancellationToken cancellationToken = default)
+    public static async Task<Dictionary<Guid, (decimal SaldoDeposit, decimal NominalMasuk, decimal NominalKeluar)>> GetLatestSaldoByKunjunganIdsAsync(
+        ApplicationDbContext dbContext,
+        IEnumerable<Guid> kunjunganIds,
+        CancellationToken cancellationToken = default)
     {
         var ids = kunjunganIds
             .Where(x => x != Guid.Empty)
@@ -2827,7 +2835,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
         if (!ids.Any())
         {
-            return new Dictionary<Guid, decimal>();
+            return new Dictionary<Guid, (decimal SaldoDeposit, decimal NominalMasuk, decimal NominalKeluar)>();
         }
 
         var latestRows = await dbContext.DepositRanaps
@@ -2842,14 +2850,23 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 .Select(x => new
                 {
                     x.KunjunganId,
-                    SaldoDeposit = x.SaldoDeposit ?? 0m
+                    SaldoDeposit = x.SaldoDeposit ?? 0m,
+                    NominalMasuk = x.NominalMasuk ?? 0m,
+                    NominalKeluar = x.NominalKeluar ?? 0m
                 })
                 .FirstOrDefault())
             .ToListAsync(cancellationToken);
 
         return latestRows
             .Where(x => x != null && x.KunjunganId.HasValue)
-            .ToDictionary(x => x!.KunjunganId!.Value, x => x!.SaldoDeposit);
+            .ToDictionary(
+                x => x!.KunjunganId!.Value,
+                x => (
+                    SaldoDeposit: x!.SaldoDeposit,
+                    NominalMasuk: x!.NominalMasuk,
+                    NominalKeluar: x!.NominalKeluar
+                )
+            );
     }
 
     #endregion

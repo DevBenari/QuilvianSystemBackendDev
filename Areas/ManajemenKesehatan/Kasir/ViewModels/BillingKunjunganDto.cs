@@ -50,7 +50,11 @@
 
         public decimal TotalBiayaVisitDokter { get; set; } = 0m;
         public decimal TotalKamarRanap { get; set; } = 0m;
-        public decimal TotalSaldoDeposito { get; set; } = 0m;
         public decimal TotalKeseluruhan { get; set; } = 0m;
+
+        // deposit
+        public decimal? TotalSaldoDeposito { get; set; } = 0m;
+        public decimal? NominalMasuk { get; set; } = 0m;
+        public decimal? NominalKeluar { get; set; } = 0m;
     }
 }
