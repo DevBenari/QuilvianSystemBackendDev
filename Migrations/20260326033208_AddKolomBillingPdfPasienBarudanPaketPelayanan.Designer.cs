@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -12,9 +13,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260326033208_AddKolomBillingPdfPasienBarudanPaketPelayanan")]
+    partial class AddKolomBillingPdfPasienBarudanPaketPelayanan
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -5614,6 +5616,9 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("BillingKode")
                         .HasColumnType("text");
 
+                    b.Property<decimal?>("CoveragePercentage")
+                        .HasColumnType("numeric");
+
                     b.Property<Guid>("CreateBy")
                         .HasColumnType("uuid");
 
@@ -7417,9 +7422,6 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.Property<string>("Alamat")
                         .HasColumnType("text");
-
-                    b.Property<decimal?>("CoveragePercentage")
-                        .HasColumnType("numeric");
 
                     b.Property<Guid>("CreateBy")
                         .HasColumnType("uuid");
@@ -14201,10 +14203,10 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("NamaPerusahaan")
                         .HasColumnType("text");
 
-                    b.Property<string>("NamaWali1")
+                    b.Property<string>("NamaWali2")
                         .HasColumnType("text");
 
-                    b.Property<string>("NamaWali2")
+                    b.Property<string>("NamaWali3")
                         .HasColumnType("text");
 
                     b.Property<Guid?>("NegaraId")
@@ -14229,10 +14231,10 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("NoTeleponPerusahaan")
                         .HasColumnType("text");
 
-                    b.Property<string>("NoWali1")
+                    b.Property<string>("NoWali2")
                         .HasColumnType("text");
 
-                    b.Property<string>("NoWali2")
+                    b.Property<string>("NoWali3")
                         .HasColumnType("text");
 
                     b.Property<Guid?>("PekerjaanId")

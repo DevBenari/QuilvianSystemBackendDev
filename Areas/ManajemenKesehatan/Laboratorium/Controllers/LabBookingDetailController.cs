@@ -166,65 +166,72 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
 
                 // ✅ Query data lengkap dengan join
-                var data = await (from d in _applicationDbContext.LabBookingDetails
-                                  join u in _applicationDbContext.UserActives
-                                    on d.CreateBy equals u.UserActiveId into userGroup
-                                  from u in userGroup.DefaultIfEmpty()
+                var data = await (from d in _applicationDbContext.LabBookingDetails.AsNoTracking()
+                                 where d.IsDelete != true
+                                 join u in _applicationDbContext.UserActives.AsNoTracking()
+                                     on d.CreateBy equals u.UserActiveId into ug
+                                 from u in ug.DefaultIfEmpty()
 
-                                      // join ke Lab
-                                  join l in _applicationDbContext.Labs
-                                    on d.LabId equals l.LabId into labGroup
-                                  from l in labGroup.DefaultIfEmpty()
+                                 join l in _applicationDbContext.Labs.AsNoTracking()
+                                     on d.LabId equals l.LabId into lg
+                                 from l in lg.DefaultIfEmpty()
 
-                                      // join ke LabBooking
-                                  join b in _applicationDbContext.LabBookings
-                                    on d.BookingLabId equals b.BookingLabId into bookingGroup
-                                  from b in bookingGroup.DefaultIfEmpty()
+                                 join b in _applicationDbContext.LabBookings.AsNoTracking()
+                                     on d.BookingLabId equals b.BookingLabId into bg
+                                 from b in bg.DefaultIfEmpty()
 
-                                      // join ke LabPemeriksaan
-                                  join p in _applicationDbContext.LabPemeriksaans
-                                    on d.PemeriksaanLabId equals p.PemeriksaanLabId into pemeriksaanGroup
-                                  from p in pemeriksaanGroup.DefaultIfEmpty()
+                                 join p in _applicationDbContext.LabPemeriksaans.AsNoTracking()
+                                     on d.PemeriksaanLabId equals p.PemeriksaanLabId into pg
+                                 from p in pg.DefaultIfEmpty()
 
-                                  where (d.IsDelete == false || d.IsDelete == null)
-                                        && d.DetailBookingLabId == id
-                                  select new
-                                  {
-                                      d.DetailBookingLabId,
-                                      d.BookingLabId,
-                                      d.PasienId,
-                                      b.KunjunganId,
-                                      d.PemeriksaanLabId,
-                                      NamaPemeriksaan = p.NamaPemeriksaan ?? "-",
-                                      HargaPemeriksaan = p.HargaPemeriksaan ?? null,
-                                      d.LabId,
-                                      NamaLab = l.NamaLab ?? "-",
-                                      d.NoOrder,
-                                      d.KategoriPatologiAnatomi,
-                                      d.JenisSpecimen,
-                                      d.LokasiSpecimen,
-                                      d.KeteranganKlinik,
-                                      d.PenyakitSebelumnya,
-                                      d.PenggunaanFiksasi,
-                                      d.JenisPemeriksaanGC,
-                                      d.JenisGC,
-                                      d.BahanNonGC,
-                                      d.BahanMicrobiologi,
-                                      d.MasaHaidTerakhir,
-                                      d.Diagnosa,
-                                      d.SpecimenJenisId,
-                                      d.SpecimenMethodId,
-                                      d.AsalSpecimenId,
-                                      d.CreateBy,
-                                      CreateByName = u.FullName ?? "(Tidak diketahui)",
-                                      d.CreateDateTime,                             
-                                      d.AlasanPembatalan,
-                                      d.TTDPembatalanPath,
-                                      d.StatusPemeriksaan,
-                                      d.TanggalSelesai,
-                                      d.StatusVerifikasi,
-                                      d.Satuan
-                                  })
+                                 join k in _applicationDbContext.Kunjungans.AsNoTracking()
+                                     on b.KunjunganId equals k.KunjunganID into kg
+                                 from k in kg.DefaultIfEmpty()
+
+                                 join bl in _applicationDbContext.Billings.AsNoTracking()
+                                     on b.KunjunganId equals bl.KunjunganId into blg
+                                 from bl in blg.DefaultIfEmpty()
+
+                                 select new
+                                 {
+                                     d.CreateDateTime,
+                                     d.CreateBy,
+                                     CreateByName = u != null ? u.FullName : null,
+                                     d.DetailBookingLabId,
+                                     d.BookingLabId,
+                                     d.PasienId,
+                                     d.NoOrder,
+                                     KunjunganId = b != null ? b.KunjunganId : (Guid?)null,
+                                     JenisKunjungan = k != null ? k.JenisKunjungan : null,
+                                     d.PemeriksaanLabId,
+                                     NamaPemeriksaan = p != null ? (p.NamaPemeriksaan ?? "-") : "-",
+                                     HargaPemeriksaan = p != null ? p.HargaPemeriksaan : (decimal?)null,
+                                     d.LabId,
+                                     NamaLab = l != null ? (l.NamaLab ?? "-") : "-",
+                                     bl.BillingId,
+                                     bl.StatusBilling,
+                                     d.KategoriPatologiAnatomi,
+                                     d.JenisSpecimen,
+                                     d.LokasiSpecimen,
+                                     d.KeteranganKlinik,
+                                     d.PenyakitSebelumnya,
+                                     d.PenggunaanFiksasi,
+                                     d.JenisPemeriksaanGC,
+                                     d.JenisGC,
+                                     d.BahanNonGC,
+                                     d.BahanMicrobiologi,
+                                     d.MasaHaidTerakhir,
+                                     d.Diagnosa,
+                                     d.SpecimenJenisId,
+                                     d.SpecimenMethodId,
+                                     d.AsalSpecimenId,
+                                     d.AlasanPembatalan,
+                                     d.TTDPembatalanPath,
+                                     d.StatusPemeriksaan,
+                                     d.TanggalSelesai,
+                                     d.StatusVerifikasi,
+                                     d.Satuan,
+                                 })
                                   .FirstOrDefaultAsync();
 
                 // ✅ Cek apakah data ditemukan
@@ -759,12 +766,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             int perPage = 10,
             string? NamaLaboratorium = null,
             Guid? kunjunganId = null,
+            bool? isLunas = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-    DateTime? startDate = null,
+            DateTime? startDate = null,
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-    DateTime? endDate = null,
+            DateTime? endDate = null,
             [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null,
             CancellationToken ct = default)
         {
@@ -793,6 +801,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     on d.PemeriksaanLabId equals p.PemeriksaanLabId into pg
                 from p in pg.DefaultIfEmpty()
 
+                join k in _applicationDbContext.Kunjungans.AsNoTracking()
+                    on b.KunjunganId equals k.KunjunganID into kg
+                from k in kg.DefaultIfEmpty()
+
+                join bl in _applicationDbContext.Billings.AsNoTracking()
+                    on b.KunjunganId equals bl.KunjunganId into blg
+                from bl in blg.DefaultIfEmpty()
+
                 select new
                 {
                     d.CreateDateTime,
@@ -803,11 +819,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     d.PasienId,
                     d.NoOrder,
                     KunjunganId = b != null ? b.KunjunganId : (Guid?)null,
+                    JenisKunjungan = k != null ? k.JenisKunjungan : null,
                     d.PemeriksaanLabId,
                     NamaPemeriksaan = p != null ? (p.NamaPemeriksaan ?? "-") : "-",
                     HargaPemeriksaan = p != null ? p.HargaPemeriksaan : (decimal?)null,
                     d.LabId,
                     NamaLab = l != null ? (l.NamaLab ?? "-") : "-",
+                    bl.BillingId,
+                    bl.StatusBilling,
                     d.KategoriPatologiAnatomi,
                     d.JenisSpecimen,
                     d.LokasiSpecimen,
@@ -834,6 +853,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             // Filter kunjunganId
             if (kunjunganId.HasValue)
                 query = query.Where(x => x.KunjunganId == kunjunganId.Value);
+
+            // filter based on status billing
+            if (isLunas.HasValue)
+                query = query.Where(x=>x.StatusBilling == isLunas.Value);
 
             // Filter search NamaLaboratorium (ILike pakai pattern)
             if (!string.IsNullOrWhiteSpace(NamaLaboratorium))

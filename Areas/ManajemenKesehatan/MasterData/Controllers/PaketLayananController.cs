@@ -61,8 +61,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.PaketLayananId,
                         a.KodePaketLayanan,
                         a.NamaPaketLayanan,
+                        a.IsMCU,
                         a.TglPembuatan,
-                        a.LayananId,
                         a.Keterangan,
 
                         a.CreateBy,
@@ -155,7 +155,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     KodePaketLayanan = req.KodePaketLayanan,
                     NamaPaketLayanan = req.NamaPaketLayanan,
                     TglPembuatan = req.TglPembuatan ?? now,
-                    LayananId = req.LayananId,
+                    IsMCU = req.IsMCU,
                     Keterangan = req.Keterangan,
 
                     CreateBy = userActiveId,
@@ -236,8 +236,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 headerEntity.NamaPaketLayanan = req.NamaPaketLayanan;
                 headerEntity.TglPembuatan = req.TglPembuatan ?? headerEntity.TglPembuatan;
-                headerEntity.LayananId = req.LayananId;
+                headerEntity.IsMCU = req.IsMCU;
                 headerEntity.Keterangan = req.Keterangan;
+
 
                 headerEntity.UpdateBy = userActiveId;
                 headerEntity.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -264,7 +265,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         // UPDATE existing detail
                         existing.LayananId = d.LayananId;
                         existing.Keterangan = d.Keterangan;
-
                         existing.UpdateBy = userActiveId;
                         existing.UpdateDateTime = DateTimeOffset.UtcNow;
                     }
@@ -315,7 +315,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     headerEntity.KodePaketLayanan,
                     headerEntity.NamaPaketLayanan,
                     headerEntity.TglPembuatan,
-                    headerEntity.LayananId,
                     headerEntity.Keterangan,
                     headerEntity.CreateBy,
                     headerEntity.CreateDateTime,
@@ -462,8 +461,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.PaketLayananId,
                         a.KodePaketLayanan,
                         a.NamaPaketLayanan,
+                        a.IsMCU,
                         a.TglPembuatan,
-                        a.LayananId,
                         a.Keterangan
                     };
 
@@ -673,7 +672,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     h.KodePaketLayanan,
                     h.NamaPaketLayanan,
                     h.TglPembuatan,
-                    h.LayananId,
                     h.Keterangan,
 
                     Details = detailLookup.TryGetValue(h.PaketLayananId, out var list)

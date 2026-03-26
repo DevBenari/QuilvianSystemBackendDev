@@ -29,5 +29,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models
         public DateTime? TanggalInvoice {  get; set; }
         public DateTime? TanggalJatuhTempo { get; set; }
         public int? DPD {  get; set; }
+        public Guid? LayananId { get; set; }
+        
     }
 }

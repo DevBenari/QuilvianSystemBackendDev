@@ -7,7 +7,7 @@
         public DateTime? TglPembuatan { get; set; }
         public Guid? LayananId { get; set; }
         public string? Keterangan { get; set; }
-
+        public bool? IsMCU { get; set; }
         public List<PaketLayananDetailVM>? Details { get; set; }
 
     }

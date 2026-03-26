@@ -189,10 +189,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         ps.TanggalLahir,
                         ps.JenisKelamin,
                         ps.NoPasien,
+                        ps.NoWali1,
                         ps.NoWali2,
-                        ps.NoWali3,
+                        ps.NamaWali1,
                         ps.NamaWali2,
-                        ps.NamaWali3,
                         ps.NamaKontakDarurat,
                         ps.NoTeleponDarurat,
                         ps.Email,
@@ -269,10 +269,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         r.TanggalLahir,
                         r.JenisKelamin,
                         r.NoPasien,
+                        r.NoWali1,
                         r.NoWali2,
-                        r.NoWali3,
+                        r.NamaWali1,
                         r.NamaWali2,
-                        r.NamaWali3,
                         r.NamaKontakDarurat,
                         r.NoTeleponDarurat,
                         r.Email,
@@ -395,6 +395,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     join o in _applicationDbContext.Asuransis on a.AsuransiId equals o.AsuransiId into asuransiGroup
                     from o in asuransiGroup.DefaultIfEmpty()
 
+                    join op in _applicationDbContext.AsuransiPasiens on a.AsuransiId equals op.AsuransiId into apGroup
+                    from op in apGroup.DefaultIfEmpty()
+
                     join ps in _applicationDbContext.PendaftaranPasienBarus on a.PasienId equals ps.PendaftaranPasienBaruId into pasienGroup
                     from ps in pasienGroup.DefaultIfEmpty()
 
@@ -422,6 +425,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.KunjunganID,
                         a.AsuransiId,
                         NamaAsuransi = o != null && o.NamaAsuransi != null ? o.NamaAsuransi : "Tunai",
+                        IsUtama = op != null && op.IsUtama != null ? op.IsUtama : false,
                         a.PoliklinikId,
                         NamaPoliklinik = p != null ? p.NamaPoliklinik : null,
                         a.DokterId,
@@ -432,10 +436,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         ps.TanggalLahir,
                         ps.JenisKelamin,
                         ps.NoPasien,
+                        ps.NoWali1,
                         ps.NoWali2,
-                        ps.NoWali3,
+                        ps.NamaWali1,
                         ps.NamaWali2,
-                        ps.NamaWali3,
                         ps.NamaKontakDarurat,
                         ps.NoTeleponDarurat,
                         ps.Email,
@@ -1396,6 +1400,36 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             return Ok(new { message = "Status IsCTTPasienIGD berhasil diperbarui." });
         }
 
+        [HttpPut("{id}/Status-TransferPasien")]
+        public async Task<IActionResult> UpdateStatusTransferPasien(Guid id, [FromBody] StatusTransferPasienVM request)
+        {
+            var kunjungan = await _applicationDbContext.Kunjungans.FindAsync(id);
+            if (kunjungan == null)
+                return NotFound(new { message = "Kunjungan tidak ditemukan." });
+
+            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(EmailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var userId = user?.UserActiveId ?? Guid.Empty;
+
+            kunjungan.AsalKunjungan = request.AsalKunjungan;
+            kunjungan.JenisKunjungan = request.JenisKunjungan;
+            kunjungan.UpdateDateTime = DateTimeOffset.UtcNow;
+            kunjungan.UpdateBy = userId;
+            await _applicationDbContext.SaveChangesAsync();
+
+            // Notifikasi SignalR
+            await _hubContext.Clients.All.SendAsync("Status-TransferPasien Changed", new
+            {
+                action = "updateStatus-TransferPasien",
+                kunjunganId = kunjungan.KunjunganID,
+            });
+
+            return Ok(new { message = "Status TransferPasien berhasil diperbarui." });
+        }
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
@@ -1899,6 +1933,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         on a.AsuransiId equals o0.AsuransiId into asuransiGroup
                     from o in asuransiGroup.DefaultIfEmpty()
 
+                    join op in _applicationDbContext.AsuransiPasiens.AsNoTracking()
+                    on a.AsuransiId equals op.AsuransiId into apGroup
+                    from op in apGroup.DefaultIfEmpty()
+
                     join ps0 in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking()
                         on a.PasienId equals ps0.PendaftaranPasienBaruId into pasienGroup
                     from ps in pasienGroup.DefaultIfEmpty()
@@ -1937,6 +1975,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                         a.AsuransiId,
                         NamaAsuransi = o != null && o.NamaAsuransi != null ? o.NamaAsuransi : "Tunai",
+                        IsUtama = op != null && op.IsUtama != null ? op.IsUtama : false,
 
                         a.PoliklinikId,
                         NamaPoliklinik = p != null ? p.NamaPoliklinik : null,
@@ -1951,10 +1990,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         TanggalLahir = ps != null ? ps.TanggalLahir : null,
                         JenisKelamin = ps != null ? ps.JenisKelamin : null,
                         NoPasien = ps != null ? ps.NoPasien : null,
+                        NoWali1 = ps != null ? ps.NoWali1 : null,
                         NoWali2 = ps != null ? ps.NoWali2 : null,
-                        NoWali3 = ps != null ? ps.NoWali3 : null,
+                        NamaWali1 = ps != null ? ps.NamaWali1 : null,
                         NamaWali2 = ps != null ? ps.NamaWali2 : null,
-                        NamaWali3 = ps != null ? ps.NamaWali3 : null,
                         NamaKontakDarurat = ps != null ? ps.NamaKontakDarurat : null,
                         NoTeleponDarurat = ps != null ? ps.NoTeleponDarurat : null,
                         EmailPasien = ps != null ? ps.Email : null,
@@ -2151,6 +2190,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         r.KunjunganID,
                         r.AsuransiId,
                         r.NamaAsuransi,
+                        r.IsUtama,
                         r.PoliklinikId,
                         r.NamaPoliklinik,
                         r.DokterId,
@@ -2161,10 +2201,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         r.TanggalLahir,
                         r.JenisKelamin,
                         r.NoPasien,
+                        r.NoWali1,
                         r.NoWali2,
-                        r.NoWali3,
+                        r.NamaWali1,
                         r.NamaWali2,
-                        r.NamaWali3,
                         r.NamaKontakDarurat,
                         r.NoTeleponDarurat,
                         Email = r.EmailPasien,
