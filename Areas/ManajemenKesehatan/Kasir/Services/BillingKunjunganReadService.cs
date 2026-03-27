@@ -2036,12 +2036,12 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 d.ReferenceId,
                 d.KunjunganId,
                 d.PasienId,
-                d.TotalPembayaran,
-                d.SisaPembayaran,
+                TotalPembayaran = (decimal?)d.TotalPembayaran,
+                SisaPembayaran = (decimal?)d.SisaPembayaran,
                 d.NoKwitansi,
-                d.AngsuranKe,
+                AngsuranKe = (decimal?)d.AngsuranKe,
                 d.NamaMetode,
-                d.NominalPembayaran,
+                NominalPembayaran = (decimal?)d.NominalPembayaran,
                 d.Keterangan,
                 d.TglPembayaran,
 
@@ -2054,22 +2054,40 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
         var detailLookup = tmpDetails.ToLookup(d => d.MainKasirId);
 
-        // ✅ NEW: ambil "detail terbaru" per KasirId (buat hitung sisa & angsuran)
-        var latestByKasirId = tmpDetails
+        var paymentSummaryByKasirId = tmpDetails
             .GroupBy(d => d.MainKasirId)
             .ToDictionary(
                 g => g.Key,
-                g => g
-                    .OrderByDescending(x => x.TglPembayaran ?? DateTime.MinValue)
-                    .ThenByDescending(x => x.CreateDateTime)
-                    .First()
-            );
+                g =>
+                {
+                    var latestDetail = g
+                        .OrderByDescending(x => x.TglPembayaran ?? DateTime.MinValue)
+                        .ThenByDescending(x => x.CreateDateTime)
+                        .First();
 
-        decimal? GetLatestAngsuran(Guid kasirId)
-            => latestByKasirId.TryGetValue(kasirId, out var d) ? d.AngsuranKe : null;
+                    return new
+                    {
+                        LatestAngsuran = latestDetail.AngsuranKe ?? 0m,
+                        TotalSudahDibayar = g.Sum(x => x.NominalPembayaran ?? 0m)
+                    };
+                });
 
-        decimal? GetLatestSisa(Guid kasirId)
-            => latestByKasirId.TryGetValue(kasirId, out var d) ? d.SisaPembayaran : null;
+        decimal GetLatestAngsuran(Guid kasirId)
+            => paymentSummaryByKasirId.TryGetValue(kasirId, out var d)
+                ? d.LatestAngsuran
+                : 0m;
+
+        decimal GetSisaPembayaran(Guid kasirId, decimal grandTotalPembayaran)
+        {
+            var totalSudahDibayar = paymentSummaryByKasirId.TryGetValue(kasirId, out var d)
+                ? d.TotalSudahDibayar
+                : 0m;
+
+            var sisa = grandTotalPembayaran - totalSudahDibayar;
+
+            // kalau sudah lunas / lebih bayar, tetap 0
+            return sisa <= 0 ? 0m : sisa;
+        }
 
         // =========================
         // 3) Load nama user sekali (hindari N+1)
@@ -2106,8 +2124,9 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         var kasirs = headers.Select(h =>
         {
             // ✅ NEW: hasil hitung dari detail terbaru (fallback aman kalau detail kosong)
-            var jumlahAngsuranHitung = GetLatestAngsuran(h.KasirId) ?? 0m;
-            var sisaPembayaranHitung = GetLatestSisa(h.KasirId) ?? (decimal?)h.GrandTotalPembayaran;
+            var totalTagihan = h.GrandTotalPembayaran;
+            var jumlahAngsuranHitung = GetLatestAngsuran(h.KasirId);
+            var sisaPembayaranHitung = GetSisaPembayaran(h.KasirId, (decimal)totalTagihan);
 
             return (object)new
             {
