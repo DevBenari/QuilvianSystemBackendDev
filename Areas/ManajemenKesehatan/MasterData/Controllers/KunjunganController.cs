@@ -1935,10 +1935,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         on a.AsuransiId equals o0.AsuransiId into asuransiGroup
                     from o in asuransiGroup.DefaultIfEmpty()
 
-                    join op in _applicationDbContext.AsuransiPasiens.AsNoTracking()
-                    on a.AsuransiId equals op.AsuransiId into apGroup
-                    from op in apGroup.DefaultIfEmpty()
-
                     join ps0 in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking()
                         on a.PasienId equals ps0.PendaftaranPasienBaruId into pasienGroup
                     from ps in pasienGroup.DefaultIfEmpty()
@@ -1971,13 +1967,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         on a.KunjunganID equals sp0.KunjunganId into suratGroup
                     from sp in suratGroup.DefaultIfEmpty()
 
+                    let isUtama = _applicationDbContext.AsuransiPasiens.AsNoTracking()
+                        .Where(ap =>
+                            ap.PasienId == a.PasienId &&
+                            ap.AsuransiId == a.AsuransiId &&
+                            (ap.IsDelete == false || ap.IsDelete == null))
+                        .Select(ap => (bool?)ap.IsUtama)
+                        .FirstOrDefault()
+
                     select new
                     {
                         a.KunjunganID,
 
                         a.AsuransiId,
                         NamaAsuransi = o != null && o.NamaAsuransi != null ? o.NamaAsuransi : "Tunai",
-                        IsUtama = op != null && op.IsUtama != null ? op.IsUtama : false,
+                        IsUtama = isUtama ?? false,
 
                         a.PoliklinikId,
                         NamaPoliklinik = p != null ? p.NamaPoliklinik : null,

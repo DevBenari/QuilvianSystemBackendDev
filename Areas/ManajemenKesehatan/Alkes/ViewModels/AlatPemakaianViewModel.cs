@@ -4,6 +4,7 @@
     {
         public Guid? KunjunganId { get; set; }
         public Guid? PasienId { get; set; }
+        public Guid? LayananId { get; set; }
         public DateTime? TanggalPemakaian { get; set; }
         public string? Keterangan { get; set; }
         public List<AlatPemakaianDetailViewModel>? Details {  get; set; }

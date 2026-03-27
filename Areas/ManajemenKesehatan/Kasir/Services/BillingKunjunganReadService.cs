@@ -2077,15 +2077,16 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 ? d.LatestAngsuran
                 : 0m;
 
-        decimal GetSisaPembayaran(Guid kasirId, decimal grandTotalPembayaran)
+        decimal GetSisaPembayaran(Guid kasirId, decimal? nominalTagihan)
         {
+            var totalTagihan = nominalTagihan ?? 0m;
+
             var totalSudahDibayar = paymentSummaryByKasirId.TryGetValue(kasirId, out var d)
                 ? d.TotalSudahDibayar
                 : 0m;
 
-            var sisa = grandTotalPembayaran - totalSudahDibayar;
+            var sisa = totalTagihan - totalSudahDibayar;
 
-            // kalau sudah lunas / lebih bayar, tetap 0
             return sisa <= 0 ? 0m : sisa;
         }
 
@@ -2124,9 +2125,9 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         var kasirs = headers.Select(h =>
         {
             // ✅ NEW: hasil hitung dari detail terbaru (fallback aman kalau detail kosong)
-            var totalTagihan = h.GrandTotalPembayaran;
+            var totalTagihan = h.GrandTotalPembayaran  ?? 0m;
             var jumlahAngsuranHitung = GetLatestAngsuran(h.KasirId);
-            var sisaPembayaranHitung = GetSisaPembayaran(h.KasirId, (decimal)totalTagihan);
+            var sisaPembayaranHitung = GetSisaPembayaran(h.KasirId, totalTagihan);
 
             return (object)new
             {
