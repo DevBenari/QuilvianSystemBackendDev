@@ -1698,13 +1698,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
             [FromQuery] DateTime? startDate = null,
-            [FromQuery] DateTime? endDate = null)
+            [FromQuery] DateTime? endDate = null,
+            [FromQuery] bool? isLunas = null)
         {
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
             // =============================
-            // 0) Ambil LabId radiologi sekali (lebih murah daripada join besar)
+            // 0) Ambil LabId radiologi sekali
             // =============================
             var radiologiLabIds = await _applicationDbContext.Labs
                 .AsNoTracking()
@@ -1731,7 +1732,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             }
 
             // =============================
-            // 1) BASE QUERY (tanpa join besar, pakai EXISTS/Any)
+            // 1) BASE QUERY parent
             // =============================
             var baseQuery = _applicationDbContext.LabBookings
                 .AsNoTracking()
@@ -1750,7 +1751,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 baseQuery = baseQuery.Where(b => b.CreateDateTime >= start && b.CreateDateTime <= end);
             }
 
-            // Filter booking yang punya detail radiologi (dan detail tidak delete)
+            // hanya booking yang punya detail radiologi
             baseQuery = baseQuery.Where(b =>
                 _applicationDbContext.LabBookingDetails.Any(d =>
                     d.BookingLabId == b.BookingLabId &&
@@ -1760,12 +1761,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             );
 
             // =============================
-            // 2) TOTAL rows
+            // 2) TOTAL rows parent
             // =============================
             int totalRows = await baseQuery.CountAsync();
 
             // =============================
-            // 3) SORTING (aman, tidak pakai string dynamic)
+            // 3) SORTING parent
             // =============================
             bool desc = (sortDirection ?? "desc")
                 .Equals("desc", StringComparison.OrdinalIgnoreCase);
@@ -1778,13 +1779,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 "TglPemeriksaan" =>
                     desc ? baseQuery.OrderByDescending(x => x.TglPemeriksaan) : baseQuery.OrderBy(x => x.TglPemeriksaan),
 
-                // default
                 _ =>
                     desc ? baseQuery.OrderByDescending(x => x.CreateDateTime) : baseQuery.OrderBy(x => x.CreateDateTime),
             };
 
             // =============================
-            // 4) PAGING ambil ID dulu (ringan)
+            // 4) PAGING parent
             // =============================
             var pagedParentIds = await sortedQuery
                 .Skip((page - 1) * perPage)
@@ -1812,7 +1812,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             var pagedIdSet = pagedParentIds.ToHashSet();
 
             // =============================
-            // 5) LOAD PARENT DATA (hanya untuk page ini)
+            // 5) LOAD PARENT DATA
             // =============================
             var parents = await
                 (from b in _applicationDbContext.LabBookings.AsNoTracking()
@@ -1890,14 +1890,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      CreateBy = u.FullName
                  }).ToListAsync();
 
-            // Bikin lookup parent (biar bisa dirakit sesuai urutan paging)
             var parentLookup = parents.ToDictionary(x => x.BookingLabId, x => x);
 
             // =============================
-            // 6) LOAD DETAIL (hanya untuk page ini + radiologi)
+            // 6) LOAD DETAIL RAW (hanya page ini + radiologi)
             // =============================
-            var details = await
+            var rawDetails = await
                 (from d in _applicationDbContext.LabBookingDetails.AsNoTracking()
+
+                 join b in _applicationDbContext.LabBookings.AsNoTracking()
+                     on d.BookingLabId equals b.BookingLabId
+
                  join lab in _applicationDbContext.Labs.AsNoTracking()
                      on d.LabId equals lab.LabId into labJoin
                  from lab in labJoin.DefaultIfEmpty()
@@ -1907,33 +1910,126 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                  from lp in lpJoin.DefaultIfEmpty()
 
                  where d.BookingLabId != null
-                       && pagedIdSet.Contains((Guid)d.BookingLabId)
+                       && pagedIdSet.Contains(d.BookingLabId.Value)
                        && (d.IsDelete == false || d.IsDelete == null)
                        && radiologiLabIds.Contains(d.LabId)
 
+                 orderby d.CreateDateTime descending
                  select new
                  {
-                     BookingLabId = (Guid?)d.BookingLabId,
+                     BookingLabId = d.BookingLabId.Value,
+                     KunjunganId = b.KunjunganId, // ambil dari header booking
                      d.DetailBookingLabId,
+                     d.PasienId,
+                     d.PemeriksaanLabId,
+                     d.LabId,
                      d.NoOrder,
                      NamaPemeriksaan = lp.NamaPemeriksaan,
                      HargaPemeriksaan = lp.HargaPemeriksaan,
                      Lab = lab.NamaLab,
                      d.Satuan,
+                     d.StatusPemeriksaan,
+                     d.StatusVerifikasi,
+                     d.TanggalSelesai,
+                     d.CreateDateTime,
                      d.IsDelete
                  }).ToListAsync();
 
-            // Ini TRIK penting: list kosong tapi tipe anonymous-nya sama persis seperti `details`
-            var emptyDetails = details.Take(0).ToList();
+            // =============================
+            // 7) AMBIL STATUS LUNAS PER DETAIL
+            // Relasi: KunjunganId + PemeriksaanLabId <-> Billing.KunjunganId + Billing.ItemId
+            // =============================
+            var kunjunganIds = rawDetails
+                .Where(x => x.KunjunganId.HasValue)
+                .Select(x => x.KunjunganId!.Value)
+                .Distinct()
+                .ToList();
 
-            // Lookup detail: key = Guid (BookingLabId)
-            var detailLookup = details
-                .Where(x => x.BookingLabId.HasValue)
-                .GroupBy(x => x.BookingLabId!.Value)
+            var pemeriksaanIds = rawDetails
+                .Where(x => x.PemeriksaanLabId.HasValue)
+                .Select(x => x.PemeriksaanLabId!.Value)
+                .Distinct()
+                .ToList();
+
+            var billingStatusDict = new Dictionary<(Guid KunjunganId, Guid PemeriksaanLabId), bool>();
+
+            if (kunjunganIds.Count > 0 && pemeriksaanIds.Count > 0)
+            {
+                var billingStatusList = await (
+                    from b in _applicationDbContext.Billings.AsNoTracking()
+                    where (b.IsDelete == false || b.IsDelete == null)
+                          && b.BillingKode == "LAB"
+                          && b.KunjunganId.HasValue
+                          && kunjunganIds.Contains(b.KunjunganId.Value)
+                          && b.ItemId.HasValue
+                          && pemeriksaanIds.Contains(b.ItemId.Value)
+                    group b by new
+                    {
+                        KunjunganId = b.KunjunganId.Value,
+                        PemeriksaanLabId = b.ItemId.Value
+                    } into g
+                    select new
+                    {
+                        g.Key.KunjunganId,
+                        g.Key.PemeriksaanLabId,
+                        IsLunas = !g.Any(x => x.StatusBilling != true)
+                    }
+                ).ToListAsync();
+
+                billingStatusDict = billingStatusList.ToDictionary(
+                    x => (x.KunjunganId, x.PemeriksaanLabId),
+                    x => x.IsLunas
+                );
+            };
+
+            // =============================
+            // 8) MAP DETAIL + FILTER isLunas (OPS A: setelah page parent)
+            // =============================
+            var finalDetails = rawDetails
+                .Select(d =>
+                {
+                    bool detailIsLunas = false;
+
+                    if (d.KunjunganId.HasValue && d.PemeriksaanLabId.HasValue)
+                    {
+                        billingStatusDict.TryGetValue(
+                            (d.KunjunganId.Value, d.PemeriksaanLabId.Value),
+                            out detailIsLunas
+                        );
+                    }
+
+                    return new
+                    {
+                        d.BookingLabId,
+                        d.DetailBookingLabId,
+                        d.KunjunganId,
+                        d.PasienId,
+                        d.PemeriksaanLabId,
+                        d.LabId,
+                        d.NoOrder,
+                        d.NamaPemeriksaan,
+                        d.HargaPemeriksaan,
+                        d.Lab,
+                        d.Satuan,
+                        d.StatusPemeriksaan,
+                        d.StatusVerifikasi,
+                        d.TanggalSelesai,
+                        d.CreateDateTime,
+                        d.IsDelete,
+                        IsLunas = detailIsLunas
+                    };
+                })
+                .Where(x => !isLunas.HasValue || x.IsLunas == isLunas.Value)
+                .ToList();
+
+            var emptyDetails = finalDetails.Take(0).ToList();
+
+            var detailLookup = finalDetails
+                .GroupBy(x => x.BookingLabId)
                 .ToDictionary(g => g.Key, g => g.ToList());
 
             // =============================
-            // 7) MERGE (urut sesuai paging)
+            // 9) MERGE sesuai urutan paging
             // =============================
             var merged = pagedParentIds
                 .Where(id => parentLookup.ContainsKey(id))
@@ -1941,10 +2037,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 {
                     Parent = parentLookup[id],
                     Details = detailLookup.TryGetValue(id, out var det) ? det : emptyDetails
-                });
+                })
+                .ToList();
 
             // =============================
-            // 8) RETURN
+            // 10) RETURN
             // =============================
             return Ok(new
             {
