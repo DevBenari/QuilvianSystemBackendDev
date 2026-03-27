@@ -78,6 +78,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                             // Informasi Klaim
                             MetodeKlaim = a.MetodeKlaim,
+                            CoveragePercentage = a.CoveragePercentage,
 
                             // Pertanggungan
                             TambahanTanggungan = a.TambahanTanggungan,
@@ -220,6 +221,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                         // Informasi Klaim
                         MetodeKlaim = vm.MetodeKlaim,
+                        CoveragePercentage = vm.CoveragePercentage,
 
                         // Informasi Pertanggungan
                         TambahanTanggungan = vm.TambahanTanggungan,
@@ -302,6 +304,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     asuransi.TanggalAkhirKerjasama = vm.TanggalAkhirKerjasama ?? asuransi.TanggalAkhirKerjasama;
                     asuransi.IsPKS = vm.IsPKS;
                     asuransi.MetodeKlaim = vm.MetodeKlaim ?? asuransi.MetodeKlaim;
+                    asuransi.CoveragePercentage = vm.CoveragePercentage ?? asuransi.CoveragePercentage;
                     asuransi.TambahanTanggungan = vm.TambahanTanggungan ?? asuransi.TambahanTanggungan;
                     asuransi.TermOfPayment = vm.TermOfPayment ?? asuransi.TermOfPayment;
                     asuransi.NamaPerusahaanAsuransi = vm.NamaPerusahaanAsuransi ?? asuransi.NamaPerusahaanAsuransi;
@@ -404,6 +407,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             TanggalMulaiKerjasama = a.TanggalMulaiKerjasama,
                             TanggalAkhirKerjasama = a.TanggalAkhirKerjasama,
                             MetodeKlaim = a.MetodeKlaim,
+                            CoveragePercentage = a.CoveragePercentage,
                             TambahanTanggungan = a.TambahanTanggungan,
                             TermOfPayment = a.TermOfPayment,
                             NamaPerusahaanAsuransi = a.NamaPerusahaanAsuransi,

@@ -749,7 +749,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     StatusPembayaran = "Belum Lunas"
                 };
                 _applicationDbContext.MainKasirs.Add(kasir);
-
                 await _applicationDbContext.SaveChangesAsync();
 
                 // =============================
@@ -761,6 +760,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     kunjunganId = newKunjungan.KunjunganID,
                     pasienId = request.PasienId,
                     dokterId = request.DokterId,
+                    kasirId = kasir.KasirId,
                     NomorAntrian = nomorAntrianFormatted
                 });
 
@@ -773,7 +773,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         request.DokterId,
                         newKunjungan.KunjunganID,
                         JenisKunjungan = inputJenis,
-                        NomorAntrian = nomorAntrianFormatted ?? "Tanpa antrean (IGD)"
+                        NomorAntrian = nomorAntrianFormatted ?? "Tanpa antrean (IGD)",
+                        kasirId = kasir.KasirId
                     }
                 });
             }
