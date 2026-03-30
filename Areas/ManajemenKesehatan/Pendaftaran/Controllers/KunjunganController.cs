@@ -21,6 +21,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewModels;
 using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
