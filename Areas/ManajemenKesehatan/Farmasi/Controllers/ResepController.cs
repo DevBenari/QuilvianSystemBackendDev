@@ -671,6 +671,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                 StatusBilling = false,
                                 TanggalInvoice = DateTime.UtcNow,
                                 TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
+                                LayananId = vm.LayananId,
                                 CreateBy = getUserActive.UserActiveId,
                                 CreateDateTime = DateTimeOffset.UtcNow
                             };
@@ -809,6 +810,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                 StatusBilling = false,
                                 TanggalInvoice = DateTime.UtcNow,
                                 TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
+                                LayananId = vm.LayananId,
                                 CreateBy = getUserActive.UserActiveId,
                                 CreateDateTime = DateTimeOffset.UtcNow
                             };

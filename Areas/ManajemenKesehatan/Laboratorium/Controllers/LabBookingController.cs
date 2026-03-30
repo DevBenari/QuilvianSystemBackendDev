@@ -1305,23 +1305,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             string? sortDirection = "desc",
             [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null,
             [FromQuery] DateTime? startDate = null,
-            [FromQuery] DateTime? endDate = null)
+            [FromQuery] DateTime? endDate = null,
+            [FromQuery] bool? isLunas = null)
         {
             // basic guard
             page = page < 1 ? 1 : page;
             perPage = perPage < 1 ? 10 : perPage;
             perPage = perPage > 200 ? 200 : perPage;
 
-            // whitelist sorting (hindari error kalau user kirim field random)
+            // whitelist sorting
             var allowedOrderBy = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-            {
-                "CreateDateTime",
-                "TglBooking",
-                "TglPemeriksaan",
-                "NoOrder",
-                "StatusBookingLab",
-                "StatusPembayaran"
-            };
+    {
+        "CreateDateTime",
+        "TglBooking",
+        "TglPemeriksaan",
+        "NoOrder",
+        "StatusBookingLab",
+        "StatusPembayaran"
+    };
 
             if (string.IsNullOrWhiteSpace(orderBy) || !allowedOrderBy.Contains(orderBy))
                 orderBy = "CreateDateTime";
@@ -1335,15 +1336,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 .AsNoTracking()
                 .Where(b => b.IsDelete == false || b.IsDelete == null);
 
-            // Filter by KunjunganId
             if (kunjunganId.HasValue)
                 parentQuery = parentQuery.Where(b => b.KunjunganId == kunjunganId.Value);
 
-            // Filter by BookingLabId
             if (labBookingId.HasValue)
                 parentQuery = parentQuery.Where(b => b.BookingLabId == labBookingId.Value);
 
-            // ✅ Filter by JenisKunjungan (TANPA N+1) -> JOIN ke Kunjungans
+            // filter JenisKunjungan
             if (JenisKunjungan.HasValue)
             {
                 var jk = JenisKunjungan.Value;
@@ -1356,7 +1355,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     select b;
             }
 
-            // Filter periode (range-based)
+            // filter periode
             if (periode.HasValue)
             {
                 DateTime todayUtc = DateTime.UtcNow.Date;
@@ -1439,7 +1438,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 }
             }
 
-            // Filter by date range (pakai endExclusive)
+            // filter date range
             if (startDate.HasValue && endDate.HasValue)
             {
                 var start = startDate.Value.Date;
@@ -1449,7 +1448,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     b.CreateDateTime >= start && b.CreateDateTime < endExclusive);
             }
 
-            // ✅ Filter by NamaLab (JOIN + Distinct)
+            // filter namaLab
             if (!string.IsNullOrWhiteSpace(namaLab))
             {
                 var nl = namaLab.Trim();
@@ -1460,12 +1459,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                          on b.BookingLabId equals d.BookingLabId
                      join lab in _applicationDbContext.Labs.AsNoTracking()
                          on d.LabId equals lab.LabId
-                     where EF.Functions.ILike(lab.NamaLab, $"%{nl}%")
+                     where (d.IsDelete == false || d.IsDelete == null)
+                           && EF.Functions.ILike(lab.NamaLab, $"%{nl}%")
                      select b)
                     .Distinct();
             }
 
-            // ✅ Filter by labId (JOIN + Distinct)
+            // filter labId
             if (labId.HasValue)
             {
                 var lid = labId.Value;
@@ -1474,7 +1474,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     (from b in parentQuery
                      join d in _applicationDbContext.LabBookingDetails.AsNoTracking()
                          on b.BookingLabId equals d.BookingLabId
-                     where d.LabId == lid
+                     where (d.IsDelete == false || d.IsDelete == null)
+                           && d.LabId == lid
                      select b)
                     .Distinct();
             }
@@ -1612,68 +1613,168 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 .ToList();
 
             // =========================================
-            // 6) LOAD DETAILS (✅ FILTER IKUT namaLab/labId, + tampilkan LabId)
+            // 6) LOAD DETAIL RAW
             // =========================================
             var detailQ =
                 from d in _applicationDbContext.LabBookingDetails.AsNoTracking()
-                where d.BookingLabId.HasValue
-                      && pagedIds.Contains(d.BookingLabId.Value)
-                      && (d.IsDelete == false || d.IsDelete == null)
+                join b in _applicationDbContext.LabBookings.AsNoTracking()
+                    on d.BookingLabId equals b.BookingLabId
                 join lp in _applicationDbContext.LabPemeriksaans.AsNoTracking()
                     on d.PemeriksaanLabId equals lp.PemeriksaanLabId into lpGroup
                 from lp in lpGroup.DefaultIfEmpty()
                 join lab in _applicationDbContext.Labs.AsNoTracking()
                     on d.LabId equals lab.LabId into labGroup
                 from lab in labGroup.DefaultIfEmpty()
-                select new { d, lp, lab };
+                where d.BookingLabId.HasValue
+                      && pagedIds.Contains(d.BookingLabId.Value)
+                      && (d.IsDelete == false || d.IsDelete == null)
+                select new
+                {
+                    BookingLabId = d.BookingLabId.Value,
+                    KunjunganId = b.KunjunganId,
+                    d.DetailBookingLabId,
+                    d.PasienId,
+                    d.PemeriksaanLabId,
+                    d.LabId,
+                    d.NoOrder,
+                    NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
+                    HargaPemeriksaan = lp != null ? (decimal?)lp.HargaPemeriksaan : null,
+                    NamaLab = lab != null ? lab.NamaLab : null,
+                    d.Satuan,
+                    d.StatusPemeriksaan,
+                    d.StatusVerifikasi,
+                    d.TanggalSelesai,
+                    d.CreateDateTime,
+                    d.IsDelete
+                };
 
-            // ✅ filter detail berdasarkan namaLab (supaya tidak “ikut semua keluarga”)
             if (!string.IsNullOrWhiteSpace(namaLab))
             {
                 var nl = namaLab.Trim();
-                detailQ = detailQ.Where(x => x.lab != null && EF.Functions.ILike(x.lab.NamaLab, $"%{nl}%"));
+                detailQ = detailQ.Where(x => x.NamaLab != null && EF.Functions.ILike(x.NamaLab, $"%{nl}%"));
             }
 
-            // ✅ filter detail berdasarkan labId
             if (labId.HasValue)
             {
                 var lid = labId.Value;
-                detailQ = detailQ.Where(x => x.d.LabId == lid);
+                detailQ = detailQ.Where(x => x.LabId == lid);
             }
 
-            var details = await detailQ
-                .Select(x => new
-                {
-                    BookingLabId = x.d.BookingLabId!.Value,
-                    x.d.DetailBookingLabId,
-                    x.d.NoOrder,
-
-                    // ✅ tampilkan labId
-                    LabId = x.d.LabId,
-
-                    NamaPemeriksaan = x.lp != null ? x.lp.NamaPemeriksaan : null,
-                    HargaPemeriksaan = x.lp != null ? (decimal?)x.lp.HargaPemeriksaan : null,
-                    NamaLab = x.lab != null ? x.lab.NamaLab : null,
-                    x.d.Satuan,
-                    x.d.IsDelete
-                })
+            var rawDetails = await detailQ
+                .OrderByDescending(x => x.CreateDateTime)
                 .ToListAsync();
+
+            // =========================================
+            // 7) AMBIL STATUS LUNAS PER DETAIL
+            // LabBooking.KunjunganId + PemeriksaanLabId
+            // <-> Billing.KunjunganId + ItemId
+            // =========================================
+            var kunjunganIds = rawDetails
+                .Where(x => x.KunjunganId.HasValue)
+                .Select(x => x.KunjunganId!.Value)
+                .Distinct()
+                .ToList();
+
+            var pemeriksaanIds = rawDetails
+                .Where(x => x.PemeriksaanLabId.HasValue)
+                .Select(x => x.PemeriksaanLabId!.Value)
+                .Distinct()
+                .ToList();
+
+            var billingStatusDict = new Dictionary<(Guid KunjunganId, Guid PemeriksaanLabId), bool>();
+
+            if (kunjunganIds.Count > 0 && pemeriksaanIds.Count > 0)
+            {
+                var billingStatusList = await (
+                    from bill in _applicationDbContext.Billings.AsNoTracking()
+                    where (bill.IsDelete == false || bill.IsDelete == null)
+                          && bill.BillingKode == "LAB"
+                          && bill.KunjunganId.HasValue
+                          && kunjunganIds.Contains(bill.KunjunganId.Value)
+                          && bill.ItemId.HasValue
+                          && pemeriksaanIds.Contains(bill.ItemId.Value)
+                    group bill by new
+                    {
+                        KunjunganId = bill.KunjunganId.Value,
+                        PemeriksaanLabId = bill.ItemId.Value
+                    } into g
+                    select new
+                    {
+                        g.Key.KunjunganId,
+                        g.Key.PemeriksaanLabId,
+                        IsLunas = !g.Any(x => x.StatusBilling != true)
+                    }
+                ).ToListAsync();
+
+                billingStatusDict = billingStatusList.ToDictionary(
+                    x => (x.KunjunganId, x.PemeriksaanLabId),
+                    x => x.IsLunas
+                );
+            }
+
+            // =========================================
+            // 8) MAP DETAIL + FILTER isLunas (OPS A)
+            // =========================================
+            var details = rawDetails
+                .Select(d =>
+                {
+                    bool detailIsLunas = false;
+
+                    if (d.KunjunganId.HasValue && d.PemeriksaanLabId.HasValue)
+                    {
+                        billingStatusDict.TryGetValue(
+                            (d.KunjunganId.Value, d.PemeriksaanLabId.Value),
+                            out detailIsLunas
+                        );
+                    }
+
+                    return new
+                    {
+                        d.BookingLabId,
+                        d.DetailBookingLabId,
+                        d.KunjunganId,
+                        d.PasienId,
+                        d.PemeriksaanLabId,
+                        d.LabId,
+                        d.NoOrder,
+                        d.NamaPemeriksaan,
+                        d.HargaPemeriksaan,
+                        d.NamaLab,
+                        d.Satuan,
+                        d.StatusPemeriksaan,
+                        d.StatusVerifikasi,
+                        d.TanggalSelesai,
+                        d.CreateDateTime,
+                        d.IsDelete,
+                        IsLunas = detailIsLunas
+                    };
+                })
+                .Where(x => !isLunas.HasValue || x.IsLunas == isLunas.Value)
+                .ToList();
+
+            var emptyDetails = new List<object>();
 
             var detailLookup = details
                 .GroupBy(x => x.BookingLabId)
-                .ToDictionary(g => g.Key, g => g.ToList());
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Select(x => (object)x).ToList()
+                );
 
             // =========================================
-            // 7) MERGE
+            // 9) MERGE
             // =========================================
             var merged = parents.Select(p => new
             {
                 Parent = p,
                 Details = detailLookup.TryGetValue(p.BookingLabId, out var list)
-                    ? list.Select(x => (object)x).ToList()
-                    : new List<object>()
+                    ? list
+                    : emptyDetails
             }).ToList();
 
+            // =========================================
+            // 10) RETURN
+            // =========================================
             return Ok(new
             {
                 status = "success",
