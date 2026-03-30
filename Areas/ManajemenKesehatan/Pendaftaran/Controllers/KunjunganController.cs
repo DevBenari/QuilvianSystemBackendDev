@@ -21,6 +21,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewModels;
 using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
@@ -28,7 +29,7 @@ using SkiaSharp;
 using Swashbuckle.AspNetCore.Annotations;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
@@ -1215,7 +1216,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             {
                 action = "updateIsClosed",
                 kunjunganId = kunjungan.KunjunganID,
-                IsClosed = request.IsClosed
+                request.IsClosed
             });
 
             return Ok(new { message = "Status IsClosed berhasil diperbarui." });
@@ -1972,7 +1973,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             ap.PasienId == a.PasienId &&
                             ap.AsuransiId == a.AsuransiId &&
                             (ap.IsDelete == false || ap.IsDelete == null))
-                        .Select(ap => (bool?)ap.IsUtama)
+                        .Select(ap => ap.IsUtama)
                         .FirstOrDefault()
 
                     select new
@@ -2034,11 +2035,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                         BookingBedRanapId = bb != null ? (Guid?)bb.BookingBedRanapId : null,
                         KelasId = kl != null ? (Guid?)kl.KelasId : null,
-                        KamarId = bb != null ? (Guid?)bb.KamarId : null,
+                        KamarId = bb != null ? bb.KamarId : null,
                         KamarNama = k != null ? k.NamaKamar : null,
                         LantaiKamar = k != null ? k.Lantai : null,
                         KelasNama = kl != null ? kl.NamaKelas : null,
-                        BedId = bb != null ? (Guid?)bb.BedId : null,
+                        BedId = bb != null ? bb.BedId : null,
                         NomorKamar = bb != null ? bb.NoKamar : null,
                         NomorBed = b != null ? b.NomorBed : null,
                         StatusBed = bb != null ? bb.StatusBed : null,

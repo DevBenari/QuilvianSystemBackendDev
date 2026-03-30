@@ -24,6 +24,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models
         public string? Keterangan { get; set; }
         public DateTimeOffset? TglPembayaran { get; set; }
         public Guid? DiskonId { get; set; }
+        public Guid? PaketLayananDiskonId { get; set; }
         public decimal? SubTotalMandiri {  get; set; }
         public decimal? SubTotalAsuransi { get;  set; }
         public decimal? HargaDiskon { get;  set; }

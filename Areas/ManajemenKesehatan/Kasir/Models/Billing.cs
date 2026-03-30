@@ -11,6 +11,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models
         public Guid BillingId { get; set; }
         public Guid? KunjunganId { get; set; }
         public Guid? DiskonId { get; set; }
+        public Guid? AsuransiId { get; set; }
         public DateTime? BillingDate { get; set; }
         public string? BillingKode { get; set; }
         public Guid? ItemId { get; set; }
@@ -26,6 +27,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models
         public bool? StatusPengambilan { get; set; }
         public bool? StatusBilling {  get; set; }
         public bool? StatusBiayaLainnya {  get; set; }
+        public bool? IsCovered {  get; set; }
         public DateTime? TanggalInvoice {  get; set; }
         public DateTime? TanggalJatuhTempo { get; set; }
         public int? DPD {  get; set; }

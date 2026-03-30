@@ -7,8 +7,8 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Interfaces;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Enum;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
 using QuilvianSystemBackendDev.Repositories;
 
@@ -1062,7 +1062,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
         // periode filter
         if (query.Periode.HasValue)
-            baseQuery = (IQueryable<QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Kunjungan>)ApplyPeriodeFilter(baseQuery, query.Periode.Value);
+            baseQuery = (IQueryable<Kunjungan>)ApplyPeriodeFilter(baseQuery, query.Periode.Value);
 
         // ============================================================
         // PAGING IDs
