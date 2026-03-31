@@ -1,16 +1,17 @@
 ﻿using System.Security.Claims;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Repositories;
 using QuilvianSystemBackendDev.ViewModels;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
 using Swashbuckle.AspNetCore.Annotations;
-using System.Text.Json.Serialization;
 using NewtonsoftJson = Newtonsoft.Json;
 using SystemTextJson = System.Text.Json.Serialization;
 
@@ -78,6 +79,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 LayananId = vm.LayananId,
                 KasirId = vm.KasirId,
                 ShiftPergantian = vm.ShiftPergantian,
+                LoketKasirId = vm.LoketKasirId,
                 WaktuMulai = vm.WaktuMulai,
                 WaktuAkhir = vm.WaktuAkhir,
                 TanggalPergantian = vm.TanggalPergantian,
@@ -104,6 +106,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             data.KodeRegistrasi = vm.KodeRegistrasi;
             data.LayananId = vm.LayananId;
             data.KasirId = vm.KasirId;
+            data.LoketKasirId = vm.LoketKasirId;
             data.ShiftPergantian = vm.ShiftPergantian;
             data.WaktuMulai = vm.WaktuMulai;
             data.WaktuAkhir = vm.WaktuAkhir;
@@ -271,6 +274,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         x.KodeRegistrasi,
                         x.LayananId,
                         x.KasirId,
+                        x.LoketKasirId,
                         x.ShiftPergantian,
                         x.WaktuMulai,
                         x.WaktuAkhir,

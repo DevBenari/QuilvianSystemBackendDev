@@ -826,7 +826,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     d.LabId,
                     NamaLab = l != null ? (l.NamaLab ?? "-") : "-",
                     bl.BillingId,
-                    bl.StatusBilling,
+                    IsLunas = bl.StatusBilling,
                     d.KategoriPatologiAnatomi,
                     d.JenisSpecimen,
                     d.LokasiSpecimen,
@@ -856,7 +856,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
             // filter based on status billing
             if (isLunas.HasValue)
-                query = query.Where(x=>x.StatusBilling == isLunas.Value);
+                query = query.Where(x=>x.IsLunas == isLunas.Value);
 
             // Filter search NamaLaboratorium (ILike pakai pattern)
             if (!string.IsNullOrWhiteSpace(NamaLaboratorium))

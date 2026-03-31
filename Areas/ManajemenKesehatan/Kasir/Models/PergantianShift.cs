@@ -13,6 +13,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models
         public Guid LayananId { get; set; }
         public Guid KasirId { get; set; }
         public string ShiftPergantian { get; set; } = string.Empty;
+        public Guid? LoketKasirId { get; set; }
         public TimeSpan WaktuMulai { get; set; }
         public TimeSpan WaktuAkhir { get; set; }
         public DateTime TanggalPergantian { get; set; }
