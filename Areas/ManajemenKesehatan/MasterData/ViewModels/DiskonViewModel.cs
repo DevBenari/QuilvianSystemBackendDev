@@ -3,6 +3,7 @@
     public class DiskonViewModel
     {
         public string? NamaDiskon { get; set; }
+        public string? KodeVoucher { get; set; }
         public DateOnly? TglBerlaku { get; set; }
         public DateOnly? TglBerakhir { get; set; }
         public bool? IsAsuransi { get; set; }

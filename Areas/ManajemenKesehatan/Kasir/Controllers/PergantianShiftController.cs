@@ -40,6 +40,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     x.LayananId,
                     x.KasirId,
                     x.ShiftPergantian,
+                    x.StatusShift,
                     x.WaktuMulai,
                     x.WaktuAkhir,
                     x.TanggalPergantian,
@@ -67,6 +68,29 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             return Ok(new { message = "Ditemukan", data });
         }
 
+        [HttpGet("shift-kasir/{kasirId}")]
+        public async Task<IActionResult> GetStatusShiftByKasirId(Guid kasirId)
+        {
+            var statusShift = await _db.PergantianShifts
+                .AsNoTracking()
+                .Where(x => x.KasirId == kasirId && !x.IsDelete)
+                .OrderByDescending(x => x.CreateDateTime) // ambil yang terbaru
+                .Select(x => x.StatusShift)
+                .FirstOrDefaultAsync();
+
+            if (statusShift == null)
+                return NotFound(new { message = "Status shift tidak ditemukan" });
+
+            return Ok(new
+            {
+                message = "Ditemukan",
+                data = new
+                {
+                    StatusShift = statusShift
+                }
+            });
+        }
+
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] PergantianShiftViewModel vm)
         {
@@ -78,6 +102,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 KodeRegistrasi = vm.KodeRegistrasi,
                 LayananId = vm.LayananId,
                 KasirId = vm.KasirId,
+                StatusShift = vm.StatusShift,
                 ShiftPergantian = vm.ShiftPergantian,
                 LoketKasirId = vm.LoketKasirId,
                 WaktuMulai = vm.WaktuMulai,
@@ -108,6 +133,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             data.KasirId = vm.KasirId;
             data.LoketKasirId = vm.LoketKasirId;
             data.ShiftPergantian = vm.ShiftPergantian;
+            data.StatusShift = vm.StatusShift;
             data.WaktuMulai = vm.WaktuMulai;
             data.WaktuAkhir = vm.WaktuAkhir;
             data.TanggalPergantian = vm.TanggalPergantian;
@@ -276,6 +302,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         x.KasirId,
                         x.LoketKasirId,
                         x.ShiftPergantian,
+                        x.StatusShift,
                         x.WaktuMulai,
                         x.WaktuAkhir,
                         x.TanggalPergantian,

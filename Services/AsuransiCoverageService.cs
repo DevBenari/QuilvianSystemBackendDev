@@ -1,75 +1,79 @@
-﻿//using Microsoft.EntityFrameworkCore;
-//using QuilvianSystemBackendDev.Interfaces;
-//using QuilvianSystemBackendDev.Repositories;
+﻿using Microsoft.EntityFrameworkCore;
+using QuilvianSystemBackendDev.Interfaces;
+using QuilvianSystemBackendDev.Repositories;
 
-//namespace QuilvianSystemBackendDev.Services
-//{
-//    public class AsuransiCoverageService : IAsuransiCoverageService
-//    {
-//        private readonly ApplicationDbContext _db;
+namespace QuilvianSystemBackendDev.Services
+{
+    using Microsoft.EntityFrameworkCore;
 
-//        public AsuransiCoverageService(ApplicationDbContext db)
-//        {
-//            _db = db;
-//        }
+    public class AsuransiCoverageService : IAsuransiCoverageService
+    {
+        private readonly ApplicationDbContext _db;
 
-//        public async Task<bool?> GetIsCoveredAsync(Guid kunjunganId, string? jenisBilling, CancellationToken ct = default)
-//        {
-//            // 1. Ambil AsuransiId dari Kunjungan
-//            var asuransiId = await _db.Kunjungans
-//                .AsNoTracking()
-//                .Where(x => x.KunjunganID == kunjunganId && (x.IsDelete == false || x.IsDelete == null))
-//                .Select(x => x.AsuransiId)
-//                .FirstOrDefaultAsync(ct);
+        public AsuransiCoverageService(ApplicationDbContext db)
+        {
+            _db = db;
+        }
 
-//            // Jika tidak ada asuransi → pasien mandiri
-//            if (asuransiId == null || asuransiId == Guid.Empty)
-//                return null;
+        public async Task<bool?> GetIsCoveredAsync(Guid kunjunganId, string? jenisBilling, Guid? itemId = null, CancellationToken ct = default)
+        {
+            var asuransiId = await _db.Kunjungans
+                .AsNoTracking()
+                .Where(x => x.KunjunganID == kunjunganId && (x.IsDelete == false || x.IsDelete == null))
+                .Select(x => x.AsuransiId)
+                .FirstOrDefaultAsync(ct);
 
-//            // Normalisasi jenis billing
-//            var jenis = NormalizeJenisBilling(jenisBilling);
-//            if (jenis == null)
-//                return false;
+            // pasien mandiri
+            if (asuransiId == null || asuransiId == Guid.Empty)
+                return null;
 
-//            // 2. Cek coveran
-//            var coverage = await _db.CoveranAsuransis
-//                .AsNoTracking()
-//                .Where(x => x.AsuransiId == asuransiId && (x.IsDelete == false || x.IsDelete == null))
-//                .Select(x => new
-//                {
-//                    x.Lab,
-//                    x.Tindakan,
-//                    x.Kamar,
-//                    x.Obat
-//                })
-//                .FirstOrDefaultAsync(ct);
+            if (string.IsNullOrWhiteSpace(jenisBilling))
+                return false;
 
-//            if (coverage == null)
-//                return false;
+            if (itemId == null || itemId == Guid.Empty)
+                return false;
 
-//            return jenis switch
-//            {
-//                "LAB" => coverage.Lab ?? false,
-//                "TINDAKAN" => coverage.Tindakan ?? false,
-//                "KAMAR" => coverage.Kamar ?? false,
-//                "OBAT" => coverage.Obat ?? false,
-//                _ => false
-//            };
-//        }
+            switch (jenisBilling.Trim())
+            {
+                case "Pemeriksaan Lab":
+                    return await _db.PemeriksaanAsuransis
+                        .AsNoTracking()
+                        .AnyAsync(x =>
+                            x.AsuransiId == asuransiId &&
+                            x.PemeriksaanLabId == itemId &&
+                            (x.IsDelete == false),
+                            ct);
 
-//        private static string? NormalizeJenisBilling(string? jenisBilling)
-//        {
-//            if (string.IsNullOrWhiteSpace(jenisBilling))
-//                return null;
+                case "Obat":
+                    return await _db.CoveranObatAsuransis
+                        .AsNoTracking()
+                        .AnyAsync(x =>
+                            x.AsuransiId == asuransiId &&
+                            x.ObatId == itemId &&
+                            (x.IsDelete == false),
+                            ct);
 
-//            var val = jenisBilling.Trim().ToLower();
+                case "Tindakan":
+                    return await _db.TindakanAsuransis
+                        .AsNoTracking()
+                        .AnyAsync(x =>
+                            x.AsuransiId == asuransiId &&
+                            x.TindakanId == itemId &&
+                            (x.IsDelete == false),
+                            ct);
 
-//            if (val.Contains("lab")) return "LAB";
-//            if (val.Contains("tindakan")) return "TINDAKAN";
-//            if (val.Contains("kamar")) return "KAMAR";
-//            if (val.Contains("obat") || val.Contains("farmasi")) return "OBAT";
+                case "Kamar":
+                    return await _db.KamarAsuransis
+                        .AsNoTracking()
+                        .AnyAsync(x =>
+                            x.AsuransiId == asuransiId &&
+                            x.KamarId == itemId &&
+                            (x.IsDelete == false),
+                            ct);
 
-//            return null;
-//        }
-//    }
-//}
+                default:
+                    return false;
+            }
+        }
+    }
+}

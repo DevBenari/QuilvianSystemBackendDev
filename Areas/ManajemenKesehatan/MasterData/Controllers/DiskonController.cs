@@ -67,6 +67,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.AsuransiId,
                         a.PersenDiskon,
                         a.NominalDiskon,
+                        a.KodeVoucher,
                         a.Keterangan,
                         a.CreateBy,
                         CreateByName = u != null ? u.FullName : null,
@@ -119,6 +120,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     h.DiskonId,
                     h.NamaDiskon,
+                    h.KodeVoucher,
                     h.TglBerlaku,
                     h.TglBerakhir,
                     h.IsAsuransi,
@@ -179,6 +181,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.AsuransiId,
                         a.PersenDiskon,
                         a.NominalDiskon,
+                        a.KodeVoucher,
                         a.Keterangan,
                         a.CreateBy,
                         CreateByName = u != null ? u.FullName : null,
@@ -288,6 +291,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     DiskonId = diskonId,
                     NamaDiskon = vm.NamaDiskon,
+                    KodeVoucher = vm.KodeVoucher,
                     TglBerlaku = vm.TglBerlaku,
                     TglBerakhir = vm.TglBerakhir,
                     IsAsuransi = vm.IsAsuransi,
@@ -424,6 +428,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // update header diskon
                 existingDiskon.NamaDiskon = vm.NamaDiskon;
+                existingDiskon.KodeVoucher = vm.KodeVoucher;
                 existingDiskon.TglBerlaku = vm.TglBerlaku;
                 existingDiskon.TglBerakhir = vm.TglBerakhir;
                 existingDiskon.IsAsuransi = vm.IsAsuransi;
@@ -606,12 +611,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             int perPage = 10,
             string? search = null,
             string? namaLayanan = null,
+            string? kodedisk = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-    DateTime? startDate = null,
+            DateTime? startDate = null,
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-    DateTime? endDate = null,
+            DateTime? endDate = null,
             [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
             try
@@ -636,6 +642,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         CreateByName = u != null ? u.FullName : null,
                         a.DiskonId,
                         a.NamaDiskon,
+                        a.KodeVoucher,
                         a.TglBerlaku,
                         a.TglBerakhir,
                         a.IsAsuransi,
@@ -652,9 +659,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     var searchPattern = $"%{search.Trim()}%";
 
                     baseQuery = baseQuery.Where(x =>
-                        EF.Functions.ILike(x.NamaDiskon!, searchPattern) ||
-                        EF.Functions.ILike(x.CreateByName!, searchPattern) ||
-                        EF.Functions.ILike(x.Keterangan!, searchPattern));
+                        EF.Functions.ILike(x.NamaDiskon!, searchPattern));
+                }
+
+                if (!string.IsNullOrWhiteSpace(kodedisk))
+                {
+                    var searchPattern = $"%{kodedisk.Trim()}%";
+
+                    baseQuery = baseQuery.Where(x =>
+                        EF.Functions.ILike(x.KodeVoucher!, searchPattern));
                 }
 
                 if (!string.IsNullOrWhiteSpace(namaLayanan))

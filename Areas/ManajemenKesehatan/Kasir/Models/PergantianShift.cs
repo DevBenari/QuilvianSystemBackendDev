@@ -5,7 +5,7 @@ using QuilvianSystemBackendDev.Models;
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models
 {
     [Table("PergantianShift", Schema = "public")]
-    public class PergantianShift
+    public class PergantianShift : UserActivity
     {
         [Key]
         public Guid PergantianShiftId { get; set; }
@@ -13,6 +13,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models
         public Guid LayananId { get; set; }
         public Guid KasirId { get; set; }
         public string ShiftPergantian { get; set; } = string.Empty;
+        public string? StatusShift {  get; set; } = string.Empty;
         public Guid? LoketKasirId { get; set; }
         public TimeSpan WaktuMulai { get; set; }
         public TimeSpan WaktuAkhir { get; set; }
