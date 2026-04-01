@@ -858,6 +858,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     h.CreateByName,
                     h.DiskonId,
                     h.NamaDiskon,
+                    h.KodeVoucher,
                     h.TglBerlaku,
                     h.TglBerakhir,
                     h.IsAsuransi,
