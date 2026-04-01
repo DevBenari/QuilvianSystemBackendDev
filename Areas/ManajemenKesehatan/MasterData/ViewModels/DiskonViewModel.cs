@@ -9,7 +9,6 @@
         public bool? IsAsuransi { get; set; }
         public Guid? AsuransiId { get; set; }
         public Guid? MetodePembayaranId { get; set; }
-
         public decimal? PersenDiskon { get; set; }
         public decimal? NominalDiskon { get; set; }
         public string? Keterangan { get; set; }

@@ -65,6 +65,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.TglBerakhir,
                         a.IsAsuransi,
                         a.AsuransiId,
+                        a.MetodePembayaranId,
                         a.PersenDiskon,
                         a.NominalDiskon,
                         a.KodeVoucher,
@@ -126,6 +127,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     h.TglBerakhir,
                     h.IsAsuransi,
                     h.AsuransiId,
+                    h.MetodePembayaranId,
                     h.PersenDiskon,
                     h.NominalDiskon,
                     h.Keterangan,
@@ -180,6 +182,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.TglBerakhir,
                         a.IsAsuransi,
                         a.AsuransiId,
+                        a.MetodePembayaranId,
                         a.PersenDiskon,
                         a.NominalDiskon,
                         a.KodeVoucher,
@@ -297,6 +300,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     TglBerlaku = vm.TglBerlaku,
                     TglBerakhir = vm.TglBerakhir,
                     IsAsuransi = vm.IsAsuransi,
+                    MetodePembayaranId = vm.MetodePembayaranId,
                     AsuransiId = vm.AsuransiId,
                     PersenDiskon = vm.PersenDiskon,
                     NominalDiskon = vm.NominalDiskon,
@@ -315,6 +319,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         DetailDiskonId = Guid.NewGuid(),
                         DiskonId = diskonId,
                         LayananId = d.LayananId,
+                        ItemId = d.ItemId,
                         KodeLayanan = d.KodeLayanan,
                         KategoriLayanan = d.KategoriLayanan,
                         MaxQty = d.MaxQty,
@@ -434,6 +439,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 existingDiskon.TglBerlaku = vm.TglBerlaku;
                 existingDiskon.TglBerakhir = vm.TglBerakhir;
                 existingDiskon.IsAsuransi = vm.IsAsuransi;
+                existingDiskon.MetodePembayaranId = vm.MetodePembayaranId;
                 existingDiskon.AsuransiId = vm.AsuransiId;
                 existingDiskon.PersenDiskon = vm.PersenDiskon;
                 existingDiskon.NominalDiskon = vm.NominalDiskon;
@@ -467,6 +473,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 DetailDiskonId = Guid.NewGuid(),
                                 DiskonId = id,
                                 LayananId = d.LayananId,
+                                ItemId = d.ItemId,
                                 KodeLayanan = d.KodeLayanan,
                                 KategoriLayanan = d.KategoriLayanan,
                                 MaxQty = d.MaxQty,
@@ -649,6 +656,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.TglBerakhir,
                         a.IsAsuransi,
                         a.AsuransiId,
+                        a.MetodePembayaranId,
                         a.PersenDiskon,
                         a.NominalDiskon,
                         a.Keterangan,
@@ -866,6 +874,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     h.TglBerakhir,
                     h.IsAsuransi,
                     h.AsuransiId,
+                    h.MetodePembayaranId,
                     h.PersenDiskon,
                     h.NominalDiskon,
                     h.Keterangan,

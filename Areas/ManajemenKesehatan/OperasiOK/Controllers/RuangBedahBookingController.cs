@@ -302,9 +302,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                         .ToDictionaryAsync(x => x.TindakanId, x => x.TarifTotal);
 
                     // 4) BillingIndex (urut per kunjungan + jenis)
-                    //    Pilih salah satu: "Tindakan" / "Operasi" / "Tindakan Operasi"
-                    //    Saya pakai "Tindakan Operasi" biar tidak campur dengan tindakan umum.
-                    var jenisBillingOperasi = "OK";
+                    var jenisBillingOperasi = "Tindakan";
 
                     int billingIndex = await _applicationDbContext.Billings
                         .CountAsync(b => b.KunjunganId == vm.KunjunganId &&
