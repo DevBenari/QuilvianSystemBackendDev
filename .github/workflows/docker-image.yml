@@ -5,32 +5,13 @@ on:
       - QuilvianDev
 
 jobs:
-  build-and-push:
+  deploy:
     runs-on: ubuntu-latest
+
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    - name: Login to GitHub Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Build and Push Docker Image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        push: true
-        tags: ghcr.io/${{ github.repository_owner }}/quilvian-backend-quilviandev:latest
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build-and-push
-    steps:
     - name: Setup SSH
       run: |
         mkdir -p ~/.ssh
@@ -39,55 +20,60 @@ jobs:
         ssh-keyscan -H ${{ secrets.SSH_IP_BACKEND }} >> ~/.ssh/known_hosts
 
     - name: Deploy to Server
-      env:
-        GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        GITHUB_ACTOR: ${{ github.actor }}
-        REPO_OWNER: ${{ github.repository_owner }}
       run: |
-        ssh ${{ secrets.SSH_USER_BACKEND }}@${{ secrets.SSH_IP_BACKEND }} \
-          GHCR_TOKEN="$GHCR_TOKEN" \
-          GITHUB_ACTOR="$GITHUB_ACTOR" \
-          REPO_OWNER="$REPO_OWNER" \
-          bash << 'EOF'
-          IMAGE="ghcr.io/${REPO_OWNER}/quilvian-backend-quilviandev:latest"
+        ssh ${{ secrets.SSH_USER_BACKEND }}@${{ secrets.SSH_IP_BACKEND }} << 'EOF'
+          APP_DIR=~/QuilvianSystemBackendDev-QuilvianDev
+          IMAGE_NAME="quilvian-backend-quilviandev"
           CONTAINER_NAME="quilvian-container-quilviandev"
           TELEGRAM_BOT_TOKEN="7630899059:AAFqAUGUB7I5V9VGKXbcmoWmbYWvrdmnje8"
           TELEGRAM_CHAT_ID="-1002437306112"
 
-          echo "➡ Login to ghcr.io..."
-          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          cd $APP_DIR || exit 1
 
-          echo "➡ Pull latest image..."
-          docker pull $IMAGE
+          echo "➡ Reset & pull latest code..."
+          git reset --hard origin/QuilvianDev
+          git clean -fd -e appsettings.json
+          git pull origin QuilvianDev
 
-          echo "➡ Stop & remove old container..."
+          echo "➡ Stop & remove old container if exists..."
           docker stop $CONTAINER_NAME || true
           docker rm $CONTAINER_NAME || true
+
+          echo "➡ Remove old image if exists..."
+          OLD_IMAGE=$(docker images -q $IMAGE_NAME)
+          if [ -n "$OLD_IMAGE" ]; then
+              docker rmi -f $OLD_IMAGE
+          fi
+
+          echo "➡ Build new Docker image with memory limit..."
+          docker build \
+            --memory="8g" \
+            --memory-swap="8g" \
+            -t $IMAGE_NAME .
 
           echo "➡ Run new container..."
           docker run -d --name $CONTAINER_NAME \
             -p 8081:80 \
-            --memory="1g" \
-            --memory-swap="1g" \
+            --memory="1g" --memory-swap="1g" \
             --restart unless-stopped \
             -e ASPNETCORE_ENVIRONMENT=Production \
             -v /opt/quilvian/config/appsettings.json:/app/appsettings.json:ro \
-            $IMAGE
+            $IMAGE_NAME
 
-          echo "➡ Cleanup..."
-          docker container prune -f
-          docker image prune -f
+          echo "➡ Cleanup dangling images..."
+          docker system prune -af
 
           DEPLOY_TIME=$(date +"%A, %d-%m-%Y %H:%M:%S")
+          PUSHER="${{ github.actor }}"
 
           echo "➡ Send Telegram notification..."
           curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
             -d chat_id=$TELEGRAM_CHAT_ID \
             -d text="✅ Deployment Sukses! 🚀
-            *Docker Image:* $IMAGE
+            *Docker Image:* $IMAGE_NAME
             *Container:* $CONTAINER_NAME
             *Tanggal:* $DEPLOY_TIME
-            Deployment dilakukan Backend Branch *$GITHUB_ACTOR* 🎉"
+            Deployment dilakukan Backend Branch *$PUSHER* 🎉"
         EOF
 
 # name: Deploy Quilvian Backend Dev
