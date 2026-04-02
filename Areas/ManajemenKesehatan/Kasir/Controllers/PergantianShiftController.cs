@@ -71,23 +71,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         [HttpGet("shift-kasir/{kasirId}")]
         public async Task<IActionResult> GetStatusShiftByKasirId(Guid kasirId)
         {
-            var statusShift = await _db.PergantianShifts
+            var data = await _db.PergantianShifts
                 .AsNoTracking()
                 .Where(x => x.KasirId == kasirId && !x.IsDelete)
-                .OrderByDescending(x => x.CreateDateTime) // ambil yang terbaru
-                .Select(x => x.StatusShift)
+                .OrderByDescending(x => x.CreateDateTime)
+                .Select(x => new
+                {
+                    x.StatusShift
+                })
                 .FirstOrDefaultAsync();
 
-            if (statusShift == null)
-                return NotFound(new { message = "Status shift tidak ditemukan" });
+            if (data == null)
+                return NotFound(new { message = "Data tidak ditemukan" });
 
             return Ok(new
             {
                 message = "Ditemukan",
-                data = new
-                {
-                    StatusShift = statusShift
-                }
+                data
             });
         }
 
