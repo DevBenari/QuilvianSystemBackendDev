@@ -330,7 +330,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
 
                 // auth
-                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+               var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
 

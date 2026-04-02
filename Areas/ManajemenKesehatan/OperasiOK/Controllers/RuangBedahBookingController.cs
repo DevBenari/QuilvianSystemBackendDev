@@ -607,7 +607,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
             if (!vm.KelasId.HasValue)
                 return BadRequest(new { message = "KelasId wajib diisi (untuk hitung tarif billing)." });
 
-            // Auth
             var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(emailLogin))
                 return Unauthorized(new { message = "User tidak terautentikasi!" });
@@ -621,19 +620,25 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
             var userActiveId = getUserActive.UserActiveId;
 
             await using var trx = await _applicationDbContext.Database.BeginTransactionAsync();
+
             try
             {
                 // =========================
-                // 1) Ambil header
+                // 1) Ambil header existing
                 // =========================
                 var parent = await _applicationDbContext.RuangBedahBookings
-                    .FirstOrDefaultAsync(x => x.BookingRuanganBedahId == id && x.IsDelete == false);
+                    .FirstOrDefaultAsync(x => x.BookingRuanganBedahId == id && (x.IsDelete == false || x.IsDelete == null));
 
                 if (parent == null)
                     return NotFound(new { message = "Booking ruang bedah tidak ditemukan." });
 
+                // simpan nilai lama untuk keperluan billing lama
+                var oldKunjunganId = parent.KunjunganId;
+                var newKunjunganId = vm.KunjunganId.Value;
+                var newKelasId = vm.KelasId.Value;
+
                 // =========================
-                // 2) Update semua field header
+                // 2) Update header saja
                 // =========================
                 parent.KunjunganId = vm.KunjunganId;
                 parent.PasienId = vm.PasienId;
@@ -685,171 +690,260 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                 parent.UpdateDateTime = DateTimeOffset.UtcNow;
 
                 // =========================
-                // 3) Soft delete detail lama
+                // 3) Proses detail yang dikirim saja
+                //    - existing detail => update
+                //    - detail baru => insert
+                //    - detail lama yang tidak dikirim => tidak disentuh
                 // =========================
-                var oldDetails = await _applicationDbContext.RuangBedahBookingDetails
-                    .Where(d => d.BookingRuanganBedahId == id && d.IsDelete == false)
-                    .ToListAsync();
-
-                foreach (var od in oldDetails)
-                {
-                    od.IsDelete = true;
-                    od.UpdateBy = userActiveId;
-                    od.UpdateDateTime = DateTimeOffset.UtcNow;
-                }
-
-                // =========================
-                // 4) Soft delete billing lama (jenis tindakan operasi)
-                // =========================
-                const string jenisBilling = "Operasi";
-
-                var oldBillings = await _applicationDbContext.Billings
-                    .Where(b =>
-                        b.KunjunganId == vm.KunjunganId.Value &&
-                        (b.IsDelete == false || b.IsDelete == null) &&
-                        b.JenisBilling.ToLower() == jenisBilling.ToLower())
-                    .ToListAsync();
-
-                foreach (var ob in oldBillings)
-                {
-                    ob.IsDelete = true;
-                    ob.UpdateBy = userActiveId;
-                    ob.UpdateDateTime = DateTimeOffset.UtcNow;
-                }
-
-                // =========================
-                // 5) Insert detail baru + billing baru
-                // =========================
-                var detailsInput = vm.Details ?? new List<RuangBedahBookingDetailVM>();
-
-                // flatten semua tindakan untuk preload master & tarif (biar cepat)
-                var tindakanIds = detailsInput
-                    .Where(x => x?.TindakanId != null)
-                    .SelectMany(x => x!.TindakanId!)
-                    .Where(x => x != Guid.Empty)
-                    .Distinct()
+                var detailsInput = (vm.Details ?? new List<RuangBedahBookingDetailVM>())
+                    .Where(x => x != null)
                     .ToList();
 
-                // master tindakan
-                var tindakanDict = await _applicationDbContext.Tindakans
-                    .Where(t => tindakanIds.Contains(t.TindakanId))
-                    .Select(t => new { t.TindakanId, t.NamaTindakan })
-                    .ToDictionaryAsync(x => x.TindakanId, x => x.NamaTindakan);
+                const string jenisBilling = "Tindakan";
 
-                // tarif kelas (TarifTotal)
-                var kelasId = vm.KelasId.Value;
-
-                var tarifDict = await _applicationDbContext.TarifKelass
-                    .Where(tk =>
-                        tk.TindakanId != null &&
-                        tindakanIds.Contains(tk.TindakanId.Value) &&
-                        tk.KelasId == kelasId)
-                    .Select(tk => new { TindakanId = tk.TindakanId!.Value, tk.TarifTotal })
-                    .ToDictionaryAsync(x => x.TindakanId, x => x.TarifTotal);
-
-                // billing index khusus kunjungan + jenis
-                int billingIndex = await _applicationDbContext.Billings
-                    .CountAsync(b =>
-                        b.KunjunganId == vm.KunjunganId.Value &&
-                        (b.IsDelete == false || b.IsDelete == null) &&
-                        b.JenisBilling.ToLower() == jenisBilling.ToLower());
-
-                var newDetailList = new List<RuangBedahBookingDetail>();
-                var newBillingList = new List<Billing>();
-
-                foreach (var d in detailsInput)
+                if (detailsInput.Any())
                 {
-                    var newDetail = new RuangBedahBookingDetail
-                    {
-                        DetailBookingBedahId = Guid.NewGuid(),
-                        BookingRuanganBedahId = id,
-                        JenisOperasiId = d.JenisOperasiId,
-                        TindakanId = d.TindakanId ?? new List<Guid>(),
-                        UserActiveId = d.UserActiveId ?? new List<Guid>(),
-                        PersentaseTindakan = d.PersentaseTindakan,
-                        DiskonDokter = d.DiskonDokter,
-                        Keterangan = d.Keterangan,
-                        IsDelete = false,
-                        CreateBy = userActiveId,
-                        CreateDateTime = DateTimeOffset.UtcNow
-                    };
-                    newDetailList.Add(newDetail);
+                    // preload semua tindakan dari request
+                    var allNewTindakanIds = detailsInput
+                        .Where(x => x!.TindakanId != null)
+                        .SelectMany(x => x!.TindakanId!)
+                        .Where(x => x != Guid.Empty)
+                        .Distinct()
+                        .ToList();
 
-                    // Billing per tindakan (qty default = 1)
-                    var tindakanList = d.TindakanId ?? new List<Guid>();
-                    foreach (var tid in tindakanList.Distinct())
-                    {
-                        if (tid == Guid.Empty) continue;
+                    var tindakanDict = await _applicationDbContext.Tindakans
+                        .Where(t => allNewTindakanIds.Contains(t.TindakanId))
+                        .Select(t => new { t.TindakanId, t.NamaTindakan })
+                        .ToDictionaryAsync(x => x.TindakanId, x => x.NamaTindakan);
 
-                        if (!tindakanDict.TryGetValue(tid, out var namaTindakan))
-                            return NotFound(new { message = $"Master tindakan tidak ditemukan. TindakanId={tid}" });
-
-                        if (!tarifDict.TryGetValue(tid, out var tarifTotal) || tarifTotal == null)
-                            return NotFound(new { message = $"Tarif tidak ditemukan untuk TindakanId={tid}, KelasId={kelasId}" });
-
-                        var qty = 1;
-                        var subTotal = tarifTotal.Value * qty;
-
-                        // diskon dokter (%)
-                        if (d.DiskonDokter.HasValue && d.DiskonDokter.Value > 0)
+                    var tarifDict = await _applicationDbContext.TarifKelass
+                        .Where(tk =>
+                            tk.TindakanId != null &&
+                            allNewTindakanIds.Contains(tk.TindakanId.Value) &&
+                            tk.KelasId == newKelasId)
+                        .Select(tk => new
                         {
-                            var disc = d.DiskonDokter.Value;
-                            if (disc > 100) disc = 100;
-                            subTotal -= (subTotal * (disc / 100m));
+                            TindakanId = tk.TindakanId!.Value,
+                            tk.TarifTotal
+                        })
+                        .ToDictionaryAsync(x => x.TindakanId, x => x.TarifTotal);
+
+                    var detailPlans = new List<(
+                        RuangBedahBookingDetail Entity,
+                        List<Guid> OldTindakanIds,
+                        List<Guid> NewTindakanIds,
+                        decimal? DiskonDokter,
+                        string? Keterangan,
+                        bool IsNew
+                    )>();
+
+                    var allOldTindakanIdsToDelete = new HashSet<Guid>();
+
+                    foreach (var d in detailsInput)
+                    {
+                        var newTindakanIds = (d!.TindakanId ?? new List<Guid>())
+                            .Where(x => x != Guid.Empty)
+                            .Distinct()
+                            .ToList();
+
+                        if (!newTindakanIds.Any())
+                            return BadRequest(new
+                            {
+                                message = "Setiap detail harus memiliki minimal 1 TindakanId."
+                            });
+
+                        RuangBedahBookingDetail detailEntity;
+                        var oldTindakanIds = new List<Guid>();
+                        var isNew = !d.DetailBookingBedahId.HasValue || d.DetailBookingBedahId.Value == Guid.Empty;
+
+                        if (isNew)
+                        {
+                            detailEntity = new RuangBedahBookingDetail
+                            {
+                                DetailBookingBedahId = Guid.NewGuid(),
+                                BookingRuanganBedahId = id,
+                                CreateBy = userActiveId,
+                                CreateDateTime = DateTimeOffset.UtcNow,
+                                IsDelete = false
+                            };
+
+                            await _applicationDbContext.RuangBedahBookingDetails.AddAsync(detailEntity);
+                        }
+                        else
+                        {
+                            detailEntity = await _applicationDbContext.RuangBedahBookingDetails
+                                .FirstOrDefaultAsync(x =>
+                                    x.DetailBookingBedahId == d.DetailBookingBedahId.Value &&
+                                    x.BookingRuanganBedahId == id &&
+                                    (x.IsDelete == false || x.IsDelete == null));
+
+                            if (detailEntity == null)
+                            {
+                                return NotFound(new
+                                {
+                                    message = $"Detail booking ruang bedah tidak ditemukan. DetailBookingBedahId={d.DetailBookingBedahId}"
+                                });
+                            }
+
+                            oldTindakanIds = (detailEntity.TindakanId ?? new List<Guid>())
+                                .Where(x => x != Guid.Empty)
+                                .Distinct()
+                                .ToList();
+
+                            foreach (var tid in oldTindakanIds)
+                                allOldTindakanIdsToDelete.Add(tid);
+
+                            detailEntity.UpdateBy = userActiveId;
+                            detailEntity.UpdateDateTime = DateTimeOffset.UtcNow;
                         }
 
-                        billingIndex++;
-                        var billingKode = $"{billingIndex:D3}";
+                        // update field detail
+                        detailEntity.BookingRuanganBedahId = id;
+                        detailEntity.JenisOperasiId = d.JenisOperasiId;
+                        detailEntity.TindakanId = d.TindakanId ?? new List<Guid>();
+                        detailEntity.UserActiveId = d.UserActiveId ?? new List<Guid>();
+                        detailEntity.PersentaseTindakan = d.PersentaseTindakan;
+                        detailEntity.DiskonDokter = d.DiskonDokter;
+                        detailEntity.Keterangan = d.Keterangan;
+                        detailEntity.IsDelete = false;
 
-                        newBillingList.Add(new Billing
-                        {
-                            BillingId = Guid.NewGuid(),
-                            KunjunganId = vm.KunjunganId.Value,
-                            BillingDate = DateTime.UtcNow,
-                            BillingKode = billingKode,
-                            InvoiceBilling = await _generateInvoiceBillingService.GetOrCreateAsync(
-                                (Guid)vm.KunjunganId,
-                                DateTime.UtcNow),
-                            IsListWhiteOff = false,
-                            ItemId = tid,
-                            NamaItem = namaTindakan,
-                            QtyItem = qty,
-                            HargaItem = tarifTotal,
-                            SubTotalItem = subTotal,
-                            TanggalInvoice = DateTime.UtcNow,
-                            TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
-                            JenisBilling = jenisBilling,
-                            Keterangan = d.Keterangan,
-                            StatusBilling = false,
-                            IsDelete = false,
-                            CreateBy = userActiveId,
-                            CreateDateTime = DateTimeOffset.UtcNow
-                        });
+                        detailPlans.Add((
+                            detailEntity,
+                            oldTindakanIds,
+                            newTindakanIds,
+                            d.DiskonDokter,
+                            d.Keterangan,
+                            isNew
+                        ));
                     }
+
+                    // =========================
+                    // 4) Soft delete billing lama hanya untuk detail yang diedit
+                    //    (detail yang tidak dikirim tidak disentuh)
+                    // =========================
+                    if (allOldTindakanIdsToDelete.Any() && oldKunjunganId.HasValue)
+                    {
+                        var oldBillings = await _applicationDbContext.Billings
+                            .Where(b =>
+                                b.KunjunganId == oldKunjunganId.Value &&
+                                (b.IsDelete == false || b.IsDelete == null) &&
+                                b.JenisBilling.ToLower() == jenisBilling.ToLower() &&
+                                b.ItemId != null &&
+                                allOldTindakanIdsToDelete.Contains(b.ItemId.Value))
+                            .ToListAsync();
+
+                        foreach (var ob in oldBillings)
+                        {
+                            ob.IsDelete = true;
+                            ob.UpdateBy = userActiveId;
+                            ob.UpdateDateTime = DateTimeOffset.UtcNow;
+                        }
+                    }
+
+                    // =========================
+                    // 5) Buat billing baru untuk detail yang dikirim
+                    // =========================
+                    int billingIndex = await _applicationDbContext.Billings
+                        .CountAsync(b =>
+                            b.KunjunganId == newKunjunganId &&
+                            (b.IsDelete == false || b.IsDelete == null) &&
+                            b.JenisBilling.ToLower() == jenisBilling.ToLower());
+
+                    var invoice = await _generateInvoiceBillingService.GetOrCreateAsync(
+                        newKunjunganId,
+                        DateTime.UtcNow
+                    );
+
+                    var newBillingList = new List<Billing>();
+
+                    foreach (var plan in detailPlans)
+                    {
+                        foreach (var tindakanId in plan.NewTindakanIds)
+                        {
+                            if (!tindakanDict.TryGetValue(tindakanId, out var namaTindakan))
+                            {
+                                return NotFound(new
+                                {
+                                    message = $"Master tindakan tidak ditemukan. TindakanId={tindakanId}"
+                                });
+                            }
+
+                            if (!tarifDict.TryGetValue(tindakanId, out var tarifTotal) || tarifTotal == null)
+                            {
+                                return NotFound(new
+                                {
+                                    message = $"Tarif tidak ditemukan untuk TindakanId={tindakanId}, KelasId={newKelasId}"
+                                });
+                            }
+
+                            var qty = 1;
+                            var subTotal = tarifTotal.Value * qty;
+
+                            if (plan.DiskonDokter.HasValue && plan.DiskonDokter.Value > 0)
+                            {
+                                var disc = plan.DiskonDokter.Value;
+                                if (disc > 100) disc = 100;
+                                subTotal -= (subTotal * (disc / 100m));
+                            }
+
+                            billingIndex++;
+                            var billingKode = $"{billingIndex:D3}";
+
+                            newBillingList.Add(new Billing
+                            {
+                                BillingId = Guid.NewGuid(),
+                                KunjunganId = newKunjunganId,
+                                BillingDate = DateTime.UtcNow,
+                                BillingKode = billingKode,
+                                InvoiceBilling = invoice,
+                                IsListWhiteOff = false,
+                                ItemId = tindakanId,
+                                NamaItem = namaTindakan,
+                                QtyItem = qty,
+                                HargaItem = tarifTotal,
+                                SubTotalItem = subTotal,
+                                TanggalInvoice = DateTime.UtcNow,
+                                TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
+                                JenisBilling = jenisBilling,
+                                Keterangan = plan.Keterangan,
+                                StatusBilling = false,
+                                IsDelete = false,
+                                CreateBy = userActiveId,
+                                CreateDateTime = DateTimeOffset.UtcNow
+                            });
+                        }
+                    }
+
+                    if (newBillingList.Any())
+                        await _applicationDbContext.Billings.AddRangeAsync(newBillingList);
                 }
-
-                if (newDetailList.Any())
-                    await _applicationDbContext.RuangBedahBookingDetails.AddRangeAsync(newDetailList);
-
-                if (newBillingList.Any())
-                    await _applicationDbContext.Billings.AddRangeAsync(newBillingList);
 
                 await _applicationDbContext.SaveChangesAsync();
                 await trx.CommitAsync();
 
                 return Ok(new
                 {
-                    message = "Update booking ruang bedah + detail + billing tindakan operasi berhasil",
+                    message = "Update booking ruang bedah + detail terpilih + billing berhasil",
                     BookingRuanganBedahId = id,
                     NoOrder = parent.NoOrder,
-                    TotalDetail = newDetailList.Count,
-                    TotalBilling = newBillingList.Count
+                    TotalDetailDiproses = detailsInput.Count
+                });
+            }
+            catch (DbUpdateException dbEx)
+            {
+                await trx.RollbackAsync();
+                return StatusCode(500, new
+                {
+                    message = $"Gagal menyimpan data: {dbEx.InnerException?.Message ?? dbEx.Message}"
                 });
             }
             catch (Exception ex)
             {
                 await trx.RollbackAsync();
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+                return StatusCode(500, new
+                {
+                    message = $"Terjadi kesalahan internal: {ex.Message}"
+                });
             }
         }
 
