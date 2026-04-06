@@ -49,7 +49,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             _depositRanapNumberService = depositRanapNumberService;
         }
 
-        [HttpGet("{kunjunganId}")]
+        [HttpGet("by-KunjunganId/{kunjunganId}")]
         public async Task<IActionResult> GetByKunjunganId(Guid kunjunganId)
         {
             var listdata = await (

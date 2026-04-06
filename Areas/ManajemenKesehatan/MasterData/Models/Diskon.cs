@@ -10,11 +10,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         [Key]
         public Guid DiskonId { get; set; }
         public string? NamaDiskon { get; set; }
-        public string? KodeDiskon { get; set; }
+        public string? KodeVoucher { get; set; }
         public DateOnly? TglBerlaku { get; set; }
         public DateOnly? TglBerakhir { get; set; }
         public bool? IsAsuransi { get; set; }
         public Guid? AsuransiId { get; set; }
+        public Guid? MetodePembayaranId { get; set; }
         public decimal? PersenDiskon { get; set; }
         public decimal? NominalDiskon { get; set; }
         public string? Keterangan { get; set; }

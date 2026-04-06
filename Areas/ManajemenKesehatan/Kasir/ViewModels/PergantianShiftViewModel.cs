@@ -5,6 +5,8 @@
         public string KodeRegistrasi { get; set; } = string.Empty;
         public Guid LayananId { get; set; }
         public Guid KasirId { get; set; }
+        public Guid? LoketKasirId { get; set; }
+        public string? StatusShift { get; set; }
         public string ShiftPergantian { get; set; } = string.Empty;
         public TimeSpan WaktuMulai { get; set; }
         public TimeSpan WaktuAkhir { get; set; }

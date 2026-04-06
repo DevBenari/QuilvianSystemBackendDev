@@ -12,7 +12,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? KodePaketLayanan { get; set; }
         public string? NamaPaketLayanan { get; set; }
         public DateTime? TglPembuatan { get; set; }
-        public Guid? LayananId { get; set; }
+        public bool? IsMCU { get; set; }
         public string? Keterangan { get; set; }
     }
 }

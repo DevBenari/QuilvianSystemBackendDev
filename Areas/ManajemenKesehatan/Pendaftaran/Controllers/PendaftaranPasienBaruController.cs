@@ -57,7 +57,45 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             _noRmGenerator = noRmGenerator;
             _uploadUrl = configuration["FileStorage:UploadUrl"];
         }
+        private static bool IsFilled(string? value)
+        {
+            return !string.IsNullOrWhiteSpace(value);
+        }
 
+        private IActionResult? ValidateDataWali(
+            string? namaWali,
+            string? noWali,
+            string? hubunganKeluarga,
+            string labelWali)
+        {
+            bool hasNama = IsFilled(namaWali);
+            bool hasNo = IsFilled(noWali);
+            bool hasHubungan = IsFilled(hubunganKeluarga);
+
+            // Kalau semua kosong => boleh
+            if (!hasNama && !hasNo && !hasHubungan)
+                return null;
+
+            // Kalau nama wali kosong, tapi field lain ada isi => tidak boleh
+            if (!hasNama && (hasNo || hasHubungan))
+            {
+                return BadRequest(new
+                {
+                    message = $"{labelWali} tidak valid. Jika Nama {labelWali} kosong, maka No {labelWali} dan Hubungan Keluarga juga harus kosong."
+                });
+            }
+
+            // Kalau nama wali diisi, maka semua field wajib lengkap
+            if (hasNama && (!hasNo || !hasHubungan))
+            {
+                return BadRequest(new
+                {
+                    message = $"{labelWali} tidak lengkap. Jika Nama {labelWali} diisi, maka No {labelWali} dan Hubungan Keluarga harus diisi semua."
+                });
+            }
+
+            return null;
+        }
         private async Task<string> GenerateNoRekamMedisAsync()
         {
             // Ambil NoRekamMedis terakhir
@@ -207,10 +245,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                             KodePos = a.KodePos,
                             Email = a.Email,
                             NoPasien = a.NoPasien,
+                            NoWali1 = a.NoWali1,
                             NoWali2 = a.NoWali2,
-                            NoWali3 = a.NoWali3,
+                            NamaWali1 = a.NamaWali1,
                             NamaWali2 = a.NamaWali2,
-                            NamaWali3 = a.NamaWali3,
                             Kewarganegaraan = a.Kewarganegaraan,
                             Suku = a.Suku,
                             StatusKewarganegaraan = a.StatusKewarganegaraan,
@@ -295,6 +333,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     listdata.TipePendaftaran,
                     listdata.TitleId,
                     listdata.NamaLengkap,
+                    listdata.NoKaryawan,
                     listdata.IdentitasId,
                     listdata.NoIdentitas,
                     listdata.TempatLahir,
@@ -316,10 +355,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     listdata.KodePos,
                     listdata.Email,
                     listdata.NoPasien,
+                    listdata.NoWali1,
                     listdata.NoWali2,
-                    listdata.NoWali3,
+                    listdata.NamaWali1,
                     listdata.NamaWali2,
-                    listdata.NamaWali3,
                     listdata.Kewarganegaraan,
                     listdata.Suku,
                     listdata.StatusKewarganegaraan,
@@ -431,6 +470,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     pasien.TipePasien,
                     pasien.TitleId,
                     pasien.NamaLengkap,
+                    pasien.NoKaryawan,
                     pasien.IdentitasId,
                     pasien.NoIdentitas,
                     pasien.TempatLahir,
@@ -452,10 +492,147 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     pasien.KodePos,
                     pasien.Email,
                     pasien.NoPasien,
+                    pasien.NoWali1,
                     pasien.NoWali2,
-                    pasien.NoWali3,
+                    pasien.NamaWali1,
                     pasien.NamaWali2,
-                    pasien.NamaWali3,
+                    pasien.Kewarganegaraan,
+                    pasien.Suku,
+                    pasien.StatusKewarganegaraan,
+                    pasien.PekerjaanId,
+                    pasien.NamaPerusahaan,
+                    pasien.AlamatPerusahaan,
+                    pasien.NoTeleponPerusahaan,
+                    pasien.GolonganDarahId,
+                    pasien.Alergi,
+                    pasien.RiwayatPenyakit,
+                    pasien.RiwayatOperasi,
+                    pasien.RiwayatPenyakitKeluarga,
+                    pasien.HubunganKeluarga1,
+                    pasien.HubunganPasien,
+                    pasien.AlamatDarurat,
+                    pasien.NoTeleponDarurat,
+                    pasien.NamaKontakDarurat,
+                    pasien.NamaOrangTua,
+                    pasien.IdentitasOrangTua,
+                    pasien.PekerjaanWali,
+                    pasien.HubunganKeluarga2,
+                    pasien.HubunganKeluarga3,
+                    pasien.FotoName,
+                    pasien.FotoPath,
+                    pasien.MembershipId,
+                    pasien.TinggalBersama,
+                    imageUrl = !string.IsNullOrEmpty(pasien.FotoName)
+                        ? $"/FotoPasienBaru/{pasien.FotoName}"
+                        : $"/FotoPasienBaru/user.jpg",
+                    QRUrl = $"/QRCodePasienBaru/{Path.GetFileName(pasien.QrCode)}"
+                }
+            });
+        }
+
+        [HttpGet("Karyawan/{noKaryawan}")]
+        public async Task<IActionResult> GetPendaftaranPasienBaruByNoKaryawan(string noKaryawan)
+        {
+            if (string.IsNullOrWhiteSpace(noKaryawan))
+                return BadRequest(new { message = "NoRM wajib diisi." });
+
+            // 1) Cari pasien by NoRekamMedis
+            var pasien = await _applicationDbContext.PendaftaranPasienBarus
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.NoKaryawan == noKaryawan && !p.IsDelete);
+
+            if (pasien == null)
+                return NotFound(new { message = "Data tidak ditemukan." });
+
+            // 2) Hitung "hari ini" berdasarkan WIB lalu ubah ke range UTC (biar query akurat & efisien)
+            TimeZoneInfo tzJakarta;
+            try { tzJakarta = TimeZoneInfo.FindSystemTimeZoneById("Asia/Jakarta"); }
+            catch { tzJakarta = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time"); } // Windows fallback
+
+            var nowWib = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, tzJakarta);
+            var startWib = nowWib.Date;               // 00:00 WIB hari ini
+            var endWib = startWib.AddDays(1);         // 00:00 WIB besok
+
+            var startUtc = new DateTimeOffset(startWib, tzJakarta.GetUtcOffset(startWib)).ToUniversalTime();
+            var endUtc = new DateTimeOffset(endWib, tzJakarta.GetUtcOffset(endWib)).ToUniversalTime();
+
+            // =============================
+            // 🔎 Cek apakah pasien masih punya kunjungan aktif
+            // =============================
+            // OP: aktif hari ini (tanpa poli karena endpoint hanya NoRM)
+            var hasActiveOPToday = await _applicationDbContext.Kunjungans
+                .AsNoTracking()
+                .AnyAsync(k =>
+                    k.PasienId == pasien.PendaftaranPasienBaruId &&
+                    !k.IsDelete &&
+                    k.IsFinished == false &&
+                    k.IsFinishedKasir == false &&
+                    k.JenisKunjungan == "OP" &&
+                    k.CreateDateTime >= startUtc &&
+                    k.CreateDateTime < endUtc);
+
+            // IP: aktif kapan pun
+            var hasActiveIP = await _applicationDbContext.Kunjungans
+                .AsNoTracking()
+                .AnyAsync(k =>
+                    k.PasienId == pasien.PendaftaranPasienBaruId &&
+                    !k.IsDelete &&
+                    k.IsFinished == false &&
+                    k.IsFinishedKasir == false &&
+                    k.JenisKunjungan == "IP");
+
+            var hasActiveVisit = hasActiveOPToday || hasActiveIP;
+
+            string? jenisAktif = null;
+            if (hasActiveOPToday && hasActiveIP) jenisAktif = "OP,IP";
+            else if (hasActiveOPToday) jenisAktif = "OP";
+            else if (hasActiveIP) jenisAktif = "IP";
+
+            // bad request jika pasien masih punya kunjungan aktif
+            if (hasActiveVisit)
+                return BadRequest(new { message = $"Pasien masih memiliki kunjungan aktif ({jenisAktif})." });
+
+            var parsed = pasien.TanggalLahir?.ToString("yyyy-MM-dd");
+
+            return Ok(new
+            {
+                message = "Ditemukan || 200 OK",
+                hasActiveVisit,
+                activeVisitType = jenisAktif,
+                data = new
+                {
+                    pasien.PendaftaranPasienBaruId,
+                    pasien.KodePasien,
+                    pasien.NoRekamMedis,
+                    pasien.TipePasien,
+                    pasien.TitleId,
+                    pasien.NamaLengkap,
+                    pasien.NoKaryawan,
+                    pasien.IdentitasId,
+                    pasien.NoIdentitas,
+                    pasien.TempatLahir,
+                    pasien.CatatanKhusus,
+                    TanggalLahir = parsed,
+                    Umur = HitungUmurLengkap(pasien.TanggalLahir),
+                    pasien.JenisKelamin,
+                    pasien.StatusPerkawinan,
+                    pasien.AgamaId,
+                    pasien.NamaAgama,
+                    pasien.PendidikanTerakhirId,
+                    pasien.AlamatIdentitas,
+                    pasien.AlamatDomisili,
+                    pasien.NegaraId,
+                    pasien.ProvinsiId,
+                    pasien.KotaId,
+                    pasien.KecKabId,
+                    pasien.KelurahanId,
+                    pasien.KodePos,
+                    pasien.Email,
+                    pasien.NoPasien,
+                    pasien.NoWali1,
+                    pasien.NoWali2,
+                    pasien.NamaWali1,
+                    pasien.NamaWali2,
                     pasien.Kewarganegaraan,
                     pasien.Suku,
                     pasien.StatusKewarganegaraan,
@@ -562,6 +739,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     listdata.TipePasien,
                     listdata.TitleId,
                     listdata.NamaLengkap,
+                    listdata.NoKaryawan,
                     listdata.IdentitasId,
                     listdata.NoIdentitas,
                     listdata.TempatLahir,
@@ -583,10 +761,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     listdata.KodePos,
                     listdata.Email,
                     listdata.NoPasien,
+                    listdata.NoWali1,
                     listdata.NoWali2,
-                    listdata.NoWali3,
+                    listdata.NamaWali1,
                     listdata.NamaWali2,
-                    listdata.NamaWali3,
                     listdata.Kewarganegaraan,
                     listdata.Suku,
                     listdata.StatusKewarganegaraan,
@@ -667,6 +845,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
 
+            // Validasi Wali 1
+            var validasiWali1 = ValidateDataWali(
+                vm.NamaWali1,
+                vm.NoWali1,
+                vm.HubunganKeluarga1,
+                "Wali 1");
+
+            if (validasiWali1 != null)
+                return validasiWali1;
+
+            // Validasi Wali 2
+            var validasiWali2 = ValidateDataWali(
+                vm.NamaWali2,
+                vm.NoWali2,
+                vm.HubunganKeluarga2,
+                "Wali 2");
+
+            if (validasiWali2 != null)
+                return validasiWali2;
+
             try
             {
                 if (!_applicationDbContext.Database.CanConnect())
@@ -718,7 +916,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 }
 
                 // =============================
-                // ✅ Cek Duplikasi DULU
+                // VALIDASI KHUSUS KARYAWAN KIOSK
+                // =============================
+                if (!string.IsNullOrWhiteSpace(vm.NoKaryawan))
+                {
+                    vm.NoKaryawan = vm.NoKaryawan.Trim();
+
+                    var isNoKaryawanExists = await _applicationDbContext.PendaftaranPasienBarus
+                        .AnyAsync(x => x.NoKaryawan == vm.NoKaryawan, ct);
+
+                    if (isNoKaryawanExists)
+                    {
+                        return Conflict(new
+                        {
+                            message = "Data sudah tersedia"
+                        });
+                    }
+                }
+
+                // =============================
+                // ✅ Cek Duplikasi 
                 // =============================
                 var isDuplicate = await _applicationDbContext.PendaftaranPasienBarus
                     .AnyAsync(c => c.NoIdentitas == vm.NoIdentitas, ct);
@@ -853,10 +1070,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     KodePos = vm.KodePos,
                     Email = vm.Email,
                     NoPasien = vm.NoPasien,
+                    NoWali1 = vm.NoWali1,
                     NoWali2 = vm.NoWali2,
-                    NoWali3 = vm.NoWali3,
+                    NamaWali1 = vm.NamaWali1,
                     NamaWali2 = vm.NamaWali2,
-                    NamaWali3 = vm.NamaWali3,
                     Kewarganegaraan = vm.Kewarganegaraan,
                     Suku = vm.Suku,
                     StatusKewarganegaraan = vm.StatusKewarganegaraan,
@@ -920,33 +1137,77 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
 
             try
             {
-                //Ambil User ID dari JWT Claims
-                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
-                var UserActiveId = GetUserActive.UserActiveId;
-
-                if (string.IsNullOrEmpty(EmailLogin))
+                // Ambil User ID dari JWT Claims
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin))
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                // **Cari Data Pasien**
+                var getUserActive = _applicationDbContext.UserActives
+                    .FirstOrDefault(u => u.Email == emailLogin);
+
+                if (getUserActive == null)
+                {
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+                }
+
+                var userActiveId = getUserActive.UserActiveId;
+
+                // Cari Data Pasien
                 var pasien = _applicationDbContext.PendaftaranPasienBarus.Find(id);
                 if (pasien == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
-                // **Konversi `TanggalLahir` dari string "yyyy-MM-dd" ke `DateTime`**
-                if (!DateTime.TryParseExact(vm.TanggalLahir, "yyyy-MM-dd",
-                    CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsedDate))
+                // Konversi TanggalLahir dari string "yyyy-MM-dd" ke DateTime
+                if (!DateTime.TryParseExact(
+                    vm.TanggalLahir,
+                    "yyyy-MM-dd",
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out DateTime parsedDate))
                 {
                     return BadRequest(new { message = "Format TanggalLahir tidak valid! Gunakan format yyyy-MM-dd." });
-
                 }
+
                 parsedDate = DateTime.SpecifyKind(parsedDate, DateTimeKind.Utc);
 
-                // **Update Data Pasien**
+                // ==========================
+                // FINAL VALUE UNTUK VALIDASI
+                // ==========================
+                // pakai nilai dari vm kalau dikirim
+                // kalau tidak dikirim, pakai nilai lama dari database
+                var namaWali1Final = vm.NamaWali1 != null ? vm.NamaWali1.Trim() : pasien.NamaWali1?.Trim();
+                var noWali1Final = vm.NoWali1 != null ? vm.NoWali1.Trim() : pasien.NoWali1?.Trim();
+                var hubunganKeluarga1Final = vm.HubunganKeluarga1 != null ? vm.HubunganKeluarga1.Trim() : pasien.HubunganKeluarga1?.Trim();
+
+                var namaWali2Final = vm.NamaWali2 != null ? vm.NamaWali2.Trim() : pasien.NamaWali2?.Trim();
+                var noWali2Final = vm.NoWali2 != null ? vm.NoWali2.Trim() : pasien.NoWali2?.Trim();
+                var hubunganKeluarga2Final = vm.HubunganKeluarga2 != null ? vm.HubunganKeluarga2.Trim() : pasien.HubunganKeluarga2?.Trim();
+
+                // validasi Wali 1
+                var validasiWali1 = ValidateDataWali(
+                    namaWali1Final,
+                    noWali1Final,
+                    hubunganKeluarga1Final,
+                    "Wali 1");
+
+                if (validasiWali1 != null)
+                    return validasiWali1;
+
+                // validasi Wali 2
+                var validasiWali2 = ValidateDataWali(
+                    namaWali2Final,
+                    noWali2Final,
+                    hubunganKeluarga2Final,
+                    "Wali 2");
+
+                if (validasiWali2 != null)
+                    return validasiWali2;
+
+                // Update Data Pasien
                 pasien.TipePasien = vm.TipePasien;
                 pasien.TipePendaftaran = vm.TipePendaftaran ?? pasien.TipePendaftaran;
                 pasien.TitleId = vm.TitleId ?? pasien.TitleId;
@@ -971,10 +1232,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 pasien.KodePos = vm.KodePos ?? pasien.KodePos;
                 pasien.Email = vm.Email ?? pasien.Email;
                 pasien.NoPasien = vm.NoPasien ?? pasien.NoPasien;
-                pasien.NoWali2 = vm.NoWali2 ?? pasien.NoWali2;
-                pasien.NoWali3 = vm.NoWali3 ?? pasien.NoWali3;
-                pasien.NamaWali2 = vm.NamaWali2 ?? pasien.NamaWali2;
-                pasien.NamaWali3 = vm.NamaWali3 ?? pasien.NamaWali3;
+                pasien.NoWali1 = vm.NoWali1 ?? pasien.NoWali1;
+                pasien.NamaWali1 = vm.NamaWali1 ?? pasien.NamaWali1;
+                pasien.NamaWali1 = namaWali1Final;
+                pasien.NoWali1 = noWali1Final;
+                pasien.HubunganKeluarga1 = hubunganKeluarga1Final;
+                pasien.NamaWali2 = namaWali2Final;
+                pasien.NoWali2 = noWali2Final;
+                pasien.HubunganKeluarga2 = hubunganKeluarga2Final;
                 pasien.Kewarganegaraan = vm.Kewarganegaraan ?? pasien.Kewarganegaraan;
                 pasien.Suku = vm.Suku ?? pasien.Suku;
                 pasien.StatusKewarganegaraan = vm.StatusKewarganegaraan ?? pasien.StatusKewarganegaraan;
@@ -995,12 +1260,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 pasien.NamaOrangTua = vm.NamaOrangTua ?? pasien.NamaOrangTua;
                 pasien.IdentitasOrangTua = vm.IdentitasOrangTua ?? pasien.IdentitasOrangTua;
                 pasien.PekerjaanWali = vm.PekerjaanWali ?? pasien.PekerjaanWali;
-                pasien.HubunganKeluarga2 = vm.HubunganKeluarga2 ?? pasien.HubunganKeluarga2;
-                pasien.HubunganKeluarga3 = vm.HubunganKeluarga3 ?? pasien.HubunganKeluarga3;
                 pasien.MembershipId = vm.MembershipId ?? pasien.MembershipId;
                 pasien.TinggalBersama = vm.TinggalBersama ?? pasien.TinggalBersama;
 
-                // **Update Foto Profil Jika Ada**
+                // Update Foto Profil Jika Ada
                 if (vm.Foto != null && vm.Foto.Length > 0)
                 {
                     var maxSize = 2 * 1024 * 1024; // Maksimum 2MB
@@ -1026,16 +1289,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     ms.Position = 0;
 
                     var content = new MultipartFormDataContent
+            {
+                {
+                    new StreamContent(ms)
                     {
-                        {
-                            new StreamContent(ms)
-                            {
-                                Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.Foto.ContentType) }
-                            }, "file", fotoFileName
-                        },
-                        { new StringContent("FotoPasienBaru"), "folderTarget" },
-                        { new StringContent(oldFileName), "oldFileName" }
-                    };
+                        Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.Foto.ContentType) }
+                    }, "file", fotoFileName
+                },
+                { new StringContent("FotoPasienBaru"), "folderTarget" },
+                { new StringContent(oldFileName), "oldFileName" }
+            };
 
                     var flaskResponse = await client.PostAsync(_uploadUrl, content);
                     if (!flaskResponse.IsSuccessStatusCode)
@@ -1044,10 +1307,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     }
 
                     pasien.FotoName = fotoFileName;
-                    pasien.FotoPath = $"/FotoPasienBaru/{fotoFileName}"; // Simpan path relatif
+                    pasien.FotoPath = $"/FotoPasienBaru/{fotoFileName}";
                 }
 
-                pasien.UpdateBy = UserActiveId;
+                pasien.UpdateBy = userActiveId;
                 pasien.UpdateDateTime = DateTimeOffset.UtcNow;
 
                 _applicationDbContext.PendaftaranPasienBarus.Update(pasien);
@@ -1056,7 +1319,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 return Ok(new
                 {
                     message = "Update Data Berhasil || 200 OK",
-                    qrCodeUrl = $"{(pasien.QrCode)}",
+                    qrCodeUrl = $"{pasien.QrCode}",
                     uploadFotoUrl = $"{pasien.FotoPath}"
                 });
             }
@@ -1133,6 +1396,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                             TipePasien = a.TipePasien,
                             NamaLengkap = a.NamaLengkap,
                             JenisKelamin = a.JenisKelamin,
+                            NoKaryawan = a.NoKaryawan,
                             CatatanKhusus = a.CatatanKhusus,
                             FotoName = a.FotoName,
                             FotoPath = a.FotoPath,
@@ -1157,10 +1421,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                             KodePos = a.KodePos,
                             Email = a.Email,
                             NoPasien = a.NoPasien,
+                            NoWali1 = a.NoWali1,
                             NoWali2 = a.NoWali2,
-                            NoWali3 = a.NoWali3,
+                            NamaWali1 = a.NamaWali1,
                             NamaWali2 = a.NamaWali2,
-                            NamaWali3 = a.NamaWali3,
                             Kewarganegaraan = a.Kewarganegaraan,
                             Suku = a.Suku,
                             StatusKewarganegaraan = a.StatusKewarganegaraan,

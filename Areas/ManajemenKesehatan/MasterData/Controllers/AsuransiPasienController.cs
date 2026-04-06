@@ -65,7 +65,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              NamaAsuransi = a.NamaAsuransi,
                              a.IsPKS,
                              ap.NoPolis,
-                             ap.Umur
+                             ap.Umur,
+                             ap.IsUtama,
                          }).OrderByDescending(ap => ap.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -131,7 +132,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 NamaAsuransi = a.NamaAsuransi,
                                 a.IsPKS,
                                 ap.NoPolis,
-                                ap.Umur
+                                ap.Umur,
+                                ap.IsUtama,
                             }).OrderByDescending(ap => ap.CreateDateTime);
 
             if (listdata == null || !listdata.Any())

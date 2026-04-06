@@ -368,6 +368,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
                             IsListWhiteOff = false,
                             ItemId = alatId,
                             NamaItem = namaAlat,
+                            LayananId = vm.LayananId,
 
                             //HargaItem = alatDb.TarifRs,
                             QtyItem = qtyInput,
@@ -571,6 +572,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
                             IsListWhiteOff = false,
                             ItemId = alatId,
                             NamaItem = namaAlat,
+                            LayananId = vm.LayananId,
 
                             //HargaItem = alatDb.TarifRs,
                             QtyItem = qtyInput,

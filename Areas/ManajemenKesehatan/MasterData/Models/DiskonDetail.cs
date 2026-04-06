@@ -8,6 +8,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         [Key]
         public Guid DetailDiskonId { get; set; }
         public Guid? DiskonId { get; set; }
+        public Guid? ItemId { get; set; }
         public Guid? LayananId { get; set; }
         public string? KodeLayanan { get; set; }
         public string? KategoriLayanan { get; set; } 

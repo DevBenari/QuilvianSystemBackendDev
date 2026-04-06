@@ -543,6 +543,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         int page = 1,
         int perPage = 10,
         //string? search = null,
+        Guid? dresumId = null,
+        Guid? resumId = null,
+        Guid? kunjunganId = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -598,6 +601,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             //        EF.Functions.ILike(u.NamaDiskon, search)
             //    );
             //}
+
+            // filter based on detail resume id
+            if (dresumId.HasValue)
+            {
+                query = query.Where(u=>u.DetResumePulangId == dresumId.Value);
+            }
+
+            // filter based on resume id
+            if (resumId.HasValue)
+            {
+                query = query.Where(u=>u.ResumePulangId == resumId.Value);
+            }
+
+            // filter based on kunjungan id
+            if (kunjunganId.HasValue)
+            {
+                query = query.Where(u=>u.KunjunganId == kunjunganId.Value);
+            }
 
             //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)

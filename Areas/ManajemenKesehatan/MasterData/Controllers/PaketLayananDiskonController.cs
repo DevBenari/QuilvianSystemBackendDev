@@ -291,9 +291,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         public async Task<IActionResult> Paged(
             int page = 1,
             int perPage = 10,
-            Guid? pLayananId = null,
-            Guid? pAsuransiId = null,
+            Guid? paketLayananId = null,
+            Guid? paketAsuransiId = null,
             Guid? diskonPersenId = null,
+            Guid? asuransiId = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -304,10 +305,27 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         {
 
             // Query data
-            var query = (from a in _applicationDbContext.PaketLayananDiskons
+            var query = (from a in _applicationDbContext.PaketLayananDiskons.AsNoTracking()
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false || a.IsDelete == null
+
+                         join p in _applicationDbContext.PaketLayanans.AsNoTracking()
+                         on a.PaketLayananId equals p.PaketLayananId into pGroup
+                         from p in pGroup.DefaultIfEmpty()
+
+                         join pa in _applicationDbContext.PaketLayananAsuransis.AsNoTracking()
+                         on a.PaketLayananAsuransiId equals pa.PaketLayananAsuransiId into paGroup
+                         from pa in paGroup.DefaultIfEmpty()
+
+                         join ar in _applicationDbContext.Asuransis.AsNoTracking()
+                         on pa.AsuransiId equals ar.AsuransiId into arGroup
+                         from ar in arGroup.DefaultIfEmpty()
+
+                         join dp in _applicationDbContext.DiskonPersentases.AsNoTracking()
+                         on a.DiskonPercentageId equals dp.DiskonPercentaseId into dpGroup
+                         from dp in dpGroup.DefaultIfEmpty()
+
+                         where a.IsDelete == false
                          select new
                          {
                              a.CreateDateTime,
@@ -316,27 +334,36 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              a.DiskonPaketLayananId,
                              a.KodeDiskonPaket,
                              a.PaketLayananId,
+                             NamaPaketLayanan = p.NamaPaketLayanan ?? null,
+                             KodeLayanan = p.KodePaketLayanan ?? null,
                              a.PaketLayananAsuransiId,
+                             ar.AsuransiId,
+                             NamaAsuransi = ar.NamaAsuransi ?? null,
                              a.DiskonPercentageId,
+                             NominalDiskonPersentase = dp.NominalPersentase,
                              a.PotonganHargaMax,
                              a.PeriodeAwal,
                              a.PeriodeAkhir,
                              a.Keterangan,
                          });
 
-            if (pAsuransiId != null)
+            if (paketAsuransiId != null)
             {
-                query = query.Where(u=>u.PaketLayananAsuransiId == pAsuransiId);
+                query = query.Where(u=>u.PaketLayananAsuransiId == paketAsuransiId);
             }
 
-            if (pLayananId != null)
+            if (paketLayananId != null)
             {
-                query = query.Where(u=>u.PaketLayananId == pLayananId);
+                query = query.Where(u=>u.PaketLayananId == paketLayananId);
             }
 
             if (diskonPersenId != null)
             {
                 query = query.Where(u => u.DiskonPercentageId == diskonPersenId);
+            }
+            if (asuransiId != null)
+            {
+                query = query.Where(u => u.AsuransiId == asuransiId);
             }
 
             //// **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**

@@ -1,16 +1,17 @@
 ﻿using System.Security.Claims;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Repositories;
 using QuilvianSystemBackendDev.ViewModels;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
 using Swashbuckle.AspNetCore.Annotations;
-using System.Text.Json.Serialization;
 using NewtonsoftJson = Newtonsoft.Json;
 using SystemTextJson = System.Text.Json.Serialization;
 
@@ -39,6 +40,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     x.LayananId,
                     x.KasirId,
                     x.ShiftPergantian,
+                    x.StatusShift,
                     x.WaktuMulai,
                     x.WaktuAkhir,
                     x.TanggalPergantian,
@@ -66,6 +68,29 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             return Ok(new { message = "Ditemukan", data });
         }
 
+        [HttpGet("shift-kasir/{kasirId}")]
+        public async Task<IActionResult> GetStatusShiftByKasirId(Guid kasirId)
+        {
+            var data = await _db.PergantianShifts
+                .AsNoTracking()
+                .Where(x => x.KasirId == kasirId && !x.IsDelete)
+                .OrderByDescending(x => x.CreateDateTime)
+                .Select(x => new
+                {
+                    x.StatusShift
+                })
+                .FirstOrDefaultAsync();
+
+            if (data == null)
+                return NotFound(new { message = "Data tidak ditemukan" });
+
+            return Ok(new
+            {
+                message = "Ditemukan",
+                data
+            });
+        }
+
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] PergantianShiftViewModel vm)
         {
@@ -77,7 +102,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 KodeRegistrasi = vm.KodeRegistrasi,
                 LayananId = vm.LayananId,
                 KasirId = vm.KasirId,
+                StatusShift = vm.StatusShift,
                 ShiftPergantian = vm.ShiftPergantian,
+                LoketKasirId = vm.LoketKasirId,
                 WaktuMulai = vm.WaktuMulai,
                 WaktuAkhir = vm.WaktuAkhir,
                 TanggalPergantian = vm.TanggalPergantian,
@@ -104,7 +131,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             data.KodeRegistrasi = vm.KodeRegistrasi;
             data.LayananId = vm.LayananId;
             data.KasirId = vm.KasirId;
+            data.LoketKasirId = vm.LoketKasirId;
             data.ShiftPergantian = vm.ShiftPergantian;
+            data.StatusShift = vm.StatusShift;
             data.WaktuMulai = vm.WaktuMulai;
             data.WaktuAkhir = vm.WaktuAkhir;
             data.TanggalPergantian = vm.TanggalPergantian;
@@ -271,7 +300,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         x.KodeRegistrasi,
                         x.LayananId,
                         x.KasirId,
+                        x.LoketKasirId,
                         x.ShiftPergantian,
+                        x.StatusShift,
                         x.WaktuMulai,
                         x.WaktuAkhir,
                         x.TanggalPergantian,
