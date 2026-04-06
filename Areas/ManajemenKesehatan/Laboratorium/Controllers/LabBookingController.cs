@@ -1316,14 +1316,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
             // whitelist sorting
             var allowedOrderBy = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-    {
-        "CreateDateTime",
-        "TglBooking",
-        "TglPemeriksaan",
-        "NoOrder",
-        "StatusBookingLab",
-        "StatusPembayaran"
-    };
+            {
+                "CreateDateTime",
+                "TglBooking",
+                "TglPemeriksaan",
+                "NoOrder",
+                "StatusBookingLab",
+                "StatusPembayaran"
+            };
 
             if (string.IsNullOrWhiteSpace(orderBy) || !allowedOrderBy.Contains(orderBy))
                 orderBy = "CreateDateTime";
@@ -1800,6 +1800,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             int perPage = 10,
             Guid? kunjunganId = null,
             Guid? labBookingId = null,
+            Guid? dokterId = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
             [FromQuery] DateTime? startDate = null,
@@ -1848,6 +1849,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
             if (labBookingId.HasValue)
                 baseQuery = baseQuery.Where(b => b.BookingLabId == labBookingId.Value);
+
+            if (dokterId.HasValue)
+                baseQuery = baseQuery.Where(b => b.DokterId == dokterId.Value);
 
             if (startDate.HasValue && endDate.HasValue)
             {
@@ -2170,6 +2174,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             int perPage = 10,
             Guid? kunjunganId = null,
             Guid? labBookingId = null,
+            Guid? dokterId = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
             [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null,
@@ -2218,6 +2223,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
             if (labBookingId.HasValue)
                 baseQuery = baseQuery.Where(b => b.BookingLabId == labBookingId.Value);
+
+            if (dokterId.HasValue)
+                baseQuery = baseQuery.Where(b => b.DokterId == dokterId.Value);
 
             // =============================
             // 2) Filter tanggal manual (startDate/endDate)
@@ -2513,6 +2521,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             int perPage = 10,
             Guid? kunjunganId = null,
             Guid? labBookingId = null,
+            Guid? dokterId = null,
             string? dokterKonsul = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
@@ -2869,6 +2878,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             int perPage = 10,
             Guid? kunjunganId = null,
             Guid? labBookingId = null,
+            Guid? dokterId = null,
             string? dokterKonsul = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
@@ -2919,10 +2929,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     if (labBookingId.HasValue)
                         baseQuery = baseQuery.Where(b => b.BookingLabId == labBookingId.Value);
 
-                    // =============================
-                    // 2) Filter start/end date manual (range)
-                    // =============================
-                    if (startDate.HasValue && endDate.HasValue)
+                    if (dokterId.HasValue)
+                        baseQuery = baseQuery.Where(b => b.DokterId == dokterId.Value);
+
+            // =============================
+            // 2) Filter start/end date manual (range)
+            // =============================
+            if (startDate.HasValue && endDate.HasValue)
                     {
                         var start = startDate.Value.Date;
                         var endExclusive = endDate.Value.Date.AddDays(1); // exclusive upper bound
