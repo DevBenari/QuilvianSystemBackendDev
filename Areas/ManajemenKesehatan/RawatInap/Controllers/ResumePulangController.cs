@@ -444,6 +444,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         int page = 1,
         int perPage = 10,
         string? search = null,
+        Guid? dokterId = null,
+        Guid? kunjunganId = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -500,6 +502,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 query = query.Where(u =>
                     EF.Functions.ILike(u.KunjunganId.ToString(), search)
                 );
+            }
+
+            // filter based on kunjungan id
+            if (kunjunganId.HasValue)
+            {
+                query = query.Where(u=>u.KunjunganId == kunjunganId.Value);
+            }
+
+            // filter based on dokter id
+            if (dokterId.HasValue)
+            {
+                query = query.Where(u=>u.DokterId ==  dokterId.Value);
             }
 
             //// **Filter berdasarkan tanggal**

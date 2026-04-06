@@ -1299,6 +1299,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             Guid? kunjunganId = null,
             Guid? labBookingId = null,
             Guid? labId = null,
+            Guid? dokterId = null,
             [FromQuery] EnumJenisKunjungan? JenisKunjungan = null,
             string? namaLab = null,
             string? orderBy = "CreateDateTime",
@@ -1341,6 +1342,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
             if (labBookingId.HasValue)
                 parentQuery = parentQuery.Where(b => b.BookingLabId == labBookingId.Value);
+
+            if (dokterId.HasValue)
+                parentQuery = parentQuery.Where(b => b.DokterId == dokterId.Value);
 
             // filter JenisKunjungan
             if (JenisKunjungan.HasValue)
