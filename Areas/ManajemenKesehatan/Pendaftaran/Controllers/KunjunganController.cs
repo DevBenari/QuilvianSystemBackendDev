@@ -748,7 +748,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 {
                     KasirId = Guid.NewGuid(),
                     KunjunganId = newKunjungan.KunjunganID,
-                    StatusPembayaran = "Belum Lunas"
+                    StatusPembayaran = "Belum Lunas",
+                    CreateDateTime = DateTime.UtcNow
                 };
                 _applicationDbContext.MainKasirs.Add(kasir);
                 await _applicationDbContext.SaveChangesAsync();

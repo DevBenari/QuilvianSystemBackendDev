@@ -75,6 +75,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
     {
         public Guid? KunjunganId { get; set; }
         public Guid? PasienId { get; set; }
+        public Guid? PetugasId { get; set; }
         public StatusBayarEnum? sb {  get; set; }
         public EnumJenisKunjungan? jk {  get; set; }
         public string? Search { get; set; }
@@ -1021,6 +1022,21 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             );
         }
 
+        //if (query.PetugasId.HasValue && query.PetugasId.Value != Guid.Empty)
+        //{
+        //    var petugasId = query.PetugasId.Value;
+
+        //    baseQuery = baseQuery.Where(k =>
+        //        _db.MainKasirs.AsNoTracking()
+        //            .Where(m =>
+        //                m.KunjunganId == k.KunjunganID &&
+        //                (m.IsDelete == false || m.IsDelete == null))
+        //            .OrderByDescending(m => m.CreateDateTime)
+        //            .Select(m => m.CreateBy)
+        //            .FirstOrDefault() == petugasId
+        //    );
+        //}
+
         if (!string.IsNullOrWhiteSpace(query.asal))
         {
             var asalQ = query.asal.Trim();
@@ -1948,6 +1964,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
     // =======================================================
     public async Task<IReadOnlyList<object>> GetMainKasirDanDetailPembayaranAsync(
         Guid kunjunganId,
+        //Guid? petugasId = null,
         CancellationToken ct = default)
     {
         // =========================
@@ -1960,12 +1977,10 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 on x.PasienId equals p0.PendaftaranPasienBaruId into pGroup
             from p in pGroup.DefaultIfEmpty()
 
-                // ✅ join Kunjungan
             join k0 in _db.Kunjungans.AsNoTracking()
                 on x.KunjunganId equals k0.KunjunganID into kGroup
             from k in kGroup.DefaultIfEmpty()
 
-                // ✅ join Asuransi dari Kunjungan
             join a0 in _db.Asuransis.AsNoTracking()
                 on k.AsuransiId equals a0.AsuransiId into aGroup
             from a in aGroup.DefaultIfEmpty()
@@ -1981,7 +1996,6 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 NamaLengkap = p != null ? p.NamaLengkap : null,
                 NoRekamMedis = p != null ? p.NoRekamMedis : null,
 
-                // ✅ Asuransi dari Kunjungan
                 AsuransiId = (Guid?)k.AsuransiId,
                 NamaAsuransi = a != null ? a.NamaAsuransi : null,
 
@@ -2018,13 +2032,20 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         var kasirIds = headers.Select(h => h.KasirId).ToList();
 
         // =========================
-        // 2) Details (ONE query)
+        // 2) Details (ONE query) + filter petugasId
         // =========================
-        var tmpDetails = await _db.MainKasirDetails
+        var detailQuery = _db.MainKasirDetails
             .AsNoTracking()
             .Where(d => d.MainKasirId != null
                         && kasirIds.Contains(d.MainKasirId.Value)
-                        && d.IsDelete != true)
+                        && d.IsDelete != true);
+
+        //if (petugasId.HasValue && petugasId.Value != Guid.Empty)
+        //{
+        //    detailQuery = detailQuery.Where(d => d.CreateBy == petugasId.Value);
+        //}
+
+        var tmpDetails = await detailQuery
             .OrderBy(d => d.TglPembayaran ?? DateTime.MaxValue)
             .ThenBy(d => d.CreateDateTime)
             .Select(d => new
@@ -2091,7 +2112,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         }
 
         // =========================
-        // 3) Load nama user sekali (hindari N+1)
+        // 3) Load nama user sekali
         // =========================
         var userIds = new HashSet<Guid>();
 
@@ -2124,8 +2145,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         // =========================
         var kasirs = headers.Select(h =>
         {
-            // ✅ NEW: hasil hitung dari detail terbaru (fallback aman kalau detail kosong)
-            var totalTagihan = h.GrandTotalPembayaran  ?? 0m;
+            var totalTagihan = h.GrandTotalPembayaran ?? 0m;
             var jumlahAngsuranHitung = GetLatestAngsuran(h.KasirId);
             var sisaPembayaranHitung = GetSisaPembayaran(h.KasirId, totalTagihan);
 
@@ -2141,12 +2161,8 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     h.AsuransiId,
                     h.NamaAsuransi,
                     h.InvoiceBilling,
-
-                    // ✅ NEW: yang dipakai dari detail terbaru
                     JumlahAngsuran = jumlahAngsuranHitung,
                     SisaPembayaran = sisaPembayaranHitung,
-
-
                     h.StatusPembayaran,
                     h.IsVerified,
                     h.TTDUserVerfiedId,
@@ -2165,17 +2181,14 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     h.Keterangan,
                     h.TglPembayaran,
                     h.DiskonId,
-
                     h.CreateDateTime,
                     h.CreateBy,
                     CreateByName = GetUserName(h.CreateBy),
-
                     h.UpdateDateTime,
                     h.UpdateBy,
                     UpdateByName = GetUserName(h.UpdateBy),
                 },
 
-                // kalau kamu masih mau balikin detail, biarkan bagian ini
                 Details = detailLookup[h.KasirId]
                     .Select(d => new
                     {
@@ -2193,11 +2206,9 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                         d.NominalPembayaran,
                         d.Keterangan,
                         d.TglPembayaran,
-
                         d.CreateDateTime,
                         d.CreateBy,
                         CreateByName = GetUserName(d.CreateBy),
-
                         d.UpdateDateTime,
                         d.UpdateBy,
                         UpdateByName = GetUserName(d.UpdateBy),
@@ -2890,6 +2901,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
     }
 
     #endregion
+
 
     #endregion
 

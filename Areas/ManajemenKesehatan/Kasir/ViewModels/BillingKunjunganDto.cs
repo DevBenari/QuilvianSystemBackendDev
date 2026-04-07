@@ -22,6 +22,7 @@
         public bool? IsPKS { get; set; }
         public string? Umur { get; set; }
 
+        // List Item Pelayanan Medis
         public List<object>? DaftarPemeriksaanLab { get; set; } = new();
         public List<object>? DaftarObat { get; set; } = new();
         public List<object>? DaftarRacikan { get; set; } = new();
@@ -29,10 +30,12 @@
         public List<object>? DaftarBiayaAdmin { get; set; } = new();
         public List<object>? DaftarBiayaLain { get; set; } = new();
         public List<object>? DaftarAlkes { get; set; } = new();
-
         public List<object>? DaftarVisitDokter { get; set; } = new();
         public List<object>? DaftarKamarRanap { get; set; } = new();
         public object? DPRanap { get; set; } = 0m;
+
+        // List Item Diskon
+        public List<object>? DaftarPaketDiskon { get; set; } = new();
 
         public decimal TotalPemeriksaanLab { get; set; } = 0m;
         public decimal TotalObat { get; set; } = 0m;
