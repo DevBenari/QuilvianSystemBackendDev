@@ -250,6 +250,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<PaketLayananAsuransi> PaketLayananAsuransis { get; set; }
         public DbSet<PaketLayananDiskon> PaketLayananDiskons { get; set; }
         public DbSet<LoketKasir> LoketKasirs { get; set; }
+        public DbSet<DiskonApproved> DiskonApproveds { get; set; }
         #endregion
 
         #region Areas Keuangan
