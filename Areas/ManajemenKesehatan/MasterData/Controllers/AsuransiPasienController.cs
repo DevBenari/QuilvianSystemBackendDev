@@ -67,6 +67,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              ap.NoPolis,
                              ap.Umur,
                              ap.IsUtama,
+                             ap.IsExcess,
                          }).OrderByDescending(ap => ap.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -134,6 +135,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 ap.NoPolis,
                                 ap.Umur,
                                 ap.IsUtama,
+                                ap.IsExcess,
                             }).OrderByDescending(ap => ap.CreateDateTime);
 
             if (listdata == null || !listdata.Any())
@@ -218,6 +220,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         AsuransiId = request.AsuransiId,
                         NoPolis = request.NoPolis,
                         Umur = request.Umur,
+                        IsExcess = request.IsExcess,
+                        IsUtama = request.IsUtama,
                         CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = UserActiveId
                     };
@@ -364,6 +368,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     data.AsuransiId = request.AsuransiId;
                     data.NoPolis = request.NoPolis;
                     data.Umur = request.Umur;
+                    data.IsUtama = request.IsUtama;
+                    data.IsExcess = request.IsExcess;
 
                     data.UpdateDateTime = DateTimeOffset.UtcNow;
                     data.UpdateBy = UserActiveId;
@@ -448,7 +454,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             NamaAsuransi = a.NamaAsuransi,
                             a.IsPKS,
                             ap.NoPolis,
-                            ap.Umur
+                            ap.Umur,
+                            ap.IsUtama,
+                            ap.IsExcess
                         };
 
             // Filter berdasarkan search

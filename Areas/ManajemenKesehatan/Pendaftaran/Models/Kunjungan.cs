@@ -10,6 +10,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
         [Key]
         public Guid KunjunganID { get; set; }
         public Guid? AsuransiId { get; set; }
+        public Guid? AsuransiExcessId { get; set; }
         public Guid? PoliklinikId { get; set; }
         public Guid? DokterId { get; set; }
         public Guid? PasienId { get; set; }
