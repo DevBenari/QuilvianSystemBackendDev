@@ -69,6 +69,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.PersenDiskon,
                         a.NominalDiskon,
                         a.KodeVoucher,
+                        a.IsDireksiApproved,
+                        a.IsDiskonCombined,
+                        a.KategoriDiskon,
+                        a.Qty,
+                        a.TipeDiskonDokter,
+                        a.ValueDiskonDokter,
                         a.Keterangan,
                         a.CreateBy,
                         CreateByName = u != null ? u.FullName : null,
@@ -186,6 +192,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.PersenDiskon,
                         a.NominalDiskon,
                         a.KodeVoucher,
+                        a.IsDireksiApproved,
+                        a.IsDiskonCombined,
+                        a.KategoriDiskon,
+                        a.Qty,
+                        a.TipeDiskonDokter,
+                        a.ValueDiskonDokter,
                         a.Keterangan,
                         a.CreateBy,
                         CreateByName = u != null ? u.FullName : null,
@@ -304,6 +316,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     AsuransiId = vm.AsuransiId,
                     PersenDiskon = vm.PersenDiskon,
                     NominalDiskon = vm.NominalDiskon,
+                    IsDireksiApproved = false,
+                    IsDiskonCombined = false,
+                    KategoriDiskon = vm.KategoriDiskon,
+                    Qty = vm.Qty,
+                    TipeDiskonDokter = vm.TipeDiskonDokter,
+                    ValueDiskonDokter = vm.ValueDiskonDokter,
                     Keterangan = vm.Keterangan,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
@@ -443,6 +461,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 existingDiskon.AsuransiId = vm.AsuransiId;
                 existingDiskon.PersenDiskon = vm.PersenDiskon;
                 existingDiskon.NominalDiskon = vm.NominalDiskon;
+                existingDiskon.KategoriDiskon = vm.KategoriDiskon;
+                existingDiskon.Qty = vm.Qty;
+                existingDiskon.TipeDiskonDokter = vm.TipeDiskonDokter;
+                existingDiskon.ValueDiskonDokter = vm.ValueDiskonDokter;
                 existingDiskon.Keterangan = vm.Keterangan;
                 existingDiskon.UpdateBy = userActiveId;
                 existingDiskon.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -523,6 +545,114 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     message = $"Terjadi kesalahan internal: {ex.Message}"
                 });
+            }
+        }
+        
+        [HttpPut("Update-AprovalDireksi/{id}")]
+        public async Task<IActionResult> AprovalDireksi(Guid id, [FromBody] UpdateIsDireksiApprovedVM request)
+        {
+            if (request == null)
+            {
+                return BadRequest(new { message = "Data tidak boleh kosong!" });
+            }
+            try
+            {
+                // **Ambil User ID dari JWT Claims**
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
+                if (string.IsNullOrEmpty(EmailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+                // Periksa apakah pasien dan asuransi ada di database
+                //var pasienExists = _applicationDbContext.PendaftaranPasienBarus
+                //                      .Any(p => p.PendaftaranPasienBaruId == request.PasienId);
+                //var asuransiExists = _applicationDbContext.Asuransis
+                //                      .Any(a => a.AsuransiId == request.AsuransiId);
+                //if (!pasienExists || !asuransiExists)
+                //{
+                //    return NotFound(new { message = "Pasien atau Asuransi tidak ditemukan!" });
+                //}
+                //validate model state
+                if (ModelState.IsValid)
+                {
+                    var data = _applicationDbContext.Diskons.Find(id);
+                    if (data == null)
+                    {
+                        return NotFound(new { message = "Data tidak ditemukan." });
+                    }
+                    data.IsDireksiApproved = request.Status;
+
+                    data.UpdateDateTime = DateTimeOffset.UtcNow;
+                    data.UpdateBy = UserActiveId;
+
+                    _applicationDbContext.Diskons.Update(data);
+                    await _applicationDbContext.SaveChangesAsync();
+                    return Ok(new { message = "Data berhasil diubah!", data });
+                }
+                else
+                {
+                    return BadRequest(new { message = "Data tidak valid!" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
+        [HttpPut("Update-CombinedDiskon/{id}")]
+        public async Task<IActionResult> CombinedDiskon(Guid id, [FromBody] UpdateIsCombinedVM request)
+        {
+            if (request == null)
+            {
+                return BadRequest(new { message = "Data tidak boleh kosong!" });
+            }
+            try
+            {
+                // **Ambil User ID dari JWT Claims**
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
+                if (string.IsNullOrEmpty(EmailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+                // Periksa apakah pasien dan asuransi ada di database
+                //var pasienExists = _applicationDbContext.PendaftaranPasienBarus
+                //                      .Any(p => p.PendaftaranPasienBaruId == request.PasienId);
+                //var asuransiExists = _applicationDbContext.Asuransis
+                //                      .Any(a => a.AsuransiId == request.AsuransiId);
+                //if (!pasienExists || !asuransiExists)
+                //{
+                //    return NotFound(new { message = "Pasien atau Asuransi tidak ditemukan!" });
+                //}
+                //validate model state
+                if (ModelState.IsValid)
+                {
+                    var data = _applicationDbContext.Diskons.Find(id);
+                    if (data == null)
+                    {
+                        return NotFound(new { message = "Data tidak ditemukan." });
+                    }
+                    data.IsDiskonCombined = request.Status;
+
+                    data.UpdateDateTime = DateTimeOffset.UtcNow;
+                    data.UpdateBy = UserActiveId;
+
+                    _applicationDbContext.Diskons.Update(data);
+                    await _applicationDbContext.SaveChangesAsync();
+                    return Ok(new { message = "Data berhasil diubah!", data });
+                }
+                else
+                {
+                    return BadRequest(new { message = "Data tidak valid!" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
 
@@ -659,6 +789,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.MetodePembayaranId,
                         a.PersenDiskon,
                         a.NominalDiskon,
+                        a.IsDireksiApproved,
+                        a.IsDiskonCombined,
+                        a.KategoriDiskon,
+                        a.Qty,
+                        a.TipeDiskonDokter,
+                        a.ValueDiskonDokter,
                         a.Keterangan,
                         a.UpdateBy,
                         a.UpdateDateTime

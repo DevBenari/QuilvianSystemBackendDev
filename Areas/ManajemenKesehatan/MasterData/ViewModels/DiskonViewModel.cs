@@ -12,6 +12,12 @@
         public decimal? PersenDiskon { get; set; }
         public decimal? NominalDiskon { get; set; }
         public string? Keterangan { get; set; }
+        public bool? IsDireksiApproved { get; set; } = false;
+        public bool? IsDiskonCombined { get; set; } = false;
+        public string? KategoriDiskon { get; set; }
+        public int? Qty { get; set; }
+        public string? TipeDiskonDokter { get; set; }
+        public int? ValueDiskonDokter { get; set; }
         public List<DetailDiskonViewModel>? Details { get; set; }
     }
 }

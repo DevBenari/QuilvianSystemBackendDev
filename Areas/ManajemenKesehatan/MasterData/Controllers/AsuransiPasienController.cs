@@ -535,7 +535,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet("paged")]
-        public IActionResult PagedAsuransiPasien(
+        public async Task<IActionResult> PagedAsuransiPasien(
         int page = 1,
         int perPage = 10,
         string? search = null,
