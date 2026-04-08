@@ -389,6 +389,114 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
+        [HttpPut("Update-IsUtama/{id}")]
+        public async Task<IActionResult> UpdateIsUtamaAP(Guid id, [FromBody] UpdateIsUtamaVM request)
+        {
+            if (request == null)
+            {
+                return BadRequest(new { message = "Data tidak boleh kosong!" });
+            }
+            try
+            {
+                // **Ambil User ID dari JWT Claims**
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
+                if (string.IsNullOrEmpty(EmailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+                // Periksa apakah pasien dan asuransi ada di database
+                //var pasienExists = _applicationDbContext.PendaftaranPasienBarus
+                //                      .Any(p => p.PendaftaranPasienBaruId == request.PasienId);
+                //var asuransiExists = _applicationDbContext.Asuransis
+                //                      .Any(a => a.AsuransiId == request.AsuransiId);
+                //if (!pasienExists || !asuransiExists)
+                //{
+                //    return NotFound(new { message = "Pasien atau Asuransi tidak ditemukan!" });
+                //}
+                //validate model state
+                if (ModelState.IsValid)
+                {
+                    var data = _applicationDbContext.AsuransiPasiens.Find(id);
+                    if (data == null)
+                    {
+                        return NotFound(new { message = "Data tidak ditemukan." });
+                    }
+                    data.IsUtama = request.IsUtama;
+
+                    data.UpdateDateTime = DateTimeOffset.UtcNow;
+                    data.UpdateBy = UserActiveId;
+
+                    _applicationDbContext.AsuransiPasiens.Update(data);
+                    await _applicationDbContext.SaveChangesAsync();
+                    return Ok(new { message = "Data berhasil diubah!", data });
+                }
+                else
+                {
+                    return BadRequest(new { message = "Data tidak valid!" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
+        [HttpPut("Update-IsExcess/{id}")]
+        public async Task<IActionResult> UpdateIsExcessAP(Guid id, [FromBody] UpdateIsExcessVM request)
+        {
+            if (request == null)
+            {
+                return BadRequest(new { message = "Data tidak boleh kosong!" });
+            }
+            try
+            {
+                // **Ambil User ID dari JWT Claims**
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
+                if (string.IsNullOrEmpty(EmailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+                // Periksa apakah pasien dan asuransi ada di database
+                //var pasienExists = _applicationDbContext.PendaftaranPasienBarus
+                //                      .Any(p => p.PendaftaranPasienBaruId == request.PasienId);
+                //var asuransiExists = _applicationDbContext.Asuransis
+                //                      .Any(a => a.AsuransiId == request.AsuransiId);
+                //if (!pasienExists || !asuransiExists)
+                //{
+                //    return NotFound(new { message = "Pasien atau Asuransi tidak ditemukan!" });
+                //}
+                //validate model state
+                if (ModelState.IsValid)
+                {
+                    var data = _applicationDbContext.AsuransiPasiens.Find(id);
+                    if (data == null)
+                    {
+                        return NotFound(new { message = "Data tidak ditemukan." });
+                    }
+                    data.IsExcess = request.IsExcess;
+
+                    data.UpdateDateTime = DateTimeOffset.UtcNow;
+                    data.UpdateBy = UserActiveId;
+
+                    _applicationDbContext.AsuransiPasiens.Update(data);
+                    await _applicationDbContext.SaveChangesAsync();
+                    return Ok(new { message = "Data berhasil diubah!", data });
+                }
+                else
+                {
+                    return BadRequest(new { message = "Data tidak valid!" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteAsuransiPasien(Guid id)
