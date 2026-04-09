@@ -7,6 +7,8 @@
         public Guid? PemeriksaanLabId { get; set; }
         public Guid? PeralatanId { get; set; }
         public Guid? DokterId { get; set; }
+        public string? KategoriTindakan { get; set; }
+        public string? KodeLayanan { get; set; }
         public string? NamaKelas { get; set; }
         public decimal? TarifDokter { get; set; }
         public decimal? TarifRs { get; set; }

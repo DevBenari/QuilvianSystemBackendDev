@@ -27,5 +27,7 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Models
         public string? NoHandphone { get; set; }
         public string? Email { get; set; }
         public string? Alamat { get; set; }
+        public string? FotoPath { get;  set; }
+        public string? FotoName { get;  set; }
     }
 }

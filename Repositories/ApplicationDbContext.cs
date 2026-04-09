@@ -251,6 +251,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<PaketLayananDiskon> PaketLayananDiskons { get; set; }
         public DbSet<LoketKasir> LoketKasirs { get; set; }
         public DbSet<DiskonApproved> DiskonApproveds { get; set; }
+        public DbSet<DiskonTagihan> DiskonTagihans {  get; set; }
         #endregion
 
         #region Areas Keuangan
