@@ -34,6 +34,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
         private readonly IGenerateInvoiceBillingService _generateInvoiceBillingService;
         private readonly ILogger<RuangBedahBookingController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly IAsuransiCoverageService _asuransiCoverageService;
 
         public RuangBedahBookingController(
             ApplicationDbContext applicationDbContext,
@@ -41,7 +42,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
             SignInManager<ApplicationUser> signInManager,
             ILogger<RuangBedahBookingController> logger,
             IWebHostEnvironment webHostEnvironment,
-            IGenerateInvoiceBillingService generateInvoiceBillingService)
+            IGenerateInvoiceBillingService generateInvoiceBillingService,
+            IAsuransiCoverageService asuransiCoverageService)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
@@ -49,6 +51,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
             _generateInvoiceBillingService = generateInvoiceBillingService;
+            _asuransiCoverageService = asuransiCoverageService;
         }
 
         [HttpGet]
@@ -156,7 +159,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] RuangBedahBookingViewModel vm)
+        public async Task<IActionResult> Create([FromBody] RuangBedahBookingViewModel vm, CancellationToken ct)
         {
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
@@ -369,6 +372,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                                 billingIndex++;
                                 string billingKode = $"{billingIndex:D3}";
 
+                                var status = await _asuransiCoverageService.GetIsCoveredAsync((Guid)vm.KunjunganId, "Tindakan", tindakanId, ct);
+
                                 billingList.Add(new Billing
                                 {
                                     BillingId = Guid.NewGuid(),
@@ -392,6 +397,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                                     JenisBilling = jenisBillingOperasi,
                                     Keterangan = d.Keterangan,
                                     StatusBilling = false,
+                                    IsCovered = status,
                                     CreateBy = userActiveId,
                                     CreateDateTime = DateTimeOffset.UtcNow
                                 });
@@ -596,7 +602,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
 
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateBookingBedah(Guid id, [FromBody] RuangBedahBookingViewModel vm)
+        public async Task<IActionResult> UpdateBookingBedah(Guid id, [FromBody] RuangBedahBookingViewModel vm, CancellationToken ct)
         {
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
@@ -889,6 +895,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                             billingIndex++;
                             var billingKode = $"{billingIndex:D3}";
 
+                            var status = await _asuransiCoverageService.GetIsCoveredAsync((Guid)vm.KunjunganId, "Tindakan", tindakanId, ct);
+
+
                             newBillingList.Add(new Billing
                             {
                                 BillingId = Guid.NewGuid(),
@@ -907,6 +916,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                                 JenisBilling = jenisBilling,
                                 Keterangan = plan.Keterangan,
                                 StatusBilling = false,
+                                IsCovered = status,
                                 IsDelete = false,
                                 CreateBy = userActiveId,
                                 CreateDateTime = DateTimeOffset.UtcNow

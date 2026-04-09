@@ -13,7 +13,9 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Hubs;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.HubSignalR;
 using QuilvianSystemBackendDev.Interfaces;
@@ -37,6 +39,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly IHubContext<AlatPemakaianHub> _hubContext;
         private readonly IGenerateInvoiceBillingService _generateInvoiceBillingService;
+        private readonly IAsuransiCoverageService _asuransiCoverageService;
         public AlatPemakaianController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
@@ -44,7 +47,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
             ILogger<AlatPemakaianController> logger,
             IWebHostEnvironment webHostEnvironment,
             IHubContext<AlatPemakaianHub> hubContext,
-            IGenerateInvoiceBillingService generateInvoiceBillingService
+            IGenerateInvoiceBillingService generateInvoiceBillingService,
+            IAsuransiCoverageService asuransiCoverageService
             )
         {
             _applicationDbContext = applicationDbContext;
@@ -54,6 +58,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
             _webHostEnvironment = webHostEnvironment;
             _hubContext = hubContext;
             _generateInvoiceBillingService = generateInvoiceBillingService;
+            _asuransiCoverageService = asuransiCoverageService;
         }
 
         [HttpGet("{id}")]
@@ -253,7 +258,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
 
 
         [HttpPost]
-        public async Task<IActionResult> CreateAlatPemakaian([FromBody] AlatPemakaianViewModel vm)
+        public async Task<IActionResult> CreateAlatPemakaian([FromBody] AlatPemakaianViewModel vm, CancellationToken ct)
         {
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
@@ -350,6 +355,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
                         CreateDateTime = DateTimeOffset.UtcNow
                     });
 
+                    var status = await _asuransiCoverageService.GetIsCoveredAsync((Guid)vm.KunjunganId, "Alkes", alatId, ct);
+
                     // ---- BILLING (Pola dictionary seperti contoh kamu) ----
                     if (!billingDict.TryGetValue(alatId, out var billing))
                     {
@@ -377,6 +384,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
                             JenisBilling = "Alkes",
                             StatusPengambilan = true,
                             StatusBilling = false,
+                            IsCovered = status,
                             TanggalInvoice = DateTime.UtcNow,
                             TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                             CreateBy = userId,
@@ -420,7 +428,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateAlatPemakaian(Guid pemakaianAlatId, [FromBody] AlatPemakaianViewModel vm)
+        public async Task<IActionResult> UpdateAlatPemakaian(Guid pemakaianAlatId, [FromBody] AlatPemakaianViewModel vm, CancellationToken ct)
         {
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
@@ -539,6 +547,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
 
                     //var subTotal = alatDb.TarifRs * qtyInput;
 
+                    var status = await _asuransiCoverageService.GetIsCoveredAsync((Guid)vm.KunjunganId, "Alkes", alatId, ct);
+
+
                     // ---- DETAIL ----
                     detailEntities.Add(new AlatPemakaianDetail
                     {
@@ -582,6 +593,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
                             JenisBilling = "Alkes",
                             StatusPengambilan = true,
                             StatusBilling = false,
+                            IsCovered = status,
                             CreateBy = userId,
                             CreateDateTime = DateTimeOffset.UtcNow
                         };

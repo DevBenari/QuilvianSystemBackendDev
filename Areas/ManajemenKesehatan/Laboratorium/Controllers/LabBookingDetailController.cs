@@ -36,6 +36,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         private readonly ILogger<LabBookingDetailController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly IGenerateInvoiceBillingService _generateInvoiceBillingService;
+        private readonly IAsuransiCoverageService _asuransiCoverageService;
 
         public LabBookingDetailController(
             ApplicationDbContext applicationDbContext,
@@ -46,7 +47,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             //IConfiguration configuration,
             ITTDService ttdService,
             IHubContext<LabBookingDetailHub> hubContext,
-            IGenerateInvoiceBillingService generateInvoiceBillingService)
+            IGenerateInvoiceBillingService generateInvoiceBillingService,
+            IAsuransiCoverageService asuransiCoverageService)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
@@ -57,6 +59,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             _hubContext = hubContext;
             _ttdService = ttdService;
             _generateInvoiceBillingService = generateInvoiceBillingService;
+            _asuransiCoverageService = asuransiCoverageService;
         }
 
         [HttpGet]
@@ -253,7 +256,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] LabBookingDetailViewModel vm)
+        public async Task<IActionResult> Create([FromBody] LabBookingDetailViewModel vm, CancellationToken ct)
         {
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
@@ -364,6 +367,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         .AsNoTracking()
                         .FirstOrDefaultAsync(p => p.PemeriksaanLabId == vm.PemeriksaanLabId);
 
+                    var status = await _asuransiCoverageService.GetIsCoveredAsync((Guid)vm.KunjunganId, "Pemeriksaan Lab", pemeriksaan.PemeriksaanLabId, ct);
+
                     if (pemeriksaan != null)
                     {
                         var billing = new Billing
@@ -385,6 +390,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                             BillingDate = DateTime.UtcNow,
                             TanggalInvoice = DateTime.UtcNow,
                             TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
+                            IsCovered = status,
                             CreateBy = userActiveId,
                             CreateDateTime = DateTimeOffset.UtcNow,
                             Keterangan = $"Booking Lab ({newNoOrder})"
@@ -497,7 +503,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] LabBookingDetailViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] LabBookingDetailViewModel vm, CancellationToken ct)
         {
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
@@ -617,6 +623,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         .AsNoTracking()
                         .FirstOrDefaultAsync(p => p.PemeriksaanLabId == vm.PemeriksaanLabId);
 
+                    var status = await _asuransiCoverageService.GetIsCoveredAsync((Guid)vm.KunjunganId, "Pemeriksaan Lab", pemeriksaan.PemeriksaanLabId, ct);
+
                     if (pemeriksaan != null)
                     {
                         // Cek apakah sudah ada billing untuk pemeriksaan ini
@@ -647,6 +655,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                 TanggalInvoice = DateTime.UtcNow,
                                 TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                                 StatusBilling = false,
+                                IsCovered = status,
                                 CreateBy = userActiveId,
                                 CreateDateTime = DateTimeOffset.UtcNow,
                                 StatusPengambilan = false,

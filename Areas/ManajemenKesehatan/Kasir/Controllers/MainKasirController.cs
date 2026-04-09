@@ -922,7 +922,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         MainKasirId = kasirId,
                         KunjunganId = kunjunganId,
                         PasienId = detailVm.PasienId ?? vm.PasienId,
-
+                        // Diskon
+                        TipeDiskonDokter = detailVm.TipeDiskonDokter,
+                        ValueDiskonDokter = detailVm.ValueDiskonDokter,
+                        
                         TotalPembayaran = totalTagihan,
                         NominalPembayaran = bayarNow,
 
@@ -1203,6 +1206,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                             MainKasirId = kasirId,
                             KunjunganId = kunjunganId,
                             PasienId = dvm.PasienId ?? vm.PasienId,
+                            TipeDiskonDokter = dvm.TipeDiskonDokter,
+                            ValueDiskonDokter = dvm.ValueDiskonDokter,
 
                             TotalPembayaran = totalTagihanNet,
                             NominalPembayaran = bayarNow,
