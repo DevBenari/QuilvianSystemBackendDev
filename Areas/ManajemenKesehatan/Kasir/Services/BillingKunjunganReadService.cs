@@ -158,12 +158,10 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 on k.AsuransiId equals a0.AsuransiId into ag
             from a in ag.DefaultIfEmpty()
 
-            // ✅ LEFT JOIN AsuransiPasien, tapi khusus yang match AsuransiId kunjungan
+                // JOIN berdasarkan AsuransiPasienId yang tersimpan di kunjungan
             join ap0 in _db.AsuransiPasiens.AsNoTracking()
-                on new { PasienId = k.PasienId, AsuransiId = k.AsuransiId }
-                equals new { PasienId = (Guid?)ap0.PasienId, AsuransiId = (Guid?)ap0.AsuransiId } into apg
+                on k.AsuransiPasienId equals (Guid?)ap0.AsuransiPasienId into apg
             from ap in apg.DefaultIfEmpty()
-
 
             select new
             {
@@ -207,6 +205,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             NamaPoliklinik = header.NamaPoliklinik,
             TipePembayaran = header.TipePembayaran,
             NamaAsuransi = header.NamaAsuransi,
+            NoPolis = header.NoPolis,
             IsPKS = header.IsPKS,
             Umur = HitungUmurLengkap(header.TanggalLahir)
         };
@@ -1138,10 +1137,11 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             from a in ag.DefaultIfEmpty()
 
                 // ✅ LEFT JOIN AsuransiPasien, tapi khusus yang match AsuransiId kunjungan
+                // JOIN berdasarkan AsuransiPasienId yang tersimpan di kunjungan
             join ap0 in _db.AsuransiPasiens.AsNoTracking()
-                on new { PasienId = k.PasienId, AsuransiId = k.AsuransiId }
-                equals new { PasienId = (Guid?)ap0.PasienId, AsuransiId = (Guid?)ap0.AsuransiId } into apg
+                on k.AsuransiPasienId equals (Guid?)ap0.AsuransiPasienId into apg
             from ap in apg.DefaultIfEmpty()
+
             select new
             {
                 k.KunjunganID,
@@ -1447,6 +1447,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 NamaPoliklinik = h.NamaPoliklinik,
                 TipePembayaran = h.TipePembayaran,
                 NamaAsuransi = h.NamaAsuransi,
+                NoPolis = h.NoPolis,
                 IsPKS = h.IsPKS,
                 Umur = HitungUmurLengkap(h.TanggalLahir),
 
@@ -1506,6 +1507,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                             BillingKode = bill?.BillingKode,
                             StatusBilling = bill?.StatusBilling,
                             jenisBilling = bill?.JenisBilling,
+
                         };
                     })
                     .ToList();
@@ -1913,6 +1915,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 dto.NamaPoliklinik,
                 dto.TipePembayaran,
                 dto.NamaAsuransi,
+                dto.NoPolis,
                 dto.IsPKS,
                 dto.Umur,
                 dto.AsOf,
