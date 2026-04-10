@@ -15,7 +15,7 @@ namespace QuilvianSystemBackendDev.Services
             _db = db;
         }
 
-        public async Task<bool?> GetIsCoveredAsync(Guid kunjunganId, string? jenisBilling, Guid? itemId = null, CancellationToken ct = default)
+        public async Task<bool?> GetIsCoveredAsync(Guid? kunjunganId, string? jenisBilling, Guid? itemId = null, CancellationToken ct = default)
         {
             var asuransiId = await _db.Kunjungans
                 .AsNoTracking()
@@ -45,7 +45,16 @@ namespace QuilvianSystemBackendDev.Services
                             ct);
 
                 case "Obat":
-                    return await _db.CoveranObatAsuransis
+                    return await _db.ObatAsuransis
+                        .AsNoTracking()
+                        .AnyAsync(x =>
+                            x.AsuransiId == asuransiId &&
+                            x.ObatId == itemId &&
+                            (x.IsDelete == false),
+                            ct);
+
+                case "Alkes":
+                    return await _db.ObatAsuransis
                         .AsNoTracking()
                         .AnyAsync(x =>
                             x.AsuransiId == asuransiId &&

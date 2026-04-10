@@ -14,5 +14,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public Guid? AsuransiId { get; set; }
         public bool? IsUtama { get; set; }
         public string? Umur { get; set; }
+        public bool? IsExcess {  get; set; }
     }
 }

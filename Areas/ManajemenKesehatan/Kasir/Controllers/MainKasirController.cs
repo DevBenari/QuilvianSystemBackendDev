@@ -646,6 +646,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         [HttpGet("Billing-Kasir/{kunjunganId:guid}")]
         public async Task<IActionResult> GetBillingKasirByKunjunganId(
             Guid kunjunganId,
+            //Guid? petugasId = null,
             [FromQuery] DateTime? asOf = null,
             CancellationToken ct = default)
         {
@@ -921,7 +922,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         MainKasirId = kasirId,
                         KunjunganId = kunjunganId,
                         PasienId = detailVm.PasienId ?? vm.PasienId,
-
+                        // Diskon
+                        TipeDiskonDokter = detailVm.TipeDiskonDokter,
+                        ValueDiskonDokter = detailVm.ValueDiskonDokter,
+                        
                         TotalPembayaran = totalTagihan,
                         NominalPembayaran = bayarNow,
 
@@ -1202,6 +1206,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                             MainKasirId = kasirId,
                             KunjunganId = kunjunganId,
                             PasienId = dvm.PasienId ?? vm.PasienId,
+                            TipeDiskonDokter = dvm.TipeDiskonDokter,
+                            ValueDiskonDokter = dvm.ValueDiskonDokter,
 
                             TotalPembayaran = totalTagihanNet,
                             NominalPembayaran = bayarNow,
@@ -1272,6 +1278,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 headerEntity.TTDUserVerfiedId = vm.TTDUserVerfiedId ?? headerEntity.TTDUserVerfiedId;
                 headerEntity.PathUserVerified = (ttd?.Path) ?? headerEntity.PathUserVerified;
 
+                headerEntity.CreateBy = userActiveId.Value;
                 headerEntity.UpdateBy = userActiveId.Value;
                 headerEntity.UpdateDateTime = DateTimeOffset.UtcNow;
 
@@ -1382,6 +1389,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             int perPage = 10,
             Guid? kunjunganId = null,
             Guid? pasienId = null,
+            //Guid? petugasId =null,
             string? asalKunjungan = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
@@ -1403,6 +1411,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 Page = page,
                 PageSize = perPage,
                 KunjunganId = kunjunganId,
+                //PetugasId = petugasId,
                 sb = status,
                 PasienId = pasienId,
                 asal = asalKunjungan,

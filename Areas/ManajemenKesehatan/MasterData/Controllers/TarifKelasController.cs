@@ -186,6 +186,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     TarifBahp = vm.TarifBahp,
                     TarifLain = vm.TarifLain,
                     TarifTotal = total,
+                    KodeLayanan = vm.KodeLayanan,
+                    KategoriTindakan = vm.KategoriTindakan,
                     KSO = vm.KSO,
                     //PemeriksaanLabId = vm.PemeriksaanLabId,
                     //PeralatanId = vm.PeralatanId,
@@ -262,6 +264,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.KelasId = vm.KelasId;
                 //data.PemeriksaanLabId = vm.PemeriksaanLabId;
                 //data.PeralatanId = vm.PeralatanId;
+                data.KodeLayanan = vm.KodeLayanan;
+                data.KategoriTindakan = vm.KategoriTindakan;
                 data.TarifDokter = vm.TarifDokter;
                 data.TarifRs = vm.TarifRs;
                 data.TarifJp = vm.TarifJp;
@@ -429,6 +433,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                     NamaTindakan = t.NamaTindakan,
                     NamaKelas = kls.NamaKelas,
+                    a.KategoriTindakan,
+                    a.KodeLayanan,
                     //NamaDokter = d != null ? d.NmDokter : null,
 
                     a.TarifDokter,
@@ -437,7 +443,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     a.TarifBahp,
                     a.TarifLain,
                     a.TarifTotal,
-                    a.KSO
+                    a.KSO,
                 };
 
             // =========================

@@ -39,6 +39,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly IHubContext<ResepHub> _hubContext;
         private readonly ITTDService _ttdService;
+        private readonly IAsuransiCoverageService _asuransiCoverageService;
 
 
         public ResepController(
@@ -49,7 +50,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             IWebHostEnvironment webHostEnvironment,
             IHubContext<ResepHub> hubContext,
             IGenerateInvoiceBillingService generateInvoiceBillingService,
-            ITTDService ttdService
+            ITTDService ttdService,
+            IAsuransiCoverageService asuransiCoverageServices
             )
         {
             _applicationDbContext = applicationDbContext;
@@ -60,6 +62,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             _hubContext = hubContext;
             _generateInvoiceBillingService = generateInvoiceBillingService;
             _ttdService = ttdService;
+            _asuransiCoverageService = asuransiCoverageServices;
         }
 
         private DateTime? TryParseTanggalToUtc(string tanggal)
@@ -520,7 +523,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
 
         [HttpPost]
-        public async Task<IActionResult> CreateResep([FromBody] ResepViewModel vm)
+        public async Task<IActionResult> CreateResep([FromBody] ResepViewModel vm, CancellationToken ct)
         {
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid!" });
@@ -648,6 +651,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             resepDetail.TotalHargaObat = resepDetail.HargaObat * resepDetail.Qty;
                         }
 
+                        var status = await _asuransiCoverageService.GetIsCoveredAsync((Guid)vm.KunjunganId, "Obat", obatId, ct);
+
+
                         if (!billingDict.TryGetValue(obatId, out var billing))
                         {
                             billingIndex++;
@@ -669,6 +675,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                 JenisBilling = "Obat",
                                 StatusPengambilan = true,
                                 StatusBilling = false,
+                                IsCovered = status,
                                 TanggalInvoice = DateTime.UtcNow,
                                 TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                                 LayananId = vm.LayananId,
@@ -841,7 +848,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateResep(Guid id, [FromBody] ResepViewModel vm)
+        public async Task<IActionResult> UpdateResep(Guid id, [FromBody] ResepViewModel vm, CancellationToken ct)
         {
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid!" });
@@ -966,6 +973,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                         detail.TotalHargaObat = detail.HargaObat * detail.Qty;
                     }
 
+                    var status = await _asuransiCoverageService.GetIsCoveredAsync(vm.KunjunganId, "Obat", obatId, ct);
+
                     if (!billingDict.TryGetValue(obatId, out var bill))
                     {
                         billingIndex++;
@@ -987,6 +996,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             JenisBilling = "Obat",
                             StatusPengambilan = true,
                             StatusBilling = false,
+                            IsCovered = status,
                             TanggalInvoice = DateTime.UtcNow,
                             TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                             CreateBy = userId,

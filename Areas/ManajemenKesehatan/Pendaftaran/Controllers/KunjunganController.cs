@@ -180,6 +180,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     {
                         a.KunjunganID,
                         a.AsuransiId,
+                        a.AsuransiPasienId,
                         NamaAsuransi = o != null && o.NamaAsuransi != null ? o.NamaAsuransi : "Tunai",
                         a.PoliklinikId,
                         NamaPoliklinik = p != null ? p.NamaPoliklinik : null,
@@ -387,38 +388,39 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
 
                 // ===================== LEFT JOIN VERSI AMAN =====================
                 var result = (
-                    from a in _applicationDbContext.Kunjungans
-                    join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId into userGroup
+                    from a in _applicationDbContext.Kunjungans.AsNoTracking()
+                    join u in _applicationDbContext.UserActives.AsNoTracking() on a.CreateBy equals u.UserActiveId into userGroup
                     from u in userGroup.DefaultIfEmpty()
 
-                    join p in _applicationDbContext.Polikliniks on a.PoliklinikId equals p.PoliklinikId into poliGroup
+                    join p in _applicationDbContext.Polikliniks.AsNoTracking()
+                    on a.PoliklinikId equals p.PoliklinikId into poliGroup
                     from p in poliGroup.DefaultIfEmpty()
 
-                    join o in _applicationDbContext.Asuransis on a.AsuransiId equals o.AsuransiId into asuransiGroup
+                    join o in _applicationDbContext.Asuransis.AsNoTracking() on a.AsuransiId equals o.AsuransiId into asuransiGroup
                     from o in asuransiGroup.DefaultIfEmpty()
 
-                    join op in _applicationDbContext.AsuransiPasiens on a.AsuransiId equals op.AsuransiId into apGroup
+                    join op in _applicationDbContext.AsuransiPasiens.AsNoTracking() on a.AsuransiPasienId equals op.AsuransiPasienId into apGroup
                     from op in apGroup.DefaultIfEmpty()
 
-                    join ps in _applicationDbContext.PendaftaranPasienBarus on a.PasienId equals ps.PendaftaranPasienBaruId into pasienGroup
+                    join ps in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking() on a.PasienId equals ps.PendaftaranPasienBaruId into pasienGroup
                     from ps in pasienGroup.DefaultIfEmpty()
 
-                    join d in _applicationDbContext.Dokters on a.DokterId equals d.DokterId into dokterGroup
+                    join d in _applicationDbContext.Dokters.AsNoTracking() on a.DokterId equals d.DokterId into dokterGroup
                     from d in dokterGroup.DefaultIfEmpty()
 
-                    join bb in _applicationDbContext.BookingBedRanaps on a.KunjunganID equals bb.KunjunganId into bookingGroup
+                    join bb in _applicationDbContext.BookingBedRanaps.AsNoTracking() on a.KunjunganID equals bb.KunjunganId into bookingGroup
                     from bb in bookingGroup.DefaultIfEmpty()
 
-                    join b in _applicationDbContext.Beds on bb.BedId equals b.BedId into bedGroup
+                    join b in _applicationDbContext.Beds.AsNoTracking() on bb.BedId equals b.BedId into bedGroup
                     from b in bedGroup.DefaultIfEmpty()
 
-                    join k in _applicationDbContext.Kamars on bb.KamarId equals k.KamarId into kamarGroup
+                    join k in _applicationDbContext.Kamars.AsNoTracking() on bb.KamarId equals k.KamarId into kamarGroup
                     from k in kamarGroup.DefaultIfEmpty()
 
-                    join kl in _applicationDbContext.Kelass on k.KelasId equals kl.KelasId into kelasGroup
+                    join kl in _applicationDbContext.Kelass.AsNoTracking() on k.KelasId equals kl.KelasId into kelasGroup
                     from kl in kelasGroup.DefaultIfEmpty()
 
-                    join sp in _applicationDbContext.SuratPengantarRawatInaps on a.KunjunganID equals sp.KunjunganId into suratGroup
+                    join sp in _applicationDbContext.SuratPengantarRawatInaps.AsNoTracking() on a.KunjunganID equals sp.KunjunganId into suratGroup
                     from sp in suratGroup.DefaultIfEmpty()
 
                     where a.KunjunganID == id && a.IsDelete == false
@@ -428,6 +430,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         a.AsuransiId,
                         NamaAsuransi = o != null && o.NamaAsuransi != null ? o.NamaAsuransi : "Tunai",
                         IsUtama = op != null && op.IsUtama != null ? op.IsUtama : false,
+                        NoPolis = op != null ? op.NoPolis : null,
+                        a.AsuransiPasienId,
+                        a.AsuransiExcessId,
                         a.PoliklinikId,
                         NamaPoliklinik = p != null ? p.NamaPoliklinik : null,
                         a.DokterId,
@@ -530,7 +535,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var GetUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+                var GetUserActive = _applicationDbContext.UserActives.AsNoTracking().FirstOrDefault(u => u.Email == EmailLogin);
                 var UserActiveId = GetUserActive?.UserActiveId ?? Guid.Empty;
 
                 // Validasi tipe pasien
@@ -644,6 +649,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     DokterId = request.DokterId,
                     PoliklinikId = request.PoliklinikId,
                     AsuransiId = request.AsuransiId,
+                    AsuransiPasienId = request.AsuransiPasienId,
+                    AsuransiExcessId = request.AsuransiExcessId,
                     JenisKunjungan = kodeJenis,
                     CreateDateTime = DateTimeOffset.UtcNow,
                     CreateBy = UserActiveId,
@@ -748,7 +755,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 {
                     KasirId = Guid.NewGuid(),
                     KunjunganId = newKunjungan.KunjunganID,
-                    StatusPembayaran = "Belum Lunas"
+                    StatusPembayaran = "Belum Lunas",
+                    CreateDateTime = DateTime.UtcNow
                 };
                 _applicationDbContext.MainKasirs.Add(kasir);
                 await _applicationDbContext.SaveChangesAsync();
@@ -969,7 +977,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 if (string.IsNullOrEmpty(EmailLogin))
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
 
-                var GetUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+                var GetUserActive = _applicationDbContext.UserActives.AsNoTracking().FirstOrDefault(u => u.Email == EmailLogin);
                 var UserActiveId = GetUserActive?.UserActiveId ?? Guid.Empty;
 
                 var existing = await _applicationDbContext.Kunjungans
@@ -1066,7 +1074,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 existing.PasienId = request.PasienId;
                 existing.DokterId = request.DokterId;
                 existing.PoliklinikId = request.PoliklinikId;
+                existing.AsuransiExcessId = request.AsuransiExcessId;
                 existing.AsuransiId = request.AsuransiId;
+                existing.AsuransiPasienId = request.AsuransiPasienId;
                 existing.JenisKunjungan = kodeJenis;
                 existing.NoRekamMedis = request.NoRekamMedis;
                 existing.TipePasien = request.TipePasien;
@@ -1174,7 +1184,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             if (string.IsNullOrEmpty(EmailLogin))
                 return Unauthorized(new { message = "User tidak terautentikasi!" });
 
-            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var user = _applicationDbContext.UserActives.AsNoTracking().FirstOrDefault(u => u.Email == EmailLogin);
             var userId = user?.UserActiveId ?? Guid.Empty;
 
             kunjungan.IsFinished = request.IsFinished;
@@ -1204,7 +1214,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             if (string.IsNullOrEmpty(EmailLogin))
                 return Unauthorized(new { message = "User tidak terautentikasi!" });
 
-            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var user = _applicationDbContext.UserActives.AsNoTracking().FirstOrDefault(u => u.Email == EmailLogin);
             var userId = user?.UserActiveId ?? Guid.Empty;
 
             kunjungan.IsClosed = request.IsClosed;
@@ -1234,7 +1244,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             if (string.IsNullOrEmpty(EmailLogin))
                 return Unauthorized(new { message = "User tidak terautentikasi!" });
 
-            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var user = _applicationDbContext.UserActives.AsNoTracking().FirstOrDefault(u => u.Email == EmailLogin);
             var userId = user?.UserActiveId ?? Guid.Empty;
 
             kunjungan.IsScreening = request.IsScreening;
@@ -1264,7 +1274,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             if (string.IsNullOrEmpty(EmailLogin))
                 return Unauthorized(new { message = "User tidak terautentikasi!" });
 
-            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var user = _applicationDbContext.UserActives.AsNoTracking().FirstOrDefault(u => u.Email == EmailLogin);
             var userId = user?.UserActiveId ?? Guid.Empty;
 
             kunjungan.IsPresent = request.IsPresent;
@@ -1294,7 +1304,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             if (string.IsNullOrEmpty(EmailLogin))
                 return Unauthorized(new { message = "User tidak terautentikasi!" });
 
-            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var user = _applicationDbContext.UserActives.AsNoTracking().FirstOrDefault(u => u.Email == EmailLogin);
             var userId = user?.UserActiveId ?? Guid.Empty;
 
             kunjungan.IsFinishedKasir = request.IsFinishedKasir;
@@ -1325,7 +1335,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             if (string.IsNullOrEmpty(EmailLogin))
                 return Unauthorized(new { message = "User tidak terautentikasi!" });
 
-            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var user = _applicationDbContext.UserActives.AsNoTracking().FirstOrDefault(u => u.Email == EmailLogin);
             var userId = user?.UserActiveId ?? Guid.Empty;
 
             kunjungan.StatusPengkajian = request.Status;
@@ -1355,7 +1365,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             if (string.IsNullOrEmpty(EmailLogin))
                 return Unauthorized(new { message = "User tidak terautentikasi!" });
 
-            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var user = _applicationDbContext.UserActives.AsNoTracking().FirstOrDefault(u => u.Email == EmailLogin);
             var userId = user?.UserActiveId ?? Guid.Empty;
 
             kunjungan.IsTriage = request.Status;
@@ -1385,7 +1395,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             if (string.IsNullOrEmpty(EmailLogin))
                 return Unauthorized(new { message = "User tidak terautentikasi!" });
 
-            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var user = _applicationDbContext.UserActives.AsNoTracking().FirstOrDefault(u => u.Email == EmailLogin);
             var userId = user?.UserActiveId ?? Guid.Empty;
 
             kunjungan.IsCTTPasienIGD = request.Status;
@@ -1415,7 +1425,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             if (string.IsNullOrEmpty(EmailLogin))
                 return Unauthorized(new { message = "User tidak terautentikasi!" });
 
-            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var user = _applicationDbContext.UserActives.AsNoTracking().FirstOrDefault(u => u.Email == EmailLogin);
             var userId = user?.UserActiveId ?? Guid.Empty;
 
             kunjungan.AsalKunjungan = request.AsalKunjungan;
@@ -1969,21 +1979,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         on a.KunjunganID equals sp0.KunjunganId into suratGroup
                     from sp in suratGroup.DefaultIfEmpty()
 
-                    let isUtama = _applicationDbContext.AsuransiPasiens.AsNoTracking()
-                        .Where(ap =>
-                            ap.PasienId == a.PasienId &&
-                            ap.AsuransiId == a.AsuransiId &&
-                            (ap.IsDelete == false || ap.IsDelete == null))
-                        .Select(ap => ap.IsUtama)
-                        .FirstOrDefault()
+                    join op in _applicationDbContext.AsuransiPasiens.AsNoTracking()
+                        on a.AsuransiPasienId equals op.AsuransiPasienId into apGroup
+                    from op in apGroup.DefaultIfEmpty()
+
+
 
                     select new
                     {
                         a.KunjunganID,
-
+                        a.AsuransiExcessId,
                         a.AsuransiId,
                         NamaAsuransi = o != null && o.NamaAsuransi != null ? o.NamaAsuransi : "Tunai",
-                        IsUtama = isUtama ?? false,
+                        a.AsuransiPasienId,
+                        IsUtama = op != null && op.IsUtama != null ? op.IsUtama : false,
+                        NoPolis = op != null ? op.NoPolis : null,
 
                         a.PoliklinikId,
                         NamaPoliklinik = p != null ? p.NamaPoliklinik : null,
@@ -2197,6 +2207,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     {
                         r.KunjunganID,
                         r.AsuransiId,
+                        r.AsuransiExcessId,
                         r.NamaAsuransi,
                         r.IsUtama,
                         r.PoliklinikId,

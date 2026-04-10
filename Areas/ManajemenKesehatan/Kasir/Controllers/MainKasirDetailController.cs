@@ -632,7 +632,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         public async Task<IActionResult> Paged(
         int page = 1,
         int perPage = 10,
-        //string? search = null,
+        Guid? petugasId = null,
         Guid? kasirId = null,
         Guid? kunjunganId = null,
         string? orderBy = "CreateDateTime",
@@ -669,6 +669,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     on d.CreateBy equals u0.UserActiveId into uj
                 from u in uj.DefaultIfEmpty()
 
+                join pk in _applicationDbContext.Polikliniks.AsNoTracking()
+                    on k.PoliklinikId equals pk.PoliklinikId into pkg
+                from pk in pkg.DefaultIfEmpty()
+
+                //join mp in _applicationDbContext.MetodePembayarans.AsNoTracking()
+                //    on d.MetodePembayaranId equals mp.MetodePembayaranId into mpg
+                //from mp in mpg.DefaultIfEmpty()
+
                 select new
                 {
                     d.CreateDateTime,
@@ -688,6 +696,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
                     PasienId = (Guid?)(mk != null ? mk.PasienId : null),
                     KunjunganId = (Guid?)(mk != null ? mk.KunjunganId : null),
+                    PoliklinikId = k.PoliklinikId,
+                    NamaPoliklinik = pk.NamaPoliklinik,
+                    AsalUnit = k.AsalKunjungan,
+                    JenisKunjungan = k.JenisKunjungan,
                     NoRekamMedis = pp != null ? pp.NoRekamMedis : null,
                     NamaPasien = pp != null ? pp.NamaLengkap : null,
                     AsuransiId = (Guid?)(k != null ? k.AsuransiId : null),
@@ -713,6 +725,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             if (kasirId.HasValue)
             {
                 query = query.Where(u=>u.MainKasirId == kasirId.Value);
+            }
+            // filter based on petugas kasir id
+            if (petugasId.HasValue)
+            {
+                query = query.Where(u=>u.CreateBy == petugasId.Value);
             }
 
             //// **Filter berdasarkan tanggal**

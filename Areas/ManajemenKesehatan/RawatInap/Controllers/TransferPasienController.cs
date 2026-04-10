@@ -30,6 +30,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         private readonly ILogger<TransferPasienController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly IGenerateInvoiceBillingService _generateInvoiceBillingService;
+        private readonly IAsuransiCoverageService _asuransiCoverageService;
 
         public TransferPasienController(
             ApplicationDbContext applicationDbContext,
@@ -38,7 +39,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             ILogger<TransferPasienController> logger,
             IWebHostEnvironment webHostEnvironment,
             ITTDService ttdService,
-            IGenerateInvoiceBillingService generateInvoiceBillingService
+            IGenerateInvoiceBillingService generateInvoiceBillingService,
+            IAsuransiCoverageService asuransiCoverageService
             )
         {
             _applicationDbContext = applicationDbContext;
@@ -48,6 +50,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             _webHostEnvironment = webHostEnvironment;
             _ttdService = ttdService;
             _generateInvoiceBillingService = generateInvoiceBillingService;
+            _asuransiCoverageService = asuransiCoverageService;
         }
 
 
@@ -261,7 +264,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] TransferPasienViewModel vm)
+        public async Task<IActionResult> Create([FromBody] TransferPasienViewModel vm, CancellationToken ct)
         {
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
@@ -405,6 +408,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 var harga = bedInfo.TarifHarian.Value;
                 var subtotal = harga * qty;
 
+                var status = await _asuransiCoverageService.GetIsCoveredAsync((Guid)vm.KunjunganId, "Kamar Ranap", bedInfo.KamarId, ct);
+
                 var billing = new Billing
                 {
                     BillingId = Guid.NewGuid(),
@@ -427,7 +432,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                     // Penting: simpan hubungan transferId untuk tracking
                     Keterangan = $"TransferPasienId={transferId};BedId={vm.BedId};Start={vm.TglPindah:yyyy-MM-dd}",
-
+                    IsCovered = status,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                     IsDelete = false

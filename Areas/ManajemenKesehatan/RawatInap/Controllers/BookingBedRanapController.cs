@@ -33,6 +33,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         private readonly IGenerateInvoiceBillingService _generateInvoiceBillingService;
         private readonly ILogger<BookingBedRanapController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly IAsuransiCoverageService _asuransiCoverageService;
 
 
         public BookingBedRanapController(
@@ -41,7 +42,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             SignInManager<ApplicationUser> signInManager,
             ILogger<BookingBedRanapController> logger,
             IWebHostEnvironment webHostEnvironment,
-            IGenerateInvoiceBillingService generateInvoiceBillingService)
+            IGenerateInvoiceBillingService generateInvoiceBillingService,
+            IAsuransiCoverageService asuransiCoverageService)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
@@ -49,6 +51,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
             _generateInvoiceBillingService = generateInvoiceBillingService;
+            _asuransiCoverageService = asuransiCoverageService;
         }
         private DateTime? TryParseTanggalToUtc(string tanggal)
         {
@@ -152,7 +155,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] BookingBedRanapViewModel vm)
+        public async Task<IActionResult> Create([FromBody] BookingBedRanapViewModel vm, CancellationToken ct)
         {
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
@@ -274,6 +277,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 var harga = kamar.TarifHarian.Value;
                 var subtotal = harga * qty;
 
+                var status = await _asuransiCoverageService.GetIsCoveredAsync((Guid)vm.KunjunganId, "Kamar Ranap", kamar.KamarId, ct);
+
                 var billing = new Billing
                 {
                     BillingId = Guid.NewGuid(),
@@ -294,6 +299,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     JenisBilling = jenisBilling,
                     TanggalInvoice = DateTime.UtcNow,
                     TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
+                    IsCovered = status,
                     Keterangan = $"BookingBedRanapId={bookingId};Start={parsedTglMasukRanap:yyyy-MM-dd}",
 
                     CreateBy = userActiveId,
@@ -592,7 +598,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] BookingBedRanapViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] BookingBedRanapViewModel vm, CancellationToken ct)
         {
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });

@@ -31,6 +31,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         private readonly IGenerateInvoiceBillingService _generateInvoiceBillingService;
         private readonly ILogger<TindakanKunjunganController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly IAsuransiCoverageService _asuransiCoverageService;
 
         public TindakanKunjunganController(
             ApplicationDbContext applicationDbContext,
@@ -38,7 +39,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             SignInManager<ApplicationUser> signInManager,
             ILogger<TindakanKunjunganController> logger,
             IWebHostEnvironment webHostEnvironment,
-            IGenerateInvoiceBillingService generateInvoiceBillingService)
+            IGenerateInvoiceBillingService generateInvoiceBillingService,
+            IAsuransiCoverageService asuransiCoverageService)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
@@ -46,6 +48,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
             _generateInvoiceBillingService = generateInvoiceBillingService;
+            _asuransiCoverageService = asuransiCoverageService;
         }
 
 
@@ -132,7 +135,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateTindakanKunjungan([FromBody] TindakanKunjunganViewModel vm)
+        public async Task<IActionResult> CreateTindakanKunjungan([FromBody] TindakanKunjunganViewModel vm, CancellationToken ct)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -235,6 +238,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return NotFound(new { message = "Data tindakan tidak ditemukan." });
                 }
 
+                var status = await _asuransiCoverageService.GetIsCoveredAsync((Guid)vm.KunjunganId, "Tindakan", vm.TindakanId, ct);
+
                 // Hitung jumlah billing sebelumnya untuk kunjungan ini
                 int billingTindakanCount = await _applicationDbContext.Billings
                     .Where(b => b.KunjunganId == vm.KunjunganId && b.JenisBilling.ToLower()=="tindakan")
@@ -263,6 +268,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     SubTotalItem = totalqty,
                     JenisBilling = "Tindakan", // Menandakan ini adalah billing untuk tindakan
                     StatusBilling= false,
+                    IsCovered = status,
                     TanggalInvoice = DateTime.UtcNow,
                     TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                     CreateBy = userActiveId,
@@ -293,10 +299,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-
-
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateTindakanKunjungan(Guid id, [FromBody] TindakanKunjunganViewModel vm)
+        public async Task<IActionResult> UpdateTindakanKunjungan(Guid id, [FromBody] TindakanKunjunganViewModel vm, CancellationToken ct)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -405,6 +409,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     billingIndex++;
                     string billingKode = $"{billingIndex.ToString("D3")}";
 
+                    var status = await _asuransiCoverageService.GetIsCoveredAsync((Guid)vm.KunjunganId, "Tindakan", vm.TindakanId, ct);
+
                     var newBilling = new Billing
                     {
                         BillingId = Guid.NewGuid(),
@@ -425,6 +431,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         JenisBilling = "Tindakan",
                         StatusPengambilan = true,
                         StatusBilling = false,
+                        IsCovered = status,
                         TanggalInvoice = DateTime.UtcNow,
                         TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                         CreateBy = userActiveId,
