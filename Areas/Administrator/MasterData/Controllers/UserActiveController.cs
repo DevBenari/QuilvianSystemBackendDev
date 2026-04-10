@@ -38,8 +38,8 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    //[Authorize]
-    //[EnableCors("AllowSpecific")]
+    [Authorize]
+    [EnableCors("AllowSpecific")]
     public class UserActiveController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
@@ -106,55 +106,80 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = (from a in _applicationDbContext.UserActives
+            var query =
+                (from a in _applicationDbContext.UserActives.AsNoTracking()
 
-                        join t in _applicationDbContext.TipeUsers.AsNoTracking()
-                            on a.TipeUserId equals t.TipeUserId into tipeJoin
-                        from tipe in tipeJoin.DefaultIfEmpty()
+                join t in _applicationDbContext.TipeUsers.AsNoTracking()
+                    on a.TipeUserId equals t.TipeUserId into tipeJoin
+                from tipe in tipeJoin.DefaultIfEmpty()
 
-                        join dept in _applicationDbContext.Departements.AsNoTracking()
-                            on a.DepartemenId equals dept.DepartementId into deptJoin
-                        from dept in deptJoin.DefaultIfEmpty()
+                join dept in _applicationDbContext.Departements.AsNoTracking()
+                    on a.DepartemenId equals dept.DepartementId into deptJoin
+                from dept in deptJoin.DefaultIfEmpty()
 
-                        join pos in _applicationDbContext.Positions.AsNoTracking()
-                            on a.PositionId equals pos.PositionId into posJoin
-                        from pos in posJoin.DefaultIfEmpty()
+                join pos in _applicationDbContext.Positions.AsNoTracking()
+                    on a.PositionId equals pos.PositionId into posJoin
+                from pos in posJoin.DefaultIfEmpty()
 
-                         //join j in _applicationDbContext.Jabatans.AsNoTracking()
-                         //    on a.Jabatan equals pos.PositionId into posJoin
-                         //from pos in posJoin.DefaultIfEmpty()
+                join creator in _applicationDbContext.UserActives.AsNoTracking()
+                    on a.CreateBy equals creator.UserActiveId into creatorJoin
+                from creator in creatorJoin.DefaultIfEmpty()
 
-                         join creator in _applicationDbContext.UserActives.AsNoTracking()
-                            on a.CreateBy equals creator.UserActiveId into creatorJoin
-                        from creator in creatorJoin.DefaultIfEmpty()
+                join kar in _applicationDbContext.Karyawans.AsNoTracking()
+                    on a.UserActiveId equals kar.UserActiveId into karJoin
+                from kar in karJoin.DefaultIfEmpty()
 
+                join dok in _applicationDbContext.Dokters.AsNoTracking()
+                    on a.UserActiveId equals dok.UserActiveId into dokJoin
+                from dok in dokJoin.DefaultIfEmpty()
 
-                         where a.IsDelete == false
+                 join td in _applicationDbContext.MasterTTDs.AsNoTracking()
+                    on a.UserActiveId equals td.UserActiveId into tdJoin
+                 from td in tdJoin.DefaultIfEmpty()
 
-                        select new
-                        {
-                            a.CreateDateTime,
-                            a.CreateBy,
-                            CreateByName = creator != null ? creator.FullName : "-",
-                            a.UserActiveId,
-                            a.UserActiveCode,
-                            a.FullName,
-                            a.Gender,
-                            a.Email,
-                            a.TipeUserId,
-                            NamaTipeUser = tipe != null ? tipe.NamaTipeUser : "-",
-                            a.DepartemenId,
-                            NamaDepartemen = dept != null ? dept.NamaDepartement : "-",
-                            a.PositionId,
-                            NamaPosisi = pos != null ? pos.PositionName : "-",
-                            a.IdentityNumber,
-                            a.PlaceOfBirth,
-                            a.Address,
-                            a.Handphone,
-                            a.StatusPegawai,
-                            a.NoSTR,
+                 where a.IsDelete == false
 
-                        }).OrderByDescending(a=>a.CreateDateTime);
+                orderby a.CreateDateTime descending
+
+                select new
+                {
+                    a.CreateDateTime,
+                    a.CreateBy,
+                    CreateByName = creator != null ? creator.FullName : "-",
+
+                    a.UserActiveId,
+                    a.UserActiveCode,
+                    a.FullName,
+                    a.Gender,
+                    a.Email,
+
+                    a.TipeUserId,
+                    NamaTipeUser = tipe != null ? tipe.NamaTipeUser : "-",
+
+                    a.DepartemenId,
+                    NamaDepartemen = dept != null ? dept.NamaDepartement : "-",
+
+                    a.PositionId,
+                    NamaPosisi = pos != null ? pos.PositionName : "-",
+
+                    a.IdentityNumber,
+                    a.PlaceOfBirth,
+                    a.Address,
+                    a.Handphone,
+                    a.StatusPegawai,
+                    a.NoSTR,
+
+                    FotoPath = kar != null && kar.FotoPath != null
+                        ? kar.FotoPath
+                        : dok != null ? dok.FotoPath : null,
+
+                    FotoName = kar != null && kar.FotoName != null
+                        ? kar.FotoName
+                        : dok != null ? dok.FotoName : null,
+
+                    TTDId = td != null ? td.TTDId : (Guid?)null,
+                    TTDPath = td != null ? td.TTDPath : null,
+                }).OrderByDescending(a=>a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
             var totalRows = query.Count();
@@ -187,57 +212,93 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
         }
 
         [HttpGet("{id}")]
-        public IActionResult GetUserById(Guid id)
+        public async Task<IActionResult> GetUserById(Guid id)
         {
-            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.UserActiveId == id);
-            if (user == null)
+            var data = await
+                (from a in _applicationDbContext.UserActives.AsNoTracking()
+
+                 join dept in _applicationDbContext.Departements.AsNoTracking()
+                     on a.DepartemenId equals dept.DepartementId into deptJoin
+                 from dept in deptJoin.DefaultIfEmpty()
+
+                 join pos in _applicationDbContext.Positions.AsNoTracking()
+                     on a.PositionId equals pos.PositionId into posJoin
+                 from pos in posJoin.DefaultIfEmpty()
+
+                 join tipe in _applicationDbContext.TipeUsers.AsNoTracking()
+                     on a.TipeUserId equals tipe.TipeUserId into tipeJoin
+                 from tipe in tipeJoin.DefaultIfEmpty()
+
+                 join kar in _applicationDbContext.Karyawans.AsNoTracking()
+                     on a.UserActiveId equals kar.UserActiveId into karJoin
+                 from kar in karJoin.DefaultIfEmpty()
+
+                 join dok in _applicationDbContext.Dokters.AsNoTracking()
+                     on a.UserActiveId equals dok.UserActiveId into dokJoin
+                 from dok in dokJoin.DefaultIfEmpty()
+
+                 join td in _applicationDbContext.MasterTTDs.AsNoTracking()
+                        on a.UserActiveId equals td.UserActiveId into tdJoin
+                 from td in tdJoin.DefaultIfEmpty()
+
+                 where a.UserActiveId == id && a.IsDelete == false
+
+                 select new
+                 {
+                     a.UserActiveId,
+                     a.UserActiveCode,
+                     a.FullName,
+                     a.IdentityNumber,
+                     a.PlaceOfBirth,
+                     a.DateOfBirth,
+                     a.Gender,
+                     a.Address,
+                     a.Handphone,
+                     a.Email,
+                     a.IsActive,
+
+                     a.DepartemenId,
+                     NamaDepartemen = dept != null ? dept.NamaDepartement : null,
+
+                     a.PositionId,
+                     NamaPosisi = pos != null ? pos.PositionName : null,
+
+                     a.TipeUserId,
+                     NamaTipeUser = tipe != null ? tipe.NamaTipeUser : null,
+
+                     a.NoSTR,
+                     a.StatusPegawai,
+
+                     FotoPath = kar != null && kar.FotoPath != null
+                         ? kar.FotoPath
+                         : dok != null ? dok.FotoPath : null,
+
+                     FotoName = kar != null && kar.FotoName != null
+                         ? kar.FotoName
+                         : dok != null ? dok.FotoName : null,
+
+                     TTDId = td != null ? td.TTDId : (Guid?)null,
+                     TTDPath = td != null ? td.TTDPath : null,
+
+                     a.CreateDateTime,
+                     a.CreateBy,
+                     a.UpdateDateTime,
+                     a.UpdateBy,
+                     a.DeleteDateTime,
+                     a.DeleteBy,
+                     a.IsDelete
+                 })
+                .FirstOrDefaultAsync();
+
+            if (data == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
             }
 
-            // Ambil nama departemen, posisi, dan tipe user (boleh null)
-            var departemen = _applicationDbContext.Departements
-                .FirstOrDefault(d => d.DepartementId == user.DepartemenId);
-
-            var posisi = _applicationDbContext.Positions
-                .FirstOrDefault(p => p.PositionId == user.PositionId);
-
-            var tipeUser = _applicationDbContext.TipeUsers
-                .FirstOrDefault(t => t.TipeUserId == user.TipeUserId);
-
-
             return Ok(new
             {
                 message = "Ditemukan || 200 OK",
-                data = new
-                {
-                    user.UserActiveId,
-                    user.UserActiveCode,
-                    user.FullName,
-                    user.IdentityNumber,
-                    user.PlaceOfBirth,
-                    user.DateOfBirth,
-                    user.Gender,
-                    user.Address,
-                    user.Handphone,
-                    user.Email,
-                    user.IsActive,
-                    user.DepartemenId,
-                    NamaDepartemen = departemen?.NamaDepartement ?? null,
-                    user.PositionId,
-                    NamaPosisi = posisi?.PositionName ?? null,
-                    user.TipeUserId,
-                    NamaTipeUser = tipeUser?.NamaTipeUser ?? null,
-                    user.NoSTR,
-                    user.StatusPegawai,
-                    user.CreateDateTime,
-                    user.CreateBy,
-                    user.UpdateDateTime,
-                    user.UpdateBy,
-                    user.DeleteDateTime,
-                    user.DeleteBy,
-                    user.IsDelete
-                }
+                data
             });
         }
 
@@ -552,6 +613,8 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                             NoHandphone = user.Handphone,
                             NoKaryawan = noKaryawan,
                             Email = user.Email,
+                            FotoName = fotoFileName,
+                            FotoPath = fotoPath,
                             DepartementId = user.DepartemenId,
                             InstalasiUnitId = user.InstalasiUnitId,
 
@@ -846,6 +909,8 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                             Email = user.Email,
                             DepartementId = user.DepartemenId,
                             InstalasiUnitId = user.InstalasiUnitId,
+                            FotoPath = fotoPathDefault,
+                            FotoName = fotoNameDefault,
                             CreateBy = userActiveLoginId,
                             CreateDateTime = DateTimeOffset.UtcNow,
                         };
@@ -1207,7 +1272,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
         }
 
         [HttpGet("paged")]
-        public IActionResult PagedUserActive(
+        public async Task<IActionResult> PagedUserActive(
         int page = 1,
         int perPage = 10,
         Guid? id = null,
@@ -1223,58 +1288,81 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null,
         [FromQuery] EnumJenisUser? tipeUser = null)
         {
-            // query
-            var query = (from a in _applicationDbContext.UserActives
+            // Query data
+            var query =
+                (from a in _applicationDbContext.UserActives.AsNoTracking()
 
-                         join t in _applicationDbContext.TipeUsers
-                             on a.TipeUserId equals t.TipeUserId into tipeJoin
-                         from tipe in tipeJoin.DefaultIfEmpty()
+                 join t in _applicationDbContext.TipeUsers.AsNoTracking()
+                     on a.TipeUserId equals t.TipeUserId into tipeJoin
+                 from tipe in tipeJoin.DefaultIfEmpty()
 
-                         join dept in _applicationDbContext.Departements
-                             on a.DepartemenId equals dept.DepartementId into deptJoin
-                         from dept in deptJoin.DefaultIfEmpty()
+                 join dept in _applicationDbContext.Departements.AsNoTracking()
+                     on a.DepartemenId equals dept.DepartementId into deptJoin
+                 from dept in deptJoin.DefaultIfEmpty()
 
-                         join pos in _applicationDbContext.Positions
-                             on a.PositionId equals pos.PositionId into posJoin
-                         from pos in posJoin.DefaultIfEmpty()
+                 join pos in _applicationDbContext.Positions.AsNoTracking()
+                     on a.PositionId equals pos.PositionId into posJoin
+                 from pos in posJoin.DefaultIfEmpty()
 
-                         join creator in _applicationDbContext.UserActives
-                             on a.CreateBy equals creator.UserActiveId into creatorJoin
-                         from creator in creatorJoin.DefaultIfEmpty()
+                 join creator in _applicationDbContext.UserActives.AsNoTracking()
+                     on a.CreateBy equals creator.UserActiveId into creatorJoin
+                 from creator in creatorJoin.DefaultIfEmpty()
 
-                         join td in _applicationDbContext.MasterTTDs
-                         on a.UserActiveId equals td.UserActiveId into tdJoin
-                         from td in tdJoin.DefaultIfEmpty()
+                 join kar in _applicationDbContext.Karyawans.AsNoTracking()
+                     on a.UserActiveId equals kar.UserActiveId into karJoin
+                 from kar in karJoin.DefaultIfEmpty()
 
+                 join dok in _applicationDbContext.Dokters.AsNoTracking()
+                     on a.UserActiveId equals dok.UserActiveId into dokJoin
+                 from dok in dokJoin.DefaultIfEmpty()
 
-                         where a.IsDelete == false
+                 join td in _applicationDbContext.MasterTTDs.AsNoTracking()
+                    on a.UserActiveId equals td.UserActiveId into tdJoin
+                 from td in tdJoin.DefaultIfEmpty()
 
-                         select new
-                         {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = creator != null ? creator.FullName : "-",
-                             a.UserActiveId,
-                             a.UserActiveCode,
-                             a.FullName,
-                             a.Gender,
-                             a.Email,
-                             a.TipeUserId,
-                             NamaTipeUser = tipe != null ? tipe.NamaTipeUser : "-",
-                             a.DepartemenId,
-                             NamaDepartemen = dept != null ? dept.NamaDepartement : "-",
-                             a.PositionId,
-                             NamaPosisi = pos != null ? pos.PositionName : "-",
-                             a.IdentityNumber,
-                             a.PlaceOfBirth,
-                             a.Address,
-                             a.Handphone,
+                 where a.IsDelete == false
 
-                             a.StatusPegawai,
-                             a.NoSTR,
-                             TTDId = td != null ? (Guid?)td.TTDId : null,
-                             TTDPath = td != null ? td.TTDPath : null,
-                         });
+                 orderby a.CreateDateTime descending
+
+                 select new
+                 {
+                     a.CreateDateTime,
+                     a.CreateBy,
+                     CreateByName = creator != null ? creator.FullName : "-",
+
+                     a.UserActiveId,
+                     a.UserActiveCode,
+                     a.FullName,
+                     a.Gender,
+                     a.Email,
+
+                     a.TipeUserId,
+                     NamaTipeUser = tipe != null ? tipe.NamaTipeUser : "-",
+
+                     a.DepartemenId,
+                     NamaDepartemen = dept != null ? dept.NamaDepartement : "-",
+
+                     a.PositionId,
+                     NamaPosisi = pos != null ? pos.PositionName : "-",
+
+                     a.IdentityNumber,
+                     a.PlaceOfBirth,
+                     a.Address,
+                     a.Handphone,
+                     a.StatusPegawai,
+                     a.NoSTR,
+
+                     FotoPath = kar != null && kar.FotoPath != null
+                         ? kar.FotoPath
+                         : dok != null ? dok.FotoPath : null,
+
+                     FotoName = kar != null && kar.FotoName != null
+                         ? kar.FotoName
+                         : dok != null ? dok.FotoName : null,
+
+                     TTDId = td != null ? td.TTDId : (Guid?)null,
+                     TTDPath = td != null ? td.TTDPath : null,
+                 });
 
             // filter based on user active id
             if (id.HasValue)

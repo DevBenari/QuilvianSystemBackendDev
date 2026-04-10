@@ -187,53 +187,74 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
             try
             {
-                // **Ambil User ID dari JWT Claims**
-                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
-                var UserActiveId = GetUserActive.UserActiveId;
-
-                if (string.IsNullOrEmpty(EmailLogin))
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin))
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                // Periksa apakah pasien dan asuransi ada di database
-                var pasienExists = _applicationDbContext.PendaftaranPasienBarus
-                                      .Any(p => p.PendaftaranPasienBaruId == request.PasienId);
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
 
-                var asuransiExists = _applicationDbContext.Asuransis
-                                      .Any(a => a.AsuransiId == request.AsuransiId);
+                if (getUserActive == null)
+                {
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+                }
+
+                var userActiveId = getUserActive.UserActiveId;
+
+                var pasienExists = await _applicationDbContext.PendaftaranPasienBarus
+                    .AnyAsync(p => p.PendaftaranPasienBaruId == request.PasienId);
+
+                var asuransiExists = await _applicationDbContext.Asuransis
+                    .AnyAsync(a => a.AsuransiId == request.AsuransiId);
 
                 if (!pasienExists || !asuransiExists)
                 {
                     return NotFound(new { message = "Pasien atau Asuransi tidak ditemukan!" });
                 }
 
+                // validasi duplikasi: pasien + asuransi + no polis tidak boleh sama
+                var isDuplicate = await _applicationDbContext.AsuransiPasiens
+                    .AnyAsync(x =>
+                        x.PasienId == request.PasienId &&
+                        x.AsuransiId == request.AsuransiId &&
+                        x.NoPolis == request.NoPolis);
 
-                //validate model state
-                if (ModelState.IsValid)
+                if (isDuplicate)
                 {
-                    var newAsuransiPasien = new AsuransiPasien
+                    return BadRequest(new
                     {
-                        AsuransiPasienId = Guid.NewGuid(),
-                        PasienId = request.PasienId,
-                        AsuransiId = request.AsuransiId,
-                        NoPolis = request.NoPolis,
-                        Umur = request.Umur,
-                        IsExcess = request.IsExcess,
-                        IsUtama = request.IsUtama,
-                        CreateDateTime = DateTimeOffset.UtcNow,
-                        CreateBy = UserActiveId
-                    };
-
-                    _applicationDbContext.AsuransiPasiens.Add(newAsuransiPasien);
-                    await _applicationDbContext.SaveChangesAsync();
-                    return Ok(new { message = "Data berhasil ditambahkan!", data = newAsuransiPasien });
+                        message = "Data asuransi pasien dengan nomor polis yang sama sudah terdaftar!"
+                    });
                 }
-                else
+
+                if (!ModelState.IsValid)
                 {
                     return BadRequest(new { message = "Data tidak valid!" });
                 }
+
+                var newAsuransiPasien = new AsuransiPasien
+                {
+                    AsuransiPasienId = Guid.NewGuid(),
+                    PasienId = request.PasienId,
+                    AsuransiId = request.AsuransiId,
+                    NoPolis = request.NoPolis,
+                    Umur = request.Umur,
+                    IsExcess = request.IsExcess,
+                    IsUtama = request.IsUtama,
+                    CreateDateTime = DateTimeOffset.UtcNow,
+                    CreateBy = userActiveId
+                };
+
+                _applicationDbContext.AsuransiPasiens.Add(newAsuransiPasien);
+                await _applicationDbContext.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    message = "Data berhasil ditambahkan!",
+                    data = newAsuransiPasien
+                });
             }
             catch (Exception ex)
             {
@@ -337,51 +358,88 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             {
                 return BadRequest(new { message = "Data tidak boleh kosong!" });
             }
+
             try
             {
-                // **Ambil User ID dari JWT Claims**
-                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
-                var UserActiveId = GetUserActive.UserActiveId;
-                if (string.IsNullOrEmpty(EmailLogin))
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin))
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
-                // Periksa apakah pasien dan asuransi ada di database
-                var pasienExists = _applicationDbContext.PendaftaranPasienBarus
-                                      .Any(p => p.PendaftaranPasienBaruId == request.PasienId);
-                var asuransiExists = _applicationDbContext.Asuransis
-                                      .Any(a => a.AsuransiId == request.AsuransiId);
+
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+
+                if (getUserActive == null)
+                {
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+                }
+
+                var userActiveId = getUserActive.UserActiveId;
+
+                var existingAsuransiPasien = await _applicationDbContext.AsuransiPasiens
+                    .FirstOrDefaultAsync(x => x.AsuransiPasienId == id);
+
+                if (existingAsuransiPasien == null)
+                {
+                    return NotFound(new { message = "Data asuransi pasien tidak ditemukan!" });
+                }
+
+                var pasienExists = await _applicationDbContext.PendaftaranPasienBarus
+                    .AnyAsync(p => p.PendaftaranPasienBaruId == request.PasienId);
+
+                var asuransiExists = await _applicationDbContext.Asuransis
+                    .AnyAsync(a => a.AsuransiId == request.AsuransiId);
+
                 if (!pasienExists || !asuransiExists)
                 {
                     return NotFound(new { message = "Pasien atau Asuransi tidak ditemukan!" });
                 }
-                //validate model state
-                if (ModelState.IsValid)
+
+                if (string.IsNullOrWhiteSpace(request.NoPolis))
                 {
-                    var data = _applicationDbContext.AsuransiPasiens.Find(id);
-                    if (data == null)
-                    {
-                        return NotFound(new { message = "Data tidak ditemukan." });
-                    }
-                    data.PasienId = request.PasienId;
-                    data.AsuransiId = request.AsuransiId;
-                    data.NoPolis = request.NoPolis;
-                    data.Umur = request.Umur;
-                    data.IsUtama = request.IsUtama;
-                    data.IsExcess = request.IsExcess;
-
-                    data.UpdateDateTime = DateTimeOffset.UtcNow;
-                    data.UpdateBy = UserActiveId;
-
-                    _applicationDbContext.AsuransiPasiens.Update(data);
-                    await _applicationDbContext.SaveChangesAsync();
-                    return Ok(new { message = "Data berhasil diubah!", data });
+                    return BadRequest(new { message = "No polis wajib diisi!" });
                 }
-                else
+
+                // cek duplikasi, tapi abaikan data yang sedang diedit
+                var isDuplicate = await _applicationDbContext.AsuransiPasiens
+                    .AnyAsync(x =>
+                        x.AsuransiPasienId != id &&
+                        x.PasienId == request.PasienId &&
+                        x.AsuransiId == request.AsuransiId &&
+                        x.NoPolis == request.NoPolis);
+
+                if (isDuplicate)
+                {
+                    return BadRequest(new
+                    {
+                        message = "Data asuransi pasien dengan pasien, asuransi, dan nomor polis yang sama sudah terdaftar!"
+                    });
+                }
+
+                if (!ModelState.IsValid)
                 {
                     return BadRequest(new { message = "Data tidak valid!" });
                 }
+
+                existingAsuransiPasien.PasienId = request.PasienId;
+                existingAsuransiPasien.AsuransiId = request.AsuransiId;
+                existingAsuransiPasien.NoPolis = request.NoPolis;
+                existingAsuransiPasien.Umur = request.Umur;
+                existingAsuransiPasien.IsExcess = request.IsExcess;
+                existingAsuransiPasien.IsUtama = request.IsUtama;
+
+                // optional kalau memang ada field audit update
+                existingAsuransiPasien.UpdateDateTime = DateTimeOffset.UtcNow;
+                existingAsuransiPasien.UpdateBy = userActiveId;
+
+                await _applicationDbContext.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    message = "Data berhasil diperbarui!",
+                    data = existingAsuransiPasien
+                });
             }
             catch (Exception ex)
             {

@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Data;
+using System.Security.Claims;
 using Microsoft.AspNet.SignalR.Client.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
@@ -15,6 +16,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.HubSignalR;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
@@ -33,20 +35,23 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly ILogger<KaryawanController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
-        
+        private readonly string _uploadUrl;
+
 
         public KaryawanController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ILogger<KaryawanController> logger,
-            IWebHostEnvironment webHostEnvironment)
+            IWebHostEnvironment webHostEnvironment,
+            IConfiguration configuration)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+            _uploadUrl = configuration["FileStorage:UploadUrl"];
         }
 
         [HttpGet("{id}")]
@@ -200,6 +205,34 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
                     return Conflict(new { message = "Data karyawan ini telah tersedia" });
                 }
 
+                string noKaryawan = "";
+                var dateNow = DateTime.UtcNow; ;
+                var setDateNow = DateTimeOffset.UtcNow.ToString("yyMMdd");
+
+                var lastKaryawan = _applicationDbContext.Karyawans
+                    .Where(k => k.CreateDateTime.Date == dateNow.Date)
+                    .OrderByDescending(k => k.NoKaryawan)
+                    .FirstOrDefault();
+
+                if (lastKaryawan == null)
+                {
+                    noKaryawan = "KRY" + setDateNow + "0001";
+                }
+                else
+                {
+                    var lastCodeTrim = lastKaryawan.NoKaryawan.Substring(3, 6);
+
+                    if (lastCodeTrim != setDateNow)
+                    {
+                        noKaryawan = "KRY" + setDateNow + "0001";
+                    }
+                    else
+                    {
+                        noKaryawan = "KRY" + setDateNow +
+                            (Convert.ToInt32(lastKaryawan.NoKaryawan.Substring(9)) + 1).ToString("D4");
+                    }
+                }
+
                 // **Buat Data Baru**
                 var data = new Karyawan
                 {
@@ -208,6 +241,7 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
                     DepartementId = vm.DepartementId ?? Guid.Empty,
                     InstalasiUnitId = vm.InstalasiUnitId ?? Guid.Empty,
                     JabatanId = vm.JabatanId ?? Guid.Empty,
+                    NoKaryawan = noKaryawan,
                     NoIdentitas = vm.NoIdentitas,
                     KodeKaryawan = vm.KodeKaryawan,
                     NoRekening = vm.NoRekening,
@@ -340,6 +374,114 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
+        [HttpPut("UploadFotoKaryawan/{id}")]
+        [RequestSizeLimit(20_000_000)]
+        [RequestFormLimits(MultipartBodyLengthLimit = 20_000_000)]
+        public async Task<IActionResult> UploadFotoKaryawan(Guid id, [FromForm] UploadFotoKaryawanViewModel vm)
+        {
+            if (vm == null || vm.FotoKaryawan == null || vm.FotoKaryawan.Length == 0)
+            {
+                return BadRequest(new { message = "File foto karyawan tidak valid." });
+            }
+
+            try
+            {
+                if (!await _applicationDbContext.Database.CanConnectAsync())
+                {
+                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+                }
+
+                // ✅ Ambil user aktif
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin))
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+                var getUserActive = await _applicationDbContext.UserActives.FirstOrDefaultAsync(u => u.Email == emailLogin);
+                if (getUserActive == null)
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+
+                var userActiveId = getUserActive.UserActiveId;
+
+                // ✅ Cari PraOperasi berdasarkan ID
+                var data = await _applicationDbContext.Karyawans.FindAsync(id);
+                if (data == null)
+                {
+                    return NotFound(new { message = "Data karyawan tidak ditemukan." });
+                }
+
+                var fileName="";
+
+                // ✅ Proses upload file TTD
+                async Task<string?> UploadToFlaskAsync(IFormFile? file, string prefix)
+                {
+                    if (file == null || file.Length == 0)
+                        return null;
+
+                    var allowedExt = new[] { ".jpg", ".jpeg" };
+                    var ext = Path.GetExtension(file.FileName).ToLower();
+
+                    if (!allowedExt.Contains(ext))
+                        throw new Exception($"{prefix} harus JPG atau JPEG.");
+
+                    if (file.Length > 5 * 1024 * 1024)
+                        throw new Exception($"{prefix} maksimal 5MB.");
+
+                    var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
+                    fileName = $"{data.NoKaryawan}_{safeTime}{ext}";
+
+                    // 👉 Sesuaikan nama folder dengan kebutuhan kamu
+                    var folderTarget = "FotoKaryawan";
+                    var filePath = $"/{folderTarget}/{fileName}";
+
+                    using var ms = new MemoryStream();
+                    await file.CopyToAsync(ms);
+                    ms.Position = 0;
+
+                    var contentType = string.IsNullOrWhiteSpace(file.ContentType)
+                        ? "image/jpeg"
+                        : file.ContentType;
+
+                    var fileContent = new StreamContent(ms);
+                    fileContent.Headers.ContentType =
+                        new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+
+                    using var form = new MultipartFormDataContent();
+                    form.Add(fileContent, "file", fileName);
+                    form.Add(new StringContent(folderTarget), "folderTarget");
+
+                    using var client = new HttpClient();
+                    var response = await client.PostAsync(_uploadUrl, form);
+
+                    if (!response.IsSuccessStatusCode)
+                        throw new Exception($"Gagal upload {prefix} ke Flask.");
+
+                    // ⚠ Di sini kita pakai pola yang sama seperti UpdatePenandaan:
+                    //     tidak baca JSON dari Flask, tapi pakai path lokal yang sudah dibentuk
+                    return filePath;
+                }
+
+
+                // Upload file → folder TTDUser
+                var path = await UploadToFlaskAsync(vm.FotoKaryawan, "FotoKaryawan");
+
+                // ✅ Update PraOperasi
+                data.FotoPath = path;
+                data.FotoName = fileName;
+
+                _applicationDbContext.Karyawans.Update(data);
+                int result = await _applicationDbContext.SaveChangesAsync();
+
+                if (result > 0)
+                    return Ok(new { message = "Foto Karyawan berhasil diupload", path, karyawanId = data.KaryawanId });
+
+                return StatusCode(500, new { message = "TTD gagal diperbarui." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan: {ex.Message}" });
             }
         }
 
