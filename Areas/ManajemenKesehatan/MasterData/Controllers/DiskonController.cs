@@ -291,14 +291,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return BadRequest(new { message = "Tanggal berakhir tidak boleh lebih kecil dari tanggal berlaku." });
                 }
 
-                bool isDuplicate = await _applicationDbContext.Diskons
-                    .AnyAsync(c => c.NamaDiskon.ToLower().Trim() == vm.NamaDiskon.ToLower().Trim()
-                                && c.IsDelete == false);
+                //bool isDuplicate = await _applicationDbContext.Diskons
+                //    .AnyAsync(c => c.NamaDiskon.ToLower().Trim() == vm.NamaDiskon.ToLower().Trim()
+                //                && c.IsDelete == false);
 
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Nama diskon ini telah tersedia." });
-                }
+                //if (isDuplicate)
+                //{
+                //    return Conflict(new { message = "Nama diskon ini telah tersedia." });
+                //}
 
                 await using var transaction = await _applicationDbContext.Database.BeginTransactionAsync();
 
@@ -438,16 +438,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // cek duplikasi nama diskon selain id yang sedang diedit
-                bool isDuplicate = await _applicationDbContext.Diskons
-                    .AnyAsync(c =>
-                        c.DiskonId != id &&
-                        c.NamaDiskon.ToLower().Trim() == vm.NamaDiskon.ToLower().Trim() &&
-                        c.IsDelete == false);
+                //bool isDuplicate = await _applicationDbContext.Diskons
+                //    .AnyAsync(c =>
+                //        c.DiskonId != id &&
+                //        c.NamaDiskon.ToLower().Trim() == vm.NamaDiskon.ToLower().Trim() &&
+                //        c.IsDelete == false);
 
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Nama diskon ini telah tersedia." });
-                }
+                //if (isDuplicate)
+                //{
+                //    return Conflict(new { message = "Nama diskon ini telah tersedia." });
+                //}
 
                 await using var transaction = await _applicationDbContext.Database.BeginTransactionAsync();
 
