@@ -82,6 +82,8 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
                                 k.NoHandphone,
                                 k.Email,
                                 k.Alamat,
+                                k.FotoName,
+                                k.FotoPath,
                                 CreateBy = fn.FullName,
                                 k.CreateDateTime
                             }); 
@@ -139,6 +141,8 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
                         k.NoHandphone,
                         k.Email,
                         k.Alamat,
+                        k.FotoName,
+                        k.FotoPath,
                         CreateBy = fn != null ? fn.FullName : null,
                         k.CreateDateTime
                     }
@@ -586,6 +590,8 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
                                   k.NoHandphone,
                                   k.Email,
                                   k.Alamat,
+                                  k.FotoName,
+                                  k.FotoPath,
                                   CreateBy = fn.FullName,
                                   k.CreateDateTime
                               });
