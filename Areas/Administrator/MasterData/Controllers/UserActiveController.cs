@@ -1320,6 +1320,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                     on a.UserActiveId equals td.UserActiveId into tdJoin
                  from td in tdJoin.DefaultIfEmpty()
 
+
                  where a.IsDelete == false
 
                  orderby a.CreateDateTime descending
@@ -1362,6 +1363,10 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
 
                      TTDId = td != null ? td.TTDId : (Guid?)null,
                      TTDPath = td != null ? td.TTDPath : null,
+
+                     // id
+                     DokterId = dok != null ? dok.DokterId : (Guid?)null,
+                     KaryawanId = kar != null ? kar.KaryawanId : (Guid?)null,
                  });
 
             // filter based on user active id

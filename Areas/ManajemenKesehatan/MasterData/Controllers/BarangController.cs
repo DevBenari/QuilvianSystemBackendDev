@@ -19,20 +19,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class BarangKategoriController : Controller
+    public class BarangController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<BarangKategoriController> _logger;
+        private readonly ILogger<BarangController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public BarangKategoriController(
+        public BarangController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<BarangKategoriController> logger,
+            ILogger<BarangController> logger,
             IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
@@ -42,78 +42,137 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             _webHostEnvironment = webHostEnvironment;
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
+        private async Task<string> GenerateKodeBarangAsync(Guid kategoriBarangId, CancellationToken ct = default)
         {
-            // Validasi agar page dan perPage minimal bernilai 1
-            if (page < 1) page = 1;
-            if (perPage < 1) perPage = 10;
+            // 1. Ambil grup kategori dari kategori barang
+            var kategori = await (
+                from kb in _applicationDbContext.BarangKategoris.AsNoTracking()
+                join b in _applicationDbContext.Barangs.AsNoTracking()
+                    on kb.KategoriBarangId equals b.KategoriBarangId
+                where kb.KategoriBarangId == kategoriBarangId
+                select new
+                {
 
-            // Query data
-            var query = (from a in _applicationDbContext.BarangKategoris
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false || a.IsDelete == null
-                         select new
-                         {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = u.FullName,
-                             a.KategoriBarangId,
-                             a.KodeKategoriBarang,
-                             a.NamaKategoriBarang,
-                             a.GrupKategoriBarang,
-                             a.Keterangan,
-                         }).OrderByDescending(a => a.CreateDateTime);
+                    NamaKategori = kb.NamaKategoriBarang
+                }
+            ).FirstOrDefaultAsync(ct);
 
-            // Hitung total data sebelum paginasi
-            var totalRows = query.Count();
-            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+            if (kategori == null)
+                throw new Exception("Kategori barang / grup kategori barang tidak ditemukan.");
 
-            // Ambil data sesuai paging
-            var listdata = query
-                .Skip((page - 1) * perPage)
-                .Take(perPage)
-                .ToList();
+            // 2. Ambil 3 huruf dari grup kategori
+            var prefix = AmbilKodePrefix3Huruf(kategori.NamaKategori);
 
-            if (!listdata.Any())
+            // hasil: OBA-, ALK-, dll
+            var fullPrefix = $"{prefix}-";
+
+            // 3. Cari kode terakhir dengan prefix yang sama
+            var lastKode = await _applicationDbContext.Barangs
+                .AsNoTracking()
+                .Where(x => x.KodeBarang != null && x.KodeBarang.StartsWith(fullPrefix))
+                .OrderByDescending(x => x.KodeBarang)
+                .Select(x => x.KodeBarang)
+                .FirstOrDefaultAsync(ct);
+
+            var nextNumber = 1;
+
+            if (!string.IsNullOrWhiteSpace(lastKode))
             {
-                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
+                // contoh: OBA-0007 -> ambil 0007
+                var nomorPart = lastKode.Substring(fullPrefix.Length);
+
+                if (int.TryParse(nomorPart, out var lastNumber))
+                    nextNumber = lastNumber + 1;
             }
 
-            // Return hasil dengan paging info
-            return Ok(new
-            {
-                message = "Berhasil || 200 OK",
-                data = listdata,
-                pagination = new
-                {
-                    CurrentPage = page,
-                    PerPage = perPage,
-                    TotalRows = totalRows,
-                    TotalPages = totalPages
-                }
-            });
+            return $"{fullPrefix}{nextNumber:D4}";
+        }
+
+        private static string AmbilKodePrefix3Huruf(string? namaGrup)
+        {
+            if (string.IsNullOrWhiteSpace(namaGrup))
+                throw new Exception("Nama grup kategori tidak valid.");
+
+            // ambil huruf saja
+            var hurufOnly = new string(namaGrup
+                .Where(char.IsLetter)
+                .ToArray())
+                .ToUpperInvariant();
+
+            if (hurufOnly.Length >= 3)
+                return hurufOnly.Substring(0, 3);
+
+            // kalau kurang dari 3 huruf, pad kanan dengan X
+            return hurufOnly.PadRight(3, 'X');
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(Guid id)
+        public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
         {
-            var listdata = _applicationDbContext.BarangKategoris.Find(id);
-            if (listdata == null)
+            try
             {
-                return NotFound(new { message = "Data tidak ditemukan." });
-            }
+                var data = await (
+                    from b in _applicationDbContext.Barangs.AsNoTracking()
+                    where b.BarangId == id && (b.IsDelete == false || b.IsDelete == null)
 
-            return Ok(new
+                    join kb in _applicationDbContext.BarangKategoris.AsNoTracking()
+                        on b.KategoriBarangId equals kb.KategoriBarangId into kbg
+                    from kb in kbg.DefaultIfEmpty()
+
+                    join br in _applicationDbContext.Brands.AsNoTracking()
+                        on b.BrandId equals br.BrandId into brG
+                    from br in brG.DefaultIfEmpty()
+
+                    join kr in _applicationDbContext.KelasResikos.AsNoTracking()
+                        on b.KelasResikoId equals kr.KelasResikoId into krG
+                    from kr in krG.DefaultIfEmpty()
+
+                    join u in _applicationDbContext.UserActives.AsNoTracking()
+                        on b.CreateBy equals u.UserActiveId into uG
+                        from u in uG.DefaultIfEmpty()
+                    select new
+                    {
+                        u.CreateBy,
+                        CreateByName = u.FullName,
+                        u.CreateDateTime,
+                        b.BarangId,
+                        b.KodeBarang,
+                        b.ItemId,
+                        b.NamaBarang,
+                        b.KategoriBarangId,
+                        NamaKategoriBarang = kb != null ? kb.NamaKategoriBarang : null,
+
+                        b.KelasResikoId,
+                        NamaKelasResiko = kr != null ? kr.NamaKelasResiko : null,
+
+                        b.BrandId,
+                        NamaBrand = br != null ? br.NamaBrand : null,
+
+                        b.Spesifikasi,
+                        b.IsPerluResep,
+                        b.StokMaximum,
+                        b.StokMinimum,
+                        b.Keterangan,
+                    }
+                ).FirstOrDefaultAsync(ct);
+
+                if (data == null)
+                    return NotFound(new { message = "Data barang tidak ditemukan." });
+
+                return Ok(new
+                {
+                    message = "Data barang ditemukan.",
+                    data
+                });
+            }
+            catch (Exception ex)
             {
-                message = "Ditemukan || 200 OK",
-                data = listdata
-            });
+                return StatusCode(500, new { message = $"Terjadi kesalahan: {ex.Message}" });
+            }
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] BarangKategoriViewModel vm)
+        public async Task<IActionResult> Create([FromBody] BarangViewModel vm, CancellationToken ct)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -143,24 +202,46 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 //cek duplikasi
-                bool isDuplicate = await _applicationDbContext.BarangKategoris
-                    .AnyAsync(c => c.NamaKategoriBarang.ToLower().Trim()
-                    == vm.NamaKategoriBarang.ToLower().Trim() 
-                    && c.GrupKategoriBarang.ToLower().Trim() == vm.GrupKategoriBarang.ToLower().Trim()
+                bool isDuplicate = await _applicationDbContext.Barangs
+                    .AnyAsync(
+                    c => c.NamaBarang.ToLower().Trim()
+                    == vm.NamaBarang.ToLower().Trim() 
+                    && c.ItemId == vm.ItemId
+                    && c.KategoriBarangId == vm.KategoriBarangId
+                    && c.BrandId == vm.BrandId
+                    && c.KelasResikoId == vm.KelasResikoId
                     && c.IsDelete == false);
 
                 if (isDuplicate)
                 {
-                    return Conflict(new { message = "Nama dan grup kategori barang ini telah tersedia" });
+                    return Conflict(new { message = "Barang ini telah tersedia" });
                 }
 
+                // validasi kategori barang
+                var kategoriExists = await _applicationDbContext.BarangKategoris
+                    .AsNoTracking()
+                    .AnyAsync(x => x.KategoriBarangId == vm.KategoriBarangId, ct);
+
+                if (!kategoriExists)
+                    return NotFound(new { message = "Kategori barang tidak ditemukan." });
+
+                var kodeBarang = await GenerateKodeBarangAsync(vm.KategoriBarangId.Value, ct);
+
+
                 // **Buat Data Baru**
-                var data = new BarangKategori
+                var data = new Barang
                 {
-                    KategoriBarangId = Guid.NewGuid(),
-                    KodeKategoriBarang = vm.KodeKategoriBarang,
-                    NamaKategoriBarang = vm.NamaKategoriBarang,
-                    GrupKategoriBarang = vm.GrupKategoriBarang,
+                    BarangId = Guid.NewGuid(),
+                    KodeBarang = kodeBarang,
+                    ItemId = vm.ItemId,
+                    NamaBarang = vm.NamaBarang,
+                    KategoriBarangId = vm.KategoriBarangId,
+                    BrandId = vm.BrandId,
+                    KelasResikoId = vm.KelasResikoId,
+                    Spesifikasi = vm.Spesifikasi,
+                    IsPerluResep = vm.IsPerluResep,
+                    StokMaximum = vm.StokMaximum,
+                    StokMinimum = vm.StokMinimum,
                     Keterangan = vm.Keterangan,
 
                     CreateBy = userActiveId,
@@ -168,7 +249,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 };
 
                 // **Simpan ke Database**
-                _applicationDbContext.BarangKategoris.Add(data);
+                _applicationDbContext.Barangs.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -191,7 +272,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] BarangKategoriViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] BarangViewModel vm, CancellationToken ct)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -222,35 +303,59 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.BarangKategoris.FindAsync(id);
+                var data = await _applicationDbContext.Barangs.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
                 //cek duplikasi
-                bool isDuplicate = await _applicationDbContext.BarangKategoris
-                    .AnyAsync(c => c.NamaKategoriBarang.ToLower().Trim()
-                    == vm.NamaKategoriBarang.ToLower().Trim()
-                    && c.GrupKategoriBarang.ToLower().Trim() == vm.GrupKategoriBarang.ToLower().Trim()
-                    && c.KategoriBarangId != id
-                    && c.IsDelete == false);
+                bool isDuplicate = await _applicationDbContext.Barangs
+                    .AnyAsync(
+                    c => c.NamaBarang.ToLower().Trim()
+                    == vm.NamaBarang.ToLower().Trim()
+                    && c.ItemId == vm.ItemId
+                    && c.KategoriBarangId == vm.KategoriBarangId
+                    && c.BrandId == vm.BrandId
+                    && c.KelasResikoId == vm.KelasResikoId
+                    && c.IsDelete == false
+                    && c.BarangId != id);
 
                 if (isDuplicate)
                 {
-                    return Conflict(new { message = "Nama dan grup kategori barang ini telah tersedia" });
+                    return Conflict(new { message = "Barang ini telah tersedia" });
                 }
 
-                // **Update Data**
-                data.KodeKategoriBarang = vm.KodeKategoriBarang;
-                data.NamaKategoriBarang = vm.NamaKategoriBarang;
-                data.GrupKategoriBarang = vm.GrupKategoriBarang;
+
+                var kategori = await _applicationDbContext.BarangKategoris
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(x => x.KategoriBarangId == vm.KategoriBarangId.Value, ct);
+
+                if (kategori == null)
+                    return NotFound(new { message = "Kategori barang tidak ditemukan." });
+
+                var kategoriBerubah = data.KategoriBarangId != vm.KategoriBarangId.Value;
+
+                data.ItemId = vm.ItemId;
+                data.NamaBarang = vm.NamaBarang;
+                data.BrandId = vm.BrandId;
+                data.KelasResikoId = vm.KelasResikoId;
+                data.Spesifikasi = vm.Spesifikasi;
+                data.IsPerluResep = vm.IsPerluResep;
+                data.StokMaximum = vm.StokMaximum;
+                data.StokMinimum = vm.StokMinimum;
                 data.Keterangan = vm.Keterangan;
+
+                // regenerate kode jika kategori berubah
+                if (kategoriBerubah)
+                {
+                    data.KodeBarang = await GenerateKodeBarangAsync(vm.KategoriBarangId.Value, ct);
+                }
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.BarangKategoris.Update(data);
+                _applicationDbContext.Barangs.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -299,7 +404,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.BarangKategoris.FindAsync(id);
+                var data = await _applicationDbContext.Barangs.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -311,7 +416,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 data.IsDelete = true;
 
-                _applicationDbContext.BarangKategoris.Update(data);
+                _applicationDbContext.Barangs.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -333,6 +438,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
+
         [HttpGet("paged")]
         public async Task<IActionResult> Paged(
             int page = 1,
@@ -348,28 +454,55 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         {
 
             // Query data
-            var query = (from a in _applicationDbContext.BarangKategoris
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false || a.IsDelete == null
-                         select new
-                         {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = u.FullName,
-                             a.KategoriBarangId,
-                             a.KodeKategoriBarang,
-                             a.NamaKategoriBarang,
-                             a.GrupKategoriBarang,
-                             a.Keterangan
-                         });
+            var query = from b in _applicationDbContext.Barangs.AsNoTracking()
+                        where (b.IsDelete == false || b.IsDelete == null)
+
+                        join kb in _applicationDbContext.BarangKategoris.AsNoTracking()
+                            on b.KategoriBarangId equals kb.KategoriBarangId into kbg
+                        from kb in kbg.DefaultIfEmpty()
+
+                        join br in _applicationDbContext.Brands.AsNoTracking()
+                            on b.BrandId equals br.BrandId into brG
+                        from br in brG.DefaultIfEmpty()
+
+                        join kr in _applicationDbContext.KelasResikos.AsNoTracking()
+                            on b.KelasResikoId equals kr.KelasResikoId into krG
+                        from kr in krG.DefaultIfEmpty()
+
+                        join u in _applicationDbContext.UserActives.AsNoTracking()
+                            on b.CreateBy equals u.UserActiveId into uG
+                        from u in uG.DefaultIfEmpty()
+                        select new
+                        {
+                            u.CreateBy,
+                            CreateByName = u.FullName,
+                            u.CreateDateTime,
+                            b.BarangId,
+                            b.KodeBarang,
+                            b.ItemId,
+                            b.NamaBarang,
+                            b.KategoriBarangId,
+                            NamaKategoriBarang = kb != null ? kb.NamaKategoriBarang : null,
+
+                            b.KelasResikoId,
+                            NamaKelasResiko = kr != null ? kr.NamaKelasResiko : null,
+
+                            b.BrandId,
+                            NamaBrand = br != null ? br.NamaBrand : null,
+
+                            b.Spesifikasi,
+                            b.IsPerluResep,
+                            b.StokMaximum,
+                            b.StokMinimum,
+                            b.Keterangan,
+                        };
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             if (!string.IsNullOrWhiteSpace(search))
             {
                 search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
-                    EF.Functions.ILike(u.NamaKategoriBarang, search)
+                    EF.Functions.ILike(u.NamaBarang, search)
                 );
             }
 
