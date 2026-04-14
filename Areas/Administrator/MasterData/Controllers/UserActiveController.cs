@@ -1288,6 +1288,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
         string? pathTTD = null,
         string? namaDept = null,
         string? namaPosisi = null,
+        string? namaTipe = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -1328,8 +1329,6 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                  join td in _applicationDbContext.MasterTTDs.AsNoTracking()
                     on a.UserActiveId equals td.UserActiveId into tdJoin
                  from td in tdJoin.DefaultIfEmpty()
-
-
                  where a.IsDelete == false
 
                  orderby a.CreateDateTime descending
@@ -1391,8 +1390,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                 query = query.Where(u =>
                     EF.Functions.ILike(u.FullName, search) ||
                     EF.Functions.ILike(u.Email, search) ||
-                    EF.Functions.ILike(u.CreateByName, search)  ||
-                    EF.Functions.ILike(u.NamaTipeUser, search)
+                    EF.Functions.ILike(u.CreateByName, search)
                 );
             }
 
@@ -1421,6 +1419,13 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
             {
                 namaPosisi = $"%{namaPosisi.ToLower()}%";
                 query = query.Where(u => EF.Functions.ILike(u.NamaPosisi, namaPosisi));
+            }
+
+            /// filter nama tipe user
+            if (!string.IsNullOrWhiteSpace(namaTipe))
+            {
+                namaTipe = $"%{namaTipe.ToLower()}%";
+                query = query.Where(u => EF.Functions.ILike(u.NamaTipeUser, namaTipe));
             }
 
 
