@@ -302,6 +302,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
+        //test
+        //paged barang stock
+
         [HttpGet("paged")]
         public async Task<IActionResult> Paged(
             int page = 1,

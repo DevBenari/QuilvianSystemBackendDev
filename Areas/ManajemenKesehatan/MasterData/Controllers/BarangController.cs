@@ -42,6 +42,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             _webHostEnvironment = webHostEnvironment;
         }
 
+        //test
+
         private async Task<string> GenerateKodeBarangAsync(Guid kategoriBarangId, CancellationToken ct = default)
         {
             // 1. Ambil grup kategori dari kategori barang

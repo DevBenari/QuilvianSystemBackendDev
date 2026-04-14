@@ -305,6 +305,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
+        //paged barang harga
         [HttpGet("paged")]
         public async Task<IActionResult> Paged(
             int page = 1,
@@ -335,6 +336,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              a.CreateBy,
                              CreateByName = u.FullName,
                              a.HargaBarangId,
+
+                             // nama barang
                              a.BarangId,
                              NamaBarang = b != null ? b.NamaBarang : null,
                              a.HteHargaBarang,

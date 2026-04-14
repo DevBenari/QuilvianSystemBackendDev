@@ -46,7 +46,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             _webHostEnvironment = webHostEnvironment;
             _hubContext = hubContext;
         }
-
+        //test
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
@@ -126,7 +126,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data = listdata
             });
         }
-
+        //test
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] DiskonApprovedViewModel vm)
         {
