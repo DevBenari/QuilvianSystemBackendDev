@@ -52,6 +52,7 @@ jobs:
           docker run -d --name $CONTAINER_NAME \
             -p 8081:80 \
             --memory="1g" --memory-swap="1g" \
+            --cpus="1.0" \
             --restart unless-stopped \
             -e ASPNETCORE_ENVIRONMENT=Production \
             -v /opt/quilvian/config/appsettings.json:/app/appsettings.json:ro \
