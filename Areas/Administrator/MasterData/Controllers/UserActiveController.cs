@@ -1286,6 +1286,8 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
         string? search = null,
         string? email = null,
         string? pathTTD = null,
+        string? namaDept = null,
+        string? namaPosisi = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -1405,6 +1407,20 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
             {
                 pathTTD = $"%{pathTTD.ToLower()}%";
                 query = query.Where(u => EF.Functions.ILike(u.TTDPath,pathTTD));
+            }
+
+            /// filter nama dept
+            if (!string.IsNullOrWhiteSpace(namaDept))
+            {
+                namaDept = $"%{namaDept.ToLower()}%";
+                query = query.Where(u => EF.Functions.ILike(u.NamaDepartemen, namaDept));
+            }
+
+            /// filter nama posisi
+            if (!string.IsNullOrWhiteSpace(namaPosisi))
+            {
+                namaPosisi = $"%{namaPosisi.ToLower()}%";
+                query = query.Where(u => EF.Functions.ILike(u.NamaPosisi, namaPosisi));
             }
 
 
