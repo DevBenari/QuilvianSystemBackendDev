@@ -45,7 +45,7 @@ jobs:
           fi
 
           echo "➡ Build new Docker image..."
-          systemd-run --scope -p CPUQuota=400% -p MemoryMax=8G docker build -t $IMAGE_NAME .
+          sudo systemd-run --scope -p CPUQuota=400% -p MemoryMax=8G docker build -t $IMAGE_NAME .
           
           echo "➡ Run new container..."
           docker run -d --name $CONTAINER_NAME \
