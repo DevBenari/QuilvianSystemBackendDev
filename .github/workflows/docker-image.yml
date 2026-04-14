@@ -45,7 +45,6 @@ jobs:
           fi
 
           echo "➡ Build new Docker image..."
-          # nice -n 10 docker build -t $IMAGE_NAME .
           systemd-run --scope -p CPUQuota=400% -p MemoryMax=8G docker build -t $IMAGE_NAME .
           
           echo "➡ Run new container..."
