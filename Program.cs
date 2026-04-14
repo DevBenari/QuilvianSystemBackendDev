@@ -289,6 +289,10 @@ app.MapHub<LabBookingDetailHub>("/hubs/labbookingdetail");
 
 // signal R Alkes
 app.MapHub<AlatPemakaianHub>("/hubs/alatpemakaian");
+
+// signal R Diskon
+app.MapHub<DiskonHub>("/hubs/diskon");
+app.MapHub<DiskonApprovedHub>("/hubs/diskonapproved");
 #endregion
 
 #endregion
