@@ -39,14 +39,14 @@ jobs:
           docker stop $CONTAINER_NAME || true
           docker rm $CONTAINER_NAME || true
 
-          echo "➡ Remove old image if exists..."
-          OLD_IMAGE=$(docker images -q $IMAGE_NAME)
-          if [ -n "$OLD_IMAGE" ]; then
-              docker rmi -f $OLD_IMAGE
-          fi
+          # echo "➡ Remove old image if exists..."
+          # OLD_IMAGE=$(docker images -q $IMAGE_NAME)
+          # if [ -n "$OLD_IMAGE" ]; then
+          #     docker rmi -f $OLD_IMAGE
+          # fi
 
-          echo "➡ Build new Docker image..."
-          docker build -t $IMAGE_NAME .
+          # echo "➡ Build new Docker image..."
+          # docker build -t $IMAGE_NAME .
 
           echo "➡ Run new container..."
           docker run -d --name $CONTAINER_NAME \
