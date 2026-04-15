@@ -1040,6 +1040,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     h.DiskonId,
                     h.NamaDiskon,
                     h.KodeVoucher,
+                    h.IsDireksiApproved,
+                    h.IsDiskonCombined,
                     h.TglBerlaku,
                     h.TglBerakhir,
                     h.IsAsuransi,
