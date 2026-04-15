@@ -250,8 +250,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                 join po in _applicationDbContext.Polikliniks on k.PoliklinikId equals po.PoliklinikId into poGroup
                                 from po in poGroup.DefaultIfEmpty()
 
-                                where (b.IsDelete == false || b.IsDelete == null)
-                                      && b.BookingLabId == id
+                                where b.BookingLabId == id && (b.IsDelete == false )
+                                     
                                 select new
                                 {
                                     // Header

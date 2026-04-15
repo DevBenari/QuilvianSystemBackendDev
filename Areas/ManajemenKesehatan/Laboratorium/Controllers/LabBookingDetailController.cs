@@ -170,7 +170,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 // ✅ Query data lengkap dengan join
                 var data = await (from d in _applicationDbContext.LabBookingDetails.AsNoTracking()
-                                 where d.IsDelete != true
+                                 where d.DetailBookingLabId == id && d.IsDelete != true
                                  join u in _applicationDbContext.UserActives.AsNoTracking()
                                      on d.CreateBy equals u.UserActiveId into ug
                                  from u in ug.DefaultIfEmpty()
@@ -192,7 +192,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                  from k in kg.DefaultIfEmpty()
 
                                  join bl in _applicationDbContext.Billings.AsNoTracking()
-                                     on b.KunjunganId equals bl.KunjunganId into blg
+                                     on d.PemeriksaanLabId equals bl.ItemId into blg
                                  from bl in blg.DefaultIfEmpty()
 
                                  select new
@@ -773,6 +773,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         public async Task<IActionResult> Paged(
             int page = 1,
             int perPage = 10,
+            Guid? labbookingdeatilId = null,
             string? NamaLaboratorium = null,
             Guid? kunjunganId = null,
             bool? isLunas = null,
@@ -815,7 +816,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 from k in kg.DefaultIfEmpty()
 
                 join bl in _applicationDbContext.Billings.AsNoTracking()
-                    on b.KunjunganId equals bl.KunjunganId into blg
+                    on d.PemeriksaanLabId equals bl.ItemId into blg
                 from bl in blg.DefaultIfEmpty()
 
                 select new
@@ -862,6 +863,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             // Filter kunjunganId
             if (kunjunganId.HasValue)
                 query = query.Where(x => x.KunjunganId == kunjunganId.Value);
+
+            // Filter lab booking id
+            if (labbookingdeatilId.HasValue)
+                query = query.Where(x => x.DetailBookingLabId == labbookingdeatilId.Value);
 
             // filter based on status billing
             if (isLunas.HasValue)
