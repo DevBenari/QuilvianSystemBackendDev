@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Data;
+using System.Security.Claims;
 using Microsoft.AspNet.SignalR.Client.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
@@ -8,8 +9,10 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Interfaces;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
@@ -20,6 +23,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.ViewModels;
 using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
+using QuilvianSystemBackendDev.Services;
 using Swashbuckle.AspNetCore.Annotations;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
@@ -38,6 +42,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         private readonly ILogger<SuratPengantarRanapController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly IHubContext<SuratPengantarRanapHub> _hubContext;
+        private readonly IGenerateInvoiceBillingService _generateInvoiceBillingService;
+        private readonly IDepositRanapNumberService _depositRanapNumberService;
 
         public SuratPengantarRanapController(
             ApplicationDbContext applicationDbContext,
@@ -46,7 +52,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             ILogger<SuratPengantarRanapController> logger,
             IWebHostEnvironment webHostEnvironment,
             IHubContext<SuratPengantarRanapHub> hubContext,
-            ITTDService ttdService
+            ITTDService ttdService,
+            IGenerateInvoiceBillingService generateInvoiceBillingService,
+            IDepositRanapNumberService depositRanapNumberService
             )
         {
             _applicationDbContext = applicationDbContext;
@@ -56,6 +64,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             _webHostEnvironment = webHostEnvironment;
             _hubContext = hubContext;
             _ttdService = ttdService;
+            _generateInvoiceBillingService = generateInvoiceBillingService;
+            _depositRanapNumberService = depositRanapNumberService;
         }
 
         private static string HitungUmurLengkap(DateTime? tanggalLahir)
@@ -116,6 +126,30 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             return !sudahAda;
         }
 
+        private async Task<string> GenerateNomorSuratPengantarRanapAsync(int tahun)
+        {
+            // Ambil nomor surat terakhir tahun berjalan
+            // Format: 001/SP-RI/MMC/2026
+            var lastNomorSurat = await _applicationDbContext.SuratPengantarRawatInaps
+                .Where(x => x.NomorSuratPengantar != null &&
+                            x.NomorSuratPengantar.EndsWith($"/SP-RI/MMC/{tahun}"))
+                .OrderByDescending(x => x.NomorSuratPengantar)
+                .Select(x => x.NomorSuratPengantar)
+                .FirstOrDefaultAsync();
+
+            var nextNumber = 1;
+
+            if (!string.IsNullOrWhiteSpace(lastNomorSurat))
+            {
+                var firstPart = lastNomorSurat.Split('/').FirstOrDefault();
+                if (int.TryParse(firstPart, out var lastNumber))
+                {
+                    nextNumber = lastNumber + 1;
+                }
+            }
+
+            return $"{nextNumber:D3}/SP-RI/MMC/{tahun}";
+        }
         [HttpGet]
         public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
         {
@@ -436,111 +470,218 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] SuratPengantarRawatInapViewModel vm)
         {
-            if (vm == null || !ModelState.IsValid)
+            if (vm == null)
             {
                 return BadRequest(new { message = "Data tidak valid." });
             }
 
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new
+                {
+                    message = "Model tidak valid.",
+                    errors = ModelState
+                        .Where(x => x.Value?.Errors.Count > 0)
+                        .Select(x => new
+                        {
+                            field = x.Key,
+                            errors = x.Value!.Errors.Select(e => e.ErrorMessage)
+                        })
+                });
+            }
+
+            if (!vm.KunjunganId.HasValue || vm.KunjunganId == Guid.Empty)
+            {
+                return BadRequest(new { message = "KunjunganId wajib diisi." });
+            }
+
+            if (!vm.DokterDPJPId.HasValue || vm.DokterDPJPId == Guid.Empty)
+            {
+                return BadRequest(new { message = "DokterDPJPId wajib diisi." });
+            }
+
+            if (!vm.DepositRanap.HasValue || vm.DepositRanap <= 0)
+            {
+                return BadRequest(new
+                {
+                    message = "Kunjungan IP (rawat inap) wajib mengisi nominal deposit."
+                });
+            }
+
             try
             {
-                // **Cek koneksi ke database**
-                if (!_applicationDbContext.Database.CanConnect())
-                {
-                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
-                }
-
-                // **Ambil User ID dari JWT Claims**
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(emailLogin))
+                if (string.IsNullOrWhiteSpace(emailLogin))
                 {
-                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                    return Unauthorized(new { message = "User tidak terautentikasi." });
                 }
 
-                var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
-                if (getUserActive == null)
+                var userActive = await _applicationDbContext.UserActives
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+
+                if (userActive == null)
                 {
-                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+                    return Unauthorized(new { message = "User aktif tidak ditemukan." });
                 }
-                var userActiveId = getUserActive.UserActiveId;
 
-                //// **Cek Duplikasi**
-                //bool isDuplicate = _applicationDbContext.Diskons
-                //                    .Any(c => c.NamaDiskon == vm.NamaDiskon);
+                var now = DateTime.UtcNow;
+                var nowOffset = DateTimeOffset.UtcNow;
+                var kunjunganId = vm.KunjunganId.Value;
+                var dokterDpjpId = vm.DokterDPJPId.Value;
+                var userActiveId = userActive.UserActiveId;
 
-                //if (isDuplicate)
-                //{
-                //    return Conflict(new { message = "Nama benefit ini telah tersedia" });
-                //}
+                var ttd = await _ttdService.CheckTTDAsync(dokterDpjpId);
+                if (ttd == null || string.IsNullOrWhiteSpace(ttd.Path))
+                {
+                    return BadRequest(new { message = "TTD dokter DPJP tidak ditemukan." });
+                }
 
-                // Generate Nomor Surat Pengantar Rawat Inap
-                int tahunSekarang = DateTime.UtcNow.Year;
-                int jumlahSuratTahunIni = await _applicationDbContext.SuratPengantarRawatInaps
-                    .CountAsync(s => s.CreateDateTime.Year == tahunSekarang);
+                await using var transaction = await _applicationDbContext.Database
+                    .BeginTransactionAsync(IsolationLevel.Serializable);
 
-                int nomorUrut = jumlahSuratTahunIni + 1;
-                string nomorSurat = $"{nomorUrut:D3}/SP-RI/MMC/{tahunSekarang}";
-
-                // **Cek apakah KunjunganId valid dan belum ada Surat Pengantar Ranap aktif**
-                var canCreate = await CanCreateSuratForKunjunganAsync(vm.KunjunganId.Value);
+                // Cek ulang di dalam transaction supaya lebih aman dari request paralel
+                var canCreate = await CanCreateSuratForKunjunganAsync(kunjunganId);
                 if (!canCreate)
-                    return StatusCode(StatusCodes.Status409Conflict,
-                        new { message = "Kunjungan ini sudah dalam proses rawat inap aktif" });
-
-                // get path ttd dokterDPJP
-                var ttd = await _ttdService.CheckTTDAsync((Guid)vm.DokterDPJPId);
-                
-                // **Buat Data Baru**
-                var data = new SuratPengantarRawatInap
                 {
-                   SuratPengantarRawatInapId = Guid.NewGuid(),
-                   KunjunganId = vm.KunjunganId,
-                   Diagnosa = vm.Diagnosa,
-                   ICDId = vm.ICDId,
-                   AlasanRanap = vm.AlasanRanap,
-                   RencanaTindakLanjut = vm.RencanaTindakLanjut,
-                   AsalUnit = vm.AsalUnit,
-                   NomorSuratPengantar = nomorSurat,
-                   Status = FilterStatusSuratPengantarRanap.Menunggu.ToString(),
-                   IndikasiTindakan = vm.IndikasiTindakan,
-                   JenisOperasi = vm.JenisOperasi,
-                   TawaranLayanan = vm.TawaranLayanan,
-                   HarapanHasil = vm.HarapanHasil,
-                   IsAdaHambatan = vm.IsAdaHambatan,
-                   PathTTDDokterDPJP = ttd.Path,
+                    return StatusCode(StatusCodes.Status409Conflict, new
+                    {
+                        message = "Kunjungan ini sudah dalam proses rawat inap aktif."
+                    });
+                }
 
-                   CreateBy = userActiveId,
-                   CreateDateTime = DateTimeOffset.UtcNow,
+                // Generate nomor surat
+                var nomorSurat = await GenerateNomorSuratPengantarRanapAsync(now.Year);
+
+                // Buat surat pengantar rawat inap
+                var surat = new SuratPengantarRawatInap
+                {
+                    SuratPengantarRawatInapId = Guid.NewGuid(),
+                    KunjunganId = kunjunganId,
+                    Diagnosa = vm.Diagnosa,
+                    ICDId = vm.ICDId,
+                    AlasanRanap = vm.AlasanRanap,
+                    RencanaTindakLanjut = vm.RencanaTindakLanjut,
+                    AsalUnit = vm.AsalUnit,
+                    NomorSuratPengantar = nomorSurat,
+                    Status = FilterStatusSuratPengantarRanap.Menunggu.ToString(),
+                    IndikasiTindakan = vm.IndikasiTindakan,
+                    JenisOperasi = vm.JenisOperasi,
+                    TawaranLayanan = vm.TawaranLayanan,
+                    HarapanHasil = vm.HarapanHasil,
+                    IsAdaHambatan = vm.IsAdaHambatan,
+                    PathTTDDokterDPJP = ttd.Path,
+                    CreateBy = userActiveId,
+                    CreateDateTime = nowOffset
                 };
 
-                 // **Simpan ke Database**
-                 _applicationDbContext.SuratPengantarRawatInaps.Add(data);
-                 int result = await _applicationDbContext.SaveChangesAsync();
+                _applicationDbContext.SuratPengantarRawatInaps.Add(surat);
 
-                // Notifikasi signalR
+                // Cari biaya admin rawat inap
+                var biayaAdmin = await _applicationDbContext.BiayaAdministrasis
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(b => b.BiayaAdministrasiKode == "IP");
+
+                // Invoice billing
+                var invoice = await _generateInvoiceBillingService.GetOrCreateAsync(
+                    kunjunganId,
+                    now
+                );
+
+                // Tambahkan billing biaya admin bila ada
+                if (biayaAdmin != null)
+                {
+                    // Ambil urutan billing terakhir utk kunjungan ini
+                    var existingBillingCount = await _applicationDbContext.Billings
+                        .CountAsync(b => b.KunjunganId == kunjunganId);
+
+                    var billingKode = (existingBillingCount + 1).ToString("D3");
+
+                    var bill = new Billing
+                    {
+                        BillingId = Guid.NewGuid(),
+                        KunjunganId = kunjunganId,
+                        ItemId = biayaAdmin.BiayaAdministrasiId,
+                        NamaItem = biayaAdmin.NamaBiayaAdministrasi,
+                        HargaItem = biayaAdmin.NominalBiayaAdministrasi,
+                        QtyItem = 1,
+                        SubTotalItem = biayaAdmin.NominalBiayaAdministrasi,
+                        InvoiceBilling = invoice,
+                        IsListWhiteOff = false,
+                        BillingKode = billingKode,
+                        JenisBilling = "Biaya Admin",
+                        StatusBilling = false,
+                        BillingDate = now,
+                        TanggalInvoice = now,
+                        TanggalJatuhTempo = now.Date.AddDays(90),
+                        CreateDateTime = nowOffset,
+                        CreateBy = userActiveId
+                    };
+
+                    _applicationDbContext.Billings.Add(bill);
+                }
+
+                // Buat deposit ranap
+                var noKwitansi = await _depositRanapNumberService.GenerateNoKwitansiAsync();
+
+                var deposit = new DepositRanap
+                {
+                    DepositRanapId = Guid.NewGuid(),
+                    KunjunganId = kunjunganId,
+                    TglTransaksi = now,
+                    NominalMasuk = vm.DepositRanap.Value,
+                    SaldoDeposit = vm.DepositRanap.Value,
+                    NoKwitansi = noKwitansi,
+                    StatusDeposit = "Pemasukkan",
+                    CreateDateTime = nowOffset,
+                    CreateBy = userActiveId
+                };
+
+                _applicationDbContext.DepositRanaps.Add(deposit);
+
+                var result = await _applicationDbContext.SaveChangesAsync();
+
+                if (result <= 0)
+                {
+                    await transaction.RollbackAsync();
+                    return StatusCode(500, new
+                    {
+                        message = "Data tidak berhasil disimpan ke database."
+                    });
+                }
+
+                await transaction.CommitAsync();
+
+                // Kirim notifikasi setelah commit berhasil
                 await _hubContext.Clients.All.SendAsync("Surat pengantar rawat inap ditambah", new
                 {
                     action = "create",
-                    suratid = data.SuratPengantarRawatInapId,
-                    kunjunganId = data.KunjunganId,
+                    suratid = surat.SuratPengantarRawatInapId,
+                    kunjunganId = surat.KunjunganId
                 });
 
-
-                if (result > 0)
+                return Created("", new
                 {
-                     return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
-                }
-                 else
-                 {
-                    return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
-                 }
+                    message = "Tambah Data Berhasil",
+                    suratPengantarRawatInapId = surat.SuratPengantarRawatInapId,
+                    nomorSurat = surat.NomorSuratPengantar
+                });
             }
-            catch (DbUpdateException dbEx)
+            catch (DbUpdateException)
             {
-                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+                // Detail error sebaiknya di-log, jangan dikirim mentah ke client
+                return StatusCode(500, new
+                {
+                    message = "Gagal menyimpan data ke database."
+                });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+                // Detail error sebaiknya di-log, jangan dikirim mentah ke client
+                return StatusCode(500, new
+                {
+                    message = "Terjadi kesalahan internal pada server."
+                });
             }
         }
 
