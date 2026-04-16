@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using System.Linq;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
@@ -297,6 +298,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                     LabBookingDetailId = (Guid?)lb.DetailBookingLabId,
                                     PemeriksaanLabId = (Guid?)lb.PemeriksaanLabId,
                                     PemeriksaanNama = lp.NamaPemeriksaan,
+                                    TipeLayanan = lb.TipeLayanan ?? null,
                                     HargaPemeriksaan = (decimal?)(lp.HargaPemeriksaan ?? 0),
                                     NamaLab = l.NamaLab ?? null,
                                     AlasanPembatalan = lb.AlasanPembatalan ?? null,
@@ -358,6 +360,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                             d.PemeriksaanNama,
                             d.HargaPemeriksaan,
                             d.NamaLab,
+                            d.TipeLayanan,
                             d.AlasanPembatalan,
                             d.TTDPembatalanPath,
                         }).ToList()
@@ -1641,6 +1644,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     d.PemeriksaanLabId,
                     d.LabId,
                     d.NoOrder,
+                    TipeLayanan = d.TipeLayanan ?? null,
                     NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
                     HargaPemeriksaan = lp != null ? (decimal?)lp.HargaPemeriksaan : null,
                     NamaLab = lab != null ? lab.NamaLab : null,
@@ -2030,6 +2034,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      KunjunganId = b.KunjunganId, // ambil dari header booking
                      d.DetailBookingLabId,
                      d.PasienId,
+                     TipeLayanan = d.TipeLayanan ?? null,
                      d.PemeriksaanLabId,
                      d.LabId,
                      d.NoOrder,
@@ -2468,6 +2473,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      BookingLabId = (Guid?)d.BookingLabId,
                      d.DetailBookingLabId,
                      d.NoOrder,
+                     TipeLayanan = d.TipeLayanan ?? null,
                      NamaPemeriksaan = lp.NamaPemeriksaan,
                      HargaPemeriksaan = lp.HargaPemeriksaan,
                      Lab = lab.NamaLab,
@@ -2827,6 +2833,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      BookingLabId = (Guid?)d.BookingLabId,
                      d.DetailBookingLabId,
                      d.NoOrder,
+                     TipeLayanan = d.TipeLayanan ?? null,
                      NamaPemeriksaan = lp.NamaPemeriksaan,
                      HargaPemeriksaan = lp.HargaPemeriksaan,
                      Lab = lab.NamaLab,
@@ -3191,6 +3198,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              BookingLabId = (Guid?)d.BookingLabId,
                              d.DetailBookingLabId,
                              d.NoOrder,
+                             TipeLayanan = d.TipeLayanan ?? null,
                              NamaPemeriksaan = lp.NamaPemeriksaan,
                              HargaPemeriksaan = lp.HargaPemeriksaan,
                              Lab = lab.NamaLab,
@@ -3233,5 +3241,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         }
                     });
                 }
+
     }
 }

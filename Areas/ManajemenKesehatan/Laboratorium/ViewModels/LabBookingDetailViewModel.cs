@@ -10,6 +10,7 @@
         public List<Guid>? SpecimenMethodId { get; set; }
         public Guid? AsalSpecimenId { get; set; }
         public Guid? KunjunganId { get; set; }
+        public string? TipeLayanan { get; set; }
         public string? KategoriPatologiAnatomi { get; set; } // Histological / Cytology / Non Gynae Cytology
         public string? JenisSpecimen { get; set; } // Biopsi / Operasi / Kerokan / Cairan Tubuh, dll
         public string? LokasiSpecimen { get; set; } // Lokasi pengambilan specimen
@@ -28,5 +29,6 @@
         public DateTime? TanggalSelesai { get; set; }
         public bool? StatusVerifikasi { get; set; }
         public string? AlasanPembatalan {  get; set; }
+
     }
 }

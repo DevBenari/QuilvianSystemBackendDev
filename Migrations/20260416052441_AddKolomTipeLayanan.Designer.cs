@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -12,9 +13,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260416052441_AddKolomTipeLayanan")]
+    partial class AddKolomTipeLayanan
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -329,12 +331,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("Address")
                         .HasColumnType("text");
 
-                    b.Property<string>("Alamat")
-                        .HasColumnType("text");
-
-                    b.Property<string>("BankId")
-                        .HasColumnType("text");
-
                     b.Property<Guid>("CreateBy")
                         .HasColumnType("uuid");
 
@@ -353,17 +349,8 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<Guid?>("DepartemenId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("DepartementId")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("Email")
                         .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("FotoName")
-                        .HasColumnType("text");
-
-                    b.Property<string>("FotoPath")
                         .HasColumnType("text");
 
                     b.Property<string>("FullName")
@@ -391,24 +378,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<bool>("IsDelete")
                         .HasColumnType("boolean");
 
-                    b.Property<Guid?>("JabatanId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("KodeKaryawan")
-                        .HasColumnType("text");
-
-                    b.Property<string>("NoHandphone")
-                        .HasColumnType("text");
-
-                    b.Property<string>("NoIdentitas")
-                        .HasColumnType("text");
-
-                    b.Property<string>("NoKaryawan")
-                        .HasColumnType("text");
-
-                    b.Property<string>("NoRekening")
-                        .HasColumnType("text");
-
                     b.Property<string>("NoSTR")
                         .HasColumnType("text");
 
@@ -425,15 +394,6 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.Property<string>("StatusPegawai")
                         .HasColumnType("text");
-
-                    b.Property<DateTime?>("TanggalAkhirKerja")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("TanggalAwalKerja")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("TanggalKontrak")
-                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid?>("TipeUserId")
                         .HasColumnType("uuid");

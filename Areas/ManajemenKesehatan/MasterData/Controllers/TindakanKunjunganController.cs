@@ -85,6 +85,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.Total,
                             a.TanggalPemeriksaan,
                             a.Disposition,
+                            a.TipeLayanan,
                             a.Keterangan,
                         }).OrderByDescending(a => a.CreateDateTime);
 
@@ -218,7 +219,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     KelasId = vm.KelasId,
                     Quantity = vm.Quantity,
                     Total = totalqty, // Masukkan nilai Total yang telah dihitung
-                    RanapId = vm.RanapId,
+                    TipeLayanan = vm.TipeLayanan,
                     TanggalPemeriksaan = vm.TanggalPemeriksaan,
                     Keterangan = vm.Keterangan,
                     Disposition = vm.Disposition,
@@ -269,6 +270,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     JenisBilling = "Tindakan", // Menandakan ini adalah billing untuk tindakan
                     StatusBilling= false,
                     IsCovered = status,
+                    TipeLayanan = vm.TipeLayanan,
                     TanggalInvoice = DateTime.UtcNow,
                     TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                     CreateBy = userActiveId,
@@ -378,7 +380,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.DepartementId = vm.DepartementId;
                 data.Quantity = vm.Quantity;
                 data.Total = totalqty;
-                data.RanapId = vm.RanapId;
+                data.TipeLayanan = vm.TipeLayanan;
                 data.TanggalPemeriksaan = vm.TanggalPemeriksaan;
                 data.Disposition = vm.Disposition;
                 data.Keterangan = vm.Keterangan;
@@ -431,6 +433,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         JenisBilling = "Tindakan",
                         StatusPengambilan = true,
                         StatusBilling = false,
+                        TipeLayanan = vm.TipeLayanan,
                         IsCovered = status,
                         TanggalInvoice = DateTime.UtcNow,
                         TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
@@ -687,6 +690,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.Quantity,
                         a.Total,
                         a.TanggalPemeriksaan,
+                        a.TipeLayanan,
                         a.Keterangan,
                     };
 
