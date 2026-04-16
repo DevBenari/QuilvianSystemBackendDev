@@ -23,6 +23,7 @@ using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Enum;
 using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.Administrator.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
+using QuilvianSystemBackendDev.Areas.HRD.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Helper;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
@@ -1228,6 +1229,116 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
         //    }
         //}
 
+
+        [HttpPut("UploadFotoUser/{id}")]
+        [RequestSizeLimit(20_000_000)]
+        [RequestFormLimits(MultipartBodyLengthLimit = 20_000_000)]
+        public async Task<IActionResult> UploadFotoUser(Guid id, [FromForm] UploadFotoKaryawanViewModel vm)
+        {
+            if (vm == null || vm.FotoKaryawan == null || vm.FotoKaryawan.Length == 0)
+            {
+                return BadRequest(new { message = "File foto karyawan tidak valid." });
+            }
+
+            try
+            {
+                if (!await _applicationDbContext.Database.CanConnectAsync())
+                {
+                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+                }
+
+                // ✅ Ambil user aktif
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin))
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+                var getUserActive = await _applicationDbContext.UserActives.FirstOrDefaultAsync(u => u.Email == emailLogin);
+                if (getUserActive == null)
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+
+                var userActiveId = getUserActive.UserActiveId;
+
+                // ✅ Cari PraOperasi berdasarkan ID
+                var data = await _applicationDbContext.UserActives.FindAsync(id);
+                if (data == null)
+                {
+                    return NotFound(new { message = "Data karyawan tidak ditemukan." });
+                }
+
+                var fileName = "";
+
+                // ✅ Proses upload file TTD
+                async Task<string?> UploadToFlaskAsync(IFormFile? file, string prefix)
+                {
+                    if (file == null || file.Length == 0)
+                        return null;
+
+                    var allowedExt = new[] { ".jpg", ".jpeg" };
+                    var ext = Path.GetExtension(file.FileName).ToLower();
+
+                    if (!allowedExt.Contains(ext))
+                        throw new Exception($"{prefix} harus JPG atau JPEG.");
+
+                    if (file.Length > 5 * 1024 * 1024)
+                        throw new Exception($"{prefix} maksimal 5MB.");
+
+                    var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
+                    fileName = $"{data.NoKaryawan}_{safeTime}{ext}";
+
+                    // 👉 Sesuaikan nama folder dengan kebutuhan kamu
+                    var folderTarget = "FotoKaryawan";
+                    var filePath = $"/{folderTarget}/{fileName}";
+
+                    using var ms = new MemoryStream();
+                    await file.CopyToAsync(ms);
+                    ms.Position = 0;
+
+                    var contentType = string.IsNullOrWhiteSpace(file.ContentType)
+                        ? "image/jpeg"
+                        : file.ContentType;
+
+                    var fileContent = new StreamContent(ms);
+                    fileContent.Headers.ContentType =
+                        new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+
+                    using var form = new MultipartFormDataContent();
+                    form.Add(fileContent, "file", fileName);
+                    form.Add(new StringContent(folderTarget), "folderTarget");
+
+                    using var client = new HttpClient();
+                    var response = await client.PostAsync(_uploadUrl, form);
+
+                    if (!response.IsSuccessStatusCode)
+                        throw new Exception($"Gagal upload {prefix} ke Flask.");
+
+                    // ⚠ Di sini kita pakai pola yang sama seperti UpdatePenandaan:
+                    //     tidak baca JSON dari Flask, tapi pakai path lokal yang sudah dibentuk
+                    return filePath;
+                }
+
+
+                // Upload file → folder TTDUser
+                var path = await UploadToFlaskAsync(vm.FotoKaryawan, "FotoKaryawan");
+
+                // ✅ Update PraOperasi
+                data.FotoPath = path;
+                data.FotoName = fileName;
+
+                _applicationDbContext.UserActives.Update(data);
+                int result = await _applicationDbContext.SaveChangesAsync();
+
+                if (result > 0)
+                    return Ok(new { message = "Foto Karyawan berhasil diupload", path, karyawanId = data.UserActiveId });
+
+                return StatusCode(500, new { message = "TTD gagal diperbarui." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan: {ex.Message}" });
+            }
+        }
+
+
         [HttpDelete("{id}")] 
         public async Task <IActionResult> DeleteUser(Guid id)
         {
@@ -1598,5 +1709,6 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
 
             return BadRequest(new { message = "Tidak ada role baru yang perlu ditambahkan." });
         }
+
     }
 }

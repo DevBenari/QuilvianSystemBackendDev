@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -12,9 +13,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260416043951_newkarya")]
+    partial class newkarya
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -5740,9 +5742,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<DateTime?>("TanggalJatuhTempo")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("TipeLayanan")
-                        .HasColumnType("text");
-
                     b.Property<Guid>("UpdateBy")
                         .HasColumnType("uuid");
 
@@ -6794,9 +6793,6 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.Property<DateTime?>("TanggalSelesai")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("TipeLayanan")
-                        .HasColumnType("text");
 
                     b.Property<Guid>("UpdateBy")
                         .HasColumnType("uuid");
@@ -13120,14 +13116,14 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<int?>("Quantity")
                         .HasColumnType("integer");
 
+                    b.Property<Guid?>("RanapId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime?>("TanggalPemeriksaan")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("TindakanId")
                         .HasColumnType("uuid");
-
-                    b.Property<string>("TipeLayanan")
-                        .HasColumnType("text");
 
                     b.Property<decimal?>("Total")
                         .HasColumnType("numeric");
