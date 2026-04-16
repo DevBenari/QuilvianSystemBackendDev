@@ -15,6 +15,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models
         public DateTime? BillingDate { get; set; }
         public string? BillingKode { get; set; }
         public Guid? ItemId { get; set; }
+        public string? TipeLayanan {  get; set; }
         public string? NamaItem { get; set; }
         public decimal? HargaItem { get; set; }
         public int? QtyItem { get; set; }

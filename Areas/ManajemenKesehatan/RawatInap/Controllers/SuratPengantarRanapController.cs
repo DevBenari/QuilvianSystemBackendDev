@@ -141,15 +141,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 join poli in _applicationDbContext.Polikliniks.AsNoTracking()
                     on k.PoliklinikId equals poli.PoliklinikId
 
-                // LEFT JOIN Asuransi (karena bisa null)
-                join ar0 in _applicationDbContext.Asuransis.AsNoTracking()
-                    on k.AsuransiId equals ar0.AsuransiId into asuransiGroup
-                from ar in asuransiGroup.DefaultIfEmpty()
-
-                    // LEFT JOIN AsuransiPasien (karena bisa null / banyak)
-                join ap0 in _applicationDbContext.AsuransiPasiens.AsNoTracking()
-                    on p.PendaftaranPasienBaruId equals ap0.PasienId into asuransiPasienGroup
+                // LEFT JOIN AsuransiPasien
+                join ap in _applicationDbContext.AsuransiPasiens.AsNoTracking()
+                    on k.AsuransiPasienId equals (Guid?)ap.AsuransiPasienId into asuransiPasienGroup
                 from ap in asuransiPasienGroup.DefaultIfEmpty()
+
+                    // LEFT JOIN Asuransi
+                join ar in _applicationDbContext.Asuransis.AsNoTracking()
+                    on ap.AsuransiId equals ar.AsuransiId into asuransiGroup
+                from ar in asuransiGroup.DefaultIfEmpty()
 
                 where a.IsDelete != true
                       && k.IsDelete != true
@@ -199,7 +199,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     TanggalLahir = p.TanggalLahir, // umur dihitung setelah paging
 
                     // Asuransi
-                    NamaAsuransi = ar != null ? ar.NamaAsuransi : "Tunai",
+                    NamaAsuransi = ar != null ? ar.NamaAsuransi : null,
                     NoPolis = ap != null ? ap.NoPolis : null
                 };
 
@@ -315,15 +315,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     on a.CreateBy equals u.UserActiveId into userJoin
                 from u in userJoin.DefaultIfEmpty()
 
-                    // LEFT JOIN Asuransi
-                join ar in _applicationDbContext.Asuransis.AsNoTracking()
-                    on k.AsuransiId equals ar.AsuransiId into asuransiGroup
-                from ar in asuransiGroup.DefaultIfEmpty()
-
                     // LEFT JOIN AsuransiPasien
                 join ap in _applicationDbContext.AsuransiPasiens.AsNoTracking()
-                    on p.PendaftaranPasienBaruId equals ap.PasienId into asuransiPasienGroup
+                    on k.AsuransiPasienId equals (Guid?)ap.AsuransiPasienId into asuransiPasienGroup
                 from ap in asuransiPasienGroup.DefaultIfEmpty()
+
+                    // LEFT JOIN Asuransi
+                join ar in _applicationDbContext.Asuransis.AsNoTracking()
+                    on ap.AsuransiId equals ar.AsuransiId into asuransiGroup
+                from ar in asuransiGroup.DefaultIfEmpty()
 
                 select new
                 {
@@ -722,6 +722,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             int page = 1,
             int perPage = 10,
             string? search = null,
+            Guid? suratpengantarId = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -741,6 +742,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 var baseQuery = _applicationDbContext.SuratPengantarRawatInaps
                     .AsNoTracking()
                     .Where(a => (a.IsDelete == false || a.IsDelete == null));
+
+                if (suratpengantarId.HasValue)
+                {
+                    baseQuery = baseQuery.Where(u=>u.SuratPengantarRawatInapId==suratpengantarId.Value);
+                }
 
                 // Filter search (NomorSuratPengantar) di tabel utama -> paling murah
                 if (!string.IsNullOrWhiteSpace(search))
@@ -839,15 +845,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                         on a.CreateBy equals u.UserActiveId into userJoin
                     from u in userJoin.DefaultIfEmpty()
 
+                         // LEFT JOIN AsuransiPasien
+                    join ap in _applicationDbContext.AsuransiPasiens.AsNoTracking()
+                        on k.AsuransiPasienId equals (Guid?)ap.AsuransiPasienId into asuransiPasienGroup
+                    from ap in asuransiPasienGroup.DefaultIfEmpty()
+
                         // LEFT JOIN Asuransi
                     join ar in _applicationDbContext.Asuransis.AsNoTracking()
-                        on k.AsuransiId equals ar.AsuransiId into asuransiGroup
+                        on ap.AsuransiId equals ar.AsuransiId into asuransiGroup
                     from ar in asuransiGroup.DefaultIfEmpty()
-
-                        // LEFT JOIN AsuransiPasien
-                    join ap in _applicationDbContext.AsuransiPasiens.AsNoTracking()
-                        on p.PendaftaranPasienBaruId equals ap.PasienId into asuransiPasienGroup
-                    from ap in asuransiPasienGroup.DefaultIfEmpty()
 
                     select new
                     {
