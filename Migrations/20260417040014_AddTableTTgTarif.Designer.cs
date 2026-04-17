@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -12,9 +13,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260417040014_AddTableTTgTarif")]
+    partial class AddTableTTgTarif
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -13453,68 +13455,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.HasKey("TarifPatnikId");
 
                     b.ToTable("TarifPatologiKliniks");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.TarifRadiologi", b =>
-                {
-                    b.Property<Guid>("TarifRadId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("CreateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("DeleteBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("DeleteDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsDelete")
-                        .HasColumnType("boolean");
-
-                    b.Property<decimal?>("KSO")
-                        .HasColumnType("numeric");
-
-                    b.Property<Guid?>("KelasId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Keterangan")
-                        .HasColumnType("text");
-
-                    b.Property<Guid?>("LabPemeriksaanId")
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal?>("TarifBahp")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("TarifDokter")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("TarifJp")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("TarifLain")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("TarifRs")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("TarifTotal")
-                        .HasColumnType("numeric");
-
-                    b.Property<Guid>("UpdateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("UpdateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("TarifRadId");
-
-                    b.ToTable("TarifRadiologis");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.TarifRehabMedik", b =>

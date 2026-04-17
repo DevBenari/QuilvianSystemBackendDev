@@ -244,14 +244,11 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<PelunasanDeposit> PelunasanDeposits { get; set; }
         public DbSet<TarifKelasKamar> TarifKelasKamars { get; set; }
         public DbSet<Layanan> Layanans { get; set; }
-        public DbSet<DiskonDetail> DiskonDetails { get; set; }
         public DbSet<PaketLayanan> PaketLayanans { get; set; }
         public DbSet<PaketLayananDetail> PaketLayananDetails { get; set; }
         public DbSet<PaketLayananAsuransi> PaketLayananAsuransis { get; set; }
         public DbSet<PaketLayananDiskon> PaketLayananDiskons { get; set; }
         public DbSet<LoketKasir> LoketKasirs { get; set; }
-        public DbSet<DiskonApproved> DiskonApproveds { get; set; }
-        public DbSet<DiskonTagihan> DiskonTagihans {  get; set; }
         public DbSet<DokumenPasien> DokumenPasiens { get; set; }
         public DbSet<BarangKategori> BarangKategoris { get; set; }
         public DbSet<Brand> Brands { get; set; }
@@ -261,12 +258,28 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<Barang> Barangs { get; set; }
         public DbSet<BarangHarga> BarangHargas { get; set; }
         public DbSet<BarangStok> BarangStoks { get; set; }
+        public DbSet<TarifVisit> TarifVisits { get; set; }
+        public DbSet<TarifKamar> TarifKamars { get; set; }
+        public DbSet<TarifPatologiKlinik> TarifPatologiKliniks { get; set; }
+        public DbSet<TarifPatalogiAnatomi> TarifPatalogiAnatomis { get; set; }
+        public DbSet<TarifMicrobiologi> TarifMicrobiologis { get; set; }
+        public DbSet<TarifRehabMedik> TarifRehabMediks { get; set; }
+        public DbSet<TarifHemodialisa> TarifHemodialisas { get; set; }
+        public DbSet<TarifAlkes> TarifAlkess { get; set; }
+        public DbSet<TarifOperasi> TarifOperasis { get; set; }
+        public DbSet<TarifPaketLayanan> TarifPaketLayanans { get; set; }
+        public DbSet<TarifRadiologi> TarifRadiologis { get; set; }
+
+
 
         #endregion
 
         #region Areas Keuangan
         public DbSet<MetodePembayaran> MetodePembayarans { get; set; }
         public DbSet<Diskon> Diskons { get; set; }
+        public DbSet<DiskonDetail> DiskonDetails { get; set; }
+        public DbSet<DiskonApproved> DiskonApproveds { get; set; }
+        public DbSet<DiskonTagihan> DiskonTagihans { get; set; }
         public DbSet<BiayaAdministrasi> BiayaAdministrasis { get; set; }
         public DbSet<MainKasir> MainKasirs { get; set; }
         public DbSet<KasirTebusResep> KasirTebusReseps { get; set; }
@@ -279,6 +292,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<DepositRanap> DepositRanaps { get; set; }
         public DbSet<DepositPersentase> DepositPersentases { get; set; }
         public DbSet<DiskonPersentase> DiskonPersentases { get; set; }
+        public DbSet<DiskonDokter> DiskonDokters { get; set; }
 
 
         #endregion
