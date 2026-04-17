@@ -396,11 +396,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     on a.PoliklinikId equals p.PoliklinikId into poliGroup
                     from p in poliGroup.DefaultIfEmpty()
 
+                    // Asuransi Pasien
+                    join op in _applicationDbContext.AsuransiPasiens.AsNoTracking() on a.AsuransiPasienId equals op.AsuransiPasienId into apGroup
+                    from op in apGroup.DefaultIfEmpty()
+
                     join o in _applicationDbContext.Asuransis.AsNoTracking() on a.AsuransiId equals o.AsuransiId into asuransiGroup
                     from o in asuransiGroup.DefaultIfEmpty()
 
-                    join op in _applicationDbContext.AsuransiPasiens.AsNoTracking() on a.AsuransiPasienId equals op.AsuransiPasienId into apGroup
-                    from op in apGroup.DefaultIfEmpty()
+                        // Asuransi Pasien Excess
+                    join aep in _applicationDbContext.AsuransiPasiens.AsNoTracking() on a.AsuransiPasienExcessId equals aep.AsuransiPasienId into aepGroup
+                    from aep in aepGroup.DefaultIfEmpty()
+
+                    join ae in _applicationDbContext.Asuransis.AsNoTracking() on a.AsuransiExcessId equals ae.AsuransiId into aeGroup
+                    from ae in aeGroup.DefaultIfEmpty()
 
                     join ps in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking() on a.PasienId equals ps.PendaftaranPasienBaruId into pasienGroup
                     from ps in pasienGroup.DefaultIfEmpty()
@@ -427,12 +435,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     select new
                     {
                         a.KunjunganID,
+
+                        // Asuransi 
                         a.AsuransiId,
-                        NamaAsuransi = o != null && o.NamaAsuransi != null ? o.NamaAsuransi : "Tunai",
+                        a.AsuransiPasienId,
+                        NamaAsuransi = o != null && o.NamaAsuransi != null ? o.NamaAsuransi : null,
                         IsUtama = op != null && op.IsUtama != null ? op.IsUtama : false,
                         NoPolis = op != null ? op.NoPolis : null,
-                        a.AsuransiPasienId,
+                        
+                        // Asuransi Excess
                         a.AsuransiExcessId,
+                        a.AsuransiPasienExcessId,
+                        NamaAsuransiExcess = ae != null && ae.NamaAsuransi != null ? ae.NamaAsuransi : null,
+                        IsUtamaExcess = aep != null && op.IsUtama != null ? op.IsUtama : false,
+                        NoPolisExcess = aep != null ? aep.NoPolis : null,
+                        IsExcess = aep != null ? aep.IsExcess : null,
+
                         a.PoliklinikId,
                         NamaPoliklinik = p != null ? p.NamaPoliklinik : null,
                         a.DokterId,
@@ -1943,9 +1961,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         on a.PoliklinikId equals p0.PoliklinikId into poliGroup
                     from p in poliGroup.DefaultIfEmpty()
 
-                    join o0 in _applicationDbContext.Asuransis.AsNoTracking()
-                        on a.AsuransiId equals o0.AsuransiId into asuransiGroup
+                        // Asuransi Pasien
+                    join op in _applicationDbContext.AsuransiPasiens.AsNoTracking() on a.AsuransiPasienId equals op.AsuransiPasienId into apGroup
+                    from op in apGroup.DefaultIfEmpty()
+
+                    join o in _applicationDbContext.Asuransis.AsNoTracking() on a.AsuransiId equals o.AsuransiId into asuransiGroup
                     from o in asuransiGroup.DefaultIfEmpty()
+
+                        // Asuransi Pasien Excess
+                    join aep in _applicationDbContext.AsuransiPasiens.AsNoTracking() on a.AsuransiPasienExcessId equals aep.AsuransiPasienId into aepGroup
+                    from aep in aepGroup.DefaultIfEmpty()
+
+                    join ae in _applicationDbContext.Asuransis.AsNoTracking() on a.AsuransiExcessId equals ae.AsuransiId into aeGroup
+                    from ae in aeGroup.DefaultIfEmpty()
 
                     join ps0 in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking()
                         on a.PasienId equals ps0.PendaftaranPasienBaruId into pasienGroup
@@ -1979,21 +2007,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         on a.KunjunganID equals sp0.KunjunganId into suratGroup
                     from sp in suratGroup.DefaultIfEmpty()
 
-                    join op in _applicationDbContext.AsuransiPasiens.AsNoTracking()
-                        on a.AsuransiPasienId equals op.AsuransiPasienId into apGroup
-                    from op in apGroup.DefaultIfEmpty()
-
-
 
                     select new
                     {
                         a.KunjunganID,
-                        a.AsuransiExcessId,
+                        // Asuransi 
                         a.AsuransiId,
-                        NamaAsuransi = o != null && o.NamaAsuransi != null ? o.NamaAsuransi : "Tunai",
                         a.AsuransiPasienId,
+                        NamaAsuransi = o != null && o.NamaAsuransi != null ? o.NamaAsuransi : null,
                         IsUtama = op != null && op.IsUtama != null ? op.IsUtama : false,
                         NoPolis = op != null ? op.NoPolis : null,
+
+                        // Asuransi Excess
+                        a.AsuransiExcessId,
+                        a.AsuransiPasienExcessId,
+                        NamaAsuransiExcess = ae != null && ae.NamaAsuransi != null ? ae.NamaAsuransi : null,
+                        IsUtamaExcess = aep != null && op.IsUtama != null ? op.IsUtama : false,
+                        NoPolisExcess = aep != null ? aep.NoPolis : null,
+                        IsExcess = aep != null ? aep.IsExcess : null,
 
                         a.PoliklinikId,
                         NamaPoliklinik = p != null ? p.NamaPoliklinik : null,
@@ -2207,9 +2238,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     {
                         r.KunjunganID,
                         r.AsuransiId,
-                        r.AsuransiExcessId,
+                        r.AsuransiPasienId,
                         r.NamaAsuransi,
+                        r.NoPolis,
                         r.IsUtama,
+
+
+                        r.AsuransiExcessId,
+                        r.AsuransiPasienExcessId,
+                        r.NamaAsuransiExcess,
+                        r.NoPolisExcess,
+                        r.IsExcess,
+                        
                         r.PoliklinikId,
                         r.NamaPoliklinik,
                         r.DokterId,

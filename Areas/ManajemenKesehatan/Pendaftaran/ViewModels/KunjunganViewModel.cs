@@ -7,6 +7,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewMode
         public Guid? AsuransiId { get; set; }
         public Guid? AsuransiExcessId { get; set; }
         public Guid? PoliklinikId { get; set; }
+        public Guid? AsuransiPasienExcessId { get; set; }
         public Guid? AsuransiPasienId { get; set; }
         public Guid? DokterId { get; set; }
         public Guid? PasienId { get; set; }
