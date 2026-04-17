@@ -1112,7 +1112,8 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                         throw new Exception($"{prefix} maksimal 5MB.");
 
                     var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
-                    fileName = $"{data.NoKaryawan}_{safeTime}{ext}";
+
+                    fileName = $"KRY{Guid.NewGuid().ToString("N").Substring(0, 8)}_{safeTime}{ext}";
 
                     // 👉 Sesuaikan nama folder dengan kebutuhan kamu
                     var folderTarget = "FotoKaryawan";
