@@ -49,7 +49,7 @@ namespace QuilvianSystemBackendDev.Controllers
                 }
                 else
                 {
-                    var idfinger = _context.Fingerprints.FirstOrDefault(u => u.UserId == model.Email);
+                   var idfinger = _context.Fingerprints.FirstOrDefault(u => u.UserId == model.Email);
                     if (model.Email == "superadmin@admin.com" && model.Password == "Admin@123")
                     {
                         // Membuat token JWT

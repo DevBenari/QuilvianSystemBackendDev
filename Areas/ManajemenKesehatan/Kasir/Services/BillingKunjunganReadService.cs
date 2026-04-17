@@ -33,6 +33,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         public string? JenisBilling { get; set; }
         public string? NamaItem { get; set; }
         public bool? IsCovered { get; set; }
+        public bool? IsCoveredExcess { get; set; }
         public string? Keterangan { get; set; }
 
         public int? QtyItem { get; set; }
@@ -82,6 +83,8 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         public string? Search { get; set; }
         public bool? isClosed { get; set; }
         public bool? isPks { get; set; }
+        public bool? isCovered { get; set; }
+        public bool? isCoveredExcess { get; set; }
         public string? asal { get; set; }
         public int Page { get; set; } = 1;
         public int PageSize { get; set; } = 10;
@@ -251,6 +254,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 JenisBilling = b.JenisBilling,
                 NamaItem = b.NamaItem,
                 IsCovered = b.IsCovered,
+                IsCoveredExcess = b.IsCoveredExcess,
                 Keterangan = b.Keterangan,
                 QtyItem = b.QtyItem,
                 HargaItem = b.HargaItem,
@@ -322,6 +326,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     x.NamaLab,
                     x.NamaPemeriksaan,
                     IsCovered = bill?.IsCovered,
+                    IsCoveredExcess = bill?.IsCoveredExcess,
                     HargaPemeriksaan = x.HargaPemeriksaan,
                     Qty = qty,
                     Subtotal = subtotal,
@@ -386,6 +391,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
                     // ✅ tambahan
                     IsCovered = bill?.IsCovered,
+                    IsCoveredExcess = bill?.IsCoveredExcess,
 
                     Qty = qty,
                     Harga = harga,
@@ -547,6 +553,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     NamaTindakan = nama,
 
                     IsCovered = bill?.IsCovered,
+                    IsCoveredExcess = bill?.IsCoveredExcess,
 
                     Qty = qtyFinal,
                     Harga = hargaEfektif,
@@ -851,6 +858,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
                     KamarId = kamarId,
                     IsCovered = billKamar?.IsCovered,
+                    IsCoveredExcess = billKamar?.IsCoveredExcess,
                     NamaItem = billKamar?.NamaItem,
 
                     HargaPerHari = tarifPerHari,
@@ -905,11 +913,18 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         // 11) TOTAL KESELURUHAN (asuransi dan mandiri)
         // =========================
         var DepositRanap = dto.TotalSaldoDeposito;
+
         var asuransi =
             SumCovered(dto.DaftarPemeriksaanLab) +
             SumCovered(dto.DaftarObat) +
             SumCovered(dto.DaftarTindakan) +
             SumCovered(dto.DaftarKamarRanap);
+
+        var asuransiExcess =
+            SumCoveredExcess(dto.DaftarPemeriksaanLab) +
+            SumCoveredExcess(dto.DaftarObat) +
+            SumCoveredExcess(dto.DaftarTindakan) +
+            SumCoveredExcess(dto.DaftarKamarRanap);
 
         var mandiri =
             SumUncovered(dto.DaftarPemeriksaanLab) +
@@ -925,6 +940,8 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
         var ppnRate = dto.PPN / 100m;
         dto.SubTotalAsuransi = asuransi;
+        dto.SubTotalAsuransiExcess = asuransiExcess;
+
         dto.SebelumTaxTotalMandiri = Math.Round(mandiri, 2, MidpointRounding.AwayFromZero);
         dto.PajakTotalMandiri = Math.Round((dto.SebelumTaxTotalMandiri ?? 0m) * ppnRate, 2, MidpointRounding.AwayFromZero);
         dto.SubTotalMandiri = Math.Round((dto.SebelumTaxTotalMandiri ?? 0m) + (dto.PajakTotalMandiri ?? 0m), 2, MidpointRounding.AwayFromZero);
@@ -1201,6 +1218,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 JenisBilling = b.JenisBilling,
                 NamaItem = b.NamaItem,
                 IsCovered = b.IsCovered,
+                IsCoveredExcess = b.IsCoveredExcess,
                 Keterangan = b.Keterangan,
                 QtyItem = b.QtyItem,
                 HargaItem = b.HargaItem,
@@ -1504,6 +1522,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                             x.NamaLab,
                             x.NamaPemeriksaan,
                             IsCovered = bill?.IsCovered,
+                            IsCoveredExcess = bill?.IsCoveredExcess,
                             HargaPemeriksaan = x.HargaPemeriksaan,
                             Qty = qty,
                             Subtotal = subtotal,
@@ -1547,6 +1566,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                             x.dr.ObatId,
                             x.o.ObatName,
                             IsCovered = bill?.IsCovered,
+                            IsCoveredExcess = bill?.IsCoveredExcess,
                             Qty = qty,
                             Harga = harga,
                             Subtotal = subtotal,
@@ -1628,6 +1648,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                             x.t!.TindakanId,
                             x.t.NamaTindakan,
                             IsCovered = bill?.IsCovered,
+                            IsCoveredExcess = bill?.IsCoveredExcess,
                             Qty = qty,
                             Harga = harga,
                             Subtotal = subtotal,
@@ -1846,6 +1867,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                         StatusBilling = billKamar?.StatusBilling,
                         KamarId = kamarId,
                         IsCovered = billKamar?.IsCovered,
+                        IsCoveredExcess = billKamar?.IsCoveredExcess,
                         NamaItem = billKamar?.NamaItem,
                         HargaPerHari = tarifPerHari,
                         JumlahHari = totalHari,
@@ -1878,11 +1900,18 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             dto.TotalBiayaLain = dto.DaftarBiayaLain.Sum(x => (decimal?)((dynamic)x).SubTotalItem ?? 0m);
 
             var DepositRanap = dto.TotalSaldoDeposito;
+
             var asuransi =
                 SumCovered(dto.DaftarPemeriksaanLab) +
                 SumCovered(dto.DaftarObat) +
                 SumCovered(dto.DaftarTindakan) +
                 SumCovered(dto.DaftarKamarRanap);
+
+            var asuransiExcess =
+                SumCoveredExcess(dto.DaftarPemeriksaanLab) +
+                SumCoveredExcess(dto.DaftarObat) +
+                SumCoveredExcess(dto.DaftarTindakan) +
+                SumCoveredExcess(dto.DaftarKamarRanap);
 
             var mandiri =
                 SumUncovered(dto.DaftarPemeriksaanLab) +
@@ -1898,6 +1927,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
             var ppnRate = dto.PPN / 100m;
             dto.SubTotalAsuransi = asuransi;
+            dto.SubTotalAsuransiExcess = asuransiExcess;
             dto.SebelumTaxTotalMandiri = Math.Round(mandiri, 2, MidpointRounding.AwayFromZero);
             dto.PajakTotalMandiri = Math.Round((dto.SebelumTaxTotalMandiri ?? 0m) * ppnRate, 2, MidpointRounding.AwayFromZero);
             dto.SubTotalMandiri = Math.Round((dto.SebelumTaxTotalMandiri ?? 0m) + (dto.PajakTotalMandiri ?? 0m), 2, MidpointRounding.AwayFromZero);
@@ -1947,6 +1977,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 dto.TotalKamarRanap,
                 dto.TotalBiayaLain,
                 dto.SubTotalAsuransi,
+                dto.SubTotalAsuransiExcess,
                 dto.SebelumTaxTotalMandiri,
                 dto.PajakTotalMandiri,
                 dto.SubTotalMandiri,
@@ -2017,6 +2048,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 x.SisaDeposito,
                 x.SubTotalAsuransi,
                 x.SubTotalMandiri,
+                x.SubTotalAsuransiExcess,
                 x.HargaDiskon,
                 x.TotalPembayaran,
                 x.GrandTotalPembayaran,
@@ -2179,6 +2211,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     h.Deposito,
                     h.SisaDeposito,
                     h.SubTotalAsuransi,
+                    h.SubTotalAsuransiExcess,
                     h.SubTotalMandiri,
                     h.TotalPembayaran,
                     h.GrandTotalPembayaran,
@@ -2796,7 +2829,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
     #endregion
 
-    #region Hitung Sub total mandiri + asuransi
+    #region Hitung Sub total mandiri + asuransi + excess
     private static bool GetBoolProp(object o, string propName)
     {
         var p = o.GetType().GetProperty(propName);
@@ -2830,6 +2863,16 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         decimal sum = 0m;
         foreach (var r in rows)
             if (!GetBoolProp(r, "IsCovered")) // kalau prop tidak ada => false => masuk mandiri
+                sum += GetDecimalProp(r, "Subtotal");
+        return sum;
+    }
+
+    private static decimal SumCoveredExcess(IEnumerable<object>? rows)
+    {
+        if (rows == null) return 0m;
+        decimal sum = 0m;
+        foreach (var r in rows)
+            if (GetBoolProp(r, "IsCoveredExcess"))
                 sum += GetDecimalProp(r, "Subtotal");
         return sum;
     }

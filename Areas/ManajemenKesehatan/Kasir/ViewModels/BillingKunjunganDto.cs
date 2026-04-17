@@ -50,6 +50,7 @@
         public decimal? PajakTotalMandiri { get; set; } = 0m;
         public decimal? SebelumTaxTotalMandiri { get; set; } = 0m;
         public decimal? SubTotalAsuransi { get; set; } = 0m;
+        public decimal? SubTotalAsuransiExcess { get; set; } = 0m;
         public decimal PPN => 11m;
 
         public decimal TotalBiayaVisitDokter { get; set; } = 0m;
