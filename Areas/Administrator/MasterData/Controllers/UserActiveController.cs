@@ -162,6 +162,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
 
                      a.IdentityNumber,
                      a.PlaceOfBirth,
+                     a.DateOfBirth,
                      a.Address,
                      a.Handphone,
                      a.StatusPegawai,
@@ -265,6 +266,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
 
                     a.IdentityNumber,
                     a.PlaceOfBirth,
+                    a.DateOfBirth,
                     a.Address,
                     a.Handphone,
                     a.StatusPegawai,
@@ -1294,6 +1296,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
 
                      a.IdentityNumber,
                      a.PlaceOfBirth,
+                     a.DateOfBirth,
                      a.Address,
                      a.Handphone,
                      a.StatusPegawai,
