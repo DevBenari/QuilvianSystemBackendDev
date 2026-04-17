@@ -164,7 +164,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] TarifVisitViewModel vm)
         {
@@ -305,6 +304,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             int page = 1,
             int perPage = 10,
             string? search = null,
+            Guid? kelasId = null,
+            Guid? dokterId = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -358,6 +359,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     EF.Functions.ILike(u.NamaDokter, search) ||
                     EF.Functions.ILike(u.NamaKelas, search)
                 );
+            }
+
+            if (kelasId.HasValue)
+            {
+                query = query.Where(u => u.KelasId == kelasId.Value);
+            }
+
+            if (dokterId.HasValue)
+            {
+                query = query.Where(u => u.DokterId == dokterId.Value);
             }
 
             //// **Filter berdasarkan tanggal**

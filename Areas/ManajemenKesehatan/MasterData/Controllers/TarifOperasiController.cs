@@ -1,4 +1,6 @@
 ﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,20 +15,24 @@ using Swashbuckle.AspNetCore.Annotations;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
-    public class TarifKamarController : Controller
+    [ApiController]
+    [Route("api/[controller]")]
+    [Authorize]
+    [EnableCors("AllowSpecific")]
+    public class TarifOperasiController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<TarifKamarController> _logger;
+        private readonly ILogger<TarifOperasiController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public TarifKamarController(
+        public TarifOperasiController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<TarifKamarController> logger,
+            ILogger<TarifOperasiController> logger,
             IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
@@ -39,27 +45,29 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = (from a in _applicationDbContext.TarifKamars.AsNoTracking()
+            var listdata = (from a in _applicationDbContext.TarifOperasis.AsNoTracking()
                             join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                             on a.CreateBy equals u.UserActiveId
 
-                            join ka in _applicationDbContext.Kamars.AsNoTracking()
-                            on a.KamarId equals ka.KamarId into kaG
-                            from ka in kaG.DefaultIfEmpty()
+                            join t in _applicationDbContext.Tindakans.AsNoTracking()
+                            on a.OperasiId equals t.TindakanId into tG
+                            from t in tG.DefaultIfEmpty()
 
                             join k in _applicationDbContext.Kelass.AsNoTracking()
                             on a.KelasId equals k.KelasId into kG
                             from k in kG.DefaultIfEmpty()
 
-                            where a.IsDelete == false && a.TarifKamarId == id
+
+
+                            where a.IsDelete == false && a.TarifOperasiId == id
                             select new
                             {
                                 a.CreateDateTime,
                                 a.CreateBy,
                                 CreateByName = u.FullName,
-                                a.TarifKamarId,
-                                a.KamarId,
-                                NamaKamar = ka.NamaKamar ?? null,
+                                a.TarifOperasiId,
+                                a.OperasiId,
+                                NamtindakanOperasi = t.NamaTindakan ?? null,
                                 a.KelasId,
                                 NamaKelas = k.NamaKelas ?? null,
                                 a.TarifDokter,
@@ -84,7 +92,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] TarifKamarViewModel vm)
+        public async Task<IActionResult> Create([FromBody] TarifOperasiViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -114,10 +122,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Buat Data Baru**
-                var data = new TarifKamar
+                var data = new TarifOperasi
                 {
-                    TarifKamarId = Guid.NewGuid(),
-                    KamarId = vm.KamarId,
+                    TarifOperasiId = Guid.NewGuid(),
+                    OperasiId = vm.OperasiId,
                     KelasId = vm.KelasId,
                     TarifDokter = vm.TarifDokter,
                     TarifRs = vm.TarifRs,
@@ -133,7 +141,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 };
 
                 // **Simpan ke Database**
-                _applicationDbContext.TarifKamars.Add(data);
+                _applicationDbContext.TarifOperasis.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -156,7 +164,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] TarifKamarViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] TarifOperasiViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -187,13 +195,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.TarifVisits.FindAsync(id);
+                var data = await _applicationDbContext.TarifOperasis.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
                 // **Update Data**
+                data.OperasiId = vm.OperasiId;
                 data.KelasId = vm.KelasId;
                 data.TarifDokter = vm.TarifDokter;
                 data.TarifRs = vm.TarifRs;
@@ -206,7 +215,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.TarifVisits.Update(data);
+                _applicationDbContext.TarifOperasis.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -255,7 +264,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.TarifKamars.FindAsync(id);
+                var data = await _applicationDbContext.TarifOperasis.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -267,7 +276,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 data.IsDelete = true;
 
-                _applicationDbContext.TarifKamars.Update(data);
+                _applicationDbContext.TarifOperasis.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -292,28 +301,28 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
         [HttpGet("paged")]
         public async Task<IActionResult> Paged(
-        int page = 1,
-        int perPage = 10,
-        string? search = null,
-        Guid? kelasId = null,
-        Guid? kamarId = null,
-        string? orderBy = "CreateDateTime",
-        string? sortDirection = "desc",
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                                        DateTime? startDate = null,
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                                        DateTime? endDate = null,
-        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+            int page = 1,
+            int perPage = 10,
+            string? search = null,
+            Guid? kelasId = null,
+            Guid? operasiId = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+                                                    DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+                                                    DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
 
             // Query data
-            var query = (from a in _applicationDbContext.TarifKamars.AsNoTracking()
+            var query = (from a in _applicationDbContext.TarifOperasis.AsNoTracking()
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
 
-                         join ka in _applicationDbContext.Kamars.AsNoTracking()
-                         on a.KamarId equals ka.KamarId into kaG
-                         from ka in kaG.DefaultIfEmpty()
+                         join t in _applicationDbContext.Tindakans.AsNoTracking()
+                         on a.OperasiId equals t.TindakanId into tG
+                         from t in tG.DefaultIfEmpty()
 
                          join k in _applicationDbContext.Kelass.AsNoTracking()
                          on a.KelasId equals k.KelasId into kG
@@ -321,15 +330,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
 
 
-                         where a.IsDelete == false || a.IsDelete == null
+                         where a.IsDelete == false
                          select new
                          {
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
-                             a.TarifKamarId,
-                             a.KamarId,
-                             NamaKamar = ka.NamaKamar ?? null,
+                             a.TarifOperasiId,
+                             a.OperasiId,
+                             NamtindakanOperasi = t.NamaTindakan ?? null,
                              a.KelasId,
                              NamaKelas = k.NamaKelas ?? null,
                              a.TarifDokter,
@@ -342,24 +351,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              a.Keterangan,
                          });
 
-            if (kelasId.HasValue)
-            {
-                query = query.Where(u => u.KelasId == kelasId.Value);
-            }
-
-            if (kamarId.HasValue)
-            {
-                query = query.Where(u => u.KamarId == kamarId.Value);
-            }
-
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             if (!string.IsNullOrWhiteSpace(search))
             {
                 search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
-                    EF.Functions.ILike(u.NamaKamar, search) ||
+                    EF.Functions.ILike(u.NamtindakanOperasi, search) ||
                     EF.Functions.ILike(u.NamaKelas, search)
                 );
+            }
+
+            if (kelasId.HasValue)
+            {
+                query = query.Where(u => u.KelasId == kelasId.Value);
+            }
+
+            if (operasiId.HasValue)
+            {
+                query = query.Where(u => u.OperasiId == operasiId.Value);
             }
 
             //// **Filter berdasarkan tanggal**
@@ -461,5 +470,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
             });
         }
+
+
     }
 }

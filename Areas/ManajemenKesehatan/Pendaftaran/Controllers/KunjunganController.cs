@@ -1870,7 +1870,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             [FromQuery] TipePasienFilter? TipePasien = null,
             [FromQuery] EnumJenisKunjungan? JenisKunjungan = null,
             [FromQuery] string? AsalKunjungan = null,
-            [FromQuery] Guid? dokterId = null
+            [FromQuery] Guid? dokterId = null,
+            [FromQuery] Guid? pasienId = null
         )
         {
             try
@@ -2118,6 +2119,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
 
                 if (TipePasien.HasValue) baseQuery = baseQuery.Where(x => x.TipePasien == TipePasien.Value.ToString());
                 if (JenisKunjungan.HasValue) baseQuery = baseQuery.Where(x => x.JenisKunjungan == JenisKunjungan.Value.ToString());
+                if (pasienId.HasValue) baseQuery = baseQuery.Where(x => x.PasienId == pasienId.Value);
 
                 if (startDate.HasValue && endDate.HasValue)
                 {
