@@ -268,6 +268,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<TarifAlkes> TarifAlkess { get; set; }
         public DbSet<TarifOperasi> TarifOperasis { get; set; }
         public DbSet<TarifPaketLayanan> TarifPaketLayanans { get; set; }
+        public DbSet<TarifRadiologi> TarifRadiologis { get; set; }
 
 
 
