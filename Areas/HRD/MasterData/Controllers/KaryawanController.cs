@@ -57,17 +57,15 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = (from k in _applicationDbContext.Karyawans.AsNoTracking()
-                            join u in _applicationDbContext.UserActives.AsNoTracking()
-                              on k.UserActiveId equals u.UserActiveId
+            var listdata = (from k in _applicationDbContext.UserActives.AsNoTracking()
                             join fn in _applicationDbContext.UserActives.AsNoTracking()
                             on k.CreateBy equals fn.UserActiveId
                             where k.IsDelete == false || k.IsDelete == null
                             select new
                             {
-                                k.KaryawanId,
+                                KaryawanId = k.UserActiveId,
                                 k.UserActiveId,
-                                NamaKaryawan = u.FullName, // Mengambil nama dari tabel UserActives
+                                NamaKaryawan = k.FullName, // Mengambil nama dari tabel UserActives
                                 k.DepartementId,
                                 k.InstalasiUnitId,
                                 k.JabatanId,
@@ -82,6 +80,8 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
                                 k.NoHandphone,
                                 k.Email,
                                 k.Alamat,
+                                k.FotoName,
+                                k.FotoPath,
                                 CreateBy = fn.FullName,
                                 k.CreateDateTime
                             }); 
@@ -122,7 +122,7 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
 
                     select new
                     {
-                        k.KaryawanId,
+                        KaryawanId = k.UserActiveId,
                         k.UserActiveId,
                         NamaKaryawan = u != null ? u.FullName : null,
                         k.DepartementId,
@@ -139,6 +139,8 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
                         k.NoHandphone,
                         k.Email,
                         k.Alamat,
+                        k.FotoName,
+                        k.FotoPath,
                         CreateBy = fn != null ? fn.FullName : null,
                         k.CreateDateTime
                     }
@@ -164,122 +166,7 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
             }
         }
 
-        [HttpPost]
-        public async Task<IActionResult> Create([FromBody] KaryawanViewModel vm)
-        {
-            if (vm == null || !ModelState.IsValid)
-            {
-                return BadRequest(new { message = "Data tidak valid." });
-            }
-
-            try
-            {
-                // **Cek koneksi ke database**
-                if (!_applicationDbContext.Database.CanConnect())
-                {
-                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
-                }
-
-                // **Ambil User ID dari JWT Claims**
-                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(emailLogin))
-                {
-                    return Unauthorized(new { message = "User tidak terautentikasi!" });
-                }
-
-                var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
-                if (getUserActive == null)
-                {
-                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-                }
-                var userActiveId = getUserActive.UserActiveId;
-
-                //// **Cek Duplikasi**
-                bool isDuplicate = await _applicationDbContext.Karyawans
-                                    .AnyAsync(c => c.NoIdentitas.ToLower().Trim() == vm.NoIdentitas.ToLower().Trim()
-                                    && c.UserActiveId == vm.UserActiveId
-                                    && c.IsDelete == false);
-
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Data karyawan ini telah tersedia" });
-                }
-
-                string noKaryawan = "";
-                var dateNow = DateTime.UtcNow; ;
-                var setDateNow = DateTimeOffset.UtcNow.ToString("yyMMdd");
-
-                var lastKaryawan = _applicationDbContext.Karyawans
-                    .Where(k => k.CreateDateTime.Date == dateNow.Date)
-                    .OrderByDescending(k => k.NoKaryawan)
-                    .FirstOrDefault();
-
-                if (lastKaryawan == null)
-                {
-                    noKaryawan = "KRY" + setDateNow + "0001";
-                }
-                else
-                {
-                    var lastCodeTrim = lastKaryawan.NoKaryawan.Substring(3, 6);
-
-                    if (lastCodeTrim != setDateNow)
-                    {
-                        noKaryawan = "KRY" + setDateNow + "0001";
-                    }
-                    else
-                    {
-                        noKaryawan = "KRY" + setDateNow +
-                            (Convert.ToInt32(lastKaryawan.NoKaryawan.Substring(9)) + 1).ToString("D4");
-                    }
-                }
-
-                // **Buat Data Baru**
-                var data = new Karyawan
-                {
-                    KaryawanId = Guid.NewGuid(),
-                    UserActiveId = vm.UserActiveId,
-                    DepartementId = vm.DepartementId ?? Guid.Empty,
-                    InstalasiUnitId = vm.InstalasiUnitId ?? Guid.Empty,
-                    JabatanId = vm.JabatanId ?? Guid.Empty,
-                    NoKaryawan = noKaryawan,
-                    NoIdentitas = vm.NoIdentitas,
-                    KodeKaryawan = vm.KodeKaryawan,
-                    NoRekening = vm.NoRekening,
-                    BankId = vm.BankId,
-                    TanggalKontrak = vm.TanggalKontrak,
-                    TanggalAwalKerja = vm.TanggalAwalKerja,
-                    TanggalAkhirKerja = vm.TanggalAkhirKerja,
-                    NoHandphone = vm.NoHandphone,
-                    Email = vm.Email,
-                    Alamat = vm.Alamat,
-
-                    CreateBy = userActiveId,
-                    CreateDateTime = DateTimeOffset.UtcNow,
-                };
-
-                // **Simpan ke Database**
-                _applicationDbContext.Karyawans.Add(data);
-                int result = await _applicationDbContext.SaveChangesAsync();
-
-                if (result > 0)
-                {
-                    return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
-                }
-                else
-                {
-                    return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
-                }
-            }
-            catch (DbUpdateException dbEx)
-            {
-                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
-            }
-        }
-
+        
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] KaryawanViewModel vm)
         {
@@ -314,8 +201,8 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
                 var userActiveId = getUserActive.UserActiveId;
 
                 // 4. Cari data lama di database
-                var data = await _applicationDbContext.Karyawans
-                    .FirstOrDefaultAsync(x => x.KaryawanId == id && (x.IsDelete == false || x.IsDelete == null));
+                var data = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(x => x.UserActiveId == id && (x.IsDelete == false || x.IsDelete == null));
 
                 if (data == null)
                 {
@@ -323,10 +210,9 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
                 }
 
                 // 5. Cek Duplikasi (NoIdentitas tidak boleh sama dengan milik orang lain)
-                bool isDuplicate = await _applicationDbContext.Karyawans
+                bool isDuplicate = await _applicationDbContext.UserActives
                     .AnyAsync(c => c.NoIdentitas.ToLower().Trim() == vm.NoIdentitas.ToLower().Trim()
-                                && c.KaryawanId != id // Pastikan bukan mengecek dirinya sendiri
-                                && c.UserActiveId == vm.UserActiveId
+                                && c.UserActiveId != id // Pastikan bukan mengecek dirinya sendiri
                                 && c.IsDelete == false);
 
                 if (isDuplicate)
@@ -335,7 +221,6 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
                 }
 
                 // 6. Mapping perubahan data dari ViewModel ke Entity yang sudah ada
-                data.UserActiveId = vm.UserActiveId;
                 data.DepartementId = vm.DepartementId ?? Guid.Empty;
                 data.InstalasiUnitId = vm.InstalasiUnitId ?? Guid.Empty;
                 data.JabatanId = vm.JabatanId ?? Guid.Empty;
@@ -355,7 +240,7 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
                 // 7. Simpan perubahan
-                _applicationDbContext.Karyawans.Update(data);
+                _applicationDbContext.UserActives.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -406,7 +291,7 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
                 var userActiveId = getUserActive.UserActiveId;
 
                 // ✅ Cari PraOperasi berdasarkan ID
-                var data = await _applicationDbContext.Karyawans.FindAsync(id);
+                var data = await _applicationDbContext.UserActives.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data karyawan tidak ditemukan." });
@@ -471,78 +356,17 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
                 data.FotoPath = path;
                 data.FotoName = fileName;
 
-                _applicationDbContext.Karyawans.Update(data);
+                _applicationDbContext.UserActives.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
-                    return Ok(new { message = "Foto Karyawan berhasil diupload", path, karyawanId = data.KaryawanId });
+                    return Ok(new { message = "Foto Karyawan berhasil diupload", path, karyawanId = data.UserActiveId });
 
                 return StatusCode(500, new { message = "TTD gagal diperbarui." });
             }
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = $"Terjadi kesalahan: {ex.Message}" });
-            }
-        }
-
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(Guid id)
-        {
-            try
-            {
-                // **Cek koneksi ke database**
-                if (!await _applicationDbContext.Database.CanConnectAsync())
-                {
-                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
-                }
-
-                // **Ambil User ID dari JWT Claims**
-                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(emailLogin))
-                {
-                    return Unauthorized(new { message = "User tidak terautentikasi!" });
-                }
-
-                var getUserActive = await _applicationDbContext.UserActives
-                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
-                if (getUserActive == null)
-                {
-                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-                }
-                var userActiveId = getUserActive.UserActiveId;
-
-                // **Cari Data**
-                var data = await _applicationDbContext.Karyawans.FindAsync(id);
-                if (data == null)
-                {
-                    return NotFound(new { message = "Data tidak ditemukan." });
-                }
-
-                // **Soft Delete (Tandai Data sebagai Terhapus)**
-                data.DeleteBy = userActiveId;
-                data.DeleteDateTime = DateTimeOffset.UtcNow;
-
-                data.IsDelete = true;
-
-                _applicationDbContext.Karyawans.Update(data);
-                int result = await _applicationDbContext.SaveChangesAsync();
-
-                if (result > 0)
-                {
-                    return Ok(new { message = "Data berhasil dihapus (soft delete) || 200 OK" });
-                }
-                else
-                {
-                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
-                }
-            }
-            catch (DbUpdateException dbEx)
-            {
-                return StatusCode(500, new { message = $"Gagal menghapus data: {dbEx.InnerException?.Message}" });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
 
@@ -569,7 +393,7 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
                               where k.IsDelete == false || k.IsDelete == null
                               select new
                               {
-                                  k.KaryawanId,
+                                  KaryawanId = k.UserActiveId,
                                   k.UserActiveId,
                                   NamaKaryawan = u.FullName, // Mengambil nama dari tabel UserActives
                                   k.DepartementId,
@@ -586,6 +410,8 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
                                   k.NoHandphone,
                                   k.Email,
                                   k.Alamat,
+                                  k.FotoName,
+                                  k.FotoPath,
                                   CreateBy = fn.FullName,
                                   k.CreateDateTime
                               });

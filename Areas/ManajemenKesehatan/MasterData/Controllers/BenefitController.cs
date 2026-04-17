@@ -20,6 +20,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
+
+    //test
     public class BenefitController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
@@ -114,7 +116,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data = listdata
             });
         }
-
+        //test
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] BenefitViewModel vm)
         {

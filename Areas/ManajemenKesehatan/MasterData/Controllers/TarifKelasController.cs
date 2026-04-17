@@ -392,6 +392,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             string? namaTindakan = null,
             string? namaKelas = null,
             string? namaDokter = null,
+            string? kategori = null,
 
             CancellationToken cancellationToken = default
         )
@@ -479,11 +480,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 q = q.Where(x => x.NamaKelas != null && EF.Functions.ILike(x.NamaKelas, p));
             }
 
-            //if (!string.IsNullOrWhiteSpace(namaDokter))
-            //{
-            //    var p = $"%{namaDokter.Trim().ToLower()}%";
-            //    q = q.Where(x => x.NamaDokter != null && EF.Functions.ILike(x.NamaDokter, p));
-            //}
+            if (!string.IsNullOrWhiteSpace(kategori))
+            {
+                var p = $"%{kategori.Trim().ToLower()}%";
+                q = q.Where(x => x.KategoriTindakan != null && EF.Functions.ILike(x.KategoriTindakan, p));
+            }
 
             // =========================
             // FILTER: tanggal range (pakai boundary, jangan .Date)

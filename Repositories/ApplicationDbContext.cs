@@ -253,6 +253,15 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<DiskonApproved> DiskonApproveds { get; set; }
         public DbSet<DiskonTagihan> DiskonTagihans {  get; set; }
         public DbSet<DokumenPasien> DokumenPasiens { get; set; }
+        public DbSet<BarangKategori> BarangKategoris { get; set; }
+        public DbSet<Brand> Brands { get; set; }
+        public DbSet<KelasResiko> KelasResikos { get; set; }
+        public DbSet<Lantai> Lantais { get; set; }
+        public DbSet<LokasiPenyimpanan> LokasiPenyimpanans {  get; set; }
+        public DbSet<Barang> Barangs { get; set; }
+        public DbSet<BarangHarga> BarangHargas { get; set; }
+        public DbSet<BarangStok> BarangStoks { get; set; }
+
         #endregion
 
         #region Areas Keuangan

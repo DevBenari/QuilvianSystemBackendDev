@@ -84,5 +84,16 @@ namespace QuilvianSystemBackendDev.Services
                     return false;
             }
         }
+
+        public async Task<bool> IsAsuransiExcessAsync(Guid? kunjunganId, CancellationToken ct = default)
+        {
+            var result = await _db.Kunjungans
+                .AsNoTracking()
+                .Where(k => k.KunjunganID == kunjunganId && (k.IsDelete == false || k.IsDelete == null))
+                .Select(k => k.AsuransiExcessId != null)
+                .FirstOrDefaultAsync(ct);
+
+            return result;
+        }
     }
 }

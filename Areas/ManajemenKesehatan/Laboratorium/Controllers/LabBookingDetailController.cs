@@ -170,7 +170,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 // ✅ Query data lengkap dengan join
                 var data = await (from d in _applicationDbContext.LabBookingDetails.AsNoTracking()
-                                 where d.IsDelete != true
+                                 where d.DetailBookingLabId == id && d.IsDelete != true
                                  join u in _applicationDbContext.UserActives.AsNoTracking()
                                      on d.CreateBy equals u.UserActiveId into ug
                                  from u in ug.DefaultIfEmpty()
@@ -192,7 +192,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                  from k in kg.DefaultIfEmpty()
 
                                  join bl in _applicationDbContext.Billings.AsNoTracking()
-                                     on b.KunjunganId equals bl.KunjunganId into blg
+                                     on d.PemeriksaanLabId equals bl.ItemId into blg
                                  from bl in blg.DefaultIfEmpty()
 
                                  select new
@@ -204,6 +204,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                      d.BookingLabId,
                                      d.PasienId,
                                      d.NoOrder,
+                                     d.TipeLayanan,
                                      KunjunganId = b != null ? b.KunjunganId : (Guid?)null,
                                      JenisKunjungan = k != null ? k.JenisKunjungan : null,
                                      d.PemeriksaanLabId,
@@ -330,6 +331,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     PasienId = vm.PasienId,
                     PemeriksaanLabId = vm.PemeriksaanLabId,
                     LabId = vm.LabId,
+                    TipeLayanan = vm.TipeLayanan,
                     KategoriPatologiAnatomi = vm.KategoriPatologiAnatomi,
                     JenisSpecimen = vm.JenisSpecimen,
                     LokasiSpecimen = vm.LokasiSpecimen,
@@ -387,6 +389,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                             BillingKode = "LAB",
                             JenisBilling = "Pemeriksaan Lab",
                             StatusBilling = false,
+                            TipeLayanan = vm.TipeLayanan,
                             BillingDate = DateTime.UtcNow,
                             TanggalInvoice = DateTime.UtcNow,
                             TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
@@ -773,6 +776,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         public async Task<IActionResult> Paged(
             int page = 1,
             int perPage = 10,
+            Guid? labbookingdeatilId = null,
             string? NamaLaboratorium = null,
             Guid? kunjunganId = null,
             bool? isLunas = null,
@@ -815,7 +819,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 from k in kg.DefaultIfEmpty()
 
                 join bl in _applicationDbContext.Billings.AsNoTracking()
-                    on b.KunjunganId equals bl.KunjunganId into blg
+                    on d.PemeriksaanLabId equals bl.ItemId into blg
                 from bl in blg.DefaultIfEmpty()
 
                 select new
@@ -827,6 +831,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     d.BookingLabId,
                     d.PasienId,
                     d.NoOrder,
+                    d.TipeLayanan,
                     KunjunganId = b != null ? b.KunjunganId : (Guid?)null,
                     JenisKunjungan = k != null ? k.JenisKunjungan : null,
                     d.PemeriksaanLabId,
@@ -834,8 +839,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     HargaPemeriksaan = p != null ? p.HargaPemeriksaan : (decimal?)null,
                     d.LabId,
                     NamaLab = l != null ? (l.NamaLab ?? "-") : "-",
-                    bl.BillingId,
-                    IsLunas = bl.StatusBilling,
+                    BillingId = bl != null ? (Guid?)bl.BillingId : null,
+                    IsLunas = bl != null ? (bool?)bl.StatusBilling : null,
                     d.KategoriPatologiAnatomi,
                     d.JenisSpecimen,
                     d.LokasiSpecimen,
@@ -862,6 +867,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             // Filter kunjunganId
             if (kunjunganId.HasValue)
                 query = query.Where(x => x.KunjunganId == kunjunganId.Value);
+
+            // Filter lab booking id
+            if (labbookingdeatilId.HasValue)
+                query = query.Where(x => x.DetailBookingLabId == labbookingdeatilId.Value);
 
             // filter based on status billing
             if (isLunas.HasValue)

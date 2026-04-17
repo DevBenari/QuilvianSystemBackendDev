@@ -27,5 +27,8 @@
 
         public string? NoSTR { get; set; }
         public string? StatusPegawai { get; set; }
+
+        //karyawan
+
     }
 }

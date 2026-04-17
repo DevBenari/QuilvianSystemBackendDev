@@ -1,12 +1,15 @@
 ﻿using System.Linq;
 using System.Security.Claims;
+using Microsoft.AspNet.SignalR.Client.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
@@ -25,7 +28,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-
+        private readonly IHubContext<DiskonHub> _hubContext;
         private readonly ILogger<DiskonController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
@@ -34,13 +37,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ILogger<DiskonController> logger,
-            IWebHostEnvironment webHostEnvironment)
+            IWebHostEnvironment webHostEnvironment,
+            IHubContext<DiskonHub> hubContext)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+            _hubContext = hubContext;
         }
 
         [HttpGet]
@@ -291,14 +296,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return BadRequest(new { message = "Tanggal berakhir tidak boleh lebih kecil dari tanggal berlaku." });
                 }
 
-                bool isDuplicate = await _applicationDbContext.Diskons
-                    .AnyAsync(c => c.NamaDiskon.ToLower().Trim() == vm.NamaDiskon.ToLower().Trim()
-                                && c.IsDelete == false);
+                //bool isDuplicate = await _applicationDbContext.Diskons
+                //    .AnyAsync(c => c.NamaDiskon.ToLower().Trim() == vm.NamaDiskon.ToLower().Trim()
+                //                && c.IsDelete == false);
 
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Nama diskon ini telah tersedia." });
-                }
+                //if (isDuplicate)
+                //{
+                //    return Conflict(new { message = "Nama diskon ini telah tersedia." });
+                //}
 
                 await using var transaction = await _applicationDbContext.Database.BeginTransactionAsync();
 
@@ -357,6 +362,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 if (result > 0)
                 {
+                    await _hubContext.Clients.All.SendAsync("Diskon ditambah", new
+                    {
+                        action = "create",
+                        diskonId = data.DiskonId,
+                    });
+
                     return Created("", new
                     {
                         message = "Tambah Data Berhasil || 201 Created",
@@ -438,16 +449,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // cek duplikasi nama diskon selain id yang sedang diedit
-                bool isDuplicate = await _applicationDbContext.Diskons
-                    .AnyAsync(c =>
-                        c.DiskonId != id &&
-                        c.NamaDiskon.ToLower().Trim() == vm.NamaDiskon.ToLower().Trim() &&
-                        c.IsDelete == false);
+                //bool isDuplicate = await _applicationDbContext.Diskons
+                //    .AnyAsync(c =>
+                //        c.DiskonId != id &&
+                //        c.NamaDiskon.ToLower().Trim() == vm.NamaDiskon.ToLower().Trim() &&
+                //        c.IsDelete == false);
 
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Nama diskon ini telah tersedia." });
-                }
+                //if (isDuplicate)
+                //{
+                //    return Conflict(new { message = "Nama diskon ini telah tersedia." });
+                //}
 
                 await using var transaction = await _applicationDbContext.Database.BeginTransactionAsync();
 
@@ -519,6 +530,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 if (result > 0)
                 {
+
+                    await _hubContext.Clients.All.SendAsync("Diskon diupdate", new
+                    {
+                        action = "update",
+                        diskonId = existingDiskon.DiskonId,
+                    });
+
                     return Ok(new
                     {
                         message = "Ubah Data Berhasil || 200 OK",
@@ -589,6 +607,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                     _applicationDbContext.Diskons.Update(data);
                     await _applicationDbContext.SaveChangesAsync();
+
+                    await _hubContext.Clients.All.SendAsync("Diskon telah disetujui direksi", new
+                    {
+                        action = "update",
+                        diskonId = data.DiskonId,
+                    });
                     return Ok(new { message = "Data berhasil diubah!", data });
                 }
                 else
@@ -643,6 +667,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                     _applicationDbContext.Diskons.Update(data);
                     await _applicationDbContext.SaveChangesAsync();
+                    await _hubContext.Clients.All.SendAsync("Status combined diskon telah diupdate", new
+                    {
+                        action = "update",
+                        diskonId = data.DiskonId,
+                    });
                     return Ok(new { message = "Data berhasil diubah!", data });
                 }
                 else
@@ -719,6 +748,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 if (result > 0)
                 {
+                    await _hubContext.Clients.All.SendAsync("Diskon  dihapus", new
+                    {
+                        action = "delete",
+                        diskonID = id
+                    });
                     return Ok(new
                     {
                         message = "Data header dan detail berhasil dihapus (soft delete) || 200 OK",
@@ -1006,6 +1040,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     h.DiskonId,
                     h.NamaDiskon,
                     h.KodeVoucher,
+                    h.IsDireksiApproved,
+                    h.IsDiskonCombined,
                     h.TglBerlaku,
                     h.TglBerakhir,
                     h.IsAsuransi,

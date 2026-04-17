@@ -46,6 +46,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             _webHostEnvironment = webHostEnvironment;
         }
 
+        //test
         [HttpGet]
         public async Task<IActionResult> GetAsuransiPasien(int page = 1, int perPage = 10)
         {

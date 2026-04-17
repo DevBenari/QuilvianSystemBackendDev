@@ -3,9 +3,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
@@ -25,7 +27,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-
+        private readonly IHubContext<DiskonApprovedHub> _hubContext;
         private readonly ILogger<DiskonApprovedController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
@@ -34,15 +36,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ILogger<DiskonApprovedController> logger,
-            IWebHostEnvironment webHostEnvironment)
+            IWebHostEnvironment webHostEnvironment,
+            IHubContext<DiskonApprovedHub> hubContext)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+            _hubContext = hubContext;
         }
-
+        //test
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
@@ -122,7 +126,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data = listdata
             });
         }
-
+        //test
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] DiskonApprovedViewModel vm)
         {
@@ -185,6 +189,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 if (result > 0)
                 {
+                    await _hubContext.Clients.All.SendAsync("Diskon Approved ditambah", new
+                    {
+                        action = "create",
+                        diskonAprrovedId = data.DiskonAprrovedId,
+                    });
+
                     return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
                 }
                 else
@@ -253,6 +263,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 if (result > 0)
                 {
+                    await _hubContext.Clients.All.SendAsync("Diskon Approved 1 telah diupdate", new
+                    {
+                        action = "update",
+                        diskonAprrovedId = data.DiskonAprrovedId,
+                        approvalId1 = data.Approved1Id,
+                    });
+
                     return Ok(new { message = "Update Data Berhasil || 200 OK" });
                 }
                 else
@@ -321,6 +338,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 if (result > 0)
                 {
+                    await _hubContext.Clients.All.SendAsync("Diskon Approved 2 telah diupdate", new
+                    {
+                        action = "update",
+                        diskonAprrovedId = data.DiskonAprrovedId,
+                        approvalId2 = data.Approved2Id,
+                    });
+
                     return Ok(new { message = "Update Data Berhasil || 200 OK" });
                 }
                 else
@@ -389,6 +413,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 if (result > 0)
                 {
+                    await _hubContext.Clients.All.SendAsync("Diskon Approved 3 telah diupdate", new
+                    {
+                        action = "update",
+                        diskonAprrovedId = data.DiskonAprrovedId,
+                        approvalId3 = data.Approved3Id,
+                    });
+
                     return Ok(new { message = "Update Data Berhasil || 200 OK" });
                 }
                 else
@@ -450,6 +481,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 if (result > 0)
                 {
+                    await _hubContext.Clients.All.SendAsync("Diskon approved dihapus", new
+                    {
+                        action = "delete",
+                        diskonApprovedID = id
+                    });
+
                     return Ok(new { message = "Data berhasil dihapus (soft delete) || 200 OK" });
                 }
                 else

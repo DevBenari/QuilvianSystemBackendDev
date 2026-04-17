@@ -2,7 +2,6 @@
 {
     public class DokumenPasienViewModel
     {
-        public Guid DokumenPasienId { get; set; }
         public Guid? PasienId { get; set; }
         public string? JenisDokumen { get; set; }
         public IFormFile? Dokumen { get; set; }

@@ -34,5 +34,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public bool? StatusVerifikasi { get; set; }
         public string? AlasanPembatalan {  get; set; }
         public string? TTDPembatalanPath { get; set; }
+        public string? TipeLayanan {  get; set; }
     }
 }
