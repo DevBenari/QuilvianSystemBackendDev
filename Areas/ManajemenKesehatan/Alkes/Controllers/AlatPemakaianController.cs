@@ -355,7 +355,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
                         CreateDateTime = DateTimeOffset.UtcNow
                     });
 
-                    var status = await _asuransiCoverageService.GetIsCoveredAsync((Guid)vm.KunjunganId, "Alkes", alatId, ct);
+                    var coverage = await _asuransiCoverageService.ResolveCoverageAsync(
+                       vm.KunjunganId,
+                        "Alkes",
+                        alatId,
+                        ct);
 
                     // ---- BILLING (Pola dictionary seperti contoh kamu) ----
                     if (!billingDict.TryGetValue(alatId, out var billing))
@@ -364,6 +368,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
 
                         billing = new Billing
                         {
+
                             BillingId = Guid.NewGuid(),
                             KunjunganId = vm.KunjunganId.Value,
 
@@ -384,7 +389,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
                             JenisBilling = "Alkes",
                             StatusPengambilan = true,
                             StatusBilling = false,
-                            IsCovered = status,
+                            IsCovered = coverage?.IsCovered,
+                            IsCoveredExcess = coverage?.IsCoveredExcess,
+                            AsuransiId = coverage?.AsuransiId,
+                            AsuransiExcessId = coverage?.AsuransiExcessId,
+
                             TanggalInvoice = DateTime.UtcNow,
                             TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                             CreateBy = userId,
@@ -547,7 +556,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
 
                     //var subTotal = alatDb.TarifRs * qtyInput;
 
-                    var status = await _asuransiCoverageService.GetIsCoveredAsync((Guid)vm.KunjunganId, "Alkes", alatId, ct);
+                    var coverage = await _asuransiCoverageService.ResolveCoverageAsync(
+                        vm.KunjunganId,
+                        "Alkes",
+                        alatId,
+                        ct);
 
 
                     // ---- DETAIL ----
@@ -593,7 +606,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
                             JenisBilling = "Alkes",
                             StatusPengambilan = true,
                             StatusBilling = false,
-                            IsCovered = status,
+
+                            IsCovered = coverage?.IsCovered,
+                            IsCoveredExcess = coverage?.IsCoveredExcess,
+                            AsuransiId = coverage?.AsuransiId,
+                            AsuransiExcessId = coverage?.AsuransiExcessId,
                             CreateBy = userId,
                             CreateDateTime = DateTimeOffset.UtcNow
                         };

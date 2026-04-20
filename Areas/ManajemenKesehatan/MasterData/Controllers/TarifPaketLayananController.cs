@@ -46,8 +46,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         public async Task<IActionResult> GetById(Guid id)
         {
             var listdata = (from a in _applicationDbContext.TarifPaketLayanans.AsNoTracking()
-                            join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                            on a.CreateBy equals u.UserActiveId
+                            join u in _applicationDbContext.UserActives.AsNoTracking()
+                                on a.CreateBy equals u.UserActiveId into uG
+                            from u in uG.DefaultIfEmpty()
 
                             join p in _applicationDbContext.PaketLayanans.AsNoTracking()
                             on a.PaketLayananId equals p.PaketLayananId into pG
@@ -319,8 +320,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
             // Query data
             var query = (from a in _applicationDbContext.TarifPaketLayanans.AsNoTracking()
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
+                         join u in _applicationDbContext.UserActives.AsNoTracking()
+                             on a.CreateBy equals u.UserActiveId into uG
+                         from u in uG.DefaultIfEmpty()
 
                          join p in _applicationDbContext.PaketLayanans.AsNoTracking()
                          on a.PaketLayananId equals p.PaketLayananId into pG

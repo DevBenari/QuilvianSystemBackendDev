@@ -46,8 +46,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         public async Task<IActionResult> GetById(Guid id)
         {
             var listdata = (from a in _applicationDbContext.TarifRehabMediks.AsNoTracking()
-                            join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                            on a.CreateBy equals u.UserActiveId
+                            join u in _applicationDbContext.UserActives.AsNoTracking()
+                                on a.CreateBy equals u.UserActiveId into uG
+                            from u in uG.DefaultIfEmpty()
 
                             join lp in _applicationDbContext.LabPemeriksaans.AsNoTracking()
                             on a.LabPemeriksaanId equals lp.PemeriksaanLabId into lpG
@@ -316,8 +317,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
             // Query data
             var query = (from a in _applicationDbContext.TarifRehabMediks.AsNoTracking()
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
+                         join u in _applicationDbContext.UserActives.AsNoTracking()
+                             on a.CreateBy equals u.UserActiveId into uG
+                         from u in uG.DefaultIfEmpty()
 
                          join lp in _applicationDbContext.LabPemeriksaans.AsNoTracking()
                          on a.LabPemeriksaanId equals lp.PemeriksaanLabId into lpG

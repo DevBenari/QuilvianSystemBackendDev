@@ -651,7 +651,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             resepDetail.TotalHargaObat = resepDetail.HargaObat * resepDetail.Qty;
                         }
 
-                        var status = await _asuransiCoverageService.GetIsCoveredAsync((Guid)vm.KunjunganId, "Obat", obatId, ct);
+                        var coverage = await _asuransiCoverageService.ResolveCoverageAsync(
+                            vm.KunjunganId,
+                            "Obat",
+                            obatId,
+                            ct);
 
 
                         if (!billingDict.TryGetValue(obatId, out var billing))
@@ -675,7 +679,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                                 JenisBilling = "Obat",
                                 StatusPengambilan = true,
                                 StatusBilling = false,
-                                IsCovered = status,
+
+                                IsCovered = coverage?.IsCovered,
+                                IsCoveredExcess = coverage?.IsCoveredExcess,
+                                AsuransiId = coverage?.AsuransiId,
+                                AsuransiExcessId = coverage?.AsuransiExcessId,
+
                                 TanggalInvoice = DateTime.UtcNow,
                                 TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                                 LayananId = vm.LayananId,
@@ -973,7 +982,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                         detail.TotalHargaObat = detail.HargaObat * detail.Qty;
                     }
 
-                    var status = await _asuransiCoverageService.GetIsCoveredAsync(vm.KunjunganId, "Obat", obatId, ct);
+                    var coverage = await _asuransiCoverageService.ResolveCoverageAsync(
+                        vm.KunjunganId,
+                        "Obat",
+                        obatId,
+                        ct);
 
                     if (!billingDict.TryGetValue(obatId, out var bill))
                     {
@@ -996,7 +1009,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             JenisBilling = "Obat",
                             StatusPengambilan = true,
                             StatusBilling = false,
-                            IsCovered = status,
+                            IsCovered = coverage?.IsCovered,
+                            IsCoveredExcess = coverage?.IsCoveredExcess,
+                            AsuransiId = coverage?.AsuransiId,
+                            AsuransiExcessId = coverage?.AsuransiExcessId,
                             TanggalInvoice = DateTime.UtcNow,
                             TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                             CreateBy = userId,

@@ -47,22 +47,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         public async Task<IActionResult> GetById(Guid id)
         {
             var listdata = (from a in _applicationDbContext.TarifVisits.AsNoTracking()
-                                        join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                                        on a.CreateBy equals u.UserActiveId
+                            join u in _applicationDbContext.UserActives.AsNoTracking()
+                            on a.CreateBy equals u.UserActiveId into uG
+                            from u in uG.DefaultIfEmpty()
 
-                                        join d in _applicationDbContext.Dokters.AsNoTracking()
-                                        on a.DokterId equals d.DokterId into dG
-                                        from d in dG.DefaultIfEmpty()
+                            join d in _applicationDbContext.Dokters.AsNoTracking()
+                            on a.DokterId equals d.DokterId into dG
+                            from d in dG.DefaultIfEmpty()
 
-                                        join k in _applicationDbContext.Kelass.AsNoTracking()
-                                        on a.KelasId equals k.KelasId into kG
-                                        from k in kG.DefaultIfEmpty()
+                            join k in _applicationDbContext.Kelass.AsNoTracking()
+                            on a.KelasId equals k.KelasId into kG
+                            from k in kG.DefaultIfEmpty()
 
-
-
-                                        where a.IsDelete == false && a.TarifVisitId == id
-                                        select new
-                                        {
+                            where a.IsDelete == false && a.TarifVisitId == id
+                            select new
+                            {
                                             a.CreateDateTime,
                                             a.CreateBy,
                                             CreateByName = u.FullName,
@@ -79,7 +78,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                             a.TarifTotal,
                                             a.KSO,
                                             a.Keterangan,
-                                        });
+                            });
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -317,8 +316,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
             // Query data
             var query = (from a in _applicationDbContext.TarifVisits.AsNoTracking()
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
+
+                         join u in _applicationDbContext.UserActives.AsNoTracking()
+                            on a.CreateBy equals u.UserActiveId into uG
+                         from u in uG.DefaultIfEmpty()
 
                          join d in _applicationDbContext.Dokters.AsNoTracking()
                          on a.DokterId equals d.DokterId into dG
