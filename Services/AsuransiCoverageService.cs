@@ -51,37 +51,68 @@ namespace QuilvianSystemBackendDev.Services
 
             result.AsuransiExcessId = asuransiExcessId;
 
-            // =========================================================
-            // PRIORITAS 1: ASURANSI ID
-            // Jika AsuransiId ada, maka ini yang dipakai lebih dulu.
-            // =========================================================
-            if (asuransiId.HasValue && asuransiId.Value != Guid.Empty)
+            var hasAsuransi = asuransiId.HasValue && asuransiId.Value != Guid.Empty;
+            var hasExcess = asuransiExcessId.HasValue && asuransiExcessId.Value != Guid.Empty;
+            var hasValidItem = !string.IsNullOrWhiteSpace(jenisBilling) &&
+                               itemId.HasValue &&
+                               itemId.Value != Guid.Empty;
+
+            // 1. Jika dua-duanya ada -> utamakan AsuransiId, fallback ke Excess bila item tidak ter-cover
+            if (hasAsuransi && hasExcess)
             {
                 result.AsuransiId = asuransiId;
-                result.IsCoveredExcess = false;
 
-                // kalau jenis billing / item belum valid, tetap return dengan AsuransiId terisi
-                if (string.IsNullOrWhiteSpace(jenisBilling) || itemId == null || itemId == Guid.Empty)
+                if (!hasValidItem)
                 {
                     result.IsCovered = false;
+                    result.IsCoveredExcess = false;
+                    return result;
+                }
+
+                var coveredByAsuransi = await CheckCoverageByJenisBillingAsync(
+                    asuransiId!.Value,
+                    jenisBilling!,
+                    itemId!.Value,
+                    ct);
+
+                if (coveredByAsuransi)
+                {
+                    result.IsCovered = true;
+                    result.IsCoveredExcess = false;
+                    return result;
+                }
+
+                // fallback ke excess jika tidak ter-cover oleh AsuransiId
+                result.AsuransiId = null;
+                result.IsCovered = false;
+                result.IsCoveredExcess = true;
+                return result;
+            }
+
+            // 2. Jika hanya AsuransiId ada
+            if (hasAsuransi)
+            {
+                result.AsuransiId = asuransiId;
+
+                if (!hasValidItem)
+                {
+                    result.IsCovered = false;
+                    result.IsCoveredExcess = false;
                     return result;
                 }
 
                 result.IsCovered = await CheckCoverageByJenisBillingAsync(
-                    asuransiId.Value,
-                    jenisBilling,
-                    itemId.Value,
+                    asuransiId!.Value,
+                    jenisBilling!,
+                    itemId!.Value,
                     ct);
 
+                result.IsCoveredExcess = false;
                 return result;
             }
 
-            // =========================================================
-            // PRIORITAS 2: ASURANSI EXCESS
-            // Dipakai hanya jika AsuransiId kosong.
-            // Semua billing dianggap excess.
-            // =========================================================
-            if (asuransiExcessId.HasValue && asuransiExcessId.Value != Guid.Empty)
+            // 3. Jika hanya Excess ada
+            if (hasExcess)
             {
                 result.AsuransiId = null;
                 result.IsCovered = false;
@@ -89,9 +120,7 @@ namespace QuilvianSystemBackendDev.Services
                 return result;
             }
 
-            // =========================================================
-            // Tidak ada asuransi maupun excess => pasien mandiri
-            // =========================================================
+            // 4. Tidak ada keduanya -> mandiri
             return result;
         }
 
@@ -153,7 +182,6 @@ namespace QuilvianSystemBackendDev.Services
             }
         }
     }
-
     public class AsuransiCoverageResult
     {
         public Guid? AsuransiId { get; set; }
