@@ -12,6 +12,7 @@ using Microsoft.OpenApi.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Hubs;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.HubSignalR;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Interfaces;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Services;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.HubSignalR;
@@ -293,6 +294,7 @@ app.MapHub<AlatPemakaianHub>("/hubs/alatpemakaian");
 // signal R Diskon
 app.MapHub<DiskonHub>("/hubs/diskon");
 app.MapHub<DiskonApprovedHub>("/hubs/diskonapproved");
+app.MapHub<DiskonDokterHub>("/hubs/diskondokter");
 #endregion
 
 #endregion

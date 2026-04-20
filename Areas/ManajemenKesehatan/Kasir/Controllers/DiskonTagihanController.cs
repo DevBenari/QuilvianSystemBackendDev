@@ -6,34 +6,34 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class DiskonDokterController : Controller
+    public class DiskonTagihanController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<DiskonDokterController> _logger;
+        private readonly ILogger<DiskonTagihanController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public DiskonDokterController(
+        public DiskonTagihanController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<DiskonDokterController> logger,
+            ILogger<DiskonTagihanController> logger,
             IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
@@ -43,54 +43,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             _webHostEnvironment = webHostEnvironment;
         }
 
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = (from a in _applicationDbContext.DiskonDokters.AsNoTracking()
-                            join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                            on a.CreateBy equals u.UserActiveId
-
-                            join p in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking()
-                            on a.PasienId equals p.PendaftaranPasienBaruId into pGroup
-                            from p in pGroup.DefaultIfEmpty()
-
-                            join k in _applicationDbContext.Kunjungans.AsNoTracking()
-                            on a.KunjunganId equals k.KunjunganID into kG
-                            from k in kG.DefaultIfEmpty()
-
-                            join d in _applicationDbContext.Diskons.AsNoTracking()
-                            on a.DiskonId equals d.DiskonId into dG
-                            from d in dG.DefaultIfEmpty()
-
-                            join dd in _applicationDbContext.DiskonDetails.AsNoTracking()
-                            on d.DiskonId equals dd.DiskonId into ddG
-                            from dd in ddG.DefaultIfEmpty()
-
-                            join dr in _applicationDbContext.Dokters.AsNoTracking()
-                            on a.Approved1Id equals dr.DokterId into drG
-                            from dr in drG.DefaultIfEmpty()
-
-                            where a.IsDelete == false && a.DiskonApprovedId==id 
-                            select new
-                            {
-                                a.CreateDateTime,
-                                a.CreateBy,
-                                CreateByName = u.FullName,
-                                a.DiskonApprovedId,
-                                a.DiskonId,
-                                NamaDiskon = d.NamaDiskon,
-                                DetailDiskonId = (Guid?)dd.DetailDiskonId ?? null,
-                                a.PasienId,
-                                NamaPasien = p.NamaLengkap ?? null,
-                                NoRm = p.NoRekamMedis ?? null,
-                                a.KunjunganId,
-                                AsalKunjungan = k.AsalKunjungan ?? null,
-                                JenisKunjungan = k.JenisKunjungan ?? null,
-                                a.Approved1Id,
-                                NamaDokterAproved = dr.NmDokter ?? null,
-                                a.ApprovedDate1,
-                                a.IsApproved1
-                            });
+            var listdata = _applicationDbContext.DiskonTagihans.Find(id);
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -104,7 +61,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] DiskonDokterViewModel vm)
+        public async Task<IActionResult> Create([FromBody] DiskonTagihanViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -133,20 +90,33 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
+                //cek duplikasi
+                //bool isDuplicate = await _applicationDbContext.AnastesiTipes
+                //    .AnyAsync(c => c.NamaTipeAnastesi.ToLower().Trim()
+                //    == vm.NamaTipeAnastesi.ToLower().Trim() && c.IsDelete == false);
+
+                //if (isDuplicate)
+                //{
+                //    return Conflict(new { message = "Tipe Anastesi ini telah tersedia" });
+                //}
+
                 // **Buat Data Baru**
-                var data = new DiskonDokter
+                var data = new DiskonTagihan
                 {
-                    DiskonApprovedId = Guid.NewGuid(),
+                    DiskonTagihanId = Guid.NewGuid(),
+                    DiskonId = vm.DiskonId,
                     PasienId = vm.PasienId,
                     KunjunganId = vm.KunjunganId,
-                    DiskonId = vm.DiskonId,
+                    NamaDiskon = vm.NamaDiskon,
+                    ValueDiskon = vm.ValueDiskon,
+                    Keterangan = vm.Keterangan,
 
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
 
                 // **Simpan ke Database**
-                _applicationDbContext.DiskonDokters.Add(data);
+                _applicationDbContext.DiskonTagihans.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -169,7 +139,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] DiskonDokterViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] DiskonTagihanViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -200,21 +170,34 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.DiskonDokters.FindAsync(id);
+                var data = await _applicationDbContext.DiskonTagihans.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
+                //cek duplikasi
+                //bool isDuplicate = await _applicationDbContext.AnastesiTipes
+                //    .AnyAsync(c => c.NamaTipeAnastesi.ToLower().Trim()
+                //    == vm.NamaTipeAnastesi.ToLower().Trim() && c.TipeAnastesiId != id);
+
+                //if (isDuplicate)
+                //{
+                //    return Conflict(new { message = "Tipe anastesi ini telah tersedia" });
+                //}
+
                 // **Update Data**
+                data.DiskonId = vm.DiskonId;
                 data.PasienId = vm.PasienId;
                 data.KunjunganId = vm.KunjunganId;
-                data.DiskonId = vm.DiskonId;
+                data.NamaDiskon = vm.NamaDiskon;
+                data.ValueDiskon = vm.ValueDiskon;
+                data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.DiskonDokters.Update(data);
+                _applicationDbContext.DiskonTagihans.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -263,7 +246,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.DiskonDokters.FindAsync(id);
+                var data = await _applicationDbContext.DiskonTagihans.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -275,7 +258,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 data.IsDelete = true;
 
-                _applicationDbContext.DiskonDokters.Update(data);
+                _applicationDbContext.DiskonTagihans.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -299,64 +282,51 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
         [HttpGet("paged")]
         public async Task<IActionResult> Paged(
-    int page = 1,
-    int perPage = 10,
-    string? search = null,
-    string? orderBy = "CreateDateTime",
-    string? sortDirection = "desc",
-    [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                            DateTime? startDate = null,
-    [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                            DateTime? endDate = null,
-    [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+            int page = 1,
+            int perPage = 10,
+            string? search = null,
+            Guid? kunjunganId = null,
+            Guid? diskonId = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+                                    DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+                                    DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
 
             // Query data
-            var query = (from a in _applicationDbContext.DiskonDokters.AsNoTracking()
+            var query = from a in _applicationDbContext.DiskonTagihans.AsNoTracking()
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
 
                          join p in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking()
-                         on a.PasienId equals p.PendaftaranPasienBaruId into pGroup
-                         from p in pGroup.DefaultIfEmpty()
+                         on a.PasienId equals p.PendaftaranPasienBaruId into pG
+                         from p in pG.DefaultIfEmpty()
 
                          join k in _applicationDbContext.Kunjungans.AsNoTracking()
                          on a.KunjunganId equals k.KunjunganID into kG
                          from k in kG.DefaultIfEmpty()
 
-                         join d in _applicationDbContext.Diskons.AsNoTracking()
-                         on a.DiskonId equals d.DiskonId into dG
-                         from d in dG.DefaultIfEmpty()
-
-                         join dd in _applicationDbContext.DiskonDetails.AsNoTracking()
-                         on d.DiskonId equals dd.DiskonId into ddG
-                         from dd in ddG.DefaultIfEmpty()
-
-                         join dr in _applicationDbContext.Dokters.AsNoTracking()
-                         on a.Approved1Id equals dr.DokterId into drG
-                         from dr in drG.DefaultIfEmpty()
-
-                         where a.IsDelete == false 
+                         where a.IsDelete == false || a.IsDelete == null
                          select new
                          {
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
-                             a.DiskonApprovedId,
+                             a.DiskonTagihanId,
                              a.DiskonId,
-                             NamaDiskon = d.NamaDiskon,
-                             DetailDiskonId = (Guid?)dd.DetailDiskonId ?? null,
-                             a.PasienId,
-                             NamaPasien = p.NamaLengkap ?? null,
-                             NoRm =  p.NoRekamMedis ?? null,
                              a.KunjunganId,
-                             AsalKunjungan = k.AsalKunjungan ?? null,
-                             JenisKunjungan = k.JenisKunjungan ?? null,
-                             a.Approved1Id,
-                             NamaDokterAproved = dr.NmDokter ?? null,
-                             a.ApprovedDate1,
-                             a.IsApproved1
-                         });
+                             JenisKunjungan = k != null ? k.JenisKunjungan : null,
+                             AsalKunjungan = k != null ? k.AsalKunjungan : null,
+                             a.PasienId,
+                             NamaLengkap = p != null ? p.NamaLengkap : null,
+                             NoRekamMedis = p!= null ?p.NoRekamMedis : null,
+                             a.NamaDiskon,
+                             a.ValueDiskon,
+                             a.Keterangan,
+                         };
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             if (!string.IsNullOrWhiteSpace(search))
@@ -364,9 +334,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
                     EF.Functions.ILike(u.NamaDiskon, search) ||
-                    EF.Functions.ILike(u.NamaPasien, search) ||
-                    EF.Functions.ILike(u.NamaDokterAproved, search)
+                    EF.Functions.ILike(u.NamaLengkap, search) ||
+                    EF.Functions.ILike(u.NoRekamMedis, search)
                 );
+            }
+
+            // filter based on kunjungan id
+            if (kunjunganId.HasValue)
+            {
+                query = query.Where(u=>u.KunjunganId == kunjunganId.Value);
+            }
+
+            // filter based on diskon id
+            if (diskonId.HasValue)
+            {
+                query = query.Where(u=>u.DiskonId == diskonId.Value);
             }
 
             //// **Filter berdasarkan tanggal**
@@ -468,7 +450,5 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
             });
         }
-
-
     }
 }

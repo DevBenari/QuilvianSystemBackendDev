@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using QuilvianSystemBackendDev.Models;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels
 {
     public class DiskonApproved : UserActivity
     {
