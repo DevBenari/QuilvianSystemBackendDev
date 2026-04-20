@@ -239,7 +239,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return NotFound(new { message = "Data tindakan tidak ditemukan." });
                 }
 
-                var status = await _asuransiCoverageService.GetIsCoveredAsync((Guid)vm.KunjunganId, "Tindakan", vm.TindakanId, ct);
+                var coverage = await _asuransiCoverageService.ResolveCoverageAsync(
+                    vm.KunjunganId,
+                    "Tindakan",
+                    vm.TindakanId,
+                    ct);
 
                 // Hitung jumlah billing sebelumnya untuk kunjungan ini
                 int billingTindakanCount = await _applicationDbContext.Billings
@@ -269,7 +273,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     SubTotalItem = totalqty,
                     JenisBilling = "Tindakan", // Menandakan ini adalah billing untuk tindakan
                     StatusBilling= false,
-                    IsCovered = status,
+
+                    IsCovered = coverage?.IsCovered,
+                    IsCoveredExcess = coverage?.IsCoveredExcess,
+                    AsuransiId = coverage?.AsuransiId,
+                    AsuransiExcessId = coverage?.AsuransiExcessId,
                     TipeLayanan = vm.TipeLayanan,
                     TanggalInvoice = DateTime.UtcNow,
                     TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
@@ -411,7 +419,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     billingIndex++;
                     string billingKode = $"{billingIndex.ToString("D3")}";
 
-                    var status = await _asuransiCoverageService.GetIsCoveredAsync((Guid)vm.KunjunganId, "Tindakan", vm.TindakanId, ct);
+                    var coverage = await _asuransiCoverageService.ResolveCoverageAsync(
+                        vm.KunjunganId,
+                        "Tindakan",
+                        vm.TindakanId,
+                        ct);
 
                     var newBilling = new Billing
                     {
@@ -434,7 +446,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         StatusPengambilan = true,
                         StatusBilling = false,
                         TipeLayanan = vm.TipeLayanan,
-                        IsCovered = status,
+
+                        IsCovered = coverage?.IsCovered,
+                        IsCoveredExcess = coverage?.IsCoveredExcess,
+                        AsuransiId = coverage?.AsuransiId,
+                        AsuransiExcessId = coverage?.AsuransiExcessId,
                         TanggalInvoice = DateTime.UtcNow,
                         TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                         CreateBy = userActiveId,

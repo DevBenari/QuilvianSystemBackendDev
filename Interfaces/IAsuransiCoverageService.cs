@@ -1,8 +1,13 @@
-﻿namespace QuilvianSystemBackendDev.Interfaces
+﻿using QuilvianSystemBackendDev.Services;
+
+namespace QuilvianSystemBackendDev.Interfaces
 {
     public interface IAsuransiCoverageService
     {
-        Task<bool?> GetIsCoveredAsync(Guid? kunjunganId, string? jenisBilling, Guid? itemId = null, CancellationToken ct = default);
-        Task<bool> IsAsuransiExcessAsync(Guid? kunjunganId, CancellationToken ct = default);
+        Task<AsuransiCoverageResult> ResolveCoverageAsync(
+            Guid? kunjunganId,
+            string? jenisBilling,
+            Guid? itemId = null,
+            CancellationToken ct = default);
     }
 }

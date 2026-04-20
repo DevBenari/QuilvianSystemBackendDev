@@ -277,7 +277,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 var harga = kamar.TarifHarian.Value;
                 var subtotal = harga * qty;
 
-                var status = await _asuransiCoverageService.GetIsCoveredAsync((Guid)vm.KunjunganId, "Kamar Ranap", kamar.KamarId, ct);
+                var coverage = await _asuransiCoverageService.ResolveCoverageAsync(
+                    vm.KunjunganId,
+                    "Kamar Ranap",
+                    kamar.KamarId,
+                    ct);
 
                 var billing = new Billing
                 {
@@ -299,7 +303,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     JenisBilling = jenisBilling,
                     TanggalInvoice = DateTime.UtcNow,
                     TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
-                    IsCovered = status,
+
+                    IsCovered = coverage?.IsCovered,
+                    IsCoveredExcess = coverage?.IsCoveredExcess,
+                    AsuransiId = coverage?.AsuransiId,
+                    AsuransiExcessId = coverage?.AsuransiExcessId,
+
                     Keterangan = $"BookingBedRanapId={bookingId};Start={parsedTglMasukRanap:yyyy-MM-dd}",
 
                     CreateBy = userActiveId,

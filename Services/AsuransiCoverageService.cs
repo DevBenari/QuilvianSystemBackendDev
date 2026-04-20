@@ -15,24 +15,121 @@ namespace QuilvianSystemBackendDev.Services
             _db = db;
         }
 
-        public async Task<bool?> GetIsCoveredAsync(Guid? kunjunganId, string? jenisBilling, Guid? itemId = null, CancellationToken ct = default)
+        public async Task<AsuransiCoverageResult> ResolveCoverageAsync(
+            Guid? kunjunganId,
+            string? jenisBilling,
+            Guid? itemId = null,
+            CancellationToken ct = default)
         {
-            var asuransiId = await _db.Kunjungans
+            var result = new AsuransiCoverageResult
+            {
+                AsuransiId = null,
+                AsuransiExcessId = null,
+                IsCovered = false,
+                IsCoveredExcess = false
+            };
+
+            if (kunjunganId == null || kunjunganId == Guid.Empty)
+                return result;
+
+            var kunjungan = await _db.Kunjungans
                 .AsNoTracking()
-                .Where(x => x.KunjunganID == kunjunganId && (x.IsDelete == false || x.IsDelete == null))
-                .Select(x => x.AsuransiId)
+                .Where(x => x.KunjunganID == kunjunganId &&
+                            (x.IsDelete == false || x.IsDelete == null))
+                .Select(x => new
+                {
+                    x.AsuransiId,
+                    x.AsuransiExcessId
+                })
                 .FirstOrDefaultAsync(ct);
 
-            // pasien mandiri
-            if (asuransiId == null || asuransiId == Guid.Empty)
-                return null;
+            if (kunjungan == null)
+                return result;
 
-            if (string.IsNullOrWhiteSpace(jenisBilling))
-                return false;
+            var asuransiId = kunjungan.AsuransiId;
+            var asuransiExcessId = kunjungan.AsuransiExcessId;
 
-            if (itemId == null || itemId == Guid.Empty)
-                return false;
+            result.AsuransiExcessId = asuransiExcessId;
 
+            var hasAsuransi = asuransiId.HasValue && asuransiId.Value != Guid.Empty;
+            var hasExcess = asuransiExcessId.HasValue && asuransiExcessId.Value != Guid.Empty;
+            var hasValidItem = !string.IsNullOrWhiteSpace(jenisBilling) &&
+                               itemId.HasValue &&
+                               itemId.Value != Guid.Empty;
+
+            // 1. Jika dua-duanya ada -> utamakan AsuransiId, fallback ke Excess bila item tidak ter-cover
+            if (hasAsuransi && hasExcess)
+            {
+                result.AsuransiId = asuransiId;
+
+                if (!hasValidItem)
+                {
+                    result.IsCovered = false;
+                    result.IsCoveredExcess = false;
+                    return result;
+                }
+
+                var coveredByAsuransi = await CheckCoverageByJenisBillingAsync(
+                    asuransiId!.Value,
+                    jenisBilling!,
+                    itemId!.Value,
+                    ct);
+
+                if (coveredByAsuransi)
+                {
+                    result.IsCovered = true;
+                    result.IsCoveredExcess = false;
+                    return result;
+                }
+
+                // fallback ke excess jika tidak ter-cover oleh AsuransiId
+                result.AsuransiId = null;
+                result.IsCovered = false;
+                result.IsCoveredExcess = true;
+                return result;
+            }
+
+            // 2. Jika hanya AsuransiId ada
+            if (hasAsuransi)
+            {
+                result.AsuransiId = asuransiId;
+
+                if (!hasValidItem)
+                {
+                    result.IsCovered = false;
+                    result.IsCoveredExcess = false;
+                    return result;
+                }
+
+                result.IsCovered = await CheckCoverageByJenisBillingAsync(
+                    asuransiId!.Value,
+                    jenisBilling!,
+                    itemId!.Value,
+                    ct);
+
+                result.IsCoveredExcess = false;
+                return result;
+            }
+
+            // 3. Jika hanya Excess ada
+            if (hasExcess)
+            {
+                result.AsuransiId = null;
+                result.IsCovered = false;
+                result.IsCoveredExcess = true;
+                return result;
+            }
+
+            // 4. Tidak ada keduanya -> mandiri
+            return result;
+        }
+
+        private async Task<bool> CheckCoverageByJenisBillingAsync(
+            Guid asuransiId,
+            string jenisBilling,
+            Guid itemId,
+            CancellationToken ct)
+        {
             switch (jenisBilling.Trim())
             {
                 case "Pemeriksaan Lab":
@@ -41,7 +138,7 @@ namespace QuilvianSystemBackendDev.Services
                         .AnyAsync(x =>
                             x.AsuransiId == asuransiId &&
                             x.PemeriksaanLabId == itemId &&
-                            (x.IsDelete == false),
+                            (x.IsDelete == false || x.IsDelete == null),
                             ct);
 
                 case "Obat":
@@ -50,7 +147,7 @@ namespace QuilvianSystemBackendDev.Services
                         .AnyAsync(x =>
                             x.AsuransiId == asuransiId &&
                             x.ObatId == itemId &&
-                            (x.IsDelete == false),
+                            (x.IsDelete == false || x.IsDelete == null),
                             ct);
 
                 case "Alkes":
@@ -59,7 +156,7 @@ namespace QuilvianSystemBackendDev.Services
                         .AnyAsync(x =>
                             x.AsuransiId == asuransiId &&
                             x.ObatId == itemId &&
-                            (x.IsDelete == false),
+                            (x.IsDelete == false || x.IsDelete == null),
                             ct);
 
                 case "Tindakan":
@@ -68,7 +165,7 @@ namespace QuilvianSystemBackendDev.Services
                         .AnyAsync(x =>
                             x.AsuransiId == asuransiId &&
                             x.TindakanId == itemId &&
-                            (x.IsDelete == false),
+                            (x.IsDelete == false || x.IsDelete == null),
                             ct);
 
                 case "Kamar":
@@ -77,23 +174,23 @@ namespace QuilvianSystemBackendDev.Services
                         .AnyAsync(x =>
                             x.AsuransiId == asuransiId &&
                             x.KamarId == itemId &&
-                            (x.IsDelete == false),
+                            (x.IsDelete == false || x.IsDelete == null),
                             ct);
 
                 default:
                     return false;
             }
         }
+    }
+    public class AsuransiCoverageResult
+    {
+        public Guid? AsuransiId { get; set; }
+        public Guid? AsuransiExcessId { get; set; }
 
-        public async Task<bool> IsAsuransiExcessAsync(Guid? kunjunganId, CancellationToken ct = default)
-        {
-            var result = await _db.Kunjungans
-                .AsNoTracking()
-                .Where(k => k.KunjunganID == kunjunganId && (k.IsDelete == false || k.IsDelete == null))
-                .Select(k => k.AsuransiExcessId != null)
-                .FirstOrDefaultAsync(ct);
+        public bool IsCovered { get; set; }
+        public bool IsCoveredExcess { get; set; }
 
-            return result;
-        }
+        public bool HasAsuransi => AsuransiId.HasValue && AsuransiId != Guid.Empty;
+        public bool HasAsuransiExcess => AsuransiExcessId.HasValue && AsuransiExcessId != Guid.Empty;
     }
 }

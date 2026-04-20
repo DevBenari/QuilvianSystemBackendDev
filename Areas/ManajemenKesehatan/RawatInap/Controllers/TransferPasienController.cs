@@ -408,7 +408,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 var harga = bedInfo.TarifHarian.Value;
                 var subtotal = harga * qty;
 
-                var status = await _asuransiCoverageService.GetIsCoveredAsync((Guid)vm.KunjunganId, "Kamar Ranap", bedInfo.KamarId, ct);
+                var coverage = await _asuransiCoverageService.ResolveCoverageAsync(
+                    vm.KunjunganId,
+                    "Kamar Ranap",
+                    bedInfo.KamarId,
+                    ct);
 
                 var billing = new Billing
                 {
@@ -432,7 +436,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                     // Penting: simpan hubungan transferId untuk tracking
                     Keterangan = $"TransferPasienId={transferId};BedId={vm.BedId};Start={vm.TglPindah:yyyy-MM-dd}",
-                    IsCovered = status,
+                    IsCovered = coverage?.IsCovered,
+                    IsCoveredExcess = coverage?.IsCoveredExcess,
+                    AsuransiId = coverage?.AsuransiId,
+                    AsuransiExcessId = coverage?.AsuransiExcessId,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                     IsDelete = false

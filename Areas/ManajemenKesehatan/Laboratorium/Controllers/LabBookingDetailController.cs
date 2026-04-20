@@ -369,7 +369,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         .AsNoTracking()
                         .FirstOrDefaultAsync(p => p.PemeriksaanLabId == vm.PemeriksaanLabId);
 
-                    var status = await _asuransiCoverageService.GetIsCoveredAsync((Guid)vm.KunjunganId, "Pemeriksaan Lab", pemeriksaan.PemeriksaanLabId, ct);
+                    var coverage = await _asuransiCoverageService.ResolveCoverageAsync(
+                        vm.KunjunganId.Value,
+                        "Pemeriksaan Lab",
+                        pemeriksaan.PemeriksaanLabId,
+                        ct);
 
                     if (pemeriksaan != null)
                     {
@@ -393,7 +397,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                             BillingDate = DateTime.UtcNow,
                             TanggalInvoice = DateTime.UtcNow,
                             TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
-                            IsCovered = status,
+                            IsCovered = coverage?.IsCovered,
+                            IsCoveredExcess = coverage?.IsCoveredExcess,
+                            AsuransiId = coverage?.AsuransiId,
+                            AsuransiExcessId = coverage?.AsuransiExcessId,
                             CreateBy = userActiveId,
                             CreateDateTime = DateTimeOffset.UtcNow,
                             Keterangan = $"Booking Lab ({newNoOrder})"
@@ -626,7 +633,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         .AsNoTracking()
                         .FirstOrDefaultAsync(p => p.PemeriksaanLabId == vm.PemeriksaanLabId);
 
-                    var status = await _asuransiCoverageService.GetIsCoveredAsync((Guid)vm.KunjunganId, "Pemeriksaan Lab", pemeriksaan.PemeriksaanLabId, ct);
+                    var coverage = await _asuransiCoverageService.ResolveCoverageAsync(
+                        vm.KunjunganId,
+                        "Pemeriksaan Lab",
+                        pemeriksaan.PemeriksaanLabId,
+                        ct);
 
                     if (pemeriksaan != null)
                     {
@@ -658,7 +669,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                 TanggalInvoice = DateTime.UtcNow,
                                 TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                                 StatusBilling = false,
-                                IsCovered = status,
+
+                                IsCovered = coverage?.IsCovered,
+                                IsCoveredExcess = coverage?.IsCoveredExcess,
+                                AsuransiId = coverage?.AsuransiId,
+                                AsuransiExcessId = coverage?.AsuransiExcessId,
+
                                 CreateBy = userActiveId,
                                 CreateDateTime = DateTimeOffset.UtcNow,
                                 StatusPengambilan = false,

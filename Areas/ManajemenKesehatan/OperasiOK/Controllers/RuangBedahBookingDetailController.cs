@@ -255,7 +255,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                     billingIndex++;
                     string billingKode = $"{billingIndex:D3}";
 
-                    var status = await _asuransiCoverageService.GetIsCoveredAsync((Guid)kunjunganId, "Tindakan", tindakanId, ct);
+                    var coverage = await _asuransiCoverageService.ResolveCoverageAsync(
+                        kunjunganId,
+                        "Tindakan",
+                        tindakanId,
+                        ct);
 
                     billingList.Add(new Billing
                     {
@@ -277,7 +281,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                         JenisBilling = jenisBillingOperasi,
                         Keterangan = vm.Keterangan,
                         StatusBilling = false,
-                        IsCovered = status,
+                        IsCovered = coverage?.IsCovered,
+                        IsCoveredExcess = coverage?.IsCoveredExcess,
+                        AsuransiId = coverage?.AsuransiId,
+                        AsuransiExcessId = coverage?.AsuransiExcessId,
                         CreateBy = userActiveId,
                         CreateDateTime = DateTimeOffset.UtcNow
                     });
@@ -489,7 +496,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                     billingIndex++;
                     var billingKode = $"{billingIndex:D3}";
 
-                    var status = await _asuransiCoverageService.GetIsCoveredAsync((Guid)kunjunganId, "Tindakan", tindakanId, ct);
+                    var coverage = await _asuransiCoverageService.ResolveCoverageAsync(
+                        kunjunganId,
+                        "Tindakan",
+                        tindakanId,
+                        ct);
 
 
                     newBillingList.Add(new Billing
@@ -510,7 +521,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
                         JenisBilling = jenisBilling,
                         Keterangan = vm.Keterangan,
                         StatusBilling = false,
-                        IsCovered = status,
+                        IsCovered = coverage?.IsCovered,
+                        IsCoveredExcess = coverage?.IsCoveredExcess,
+                        AsuransiId = coverage?.AsuransiId,
+                        AsuransiExcessId = coverage?.AsuransiExcessId,
                         IsDelete = false,
                         CreateBy = userActiveId,
                         CreateDateTime = DateTimeOffset.UtcNow

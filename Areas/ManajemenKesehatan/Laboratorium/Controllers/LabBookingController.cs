@@ -1805,6 +1805,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             Guid? kunjunganId = null,
             Guid? labBookingId = null,
             Guid? dokterId = null,
+            [FromQuery] EnumJenisKunjungan? JenisKunjungan = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
             [FromQuery] DateTime? startDate = null,
@@ -1856,6 +1857,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
             if (dokterId.HasValue)
                 baseQuery = baseQuery.Where(b => b.DokterId == dokterId.Value);
+
+            // filter JenisKunjungan
+            if (JenisKunjungan.HasValue)
+            {
+                var jk = JenisKunjungan.Value;
+
+                baseQuery =
+                    from b in baseQuery
+                    join k in _applicationDbContext.Kunjungans.AsNoTracking()
+                        on b.KunjunganId equals k.KunjunganID
+                    where k.JenisKunjungan == jk.ToString()
+                    select b;
+            }
 
             if (startDate.HasValue && endDate.HasValue)
             {
@@ -1968,6 +1982,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      b.BookingLabId,
                      b.KunjunganId,
                      PoliklinikId = (Guid?)k.PoliklinikId,
+                     JenisKunjungan = k.JenisKunjungan ?? null,
                      k.AsalKunjungan,
                      b.PasienId,
                      NamaLengkap = p.NamaLengkap,
@@ -2180,6 +2195,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             Guid? kunjunganId = null,
             Guid? labBookingId = null,
             Guid? dokterId = null,
+            [FromQuery] EnumJenisKunjungan? JenisKunjungan = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
             [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null,
@@ -2231,6 +2247,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
             if (dokterId.HasValue)
                 baseQuery = baseQuery.Where(b => b.DokterId == dokterId.Value);
+
+            // filter JenisKunjungan
+            if (JenisKunjungan.HasValue)
+            {
+                var jk = JenisKunjungan.Value;
+
+                baseQuery =
+                    from b in baseQuery
+                    join k in _applicationDbContext.Kunjungans.AsNoTracking()
+                        on b.KunjunganId equals k.KunjunganID
+                    where k.JenisKunjungan == jk.ToString()
+                    select b;
+            }
 
             // =============================
             // 2) Filter tanggal manual (startDate/endDate)
@@ -2413,6 +2442,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                  {
                      b.BookingLabId,
                      b.KunjunganId,
+                     JenisKunjungan = k.JenisKunjungan ?? null,
                      AsalKunjungan = k.AsalKunjungan ?? null,
                      b.PasienId,
                      p.NamaLengkap,
@@ -2529,6 +2559,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             Guid? labBookingId = null,
             Guid? dokterId = null,
             string? dokterKonsul = null,
+            [FromQuery] EnumJenisKunjungan? JenisKunjungan = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
             [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null,
@@ -2661,7 +2692,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
             // =============================
             // 4) Filter dokter konsulen (tanpa join besar)
-            //    NOTE: ini tetap bisa berat kalau kolom NmDokter tidak terindex / LIKE %x%
             // =============================
             if (!string.IsNullOrWhiteSpace(dokterKonsul))
             {
@@ -2675,6 +2705,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         dr.NmDokter.ToLower().Contains(dk)
                     )
                 );
+            }
+
+            // filter JenisKunjungan
+            if (JenisKunjungan.HasValue)
+            {
+                var jk = JenisKunjungan.Value;
+
+                baseQuery =
+                    from b in baseQuery
+                    join k in _applicationDbContext.Kunjungans.AsNoTracking()
+                        on b.KunjunganId equals k.KunjunganID
+                    where k.JenisKunjungan == jk.ToString()
+                    select b;
             }
 
             // =============================
@@ -2774,6 +2817,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                  {
                      b.BookingLabId,
                      b.KunjunganId,
+                     AsalKunjungan = k.AsalKunjungan ?? null,
+                     JenisKunjungan = k.JenisKunjungan ?? null,
                      b.PasienId,
                      NamaLengkap = p.NamaLengkap,
                      b.NoOrder,
@@ -2887,6 +2932,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             Guid? labBookingId = null,
             Guid? dokterId = null,
             string? dokterKonsul = null,
+            [FromQuery] EnumJenisKunjungan? JenisKunjungan = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
             [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null,
@@ -2938,6 +2984,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                     if (dokterId.HasValue)
                         baseQuery = baseQuery.Where(b => b.DokterId == dokterId.Value);
+
+                    // filter JenisKunjungan
+                    if (JenisKunjungan.HasValue)
+                    {
+                        var jk = JenisKunjungan.Value;
+
+                        baseQuery =
+                            from b in baseQuery
+                            join k in _applicationDbContext.Kunjungans.AsNoTracking()
+                                on b.KunjunganId equals k.KunjunganID
+                            where k.JenisKunjungan == jk.ToString()
+                            select b;
+                    }
 
             // =============================
             // 2) Filter start/end date manual (range)
@@ -3140,6 +3199,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                          {
                              b.BookingLabId,
                              b.KunjunganId,
+                             AsalKunjungan = k.AsalKunjungan ?? null,
+                             JenisKunjungan = k.JenisKunjungan ?? null,
                              b.PasienId,
                              NamaLengkap = p.NamaLengkap,
                              NoRekamMedis = p.NoRekamMedis,
