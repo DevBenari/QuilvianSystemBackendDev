@@ -1,9 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using QuilvianSystemBackendDev.Models;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models
 {
-    public class DiskonApproved : UserActivity
+    public class DiskonDireksi : UserActivity
     {
         [Key]
         public Guid DiskonAprrovedId { get; set; }

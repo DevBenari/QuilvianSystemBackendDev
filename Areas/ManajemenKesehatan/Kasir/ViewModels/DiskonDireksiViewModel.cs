@@ -1,6 +1,6 @@
 ﻿namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels
 {
-    public class DiskonApprovedViewModel
+    public class DiskonDireksiViewModel
     {
         public Guid? DiskonId { get; set; }
         public Guid? KunjunganId { get; set; }

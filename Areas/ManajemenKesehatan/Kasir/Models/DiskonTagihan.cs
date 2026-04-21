@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using QuilvianSystemBackendDev.Models;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models
 {
     public class DiskonTagihan : UserActivity
     {
