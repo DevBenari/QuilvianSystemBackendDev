@@ -1907,11 +1907,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
 
                 var tipeName = (login.TipeUserName ?? "").Trim().ToLowerInvariant();
                 bool isDokter = tipeName == "dokter";
-                bool isPerawat = tipeName == "perawat";
-                bool isAdmin = tipeName.Contains("admin") || tipeName.Contains("superadmin");
+                //bool isPerawat = tipeName == "perawat";
+                //bool isAdmin = tipeName.Contains("admin") || tipeName.Contains("superadmin");
 
-                if (!isDokter && !isPerawat && !isAdmin)
-                    return StatusCode(403, new { message = "Anda tidak memiliki akses untuk melihat daftar pasien." });
+                //if (!isDokter && !isPerawat && !isAdmin)
+                //    return StatusCode(403, new { message = "Anda tidak memiliki akses untuk melihat daftar pasien." });
 
                 // =====================================================
                 // 1) Jika Dokter login → ambil DokterId dari MstDokter.UserActiveId
