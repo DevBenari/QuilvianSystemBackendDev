@@ -233,6 +233,8 @@ builder.Services.AddScoped<IPerkiraanBillingRanapService, PerkiraanBillingRanapS
 builder.Services.AddScoped<IDepositRanapNumberService, DepositRanapNumberService>();
 // service asuransi coverage
 builder.Services.AddScoped<IAsuransiCoverageService, AsuransiCoverageService>();
+// service notifikasi wa
+builder.Services.AddScoped<INotification, NotificationService>();
 #endregion
 
 #region Setting Container
