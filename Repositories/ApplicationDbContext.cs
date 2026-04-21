@@ -14,7 +14,6 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Gizi.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MCU.Models;
@@ -279,7 +278,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<MetodePembayaran> MetodePembayarans { get; set; }
         public DbSet<Diskon> Diskons { get; set; }
         public DbSet<DiskonDetail> DiskonDetails { get; set; }
-        public DbSet<DiskonApproved> DiskonApproveds { get; set; }
+        public DbSet<DiskonDireksi> DiskonDireksis { get; set; }
         public DbSet<DiskonTagihan> DiskonTagihans { get; set; }
         public DbSet<BiayaAdministrasi> BiayaAdministrasis { get; set; }
         public DbSet<MainKasir> MainKasirs { get; set; }

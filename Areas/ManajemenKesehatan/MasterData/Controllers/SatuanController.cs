@@ -1,34 +1,49 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System;
+using System.Linq;
+using System.Security.Claims;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
-using QuilvianSystemBackendDev.Repositories;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Security.Claims;
-using QuilvianSystemBackendDev.Models;
-using Microsoft.AspNetCore.Identity;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
-using Swashbuckle.AspNetCore.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Models;
+using QuilvianSystemBackendDev.Repositories;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
+    [EnableCors("AllowSpecific")]
+
     public class SatuanController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly SignInManager<ApplicationUser> _signInManager;
 
-        public SatuanController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
+        private readonly ILogger<SatuanController> _logger;
+        private readonly IWebHostEnvironment _webHostEnvironment;
+
+        public SatuanController(
+            ApplicationDbContext applicationDbContext,
+            UserManager<ApplicationUser> userManager,
+            SignInManager<ApplicationUser> signInManager,
+            ILogger<SatuanController> logger,
+            IWebHostEnvironment webHostEnvironment)
         {
-            _applicationDbContext = context;
+            _applicationDbContext = applicationDbContext;
             _userManager = userManager;
+            _signInManager = signInManager;
+            _logger = logger;
+            _webHostEnvironment = webHostEnvironment;
         }
 
         // GET: api/Satuan
@@ -43,7 +58,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         {
                             SatuanId = b.SatuanId,
                             KodeSatuan = b.KodeSatuan,
-                            NamaSatuan = b.NamaSatuan
+                            NamaSatuan = b.NamaSatuan,
+                            b.SingkatanSatuan,
+                            b.EnSatuan,
                         };
 
             var totalRows = await query.CountAsync();
@@ -155,6 +172,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     SatuanId = Guid.NewGuid(),
                     KodeSatuan = KodeSatuan,  // Gunakan kode yang sudah dihasilkan
                     NamaSatuan = satuanViewModel.NamaSatuan,
+                    SingkatanSatuan = satuanViewModel.SingkatanSatuan,
+                    EnSatuan = satuanViewModel.EnSatuan,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow
                 };
@@ -218,6 +237,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 // Update data
                 data.KodeSatuan = bentukObat.KodeSatuan;
                 data.NamaSatuan = bentukObat.NamaSatuan;
+                data.SingkatanSatuan = bentukObat.SingkatanSatuan;
+                data.EnSatuan = bentukObat.EnSatuan;
+
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
@@ -256,7 +278,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet("paged")]
-        public IActionResult PagedSatuan(
+        public async Task<IActionResult> PagedSatuan(
         int page = 1,
         int perPage = 10,
         string? search = null,
@@ -274,7 +296,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateDateTime = b.CreateDateTime,
                             SatuanId = b.SatuanId,
                             KodeSatuan = b.KodeSatuan,
-                            NamaSatuan = b.NamaSatuan
+                            NamaSatuan = b.NamaSatuan,
+                            b.SingkatanSatuan,
+                            b.EnSatuan
                         };
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**

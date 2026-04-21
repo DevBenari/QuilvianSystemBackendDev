@@ -2884,7 +2884,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         if (rows == null) return 0m;
         decimal sum = 0m;
         foreach (var r in rows)
-            if (!GetBoolProp(r, "IsCovered")) // kalau prop tidak ada => false => masuk mandiri
+            if (!GetBoolProp(r, "IsCovered") && !GetBoolProp(r, "IsCoveredExcess")) // kalau prop tidak ada => false => masuk mandiri
                 sum += GetDecimalProp(r, "Subtotal");
         return sum;
     }

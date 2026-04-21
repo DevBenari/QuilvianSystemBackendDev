@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.HubSignalR;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
@@ -22,20 +23,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class DiskonApprovedController : Controller
+    public class DiskonDireksiController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly IHubContext<DiskonApprovedHub> _hubContext;
-        private readonly ILogger<DiskonApprovedController> _logger;
+        private readonly ILogger<DiskonDireksiController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public DiskonApprovedController(
+        public DiskonDireksiController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<DiskonApprovedController> logger,
+            ILogger<DiskonDireksiController> logger,
             IWebHostEnvironment webHostEnvironment,
             IHubContext<DiskonApprovedHub> hubContext)
         {
@@ -51,7 +52,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         public async Task<IActionResult> GetById(Guid id)
         {
             var listdata = 
-                from a in _applicationDbContext.DiskonApproveds.AsNoTracking()
+                from a in _applicationDbContext.DiskonDireksis.AsNoTracking()
 
                 join u in _applicationDbContext.UserActives.AsNoTracking()
                     on a.CreateBy equals u.UserActiveId into uG
@@ -128,7 +129,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         }
         //test
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] DiskonApprovedViewModel vm)
+        public async Task<IActionResult> Create([FromBody] DiskonDireksiViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -168,7 +169,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 //}
 
                 // **Buat Data Baru**
-                var data = new DiskonApproved
+                var data = new DiskonDireksi
                 {
                     DiskonAprrovedId = Guid.NewGuid(),
                     DiskonId = vm.DiskonId,
@@ -184,7 +185,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 };
 
                 // **Simpan ke Database**
-                _applicationDbContext.DiskonApproveds.Add(data);
+                _applicationDbContext.DiskonDireksis.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -244,7 +245,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.DiskonApproveds.FindAsync(id);
+                var data = await _applicationDbContext.DiskonDireksis.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -258,7 +259,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.DiskonApproveds.Update(data);
+                _applicationDbContext.DiskonDireksis.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -319,7 +320,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.DiskonApproveds.FindAsync(id);
+                var data = await _applicationDbContext.DiskonDireksis.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -333,7 +334,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.DiskonApproveds.Update(data);
+                _applicationDbContext.DiskonDireksis.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -394,7 +395,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.DiskonApproveds.FindAsync(id);
+                var data = await _applicationDbContext.DiskonDireksis.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -408,7 +409,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.DiskonApproveds.Update(data);
+                _applicationDbContext.DiskonDireksis.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -464,7 +465,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.DiskonApproveds.FindAsync(id);
+                var data = await _applicationDbContext.DiskonDireksis.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -476,7 +477,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
                 data.IsDelete = true;
 
-                _applicationDbContext.DiskonApproveds.Update(data);
+                _applicationDbContext.DiskonDireksis.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -523,7 +524,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
             // Query data
             var query =
-                from a in _applicationDbContext.DiskonApproveds.AsNoTracking()
+                from a in _applicationDbContext.DiskonDireksis.AsNoTracking()
 
                 join u in _applicationDbContext.UserActives.AsNoTracking()
                     on a.CreateBy equals u.UserActiveId into uG

@@ -1871,7 +1871,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             [FromQuery] EnumJenisKunjungan? JenisKunjungan = null,
             [FromQuery] string? AsalKunjungan = null,
             [FromQuery] Guid? dokterId = null,
-            [FromQuery] Guid? pasienId = null
+            [FromQuery] Guid? pasienId = null,
+            [FromQuery] string? namaKamar = null
         )
         {
             try
@@ -2132,6 +2133,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 {
                     var pattern = $"%{AsalKunjungan.ToLower()}%";
                     baseQuery = baseQuery.Where(x => EF.Functions.ILike(x.AsalKunjungan ?? "", pattern));
+                }
+                if (!string.IsNullOrWhiteSpace(namaKamar))
+                {
+                    var pattern = $"%{namaKamar.ToLower()}%";
+                    baseQuery = baseQuery.Where(x => EF.Functions.ILike(x.KamarNama ?? "", pattern));
                 }
 
                 if (periode.HasValue)
