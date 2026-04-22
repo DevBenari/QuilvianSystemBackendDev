@@ -479,8 +479,8 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                 }
 
                 // set foto default
-                var fotoPath = isDokter ? "/FotoDokter/dokter.jpg" : "/FotoUser/user.jpg";
-                var fotoFileName = isDokter ? "dokter.jpg" : "user.jpg";
+                var fotoPath = isDokter ? "/default-photo/user.jpeg" : "/default-photo/user.jpeg";
+                var fotoFileName = isDokter ? "user.jpeg" : "user.jpeg";
 
                 // Cek Duplikasi
                 var id = Guid.NewGuid();
