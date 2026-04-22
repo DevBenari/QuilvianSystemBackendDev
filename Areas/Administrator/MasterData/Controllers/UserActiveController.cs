@@ -1271,7 +1271,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                      on a.CreateBy equals creator.UserActiveId into creatorJoin
                  from creator in creatorJoin.DefaultIfEmpty()
 
-                 join dok in _applicationDbContext.Dokters.AsNoTracking()
+                 join dok in _applicationDbContext.Dokters.AsNoTracking().Where(x => x.IsDelete == false)
                      on a.UserActiveId equals dok.UserActiveId into dokJoin
                  from dok in dokJoin.DefaultIfEmpty()
 
