@@ -269,7 +269,13 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<TarifOperasi> TarifOperasis { get; set; }
         public DbSet<TarifPaketLayanan> TarifPaketLayanans { get; set; }
         public DbSet<TarifRadiologi> TarifRadiologis { get; set; }
-
+        public DbSet<KategoriTerapeutik> KategoriTerapeutiks { get; set; }
+        public DbSet<SubKategoriTerapeutik> SubKategoriTerapeutiks { get; set; }
+        public DbSet<JenisProdukObat> JenisProdukObats { get; set; }
+        public DbSet<KodeKFA> KodeKFAs { get; set; }
+        public DbSet<Komoditas> Komoditas { get; set; }
+        public DbSet<Principal> Principals { get; set; }
+        public DbSet<GolonganObat> GolonganObats { get; set; }
 
 
         #endregion
