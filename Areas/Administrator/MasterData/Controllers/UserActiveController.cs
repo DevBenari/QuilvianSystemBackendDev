@@ -486,7 +486,16 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                 var id = Guid.NewGuid();
 
                 var isDuplicateUserActive = await _applicationDbContext.UserActives
-                    .AnyAsync(c => c.UserActiveCode == kode && c.Email == vm.Email);
+                    .AnyAsync(c => c.UserActiveCode == kode 
+                    && c.Email == vm.Email
+                    && c.IdentityNumber == vm.IdentityNumber
+                    && c.FullName.Trim().ToLower() == c.FullName.Trim().ToLower()
+                    );
+
+                if (isDuplicateUserActive) 
+                {
+                    return Conflict(new { message = "User ini telah terdaftar" });
+                }
 
                 // Validate ModelState
                 if (ModelState.IsValid)
