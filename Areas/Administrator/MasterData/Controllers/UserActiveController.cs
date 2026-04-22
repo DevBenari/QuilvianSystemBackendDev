@@ -690,7 +690,6 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
 
             try
             {
-                // Ambil Email login dari claim
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
@@ -703,61 +702,54 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
 
                 var userActiveLoginId = getUserActiveLogin.UserActiveId;
 
-                // Ambil target yang mau di-update
                 var user = await _applicationDbContext.UserActives
                     .FirstOrDefaultAsync(u => u.UserActiveId == id);
 
                 if (user == null)
                     return NotFound(new { message = "Data UserActive tidak ditemukan." });
 
-                // Parse DateOfBirth dari "yyyy-MM-dd"
-                if (!DateTime.TryParseExact(vm.DateOfBirth, "yyyy-MM-dd",
-                    CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsedDate))
+                if (!DateTime.TryParseExact(
+                        vm.DateOfBirth,
+                        "yyyy-MM-dd",
+                        CultureInfo.InvariantCulture,
+                        DateTimeStyles.None,
+                        out DateTime parsedDate))
                 {
                     return BadRequest(new { message = "Format TanggalLahir tidak valid! Gunakan format yyyy-MM-dd." });
                 }
+
                 parsedDate = DateTime.SpecifyKind(parsedDate, DateTimeKind.Utc);
 
-                // Cek duplicate email (kecuali data ini sendiri)
                 var isDuplicateEmail = await _applicationDbContext.UserActives
                     .AnyAsync(x => x.Email == vm.Email && x.UserActiveId != id);
 
                 if (isDuplicateEmail)
                     return Conflict(new { message = "Email sudah dipakai oleh user lain! || 409 Conflict" });
 
-                // Ambil tipe user terbaru
                 var tipeUser = await _applicationDbContext.TipeUsers
                     .FirstOrDefaultAsync(t => t.TipeUserId == vm.TipeUserId);
 
                 var isDokter = tipeUser?.NamaTipeUser?.ToLower() == "dokter";
 
-                // Foto default (kalau butuh untuk create dokter baru)
-                var fotoPathDefault = isDokter ? "/FotoDokter/dokter.jpg" : "/FotoUser/user.jpg";
-                var fotoNameDefault = isDokter ? "dokter.jpg" : "user.jpg";
+                var fotoPathDefault = isDokter ? "/default-photo/user.jpeg" : "/default-photo/user.jpeg";
+                var fotoNameDefault = isDokter ? "user.jpeg" : "user.jpeg";
 
                 using var transaction = await _applicationDbContext.Database.BeginTransactionAsync();
 
-                // =========================
-                // UPDATE ASP.NET IDENTITY USER
-                // =========================
-                // Cari user login identity berdasarkan email lama (yang tersimpan di UserActive)
                 var identityUser = await _userManager.FindByEmailAsync(user.Email);
                 if (identityUser != null)
                 {
-                    // Kalau email berubah, update juga username/email identity
                     if (!string.Equals(identityUser.Email, vm.Email, StringComparison.OrdinalIgnoreCase))
                     {
                         identityUser.Email = vm.Email;
                         identityUser.UserName = vm.Email;
                     }
 
-                    // Update info lain yang kamu simpan di ApplicationUser
                     if (identityUser is ApplicationUser appUser)
                     {
                         appUser.NamaUser = vm.FullName;
                         appUser.PhoneNumber = vm.Handphone;
                         appUser.IsActive = true;
-                        // appUser.KodeUser biasanya jangan diubah saat update
                     }
 
                     var resultUpdateIdentity = await _userManager.UpdateAsync(identityUser);
@@ -768,13 +760,11 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                         return BadRequest(new { message = $"Gagal update user login: {err}" });
                     }
                 }
-                // kalau identityUser null, kamu bisa pilih: return error atau skip
-                // Di sini aku skip, tapi biasanya lebih aman return NotFound:
-                // else { ... }
+                else
+                {
+                    return BadRequest(new { message = "User tidak ditemukan" });
+                }
 
-                // =========================
-                // UPDATE USERACTIVE
-                // =========================
                 user.FullName = vm.FullName;
                 user.IdentityNumber = vm.IdentityNumber;
                 user.PlaceOfBirth = vm.PlaceOfBirth;
@@ -790,7 +780,6 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                 user.StatusPegawai = vm.StatusPegawai;
                 user.IsActive = true;
 
-                // karyawan
                 user.NoIdentitas = user.IdentityNumber;
                 user.Alamat = user.Address;
                 user.NoHandphone = user.Handphone;
@@ -798,31 +787,23 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                 user.FotoName = fotoNameDefault;
                 user.DepartementId = user.DepartemenId;
                 user.InstalasiUnitId = user.InstalasiUnitId;
-                // Kalau kamu memang mau regenerate pin ketika DOB berubah:
                 user.PinPegawai = DelegasiVerifikasi.ComputeSha256Hash(
                     GeneratePinPegawai(parsedDate)
                 );
 
-                // Kalau tabelmu punya kolom update/audit, set di sini (contoh):
-                // user.UpdateDateTime = DateTimeOffset.UtcNow;
-                // user.UpdateBy = userActiveLoginId;
-
                 _applicationDbContext.UserActives.Update(user);
 
-                // =========================
-                // SYNC DOKTER / KARYAWAN
-                // =========================
+                // cari record dokter existing, termasuk yang IsDelete = true
                 var dokterExisting = await _applicationDbContext.Dokters
-                    .FirstOrDefaultAsync(d => d.UserActiveId == user.UserActiveId && d.IsDelete == false);
+                    .Where(d => d.UserActiveId == user.UserActiveId)
+                    .OrderBy(d => d.CreateDateTime)
+                    .ThenByDescending(d => d.IsDelete)
+                    .FirstOrDefaultAsync();
 
                 if (isDokter)
                 {
-                    // Kalau sebelumnya Karyawan, biarkan / update / atau hapus sesuai kebutuhan.
-                    // Di sini aku biarkan ada, tapi biasanya lebih rapi kalau dinonaktifkan/di-remove.
-
                     if (dokterExisting == null)
                     {
-                        // generate kode dokter baru jika belum ada record dokter
                         var setDateNow = DateTimeOffset.UtcNow.ToString("yyMMdd");
                         var dateNow = DateTime.UtcNow;
 
@@ -872,35 +853,33 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                         dokterExisting.Nohp = vm.Handphone;
                         dokterExisting.Nik = vm.IdentityNumber;
                         dokterExisting.Alamat = vm.Address;
+                        dokterExisting.FotoPath = fotoPathDefault;
+                        dokterExisting.FotoName = fotoNameDefault;
                         dokterExisting.IsActive = true;
-                        // dokterExisting.UpdateDateTime = DateTimeOffset.UtcNow;
-                        // dokterExisting.UpdateBy = userActiveLoginId;
+                        dokterExisting.IsDelete = false;
+
+                        dokterExisting.UpdateDateTime = DateTimeOffset.UtcNow;
+                        dokterExisting.UpdateBy = userActiveLoginId;
+
 
                         _applicationDbContext.Dokters.Update(dokterExisting);
                     }
                 }
-                else
+                else //menonaktifkan user dokter (dokter menjadi nondokter)
                 {
-                    // Jika sebelumnya dokter, tandai delete (lebih aman daripada remove kalau ada FK/riwayat)
-                    if (dokterExisting != null)
+                    if (dokterExisting != null && dokterExisting.IsDelete == false)
                     {
                         dokterExisting.IsDelete = true;
                         dokterExisting.IsActive = false;
+                        dokterExisting.UpdateDateTime = DateTimeOffset.UtcNow;
+                        dokterExisting.UpdateBy = userActiveLoginId;
+
                         _applicationDbContext.Dokters.Update(dokterExisting);
                     }
-
-
                 }
 
                 await _applicationDbContext.SaveChangesAsync();
                 await transaction.CommitAsync();
-
-                // OPTIONAL: update role berdasarkan PositionId (kalau memang dibutuhkan saat update)
-                // var idnetuser = await _applicationDbContext.Users.FirstOrDefaultAsync(u => u.Email == vm.Email);
-                // if (idnetuser != null && vm.PositionId.HasValue)
-                // {
-                //     await CreateRole(vm.PositionId.Value, idnetuser.Id);
-                // }
 
                 return Ok(new { message = "Update Data Berhasil || 200 OK" });
             }
@@ -1068,7 +1047,6 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
-
 
         [HttpPut("UploadFotoUser/{id}")]
         [RequestSizeLimit(20_000_000)]
