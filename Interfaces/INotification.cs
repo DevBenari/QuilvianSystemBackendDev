@@ -1,7 +1,9 @@
-﻿namespace QuilvianSystemBackendDev.Interfaces
+﻿using QuilvianSystemBackendDev.DTO;
+
+namespace QuilvianSystemBackendDev.Interfaces
 {
     public interface INotification
     {
-        Task<bool> SendWhatsAppAsync(string phoneNumber, string message);
+        Task<WhatsAppResultDto> SendWhatsAppAsync(string phoneNumber, string message);
     }
 }

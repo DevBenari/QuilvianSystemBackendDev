@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.HubSignalR;
@@ -13,6 +14,9 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
+using QuilvianSystemBackendDev.DTO;
+using QuilvianSystemBackendDev.Helpers;
+using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
@@ -31,6 +35,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         private readonly IHubContext<DiskonDokterHub> _hubContext;
         private readonly ILogger<DiskonDokterController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly AutoLoginDTO _optAutoLogin;
+        private readonly INotification _serviceNotification;
 
         public DiskonDokterController(
             ApplicationDbContext applicationDbContext,
@@ -38,7 +44,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             SignInManager<ApplicationUser> signInManager,
             ILogger<DiskonDokterController> logger,
             IWebHostEnvironment webHostEnvironment,
-            IHubContext <DiskonDokterHub> hubContext)
+            IHubContext <DiskonDokterHub> hubContext,
+            IOptions<AutoLoginDTO> optAutoLogin,
+            INotification serviceNotification
+            )
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
@@ -46,6 +55,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
             _hubContext = hubContext;
+            _optAutoLogin = optAutoLogin.Value;
+            _serviceNotification = serviceNotification;
         }
 
         [HttpGet("{id}")]
@@ -118,58 +129,147 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
             try
             {
-                // **Cek koneksi ke database**
                 if (!_applicationDbContext.Database.CanConnect())
                 {
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
                 }
 
-                // **Ambil User ID dari JWT Claims**
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+
                 if (getUserActive == null)
                 {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
                 }
+
+                bool isValid = await _applicationDbContext.Diskons
+                    .AnyAsync(c=>c.DiskonId == vm.DiskonId && c.IsDelete == false);
+                if (!isValid)
+                {
+                    return BadRequest(new { message = "Diskon tidak ditemukan." });
+                }
+
                 var userActiveId = getUserActive.UserActiveId;
 
-                // **Buat Data Baru**
                 var data = new DiskonDokter
                 {
                     DiskonApprovedId = Guid.NewGuid(),
                     PasienId = vm.PasienId,
                     KunjunganId = vm.KunjunganId,
                     DiskonId = vm.DiskonId,
-
+                    Approved1Id = vm.Approved1Id,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
 
-                // **Simpan ke Database**
                 _applicationDbContext.DiskonDokters.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
-                if (result > 0)
-                {
-                    return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
-                }
-                else
+                if (result <= 0)
                 {
                     return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
                 }
+
+                // =========================================================
+                // USER TUJUAN WA
+                // sementara pakai user login dulu untuk testing
+                // nanti ganti ke approver sebenarnya
+                // =========================================================
+                var userApproval = getUserActive;
+
+                if (userApproval == null)
+                {
+                    return Created("", new
+                    {
+                        message = "Tambah Data Berhasil || 201 Created, tetapi user approver tidak ditemukan."
+                    });
+                }
+
+                // =========================================================
+                // TARGET HALAMAN SETELAH AUTO LOGIN
+                // halaman yang Anda inginkan:
+                // http://103.153.61.119:8084/kasir/diskon-approval/table
+                // =========================================================
+                var targetUrl = "/kasir/diskon-approval/table";
+
+                // token berisi user + targetUrl + expired
+                var token = AutoLoginHelper.GenerateAutoLoginToken(
+                    userApproval.UserActiveId.ToString(),
+                    targetUrl,
+                    _optAutoLogin.SecretKey,
+                    expiredMinutes: 10);
+
+                // link final yang dikirim ke WA:
+                // http://103.153.61.119:8084/kasir/diskon-approval/table/{token}
+                var autoLoginUrl =
+                    $"{_optAutoLogin.BaseUrl.TrimEnd('/')}/kasir/diskon-approval/table/{Uri.EscapeDataString(token)}";
+
+                _logger.LogInformation(
+                    "Auto-login URL berhasil dibuat untuk DiskonApprovedId {DiskonApprovedId}: {AutoLoginUrl}",
+                    data.DiskonApprovedId,
+                    autoLoginUrl);
+
+                // =========================================================
+                // KIRIM WHATSAPP
+                // =========================================================
+                WhatsAppResultDto waResult;
+
+                if (string.IsNullOrWhiteSpace(userApproval.Handphone))
+                {
+                    waResult = new WhatsAppResultDto
+                    {
+                        Success = false,
+                        Message = "Nomor handphone user approval kosong.",
+                        PhoneNumber = ""
+                    };
+
+                    _logger.LogWarning(
+                        "Nomor handphone kosong untuk UserActiveId {UserActiveId}",
+                        userApproval.UserActiveId);
+                }
+                else
+                {
+                    var waMsg =
+                        $"APPROVAL DISKON,\n\n" +
+                        $"Yth. Bapak/Ibu {userApproval.FullName},\n" +
+                        $"Terdapat permintaan approval diskon yang menunggu tindak lanjut.\n" +
+                        $"Silakan klik link berikut untuk membuka halaman approval:\n\n{autoLoginUrl}";
+
+                    waResult = await _serviceNotification.SendWhatsAppAsync(userApproval.Handphone, waMsg);
+                }
+
+                return Created("", new
+                {
+                    message = "Tambah Data Berhasil || 201 Created",
+                    data = new
+                    {
+                        data.DiskonApprovedId,
+                        AutoLoginUrl = autoLoginUrl,
+                        WhatsAppSent = waResult.Success,
+                        WhatsAppDebug = waResult
+                    }
+                });
             }
             catch (DbUpdateException dbEx)
             {
-                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+                return StatusCode(500, new
+                {
+                    message = $"Gagal menyimpan data: {dbEx.InnerException?.Message ?? dbEx.Message}"
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+                _logger.LogError(ex, "Terjadi kesalahan saat Create DiskonDokter");
+                return StatusCode(500, new
+                {
+                    message = $"Terjadi kesalahan internal: {ex.Message}"
+                });
             }
         }
 

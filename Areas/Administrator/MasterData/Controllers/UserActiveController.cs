@@ -169,8 +169,8 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                      a.StatusPegawai,
                      a.NoSTR,
 
-                     FotoPath = a != null && a.FotoPath != null,
-                     FotoName = a != null && a.FotoName != null,
+                     FotoName = a != null ? a.FotoName : null,
+                     FotoPath = a != null ? a.FotoPath : null,
 
                      TTDId = td != null ? td.TTDId : (Guid?)null,
                      TTDPath = td != null ? td.TTDPath : null,
@@ -268,8 +268,8 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                     a.StatusPegawai,
                     a.NoSTR,
 
-                    FotoPath = a != null && a.FotoPath != null,
-                    FotoName = a != null && a.FotoName != null,
+                    FotoName = a != null ? a.FotoName : null,
+                    FotoPath = a != null ? a.FotoPath : null,
 
                     TTDId = td != null ? td.TTDId : (Guid?)null,
                     TTDPath = td != null ? td.TTDPath : null,
@@ -1380,8 +1380,8 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                      a.StatusPegawai,
                      a.NoSTR,
 
-                     FotoPath = a != null && a.FotoPath != null,
-                     FotoName = a != null && a.FotoName != null,
+                     FotoName = a != null ? a.FotoName : null,
+                     FotoPath = a != null ? a.FotoPath : null,
 
                      TTDId = td != null ? td.TTDId : (Guid?)null,
                      TTDPath = td != null ? td.TTDPath : null,

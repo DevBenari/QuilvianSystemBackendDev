@@ -62,7 +62,7 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =
 
 
 #endregion
-
+builder.Services.Configure<AutoLoginDTO>(builder.Configuration.GetSection("AutoLogin"));
 #region Hangfire
 // BUILDER HANGFIRE
 //builder.Services.AddControllers();

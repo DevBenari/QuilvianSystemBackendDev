@@ -1,15 +1,19 @@
-﻿using Microsoft.AspNet.SignalR.Client.Http;
+﻿using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+using Microsoft.AspNet.SignalR.Client.Http;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models;
+using QuilvianSystemBackendDev.Helpers;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 using static QRCoder.PayloadGenerator;
 
 namespace QuilvianSystemBackendDev.Controllers
@@ -22,18 +26,22 @@ namespace QuilvianSystemBackendDev.Controllers
         private readonly IConfiguration _configuration;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly AutoLoginDTO _optAutoLogin;
+
         public AuthController
         (
             IConfiguration configuration,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ApplicationDbContext context
+            ApplicationDbContext context,
+            IOptions<AutoLoginDTO> optAutoLogin
         )
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _configuration = configuration;
             _context = context;
+            _optAutoLogin = optAutoLogin.Value;
         }
 
 
@@ -248,7 +256,58 @@ namespace QuilvianSystemBackendDev.Controllers
                 message = "Logout berhasil."
             });
         }
-    }
+
+        [AllowAnonymous]
+        [HttpGet]
+        public async Task<IActionResult> AutoLogin(string token)
+        {
+            if (string.IsNullOrWhiteSpace(token))
+                return BadRequest(new { message = "Token kosong." });
+
+            var result = AutoLoginHelper.ValidateToken(token, _optAutoLogin.SecretKey);
+
+            if (!result.IsValid || string.IsNullOrWhiteSpace(result.UserId) || string.IsNullOrWhiteSpace(result.TargetUrl))
+                return Unauthorized(new { message = "Token tidak valid atau sudah kadaluarsa." });
+
+            if (!Guid.TryParse(result.UserId, out Guid userId))
+                return Unauthorized(new { message = "UserId pada token tidak valid." });
+
+            var user = await _context.UserActives
+                .FirstOrDefaultAsync(x => x.UserActiveId == userId);
+
+            if (user == null)
+                return Unauthorized(new { message = "User tidak ditemukan." });
+
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.Email ?? user.UserActiveId.ToString()),
+                new Claim(ClaimTypes.Name, user.FullName ?? string.Empty),
+                new Claim("UserActiveId", user.UserActiveId.ToString())
+            };
+
+            var identity = new ClaimsIdentity(
+                claims,
+                CookieAuthenticationDefaults.AuthenticationScheme);
+
+            var principal = new ClaimsPrincipal(identity);
+
+            await HttpContext.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                principal,
+                new AuthenticationProperties
+                {
+                    IsPersistent = true,
+                    ExpiresUtc = DateTimeOffset.UtcNow.AddHours(8)
+                });
+
+            if (!Url.IsLocalUrl(result.TargetUrl))
+                return BadRequest(new { message = "Target URL tidak valid." });
+
+            return LocalRedirect(result.TargetUrl);
+        }
+    
+
+}
 
 
     public class LoginModel

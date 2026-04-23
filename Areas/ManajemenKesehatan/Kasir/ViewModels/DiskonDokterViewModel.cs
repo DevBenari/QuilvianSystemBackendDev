@@ -5,5 +5,6 @@
         public Guid? DiskonId { get; set; }
         public Guid? KunjunganId { get; set; }
         public Guid? PasienId { get; set; }
+        public Guid? Approved1Id { get; set; }
     }
 }
