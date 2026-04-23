@@ -8,6 +8,6 @@
         public string ResponseBody { get; set; } = string.Empty;
         public string RequestUrl { get; set; } = string.Empty;
         public string RequestBody { get; set; } = string.Empty;
-        public string PhoneNumber { get; set; } = string.Empty;
+        //public string PhoneNumber { get; set; } = string.Empty;
     }
 }

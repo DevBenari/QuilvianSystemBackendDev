@@ -442,6 +442,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
 
                 // Jika dokter, generate kode dokter untuk nama file
                 string kodeDokter = "";
+
                 if (isDokter)
                 {
                     var lastDr = _applicationDbContext.Dokters
@@ -475,7 +476,6 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
 
                 // Cek Duplikasi
                 var id = Guid.NewGuid();
-
                 var isDuplicateUserActive = await _applicationDbContext.UserActives
                     .AnyAsync(c => c.UserActiveCode == kode 
                     && c.Email == vm.Email
@@ -543,7 +543,9 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
 
                     _applicationDbContext.UserActives.Add(user);
 
+
                     // Jika tipe user adalah dokter → buat entri di tabel Dokter
+                    Guid? createdDokterId = null;
                     if (isDokter)
                     {
                         var dokter = new Dokter
@@ -561,6 +563,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                             IsActive = true,
                             IsDelete = false
                         };
+                        createdDokterId = dokter.DokterId;
                         _applicationDbContext.Dokters.Add(dokter);
                     }
                     else
@@ -620,7 +623,10 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                     }
                     // END ROLE USER
 
-                    return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
+                    return Created("", new 
+                    {   message = "Tambah Data Berhasil || 201 Created",
+                        dokterId = createdDokterId
+                    });
                 }
                 else
                 {

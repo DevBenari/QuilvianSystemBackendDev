@@ -60,7 +60,7 @@ namespace QuilvianSystemBackendDev.Services
                         ResponseBody = responseContent,
                         RequestUrl = apiUrl,
                         RequestBody = json,
-                        PhoneNumber = normalizedPhone
+                        //PhoneNumber = normalizedPhone
                     };
                 }
 
@@ -75,7 +75,7 @@ namespace QuilvianSystemBackendDev.Services
                     ResponseBody = responseContent,
                     RequestUrl = apiUrl,
                     RequestBody = json,
-                    PhoneNumber = normalizedPhone
+                    //PhoneNumber = normalizedPhone
                 };
             }
             catch (Exception ex)
@@ -89,7 +89,7 @@ namespace QuilvianSystemBackendDev.Services
                     ResponseBody = ex.ToString(),
                     RequestUrl = apiUrl,
                     RequestBody = json,
-                    PhoneNumber = normalizedPhone
+                    //PhoneNumber = normalizedPhone
                 };
             }
         }

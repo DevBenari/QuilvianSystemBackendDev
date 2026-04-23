@@ -149,7 +149,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 }
 
                 bool isValid = await _applicationDbContext.Diskons
-                    .AnyAsync(c=>c.DiskonId == vm.DiskonId && c.IsDelete == false);
+                    .AnyAsync(c=>c.DiskonId != vm.DiskonId && c.IsDelete == false);
                 if (!isValid)
                 {
                     return BadRequest(new { message = "Diskon tidak ditemukan." });
@@ -181,57 +181,49 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 // sementara pakai user login dulu untuk testing
                 // nanti ganti ke approver sebenarnya
                 // =========================================================
-                var userApproval = getUserActive;
+                var userApproval = await _applicationDbContext.UserActives
+                    .Where(c => c.UserActiveId == vm.Approved1Id)
+                    .Select(c => new
+                    {
+                        c.UserActiveId,
+                        c.NoHandphone,
+                        c.FullName
+                    })
+                    .FirstOrDefaultAsync();
 
                 if (userApproval == null)
                 {
-                    return Created("", new
-                    {
-                        message = "Tambah Data Berhasil || 201 Created, tetapi user approver tidak ditemukan."
-                    });
+                    return BadRequest(new { message = "User dokter tidak ditemukan." });
                 }
 
                 // =========================================================
                 // TARGET HALAMAN SETELAH AUTO LOGIN
-                // halaman yang Anda inginkan:
-                // http://103.153.61.119:8084/kasir/diskon-approval/table
                 // =========================================================
-                var targetUrl = "/kasir/diskon-approval/table";
+                var detailSlug = SlugEncryptionHelper.EncryptGuid(
+                    data.DiskonApprovedId,
+                    _optAutoLogin.SecretKey);
 
-                // token berisi user + targetUrl + expired
+                var targetUrl = $"/kasir/diskon-approval/dokter/detail/{detailSlug}";
+
                 var token = AutoLoginHelper.GenerateAutoLoginToken(
                     userApproval.UserActiveId.ToString(),
                     targetUrl,
                     _optAutoLogin.SecretKey,
                     expiredMinutes: 10);
 
-                // link final yang dikirim ke WA:
-                // http://103.153.61.119:8084/kasir/diskon-approval/table/{token}
                 var autoLoginUrl =
-                    $"{_optAutoLogin.BaseUrl.TrimEnd('/')}/kasir/diskon-approval/table/{Uri.EscapeDataString(token)}";
+                    $"{_optAutoLogin.BaseUrl.TrimEnd('/')}/kasir/diskon-approval/dokter/open/{Uri.EscapeDataString(token)}";
 
-                _logger.LogInformation(
-                    "Auto-login URL berhasil dibuat untuk DiskonApprovedId {DiskonApprovedId}: {AutoLoginUrl}",
-                    data.DiskonApprovedId,
-                    autoLoginUrl);
-
-                // =========================================================
-                // KIRIM WHATSAPP
-                // =========================================================
                 WhatsAppResultDto waResult;
 
-                if (string.IsNullOrWhiteSpace(userApproval.Handphone))
+                if (string.IsNullOrWhiteSpace(userApproval.NoHandphone))
                 {
                     waResult = new WhatsAppResultDto
                     {
                         Success = false,
                         Message = "Nomor handphone user approval kosong.",
-                        PhoneNumber = ""
+                        //PhoneNumber = ""
                     };
-
-                    _logger.LogWarning(
-                        "Nomor handphone kosong untuk UserActiveId {UserActiveId}",
-                        userApproval.UserActiveId);
                 }
                 else
                 {
@@ -239,9 +231,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         $"APPROVAL DISKON,\n\n" +
                         $"Yth. Bapak/Ibu {userApproval.FullName},\n" +
                         $"Terdapat permintaan approval diskon yang menunggu tindak lanjut.\n" +
-                        $"Silakan klik link berikut untuk membuka halaman approval:\n\n{autoLoginUrl}";
+                        $"Silakan klik link berikut untuk membuka detail approval:\n\n{autoLoginUrl}";
 
-                    waResult = await _serviceNotification.SendWhatsAppAsync(userApproval.Handphone, waMsg);
+                    waResult = await _serviceNotification.SendWhatsAppAsync(userApproval.NoHandphone, waMsg);
                 }
 
                 return Created("", new
@@ -250,6 +242,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     data = new
                     {
                         data.DiskonApprovedId,
+                        DetailSlug = detailSlug,
                         AutoLoginUrl = autoLoginUrl,
                         WhatsAppSent = waResult.Success,
                         WhatsAppDebug = waResult
