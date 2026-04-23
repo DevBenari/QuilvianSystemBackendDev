@@ -54,6 +54,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         where a.IsDelete == false
                         join d in _context.Dokters on a.DokterId equals d.DokterId into dokterGroup
                         from d in dokterGroup.DefaultIfEmpty()
+
+                        join da in _context.UserActives on d.UserActiveId equals da.UserActiveId into daGroup
+                        from da in daGroup.DefaultIfEmpty()
+
                         join u in _context.UserActives on a.CreateBy equals u.UserActiveId into userGroup
                         from u in userGroup.DefaultIfEmpty()
                         select new
@@ -65,10 +69,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             NmDokter = d != null ? d.NmDokter : "-",
                             a.AsuransiId,
                             a.DokterId,
-                            FotoName = d != null ? d.FotoName : null,
-                            ImageUrl = d != null && !string.IsNullOrEmpty(d.FotoName)
-                                                           ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
-                                                           : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg"
+                            FotoPath = da != null ? da.FotoPath : null,
+                            FotoName = da != null ? da.FotoName : null
                         }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -291,9 +293,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             // Query data
             var query = from a in _context.DokterAsuransis
                         where a.IsDelete == false
-                        join d in _context.Dokters on a.DokterId equals d.DokterId into dokterGroup
+
+                        join d in _context.Dokters.AsNoTracking() 
+                        on a.DokterId equals d.DokterId into dokterGroup
                         from d in dokterGroup.DefaultIfEmpty()
-                        join u in _context.UserActives on a.CreateBy equals u.UserActiveId into userGroup
+
+                        join da in _context.UserActives.AsNoTracking()
+                        on d.UserActiveId equals da.UserActiveId into daGroup
+                        from da in daGroup.DefaultIfEmpty()
+
+                        join u in _context.UserActives.AsNoTracking()
+                        on a.CreateBy equals u.UserActiveId into userGroup
                         from u in userGroup.DefaultIfEmpty()
                         select new
                         {
@@ -304,10 +314,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             NmDokter = d != null ? d.NmDokter : "-",
                             a.AsuransiId,
                             a.DokterId,
-                            FotoName = d != null ? d.FotoName : null,
-                            ImageUrl = d != null && !string.IsNullOrEmpty(d.FotoName)
-                                                           ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
-                                                           : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg"
+                            FotoPath = da != null ? da.FotoPath : null,
+                            FotoName = da != null ? da.FotoName : null
                         };
 
             // search by nmdokter

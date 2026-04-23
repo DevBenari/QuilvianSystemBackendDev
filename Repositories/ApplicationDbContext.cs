@@ -271,7 +271,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<TarifRadiologi> TarifRadiologis { get; set; }
         public DbSet<KategoriTerapeutik> KategoriTerapeutiks { get; set; }
         public DbSet<SubKategoriTerapeutik> SubKategoriTerapeutiks { get; set; }
-        public DbSet<JenisProdukObat> JenisProdukObats { get; set; }
+        public DbSet<JenisProkes> JenisProkess { get; set; }
         public DbSet<KodeKFA> KodeKFAs { get; set; }
         public DbSet<Komoditas> Komoditas { get; set; }
         public DbSet<Principal> Principals { get; set; }

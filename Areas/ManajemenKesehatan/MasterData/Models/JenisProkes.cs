@@ -4,12 +4,12 @@ using QuilvianSystemBackendDev.Models;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
 {
-    [Table("MstJenisProdukObat", Schema = "public")]
-    public class JenisProdukObat : UserActivity
+    [Table("MstJenisProkes", Schema = "public")]
+    public class JenisProkes : UserActivity
     {
         [Key]
-        public Guid JenisProdukObatId { get; set; }
-        public string? NamaJenisProdukObat { get; set; }
+        public Guid JenisProkesId { get; set; }
+        public string? NamaJenisProkes { get; set; }
         public string? Keterangan { get; set; }
     }
 }

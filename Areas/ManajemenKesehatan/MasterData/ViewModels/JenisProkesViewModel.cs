@@ -1,8 +1,8 @@
 ﻿namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels
 {
-    public class JenisProdukObatViewModel
+    public class JenisProkesViewModel
     {
-        public string? NamaJenisProdukObat { get; set; }
+        public string? NamaJenisProkes { get; set; }
         public string? Keterangan { get; set; }
     }
 }

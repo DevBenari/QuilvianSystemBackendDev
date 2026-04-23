@@ -59,7 +59,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] JenisProdukObatViewModel vm)
+        public async Task<IActionResult> Create([FromBody] JenisProkesViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -89,9 +89,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 //cek duplikasi
-                bool isDuplicate = await _applicationDbContext.JenisProdukObats
-                    .AnyAsync(c => c.NamaJenisProdukObat.ToLower().Trim()
-                    == vm.NamaJenisProdukObat.ToLower().Trim() && c.IsDelete == false);
+                bool isDuplicate = await _applicationDbContext.JenisProkess
+                    .AnyAsync(c => c.NamaJenisProkes.ToLower().Trim()
+                    == vm.NamaJenisProkes.ToLower().Trim() && c.IsDelete == false);
 
                 if (isDuplicate)
                 {
@@ -99,10 +99,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // **Buat Data Baru**
-                var data = new JenisProdukObat
+                var data = new JenisProkes
                 {
-                    JenisProdukObatId = Guid.NewGuid(),
-                    NamaJenisProdukObat = vm.NamaJenisProdukObat,
+                    JenisProkesId = Guid.NewGuid(),
+                    NamaJenisProkes = vm.NamaJenisProkes,
                     Keterangan = vm.Keterangan,
 
                     CreateBy = userActiveId,
@@ -110,7 +110,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 };
 
                 // **Simpan ke Database**
-                _applicationDbContext.JenisProdukObats.Add(data);
+                _applicationDbContext.JenisProkess.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -133,7 +133,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] JenisProdukObatViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] JenisProkesViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -164,17 +164,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.JenisProdukObats.FindAsync(id);
+                var data = await _applicationDbContext.JenisProkess.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
                 //cek duplikasi
-                bool isDuplicate = await _applicationDbContext.JenisProdukObats
-                    .AnyAsync(c => c.NamaJenisProdukObat.ToLower().Trim()
-                    == vm.NamaJenisProdukObat.ToLower().Trim() 
-                    && c.JenisProdukObatId != id
+                bool isDuplicate = await _applicationDbContext.JenisProkess
+                    .AnyAsync(c => c.NamaJenisProkes.ToLower().Trim()
+                    == vm.NamaJenisProkes.ToLower().Trim() 
+                    && c.JenisProkesId != id
                     && c.IsDelete == false);
 
                 if (isDuplicate)
@@ -183,13 +183,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // **Update Data**
-                data.NamaJenisProdukObat = vm.NamaJenisProdukObat;
+                data.NamaJenisProkes = vm.NamaJenisProkes;
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.JenisProdukObats.Update(data);
+                _applicationDbContext.JenisProkess.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -238,7 +238,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.JenisProdukObats.FindAsync(id);
+                var data = await _applicationDbContext.JenisProkess.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -250,7 +250,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 data.IsDelete = true;
 
-                _applicationDbContext.JenisProdukObats.Update(data);
+                _applicationDbContext.JenisProkess.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -287,7 +287,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         {
 
             // Query data
-            var query = (from a in _applicationDbContext.JenisProdukObats.AsNoTracking()
+            var query = (from a in _applicationDbContext.JenisProkess.AsNoTracking()
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
                          where a.IsDelete == false || a.IsDelete == null
@@ -296,8 +296,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
-                             a.JenisProdukObatId,
-                             a.NamaJenisProdukObat,
+                             a.JenisProkesId,
+                             a.NamaJenisProkes,
                              a.Keterangan,
                          });
 
@@ -306,7 +306,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             {
                 search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
-                    EF.Functions.ILike(u.NamaJenisProdukObat, search)
+                    EF.Functions.ILike(u.NamaJenisProkes, search)
                 );
             }
 

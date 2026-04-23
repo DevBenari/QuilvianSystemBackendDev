@@ -51,13 +51,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = (from a in _applicationDbContext.DokterPolis
-                        join u in _applicationDbContext.UserActives
-                            on a.CreateBy equals u.UserActiveId
-                        join d in _applicationDbContext.Dokters
-                            on a.DokterId equals d.DokterId
-                        join p in _applicationDbContext.Polikliniks
-                            on a.PoliId equals p.PoliklinikId
+            var query = (from a in _applicationDbContext.DokterPolis.AsNoTracking()
+
+                        join u in _applicationDbContext.UserActives.AsNoTracking()
+                            on a.CreateBy equals u.UserActiveId into uGroup
+                        from u in uGroup.DefaultIfEmpty()
+
+                        join d in _applicationDbContext.Dokters.AsNoTracking()
+                            on a.DokterId equals d.DokterId into dGroup
+                        from d in dGroup.DefaultIfEmpty()
+
+                        join p in _applicationDbContext.Polikliniks.AsNoTracking()
+                            on a.PoliId equals p.PoliklinikId into pGroup
+                        from p in pGroup.DefaultIfEmpty()
+
+                        join da in _applicationDbContext.UserActives.AsNoTracking()
+                            on d.UserActiveId equals da.UserActiveId into daGroup
+                        from da in daGroup.DefaultIfEmpty()
+
                         where a.IsDelete == false
                         select new
                         {
@@ -74,10 +85,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             // Ambil Nama Poli
                             NamaPoliklinik = p.NamaPoliklinik,
 
-                            FotoName = d.FotoName,
-                            ImageUrl = !string.IsNullOrEmpty(d.FotoName)
-                                ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
-                                : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg"
+                            FotoPath = da != null ? da.FotoPath : null,
+                            FotoName = da != null ? da.FotoName : null
 
                         }).OrderByDescending(a => a.CreateDateTime);
 
@@ -286,34 +295,44 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
             // Query data
-            var query = from a in _applicationDbContext.DokterPolis
-                        join u in _applicationDbContext.UserActives
-                            on a.CreateBy equals u.UserActiveId
-                        join d in _applicationDbContext.Dokters
-                            on a.DokterId equals d.DokterId
-                        join p in _applicationDbContext.Polikliniks
-                            on a.PoliId equals p.PoliklinikId
-                        where a.IsDelete == false
-                        select new
-                        {
-                            CreateDateTime = a.CreateDateTime,
-                            CreateBy = a.CreateBy,
-                            CreateByName = u.FullName,
-                            DokterPoliId = a.DokterPoliId,
-                            DokterId = a.DokterId,
-                            PoliId = a.PoliId,
+            var query = (from a in _applicationDbContext.DokterPolis.AsNoTracking()
 
-                            // Ambil Nama Dokter
-                            NmDokter = d.NmDokter,
+                         join u in _applicationDbContext.UserActives.AsNoTracking()
+                             on a.CreateBy equals u.UserActiveId into uGroup
+                         from u in uGroup.DefaultIfEmpty()
 
-                            // Ambil Nama Poli
-                            NamaPoliklinik = p.NamaPoliklinik,
+                         join d in _applicationDbContext.Dokters.AsNoTracking()
+                             on a.DokterId equals d.DokterId into dGroup
+                         from d in dGroup.DefaultIfEmpty()
 
-                            FotoName = d.FotoName,
-                            ImageUrl = !string.IsNullOrEmpty(d.FotoName)
-                                ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
-                                : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg"
-                        };
+                         join p in _applicationDbContext.Polikliniks.AsNoTracking()
+                             on a.PoliId equals p.PoliklinikId into pGroup
+                         from p in pGroup.DefaultIfEmpty()
+
+                         join da in _applicationDbContext.UserActives.AsNoTracking()
+                             on d.UserActiveId equals da.UserActiveId into daGroup
+                         from da in daGroup.DefaultIfEmpty()
+
+                         where a.IsDelete == false
+                         select new
+                         {
+                             CreateDateTime = a.CreateDateTime,
+                             CreateBy = a.CreateBy,
+                             CreateByName = u.FullName,
+                             DokterPoliId = a.DokterPoliId,
+                             DokterId = a.DokterId,
+                             PoliId = a.PoliId,
+
+                             // Ambil Nama Dokter
+                             NmDokter = d.NmDokter,
+
+                             // Ambil Nama Poli
+                             NamaPoliklinik = p.NamaPoliklinik,
+
+                             FotoPath = da != null ? da.FotoPath : null,
+                             FotoName = da != null ? da.FotoName : null
+
+                         });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             if (!string.IsNullOrWhiteSpace(search))

@@ -84,39 +84,39 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     d.IsAsuransi,
                     d.IsActive,
                     d.HargaVisit,
-                    d.FotoName,
-                    d.FotoPath,
-                    imageUrl = !string.IsNullOrEmpty(d.FotoName)
-                        ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
-                        : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg",
+                    //d.FotoName,
+                    //d.FotoPath,
+                    //imageUrl = !string.IsNullOrEmpty(d.FotoName)
+                    //    ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
+                    //    : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg",
                     // Menambahkan daftar ID Asuransi
-                    AsuransiIds = _context.DokterAsuransis
+                    AsuransiIds = _context.DokterAsuransis.AsNoTracking()
                         .Where(da => da.DokterId == d.DokterId)
                         .Select(da => da.AsuransiId)
                         .Distinct()
                         .ToList(),
 
-                    NamaAsuransi = _context.DokterAsuransis
+                    NamaAsuransi = _context.DokterAsuransis.AsNoTracking()
                         .Where(da => da.DokterId == d.DokterId)
                         .Join(_context.Asuransis, da => da.AsuransiId, a => a.AsuransiId, (da, a) => a.NamaAsuransi)
                         .Distinct()
                         .ToList(),
 
                     // Menambahkan daftar ID Poli
-                    PoliIds = _context.DokterPolis
+                    PoliIds = _context.DokterPolis.AsNoTracking()
                         .Where(dp => dp.DokterId == d.DokterId)
                         .Select(dp => dp.PoliId)
                         .Distinct()
                         .ToList(),
 
-                    NamaPoli = _context.DokterPolis
+                    NamaPoli = _context.DokterPolis.AsNoTracking()
                         .Where(dp => dp.DokterId == d.DokterId)
                         .Join(_context.Polikliniks, dp => dp.PoliId, p => p.PoliklinikId, (dp, p) => p.NamaPoliklinik)
                         .Distinct()
                         .ToList(),
 
                     JadwalPraktek = (
-                    from dp in _context.DokterPolis
+                    from dp in _context.DokterPolis.AsNoTracking()
                     join jp in _context.JadwalPrakteks on dp.DokterPoliId equals jp.DokterPoliId
                     join p in _context.Polikliniks on dp.PoliId equals p.PoliklinikId
                     where dp.DokterId == d.DokterId
@@ -194,7 +194,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     {
                         Dokter = d,
                         CreateByName = cb != null ? cb.FullName : null,
-                        Email = ua != null ? ua.Email : null
+                        Email = ua != null ? ua.Email : null,
+                        FotoName = ua != null ? ua.FotoName : null,
+                        FotoPath = ua != null ? ua.FotoPath : null,
                     }
                 ).FirstOrDefaultAsync();
 
@@ -272,9 +274,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 // =========================================================
                 // 4) Image URL
                 // =========================================================
-                string imageUrl = !string.IsNullOrEmpty(dokter.FotoName)
-                    ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{dokter.FotoName}"
-                    : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg";
+                //string imageUrl = !string.IsNullOrEmpty(dokter.FotoName)
+                //    ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{dokter.FotoName}"
+                //    : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg";
 
                 // =========================================================
                 // 5) Result
@@ -302,10 +304,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     dokter.IsAsuransi,
                     dokter.IsActive,
                     dokter.UserActiveId,
-                    dokter.FotoName,
-                    dokter.FotoPath,
+                    dokterRow.FotoName,
+                    dokterRow.FotoPath,
 
-                    imageUrl,
+                    //imageUrl,
 
                     AsuransiIds,
                     NamaAsuransi,
@@ -361,7 +363,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     {
                         Dokter = d0,
                         Email = ua.Email,
-                        CreateByName = cb != null ? cb.FullName : null
+                        CreateByName = cb != null ? cb.FullName : null,
+                        FotoName = ua != null ? ua.FotoName : null,
+                        FotoPath = ua != null ? ua.FotoPath : null,
                     }
                 ).FirstOrDefaultAsync();
 
@@ -435,9 +439,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 // =========================================================
                 // 4) Image URL
                 // =========================================================
-                string imageUrl = !string.IsNullOrEmpty(dokter.FotoName)
-                    ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{dokter.FotoName}"
-                    : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg";
+                //string imageUrl = !string.IsNullOrEmpty(dokter.FotoName)
+                //    ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{dokter.FotoName}"
+                //    : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg";
 
                 // =========================================================
                 // 5) FINAL OBJECT
@@ -464,10 +468,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     dokter.IsAsuransi,
                     dokter.IsActive,
                     dokter.UserActiveId,
-                    dokter.FotoName,
-                    dokter.FotoPath,
+                    dokterRow.FotoName,
+                    dokterRow.FotoPath,
 
-                    imageUrl,
+                    //imageUrl,
 
                     AsuransiIds,
                     NamaAsuransi,
@@ -491,31 +495,31 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
 
-        [HttpGet("get-image/{id}")]
-        public async Task<IActionResult> GetImage(Guid id)
-        {
-            var fotoPath = _context.Dokters
-                .Where(p => p.DokterId == id)
-                .Select(p => p.FotoPath)
-                .FirstOrDefault();
+        //[HttpGet("get-image/{id}")]
+        //public async Task<IActionResult> GetImage(Guid id)
+        //{
+        //    var fotoPath = _context.Dokters
+        //        .Where(p => p.DokterId == id)
+        //        .Select(p => p.FotoPath)
+        //        .FirstOrDefault();
 
-            if (string.IsNullOrEmpty(fotoPath))
-            {
-                return NotFound(new { message = "Foto tidak ditemukan." });
-            }
+        //    if (string.IsNullOrEmpty(fotoPath))
+        //    {
+        //        return NotFound(new { message = "Foto tidak ditemukan." });
+        //    }
 
-            // Pastikan path lengkap menggunakan wwwroot
-            var fullPath = Path.Combine(_webHostEnvironment.WebRootPath, fotoPath.TrimStart('/'));
+        //    // Pastikan path lengkap menggunakan wwwroot
+        //    var fullPath = Path.Combine(_webHostEnvironment.WebRootPath, fotoPath.TrimStart('/'));
 
-            if (!System.IO.File.Exists(fullPath))
-            {
-                return NotFound(new { message = "File tidak ditemukan di server." });
-            }
+        //    if (!System.IO.File.Exists(fullPath))
+        //    {
+        //        return NotFound(new { message = "File tidak ditemukan di server." });
+        //    }
 
-            var image = System.IO.File.OpenRead(fullPath);
-            var contentType = GetContentType(fullPath);
-            return File(image, contentType);
-        }
+        //    var image = System.IO.File.OpenRead(fullPath);
+        //    var contentType = GetContentType(fullPath);
+        //    return File(image, contentType);
+        //}
 
         // Fungsi untuk mendapatkan MIME Type
         private string GetContentType(string path)
@@ -807,52 +811,65 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     _context.UserActives.Update(userActive);
                 }
 
-                // **Update Foto Profil Jika Ada**
-                if (vm.Foto != null && vm.Foto.Length > 0)
-                {
-                    var maxSize = 2 * 1024 * 1024; // Maksimum 2MB
-                    var allowedExtensions = new List<string> { ".jpg", ".jpeg", ".png" };
-                    var fileExtension = Path.GetExtension(vm.Foto.FileName).ToLower();
+                //// **Update Foto Profil Jika Ada**
+                //if (vm.Foto != null && vm.Foto.Length > 0)
+                //{
+                //    var maxSize = 2 * 1024 * 1024; // Maksimum 2MB
+                //    var allowedExtensions = new List<string> { ".jpg", ".jpeg", ".png" };
+                //    var fileExtension = Path.GetExtension(vm.Foto.FileName).ToLower();
 
-                    if (vm.Foto.Length > maxSize)
-                    {
-                        return BadRequest(new { message = "Ukuran file terlalu besar! Maksimum 2MB." });
-                    }
+                //    if (vm.Foto.Length > maxSize)
+                //    {
+                //        return BadRequest(new { message = "Ukuran file terlalu besar! Maksimum 2MB." });
+                //    }
 
-                    if (!allowedExtensions.Contains(fileExtension))
-                    {
-                        return BadRequest(new { message = "Format file tidak valid! Gunakan JPG atau PNG." });
-                    }
+                //    if (!allowedExtensions.Contains(fileExtension))
+                //    {
+                //        return BadRequest(new { message = "Format file tidak valid! Gunakan JPG atau PNG." });
+                //    }
 
-                    var fotoFileName = $"{data.KdDokter}{fileExtension}";
-                    var oldFileName = data.FotoName ?? "";
+                //    var fotoFileName = $"{data.KdDokter}{fileExtension}";
 
-                    using var client = new HttpClient();
-                    using var ms = new MemoryStream();
-                    await vm.Foto.CopyToAsync(ms);
-                    ms.Position = 0;
+                //    // ambil old file dari userActive karena sekarang foto utama ada di sana
+                //    var oldFileName = userActive?.FotoName ?? "";
 
-                    var content = new MultipartFormDataContent
-                    {
-                        {
-                            new StreamContent(ms)
-                            {
-                                Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.Foto.ContentType) }
-                            }, "file", fotoFileName
-                        },
-                        { new StringContent("FotoDokter"), "folderTarget" },
-                        { new StringContent(oldFileName), "oldFileName" }
-                    };
+                //    using var client = new HttpClient();
+                //    using var ms = new MemoryStream();
+                //    await vm.Foto.CopyToAsync(ms);
+                //    ms.Position = 0;
 
-                    var flaskResponse = await client.PostAsync(_uploadUrl, content);
-                    if (!flaskResponse.IsSuccessStatusCode)
-                    {
-                        return StatusCode(500, new { message = "Gagal upload foto ke server Flask." });
-                    }
+                //    var content = new MultipartFormDataContent
+                //    {
+                //        {
+                //            new StreamContent(ms)
+                //            {
+                //                Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.Foto.ContentType) }
+                //            },
+                //            "file",
+                //            fotoFileName
+                //        },
+                //        { new StringContent("FotoKaryawan"), "folderTarget" },
+                //        { new StringContent(oldFileName), "oldFileName" }
+                //    };
 
-                    data.FotoName = fotoFileName;
-                    data.FotoPath = $"/FotoDokter/{fotoFileName}";
-                }
+                //    var flaskResponse = await client.PostAsync(_uploadUrl, content);
+                //    if (!flaskResponse.IsSuccessStatusCode)
+                //    {
+                //        return StatusCode(500, new { message = "Gagal upload foto ke server Flask." });
+                //    }
+
+                //    // update foto utama di tabel UserActive
+                //    if (userActive != null)
+                //    {
+                //        userActive.FotoName = fotoFileName;
+                //        userActive.FotoPath = $"/FotoKaryawan/{fotoFileName}";
+                //        userActive.UpdateDateTime = DateTimeOffset.UtcNow;
+                //        userActive.UpdateBy = UserActiveId;
+
+                //        _context.UserActives.Update(userActive);
+                //    }
+
+                //}
 
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
                 data.UpdateBy = UserActiveId;
@@ -1485,6 +1502,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     on d.CreateBy equals u0.UserActiveId into uj
                 from u in uj.DefaultIfEmpty()
 
+                join o in _context.UserActives.AsNoTracking()
+                    on d.UserActiveId equals o.UserActiveId into oJ
+                from o in oJ.DefaultIfEmpty()
+
                 select new
                 {
                     d.CreateDateTime,
@@ -1507,8 +1528,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     d.IsAsuransi,
                     d.IsActive,
                     d.HargaVisit,
-                    d.FotoName,
-                    d.FotoPath
+                    FotoName = o != null ? o.FotoName : null,
+                    FotoPath = o != null ? o.FotoPath : null,
                 }
             ).ToListAsync(ct);
 
@@ -1582,9 +1603,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     })
                     .ToList();
 
-                var imageUrl = !string.IsNullOrEmpty(d.FotoName)
-                    ? $"{baseUrl}/FotoDokter/{d.FotoName}"
-                    : $"{baseUrl}/FotoDokter/dokter.jpg";
+                //var imageUrl = !string.IsNullOrEmpty(d.FotoName)
+                //    ? $"{baseUrl}/FotoDokter/{d.FotoName}"
+                //    : $"{baseUrl}/FotoDokter/dokter.jpg";
 
                 return new
                 {
@@ -1611,7 +1632,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     d.FotoName,
                     d.FotoPath,
 
-                    imageUrl,
+                    //imageUrl,
 
                     AsuransiIds = asuItems.Select(x => x.AsuransiId).Distinct().ToList(),
                     NamaAsuransi = asuItems.Select(x => x.NamaAsuransi).Where(x => x != null).Distinct().ToList(),
