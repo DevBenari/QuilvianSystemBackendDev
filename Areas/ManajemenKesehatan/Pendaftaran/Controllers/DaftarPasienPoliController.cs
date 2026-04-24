@@ -62,11 +62,11 @@
 //        [HttpPost]
 //        public async Task<ActionResult<PendaftaranPasien>> PostPendaftaranPasien(PendaftaranPasien pendaftaranPasien)
 //        {
-//            var dateNow = DateTimeOffset.Now;
+//             var dateNow = DateTime.UtcNow;;
 //            var day = dateNow.Day;
 //            var month = dateNow.Month;
 //            var year = dateNow.Year;
-//            var setDateNow = DateTimeOffset.Now.ToString("yyMMdd");
+//            var setDateNow = DateTimeOffset.UtcNow.ToString("yyMMdd");
 
 //            var lastCode = _applicationDbContext.PendaftaranPasiens
 //                                .Where(d => d.CreateDateTime.Day == day && d.CreateDateTime.Month == month && d.CreateDateTime.Year == year)

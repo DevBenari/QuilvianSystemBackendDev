@@ -1,27 +1,75 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Areas\Keuangan\**" />
+    <Compile Remove="Areas\ManajemenKesehatan\Kunjungan\**" />
+    <Content Remove="Areas\Keuangan\**" />
+    <Content Remove="Areas\ManajemenKesehatan\Kunjungan\**" />
+    <EmbeddedResource Remove="Areas\Keuangan\**" />
+    <EmbeddedResource Remove="Areas\ManajemenKesehatan\Kunjungan\**" />
+    <None Remove="Areas\Keuangan\**" />
+    <None Remove="Areas\ManajemenKesehatan\Kunjungan\**" />
+  </ItemGroup>
  
   <ItemGroup>
+    <PackageReference Include="Hangfire.AspNetCore" Version="1.8.22" />
+    <PackageReference Include="Hangfire.PostgreSql" Version="1.20.13" />
+    <PackageReference Include="Microsoft.AspNet.SignalR.Client" Version="2.4.3" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.29" />
     <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.0" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="6.0.29" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="6.0.29" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.2.0" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Core" Version="1.2.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="6.0.29" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="6.0.29">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="6.0.18" />
+    <PackageReference Include="NdefLibrary" Version="4.1.0" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="6.0.29" />
+    <PackageReference Include="OpenCvSharp4" Version="4.10.0.20241108" />
+    <PackageReference Include="OpenCvSharp4.runtime.win" Version="4.10.0.20241108" />
+    <PackageReference Include="PCSC" Version="7.0.0" />
+    <PackageReference Include="PCSC.Iso7816" Version="7.0.0" />
     <PackageReference Include="QRCoder" Version="1.4.3" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.7" />
+    <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="2.1.5" />
+    <PackageReference Include="SkiaSharp" Version="3.116.1" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="3.116.1" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
     <PackageReference Include="Swashbuckle.AspNetCore.Annotations" Version="6.8.0" />
+    <PackageReference Include="System.Drawing.Common" Version="7.0.0" />
+    <PackageReference Include="Tesseract" Version="5.2.0" />
     <PackageReference Include="ZXing.Net.Bindings.Windows.Compatibility" Version="0.16.12" />
+  </ItemGroup>
+ 
+  <ItemGroup>
+    <Folder Include=".github\workflows\" />
+    <Folder Include="Areas\ManajemenKesehatan\RawatJalan\Controllers\" />
+    <Folder Include="Areas\ManajemenKesehatan\RawatJalan\Models\" />
+    <Folder Include="Areas\ManajemenKesehatan\RawatJalan\ViewModels\" />
+    <Folder Include="Areas\ManajemenKesehatan\RekamMedisElektronik\Controllers\" />
+    <Folder Include="Areas\ManajemenKesehatan\RekamMedisElektronik\Models\" />
+    <Folder Include="Areas\ManajemenKesehatan\RekamMedisElektronik\ViewModels\" />
+    <Folder Include="Areas\ManajemenKesehatan\Radiologi\Controllers\" />
+    <Folder Include="Areas\ManajemenKesehatan\Radiologi\Models\" />
+    <Folder Include="Areas\ManajemenKesehatan\Radiologi\ViewModels\" />
+    <Folder Include="Areas\ManajemenKesehatan\Resep\Controllers\" />
+    <Folder Include="Areas\ManajemenKesehatan\Resep\Models\" />
+    <Folder Include="Areas\ManajemenKesehatan\Resep\ViewModels\" />
+    <Folder Include="Areas\ManajemenKesehatan\Tindakan\ViewModels\" />
+    <Folder Include="Areas\ManajemenKesehatan\OperasiOK\Data\" />
+    <Folder Include="wwwroot\TTDKeluargaPasien\" />
+    <Folder Include="wwwroot\TTDUser\" />
+    <Folder Include="wwwroot\scanktp\tessdata\" />
   </ItemGroup>
 
 </Project>

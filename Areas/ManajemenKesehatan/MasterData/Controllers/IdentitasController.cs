@@ -134,7 +134,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var dateNow = DateTimeOffset.Now;
+                 var dateNow = DateTime.UtcNow;;
                 var setDateNow = dateNow.ToString("yyMMdd");
 
                 // Ambil data terakhir untuk hari ini (tanpa ToString di query)
@@ -163,8 +163,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // Cek Duplikasi
-                var isDuplicate = _applicationDbContext.Identitass
-                    .Any(c => c.KodeIdentitas == kode && c.JenisIdentitas == vm.JenisIdentitas);
+                var isDuplicate = await _applicationDbContext.Identitass
+                    .AnyAsync(c =>c.JenisIdentitas.ToLower().Trim() == vm.JenisIdentitas.ToLower().Trim());
 
                 if (isDuplicate)
                 {
@@ -178,7 +178,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     var data = new Identitas
                     {
                         IdentitasId = Guid.NewGuid(),
-                        CreateDateTime = DateTimeOffset.Now,
+                        CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = UserActiveId,
                         KodeIdentitas = kode,
                         JenisIdentitas = vm.JenisIdentitas
@@ -230,11 +230,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
+                // Cek Duplikasi
+                var isDuplicate = await _applicationDbContext.Identitass
+                    .AnyAsync(c => c.JenisIdentitas.ToLower().Trim() == vm.JenisIdentitas.ToLower().Trim() && c.IdentitasId != id);
+
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
+                }
+
                 // **Update Data Pasien**
                 data.JenisIdentitas = vm.JenisIdentitas;
 
                 data.UpdateBy = UserActiveId;
-                data.UpdateDateTime = DateTimeOffset.Now;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
 
                 _applicationDbContext.Identitass.Update(data);
                 _applicationDbContext.SaveChanges();
@@ -274,7 +283,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // **Soft Delete (Tandai Data sebagai Terhapus)**
                 data.DeleteBy = UserActiveId;
-                data.DeleteDateTime = DateTimeOffset.Now;
+                data.DeleteDateTime = DateTimeOffset.UtcNow;
                 data.IsDelete = true;
 
                 _applicationDbContext.Identitass.Update(data);
@@ -315,21 +324,25 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             JenisIdentitas = a.JenisIdentitas,
                         };
 
-            // Filter berdasarkan search
+            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             if (!string.IsNullOrWhiteSpace(search))
             {
+                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
-                    u.KodeIdentitas.Contains(search) || u.JenisIdentitas.Contains(search)
+                    EF.Functions.ILike(u.KodeIdentitas, search) ||
+                    EF.Functions.ILike(u.JenisIdentitas, search)
                 );
             }
 
-            // Filter berdasarkan daterange jika keduanya memiliki nilai
+            //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
             {
+                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
+                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+
                 query = query.Where(u =>
-                    u.CreateDateTime.Date >= startDate.Value.Date &&
-                    u.CreateDateTime.Date <= endDate.Value.Date
-                );
+                    u.CreateDateTime >= startUtc &&
+                    u.CreateDateTime <= endUtc);
             }
 
             // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll)

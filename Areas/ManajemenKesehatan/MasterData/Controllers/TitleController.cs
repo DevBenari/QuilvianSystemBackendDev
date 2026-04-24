@@ -135,7 +135,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var dateNow = DateTimeOffset.Now;
+                 var dateNow = DateTime.UtcNow;;
                 var setDateNow = dateNow.ToString("yyMMdd");
 
                 // Ambil data terakhir untuk hari ini (tanpa ToString di query)
@@ -165,7 +165,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Cek Duplikasi
                 var isDuplicate = _applicationDbContext.Titles
-                    .Any(c => c.KodeTitle == kode && c.NamaTitle == vm.NamaTitle);
+                    .Any(c =>c.NamaTitle.ToLower().Trim() == vm.NamaTitle.ToLower().Trim() && c.IsDelete == false);
 
                 if (isDuplicate)
                 {
@@ -179,7 +179,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     var data = new Title
                     {
                         TitleId = Guid.NewGuid(),
-                        CreateDateTime = DateTimeOffset.Now,
+                        CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = UserActiveId,
                         KodeTitle = kode,
                         NamaTitle = vm.NamaTitle
@@ -231,11 +231,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
+                // Cek Duplikasi
+                var isDuplicate = _applicationDbContext.Titles
+                    .Any(c => c.NamaTitle.ToLower().Trim() == vm.NamaTitle.ToLower().Trim() && c.IsDelete == false && c.TitleId != id);
+
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
+                }
+
                 // **Update Data Pasien**
                 data.NamaTitle = vm.NamaTitle;
 
                 data.UpdateBy = UserActiveId;
-                data.UpdateDateTime = DateTimeOffset.Now;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
 
                 _applicationDbContext.Titles.Update(data);
                 _applicationDbContext.SaveChanges();
@@ -275,7 +284,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // **Soft Delete (Tandai Data sebagai Terhapus)**
                 data.DeleteBy = UserActiveId;
-                data.DeleteDateTime = DateTimeOffset.Now;
+                data.DeleteDateTime = DateTimeOffset.UtcNow;
                 data.IsDelete = true;
 
                 _applicationDbContext.Titles.Update(data);
@@ -327,11 +336,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             // Filter berdasarkan daterange jika keduanya memiliki nilai
             if (startDate.HasValue && endDate.HasValue)
             {
+                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
+                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+
                 query = query.Where(u =>
-                    u.CreateDateTime.Date >= startDate.Value.Date &&
-                    u.CreateDateTime.Date <= endDate.Value.Date
-                );
+                    u.CreateDateTime >= startUtc &&
+                    u.CreateDateTime <= endUtc);
             }
+
 
             // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll)
             if (periode.HasValue)

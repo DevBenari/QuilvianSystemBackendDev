@@ -133,7 +133,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var dateNow = DateTimeOffset.Now;
+                 var dateNow = DateTime.UtcNow;;
                 var setDateNow = dateNow.ToString("yyMMdd");
 
                 // Ambil data terakhir untuk hari ini (tanpa ToString di query)
@@ -163,7 +163,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Cek Duplikasi
                 var isDuplicate = _applicationDbContext.Jabatans
-                    .Any(c => c.KodeJabatan == kode && c.NamaJabatan == vm.NamaJabatan);
+                    .Any(c =>c.NamaJabatan.ToLower().Trim() == vm.NamaJabatan.ToLower().Trim() && c.IsDelete== false);
 
                 if (isDuplicate)
                 {
@@ -177,7 +177,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     var data = new Jabatan
                     {
                         JabatanId = Guid.NewGuid(),
-                        CreateDateTime = DateTimeOffset.Now,
+                        CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = UserActiveId,
                         KodeJabatan = kode,
                         NamaJabatan = vm.NamaJabatan
@@ -233,7 +233,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.NamaJabatan = vm.NamaJabatan;
 
                 data.UpdateBy = UserActiveId;
-                data.UpdateDateTime = DateTimeOffset.Now;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
 
                 _applicationDbContext.Jabatans.Update(data);
                 _applicationDbContext.SaveChanges();
@@ -273,7 +273,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // **Soft Delete (Tandai Data sebagai Terhapus)**
                 data.DeleteBy = UserActiveId;
-                data.DeleteDateTime = DateTimeOffset.Now;
+                data.DeleteDateTime = DateTimeOffset.UtcNow;
                 data.IsDelete = true;
 
                 _applicationDbContext.Jabatans.Update(data);
@@ -314,21 +314,25 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             NamaJabatan = a.NamaJabatan,
                         };
 
-            // Filter berdasarkan search
+            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             if (!string.IsNullOrWhiteSpace(search))
             {
+                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
-                    u.KodeJabatan.Contains(search) || u.NamaJabatan.Contains(search)
+                    EF.Functions.ILike(u.KodeJabatan, search) ||
+                    EF.Functions.ILike(u.NamaJabatan, search)
                 );
             }
 
-            // Filter berdasarkan daterange jika keduanya memiliki nilai
+            //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
             {
+                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
+                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+
                 query = query.Where(u =>
-                    u.CreateDateTime.Date >= startDate.Value.Date &&
-                    u.CreateDateTime.Date <= endDate.Value.Date
-                );
+                    u.CreateDateTime >= startUtc &&
+                    u.CreateDateTime <= endUtc);
             }
 
             // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll)

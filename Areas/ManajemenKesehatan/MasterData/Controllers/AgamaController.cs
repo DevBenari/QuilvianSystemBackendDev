@@ -12,6 +12,9 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using Swashbuckle.AspNetCore.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using System.Globalization;
+using Microsoft.IdentityModel.Tokens;
+using QuilvianSystemBackendDev.Helpers;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
@@ -44,6 +47,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
         }
+        private static string NormalizeNama(string nama)
+        {
+            nama = (nama ?? "").Trim();
+            while (nama.Contains("  "))
+                nama = nama.Replace("  ", " ");
+            return nama;
+        }
 
         [HttpGet]
         public async Task<IActionResult> GetAllAgama(int page = 1, int perPage = 10)
@@ -53,7 +63,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = from a in _applicationDbContext.Agamas
+            var query = (from a in _applicationDbContext.Agamas
                         join u in _applicationDbContext.UserActives
                         on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
@@ -65,7 +75,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             AgamaId = a.AgamaId,
                             KodeAgama = a.KodeAgama,
                             NamaAgama = a.NamaAgama,
-                        };
+                        }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
             var totalRows = query.Count();
@@ -120,7 +130,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             {
                 return BadRequest(new { message = "Data tidak valid." });
             }
-
+            var Nama = NormalizeNama(vm.NamaAgama);
             try
             {
                 // **Cek koneksi ke database**
@@ -147,10 +157,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var dateNow = DateTime.UtcNow;
                 var setDateNow = dateNow.ToString("yyMMdd"); // Format: YYMMDD
 
+
                 // **Ambil Kode Terakhir**
                 var lastCode = _applicationDbContext.Agamas
                     .Where(d => d.CreateDateTime.Date == dateNow.Date)
                     .OrderByDescending(k => k.CreateDateTime)
+
                     .FirstOrDefault();
 
                 string kode;
@@ -173,23 +185,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     }
                 }
 
-                // **Cek Duplikasi**
-                bool isDuplicate = _applicationDbContext.Agamas
-                    .Any(c => c.KodeAgama == kode || c.NamaAgama.ToLower() == vm.NamaAgama.ToLower());
-
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
-                }
+                
 
                 // **Buat Data Baru**
                 var data = new Agama
                 {
                     AgamaId = Guid.NewGuid(),
-                    CreateDateTime = dateNow,
+                    CreateDateTime = dateNow.Date,// Konversi ke UTC,
                     CreateBy = userActiveId,
                     KodeAgama = kode,
-                    NamaAgama = vm.NamaAgama
+                    NamaAgama = Nama
                 };
 
                 // **Simpan ke Database**
@@ -205,9 +210,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
                 }
             }
-            catch (DbUpdateException dbEx)
+            catch (DbUpdateException ex) when (UniqueViolationError.IsUniqueViolation(ex))
             {
-                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+                // Karena citext + partial unique index, ini berarti sudah ada NAMA aktif yang sama
+                return Conflict(new
+                {
+                    status = "duplicate",
+                    message = $"Agama '{Nama}' sudah ada (aktif)."
+                });
             }
             catch (Exception ex)
             {
@@ -289,7 +299,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteAgama(Guid id)
         {
@@ -326,6 +335,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 // **Soft Delete (Tandai Data sebagai Terhapus)**
                 data.DeleteBy = userActiveId;
                 data.DeleteDateTime = DateTime.UtcNow;
+
                 data.IsDelete = true;
 
                 _applicationDbContext.Agamas.Update(data);
@@ -397,11 +407,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     );
                 }
 
-                // **Filter berdasarkan tanggal**
+                //// **Filter berdasarkan tanggal**
                 if (startDate.HasValue && endDate.HasValue)
                 {
-                    DateTime startUtc = startDate.Value.Date;
-                    DateTime endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1);
+                    DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
+                    DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
 
                     query = query.Where(u =>
                         u.CreateDateTime >= startUtc &&

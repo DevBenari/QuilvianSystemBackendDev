@@ -51,7 +51,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = from a in _applicationDbContext.CoveranAsuransis
+            var query = (from a in _applicationDbContext.CoveranAsuransis
                         join u in _applicationDbContext.UserActives
                         on a.CreateBy equals u.UserActiveId
                         where a.IsDelete == false
@@ -73,7 +73,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             TglBerakhir = a.TglBerakhir,
                             IsPKS = a.IsPKS,
                             AsuransiId = a.AsuransiId
-                        };
+                        }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
             var totalRows = query.Count();
@@ -122,25 +122,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             });
         }
 
-        [HttpGet("{NamaAsuransi}")]
-        public IActionResult GetCoveranAsuransiByName(string NamaAsuransi)
-        {
-            var listdata = _applicationDbContext.CoveranAsuransis
-                .Where(c => c.NamaAsuransi.ToLower().Contains(NamaAsuransi.ToLower()))
-                .ToList();
-
-            if (listdata == null || listdata.Count == 0)
-            {
-                return NotFound(new { message = "Data tidak ditemukan." });
-            }
-
-            return Ok(new
-            {
-                message = "Ditemukan || 200 OK",
-                data = listdata
-            });
-        }
-
         [HttpPost]
         public async Task<IActionResult> CreateCoveranAsuransi([FromBody] CoveranAsuransiViewModel vm)
         {
@@ -161,7 +142,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var dateNow = DateTimeOffset.Now;
+                var dateNow = DateTime.UtcNow; ;
                 var setDateNow = dateNow.ToString("yyMMdd");
 
                 // Ambil data terakhir untuk hari ini (tanpa ToString di query)
@@ -190,13 +171,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // cek duplikasi
-                var isDuplicate = _applicationDbContext.CoveranAsuransis
-                    .Any(c => c.KodeCoveranAsuransi == kode);
+                //var isDuplicate = _applicationDbContext.CoveranAsuransis
+                //    .Any(c => c.KodeCoveranAsuransi == kode);
 
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
-                }
+                //if (isDuplicate)
+                //{
+                //    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
+                //}
 
                 // Validate ModelState
                 if (ModelState.IsValid)
@@ -216,12 +197,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         TglBerakhir = vm.TglBerakhir,
                         IsPKS = vm.IsPKS,
                         AsuransiId = vm.AsuransiId,
-                        CreateDateTime = DateTimeOffset.Now,
+                        CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = UserActiveId,
-                        UpdateDateTime = DateTimeOffset.Now,
-                        UpdateBy = UserActiveId,
-                        DeleteDateTime = DateTimeOffset.Now,
-                        DeleteBy = UserActiveId,
+
+
+
                         IsDelete = false
                     };
 
@@ -266,13 +246,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
-                // cek duplikasi
-                var isDuplicate = _applicationDbContext.CoveranAsuransis
-                    .Any(c => c.CoveranAsuransiId != id);
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
-                }
                 // Validate ModelState
                 if (ModelState.IsValid)
                 {
@@ -287,7 +260,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     data.TglBerakhir = vm.TglBerakhir;
                     data.IsPKS = vm.IsPKS;
                     data.AsuransiId = vm.AsuransiId;
-                    data.UpdateDateTime = DateTimeOffset.Now;
+                    data.UpdateDateTime = DateTimeOffset.UtcNow;
                     data.UpdateBy = UserActiveId;
                     _applicationDbContext.CoveranAsuransis.Update(data);
                     _applicationDbContext.SaveChanges();
@@ -328,7 +301,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 data.IsDelete = true;
-                data.DeleteDateTime = DateTimeOffset.Now;
+                data.DeleteDateTime = DateTimeOffset.UtcNow;
                 data.DeleteBy = UserActiveId;
 
                 _applicationDbContext.CoveranAsuransis.Update(data);
@@ -383,22 +356,25 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             AsuransiId = a.AsuransiId
                         };
 
-            // Filter berdasarkan search
+            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             if (!string.IsNullOrWhiteSpace(search))
             {
+                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
-                    u.KodeCoveranAsuransi.Contains(search) || u.NamaAsuransi.Contains(search) || u.Class.Contains(search)
-                    || u.ServiceDesc.Contains(search)
+                    EF.Functions.ILike(u.KodeCoveranAsuransi, search) ||
+                    EF.Functions.ILike(u.NamaAsuransi, search)
                 );
             }
 
-            // Filter berdasarkan daterange jika keduanya memiliki nilai
+            //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
             {
+                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
+                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+
                 query = query.Where(u =>
-                    u.CreateDateTime.Date >= startDate.Value.Date &&
-                    u.CreateDateTime.Date <= endDate.Value.Date
-                );
+                    u.CreateDateTime >= startUtc &&
+                    u.CreateDateTime <= endUtc);
             }
 
             // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai

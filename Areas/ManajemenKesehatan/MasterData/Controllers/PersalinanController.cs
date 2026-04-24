@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
@@ -154,7 +155,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var dateNow = DateTimeOffset.Now;
+                 var dateNow = DateTime.UtcNow;;
                 var setDateNow = dateNow.ToString("yyMMdd");
 
                 // Ambil data terakhir untuk hari ini (tanpa ToString di query)
@@ -184,7 +185,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // cek duplikasi
                 var isDuplicate = _applicationDbContext.Persalinans
-                    .Any(c => c.KodePersalinan == kode && c.NamaPersalinan == vm.NamaPersalinan);
+                    .Any(c => c.NamaPersalinan.ToLower().Trim() == vm.NamaPersalinan.ToLower().Trim() && !c.IsDelete);
 
                 if (isDuplicate)
                 {
@@ -220,11 +221,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         NamaAyah = vm.NamaAyah,
                         NamaIbu = vm.NamaIbu,
                         StatusBayi = vm.StatusBayi,
-                        CreateDateTime = DateTimeOffset.Now,
+                        CreateDateTime = DateTimeOffset.UtcNow,
                         CreateBy = UserActiveId,
-                        UpdateDateTime = DateTimeOffset.Now,
+                        UpdateDateTime = DateTimeOffset.UtcNow,
                         UpdateBy = UserActiveId,
-                        DeleteDateTime = DateTimeOffset.Now,
+                        DeleteDateTime = DateTimeOffset.UtcNow,
                         DeleteBy = UserActiveId,
                         IsDelete = false
                     };
@@ -275,6 +276,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
+                // cek duplikasi
+                var isDuplicate = _applicationDbContext.Persalinans
+                    .Any(c => c.NamaPersalinan.ToLower().Trim() == vm.NamaPersalinan.ToLower().Trim() && !c.IsDelete && c.PersalinanId !=id);
+
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
+                }
+
                 // **Update Data**
                 data.NamaPersalinan = vm.NamaPersalinan;
                 data.TanggalPersalinan = vm.TanggalPersalinan;
@@ -298,7 +308,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.NamaAyah = vm.NamaAyah;
                 data.NamaIbu = vm.NamaIbu;
                 data.StatusBayi = vm.StatusBayi;
-                data.UpdateDateTime = DateTimeOffset.Now;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
                 data.UpdateBy = UserActiveId;
 
                 _applicationDbContext.Persalinans.Update(data);
@@ -338,7 +348,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
                 // **Soft Delete Data**
                 data.IsDelete = true;
-                data.DeleteDateTime = DateTimeOffset.Now;
+                data.DeleteDateTime = DateTimeOffset.UtcNow;
                 data.DeleteBy = UserActiveId;
                 _applicationDbContext.Persalinans.Update(data);
                 _applicationDbContext.SaveChanges();
@@ -403,22 +413,25 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             StatusBayi = a.StatusBayi
                         };
 
-            // Filter berdasarkan search
+            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             if (!string.IsNullOrWhiteSpace(search))
             {
+                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
-                    u.KodePersalinan.Contains(search) || u.NamaPersalinan.Contains(search) || u.NamaBayi.Contains(search)
-                    || u.NamaIbu.Contains(search)
+                    EF.Functions.ILike(u.KodePersalinan, search) ||
+                    EF.Functions.ILike(u.NamaPersalinan, search)
                 );
             }
 
-            // Filter berdasarkan daterange jika keduanya memiliki nilai
+            //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
             {
+                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
+                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+
                 query = query.Where(u =>
-                    u.CreateDateTime.Date >= startDate.Value.Date &&
-                    u.CreateDateTime.Date <= endDate.Value.Date
-                );
+                    u.CreateDateTime >= startUtc &&
+                    u.CreateDateTime <= endUtc);
             }
 
             // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai

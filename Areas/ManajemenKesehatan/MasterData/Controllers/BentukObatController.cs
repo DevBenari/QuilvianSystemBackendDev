@@ -1,0 +1,392 @@
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
+using QuilvianSystemBackendDev.Repositories;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Security.Claims;
+using QuilvianSystemBackendDev.Models;
+using Microsoft.AspNetCore.Identity;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using Swashbuckle.AspNetCore.Annotations;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
+
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    [Authorize]
+    public class BentukObatController : Controller
+    {
+        private readonly ApplicationDbContext _applicationDbContext;
+        private readonly UserManager<ApplicationUser> _userManager;
+
+        public BentukObatController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
+        {
+            _applicationDbContext = context;
+            _userManager = userManager;
+        }
+
+        // GET: api/BentukObat
+        [HttpGet]
+        public async Task<IActionResult> GetAllBentukObat(int page = 1, int perPage = 10)
+        {
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
+
+            var query = from b in _applicationDbContext.BentukObats
+                        select new
+                        {
+                            b.BentukSatuanId,
+                            b.KodeBentukSatuan,
+                            b.NamaBentukSatuan
+                        };
+
+            var totalRows = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            var listdata = await query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToListAsync();
+
+            if (!listdata.Any())
+            {
+                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
+            }
+
+            return Ok(new
+            {
+                message = "Berhasil || 200 OK",
+                data = listdata,
+                pagination = new
+                {
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalRows = totalRows,
+                    TotalPages = totalPages
+                }
+            });
+        }
+
+        // GET: api/BentukObat/{id}
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetBentukObatById(Guid id)
+        {
+            var bentukObat = await _applicationDbContext.BentukObats
+                .FirstOrDefaultAsync(b => b.BentukSatuanId == id);
+
+            if (bentukObat == null)
+            {
+                return NotFound(new { message = "Data tidak ditemukan." });
+            }
+
+            return Ok(new
+            {
+                message = "Ditemukan || 200 OK",
+                data = bentukObat
+            });
+        }
+
+        // POST: api/BentukObat
+        [HttpPost]
+        public async Task<IActionResult> CreateBentukObat([FromBody] BentukObatViewModel bentukObatViewModel)
+        {
+            if (bentukObatViewModel == null)
+            {
+                return BadRequest(new { message = "Data tidak valid." });
+            }
+
+            try
+            {
+                // Ambil User ID dari JWT Claims
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+
+                if (getUserActive == null)
+                {
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+                }
+                var userActiveId = getUserActive.UserActiveId;
+
+                // Mendapatkan tanggal sekarang
+                var dateNow = DateTime.UtcNow;
+                var setDateNow = dateNow.ToString("yyMMdd");
+
+                // Menentukan KodeBentukObat berdasarkan tanggal dan urutan
+                var lastCode = await _applicationDbContext.BentukObats
+                    .Where(d => d.CreateDateTime.Date == dateNow.Date)
+                    .OrderByDescending(b => b.KodeBentukSatuan)
+                    .FirstOrDefaultAsync();
+
+                string KodeBentukObat;
+                if (lastCode == null || lastCode.KodeBentukSatuan.Substring(3, 6) != setDateNow)
+                {
+                    KodeBentukObat = $"BKG{setDateNow}0001";
+                }
+                else
+                {
+                    int lastNumber = Convert.ToInt32(lastCode.KodeBentukSatuan.Substring(9));
+                    KodeBentukObat = $"BKG{setDateNow}{(lastNumber + 1).ToString("D4")}";
+                }
+
+                // Cek jika sudah ada data yang sama berdasarkan KodeBentukObat
+                var isDuplicate = await _applicationDbContext.BentukObats
+                    .AnyAsync(b => b.NamaBentukSatuan.ToLower().Trim() == bentukObatViewModel.NamaBentukSatuan.ToLower().Trim());
+
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Data dengan kode bentuk obat yang sama sudah ada || 409 Conflict Data" });
+                }
+
+                // Convert ViewModel ke Entity BentukObat
+                var bentukObat = new BentukObat
+                {
+                    BentukSatuanId = Guid.NewGuid(),
+                    KodeBentukSatuan = bentukObatViewModel.KodeBentukSatuan,  // Gunakan kode yang sudah dihasilkan
+                    NamaBentukSatuan = bentukObatViewModel.NamaBentukSatuan,
+                    CreateBy = userActiveId,
+                    CreateDateTime = DateTimeOffset.UtcNow
+                };
+
+                // Insert data baru ke database
+                _applicationDbContext.BentukObats.Add(bentukObat);
+                await _applicationDbContext.SaveChangesAsync();
+
+                return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
+
+        // PUT: api/BentukObat/{id}
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateBentukObat(Guid id, [FromBody] BentukObat bentukObat)
+        {
+            if (bentukObat == null)
+            {
+                return BadRequest(new { message = "Data tidak valid." });
+            }
+
+            try
+            {
+                // Ambil User ID dari JWT Claims
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+
+                if (getUserActive == null)
+                {
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+                }
+                var userActiveId = getUserActive.UserActiveId;
+
+                // Cari data yang ingin diupdate
+                var data = await _applicationDbContext.BentukObats.FindAsync(id);
+                if (data == null)
+                {
+                    return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                // Cek duplikasi berdasarkan NamaBentukObat
+                bool isDuplicate = await _applicationDbContext.BentukObats
+                    .AnyAsync(b => b.NamaBentukSatuan.ToLower() == bentukObat.NamaBentukSatuan.ToLower() && b.BentukSatuanId != id);
+
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
+                }
+
+                // Update data
+                data.KodeBentukSatuan = bentukObat.KodeBentukSatuan;
+                data.NamaBentukSatuan = bentukObat.NamaBentukSatuan;
+                data.UpdateBy = userActiveId;
+                data.UpdateDateTime = DateTimeOffset.UtcNow;
+
+                _applicationDbContext.BentukObats.Update(data);
+                await _applicationDbContext.SaveChangesAsync();
+
+                return Ok(new { message = "Update Data Berhasil || 200 OK" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
+        // DELETE: api/BentukObat/{id}
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteBentukObat(Guid id)
+        {
+            try
+            {
+                var data = await _applicationDbContext.BentukObats.FindAsync(id);
+                if (data == null)
+                {
+                    return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                _applicationDbContext.BentukObats.Remove(data);
+                await _applicationDbContext.SaveChangesAsync();
+
+                return Ok(new { message = "Data berhasil dihapus || 200 OK" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
+        [HttpGet("paged")]
+        public IActionResult PagedBentukObat(
+        int page = 1,
+        int perPage = 10,
+        string? search = null,
+        string? orderBy = "CreateDateTime",
+        string? sortDirection = "desc",
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+        DateTime? startDate = null,
+        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+        DateTime? endDate = null,
+        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        {
+            var query = from b in _applicationDbContext.BentukObats
+                        select new
+                        {
+                            CreateDateTime = b.CreateDateTime,
+                            b.BentukSatuanId,
+                            b.KodeBentukSatuan,
+                            b.NamaBentukSatuan
+                        };
+
+            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+                query = query.Where(u =>
+                    EF.Functions.ILike(u.KodeBentukSatuan, search) ||
+                    EF.Functions.ILike(u.NamaBentukSatuan, search)
+                );
+            }
+
+            //// **Filter berdasarkan tanggal**
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
+                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+
+                query = query.Where(u =>
+                    u.CreateDateTime >= startUtc &&
+                    u.CreateDateTime <= endUtc);
+            }
+
+            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
+            if (periode.HasValue)
+            {
+                DateTime today = DateTime.UtcNow.Date;
+
+                switch (periode)
+                {
+                    case PeriodeFilter.Today:
+                        query = query.Where(u => u.CreateDateTime.Date == today);
+                        break;
+                    case PeriodeFilter.ThisWeek:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
+                            u.CreateDateTime.Date <= today
+                        );
+                        break;
+                    case PeriodeFilter.LastWeek:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
+                            u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek))
+                        );
+                        break;
+                    case PeriodeFilter.ThisMonth:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Month == today.Month &&
+                            u.CreateDateTime.Year == today.Year
+                        );
+                        break;
+                    case PeriodeFilter.LastMonth:
+                        query = query.Where(u =>
+                            u.CreateDateTime.Month == today.Month - 1 &&
+                            u.CreateDateTime.Year == today.Year
+                        );
+                        break;
+                    case PeriodeFilter.ThisYear:
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
+                        break;
+                    case PeriodeFilter.LastYear:
+                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
+                        break;
+                    case PeriodeFilter.Last3Months:
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
+                        break;
+                    case PeriodeFilter.Last6Months:
+                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
+                        break;
+                }
+            }
+
+            // Sorting Data dengan cara yang lebih aman
+            query = sortDirection?.ToLower() == "desc"
+                ? orderBy switch
+                {
+                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
+                    "NamaBentukSatuan" => query.OrderByDescending(u => u.NamaBentukSatuan),
+                    "KodeBentukSatuan" => query.OrderByDescending(u => u.KodeBentukSatuan),
+                    _ => query.OrderByDescending(u => u.CreateDateTime)
+                }
+                : orderBy switch
+                {
+                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
+                    "NamaBentukSatuan" => query.OrderByDescending(u => u.NamaBentukSatuan),
+                    "KodeBentukSatuan" => query.OrderByDescending(u => u.KodeBentukSatuan),
+                    _ => query.OrderByDescending(u => u.CreateDateTime)
+                };
+
+            // Pagination
+            var totalRows = query.Count();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
+
+            if (rows.Count == 0 && page > totalPages)
+            {
+                return NotFound(new { message = "Page not found." });
+            }
+
+            return Ok(new
+            {
+                status = "success",
+                message = "Data retrieved successfully",
+                data = new
+                {
+                    Rows = rows,
+                    TotalRows = totalRows,
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalPages = totalPages
+                }
+            });
+        }
+    }
+}
