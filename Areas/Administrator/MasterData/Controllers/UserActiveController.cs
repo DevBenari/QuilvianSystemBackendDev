@@ -51,8 +51,6 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
         private readonly ILogger<UserActiveController> _logger;
         private readonly string _uploadUrl;
 
-        //test
-
         public UserActiveController(
             ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,

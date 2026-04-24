@@ -43,6 +43,82 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             _webHostEnvironment = webHostEnvironment;
         }
 
+        //[HttpGet("cobaaa")]
+        //public async Task<IActionResult> GetAllDokterPoli2(int page = 1, int perPage = 10)
+        //{
+        //    if (page < 1) page = 1;
+        //    if (perPage < 1) perPage = 10;
+
+        //    var query =
+        //        from a in _applicationDbContext.DokterPolis.AsNoTracking()
+
+        //            // INNER JOIN -> hanya tampilkan DokterPoli yang DokterId-nya valid
+        //        join d in _applicationDbContext.Dokters.AsNoTracking()
+        //            on a.DokterId equals d.DokterId
+
+        //        // INNER JOIN -> hanya tampilkan Poli yang valid
+        //        join p in _applicationDbContext.Polikliniks.AsNoTracking()
+        //            on a.PoliId equals p.PoliklinikId
+
+        //        // LEFT JOIN -> CreateBy boleh saja tidak ditemukan
+        //        join u in _applicationDbContext.UserActives.AsNoTracking()
+        //            on a.CreateBy equals u.UserActiveId into uGroup
+        //        from u in uGroup.DefaultIfEmpty()
+
+        //            // LEFT JOIN -> UserActive dokter boleh saja null
+        //        join da in _applicationDbContext.UserActives.AsNoTracking()
+        //            on d.UserActiveId equals da.UserActiveId into daGroup
+        //        from da in daGroup.DefaultIfEmpty()
+
+        //        where a.IsDelete == false || a.IsDelete == null
+        //        orderby a.CreateDateTime descending
+        //        select new
+        //        {
+        //            CreateDateTime = a.CreateDateTime,
+        //            CreateBy = a.CreateBy,
+        //            CreateByName = u != null ? u.FullName : null,
+
+        //            DokterPoliId = a.DokterPoliId,
+        //            DokterId = a.DokterId,
+        //            PoliId = a.PoliId,
+
+        //            NmDokter = d.NmDokter,
+        //            NamaPoliklinik = p.NamaPoliklinik,
+
+        //            FotoPath = da != null ? da.FotoPath : null,
+        //            FotoName = da != null ? da.FotoName : null
+        //        };
+
+        //    var totalRows = await query.CountAsync();
+        //    var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+        //    var listdata = await query
+        //        .Skip((page - 1) * perPage)
+        //        .Take(perPage)
+        //        .ToListAsync();
+
+        //    if (!listdata.Any())
+        //    {
+        //        return NotFound(new
+        //        {
+        //            message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found"
+        //        });
+        //    }
+
+        //    return Ok(new
+        //    {
+        //        message = "Berhasil || 200 OK",
+        //        data = listdata,
+        //        pagination = new
+        //        {
+        //            CurrentPage = page,
+        //            PerPage = perPage,
+        //            TotalRows = totalRows,
+        //            TotalPages = totalPages
+        //        }
+        //    });
+        //}
+
         [HttpGet]
         public async Task<IActionResult> GetAllDokterPoli(int page = 1, int perPage = 10)
         {
@@ -65,11 +141,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             on a.PoliId equals p.PoliklinikId into pGroup
                         from p in pGroup.DefaultIfEmpty()
 
-                        join da in _applicationDbContext.UserActives.AsNoTracking()
-                            on d.UserActiveId equals da.UserActiveId into daGroup
-                        from da in daGroup.DefaultIfEmpty()
+                         join da in _applicationDbContext.UserActives.AsNoTracking()
+                             on d.UserActiveId equals da.UserActiveId into daGroup
+                         from da in daGroup.DefaultIfEmpty()
 
-                        where a.IsDelete == false
+                         where a.IsDelete == false
                         select new
                         {
                             CreateDateTime = a.CreateDateTime,
@@ -192,7 +268,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         //        return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
         //    }
         //}
-
 
 
         [HttpPut("{id}")]
