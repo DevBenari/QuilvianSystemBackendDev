@@ -149,7 +149,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 }
 
                 bool isValid = await _applicationDbContext.Diskons
-                    .AnyAsync(c=>c.DiskonId != vm.DiskonId && c.IsDelete == false);
+                    .AnyAsync(c =>
+                        c.DiskonId == vm.DiskonId &&
+                        (c.IsDelete == false || c.IsDelete == null)
+                    );
+
                 if (!isValid)
                 {
                     return BadRequest(new { message = "Diskon tidak ditemukan." });
@@ -193,26 +197,27 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
                 if (userApproval == null)
                 {
-                    return BadRequest(new { message = "User dokter tidak ditemukan." });
+                    return BadRequest(new { message = "User aktif tidak ditemukan." });
                 }
 
                 // =========================================================
                 // TARGET HALAMAN SETELAH AUTO LOGIN
                 // =========================================================
-                var detailSlug = SlugEncryptionHelper.EncryptGuid(
-                    data.DiskonApprovedId,
-                    _optAutoLogin.SecretKey);
-
-                var targetUrl = $"/kasir/diskon-approval/dokter/detail/{detailSlug}";
+                //var targetUrl = "/kasir/diskon-approval/dokter/";
+                var targetUrl = "/kasir/diskon-approval/dokter/table";
 
                 var token = AutoLoginHelper.GenerateAutoLoginToken(
-                    userApproval.UserActiveId.ToString(),
-                    targetUrl,
-                    _optAutoLogin.SecretKey,
-                    expiredMinutes: 10);
+                   userApproval.UserActiveId.ToString(),
+                   targetUrl,
+                   _optAutoLogin.SecretKey,
+                   expiredMinutes: 10
+               );
 
                 var autoLoginUrl =
-                    $"{_optAutoLogin.BaseUrl.TrimEnd('/')}/kasir/diskon-approval/dokter/open/{Uri.EscapeDataString(token)}";
+                    $"{_optAutoLogin.BaseUrl.TrimEnd('/')}/api/Auth/AutoLogin" +
+                    $"?token={Uri.EscapeDataString(token)}" +
+                    $"&redirect=true" +
+                    $"&setCookie=true";
 
                 WhatsAppResultDto waResult;
 
@@ -242,7 +247,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     data = new
                     {
                         data.DiskonApprovedId,
-                        DetailSlug = detailSlug,
+                        TargetUrl = $"{_optAutoLogin.BaseUrl.TrimEnd('/')}{targetUrl}",
                         AutoLoginUrl = autoLoginUrl,
                         WhatsAppSent = waResult.Success,
                         WhatsAppDebug = waResult
@@ -506,7 +511,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                          from dd in ddG.DefaultIfEmpty()
 
                          join dr in _applicationDbContext.Dokters.AsNoTracking()
-                         on a.Approved1Id equals dr.DokterId into drG
+                         on a.Approved1Id equals dr.UserActiveId into drG
                          from dr in drG.DefaultIfEmpty()
 
                          where a.IsDelete == false 

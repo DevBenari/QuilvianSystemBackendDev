@@ -8,6 +8,7 @@ namespace QuilvianSystemBackendDev.Models
         public string NamaUser { get; set; }
         public bool IsActive { get; set; }
         public bool IsOnline { get; set; }
+        //public DateTime LastActivityTime {get; set;}
     }
 
 }
