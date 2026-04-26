@@ -91,17 +91,36 @@ builder.Services.AddHttpClient();
 #endregion
 
 #region SESSION
+
 builder.Services.AddDistributedMemoryCache();
+
 builder.Services.AddSession(options =>
 {
-    options.IdleTimeout = TimeSpan.FromMinutes(
-        builder.Configuration.GetValue<int?>("AuthSession:CookieExpireMinutes") ?? 120
-    );
+    //var idleSeconds = builder.Configuration.GetValue<int?>("AuthSession:IdleTimeoutSeconds");
+
+    //if (idleSeconds.HasValue && idleSeconds.Value > 0)
+    //{
+    //    options.IdleTimeout = TimeSpan.FromSeconds(idleSeconds.Value);
+    //}
+    //else
+    //{
+    //    var idleMinutes = builder.Configuration.GetValue<int?>("AuthSession:IdleTimeoutMinutes") ?? 180;
+    //    options.IdleTimeout = TimeSpan.FromMinutes(idleMinutes);
+    //}
+    var idleMinutes = builder.Configuration.GetValue<int?>("AuthSession:IdleTimeoutMinutes") ?? 180;
+
+    //options.IdleTimeout = TimeSpan.FromMinutes(idleMinutes);
+    options.Cookie.Name = ".Quilvian.Session";
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
-    options.Cookie.Name = ".Quilvian.Session";
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.None;
+    //kalo pake https ini dinyalakan
+    //options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
 });
+
 #endregion
+
 
 #region AUTH JWT + COOKIE SMART SCHEME
 builder.Services.AddAuthentication(options =>
@@ -144,25 +163,39 @@ builder.Services.AddAuthentication(options =>
 #endregion
 
 #region COOKIE IDENTITY
+
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.Name = ".Quilvian.Auth";
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
 
-    // Karena server kamu masih pakai http://103.153.61.119:8084
     options.Cookie.SameSite = SameSiteMode.Lax;
     options.Cookie.SecurePolicy = CookieSecurePolicy.None;
+    //kalo pake https ini dinyalakan
     //options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
 
     options.ExpireTimeSpan = TimeSpan.FromMinutes(
-        builder.Configuration.GetValue<int?>("AuthSession:CookieExpireMinutes") ?? 120
+        builder.Configuration.GetValue<int?>("AuthSession:CookieExpireMinutes") ?? 180
     );
 
-    options.SlidingExpiration = false;
+    //var cookieSeconds = builder.Configuration.GetValue<int?>("AuthSession:CookieExpireSeconds");
+
+    //if (cookieSeconds.HasValue && cookieSeconds.Value > 0)
+    //{
+    //    options.ExpireTimeSpan = TimeSpan.FromSeconds(cookieSeconds.Value);
+    //}
+    //else
+    //{
+    //    var cookieMinutes = builder.Configuration.GetValue<int?>("AuthSession:CookieExpireMinutes") ?? 180;
+    //    options.ExpireTimeSpan = TimeSpan.FromMinutes(cookieMinutes);
+    //}
+
+    options.SlidingExpiration = true;
     options.LoginPath = "/login";
     options.AccessDeniedPath = "/forbidden";
 });
+
 #endregion
 
 #region AUTHORIZATION
@@ -269,10 +302,38 @@ builder.Services.AddSignalR();
 
 var app = builder.Build();
 
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
+app.UseHttpsRedirection();
+
+app.UseStaticFiles();
+
 app.UseRouting();
+
 app.UseCors("AllowSpecific");
 
+app.UseSession();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+#region Swagger Mapping
+app.UseSwagger();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Home");
+    c.SwaggerEndpoint("/swagger/manajemen_kesehatan/swagger.json", "Manajemen Kesehatan API");
+    c.SwaggerEndpoint("/swagger/administrator/swagger.json", "Administrator API");
+    c.SwaggerEndpoint("/swagger/hrd/swagger.json", "HRD API");
+    c.SwaggerEndpoint("/swagger/finance/swagger.json", "Finance API");
+    c.SwaggerEndpoint("/swagger/master/swagger.json", "Master API");
+    c.RoutePrefix = "swagger";
+    c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None);
+});
+#endregion
+
 #region Hubs + Controllers
+
 app.MapControllers();
 
 app.MapHub<KunjunganHub>("/hubs/kunjungan");
@@ -306,29 +367,7 @@ app.MapHub<AlatPemakaianHub>("/hubs/alatpemakaian");
 app.MapHub<DiskonHub>("/hubs/diskon");
 app.MapHub<DiskonApprovedHub>("/hubs/diskonapproved");
 app.MapHub<DiskonDokterHub>("/hubs/diskondokter");
-#endregion
 
-app.UseHttpsRedirection();
-app.UseStaticFiles();
-app.UseSession();
-app.UseAuthentication();
-app.UseAuthorization();
-
-#region Swagger
-AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
-
-app.UseSwagger();
-app.UseSwaggerUI(c =>
-{
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Home");
-    c.SwaggerEndpoint("/swagger/manajemen_kesehatan/swagger.json", "Manajemen Kesehatan API");
-    c.SwaggerEndpoint("/swagger/administrator/swagger.json", "Administrator API");
-    c.SwaggerEndpoint("/swagger/hrd/swagger.json", "HRD API");
-    c.SwaggerEndpoint("/swagger/finance/swagger.json", "Finance API");
-    c.SwaggerEndpoint("/swagger/master/swagger.json", "Master API");
-    c.RoutePrefix = "swagger";
-    c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None);
-});
 #endregion
 
 app.Run();

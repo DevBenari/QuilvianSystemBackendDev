@@ -382,6 +382,82 @@ namespace QuilvianSystemBackendDev.Controllers
             });
         }
 
+        [HttpPost("keep-alive")]
+        [Authorize(AuthenticationSchemes = "Bearer,Identity.Application")]
+        public async Task<IActionResult> KeepAlive([FromQuery] bool setCookie = true)
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value
+                     ?? User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value
+                     ?? HttpContext.Session.GetString("Email");
+
+            var userActiveIdClaim = User.FindFirst("UserActiveId")?.Value
+                                 ?? HttpContext.Session.GetString("UserActiveId");
+
+            if (string.IsNullOrWhiteSpace(email) && string.IsNullOrWhiteSpace(userActiveIdClaim))
+            {
+                return Unauthorized(new { message = "User tidak terautentikasi." });
+            }
+
+            UserActive? userActive = null;
+
+            if (Guid.TryParse(userActiveIdClaim, out var userActiveId))
+            {
+                userActive = await _context.UserActives
+                    .FirstOrDefaultAsync(x => x.UserActiveId == userActiveId && x.IsActive);
+            }
+
+            if (userActive == null && !string.IsNullOrWhiteSpace(email))
+            {
+                userActive = await _context.UserActives
+                    .FirstOrDefaultAsync(x => x.Email == email && x.IsActive);
+            }
+
+            if (userActive == null)
+            {
+                return Unauthorized(new { message = "User tidak ditemukan atau tidak aktif." });
+            }
+
+            var roleName = await _context.TipeUsers
+                .Where(t => t.TipeUserId == userActive.TipeUserId)
+                .Select(t => t.NamaTipeUser)
+                .FirstOrDefaultAsync() ?? "Guest";
+
+            if (setCookie)
+            {
+                await SignInIdentityCookieAsync(
+                    userActive.Email ?? userActive.UserActiveId.ToString(),
+                    userActive.FullName ?? string.Empty,
+                    userActive.UserActiveId.ToString(),
+                    roleName
+                );
+            }
+
+            SetSession(
+                userActive.Email ?? userActive.UserActiveId.ToString(),
+                userActive.FullName ?? string.Empty,
+                userActive.UserActiveId.ToString(),
+                roleName
+            );
+
+            var jwt = BuildJwtToken(
+                userActive.Email ?? userActive.UserActiveId.ToString(),
+                roleName,
+                userActive.UserActiveId.ToString(),
+                userActive.FullName
+            );
+
+            return Ok(new
+            {
+                message = "Session diperpanjang.",
+                token = jwt.Token,
+                tokenType = "Bearer",
+                expiration = jwt.ExpirationUtc,
+                sessionDurationMinutes = GetSessionTimeoutMinutes(),
+                sessionExpiresAtUtc = DateTime.UtcNow.AddMinutes(GetSessionTimeoutMinutes()),
+                cookieUpdated = setCookie
+            });
+        }
+
         private JwtResult BuildJwtToken(string email, string role, string? userActiveId, string? fullName)
         {
             var jwtSettings = _configuration.GetSection("Jwt");
@@ -401,7 +477,6 @@ namespace QuilvianSystemBackendDev.Controllers
                 claims.Add(new Claim("UserActiveId", userActiveId));
 
             var expiresUtc = DateTime.UtcNow.AddMinutes(GetJwtExpireMinutes());
-
             var token = new JwtSecurityToken(
                 issuer: jwtSettings["Issuer"],
                 audience: jwtSettings["Audience"],
@@ -441,13 +516,14 @@ namespace QuilvianSystemBackendDev.Controllers
                     IsPersistent = true,
                     AllowRefresh = true,
                     ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(GetSessionTimeoutMinutes())
+                    //ExpiresUtc = DateTimeOffset.UtcNow.AddSeconds(GetSessionTimeoutSeconds())
                 });
         }
 
         private void SetSession(string email, string fullName, string? userActiveId, string role)
         {
             var expiresAt = DateTime.UtcNow.AddMinutes(GetSessionTimeoutMinutes());
-
+            //var expiresAt = DateTime.UtcNow.AddSeconds(GetSessionTimeoutSeconds());
             HttpContext.Session.SetString("Email", email);
             HttpContext.Session.SetString("FullName", fullName ?? string.Empty);
             HttpContext.Session.SetString("Role", role ?? "Guest");
@@ -458,18 +534,41 @@ namespace QuilvianSystemBackendDev.Controllers
                 HttpContext.Session.SetString("UserActiveId", userActiveId);
         }
 
+        //private int GetJwtExpireSeconds()
+        //{
+        //    var seconds = _configuration.GetValue<int?>("Jwt:ExpirationInSeconds");
+
+        //    if (seconds.HasValue && seconds.Value > 0)
+        //        return seconds.Value;
+
+        //    var minutes = _configuration.GetValue<int?>("Jwt:ExpirationInMinutes");
+
+        //    return (minutes.HasValue && minutes.Value > 0 ? minutes.Value : 180) * 60;
+        //}
+
         private int GetJwtExpireMinutes()
         {
             var value = _configuration.GetValue<int?>("Jwt:ExpirationInMinutes");
-            return value.HasValue && value.Value > 0 ? value.Value : 120;
+            return value.HasValue && value.Value > 0 ? value.Value : 180;
         }
 
         private int GetSessionTimeoutMinutes()
         {
             var value = _configuration.GetValue<int?>("AuthSession:CookieExpireMinutes");
-            return value.HasValue && value.Value > 0 ? value.Value : 120;
+            return value.HasValue && value.Value > 0 ? value.Value : 180;
         }
 
+        //private int GetSessionTimeoutSeconds()
+        //{
+        //    var seconds = _configuration.GetValue<int?>("AuthSession:CookieExpireSeconds");
+
+        //    if (seconds.HasValue && seconds.Value > 0)
+        //        return seconds.Value;
+
+        //    var minutes = _configuration.GetValue<int?>("AuthSession:CookieExpireMinutes");
+
+        //    return (minutes.HasValue && minutes.Value > 0 ? minutes.Value : 180) * 60;
+        //}
         private bool IsAllowedRedirect(string targetUrl)
         {
             if (Url.IsLocalUrl(targetUrl))
