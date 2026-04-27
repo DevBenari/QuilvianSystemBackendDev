@@ -124,6 +124,30 @@ namespace QuilvianSystemBackendDev.Repositories
                  .HasFilter(@"""IsDelete"" = false OR ""IsDelete"" IS NULL");
             });
             #endregion
+
+            #region Icollection Restriction
+            #region Alat Pemakaian
+            modelBuilder.Entity<AlatPemakaian>()
+                .HasOne(x => x.Kunjungan)
+                .WithMany(x => x.AlatPemakaians)
+                .HasForeignKey(x => x.KunjunganId)
+                .HasPrincipalKey(x=>x.KunjunganID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<AlatPemakaian>()
+                .HasOne(x => x.Pasien)
+                .WithMany(x => x.AlatPemakaians)
+                .HasForeignKey(x => x.PasienId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<AlatPemakaian>()
+                .HasMany(x => x.Details)
+                .WithOne(x => x.AlatPemakaian)
+                .HasForeignKey(x => x.PemakaianAlatId)
+                .OnDelete(DeleteBehavior.Cascade);
+            #endregion
+
+            #endregion
         }
 
         public DbSet<UserActive> UserActives { get; set; }

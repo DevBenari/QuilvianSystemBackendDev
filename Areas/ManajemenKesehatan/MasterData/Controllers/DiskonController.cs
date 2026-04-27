@@ -851,6 +851,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         EF.Functions.ILike(x.KodeVoucher!, searchPattern));
                 }
 
+                if (!string.IsNullOrWhiteSpace(namaKategori))
+                {
+                    var searchPattern = $"%{namaKategori.Trim()}%";
+
+                    baseQuery = baseQuery.Where(x =>
+                        EF.Functions.ILike(x.KategoriDiskon!, searchPattern));
+                }
+
                 if (!string.IsNullOrWhiteSpace(namaLayanan))
                 {
                     var layananPattern = $"%{namaLayanan.Trim()}%";
@@ -867,21 +875,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     baseQuery = baseQuery.Where(x => diskonIdByLayananQuery.Contains(x.DiskonId));
                 }
 
-                if (!string.IsNullOrWhiteSpace(namaKategori))
-                {
-                    var kategoriPatern = $"%{namaKategori.Trim()}%";
-
-                    var diskonIdByLayananQuery =
-                        from d in _applicationDbContext.DiskonDetails.AsNoTracking()
-                        join l in _applicationDbContext.Layanans.AsNoTracking()
-                            on d.LayananId equals l.LayananId
-                        where (d.IsDelete == false || d.IsDelete == null)
-                              && d.DiskonId != null
-                              && EF.Functions.ILike(l.NamaLayanan!, kategoriPatern)
-                        select d.DiskonId.Value;
-
-                    baseQuery = baseQuery.Where(x => diskonIdByLayananQuery.Contains(x.DiskonId));
-                }
 
                 if (startDate.HasValue)
                 {

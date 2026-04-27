@@ -774,9 +774,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
             int perPage = 10,
             Guid? kunjunganId = null,
 
-            // optional search untuk header (keterangan / createByName)
-            //string? search = null,
-
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
 
@@ -817,18 +814,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
             // =========================
             if (kunjunganId.HasValue)
                 query = query.Where(x => x.KunjunganId == kunjunganId.Value);
-
-            // =========================
-            // Search (header fields only)
-            // =========================
-            //if (!string.IsNullOrWhiteSpace(search))
-            //{
-            //    var like = $"%{search.ToLower()}%";
-            //    query = query.Where(x =>
-            //        EF.Functions.ILike(x.Keterangan ?? string.Empty, like) ||
-            //        EF.Functions.ILike(x.CreateByName ?? string.Empty, like)
-            //    );
-            //}
 
             // =========================
             // Date range

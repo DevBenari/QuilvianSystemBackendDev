@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Models;
 using QuilvianSystemBackendDev.Models;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
@@ -35,15 +36,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
         public bool? IsCTTPasienIGD { get; set; }
         public Guid? KelasId { get; set; }
         public bool? IsClosed { get; set; }
-        // ttg rawat inap
-        //public DateTime? TglMasukRanap { get; set; }
-        //public DateTime? TglKeluarRanap { get; set; }
-        //public Guid? DokterDPJId { get; set; }
-        //public Guid? KamarId { get; set; }
-        //public Guid? BedId { get; set; }
-        //public bool? StatusRanap { get; set; }
-        //public string? AlasanKeluar { get; set; }
-        //public Guid? ReferensiKunjunganId { get; set; }
+
+
+        // Navigation
+        public ICollection<AlatPemakaian> AlatPemakaians { get; set; } = new List<AlatPemakaian>();
+
     }
 
 }
