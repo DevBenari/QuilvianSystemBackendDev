@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Models;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Models
@@ -17,5 +18,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Models
 
         // Navigation Property: detail milik 1 header
         public AlatPemakaian? AlatPemakaian { get; set; }
+        public Peralatan? Peralatan { get; set; }
+        public Kelas? Kelas { get; set; }
     }
 }

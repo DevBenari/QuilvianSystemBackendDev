@@ -145,8 +145,123 @@ namespace QuilvianSystemBackendDev.Repositories
                 .WithOne(x => x.AlatPemakaian)
                 .HasForeignKey(x => x.PemakaianAlatId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<AlatPemakaianDetail>()
+                .HasOne(x => x.Peralatan)
+                .WithMany(x => x.AlatPemakaianDetails)
+                .HasForeignKey(x => x.PeralatanId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<AlatPemakaianDetail>()
+                .HasOne(x => x.Kelas)
+                .WithMany(x => x.AlatPemakaianDetails)
+                .HasForeignKey(x => x.KelasId)
+                .OnDelete(DeleteBehavior.Restrict);
             #endregion
 
+            #region Penerimaan dan Permintaan Unit + Farmasi RJ
+            // =========================================================
+            // PERMINTAAN UNIT -> DETAIL PERMINTAAN UNIT
+            // 1 header : many details
+            // =========================================================
+            modelBuilder.Entity<PermintaanUnit>()
+                .HasMany(x => x.DetailPermintaanUnits)
+                .WithOne(x => x.PermintaanUnit)
+                .HasForeignKey(x => x.PermintaanUnitId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+
+            // =========================================================
+            // PENERIMAAN UNIT -> DETAIL PENERIMAAN UNIT
+            // 1 header : many details
+            // =========================================================
+            modelBuilder.Entity<PenerimaanUnit>()
+                .HasMany(x => x.DetailPenerimaanUnits)
+                .WithOne(x => x.PenerimaanUnit)
+                .HasForeignKey(x => x.PenerimaanUnitId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+
+            // =========================================================
+            // PERMINTAAN UNIT -> INSTALASI UNIT (ASAL)
+            // UnitId -> InstalasiUnit.UnitId
+            // =========================================================
+            modelBuilder.Entity<PermintaanUnit>()
+                .HasOne(x => x.Unit)
+                .WithMany(x => x.PermintaanUnitsAsal)
+                .HasForeignKey(x => x.UnitId)
+                .HasPrincipalKey(x => x.InstalasiUnitId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+
+            // =========================================================
+            // PERMINTAAN UNIT -> INSTALASI UNIT (TUJUAN)
+            // TujuanUnitId -> InstalasiUnit.UnitId
+            // =========================================================
+            modelBuilder.Entity<PermintaanUnit>()
+                .HasOne(x => x.TujuanUnit)
+                .WithMany(x => x.PermintaanUnitsTujuan)
+                .HasForeignKey(x => x.TujuanUnitId)
+                .HasPrincipalKey(x => x.InstalasiUnitId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+
+            // =========================================================
+            // PENERIMAAN UNIT -> INSTALASI UNIT
+            // UnitId -> InstalasiUnit.UnitId
+            // =========================================================
+            modelBuilder.Entity<PenerimaanUnit>()
+                .HasOne(x => x.Unit)
+                .WithMany(x => x.PenerimaanUnits)
+                .HasForeignKey(x => x.UnitId)
+                .HasPrincipalKey(x => x.InstalasiUnitId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+
+            // =========================================================
+            // DETAIL PERMINTAAN UNIT -> OBAT
+            // =========================================================
+            modelBuilder.Entity<DetailPermintaanUnit>()
+                .HasOne(x => x.Obat)
+                .WithMany(x => x.DetailPermintaanUnits)
+                .HasForeignKey(x => x.ObatId)
+                .HasPrincipalKey(x => x.ObatId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+
+            // =========================================================
+            // DETAIL PENERIMAAN UNIT -> OBAT
+            // =========================================================
+            modelBuilder.Entity<DetailPenerimaanUnit>()
+                .HasOne(x => x.Obat)
+                .WithMany(x => x.DetailPenerimaanUnits)
+                .HasForeignKey(x => x.ObatId)
+                .HasPrincipalKey(x => x.ObatId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+
+            // =========================================================
+            // FARMASI RJ -> OBAT
+            // =========================================================
+            modelBuilder.Entity<FarmasiRJ>()
+                .HasOne(x => x.Obat)
+                .WithMany(x => x.FarmasiRJs)
+                .HasForeignKey(x => x.ObatId)
+                .HasPrincipalKey(x => x.ObatId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+
+            // =========================================================
+            // FARMASI RJ -> KONVERSI SATUAN
+            // =========================================================
+            modelBuilder.Entity<FarmasiRJ>()
+                .HasOne(x => x.KonversiSatuan)
+                .WithMany(x => x.FarmasiRJs)
+                .HasForeignKey(x => x.KonversiSatuanId)
+                .HasPrincipalKey(x => x.KonversiSatuanId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            #endregion
             #endregion
         }
 

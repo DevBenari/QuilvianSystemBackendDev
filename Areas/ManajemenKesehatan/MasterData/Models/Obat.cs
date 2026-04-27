@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Newtonsoft.Json;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
 using QuilvianSystemBackendDev.Models;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
@@ -36,9 +37,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public Guid? ObatRuteId { get; set; }
         public string? KategoriObat { get; set; }
         public bool? IsControlled { get; set; }
-        //public string Asuransi { get; set; }
-        //public string KandunganObat { get; set; }
-        //public string TipeHarga { get; set; }
 
+        // navigation
+        public ICollection<DetailPermintaanUnit> DetailPermintaanUnits { get; set; } = new List<DetailPermintaanUnit>();
+        public ICollection<DetailPenerimaanUnit> DetailPenerimaanUnits { get; set; } = new List<DetailPenerimaanUnit>();
+        public ICollection<FarmasiRJ> FarmasiRJs { get; set; } = new List<FarmasiRJ>();
     }
 }

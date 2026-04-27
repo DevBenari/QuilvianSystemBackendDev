@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Models;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
@@ -16,5 +17,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
         public string? BatchNumber { get; set; }
         public string? RackLocation { get; set; }
         public DateOnly? TanggalKadaluarsa { get; set; }
+
+        // navigation
+        public Obat? Obat { get; set; }
+        public KonversiSatuan? KonversiSatuan { get; set; }
     }
 }
