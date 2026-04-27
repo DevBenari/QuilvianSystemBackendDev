@@ -47,47 +47,125 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
+        public async Task<IActionResult> GetAll(int page = 1, int perPage = 10, CancellationToken ct = default)
         {
-            // Validasi agar page dan perPage minimal bernilai 1
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            // Query data
-            var query = (from a in _applicationDbContext.ObatReturns
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false || a.IsDelete == null
-                         select new
-                         {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = u.FullName,
-                             a.ObatReturnId,
-                             a.KasirId,
-                             a.ReferenceId,
-                             a.StatusPembayaran,
-                             a.TanggalReturn,
-                             a.Keterangan,
+            var query =
+                from a in _applicationDbContext.ObatReturns.AsNoTracking()
 
-                         }).OrderByDescending(a => a.CreateDateTime);
+                join u in _applicationDbContext.UserActives.AsNoTracking()
+                    on a.CreateBy equals u.UserActiveId into uG
+                from u in uG.DefaultIfEmpty()
 
-            // Hitung total data sebelum paginasi
-            var totalRows = query.Count();
+                where a.IsDelete == false || a.IsDelete == null
+
+                select new
+                {
+                    a.CreateDateTime,
+                    a.CreateBy,
+                    CreateByName = u != null ? u.FullName : null,
+
+                    a.ObatReturnId,
+                    a.KasirId,
+                    a.ReferenceId,
+                    a.StatusPembayaran,
+                    a.TanggalReturn,
+                    a.Keterangan
+                };
+
+            query = query.OrderByDescending(a => a.CreateDateTime);
+
+            var totalRows = await query.CountAsync(ct);
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
 
-            // Ambil data sesuai paging
-            var listdata = query
-                .Skip((page - 1) * perPage)
-                .Take(perPage)
-                .ToList();
-
-            if (!listdata.Any())
+            if (totalRows == 0)
             {
-                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
+                return NotFound(new
+                {
+                    message = "Belum ada data. || 404 Not Found"
+                });
             }
 
-            // Return hasil dengan paging info
+            if (page > totalPages)
+            {
+                return NotFound(new
+                {
+                    message = "Halaman tidak ditemukan. || 404 Not Found"
+                });
+            }
+
+            var headers = await query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToListAsync(ct);
+
+            var obatReturnIds = headers
+                .Select(x => x.ObatReturnId)
+                .ToList();
+
+            var details = await _applicationDbContext.ObatReturnDetails
+                .AsNoTracking()
+                .Where(d =>
+                    d.ObatReturnId != null &&
+                    obatReturnIds.Contains(d.ObatReturnId.Value) &&
+                    (d.IsDelete == false || d.IsDelete == null)
+                )
+                .Select(d => new
+                {
+                    ObatReturnId = d.ObatReturnId!.Value,
+                    d.ObatReturnDetailId,
+                    d.ObatId,
+                    d.NamaObat,
+                    d.Qty,
+                    d.NoBatch,
+                    d.IsMasihTersegel,
+                    d.IsObatUtuh,
+                    d.Keterangan,
+                    d.CreateDateTime,
+                    d.CreateBy
+                })
+                .ToListAsync(ct);
+
+            var listdata = headers
+                .GroupJoin(
+                    details,
+                    header => header.ObatReturnId,
+                    detail => detail.ObatReturnId,
+                    (header, detailGroup) => new
+                    {
+                        header.CreateDateTime,
+                        header.CreateBy,
+                        header.CreateByName,
+
+                        header.ObatReturnId,
+                        header.KasirId,
+                        header.ReferenceId,
+                        header.StatusPembayaran,
+                        header.TanggalReturn,
+                        header.Keterangan,
+
+                        ObatReturnDetails = detailGroup
+                            .Select(d => new
+                            {
+                                d.ObatReturnDetailId,
+                                d.ObatReturnId,
+                                d.ObatId,
+                                d.NamaObat,
+                                d.Qty,
+                                d.NoBatch,
+                                d.IsMasihTersegel,
+                                d.IsObatUtuh,
+                                d.Keterangan,
+                                d.CreateDateTime,
+                                d.CreateBy
+                            })
+                            .ToList()
+                    }
+                )
+                .ToList();
+
             return Ok(new
             {
                 message = "Berhasil || 200 OK",
@@ -100,22 +178,86 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                     TotalPages = totalPages
                 }
             });
-
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(Guid id)
+        public async Task<IActionResult> GetById(Guid id, CancellationToken ct = default)
         {
-            var listdata = _applicationDbContext.ObatReturns.Find(id);
-            if (listdata == null)
+            var header = await (
+                from a in _applicationDbContext.ObatReturns.AsNoTracking()
+
+                join u in _applicationDbContext.UserActives.AsNoTracking()
+                    on a.CreateBy equals u.UserActiveId into uG
+                from u in uG.DefaultIfEmpty()
+
+                where a.ObatReturnId == id
+                      && (a.IsDelete == false || a.IsDelete == null)
+
+                select new
+                {
+                    a.CreateDateTime,
+                    a.CreateBy,
+                    CreateByName = u != null ? u.FullName : null,
+
+                    a.ObatReturnId,
+                    a.KasirId,
+                    a.ReferenceId,
+                    a.StatusPembayaran,
+                    a.TanggalReturn,
+                    a.Keterangan
+                }
+            ).FirstOrDefaultAsync(ct);
+
+            if (header == null)
             {
-                return NotFound(new { message = "Data tidak ditemukan." });
+                return NotFound(new
+                {
+                    message = "Data tidak ditemukan."
+                });
             }
+
+            var details = await _applicationDbContext.ObatReturnDetails
+                .AsNoTracking()
+                .Where(d =>
+                    d.ObatReturnId == id &&
+                    (d.IsDelete == false || d.IsDelete == null)
+                )
+                .Select(d => new
+                {
+                    d.ObatReturnDetailId,
+                    d.ObatReturnId,
+                    d.ObatId,
+                    d.NamaObat,
+                    d.Qty,
+                    d.NoBatch,
+                    d.IsMasihTersegel,
+                    d.IsObatUtuh,
+                    d.Keterangan,
+                    d.CreateDateTime,
+                    d.CreateBy
+                })
+                .ToListAsync(ct);
+
+            var data = new
+            {
+                header.CreateDateTime,
+                header.CreateBy,
+                header.CreateByName,
+
+                header.ObatReturnId,
+                header.KasirId,
+                header.ReferenceId,
+                header.StatusPembayaran,
+                header.TanggalReturn,
+                header.Keterangan,
+
+                ObatReturnDetails = details
+            };
 
             return Ok(new
             {
                 message = "Ditemukan || 200 OK",
-                data = listdata
+                data
             });
         }
 
@@ -266,118 +408,97 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
-            try
+            var data = await _applicationDbContext.ObatReturns
+                .Include(x => x.ObatReturnDetails)
+                .FirstOrDefaultAsync(x => x.ObatReturnId == id);
+
+            if (data == null || data.IsDelete == true)
             {
-                // **Cek koneksi ke database**
-                if (!await _applicationDbContext.Database.CanConnectAsync())
+                return NotFound(new
                 {
-                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
-                }
-
-                // **Ambil User ID dari JWT Claims**
-                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(emailLogin))
-                {
-                    return Unauthorized(new { message = "User tidak terautentikasi!" });
-                }
-
-                var getUserActive = await _applicationDbContext.UserActives
-                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
-                if (getUserActive == null)
-                {
-                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-                }
-                var userActiveId = getUserActive.UserActiveId;
-
-                // **Cari Data**
-                var data = await _applicationDbContext.ObatReturns.FindAsync(id);
-                if (data == null)
-                {
-                    return NotFound(new { message = "Data tidak ditemukan." });
-                }
-
-                // **Soft Delete (Tandai Data sebagai Terhapus)**
-                data.DeleteBy = userActiveId;
-                data.DeleteDateTime = DateTimeOffset.UtcNow;
-
-                data.IsDelete = true;
-
-                _applicationDbContext.ObatReturns.Update(data);
-                int result = await _applicationDbContext.SaveChangesAsync();
-
-                if (result > 0)
-                {
-                    return Ok(new { message = "Data berhasil dihapus (soft delete) || 200 OK" });
-                }
-                else
-                {
-                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
-                }
+                    status = "error",
+                    message = "Data obat return tidak ditemukan"
+                });
             }
-            catch (DbUpdateException dbEx)
+
+            data.IsDelete = true;
+            data.DeleteDateTime = DateTime.UtcNow;
+
+            foreach (var detail in data.ObatReturnDetails)
             {
-                return StatusCode(500, new { message = $"Gagal menghapus data: {dbEx.InnerException?.Message}" });
+                detail.IsDelete = true;
+                detail.DeleteDateTime = DateTime.UtcNow;
             }
-            catch (Exception ex)
+
+            await _applicationDbContext.SaveChangesAsync();
+
+            return Ok(new
             {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
-            }
+                status = "success",
+                message = "Data obat return berhasil dihapus"
+            });
         }
 
         [HttpGet("paged")]
-        public IActionResult Paged(
-        int page = 1,
-        int perPage = 10,
-        string? search = null,
-        string? orderBy = "CreateDateTime",
-        string? sortDirection = "desc",
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                DateTime? startDate = null,
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                DateTime? endDate = null,
-        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        public async Task<IActionResult> Paged(
+            int page = 1,
+            int perPage = 10,
+            string? search = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+    DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+    DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null,
+            CancellationToken ct = default)
         {
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
 
-            // Query data
-            var query = from a in _applicationDbContext.ObatReturns
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false || a.IsDelete == null
-                         select new
-                         {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = u.FullName,
-                             a.ObatReturnId,
-                             a.KasirId,
-                             a.ReferenceId,
-                             a.StatusPembayaran,
-                             a.TanggalReturn,
-                             a.Keterangan,
+            var query =
+                from a in _applicationDbContext.ObatReturns.AsNoTracking()
 
-                         };
+                join u in _applicationDbContext.UserActives.AsNoTracking()
+                    on a.CreateBy equals u.UserActiveId into uG
+                from u in uG.DefaultIfEmpty()
 
-            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-            //if (!string.IsNullOrWhiteSpace(search))
-            //{
-            //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-            //    query = query.Where(u =>
-            //        EF.Functions.ILike(u.NamaDiskon, search)
-            //    );
-            //}
+                where a.IsDelete == false || a.IsDelete == null
 
-            //// **Filter berdasarkan tanggal**
+                select new
+                {
+                    a.CreateDateTime,
+                    a.CreateBy,
+                    CreateByName = u != null ? u.FullName : null,
+
+                    a.ObatReturnId,
+                    a.KasirId,
+                    a.ReferenceId,
+                    a.StatusPembayaran,
+                    a.TanggalReturn,
+                    a.Keterangan
+                };
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var keyword = $"%{search.Trim()}%";
+
+                query = query.Where(x =>
+                    EF.Functions.ILike(x.Keterangan ?? "", keyword)
+                );
+            }
+
             if (startDate.HasValue && endDate.HasValue)
             {
                 DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
                 DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
 
-                query = query.Where(u =>
-                    u.CreateDateTime >= startUtc &&
-                    u.CreateDateTime <= endUtc);
+                query = query.Where(x =>
+                    x.CreateDateTime >= startUtc &&
+                    x.CreateDateTime <= endUtc
+                );
             }
 
-            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
             if (periode.HasValue)
             {
                 DateTime today = DateTime.UtcNow.Date;
@@ -385,71 +506,172 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 switch (periode)
                 {
                     case PeriodeFilter.Today:
-                        query = query.Where(u => u.CreateDateTime.Date == today);
+                        query = query.Where(x => x.CreateDateTime.Date == today);
                         break;
+
                     case PeriodeFilter.ThisWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date <= today
+                        query = query.Where(x =>
+                            x.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
+                            x.CreateDateTime.Date <= today
                         );
                         break;
+
                     case PeriodeFilter.LastWeek:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)
+                        query = query.Where(x =>
+                            x.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
+                            x.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)
                         );
                         break;
+
                     case PeriodeFilter.ThisMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month &&
-                            u.CreateDateTime.Year == today.Year
+                        query = query.Where(x =>
+                            x.CreateDateTime.Month == today.Month &&
+                            x.CreateDateTime.Year == today.Year
                         );
                         break;
+
                     case PeriodeFilter.LastMonth:
-                        query = query.Where(u =>
-                            u.CreateDateTime.Month == today.Month - 1 &&
-                            u.CreateDateTime.Year == today.Year
+                        var lastMonth = today.AddMonths(-1);
+                        query = query.Where(x =>
+                            x.CreateDateTime.Month == lastMonth.Month &&
+                            x.CreateDateTime.Year == lastMonth.Year
                         );
                         break;
+
                     case PeriodeFilter.ThisYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
+                        query = query.Where(x => x.CreateDateTime.Year == today.Year);
                         break;
+
                     case PeriodeFilter.LastYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
+                        query = query.Where(x => x.CreateDateTime.Year == today.Year - 1);
                         break;
+
                     case PeriodeFilter.Last3Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
+                        query = query.Where(x => x.CreateDateTime >= today.AddMonths(-3));
                         break;
+
                     case PeriodeFilter.Last6Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
+                        query = query.Where(x => x.CreateDateTime >= today.AddMonths(-6));
                         break;
                 }
             }
 
-            // Sorting Data dengan cara yang lebih aman
             query = sortDirection?.ToLower() == "desc"
                 ? orderBy switch
                 {
-                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    _ => query.OrderByDescending(u => u.CreateDateTime)
+                    "CreateDateTime" => query.OrderByDescending(x => x.CreateDateTime),
+                    "CreateByName" => query.OrderByDescending(x => x.CreateByName),
+                    "TanggalReturn" => query.OrderByDescending(x => x.TanggalReturn),
+                    "StatusPembayaran" => query.OrderByDescending(x => x.StatusPembayaran),
+                    _ => query.OrderByDescending(x => x.CreateDateTime)
                 }
                 : orderBy switch
                 {
-                    "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    _ => query.OrderBy(u => u.CreateDateTime)
+                    "CreateDateTime" => query.OrderBy(x => x.CreateDateTime),
+                    "CreateByName" => query.OrderBy(x => x.CreateByName),
+                    "TanggalReturn" => query.OrderBy(x => x.TanggalReturn),
+                    "StatusPembayaran" => query.OrderBy(x => x.StatusPembayaran),
+                    _ => query.OrderBy(x => x.CreateDateTime)
                 };
 
-            // Pagination
-            var totalRows = query.Count();
+            var totalRows = await query.CountAsync(ct);
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
 
-            if (rows.Count == 0 && page > totalPages)
+            if (totalRows == 0)
             {
-                return NotFound(new { message = "Page not found." });
+                return Ok(new
+                {
+                    status = "success",
+                    message = "Data retrieved successfully",
+                    data = new
+                    {
+                        Rows = new List<object>(),
+                        TotalRows = totalRows,
+                        CurrentPage = page,
+                        PerPage = perPage,
+                        TotalPages = totalPages
+                    }
+                });
             }
+
+            if (page > totalPages)
+            {
+                return NotFound(new
+                {
+                    status = "error",
+                    message = "Page not found."
+                });
+            }
+
+            var headers = await query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToListAsync(ct);
+
+            var obatReturnIds = headers
+                .Select(x => x.ObatReturnId)
+                .ToList();
+
+            var details = await _applicationDbContext.ObatReturnDetails
+                .AsNoTracking()
+                .Where(d =>
+                    d.ObatReturnId != null &&
+                    obatReturnIds.Contains(d.ObatReturnId.Value) &&
+                    (d.IsDelete == false || d.IsDelete == null)
+                )
+                .Select(d => new
+                {
+                    ObatReturnId = d.ObatReturnId!.Value,
+                    d.ObatReturnDetailId,
+                    d.ObatId,
+                    d.NamaObat,
+                    d.Qty,
+                    d.NoBatch,
+                    d.IsMasihTersegel,
+                    d.IsObatUtuh,
+                    d.Keterangan,
+                    d.CreateDateTime,
+                    d.CreateBy
+                })
+                .ToListAsync(ct);
+
+            var rows = headers
+                .GroupJoin(
+                    details,
+                    header => header.ObatReturnId,
+                    detail => detail.ObatReturnId,
+                    (header, detailGroup) => new
+                    {
+                        header.CreateDateTime,
+                        header.CreateBy,
+                        header.CreateByName,
+
+                        header.ObatReturnId,
+                        header.KasirId,
+                        header.ReferenceId,
+                        header.StatusPembayaran,
+                        header.TanggalReturn,
+                        header.Keterangan,
+
+                        ObatReturnDetails = detailGroup
+                            .Select(d => new
+                            {
+                                d.ObatReturnDetailId,
+                                d.ObatReturnId,
+                                d.ObatId,
+                                d.NamaObat,
+                                d.Qty,
+                                d.NoBatch,
+                                d.IsMasihTersegel,
+                                d.IsObatUtuh,
+                                d.Keterangan,
+                                d.CreateDateTime,
+                                d.CreateBy
+                            })
+                            .ToList()
+                    }
+                )
+                .ToList();
 
             return Ok(new
             {

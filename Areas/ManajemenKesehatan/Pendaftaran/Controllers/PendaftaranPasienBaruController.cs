@@ -18,7 +18,6 @@ using System.Text.RegularExpressions;
 using System.Globalization;
 using ZXing.QrCode.Internal;
 using System.IO;
-using SixLabors.ImageSharp.PixelFormats;
 using System.Net.Http.Headers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Interfaces;
 

@@ -38,9 +38,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? KategoriObat { get; set; }
         public bool? IsControlled { get; set; }
 
-        // navigation
+
+        // Navigation ke master
+        public Satuan? Satuan { get; set; }
+        public BentukObat? BentukObat { get; set; }
+
+        // icollection ke transaksi
         public ICollection<DetailPermintaanUnit> DetailPermintaanUnits { get; set; } = new List<DetailPermintaanUnit>();
         public ICollection<DetailPenerimaanUnit> DetailPenerimaanUnits { get; set; } = new List<DetailPenerimaanUnit>();
         public ICollection<FarmasiRJ> FarmasiRJs { get; set; } = new List<FarmasiRJ>();
+        public ICollection<ObatReturnDetail> ObatReturnDetails { get; set; } = new HashSet<ObatReturnDetail>();
     }
 }
