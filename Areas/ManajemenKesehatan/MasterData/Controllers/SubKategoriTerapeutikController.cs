@@ -3,110 +3,69 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.HubSignalR;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
-using QuilvianSystemBackendDev.DTO;
-using QuilvianSystemBackendDev.Helpers;
-using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class DiskonDokterController : Controller
+    public class SubKategoriTerapeutikController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-        private readonly IHubContext<DiskonDokterHub> _hubContext;
-        private readonly ILogger<DiskonDokterController> _logger;
-        private readonly IWebHostEnvironment _webHostEnvironment;
-        private readonly AutoLoginDTO _optAutoLogin;
-        private readonly INotification _serviceNotification;
 
-        public DiskonDokterController(
+        private readonly ILogger<SubKategoriTerapeutikController> _logger;
+        private readonly IWebHostEnvironment _webHostEnvironment;
+
+        public SubKategoriTerapeutikController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<DiskonDokterController> logger,
-            IWebHostEnvironment webHostEnvironment,
-            IHubContext <DiskonDokterHub> hubContext,
-            IOptions<AutoLoginDTO> optAutoLogin,
-            INotification serviceNotification
-            )
+            ILogger<SubKategoriTerapeutikController> logger,
+            IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
-            _hubContext = hubContext;
-            _optAutoLogin = optAutoLogin.Value;
-            _serviceNotification = serviceNotification;
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = from a in _applicationDbContext.DiskonDokters.AsNoTracking()
+            var listdata = (from a in _applicationDbContext.SubKategoriTerapeutiks.AsNoTracking()
                             join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                             on a.CreateBy equals u.UserActiveId
 
-                            join p in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking()
-                            on a.PasienId equals p.PendaftaranPasienBaruId into pGroup
-                            from p in pGroup.DefaultIfEmpty()
-
-                            join k in _applicationDbContext.Kunjungans.AsNoTracking()
-                            on a.KunjunganId equals k.KunjunganID into kG
+                            join k in _applicationDbContext.KategoriTerapeutiks.AsNoTracking()
+                            on a.KategoriTerapeutikId equals k.KategoriTerapeutikId into kG
                             from k in kG.DefaultIfEmpty()
 
-                            join d in _applicationDbContext.Diskons.AsNoTracking()
-                            on a.DiskonId equals d.DiskonId into dG
-                            from d in dG.DefaultIfEmpty()
-
-                            join dd in _applicationDbContext.DiskonDetails.AsNoTracking()
-                            on d.DiskonId equals dd.DiskonId into ddG
-                            from dd in ddG.DefaultIfEmpty()
-
-                            join dr in _applicationDbContext.Dokters.AsNoTracking()
-                            on a.Approved1Id equals dr.DokterId into drG
-                            from dr in drG.DefaultIfEmpty()
-
-                            where a.IsDelete == false && a.DiskonApprovedId==id 
+                            where a.IsDelete == false || a.IsDelete == null
                             select new
                             {
                                 a.CreateDateTime,
                                 a.CreateBy,
                                 CreateByName = u.FullName,
-                                a.DiskonApprovedId,
-                                a.DiskonId,
-                                d.NamaDiskon,
-                                DetailDiskonId = (Guid?)dd.DetailDiskonId ?? null,
-                                a.PasienId,
-                                NamaPasien = p.NamaLengkap ?? null,
-                                NoRm = p.NoRekamMedis ?? null,
-                                a.KunjunganId,
-                                AsalKunjungan = k.AsalKunjungan ?? null,
-                                JenisKunjungan = k.JenisKunjungan ?? null,
-                                a.Approved1Id,
-                                NamaDokterAproved = dr.NmDokter ?? null,
-                                a.ApprovedDate1,
-                                a.IsApproved1
-                            };
+                                a.SubKategoriTerapeutikId,
+                                a.NamaSubKategoriTerapeutik,
+                                a.KategoriTerapeutikId,
+                                NamaKategoriTerapeutik = k.NamaKategoriTerapeutik ?? null,
+                                a.FungsiObat,
+                                a.Keterangan,
+                            });
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -120,159 +79,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] DiskonDokterViewModel vm)
-        {
-            if (vm == null || !ModelState.IsValid)
-            {
-                return BadRequest(new { message = "Data tidak valid." });
-            }
-
-            try
-            {
-                if (!_applicationDbContext.Database.CanConnect())
-                {
-                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
-                }
-
-                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(emailLogin))
-                {
-                    return Unauthorized(new { message = "User tidak terautentikasi!" });
-                }
-
-                var getUserActive = await _applicationDbContext.UserActives
-                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
-
-                if (getUserActive == null)
-                {
-                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-                }
-
-                bool isValid = await _applicationDbContext.Diskons
-                    .AnyAsync(c =>
-                        c.DiskonId == vm.DiskonId &&
-                        (c.IsDelete == false || c.IsDelete == null)
-                    );
-
-                if (!isValid)
-                {
-                    return BadRequest(new { message = "Diskon tidak ditemukan." });
-                }
-
-                var userActiveId = getUserActive.UserActiveId;
-
-                var data = new DiskonDokter
-                {
-                    DiskonApprovedId = Guid.NewGuid(),
-                    PasienId = vm.PasienId,
-                    KunjunganId = vm.KunjunganId,
-                    DiskonId = vm.DiskonId,
-                    Approved1Id = vm.Approved1Id,
-                    CreateBy = userActiveId,
-                    CreateDateTime = DateTimeOffset.UtcNow,
-                };
-
-                _applicationDbContext.DiskonDokters.Add(data);
-                int result = await _applicationDbContext.SaveChangesAsync();
-
-                if (result <= 0)
-                {
-                    return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
-                }
-
-                // =========================================================
-                // USER TUJUAN WA
-                // sementara pakai user login dulu untuk testing
-                // nanti ganti ke approver sebenarnya
-                // =========================================================
-                var userApproval = await _applicationDbContext.UserActives
-                    .Where(c => c.UserActiveId == vm.Approved1Id)
-                    .Select(c => new
-                    {
-                        c.UserActiveId,
-                        c.NoHandphone,
-                        c.FullName
-                    })
-                    .FirstOrDefaultAsync();
-
-                if (userApproval == null)
-                {
-                    return BadRequest(new { message = "User aktif tidak ditemukan." });
-                }
-
-                // =========================================================
-                // TARGET HALAMAN SETELAH AUTO LOGIN
-                // =========================================================
-                //var targetUrl = "/kasir/diskon-approval/dokter/";
-                var targetUrl = "/kasir/diskon-approval/dokter/table";
-
-                var token = AutoLoginHelper.GenerateAutoLoginToken(
-                   userApproval.UserActiveId.ToString(),
-                   targetUrl,
-                   _optAutoLogin.SecretKey,
-                   expiredMinutes: 10
-               );
-
-                var autoLoginUrl =
-                    $"{_optAutoLogin.BaseUrl.TrimEnd('/')}/api/Auth/AutoLogin" +
-                    $"?token={Uri.EscapeDataString(token)}" +
-                    $"&redirect=true" +
-                    $"&setCookie=true";
-
-                WhatsAppResultDto waResult;
-
-                if (string.IsNullOrWhiteSpace(userApproval.NoHandphone))
-                {
-                    waResult = new WhatsAppResultDto
-                    {
-                        Success = false,
-                        Message = "Nomor handphone user approval kosong.",
-                        //PhoneNumber = ""
-                    };
-                }
-                else
-                {
-                    var waMsg =
-                        $"APPROVAL DISKON,\n\n" +
-                        $"Yth. Bapak/Ibu {userApproval.FullName},\n" +
-                        $"Terdapat permintaan approval diskon yang menunggu tindak lanjut.\n" +
-                        $"Silakan klik link berikut untuk membuka detail approval:\n\n{autoLoginUrl}";
-
-                    waResult = await _serviceNotification.SendWhatsAppAsync(userApproval.NoHandphone, waMsg);
-                }
-
-                return Created("", new
-                {
-                    message = "Tambah Data Berhasil || 201 Created",
-                    data = new
-                    {
-                        data.DiskonApprovedId,
-                        TargetUrl = $"{_optAutoLogin.BaseUrl.TrimEnd('/')}{targetUrl}",
-                        AutoLoginUrl = autoLoginUrl,
-                        WhatsAppSent = waResult.Success,
-                        WhatsAppDebug = waResult
-                    }
-                });
-            }
-            catch (DbUpdateException dbEx)
-            {
-                return StatusCode(500, new
-                {
-                    message = $"Gagal menyimpan data: {dbEx.InnerException?.Message ?? dbEx.Message}"
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Terjadi kesalahan saat Create DiskonDokter");
-                return StatusCode(500, new
-                {
-                    message = $"Terjadi kesalahan internal: {ex.Message}"
-                });
-            }
-        }
-
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] DiskonDokterViewModel vm)
+        public async Task<IActionResult> Create([FromBody] SubKategoriTrapeutikViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -282,7 +89,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             try
             {
                 // **Cek koneksi ke database**
-                if (!await _applicationDbContext.Database.CanConnectAsync())
+                if (!_applicationDbContext.Database.CanConnect())
                 {
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
                 }
@@ -294,39 +101,50 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var getUserActive = await _applicationDbContext.UserActives
-                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+                var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
                 if (getUserActive == null)
                 {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
-                // **Cari Data**
-                var data = await _applicationDbContext.DiskonDokters.FindAsync(id);
-                if (data == null)
+                //cek duplikasi
+                bool isDuplicate = await _applicationDbContext.SubKategoriTerapeutiks
+                    .AnyAsync(c => c.NamaSubKategoriTerapeutik.ToLower().Trim()
+                    == vm.NamaSubKategoriTerapeutik.ToLower().Trim()
+                    && c.FungsiObat.ToLower().Trim() == vm.FungsiObat.ToLower().Trim()
+                    && c.KategoriTerapeutikId == vm.KategoriTerapeutikId
+                    && c.IsDelete == false);
+
+                if (isDuplicate)
                 {
-                    return NotFound(new { message = "Data tidak ditemukan." });
+                    return Conflict(new { message = "Nama sub kategori dan fungsi terapeutik ini telah tersedia" });
                 }
 
-                // **Update Data**
-                data.PasienId = vm.PasienId;
-                data.KunjunganId = vm.KunjunganId;
-                data.DiskonId = vm.DiskonId;
+                // **Buat Data Baru**
+                var data = new SubKategoriTerapeutik
+                {
+                    SubKategoriTerapeutikId = Guid.NewGuid(),
+                    KategoriTerapeutikId = vm.KategoriTerapeutikId,
+                    NamaSubKategoriTerapeutik = vm.NamaSubKategoriTerapeutik,
+                    FungsiObat = vm.FungsiObat,
+                    Keterangan = vm.Keterangan,
 
-                data.UpdateBy = userActiveId;
-                data.UpdateDateTime = DateTimeOffset.UtcNow;
+                    CreateBy = userActiveId,
+                    CreateDateTime = DateTimeOffset.UtcNow,
+                };
 
-                _applicationDbContext.DiskonDokters.Update(data);
+                // **Simpan ke Database**
+                _applicationDbContext.SubKategoriTerapeutiks.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
                 {
-                    return Ok(new { message = "Update Data Berhasil || 200 OK" });
+                    return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
                 }
                 else
                 {
-                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
+                    return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
                 }
             }
             catch (DbUpdateException dbEx)
@@ -339,8 +157,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             }
         }
 
-        [HttpPut("DiskonDokter-Approval/{id}")]
-        public async Task<IActionResult> DiskonDokterApproval(Guid id, [FromBody] DiskonApprovalViewModel vm)
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(Guid id, [FromBody] SubKategoriTrapeutikViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -371,32 +189,41 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.DiskonDokters.FindAsync(id);
+                var data = await _applicationDbContext.SubKategoriTerapeutiks.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
+                //cek duplikasi
+                bool isDuplicate = await _applicationDbContext.SubKategoriTerapeutiks
+                    .AnyAsync(c => c.NamaSubKategoriTerapeutik.ToLower().Trim()
+                    == vm.NamaSubKategoriTerapeutik.ToLower().Trim()
+                    && c.FungsiObat.ToLower().Trim() == vm.FungsiObat.ToLower().Trim()
+                    && c.KategoriTerapeutikId == vm.KategoriTerapeutikId
+                    && c.SubKategoriTerapeutikId != id
+                    && c.IsDelete == false
+                    );
+
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Nama sub kategori dan fungsi terapeutik ini telah tersedia" });
+                }
+
                 // **Update Data**
-                data.Approved1Id = vm.ApprovedId;
-                data.IsApproved1 = true;
-                data.ApprovedDate1 = vm.ApprovedDate;
+                data.NamaSubKategoriTerapeutik = vm.NamaSubKategoriTerapeutik;
+                data.KategoriTerapeutikId = vm.KategoriTerapeutikId;
+                data.FungsiObat = vm.FungsiObat;
+                data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.DiskonDokters.Update(data);
+                _applicationDbContext.SubKategoriTerapeutiks.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
                 {
-                    await _hubContext.Clients.All.SendAsync("Diskon dokter telah disetujui", new
-                    {
-                        action = "update",
-                        diskonAprrovedId = data.DiskonApprovedId,
-                        approvalId1 = data.Approved1Id,
-                    });
-
                     return Ok(new { message = "Update Data Berhasil || 200 OK" });
                 }
                 else
@@ -441,7 +268,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.DiskonDokters.FindAsync(id);
+                var data = await _applicationDbContext.SubKategoriTerapeutiks.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -453,7 +280,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
                 data.IsDelete = true;
 
-                _applicationDbContext.DiskonDokters.Update(data);
+                _applicationDbContext.SubKategoriTerapeutiks.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -480,6 +307,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             int page = 1,
             int perPage = 10,
             string? search = null,
+            Guid? kategoriTerapeutik = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -490,61 +318,43 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         {
 
             // Query data
-            var query = from a in _applicationDbContext.DiskonDokters.AsNoTracking()
+            var query = (from a in _applicationDbContext.SubKategoriTerapeutiks.AsNoTracking()
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
 
-                         join p in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking()
-                         on a.PasienId equals p.PendaftaranPasienBaruId into pGroup
-                         from p in pGroup.DefaultIfEmpty()
-
-                         join k in _applicationDbContext.Kunjungans.AsNoTracking()
-                         on a.KunjunganId equals k.KunjunganID into kG
+                         join k in _applicationDbContext.KategoriTerapeutiks.AsNoTracking()
+                         on a.KategoriTerapeutikId equals k.KategoriTerapeutikId into kG
                          from k in kG.DefaultIfEmpty()
 
-                         join d in _applicationDbContext.Diskons.AsNoTracking()
-                         on a.DiskonId equals d.DiskonId into dG
-                         from d in dG.DefaultIfEmpty()
-
-                         join dd in _applicationDbContext.DiskonDetails.AsNoTracking()
-                         on d.DiskonId equals dd.DiskonId into ddG
-                         from dd in ddG.DefaultIfEmpty()
-
-                         join dr in _applicationDbContext.Dokters.AsNoTracking()
-                         on a.Approved1Id equals dr.UserActiveId into drG
-                         from dr in drG.DefaultIfEmpty()
-
-                         where a.IsDelete == false 
+                         where a.IsDelete == false || a.IsDelete == null
                          select new
                          {
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
-                             a.DiskonApprovedId,
-                             a.DiskonId,
-                             d.NamaDiskon,
-                             DetailDiskonId = (Guid?)dd.DetailDiskonId ?? null,
-                             a.PasienId,
-                             NamaPasien = p.NamaLengkap ?? null,
-                             NoRm =  p.NoRekamMedis ?? null,
-                             a.KunjunganId,
-                             AsalKunjungan = k.AsalKunjungan ?? null,
-                             JenisKunjungan = k.JenisKunjungan ?? null,
-                             a.Approved1Id,
-                             NamaDokterAproved = dr.NmDokter ?? null,
-                             a.ApprovedDate1,
-                             a.IsApproved1
-                         };
+                             a.SubKategoriTerapeutikId,
+                             a.NamaSubKategoriTerapeutik,
+                             a.KategoriTerapeutikId,
+                             NamaKategoriTerapeutik = k.NamaKategoriTerapeutik ?? null,
+                             a.FungsiObat,
+                             a.Keterangan,
+                         });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             if (!string.IsNullOrWhiteSpace(search))
             {
                 search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
-                    EF.Functions.ILike(u.NamaDiskon, search) ||
-                    EF.Functions.ILike(u.NamaPasien, search) ||
-                    EF.Functions.ILike(u.NamaDokterAproved, search)
+                    EF.Functions.ILike(u.NamaSubKategoriTerapeutik, search) ||
+                    EF.Functions.ILike(u.NamaKategoriTerapeutik, search) ||
+                    EF.Functions.ILike(u.FungsiObat, search)
                 );
+            }
+
+            // filter berdasarkan kategori terapeutik
+            if (kategoriTerapeutik.HasValue)
+            {
+                query = query.Where(c=>c.KategoriTerapeutikId == kategoriTerapeutik.Value);
             }
 
             //// **Filter berdasarkan tanggal**
@@ -646,7 +456,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 }
             });
         }
-
 
     }
 }

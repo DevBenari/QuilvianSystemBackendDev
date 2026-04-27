@@ -163,6 +163,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     IsDelete = false
                 };
 
+
                 var detailEntities = req.Details.Select(d => new PaketLayananDetail
                 {
                     DetailPaketLayananId = Guid.NewGuid(),

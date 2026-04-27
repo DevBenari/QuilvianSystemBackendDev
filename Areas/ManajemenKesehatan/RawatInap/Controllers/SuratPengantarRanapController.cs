@@ -500,13 +500,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 return BadRequest(new { message = "DokterDPJPId wajib diisi." });
             }
 
-            if (!vm.DepositRanap.HasValue || vm.DepositRanap <= 0)
-            {
-                return BadRequest(new
-                {
-                    message = "Kunjungan IP (rawat inap) wajib mengisi nominal deposit."
-                });
-            }
+            //if (!vm.DepositRanap.HasValue || vm.DepositRanap <= 0)
+            //{
+            //    return BadRequest(new
+            //    {
+            //        message = "Kunjungan IP (rawat inap) wajib mengisi nominal deposit."
+            //    });
+            //}
 
             try
             {
@@ -622,22 +622,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 }
 
                 // Buat deposit ranap
-                var noKwitansi = await _depositRanapNumberService.GenerateNoKwitansiAsync();
+                //var noKwitansi = await _depositRanapNumberService.GenerateNoKwitansiAsync();
 
-                var deposit = new DepositRanap
-                {
-                    DepositRanapId = Guid.NewGuid(),
-                    KunjunganId = kunjunganId,
-                    TglTransaksi = now,
-                    NominalMasuk = vm.DepositRanap.Value,
-                    SaldoDeposit = vm.DepositRanap.Value,
-                    NoKwitansi = noKwitansi,
-                    StatusDeposit = "Pemasukkan",
-                    CreateDateTime = nowOffset,
-                    CreateBy = userActiveId
-                };
+                //var deposit = new DepositRanap
+                //{
+                //    DepositRanapId = Guid.NewGuid(),
+                //    KunjunganId = kunjunganId,
+                //    TglTransaksi = now,
+                //    NominalMasuk = vm.DepositRanap.Value,
+                //    SaldoDeposit = vm.DepositRanap.Value,
+                //    NoKwitansi = noKwitansi,
+                //    StatusDeposit = "Pemasukkan",
+                //    CreateDateTime = nowOffset,
+                //    CreateBy = userActiveId
+                //};
 
-                _applicationDbContext.DepositRanaps.Add(deposit);
+                //_applicationDbContext.DepositRanaps.Add(deposit);
 
                 var result = await _applicationDbContext.SaveChangesAsync();
 

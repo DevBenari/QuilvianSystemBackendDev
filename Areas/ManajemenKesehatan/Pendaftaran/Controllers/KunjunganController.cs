@@ -158,6 +158,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     join d in _applicationDbContext.Dokters on a.DokterId equals d.DokterId into dokterGroup
                     from d in dokterGroup.DefaultIfEmpty()
 
+                    join da in _applicationDbContext.UserActives on d.UserActiveId equals da.UserActiveId into daGroup
+                    from da in daGroup.DefaultIfEmpty()
+
                     join j in jumlahPerJenis on new { a.PasienId, a.JenisKunjungan } equals new { j.PasienId, j.JenisKunjungan }
 
                     join bb in _applicationDbContext.BookingBedRanaps on a.KunjunganID equals bb.KunjunganId into bookingGroup
@@ -221,9 +224,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         a.CaraMasukRS,
                         a.KondisiKeluar,
                         d.NmDokter,
-                        gambardokter = !string.IsNullOrEmpty(d.FotoName)
-                            ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
-                            : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg",
+                        FotoPath = da != null ? da.FotoPath : null,
+                        FotoName = da != null ? da.FotoName : null,
                         CreateByName = u != null ? u.FullName : null,
                         KelasId = kl != null ? (Guid?)kl.KelasId : null,
                         JumlahJenisKunjungan = j.JumlahJenis,
@@ -301,7 +303,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         r.KondisiKeluar,
                         r.IsFinishedKasir,
                         r.NmDokter,
-                        r.gambardokter,
+                        r.FotoName,
+                        r.FotoPath,
                         r.CreateByName,
                         r.JumlahJenisKunjungan,
                         r.BookingBedRanapId,
@@ -416,6 +419,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     join d in _applicationDbContext.Dokters.AsNoTracking() on a.DokterId equals d.DokterId into dokterGroup
                     from d in dokterGroup.DefaultIfEmpty()
 
+                    join da in _applicationDbContext.UserActives on d.UserActiveId equals da.UserActiveId into daGroup
+                    from da in daGroup.DefaultIfEmpty()
+
                     join bb in _applicationDbContext.BookingBedRanaps.AsNoTracking() on a.KunjunganID equals bb.KunjunganId into bookingGroup
                     from bb in bookingGroup.DefaultIfEmpty()
 
@@ -491,9 +497,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         a.CaraMasukRS,
                         a.KondisiKeluar,
                         a.IsFinishedKasir,
-                        gambardokter = !string.IsNullOrEmpty(d.FotoName)
-                            ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
-                            : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg",
+                        FotoPath = da != null ? da.FotoPath : null,
+                        FotoName = da != null ? da.FotoName : null,
                         CreateByName = u != null ? u.FullName : null,
                         KelasId = kl != null ? (Guid?)kl.KelasId : null,
                         BookingBedRanapId = bb != null ? (Guid?)bb.BookingBedRanapId : null,
@@ -1985,6 +1990,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         on a.DokterId equals d0.DokterId into dokterGroup
                     from d in dokterGroup.DefaultIfEmpty()
 
+                    join da in _applicationDbContext.UserActives on d.UserActiveId equals da.UserActiveId into daGroup
+                    from da in daGroup.DefaultIfEmpty()
+
                     join j in jumlahPerJenis
                         on new { a.PasienId, a.JenisKunjungan }
                         equals new { j.PasienId, j.JenisKunjungan }
@@ -2033,7 +2041,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
 
                         a.DokterId,
                         NamaDokter = d != null ? d.NmDokter : null,
-                        FotoDokter = d != null ? d.FotoName : null,
+                        FotoPath = da != null ? da.FotoPath : null,
+                        FotoName = da != null ? da.FotoName : null,
 
                         a.PasienId,
                         a.AsalKunjungan,
@@ -2302,10 +2311,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         r.CaraMasukRS,
                         r.KondisiKeluar,
                         r.IsFinishedKasir,
-
-                        gambardokter = !string.IsNullOrEmpty(r.FotoDokter)
-                            ? $"{host}/FotoDokter/{r.FotoDokter}"
-                            : $"{host}/FotoDokter/dokter.jpg",
+                        r.FotoName,
+                        r.FotoPath,
 
                         r.JumlahJenisKunjungan,
 

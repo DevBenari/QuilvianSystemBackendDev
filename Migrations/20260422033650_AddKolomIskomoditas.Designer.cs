@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -12,9 +13,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260422033650_AddKolomIskomoditas")]
+    partial class AddKolomIskomoditas
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -8982,6 +8984,12 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("Email")
                         .HasColumnType("text");
 
+                    b.Property<string>("FotoName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("FotoPath")
+                        .HasColumnType("text");
+
                     b.Property<decimal?>("HargaVisit")
                         .HasColumnType("numeric");
 
@@ -9772,9 +9780,9 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.ToTable("MstJadwalPraktek", "public");
                 });
 
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.JenisProkes", b =>
+            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.JenisProdukObat", b =>
                 {
-                    b.Property<Guid>("JenisProkesId")
+                    b.Property<Guid>("JenisProdukObatId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
@@ -9796,7 +9804,7 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("Keterangan")
                         .HasColumnType("text");
 
-                    b.Property<string>("NamaJenisProkes")
+                    b.Property<string>("NamaJenisProdukObat")
                         .HasColumnType("text");
 
                     b.Property<Guid>("UpdateBy")
@@ -9805,9 +9813,9 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<DateTimeOffset>("UpdateDateTime")
                         .HasColumnType("timestamp with time zone");
 
-                    b.HasKey("JenisProkesId");
+                    b.HasKey("JenisProdukObatId");
 
-                    b.ToTable("MstJenisProkes", "public");
+                    b.ToTable("MstJenisProdukObat", "public");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.KabupatenKota", b =>

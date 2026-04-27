@@ -43,6 +43,82 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             _webHostEnvironment = webHostEnvironment;
         }
 
+        //[HttpGet("cobaaa")]
+        //public async Task<IActionResult> GetAllDokterPoli2(int page = 1, int perPage = 10)
+        //{
+        //    if (page < 1) page = 1;
+        //    if (perPage < 1) perPage = 10;
+
+        //    var query =
+        //        from a in _applicationDbContext.DokterPolis.AsNoTracking()
+
+        //            // INNER JOIN -> hanya tampilkan DokterPoli yang DokterId-nya valid
+        //        join d in _applicationDbContext.Dokters.AsNoTracking()
+        //            on a.DokterId equals d.DokterId
+
+        //        // INNER JOIN -> hanya tampilkan Poli yang valid
+        //        join p in _applicationDbContext.Polikliniks.AsNoTracking()
+        //            on a.PoliId equals p.PoliklinikId
+
+        //        // LEFT JOIN -> CreateBy boleh saja tidak ditemukan
+        //        join u in _applicationDbContext.UserActives.AsNoTracking()
+        //            on a.CreateBy equals u.UserActiveId into uGroup
+        //        from u in uGroup.DefaultIfEmpty()
+
+        //            // LEFT JOIN -> UserActive dokter boleh saja null
+        //        join da in _applicationDbContext.UserActives.AsNoTracking()
+        //            on d.UserActiveId equals da.UserActiveId into daGroup
+        //        from da in daGroup.DefaultIfEmpty()
+
+        //        where a.IsDelete == false || a.IsDelete == null
+        //        orderby a.CreateDateTime descending
+        //        select new
+        //        {
+        //            CreateDateTime = a.CreateDateTime,
+        //            CreateBy = a.CreateBy,
+        //            CreateByName = u != null ? u.FullName : null,
+
+        //            DokterPoliId = a.DokterPoliId,
+        //            DokterId = a.DokterId,
+        //            PoliId = a.PoliId,
+
+        //            NmDokter = d.NmDokter,
+        //            NamaPoliklinik = p.NamaPoliklinik,
+
+        //            FotoPath = da != null ? da.FotoPath : null,
+        //            FotoName = da != null ? da.FotoName : null
+        //        };
+
+        //    var totalRows = await query.CountAsync();
+        //    var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+        //    var listdata = await query
+        //        .Skip((page - 1) * perPage)
+        //        .Take(perPage)
+        //        .ToListAsync();
+
+        //    if (!listdata.Any())
+        //    {
+        //        return NotFound(new
+        //        {
+        //            message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found"
+        //        });
+        //    }
+
+        //    return Ok(new
+        //    {
+        //        message = "Berhasil || 200 OK",
+        //        data = listdata,
+        //        pagination = new
+        //        {
+        //            CurrentPage = page,
+        //            PerPage = perPage,
+        //            TotalRows = totalRows,
+        //            TotalPages = totalPages
+        //        }
+        //    });
+        //}
+
         [HttpGet]
         public async Task<IActionResult> GetAllDokterPoli(int page = 1, int perPage = 10)
         {
@@ -51,14 +127,25 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = (from a in _applicationDbContext.DokterPolis
-                        join u in _applicationDbContext.UserActives
-                            on a.CreateBy equals u.UserActiveId
-                        join d in _applicationDbContext.Dokters
-                            on a.DokterId equals d.DokterId
-                        join p in _applicationDbContext.Polikliniks
-                            on a.PoliId equals p.PoliklinikId
-                        where a.IsDelete == false
+            var query = (from a in _applicationDbContext.DokterPolis.AsNoTracking()
+
+                        join u in _applicationDbContext.UserActives.AsNoTracking()
+                            on a.CreateBy equals u.UserActiveId into uGroup
+                        from u in uGroup.DefaultIfEmpty()
+
+                        join d in _applicationDbContext.Dokters.AsNoTracking()
+                            on a.DokterId equals d.DokterId into dGroup
+                        from d in dGroup.DefaultIfEmpty()
+
+                        join p in _applicationDbContext.Polikliniks.AsNoTracking()
+                            on a.PoliId equals p.PoliklinikId into pGroup
+                        from p in pGroup.DefaultIfEmpty()
+
+                         join da in _applicationDbContext.UserActives.AsNoTracking()
+                             on d.UserActiveId equals da.UserActiveId into daGroup
+                         from da in daGroup.DefaultIfEmpty()
+
+                         where a.IsDelete == false
                         select new
                         {
                             CreateDateTime = a.CreateDateTime,
@@ -74,10 +161,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             // Ambil Nama Poli
                             NamaPoliklinik = p.NamaPoliklinik,
 
-                            FotoName = d.FotoName,
-                            ImageUrl = !string.IsNullOrEmpty(d.FotoName)
-                                ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
-                                : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg"
+                            FotoPath = da != null ? da.FotoPath : null,
+                            FotoName = da != null ? da.FotoName : null
 
                         }).OrderByDescending(a => a.CreateDateTime);
 
@@ -128,62 +213,61 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         // POST: api/DokterPoli
-        [HttpPost]
-        public async Task<IActionResult> CreateDokterPoli([FromBody] DokterPoliViewModel vm)
-        {
-            if (vm == null || !ModelState.IsValid)
-            {
-                return BadRequest(new { message = "Data tidak valid. || 400 Bad Request" });
-            }
+        //[HttpPost]
+        //public async Task<IActionResult> CreateDokterPoli([FromBody] DokterPoliViewModel vm)
+        //{
+        //    if (vm == null || !ModelState.IsValid)
+        //    {
+        //        return BadRequest(new { message = "Data tidak valid. || 400 Bad Request" });
+        //    }
 
-            try
-            {
-                // **Ambil User ID dari JWT Claims**
-                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
-                var UserActiveId = GetUserActive.UserActiveId;
+        //    try
+        //    {
+        //        // **Ambil User ID dari JWT Claims**
+        //        var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        //        var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+        //        var UserActiveId = GetUserActive.UserActiveId;
 
-                if (string.IsNullOrEmpty(EmailLogin))
-                {
-                    return Unauthorized(new { message = "User tidak terautentikasi!" });
-                }
+        //        if (string.IsNullOrEmpty(EmailLogin))
+        //        {
+        //            return Unauthorized(new { message = "User tidak terautentikasi!" });
+        //        }
 
-                var dateNow = DateTime.UtcNow; ;
-                var setDateNow = dateNow.ToString("yyMMdd");
+        //        var dateNow = DateTime.UtcNow; ;
+        //        var setDateNow = dateNow.ToString("yyMMdd");
 
-                // Validate ModelState
-                if (ModelState.IsValid)
-                {
-                    var data = new DokterPoli
-                    {
-                        DokterPoliId = Guid.NewGuid(),
-                        DokterId = vm.DokterId,
-                        PoliId = vm.PoliId,
-                        CreateDateTime = dateNow,
-                        CreateBy = UserActiveId,
-                        IsDelete = false
-                    };
+        //        // Validate ModelState
+        //        if (ModelState.IsValid)
+        //        {
+        //            var data = new DokterPoli
+        //            {
+        //                DokterPoliId = Guid.NewGuid(),
+        //                DokterId = vm.DokterId,
+        //                PoliId = vm.PoliId,
+        //                CreateDateTime = dateNow,
+        //                CreateBy = UserActiveId,
+        //                IsDelete = false
+        //            };
 
 
-                    _applicationDbContext.DokterPolis.Add(data);
-                    _applicationDbContext.SaveChanges();
-                    return Created("", new
-                    {
-                        message = "Data berhasil ditambahkan. || 201 Created",
-                    });
-                }
-                else
-                {
-                    return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
-                }
-            }
-            catch
-            (Exception ex)
-            {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
-            }
-        }
-
+        //            _applicationDbContext.DokterPolis.Add(data);
+        //            _applicationDbContext.SaveChanges();
+        //            return Created("", new
+        //            {
+        //                message = "Data berhasil ditambahkan. || 201 Created",
+        //            });
+        //        }
+        //        else
+        //        {
+        //            return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
+        //        }
+        //    }
+        //    catch
+        //    (Exception ex)
+        //    {
+        //        return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+        //    }
+        //}
 
 
         [HttpPut("{id}")]
@@ -286,34 +370,44 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
             // Query data
-            var query = from a in _applicationDbContext.DokterPolis
-                        join u in _applicationDbContext.UserActives
-                            on a.CreateBy equals u.UserActiveId
-                        join d in _applicationDbContext.Dokters
-                            on a.DokterId equals d.DokterId
-                        join p in _applicationDbContext.Polikliniks
-                            on a.PoliId equals p.PoliklinikId
-                        where a.IsDelete == false
-                        select new
-                        {
-                            CreateDateTime = a.CreateDateTime,
-                            CreateBy = a.CreateBy,
-                            CreateByName = u.FullName,
-                            DokterPoliId = a.DokterPoliId,
-                            DokterId = a.DokterId,
-                            PoliId = a.PoliId,
+            var query = (from a in _applicationDbContext.DokterPolis.AsNoTracking()
 
-                            // Ambil Nama Dokter
-                            NmDokter = d.NmDokter,
+                         join u in _applicationDbContext.UserActives.AsNoTracking()
+                             on a.CreateBy equals u.UserActiveId into uGroup
+                         from u in uGroup.DefaultIfEmpty()
 
-                            // Ambil Nama Poli
-                            NamaPoliklinik = p.NamaPoliklinik,
+                         join d in _applicationDbContext.Dokters.AsNoTracking()
+                             on a.DokterId equals d.DokterId into dGroup
+                         from d in dGroup.DefaultIfEmpty()
 
-                            FotoName = d.FotoName,
-                            ImageUrl = !string.IsNullOrEmpty(d.FotoName)
-                                ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
-                                : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg"
-                        };
+                         join p in _applicationDbContext.Polikliniks.AsNoTracking()
+                             on a.PoliId equals p.PoliklinikId into pGroup
+                         from p in pGroup.DefaultIfEmpty()
+
+                         join da in _applicationDbContext.UserActives.AsNoTracking()
+                             on d.UserActiveId equals da.UserActiveId into daGroup
+                         from da in daGroup.DefaultIfEmpty()
+
+                         where a.IsDelete == false
+                         select new
+                         {
+                             CreateDateTime = a.CreateDateTime,
+                             CreateBy = a.CreateBy,
+                             CreateByName = u.FullName,
+                             DokterPoliId = a.DokterPoliId,
+                             DokterId = a.DokterId,
+                             PoliId = a.PoliId,
+
+                             // Ambil Nama Dokter
+                             NmDokter = d.NmDokter,
+
+                             // Ambil Nama Poli
+                             NamaPoliklinik = p.NamaPoliklinik,
+
+                             FotoPath = da != null ? da.FotoPath : null,
+                             FotoName = da != null ? da.FotoName : null
+
+                         });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             if (!string.IsNullOrWhiteSpace(search))
