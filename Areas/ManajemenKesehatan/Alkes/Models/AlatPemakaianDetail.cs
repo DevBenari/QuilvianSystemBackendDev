@@ -14,5 +14,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Models
         public decimal? HargaPeralatan { get; set; }
         public decimal? TotalPemakaianAlat { get; set; }
         public string? Keterangan {  get; set; }
+
+        // Navigation Property: detail milik 1 header
+        public AlatPemakaian? AlatPemakaian { get; set; }
     }
 }

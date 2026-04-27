@@ -784,6 +784,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             int perPage = 10,
             string? search = null,
             string? namaLayanan = null,
+            string? namaKategori = null,
             string? kodedisk = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
@@ -861,6 +862,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         where (d.IsDelete == false || d.IsDelete == null)
                               && d.DiskonId != null
                               && EF.Functions.ILike(l.NamaLayanan!, layananPattern)
+                        select d.DiskonId.Value;
+
+                    baseQuery = baseQuery.Where(x => diskonIdByLayananQuery.Contains(x.DiskonId));
+                }
+
+                if (!string.IsNullOrWhiteSpace(namaKategori))
+                {
+                    var kategoriPatern = $"%{namaKategori.Trim()}%";
+
+                    var diskonIdByLayananQuery =
+                        from d in _applicationDbContext.DiskonDetails.AsNoTracking()
+                        join l in _applicationDbContext.Layanans.AsNoTracking()
+                            on d.LayananId equals l.LayananId
+                        where (d.IsDelete == false || d.IsDelete == null)
+                              && d.DiskonId != null
+                              && EF.Functions.ILike(l.NamaLayanan!, kategoriPatern)
                         select d.DiskonId.Value;
 
                     baseQuery = baseQuery.Where(x => diskonIdByLayananQuery.Contains(x.DiskonId));
