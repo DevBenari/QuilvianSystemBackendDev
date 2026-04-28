@@ -613,6 +613,7 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<GolonganObat> GolonganObats { get; set; }
         public DbSet<GroupObatAlkes> GroupObatAlkess { get; set; }
         public DbSet<ObatAlkes> ObatAlkess { get; set; }
+        public DbSet<SupplierObatAlkes> SupplierObatAlkess { get; set; }
 
 
         #endregion
