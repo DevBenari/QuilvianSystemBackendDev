@@ -611,6 +611,8 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<Komoditas> Komoditas { get; set; }
         public DbSet<Principal> Principals { get; set; }
         public DbSet<GolonganObat> GolonganObats { get; set; }
+        public DbSet<GroupObatAlkes> GroupObatAlkess { get; set; }
+        public DbSet<ObatAlkes> ObatAlkess { get; set; }
 
 
         #endregion

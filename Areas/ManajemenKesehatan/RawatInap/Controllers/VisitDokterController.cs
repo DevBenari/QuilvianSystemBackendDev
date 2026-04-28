@@ -224,17 +224,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     });
                 }
 
-                //var harga = await _applicationDbContext.TarifKelass
-                //    .AsNoTracking()
-                //    .FirstOrDefaultAsync(x => x.DokterId == vm.DokterId && x.KelasId == vm.KelasId);
-                // **Cek jika data tarif tidak ditemukan**
-                //if (harga == null)
-                //{
-                //    return NotFound(new
-                //    {
-                //        message = $"Tarif tidak ditemukan untuk Dokter dan Kelas yang dipilih."
-                //    });
-                //}
+                var harga = await _applicationDbContext.TarifVisits
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(x => x.DokterId == vm.DokterId && x.KelasId == vm.KelasId);
+                //**Cek jika data tarif tidak ditemukan * *
+                if (harga == null)
+                {
+                    return NotFound(new
+                    {
+                        message = $"Tarif tidak ditemukan untuk Dokter dan Kelas yang dipilih."
+                    });
+                }
 
                 int billingCount = await _applicationDbContext.Billings
                     .CountAsync(b =>
@@ -256,14 +256,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                                 DateTime.UtcNow),
                     IsListWhiteOff = false,
                     NamaItem = $"Visit Dokter : {dr ?? null}",
-                    //HargaItem = harga?.TarifTotal ?? 0m,
+                    HargaItem = harga?.TarifTotal ?? 0m,
                     QtyItem = 1,
-                    //SubTotalItem = harga?.TarifTotal ?? 0m,
+                    SubTotalItem = harga?.TarifTotal ?? 0m,
                     BillingKode = $"{billingIndex:D3}",
                     JenisBilling = "Visit Dokter",
                     StatusBilling = false,
                     BillingDate = DateTime.UtcNow,
-                    //Keterangan = $"Biaya Visit Dokter ID{dr}",
+                    Keterangan = $"Biaya Visit Dokter ID{dr}",
                     TanggalInvoice = DateTime.UtcNow,
                     TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                     CreateBy = userActiveId,

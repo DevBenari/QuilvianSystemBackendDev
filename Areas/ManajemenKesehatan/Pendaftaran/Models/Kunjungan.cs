@@ -40,6 +40,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
 
 
         // Navigation
+
         public ICollection<AlatPemakaian> AlatPemakaians { get; set; } = new List<AlatPemakaian>();
         public ICollection<LogRacikPenerimaan> LogRacikPenerimaans { get; set; } = new HashSet<LogRacikPenerimaan>();
     }

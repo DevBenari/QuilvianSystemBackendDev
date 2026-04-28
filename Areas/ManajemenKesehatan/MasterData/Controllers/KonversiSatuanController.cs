@@ -60,8 +60,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              CreateBy = a.CreateBy,
                              CreateByName = u.FullName,
                              KonversiSatuanId = a.KonversiSatuanId,
-                             ObatId = a.ObatId,
-                             SatuanId = a.SatuanId,
+                             ObatAlkesId = a.ObatAlkesId,
+                             SatuanBesarId = a.SatuanBesarId,
+                             SatuanKecilId = a.SatuanKecilId,
                              NilaiKonversi = a.NilaiKonversi,
                          }).OrderByDescending(a => a.CreateDateTime);
 
@@ -155,8 +156,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var data = new KonversiSatuan
                 {
                     KonversiSatuanId = Guid.NewGuid(),
-                    ObatId = vm.ObatId,
-                    SatuanId = vm.SatuanId,
+                    ObatAlkesId = vm.ObatAlkesId,
+                    SatuanBesarId = vm.SatuanBesarId,
+                    SatuanKecilId = vm.SatuanKecilId,
                     NilaiKonversi = vm.NilaiKonversi,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
@@ -225,8 +227,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // **Update Data**
-                data.ObatId = vm.ObatId;
-                data.SatuanId = vm.SatuanId;
+                data.ObatAlkesId = vm.ObatAlkesId;
+                data.SatuanBesarId = vm.SatuanBesarId;
+                data.SatuanKecilId = vm.SatuanKecilId;
                 data.NilaiKonversi = vm.NilaiKonversi;
 
                 data.UpdateBy = userActiveId;
@@ -339,8 +342,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              CreateBy = a.CreateBy,
                              CreateByName = u.FullName,
                              KonversiSatuanId = a.KonversiSatuanId,
-                             ObatId = a.ObatId,
-                             SatuanId = a.SatuanId,
+                             ObatAlkesId = a.ObatAlkesId,
+                             a.SatuanBesarId,
+                             a.SatuanKecilId,
                              NilaiKonversi = a.NilaiKonversi,
                          });
 

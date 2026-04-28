@@ -10,8 +10,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
     {
         [Key]
         public Guid? KonversiSatuanId { get; set; }
-        public Guid? ObatId { get; set; }
-        public Guid? SatuanId { get; set; }
+        public Guid? ObatAlkesId { get; set; }
+        public Guid? SatuanBesarId { get; set; }
+        public Guid? SatuanKecilId { get; set; }
         public decimal? NilaiKonversi { get; set; }
 
         // navigation
