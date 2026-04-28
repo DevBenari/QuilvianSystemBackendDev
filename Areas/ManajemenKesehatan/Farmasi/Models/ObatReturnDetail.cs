@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Models;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
@@ -17,5 +18,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
         public bool? IsMasihTersegel { get; set; }
         public bool? IsObatUtuh { get; set; }
         public string? Keterangan { get; set; }
+
+        // Navigation
+        public ObatReturn? ObatReturn { get; set; }
+
+        // Sesuaikan nama class master obat kamu.
+        // Kalau nama model obat kamu bukan Obat, ganti ini.
+        public Obat? Obat { get; set; }
     }
 }

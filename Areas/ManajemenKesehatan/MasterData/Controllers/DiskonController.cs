@@ -784,6 +784,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             int perPage = 10,
             string? search = null,
             string? namaLayanan = null,
+            string? namaKategori = null,
             string? kodedisk = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
@@ -850,6 +851,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         EF.Functions.ILike(x.KodeVoucher!, searchPattern));
                 }
 
+                if (!string.IsNullOrWhiteSpace(namaKategori))
+                {
+                    var searchPattern = $"%{namaKategori.Trim()}%";
+
+                    baseQuery = baseQuery.Where(x =>
+                        EF.Functions.ILike(x.KategoriDiskon!, searchPattern));
+                }
+
                 if (!string.IsNullOrWhiteSpace(namaLayanan))
                 {
                     var layananPattern = $"%{namaLayanan.Trim()}%";
@@ -865,6 +874,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                     baseQuery = baseQuery.Where(x => diskonIdByLayananQuery.Contains(x.DiskonId));
                 }
+
 
                 if (startDate.HasValue)
                 {
@@ -1040,6 +1050,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     h.DiskonId,
                     h.NamaDiskon,
                     h.KodeVoucher,
+                    h.KategoriDiskon,
                     h.IsDireksiApproved,
                     h.IsDiskonCombined,
                     h.TglBerlaku,

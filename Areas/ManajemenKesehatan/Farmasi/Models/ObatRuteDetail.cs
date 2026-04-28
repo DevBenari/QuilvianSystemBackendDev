@@ -11,5 +11,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
         public string? NamaSingkat {  get; set; }
         public string? Kepanjangan { get; set; }
         public string? Keterangan { get; set; }
+
+        // Navigation
+        public ObatRute? ObatRute { get; set; }
     }
 }

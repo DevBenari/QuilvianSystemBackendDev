@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -12,9 +13,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260427070335_addICollectionPemintaanUnitdanFarmasi")]
+    partial class addICollectionPemintaanUnitdanFarmasi
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2426,14 +2428,6 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasKey("LogPeracikanPenerimaanId");
 
-                    b.HasIndex("KunjunganId");
-
-                    b.HasIndex("ResepId");
-
-                    b.HasIndex("UserActiveFarmasiId");
-
-                    b.HasIndex("UserActivePerawatId");
-
                     b.ToTable("LogRacikPenerimaans");
                 });
 
@@ -2464,9 +2458,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("Keterangan")
                         .HasColumnType("text");
 
-                    b.Property<Guid?>("MainKasirKasirId")
-                        .HasColumnType("uuid");
-
                     b.Property<Guid?>("ReferenceId")
                         .HasColumnType("uuid");
 
@@ -2483,8 +2474,6 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("ObatReturnId");
-
-                    b.HasIndex("MainKasirKasirId");
 
                     b.ToTable("ObatReturn", "public");
                 });
@@ -2541,10 +2530,6 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("ObatReturnDetailId");
-
-                    b.HasIndex("ObatId");
-
-                    b.HasIndex("ObatReturnId");
 
                     b.ToTable("ObatReturnDetail", "public");
                 });
@@ -2627,8 +2612,6 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("DetailRuteObatId");
-
-                    b.HasIndex("RuteObatId");
 
                     b.ToTable("ObatRuteDetails");
                 });
@@ -11053,10 +11036,6 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("ObatId");
-
-                    b.HasIndex("BentukObatId");
-
-                    b.HasIndex("SatuanId");
 
                     b.ToTable("MstObat", "public");
                 });
@@ -20379,73 +20358,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Navigation("Obat");
                 });
 
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models.LogRacikPenerimaan", b =>
-                {
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models.Kunjungan", "Kunjungan")
-                        .WithMany("LogRacikPenerimaans")
-                        .HasForeignKey("KunjunganId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models.Resep", "Resep")
-                        .WithMany("LogRacikPenerimaans")
-                        .HasForeignKey("ResepId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models.UserActive", "UserActiveFarmasi")
-                        .WithMany()
-                        .HasForeignKey("UserActiveFarmasiId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models.UserActive", "UserActivePerawat")
-                        .WithMany()
-                        .HasForeignKey("UserActivePerawatId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("Kunjungan");
-
-                    b.Navigation("Resep");
-
-                    b.Navigation("UserActiveFarmasi");
-
-                    b.Navigation("UserActivePerawat");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models.ObatReturn", b =>
-                {
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models.MainKasir", "MainKasir")
-                        .WithMany()
-                        .HasForeignKey("MainKasirKasirId");
-
-                    b.Navigation("MainKasir");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models.ObatReturnDetail", b =>
-                {
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Obat", "Obat")
-                        .WithMany("ObatReturnDetails")
-                        .HasForeignKey("ObatId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models.ObatReturn", "ObatReturn")
-                        .WithMany("ObatReturnDetails")
-                        .HasForeignKey("ObatReturnId")
-                        .OnDelete(DeleteBehavior.Cascade);
-
-                    b.Navigation("Obat");
-
-                    b.Navigation("ObatReturn");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models.ObatRuteDetail", b =>
-                {
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models.ObatRute", "ObatRute")
-                        .WithMany("ObatRuteDetails")
-                        .HasForeignKey("RuteObatId")
-                        .OnDelete(DeleteBehavior.Cascade);
-
-                    b.Navigation("ObatRute");
-                });
-
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models.PenerimaanUnit", b =>
                 {
                     b.HasOne("QuilvianSystemBackendDev.Areas.HRD.MasterData.Models.InstalasiUnit", "Unit")
@@ -20520,23 +20432,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Navigation("Kelurahan");
                 });
 
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Obat", b =>
-                {
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.BentukObat", "BentukObat")
-                        .WithMany("Obats")
-                        .HasForeignKey("BentukObatId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Satuan", "Satuan")
-                        .WithMany("Obats")
-                        .HasForeignKey("SatuanId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("BentukObat");
-
-                    b.Navigation("Satuan");
-                });
-
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Peralatan", b =>
                 {
                     b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.KategoriPeralatan", "KategoriPeralatans")
@@ -20592,16 +20487,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Navigation("Details");
                 });
 
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models.ObatReturn", b =>
-                {
-                    b.Navigation("ObatReturnDetails");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models.ObatRute", b =>
-                {
-                    b.Navigation("ObatRuteDetails");
-                });
-
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models.PenerimaanUnit", b =>
                 {
                     b.Navigation("DetailPenerimaanUnits");
@@ -20610,16 +20495,6 @@ namespace QuilvianSystemBackendDev.Migrations
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models.PermintaanUnit", b =>
                 {
                     b.Navigation("DetailPermintaanUnits");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models.Resep", b =>
-                {
-                    b.Navigation("LogRacikPenerimaans");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.BentukObat", b =>
-                {
-                    b.Navigation("Obats");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.KabupatenKota", b =>
@@ -20659,8 +20534,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Navigation("DetailPermintaanUnits");
 
                     b.Navigation("FarmasiRJs");
-
-                    b.Navigation("ObatReturnDetails");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Peralatan", b =>
@@ -20673,16 +20546,9 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Navigation("KabupatenKotas");
                 });
 
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Satuan", b =>
-                {
-                    b.Navigation("Obats");
-                });
-
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models.Kunjungan", b =>
                 {
                     b.Navigation("AlatPemakaians");
-
-                    b.Navigation("LogRacikPenerimaans");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models.PendaftaranPasienBaru", b =>

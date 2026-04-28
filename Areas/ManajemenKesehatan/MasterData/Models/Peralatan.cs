@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Models;
 using QuilvianSystemBackendDev.Models;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
@@ -24,5 +25,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         [ForeignKey("KategoriPeralatanId")]
         public KategoriPeralatan KategoriPeralatans { get; set; }
 
+        public ICollection<AlatPemakaianDetail> AlatPemakaianDetails { get; set; } = new List<AlatPemakaianDetail>();
     }
+
 }

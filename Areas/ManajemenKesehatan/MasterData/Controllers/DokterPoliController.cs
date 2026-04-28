@@ -212,62 +212,62 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             });
         }
 
-        // POST: api/DokterPoli
-        //[HttpPost]
-        //public async Task<IActionResult> CreateDokterPoli([FromBody] DokterPoliViewModel vm)
-        //{
-        //    if (vm == null || !ModelState.IsValid)
-        //    {
-        //        return BadRequest(new { message = "Data tidak valid. || 400 Bad Request" });
-        //    }
+        //POST: api/DokterPoli
+       [HttpPost]
+        public async Task<IActionResult> CreateDokterPoli([FromBody] DokterPoliViewModel vm)
+        {
+            if (vm == null || !ModelState.IsValid)
+            {
+                return BadRequest(new { message = "Data tidak valid. || 400 Bad Request" });
+            }
 
-        //    try
-        //    {
-        //        // **Ambil User ID dari JWT Claims**
-        //        var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        //        var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
-        //        var UserActiveId = GetUserActive.UserActiveId;
+            try
+            {
+                // **Ambil User ID dari JWT Claims**
+                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var GetUserActive = _applicationDbContext.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+                var UserActiveId = GetUserActive.UserActiveId;
 
-        //        if (string.IsNullOrEmpty(EmailLogin))
-        //        {
-        //            return Unauthorized(new { message = "User tidak terautentikasi!" });
-        //        }
+                if (string.IsNullOrEmpty(EmailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
 
-        //        var dateNow = DateTime.UtcNow; ;
-        //        var setDateNow = dateNow.ToString("yyMMdd");
+                var dateNow = DateTime.UtcNow; ;
+                var setDateNow = dateNow.ToString("yyMMdd");
 
-        //        // Validate ModelState
-        //        if (ModelState.IsValid)
-        //        {
-        //            var data = new DokterPoli
-        //            {
-        //                DokterPoliId = Guid.NewGuid(),
-        //                DokterId = vm.DokterId,
-        //                PoliId = vm.PoliId,
-        //                CreateDateTime = dateNow,
-        //                CreateBy = UserActiveId,
-        //                IsDelete = false
-        //            };
+                // Validate ModelState
+                if (ModelState.IsValid)
+                {
+                    var data = new DokterPoli
+                    {
+                        DokterPoliId = Guid.NewGuid(),
+                        DokterId = vm.DokterId,
+                        PoliId = vm.PoliId,
+                        CreateDateTime = dateNow,
+                        CreateBy = UserActiveId,
+                        IsDelete = false
+                    };
 
 
-        //            _applicationDbContext.DokterPolis.Add(data);
-        //            _applicationDbContext.SaveChanges();
-        //            return Created("", new
-        //            {
-        //                message = "Data berhasil ditambahkan. || 201 Created",
-        //            });
-        //        }
-        //        else
-        //        {
-        //            return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
-        //        }
-        //    }
-        //    catch
-        //    (Exception ex)
-        //    {
-        //        return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
-        //    }
-        //}
+                    _applicationDbContext.DokterPolis.Add(data);
+                    _applicationDbContext.SaveChanges();
+                    return Created("", new
+                    {
+                        message = "Data berhasil ditambahkan. || 201 Created",
+                    });
+                }
+                else
+                {
+                    return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
+                }
+            }
+            catch
+            (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
 
 
         [HttpPut("{id}")]

@@ -11,5 +11,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
         public Guid? RuteObatId { get; set; }
         public string? RuteObat {  get; set; }
         public string? Keterangan {  get; set; }
+
+        // ICollection
+        public ICollection<ObatRuteDetail> ObatRuteDetails { get; set; } = new HashSet<ObatRuteDetail>();
+
     }
 }

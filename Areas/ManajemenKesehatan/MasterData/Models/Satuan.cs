@@ -13,5 +13,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? NamaSatuan { get; set; }
         public string? SingkatanSatuan { get; set; }
         public string? EnSatuan { get; set; }
+
+        public ICollection<Obat> Obats { get; set; } = new HashSet<Obat>();
     }
 }

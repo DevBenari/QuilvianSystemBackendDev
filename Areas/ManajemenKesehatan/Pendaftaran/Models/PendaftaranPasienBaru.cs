@@ -1,8 +1,9 @@
-﻿using Microsoft.EntityFrameworkCore;
-using QuilvianSystemBackendDev.Models;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
+using Microsoft.EntityFrameworkCore;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Models;
+using QuilvianSystemBackendDev.Models;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
 {
@@ -89,6 +90,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
         public string? FotoPath { get; set; }
         public string? QrCode { get; set; }
         public byte[]? QrCodeImage { get; set; }
+
+
+        // Navigation Property
+        public ICollection<AlatPemakaian> AlatPemakaians { get; set; } = new List<AlatPemakaian>();
     }
 
 }

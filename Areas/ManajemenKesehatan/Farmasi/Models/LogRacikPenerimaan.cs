@@ -1,6 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 using QuilvianSystemBackendDev.Models;
+using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
 {
@@ -18,5 +20,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
         public string? ShiftPengambilan { get; set; }
         public DateTime? TglPengambilanObat { get; set; }
         public string? Keterangan { get; set; }
+
+        // Navigation
+        public Kunjungan? Kunjungan { get; set; }
+        public Resep? Resep { get; set; }
+
+        public UserActive? UserActiveFarmasi { get; set; }
+        public UserActive? UserActivePerawat { get; set; }
     }
 }

@@ -31,5 +31,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
         public Guid? PetugasFarmasiId { get; set; }
         public string? PathTTDPetugasFarmasi{ get; set; }
         public string? PathTTDDokter { get; set; }
+
+        public ICollection<LogRacikPenerimaan> LogRacikPenerimaans { get; set; } = new HashSet<LogRacikPenerimaan>();
     }
 }

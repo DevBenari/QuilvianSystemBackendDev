@@ -11,5 +11,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public Guid BentukSatuanId { get; set; }
         public string KodeBentukSatuan { get; set; }
         public string NamaBentukSatuan { get; set; }
+
+        public ICollection<Obat> Obats { get; set; } = new HashSet<Obat>();
     }
 }

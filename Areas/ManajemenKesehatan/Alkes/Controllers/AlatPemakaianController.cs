@@ -64,92 +64,43 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            // =========================
-            // 1) Ambil header
-            // =========================
-            var header = await _applicationDbContext.AlatPemakaians
+            var result = await _applicationDbContext.AlatPemakaians
                 .AsNoTracking()
-                .Where(x => x.PemakaianAlatId == id)
+                .Where(x => x.PemakaianAlatId == id && (x.IsDelete == false || x.IsDelete == null))
                 .Select(x => new
                 {
-                    x.PemakaianAlatId,
-                    x.KunjunganId,
-                    x.PasienId,
-                    x.TanggalPemakaian,
-                    x.Keterangan,
-                    x.CreateDateTime,
-                    x.CreateBy
+                    Header = new
+                    {
+                        x.PemakaianAlatId,
+                        x.KunjunganId,
+                        x.PasienId,
+                        x.TanggalPemakaian,
+                        x.Keterangan,
+                        x.CreateDateTime,
+                        x.CreateBy
+                    },
+                    Details = x.Details
+                        .Where(d => d.IsDelete == false || d.IsDelete == null)
+                        .Select(d => new
+                        {
+                            d.DetailPemakaianAlatId,
+                            d.PeralatanId,
+                            NamaPeralatan = d.Peralatan != null ? d.Peralatan.NamaPeralatan : null,
+                            d.KelasId,
+                            NamaKelas = d.Kelas != null ? d.Kelas.NamaKelas : null,
+                            d.QtyPemakaian,
+                            d.HargaPeralatan,
+                            d.TotalPemakaianAlat,
+                            d.Keterangan
+                        })
+                        .ToList()
                 })
                 .FirstOrDefaultAsync();
 
-            if (header == null)
-                return NotFound(new { message = "Data pemakaian alat tidak ditemukan." });
-
-            // =========================
-            // 2) Ambil detail alat
-            // =========================
-            var details = await _applicationDbContext.AlatPemakaianDetails
-                .AsNoTracking()
-                .Where(x => x.PemakaianAlatId == id)
-                .Select(x => new
-                {
-                    x.DetailPemakaianAlatId,
-                    x.PeralatanId,
-                    x.KelasId,
-                    x.QtyPemakaian,
-                    x.HargaPeralatan,
-                    x.TotalPemakaianAlat,
-                    x.Keterangan
-                })
-                .ToListAsync();
-
-            // =========================
-            // 3) Lookup Nama Peralatan & Nama Kelas
-            // =========================
-
-            var alatIds = details.Where(d => d.PeralatanId != null).Select(d => d.PeralatanId!.Value).Distinct().ToList();
-            var kelasIds = details.Where(d => d.KelasId != null).Select(d => d.KelasId!.Value).Distinct().ToList();
-
-            var namaAlatDict = await _applicationDbContext.Peralatans
-                .Where(x => alatIds.Contains(x.PeralatanId))
-                .Select(x => new { x.PeralatanId, x.NamaPeralatan })
-                .ToDictionaryAsync(x => x.PeralatanId, x => x.NamaPeralatan);
-
-            var kelasDict = await _applicationDbContext.Kelass
-                .Where(x => kelasIds.Contains(x.KelasId))
-                .Select(x => new { x.KelasId, x.NamaKelas })
-                .ToDictionaryAsync(x => x.KelasId, x => x.NamaKelas);
-
-            // =========================
-            // 4) Final result (AMAN dari null)
-            // =========================
-            var result = new
+            if (result == null)
             {
-                Header = header,
-                Details = details.Select(d => new
-                {
-                    d.DetailPemakaianAlatId,
-                    d.PeralatanId,
-
-                    NamaPeralatan =
-                        d.PeralatanId != null &&
-                        namaAlatDict.TryGetValue(d.PeralatanId.Value, out var alat)
-                            ? alat
-                            : null,
-
-                    d.KelasId,
-                    NamaKelas =
-                        d.KelasId != null &&
-                        kelasDict.TryGetValue(d.KelasId.Value, out var kelas)
-                            ? kelas
-                            : null,
-
-                    d.QtyPemakaian,
-                    d.HargaPeralatan,
-                    d.TotalPemakaianAlat,
-                    d.Keterangan
-                })
-            };
+                return NotFound(new { message = "Data pemakaian alat tidak ditemukan." });
+            }
 
             return Ok(result);
         }
@@ -158,101 +109,50 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
         [HttpGet("by-kunjungan/{kunjunganId}")]
         public async Task<IActionResult> GetByKunjunganId(Guid kunjunganId)
         {
-            // =========================
-            // 1. Ambil header pemakaian alat
-            // =========================
-            var headers = await _applicationDbContext.AlatPemakaians
+            var data = await _applicationDbContext.AlatPemakaians
                 .AsNoTracking()
-                .Where(x => x.KunjunganId == kunjunganId && !x.IsDelete)
+                .Where(x => x.KunjunganId == kunjunganId && (x.IsDelete == false || x.IsDelete == null))
                 .OrderByDescending(x => x.CreateDateTime)
                 .Select(x => new
                 {
-                    x.PemakaianAlatId,
-                    x.KunjunganId,
-                    x.PasienId,
-                    x.TanggalPemakaian,
-                    x.Keterangan,
-                    x.CreateDateTime
-                })
-                .ToListAsync();
-
-            if (headers.Count == 0)
-                return NotFound(new { message = "Tidak ada data pemakaian alat untuk kunjungan ini." });
-
-            var pemakaianIds = headers.Select(h => h.PemakaianAlatId).ToList();
-
-            // =========================
-            // 2. Ambil semua detail alat
-            // =========================
-            var details = await _applicationDbContext.AlatPemakaianDetails
-                .AsNoTracking()
-                .Where(x => pemakaianIds.Contains((Guid)x.PemakaianAlatId) && !x.IsDelete)
-                .Select(x => new
-                {
-                    x.PemakaianAlatId,
-                    x.DetailPemakaianAlatId,
-                    x.PeralatanId,
-                    x.KelasId,
-                    x.QtyPemakaian,
-                    x.HargaPeralatan,
-                    x.TotalPemakaianAlat,
-                    x.Keterangan
-                })
-                .ToListAsync();
-
-            // =========================
-            // 3. Load lookup master alat & kelas
-            // =========================
-            var alatIds = details.Where(d => d.PeralatanId != null).Select(d => d.PeralatanId!.Value).Distinct().ToList();
-            var kelasIds = details.Where(d => d.KelasId != null).Select(d => d.KelasId!.Value).Distinct().ToList();
-
-            var namaAlatDict = await _applicationDbContext.Peralatans
-                .Where(x => alatIds.Contains(x.PeralatanId))
-                .Select(x => new { x.PeralatanId, x.NamaPeralatan })
-                .ToDictionaryAsync(x => x.PeralatanId, x => x.NamaPeralatan);
-
-            var kelasDict = await _applicationDbContext.Kelass
-                .Where(x => kelasIds.Contains(x.KelasId))
-                .Select(x => new { x.KelasId, x.NamaKelas })
-                .ToDictionaryAsync(x => x.KelasId, x => x.NamaKelas);
-
-            // =========================
-            // 4. Grouping hasil aman dari null
-            // =========================
-            var result = headers.Select(h => new
-            {
-                Header = h,
-                Details = details
-                    .Where(d => d.PemakaianAlatId == h.PemakaianAlatId)
-                    .Select(d => new
+                    Header = new
                     {
-                        d.DetailPemakaianAlatId,
-                        d.PeralatanId,
-                        NamaPeralatan =
-                            d.PeralatanId != null &&
-                            namaAlatDict.TryGetValue(d.PeralatanId.Value, out var nama)
-                                ? nama
-                                : null,
+                        x.PemakaianAlatId,
+                        x.KunjunganId,
+                        x.PasienId,
+                        x.TanggalPemakaian,
+                        x.Keterangan,
+                        x.CreateDateTime
+                    },
+                    Details = x.Details
+                        .Where(d => d.IsDelete == false || d.IsDelete == null)
+                        .Select(d => new
+                        {
+                            d.DetailPemakaianAlatId,
+                            d.PemakaianAlatId,
+                            d.PeralatanId,
+                            NamaPeralatan = d.Peralatan != null ? d.Peralatan.NamaPeralatan : null,
+                            d.KelasId,
+                            NamaKelas = d.Kelas != null ? d.Kelas.NamaKelas : null,
+                            d.QtyPemakaian,
+                            d.HargaPeralatan,
+                            d.TotalPemakaianAlat,
+                            d.Keterangan
+                        })
+                        .ToList()
+                })
+                .ToListAsync();
 
-                        d.KelasId,
-                        NamaKelas =
-                            d.KelasId != null &&
-                            kelasDict.TryGetValue(d.KelasId.Value, out var kelas)
-                                ? kelas
-                                : null,
-
-                        d.QtyPemakaian,
-                        d.HargaPeralatan,
-                        d.TotalPemakaianAlat,
-                        d.Keterangan
-                    })
-            });
+            if (data.Count == 0)
+            {
+                return NotFound(new { message = "Tidak ada data pemakaian alat untuk kunjungan ini." });
+            }
 
             return Ok(new
             {
                 KunjunganId = kunjunganId,
-                TotalPemakaian = headers.Count,
-                Data = result
+                TotalPemakaian = data.Count,
+                Data = data
             });
         }
 
@@ -773,9 +673,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
             int page = 1,
             int perPage = 10,
             Guid? kunjunganId = null,
-
-            // optional search untuk header (keterangan / createByName)
-            //string? search = null,
+            Guid? pasienId = null,
+            string? namaAlat = null,
 
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
@@ -792,197 +691,218 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            // =========================
-            // Base Query (headers)
-            // =========================
-            var query =
-                from a in _applicationDbContext.AlatPemakaians
-                join u0 in _applicationDbContext.UserActives on a.CreateBy equals u0.UserActiveId into uu
-                from u in uu.DefaultIfEmpty()
-                where a.IsDelete == false || a.IsDelete == null
-                select new
-                {
-                    a.PemakaianAlatId,
-                    a.KunjunganId,
-                    a.PasienId,
-                    a.TanggalPemakaian,
-                    a.Keterangan,
-                    a.CreateDateTime,
-                    a.CreateBy,
-                    CreateByName = u != null ? u.FullName : null
-                };
+            var namaAlatPattern = !string.IsNullOrWhiteSpace(namaAlat)
+                ? $"%{namaAlat.Trim()}%"
+                : null;
 
-            // =========================
-            // Filter by kunjunganId
-            // =========================
+            // =========================================
+            // Base query
+            // =========================================
+            var query = _applicationDbContext.AlatPemakaians
+                .AsNoTracking()
+                .Where(x => x.IsDelete == false || x.IsDelete == null);
+
+            // =========================================
+            // Filter: KunjunganId
+            // =========================================
             if (kunjunganId.HasValue)
+            {
                 query = query.Where(x => x.KunjunganId == kunjunganId.Value);
+            }
 
-            // =========================
-            // Search (header fields only)
-            // =========================
-            //if (!string.IsNullOrWhiteSpace(search))
-            //{
-            //    var like = $"%{search.ToLower()}%";
-            //    query = query.Where(x =>
-            //        EF.Functions.ILike(x.Keterangan ?? string.Empty, like) ||
-            //        EF.Functions.ILike(x.CreateByName ?? string.Empty, like)
-            //    );
-            //}
+            // =========================================
+            // Filter: PasienId
+            // =========================================
+            if (pasienId.HasValue)
+            {
+                query = query.Where(x => x.PasienId == pasienId.Value);
+            }
 
-            // =========================
+            // =========================================
+            // Filter: Nama Alat
+            // Cari di tabel detail -> peralatan
+            // PostgreSQL: ILike = case-insensitive
+            // =========================================
+            if (!string.IsNullOrWhiteSpace(namaAlatPattern))
+            {
+                query = query.Where(x => x.Details.Any(d =>
+                    (d.IsDelete == false || d.IsDelete == null) &&
+                    d.Peralatan != null &&
+                    d.Peralatan.NamaPeralatan != null &&
+                    EF.Functions.ILike(d.Peralatan.NamaPeralatan, namaAlatPattern)));
+            }
+
+            // =========================================
             // Date range
-            // =========================
+            // =========================================
             if (startDate.HasValue && endDate.HasValue)
             {
-                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
-                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+                var startUtc = new DateTimeOffset(startDate.Value.Date.ToUniversalTime());
+                var endUtc = new DateTimeOffset(endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime());
+
                 query = query.Where(x => x.CreateDateTime >= startUtc && x.CreateDateTime <= endUtc);
             }
 
-            // =========================
+            // =========================================
             // Periode
-            // =========================
+            // =========================================
             if (periode.HasValue)
             {
-                var todayUtc = DateTime.UtcNow.Date;
+                var today = DateTime.UtcNow.Date;
+                DateTime start;
+                DateTime endExclusive;
 
                 switch (periode.Value)
                 {
                     case PeriodeFilter.Today:
-                        query = query.Where(x => x.CreateDateTime.Date == todayUtc);
+                        start = today;
+                        endExclusive = today.AddDays(1);
+                        query = query.Where(x => x.CreateDateTime >= start && x.CreateDateTime < endExclusive);
                         break;
 
                     case PeriodeFilter.ThisWeek:
-                        var startOfWeek = todayUtc.AddDays(-(int)todayUtc.DayOfWeek);
-                        query = query.Where(x => x.CreateDateTime.Date >= startOfWeek && x.CreateDateTime.Date <= todayUtc);
+                        start = today.AddDays(-(int)today.DayOfWeek);
+                        endExclusive = today.AddDays(1);
+                        query = query.Where(x => x.CreateDateTime >= start && x.CreateDateTime < endExclusive);
                         break;
 
                     case PeriodeFilter.LastWeek:
-                        var startOfThisWeek = todayUtc.AddDays(-(int)todayUtc.DayOfWeek);
-                        var startOfLastWeek = startOfThisWeek.AddDays(-7);
-                        query = query.Where(x => x.CreateDateTime.Date >= startOfLastWeek && x.CreateDateTime.Date < startOfThisWeek);
+                        var startOfThisWeek = today.AddDays(-(int)today.DayOfWeek);
+                        start = startOfThisWeek.AddDays(-7);
+                        endExclusive = startOfThisWeek;
+                        query = query.Where(x => x.CreateDateTime >= start && x.CreateDateTime < endExclusive);
                         break;
 
                     case PeriodeFilter.ThisMonth:
-                        query = query.Where(x => x.CreateDateTime.Month == todayUtc.Month && x.CreateDateTime.Year == todayUtc.Year);
+                        start = new DateTime(today.Year, today.Month, 1);
+                        endExclusive = start.AddMonths(1);
+                        query = query.Where(x => x.CreateDateTime >= start && x.CreateDateTime < endExclusive);
                         break;
 
                     case PeriodeFilter.LastMonth:
-                        var lm = todayUtc.AddMonths(-1);
-                        query = query.Where(x => x.CreateDateTime.Month == lm.Month && x.CreateDateTime.Year == lm.Year);
+                        var firstDayThisMonth = new DateTime(today.Year, today.Month, 1);
+                        start = firstDayThisMonth.AddMonths(-1);
+                        endExclusive = firstDayThisMonth;
+                        query = query.Where(x => x.CreateDateTime >= start && x.CreateDateTime < endExclusive);
                         break;
 
                     case PeriodeFilter.ThisYear:
-                        query = query.Where(x => x.CreateDateTime.Year == todayUtc.Year);
+                        start = new DateTime(today.Year, 1, 1);
+                        endExclusive = start.AddYears(1);
+                        query = query.Where(x => x.CreateDateTime >= start && x.CreateDateTime < endExclusive);
                         break;
 
                     case PeriodeFilter.LastYear:
-                        query = query.Where(x => x.CreateDateTime.Year == todayUtc.Year - 1);
+                        start = new DateTime(today.Year - 1, 1, 1);
+                        endExclusive = new DateTime(today.Year, 1, 1);
+                        query = query.Where(x => x.CreateDateTime >= start && x.CreateDateTime < endExclusive);
                         break;
 
                     case PeriodeFilter.Last3Months:
-                        query = query.Where(x => x.CreateDateTime >= todayUtc.AddMonths(-3));
+                        start = today.AddMonths(-3);
+                        endExclusive = today.AddDays(1);
+                        query = query.Where(x => x.CreateDateTime >= start && x.CreateDateTime < endExclusive);
                         break;
 
                     case PeriodeFilter.Last6Months:
-                        query = query.Where(x => x.CreateDateTime >= todayUtc.AddMonths(-6));
+                        start = today.AddMonths(-6);
+                        endExclusive = today.AddDays(1);
+                        query = query.Where(x => x.CreateDateTime >= start && x.CreateDateTime < endExclusive);
                         break;
                 }
             }
 
-            // =========================
+            // =========================================
             // Sorting
-            // =========================
+            // =========================================
             bool desc = string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase);
 
-            query = desc
-                ? orderBy switch
-                {
-                    "CreateDateTime" => query.OrderByDescending(x => x.CreateDateTime),
-                    "TanggalPemakaian" => query.OrderByDescending(x => x.TanggalPemakaian),
-                    "CreateByName" => query.OrderByDescending(x => x.CreateByName),
-                    _ => query.OrderByDescending(x => x.CreateDateTime)
-                }
-                : orderBy switch
-                {
-                    "CreateDateTime" => query.OrderBy(x => x.CreateDateTime),
-                    "TanggalPemakaian" => query.OrderBy(x => x.TanggalPemakaian),
-                    "CreateByName" => query.OrderBy(x => x.CreateByName),
-                    _ => query.OrderBy(x => x.CreateDateTime)
-                };
+            query = (orderBy ?? "CreateDateTime").Trim() switch
+            {
+                "TanggalPemakaian" => desc
+                    ? query.OrderByDescending(x => x.TanggalPemakaian)
+                    : query.OrderBy(x => x.TanggalPemakaian),
 
-            // =========================
-            // Pagination counts
-            // =========================
+                "CreateByName" => desc
+                    ? query.OrderByDescending(x =>
+                        _applicationDbContext.UserActives
+                            .Where(u => u.UserActiveId == x.CreateBy)
+                            .Select(u => u.FullName)
+                            .FirstOrDefault())
+                    : query.OrderBy(x =>
+                        _applicationDbContext.UserActives
+                            .Where(u => u.UserActiveId == x.CreateBy)
+                            .Select(u => u.FullName)
+                            .FirstOrDefault()),
+
+                _ => desc
+                    ? query.OrderByDescending(x => x.CreateDateTime)
+                    : query.OrderBy(x => x.CreateDateTime)
+            };
+
+            // =========================================
+            // Count
+            // =========================================
             var totalRows = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
 
             if (totalRows == 0)
+            {
                 return NotFound(new { message = "Data tidak ditemukan." });
+            }
 
             if (page > totalPages)
+            {
                 return NotFound(new { message = "Page not found." });
+            }
 
-            // =========================
-            // Fetch page headers
-            // =========================
-            var pageHeaders = await query
+            // =========================================
+            // Fetch paged data + details via navigation
+            // =========================================
+            var rows = await query
                 .Skip((page - 1) * perPage)
                 .Take(perPage)
-                .ToListAsync();
-
-            var pemakaianIds = pageHeaders.Select(h => h.PemakaianAlatId).ToList();
-
-            // =========================
-            // Fetch details for those headers (ONE query)
-            // + join master Peralatan & Kelas (optional)
-            // =========================
-            var pageDetails = await (
-                from d in _applicationDbContext.AlatPemakaianDetails
-                where pemakaianIds.Contains((Guid)d.PemakaianAlatId) && !d.IsDelete
-
-                join p0 in _applicationDbContext.Peralatans on d.PeralatanId equals p0.PeralatanId into pp
-                from p in pp.DefaultIfEmpty()
-
-                join k0 in _applicationDbContext.Kelass on d.KelasId equals k0.KelasId into kk
-                from kls in kk.DefaultIfEmpty()
-
-                select new
+                .Select(x => new
                 {
-                    d.PemakaianAlatId,
-                    d.DetailPemakaianAlatId,
-                    d.PeralatanId,
-                    NamaPeralatan = p != null ? p.NamaPeralatan : null,
-                    d.KelasId,
-                    NamaKelas = kls != null ? kls.NamaKelas : null,
-                    d.QtyPemakaian,
-                    d.HargaPeralatan,
-                    d.TotalPemakaianAlat,
-                    d.Keterangan,
-                    d.IsDelete,
-                    d.CreateDateTime,
-                }
-            ).ToListAsync();
+                    x.PemakaianAlatId,
+                    x.KunjunganId,
+                    x.PasienId,
+                    x.TanggalPemakaian,
+                    x.Keterangan,
+                    x.CreateDateTime,
+                    x.CreateBy,
 
-            // ✅ ILookup: kalau key tidak ada, hasilnya empty (bukan null)
-            var detailLookup = pageDetails.ToLookup(x => x.PemakaianAlatId);
+                    CreateByName = _applicationDbContext.UserActives
+                        .Where(u => u.UserActiveId == x.CreateBy)
+                        .Select(u => u.FullName)
+                        .FirstOrDefault(),
 
-            // =========================
-            // Compose response rows (no ternary type issue)
-            // =========================
-            var rows = pageHeaders.Select(h => new
-            {
-                h.PemakaianAlatId,
-                h.KunjunganId,
-                h.PasienId,
-                h.TanggalPemakaian,
-                h.Keterangan,
-                h.CreateDateTime,
-                h.CreateBy,
-                h.CreateByName,
-                Details = detailLookup[h.PemakaianAlatId].ToList()
-            });
+                    Details = x.Details
+                        .Where(d =>
+                            (d.IsDelete == false || d.IsDelete == null) &&
+                            (
+                                namaAlatPattern == null ||
+                                (d.Peralatan != null &&
+                                 d.Peralatan.NamaPeralatan != null &&
+                                 EF.Functions.ILike(d.Peralatan.NamaPeralatan, namaAlatPattern))
+                            ))
+                        .Select(d => new
+                        {
+                            d.DetailPemakaianAlatId,
+                            d.PemakaianAlatId,
+                            d.PeralatanId,
+                            NamaPeralatan = d.Peralatan != null ? d.Peralatan.NamaPeralatan : null,
+                            d.KelasId,
+                            NamaKelas = d.Kelas != null ? d.Kelas.NamaKelas : null,
+                            d.QtyPemakaian,
+                            d.HargaPeralatan,
+                            d.TotalPemakaianAlat,
+                            d.Keterangan,
+                            d.CreateDateTime
+                        })
+                        .ToList()
+                })
+                .ToListAsync();
 
             return Ok(new
             {
