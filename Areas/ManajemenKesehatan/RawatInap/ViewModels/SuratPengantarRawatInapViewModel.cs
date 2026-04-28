@@ -14,6 +14,6 @@
         public string? TawaranLayanan { get; set; }
         public string? HarapanHasil { get; set; }
         public bool? IsAdaHambatan { get; set; }
-        public Guid? DokterDPJPId { get; set; }
+        public Guid? UserActiveDokterId { get; set; }
     }
 }

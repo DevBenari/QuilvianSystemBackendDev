@@ -33,5 +33,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
         public string? PathTTDDokter { get; set; }
 
         public ICollection<LogRacikPenerimaan> LogRacikPenerimaans { get; set; } = new HashSet<LogRacikPenerimaan>();
+        public ICollection<Racikan> Racikans { get; set; } = new HashSet<Racikan>();
+        public ICollection<ResepDetail> ResepDetails { get; set; } = new HashSet<ResepDetail>();
+
+
+
     }
 }
