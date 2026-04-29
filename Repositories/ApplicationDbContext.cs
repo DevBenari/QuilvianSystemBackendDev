@@ -458,6 +458,72 @@ namespace QuilvianSystemBackendDev.Repositories
                 .OnDelete(DeleteBehavior.Restrict);
             #endregion
 
+            #region Kunjungan
+            modelBuilder.Entity<Kunjungan>(entity =>
+            {
+                entity.ToTable("MstKunjungan", "public");
+
+                entity.HasKey(e => e.KunjunganID);
+
+                // =========================
+                // RELASI KE ASURANSI
+                // =========================
+
+                entity.HasOne(e => e.Asuransi)
+                    .WithMany()
+                    .HasForeignKey(e => e.AsuransiId)
+                    .IsRequired(false)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .HasConstraintName("FK_MstKunjungan_MstAsuransi_AsuransiId");
+
+                entity.HasOne(e => e.AsuransiExcess)
+                    .WithMany()
+                    .HasForeignKey(e => e.AsuransiExcessId)
+                    .IsRequired(false)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .HasConstraintName("FK_MstKunjungan_MstAsuransi_AsuransiExcessId");
+
+                entity.HasOne(e => e.AsuransiPasien)
+                    .WithMany()
+                    .HasForeignKey(e => e.AsuransiPasienId)
+                    .IsRequired(false)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .HasConstraintName("FK_MstKunjungan_MstAsuransiPasien_AsuransiPasienId");
+
+                entity.HasOne(e => e.AsuransiPasienExcess)
+                    .WithMany()
+                    .HasForeignKey(e => e.AsuransiPasienExcessId)
+                    .IsRequired(false)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .HasConstraintName("FK_MstKunjungan_MstAsuransiPasien_AsuransiPasienExcessId");
+
+                // =========================
+                // RELASI KE POLIKLINIK, DOKTER, PASIEN
+                // =========================
+
+                entity.HasOne(e => e.Poliklinik)
+                    .WithMany()
+                    .HasForeignKey(e => e.PoliklinikId)
+                    .IsRequired(false)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .HasConstraintName("FK_MstKunjungan_MstPoliklinik_PoliklinikId");
+
+                entity.HasOne(e => e.Dokter)
+                    .WithMany()
+                    .HasForeignKey(e => e.DokterId)
+                    .IsRequired(false)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .HasConstraintName("FK_MstKunjungan_MstDokter_DokterId");
+
+                entity.HasOne(e => e.Pasien)
+                    .WithMany()
+                    .HasForeignKey(e => e.PasienId)
+                    .IsRequired(false)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .HasConstraintName("FK_MstKunjungan_MstPendaftaranPasienBaru_PasienId");
+            });
+            #endregion
+
             #endregion
         }
 

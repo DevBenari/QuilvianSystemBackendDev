@@ -1,6 +1,7 @@
-﻿using QuilvianSystemBackendDev.Models;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
+using QuilvianSystemBackendDev.Models;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
 {
@@ -15,5 +16,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public bool? IsUtama { get; set; }
         public string? Umur { get; set; }
         public bool? IsExcess {  get; set; }
+
+        //public ICollection<Kunjungan> KunjunganAsuransiPasiens { get; set; } = new List<Kunjungan>();
+        //public ICollection<Kunjungan> KunjunganAsuransiPasienExcesses { get; set; } = new List<Kunjungan>();
     }
 }

@@ -2,6 +2,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Models;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
@@ -40,6 +41,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
 
 
         // Navigation
+        public Poliklinik? Poliklinik { get; set; }
+        public Dokter? Dokter { get; set; }
+        public PendaftaranPasienBaru? Pasien { get; set; }
+        public Asuransi? Asuransi { get; set; }
+        public Asuransi? AsuransiExcess { get; set; }
+        public AsuransiPasien? AsuransiPasien { get; set; }
+        public AsuransiPasien? AsuransiPasienExcess { get; set; }
 
         public ICollection<AlatPemakaian> AlatPemakaians { get; set; } = new List<AlatPemakaian>();
         public ICollection<LogRacikPenerimaan> LogRacikPenerimaans { get; set; } = new HashSet<LogRacikPenerimaan>();
