@@ -17,5 +17,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
         public string? SignaTambahan { get; set; } 
         public int? QtyRacikan { get; set; }
         public string? KodeRacikan { get; set; }
+
+        // Navigation
+        public Resep? Resep { get; set; }
+        public RacikanBentuk? BentukRacikan { get; set; }
+
+        public ICollection<RacikanDetail> RacikanDetails { get; set; } = new HashSet<RacikanDetail>();
+        public ICollection<ResepDetail> ResepDetails { get; set; } = new HashSet<ResepDetail>();
+
     }
 }

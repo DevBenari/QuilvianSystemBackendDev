@@ -308,38 +308,38 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 // ==================================================
                 // ✅ Validasi Bed + Ambil Kamar + Tarif
                 // ==================================================
-                var bedInfo = await (
-                    from b in _applicationDbContext.Beds
-                    join k in _applicationDbContext.Kamars on b.KamarId equals k.KamarId
-                    where b.BedId == vm.BedId
-                          && b.IsDelete == false
-                          && k.IsDelete == false
-                    select new
-                    {
-                        Bed = b,
-                        k.KamarId,
-                        k.NamaKamar,
-                        k.KodeKamar,
-                        k.KelasId,
-                        k.TarifHarian
-                    }
-                ).FirstOrDefaultAsync();
+                //var bedInfo = await (
+                //    from b in _applicationDbContext.Beds
+                //    join k in _applicationDbContext.Kamars on b.KamarId equals k.KamarId
+                //    where b.BedId == vm.BedId
+                //          && b.IsDelete == false
+                //          && k.IsDelete == false
+                //    select new
+                //    {
+                //        Bed = b,
+                //        k.KamarId,
+                //        k.NamaKamar,
+                //        k.KodeKamar,
+                //        k.KelasId,
+                //        k.TarifHarian
+                //    }
+                //).FirstOrDefaultAsync();
 
-                if (bedInfo == null)
-                    return NotFound(new { message = "Bed atau kamar tidak ditemukan." });
+                //if (bedInfo == null)
+                //    return NotFound(new { message = "Bed atau kamar tidak ditemukan." });
 
-                if (bedInfo.TarifHarian == null || bedInfo.TarifHarian <= 0)
-                    return BadRequest(new { message = "Tarif harian kamar belum diset / tidak valid." });
+                //if (bedInfo.TarifHarian == null || bedInfo.TarifHarian <= 0)
+                //    return BadRequest(new { message = "Tarif harian kamar belum diset / tidak valid." });
 
-                // ✅ Bed harus kosong dulu
-                if (bedInfo.Bed.Status == true)
-                    return Conflict(new { message = "Bed sudah terpakai / tidak tersedia." });
+                //// ✅ Bed harus kosong dulu
+                //if (bedInfo.Bed.Status == true)
+                //    return Conflict(new { message = "Bed sudah terpakai / tidak tersedia." });
 
-                // ==================================================
-                // ✅ Lock Bed (bed jadi terpakai)
-                // ==================================================
-                bedInfo.Bed.Status = true;
-                _applicationDbContext.Beds.Update(bedInfo.Bed);
+                //// ==================================================
+                //// ✅ Lock Bed (bed jadi terpakai)
+                //// ==================================================
+                //bedInfo.Bed.Status = true;
+                //_applicationDbContext.Beds.Update(bedInfo.Bed);
 
                 // ==================================================
                 // ✅ Insert TransferPasien
@@ -391,61 +391,61 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 // ==================================================
                 // ✅ BILLING KAMAR RANAP (bareng Transfer)
                 // ==================================================
-                const string jenisBilling = "Kamar Ranap";
+                //const string jenisBilling = "Kamar Ranap";
 
-                // billing kode incremental per kunjungan untuk jenis ini
-                var billingCount = await _applicationDbContext.Billings
-                    .Where(b =>
-                        b.KunjunganId == vm.KunjunganId &&
-                        b.JenisBilling == jenisBilling &&
-                        (b.IsDelete == false || b.IsDelete == null))
-                    .CountAsync();
+                //// billing kode incremental per kunjungan untuk jenis ini
+                //var billingCount = await _applicationDbContext.Billings
+                //    .Where(b =>
+                //        b.KunjunganId == vm.KunjunganId &&
+                //        b.JenisBilling == jenisBilling &&
+                //        (b.IsDelete == false || b.IsDelete == null))
+                //    .CountAsync();
 
-                var billingKode = $"{(billingCount + 1):D3}";
+                //var billingKode = $"{(billingCount + 1):D3}";
 
-                // qty awal 1 hari (awal pindah)
-                var qty = 1;
-                var harga = bedInfo.TarifHarian.Value;
-                var subtotal = harga * qty;
+                //// qty awal 1 hari (awal pindah)
+                //var qty = 1;
+                //var harga = bedInfo.TarifHarian.Value;
+                //var subtotal = harga * qty;
 
-                var coverage = await _asuransiCoverageService.ResolveCoverageAsync(
-                    vm.KunjunganId,
-                    "Kamar Ranap",
-                    bedInfo.KamarId,
-                    ct);
+                //var coverage = await _asuransiCoverageService.ResolveCoverageAsync(
+                //    vm.KunjunganId,
+                //    "Kamar Ranap",
+                //    bedInfo.KamarId,
+                //    ct);
 
-                var billing = new Billing
-                {
-                    BillingId = Guid.NewGuid(),
-                    KunjunganId = vm.KunjunganId,
-                    BillingDate = DateTime.UtcNow,
-                    BillingKode = billingKode,
-                    InvoiceBilling = await _generateInvoiceBillingService.GetOrCreateAsync(
-                                (Guid)vm.KunjunganId,
-                                DateTime.UtcNow),
-                    IsListWhiteOff = false,
-                    // Item kamar
-                    ItemId = bedInfo.KamarId,
-                    NamaItem = $"Kamar Ranap - {(bedInfo.NamaKamar ?? bedInfo.KodeKamar)}",
-                    HargaItem = harga,
-                    QtyItem = qty,
-                    SubTotalItem = subtotal,
-                    TanggalInvoice = DateTime.UtcNow,
-                    TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
-                    JenisBilling = jenisBilling,
+                //var billing = new Billing
+                //{
+                //    BillingId = Guid.NewGuid(),
+                //    KunjunganId = vm.KunjunganId,
+                //    BillingDate = DateTime.UtcNow,
+                //    BillingKode = billingKode,
+                //    InvoiceBilling = await _generateInvoiceBillingService.GetOrCreateAsync(
+                //                (Guid)vm.KunjunganId,
+                //                DateTime.UtcNow),
+                //    IsListWhiteOff = false,
+                //    // Item kamar
+                //    ItemId = bedInfo.KamarId,
+                //    NamaItem = $"Kamar Ranap - {(bedInfo.NamaKamar ?? bedInfo.KodeKamar)}",
+                //    HargaItem = harga,
+                //    QtyItem = qty,
+                //    SubTotalItem = subtotal,
+                //    TanggalInvoice = DateTime.UtcNow,
+                //    TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
+                //    JenisBilling = jenisBilling,
 
-                    // Penting: simpan hubungan transferId untuk tracking
-                    Keterangan = $"TransferPasienId={transferId};BedId={vm.BedId};Start={vm.TglPindah:yyyy-MM-dd}",
-                    IsCovered = coverage?.IsCovered,
-                    IsCoveredExcess = coverage?.IsCoveredExcess,
-                    AsuransiId = coverage?.AsuransiId,
-                    AsuransiExcessId = coverage?.AsuransiExcessId,
-                    CreateBy = userActiveId,
-                    CreateDateTime = DateTimeOffset.UtcNow,
-                    IsDelete = false
-                };
+                //    // Penting: simpan hubungan transferId untuk tracking
+                //    Keterangan = $"TransferPasienId={transferId};BedId={vm.BedId};Start={vm.TglPindah:yyyy-MM-dd}",
+                //    IsCovered = coverage?.IsCovered,
+                //    IsCoveredExcess = coverage?.IsCoveredExcess,
+                //    AsuransiId = coverage?.AsuransiId,
+                //    AsuransiExcessId = coverage?.AsuransiExcessId,
+                //    CreateBy = userActiveId,
+                //    CreateDateTime = DateTimeOffset.UtcNow,
+                //    IsDelete = false
+                //};
 
-                _applicationDbContext.Billings.Add(billing);
+                //_applicationDbContext.Billings.Add(billing);
 
                 // ==================================================
                 // ✅ Save + Commit Transaksi
@@ -459,11 +459,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     {
                         message = "Tambah Data Transfer Pasien + Billing Kamar berhasil || 201 Created",
                         transferPasienId = transferId,
-                        billingId = billing.BillingId,
-                        billingKode = billingKode,
-                        tarifHarian = harga,
-                        qtyAwal = qty,
-                        subtotalAwal = subtotal,
+                        //billingId = billing.BillingId,
+                        //billingKode = billingKode,
+                        //tarifHarian = harga,
+                        //qtyAwal = qty,
+                        //subtotalAwal = subtotal,
 
                         // info ttd
                         TTDIdMenyerahkan = ttdMenyerahkan?.TTDId,
@@ -702,60 +702,60 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 // =====================================================
                 // ✅ Update status Bed jadi tersedia (false)
                 // =====================================================
-                if (data.BedId.HasValue)
-                {
-                    var bed = await _applicationDbContext.Beds
-                        .FirstOrDefaultAsync(b => b.BedId == data.BedId.Value && b.IsDelete != true);
+                //if (data.BedId.HasValue)
+                //{
+                //    var bed = await _applicationDbContext.Beds
+                //        .FirstOrDefaultAsync(b => b.BedId == data.BedId.Value && b.IsDelete != true);
 
-                    if (bed != null)
-                    {
-                        bed.Status = false;
-                        bed.UpdateBy = userActiveId;
-                        bed.UpdateDateTime = DateTimeOffset.UtcNow;
+                //    if (bed != null)
+                //    {
+                //        bed.Status = false;
+                //        bed.UpdateBy = userActiveId;
+                //        bed.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                        _applicationDbContext.Beds.Update(bed);
-                    }
-                }
+                //        _applicationDbContext.Beds.Update(bed);
+                //    }
+                //}
 
                 // =====================================================
                 // ✅ Close/Update Billing Kamar Ranap
                 // =====================================================
-                const string jenisBilling = "Kamar Ranap";
-                var bookingId = data.BookingBedRanapId;
+                //const string jenisBilling = "Kamar Ranap";
+                //var bookingId = data.BookingBedRanapId;
 
-                var billing = await _applicationDbContext.Billings
-                    .Where(b =>
-                        b.KunjunganId == data.KunjunganId &&
-                        b.JenisBilling == jenisBilling &&
-                        (b.IsDelete == false || b.IsDelete == null) &&
-                        b.Keterangan != null &&
-                        EF.Functions.ILike(b.Keterangan, $"%BookingBedRanapId={bookingId}%")
-                    )
-                    .OrderByDescending(b => b.CreateDateTime)
-                    .FirstOrDefaultAsync();
+                //var billing = await _applicationDbContext.Billings
+                //    .Where(b =>
+                //        b.KunjunganId == data.KunjunganId &&
+                //        b.JenisBilling == jenisBilling &&
+                //        (b.IsDelete == false || b.IsDelete == null) &&
+                //        b.Keterangan != null &&
+                //        EF.Functions.ILike(b.Keterangan, $"%BookingBedRanapId={bookingId}%")
+                //    )
+                //    .OrderByDescending(b => b.CreateDateTime)
+                //    .FirstOrDefaultAsync();
 
-                if (billing != null)
-                {
-                    var harga = billing.HargaItem ?? 0;
-                    //var qty = jumlahHari;
-                    var subtotal = harga * jumlahHari;
+                //if (billing != null)
+                //{
+                //    var harga = billing.HargaItem ?? 0;
+                //    //var qty = jumlahHari;
+                //    var subtotal = harga * jumlahHari;
 
                     
-                    billing.SubTotalItem = subtotal;
+                //    billing.SubTotalItem = subtotal;
 
-                    // Tambahkan info close ke keterangan (tanpa perlu kolom khusus)
-                    billing.Keterangan =
-                        $"BookingBedRanapId={bookingId};Start={data.TglMasuk:yyyy-MM-dd};End={vm.TglKeluar:yyyy-MM-dd};Days={jumlahHari}";
+                //    // Tambahkan info close ke keterangan (tanpa perlu kolom khusus)
+                //    billing.Keterangan =
+                //        $"BookingBedRanapId={bookingId};Start={data.TglMasuk:yyyy-MM-dd};End={vm.TglKeluar:yyyy-MM-dd};Days={jumlahHari}";
 
-                    billing.UpdateBy = userActiveId;
-                    billing.UpdateDateTime = DateTimeOffset.UtcNow;
+                //    billing.UpdateBy = userActiveId;
+                //    billing.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                    _applicationDbContext.Billings.Update(billing);
-                }
-                else
-                {
-                    return NotFound(new { message = "Data Billing Transfer Bed Ranap tidak ditemukan." });
-                }
+                //    _applicationDbContext.Billings.Update(billing);
+                //}
+                //else
+                //{
+                //    return NotFound(new { message = "Data Billing Transfer Bed Ranap tidak ditemukan." });
+                //}
 
                 // =====================================================
                 // ✅ Save + Commit
@@ -769,9 +769,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     bookingBedRanapId = data.BookingBedRanapId,
                     kunjunganId = data.KunjunganId,
                     jumlahHari,
-                    billingId = billing?.BillingId,
-                    billingKode = billing?.BillingKode,
-                    totalKamar = billing?.SubTotalItem
+                    //billingId = billing?.BillingId,
+                    //billingKode = billing?.BillingKode,
+                    //totalKamar = billing?.SubTotalItem
                 });
             }
             catch (DbUpdateException dbEx)

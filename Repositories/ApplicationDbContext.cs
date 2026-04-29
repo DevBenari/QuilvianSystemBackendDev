@@ -350,6 +350,7 @@ namespace QuilvianSystemBackendDev.Repositories
 
             #endregion
 
+            #region Obat dan satuannya
             // =========================================================
             // OBAT -> SATUAN
             // =========================================================
@@ -370,6 +371,93 @@ namespace QuilvianSystemBackendDev.Repositories
                 .HasForeignKey(x => x.BentukObatId)
                 .HasPrincipalKey(x => x.BentukSatuanId)
                 .OnDelete(DeleteBehavior.Restrict);
+            #endregion
+
+            #region Resep + Racikan
+            // =========================================================
+            // RESEP -> RACIKAN
+            // 1 resep : many racikan
+            // =========================================================
+            modelBuilder.Entity<Racikan>()
+                .HasOne(x => x.Resep)
+                .WithMany(x => x.Racikans)
+                .HasForeignKey(x => x.ResepId)
+                .HasPrincipalKey(x => x.ResepId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+
+            // =========================================================
+            // RACIKAN BENTUK -> RACIKAN
+            // 1 bentuk racikan : many racikan
+            // =========================================================
+            modelBuilder.Entity<Racikan>()
+                .HasOne(x => x.BentukRacikan)
+                .WithMany(x => x.Racikans)
+                .HasForeignKey(x => x.BentukRacikanId)
+                .HasPrincipalKey(x => x.BentukRacikanId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+
+            // =========================================================
+            // RACIKAN -> RACIKAN DETAIL
+            // 1 racikan : many detail racikan
+            // =========================================================
+            modelBuilder.Entity<Racikan>()
+                .HasMany(x => x.RacikanDetails)
+                .WithOne(x => x.Racikan)
+                .HasForeignKey(x => x.RacikanId)
+                .HasPrincipalKey(x => x.RacikanId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+
+            // =========================================================
+            // RACIKAN DETAIL -> OBAT
+            // ObatId -> Obat.ObatId
+            // =========================================================
+            modelBuilder.Entity<RacikanDetail>()
+                .HasOne(x => x.Obat)
+                .WithMany(x => x.RacikanDetails)
+                .HasForeignKey(x => x.ObatId)
+                .HasPrincipalKey(x => x.ObatId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+
+            // =========================================================
+            // RESEP -> RESEP DETAIL
+            // 1 resep : many resep detail
+            // =========================================================
+            modelBuilder.Entity<Resep>()
+                .HasMany(x => x.ResepDetails)
+                .WithOne(x => x.Resep)
+                .HasForeignKey(x => x.ResepId)
+                .HasPrincipalKey(x => x.ResepId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+
+            // =========================================================
+            // RACIKAN -> RESEP DETAIL
+            // 1 racikan : many resep detail
+            // =========================================================
+            modelBuilder.Entity<ResepDetail>()
+                .HasOne(x => x.Racikan)
+                .WithMany(x => x.ResepDetails)
+                .HasForeignKey(x => x.RacikanId)
+                .HasPrincipalKey(x => x.RacikanId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+
+            // =========================================================
+            // RESEP DETAIL -> OBAT
+            // ObatId -> Obat.ObatId
+            // =========================================================
+            modelBuilder.Entity<ResepDetail>()
+                .HasOne(x => x.Obat)
+                .WithMany(x => x.ResepDetails)
+                .HasForeignKey(x => x.ObatId)
+                .HasPrincipalKey(x => x.ObatId)
+                .OnDelete(DeleteBehavior.Restrict);
+            #endregion
+
             #endregion
         }
 
@@ -523,6 +611,9 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<Komoditas> Komoditas { get; set; }
         public DbSet<Principal> Principals { get; set; }
         public DbSet<GolonganObat> GolonganObats { get; set; }
+        public DbSet<GroupObatAlkes> GroupObatAlkess { get; set; }
+        public DbSet<ObatAlkes> ObatAlkess { get; set; }
+        public DbSet<SupplierObatAlkes> SupplierObatAlkess { get; set; }
 
 
         #endregion

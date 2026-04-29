@@ -12,5 +12,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
         public string? LatinBentukRacikan {  get; set; }
         public string? NamaBentukRacikan { get; set; }
         public string? Keterangan {  get; set; }
+
+        public ICollection<Racikan> Racikans { get; set; } = new HashSet<Racikan>();
+
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Models;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
@@ -47,5 +48,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
         public decimal? QtyReturn { get; set; }
         public string? AlasanReturn { get; set; }
         public Guid? DikembalikanOleh { get; set; }
+
+
+        public Resep? Resep { get; set; }
+        public Racikan? Racikan { get; set; }
+        public Obat? Obat { get; set; }
     }
 }

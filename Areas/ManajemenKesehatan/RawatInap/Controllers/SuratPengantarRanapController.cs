@@ -495,7 +495,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 return BadRequest(new { message = "KunjunganId wajib diisi." });
             }
 
-            if (!vm.DokterDPJPId.HasValue || vm.DokterDPJPId == Guid.Empty)
+            if (!vm.UserActiveDokterId.HasValue || vm.UserActiveDokterId == Guid.Empty)
             {
                 return BadRequest(new { message = "DokterDPJPId wajib diisi." });
             }
@@ -528,7 +528,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 var now = DateTime.UtcNow;
                 var nowOffset = DateTimeOffset.UtcNow;
                 var kunjunganId = vm.KunjunganId.Value;
-                var dokterDpjpId = vm.DokterDPJPId.Value;
+                var dokterDpjpId = vm.UserActiveDokterId.Value;
                 var userActiveId = userActive.UserActiveId;
 
                 var ttd = await _ttdService.CheckTTDAsync(dokterDpjpId);
@@ -724,7 +724,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 }
 
                 // get path ttd dokterDPJP
-                var ttd = await _ttdService.CheckTTDAsync((Guid)vm.DokterDPJPId);
+                var ttd = await _ttdService.CheckTTDAsync((Guid)vm.UserActiveDokterId);
 
                 // **Update Data**
                 data.KunjunganId = vm.KunjunganId;

@@ -291,14 +291,23 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         // 3) LAB
         // =========================
         var labRows = await (
-            from lbd in _db.LabBookingDetails.AsNoTracking()
-            where lbd.PasienId == header.PasienId
+            from lb in _db.LabBookings.AsNoTracking()
+            where lb.KunjunganId == kunjunganId
+                  && (lb.IsDelete == false || lb.IsDelete == null)
+
+            join lbd in _db.LabBookingDetails.AsNoTracking()
+                on lb.BookingLabId equals lbd.BookingLabId
+
+            where lbd.IsDelete == false || lbd.IsDelete == null
+
             join lp in _db.LabPemeriksaans.AsNoTracking()
                 on lbd.PemeriksaanLabId equals lp.PemeriksaanLabId into pg
             from lp in pg.DefaultIfEmpty()
+
             join la in _db.Labs.AsNoTracking()
                 on lbd.LabId equals la.LabId into lg
             from la in lg.DefaultIfEmpty()
+
             select new
             {
                 lbd.BookingLabId,
@@ -641,7 +650,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         dto.TotalAlkes = dto.DaftarAlkes.Sum(x => (decimal)((dynamic)x).Subtotal);
 
         // =========================
-        // 8) VISIT DOKTER (TarifKelas)
+        // 8) VISIT DOKTER - dari Billing sebagai histori
         // =========================
         var visitRows = await _db.VisitDokters.AsNoTracking()
             .Where(v => v.KunjunganId == kunjunganId && (v.IsDelete == false || v.IsDelete == null))
@@ -652,116 +661,115 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 v.KelasId,
                 v.TanggalVisit,
                 v.WaktuVisit,
-                v.Keterangan
+                v.Keterangan,
+                v.CreateDateTime
             })
             .ToListAsync(ct);
 
         dto.DaftarVisitDokter = new List<object>();
         dto.TotalBiayaVisitDokter = 0m;
 
-        //if (visitRows.Count > 0)
-        //{
-        //    var billingVisitMap = billings
-        //        .Where(b => b.ItemId != null && string.Equals(b.JenisBilling, "Visit Dokter", StringComparison.OrdinalIgnoreCase))
-        //        .GroupBy(b => b.ItemId!.Value)
-        //        .ToDictionary(
-        //            g => g.Key,
-        //            g => g.OrderByDescending(x => x.CreateDateTime ?? DateTime.MinValue).First()
-        //        );
+        if (visitRows.Count > 0)
+        {
+            // Billing adalah sumber harga histori.
+            // Pastikan saat POST VisitDokter, Billing.ItemId = VisitDokterId
+            // dan Billing.JenisBilling = "Visit Dokter".
+            var billingVisitMap = billings
+                .Where(b =>
+                    b.ItemId != null &&
+                    string.Equals(b.JenisBilling, "Visit Dokter", StringComparison.OrdinalIgnoreCase))
+                .GroupBy(b => b.ItemId!.Value)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.OrderByDescending(x => x.CreateDateTime ?? DateTimeOffset.MinValue).First()
+                );
 
-        //    var dokterIds = visitRows.Select(x => x.DokterId).Distinct().ToList();
+            var dokterIds = visitRows
+                .Where(x => x.DokterId != null)
+                .Select(x => x.DokterId!.Value)
+                .Distinct()
+                .ToList();
 
-        //    var dokterNameMap = await _db.Dokters.AsNoTracking()
-        //        .Where(d => dokterIds.Contains(d.DokterId))
-        //        .Select(d => new { d.DokterId, d.NmDokter })
-        //        .ToDictionaryAsync(x => x.DokterId, x => x.NmDokter, ct);
+            var dokterNameMap = await _db.Dokters.AsNoTracking()
+                .Where(d => dokterIds.Contains(d.DokterId))
+                .Select(d => new
+                {
+                    d.DokterId,
+                    d.NmDokter
+                })
+                .ToDictionaryAsync(x => x.DokterId, x => x.NmDokter, ct);
 
-        //    var kelasIds = visitRows
-        //        .Where(x => x.KelasId != null)
-        //        .Select(x => x.KelasId!.Value)
-        //        .Distinct()
-        //        .ToList();
+            foreach (var grp in visitRows.GroupBy(x => new { x.DokterId, x.KelasId }))
+            {
+                var dokterId = grp.Key.DokterId;
+                var kelasId = grp.Key.KelasId;
 
-        //    // ✅ pakai DbSet kamu (di kode kamu: TarifKelass)
-        //    var tarifRows = await _db.TarifKelass.AsNoTracking()
-        //        .Where(t => dokterIds.Contains(t.DokterId) && kelasIds.Contains((Guid)t.KelasId))
-        //        .Where(t => (t.IsDelete == false || t.IsDelete == null))
-        //        .Select(t => new
-        //        {
-        //            t.DokterId,
-        //            t.KelasId,
-        //            TarifDokter = (decimal?)t.TarifDokter ?? 0m,
-        //            t.CreateDateTime
-        //        })
-        //        .ToListAsync(ct);
+                string? nmDokter = null;
 
-        //    var tarifMap = tarifRows
-        //        .GroupBy(x => (x.DokterId, x.KelasId))
-        //        .ToDictionary(
-        //            g => g.Key,
-        //            g => g.OrderByDescending(x => x.CreateDateTime).First().TarifDokter
-        //        );
+                if (dokterId.HasValue)
+                {
+                    dokterNameMap.TryGetValue(dokterId.Value, out nmDokter);
+                }
 
-        //    foreach (var grp in visitRows.GroupBy(x => new { x.DokterId, x.KelasId }))
-        //    {
-        //        var dokterId = grp.Key.DokterId;
-        //        var kelasId = grp.Key.KelasId; // Guid?
+                var visitDetails = grp
+                    .OrderBy(x => x.TanggalVisit ?? DateTime.MinValue)
+                    .Select(v =>
+                    {
+                        billingVisitMap.TryGetValue(v.VisitDokterId, out var bill);
 
-        //        dokterNameMap.TryGetValue((Guid)dokterId, out var nmDokter);
+                        var qty = bill?.QtyItem ?? 1;
+                        var harga = bill?.HargaItem ?? 0m;
+                        var subtotal = bill?.SubTotalItem ?? 0m;
 
-        //        decimal tarifPerVisit = 0m;
-        //        if (kelasId.HasValue && tarifMap.TryGetValue((dokterId, kelasId.Value), out var t))
-        //            tarifPerVisit = t;
+                        return new
+                        {
+                            v.VisitDokterId,
+                            v.TanggalVisit,
+                            v.WaktuVisit,
+                            v.Keterangan,
 
-        //        var visitDetails = grp
-        //            .OrderBy(x => x.TanggalVisit ?? DateTime.MinValue)
-        //            .Select(v =>
-        //            {
-        //                billingVisitMap.TryGetValue(v.VisitDokterId, out var bill);
+                            AsuransiId = bill?.AsuransiId,
+                            IsCovered = bill?.IsCovered,
+                            AsuransiExcessId = bill?.AsuransiExcessId,
+                            IsCoveredExcess = bill?.IsCoveredExcess,
 
-        //                var qty = bill?.QtyItem ?? 1;
-        //                var harga = bill?.HargaItem ?? tarifPerVisit;
-        //                var subtotal = bill?.SubTotalItem ?? (qty * harga);
+                            Qty = qty,
+                            Harga = harga,
+                            Subtotal = subtotal,
 
-        //                return new
-        //                {
-        //                    v.VisitDokterId,
-        //                    v.TanggalVisit,
-        //                    v.WaktuVisit,
-        //                    v.Keterangan,
+                            BillingId = bill?.BillingId,
+                            BillingKode = bill?.BillingKode,
+                            jenisBilling = bill?.JenisBilling,
+                            StatusBilling = bill?.StatusBilling,
+                            TanggalInvoice = bill?.TanggalInvoice,
+                            TanggalJatuhTempo = bill?.TanggalJatuhTempo,
 
-        //                    Qty = qty,
-        //                    Harga = harga,
-        //                    Subtotal = subtotal,
+                            DPD = HitungDpd(bill?.TanggalJatuhTempo, snap)
+                        };
+                    })
+                    .ToList();
 
-        //                    BillingId = bill?.BillingId,
-        //                    BillingKode = bill?.BillingKode,
-        //                    StatusBilling = bill?.StatusBilling,
-        //                    TanggalInvoice = bill?.TanggalInvoice,
-        //                    TanggalJatuhTempo = bill?.TanggalJatuhTempo,
+                var subtotalGroup = visitDetails.Sum(x => x.Subtotal);
 
-        //                    // ✅ dpd lokal
-        //                    DPD = HitungDpd(bill?.TanggalJatuhTempo, snap)
-        //                };
-        //            })
-        //            .ToList();
+                dto.TotalBiayaVisitDokter += subtotalGroup;
 
-        //        var subtotalGroup = visitDetails.Sum(x => x.Subtotal);
+                dto.DaftarVisitDokter.Add(new
+                {
+                    DokterId = dokterId,
+                    NmDokter = nmDokter,
+                    KelasId = kelasId,
 
-        //        dto.TotalBiayaVisitDokter += subtotalGroup;
+                    Qty = visitDetails.Sum(x => x.Qty),
+                    HargaPerVisit = visitDetails
+                        .OrderByDescending(x => x.TanggalVisit ?? DateTime.MinValue)
+                        .Select(x => x.Harga)
+                        .FirstOrDefault(),
 
-        //        dto.DaftarVisitDokter.Add(new
-        //        {
-        //            DokterId = dokterId,
-        //            NmDokter = nmDokter,
-        //            KelasId = kelasId,
-        //            Qty = visitDetails.Count,
-        //            HargaPerVisit = tarifPerVisit,
-        //            Subtotal = subtotalGroup,
-        //            Visits = visitDetails
-        //        });
-        //    }
-        //}
+                    Subtotal = subtotalGroup,
+                    Visits = visitDetails
+                });
+            }
+        }
 
         // =========================
         // 9) KAMAR RANAP (IP): hitung sampai SNAPSHOT asOf
@@ -1199,8 +1207,10 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
 
         var headerById = headers.ToDictionary(x => x.KunjunganID, x => x);
-        var pasienIds = headers.Select(x => x.PasienId).Distinct().ToList();
-
+        var kunjunganIds = headers
+            .Select(x => x.KunjunganID)
+            .Distinct()
+            .ToList();
         // ============================================================
         // KasirId bulk
         // ============================================================
@@ -1277,28 +1287,38 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         // LAB bulk (filter by PasienId seperti function kamu)
         // ============================================================
         var labRows = await (
-            from lbd in _db.LabBookingDetails.AsNoTracking()
-            where pasienIds.Contains(lbd.PasienId)
+            from lb in _db.LabBookings.AsNoTracking()
+            where kunjunganIds.Contains((Guid)lb.KunjunganId)
+                  && (lb.IsDelete == false || lb.IsDelete == null)
+
+            join lbd in _db.LabBookingDetails.AsNoTracking()
+                on lb.BookingLabId equals lbd.BookingLabId
+
+            where lbd.IsDelete == false || lbd.IsDelete == null
+
             join lp in _db.LabPemeriksaans.AsNoTracking()
                 on lbd.PemeriksaanLabId equals lp.PemeriksaanLabId into pg
             from lp in pg.DefaultIfEmpty()
+
             join la in _db.Labs.AsNoTracking()
                 on lbd.LabId equals la.LabId into lg
             from la in lg.DefaultIfEmpty()
+
             select new
             {
-                lbd.PasienId,
+                lb.KunjunganId,
+                lb.PasienId,
                 lbd.BookingLabId,
                 lbd.DetailBookingLabId,
-                PemeriksaanLabId = lbd.PemeriksaanLabId, 
+                PemeriksaanLabId = lbd.PemeriksaanLabId,
                 NamaLab = la != null ? la.NamaLab : null,
                 NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
                 HargaPemeriksaan = (decimal?)lp.HargaPemeriksaan ?? 0m
             }
         ).ToListAsync(ct);
 
-        var labByPasien = labRows
-            .GroupBy(x => x.PasienId)
+        var labRowsByKunjunganId = labRows
+            .GroupBy(x => x.KunjunganId)
             .ToDictionary(g => g.Key, g => g.ToList());
 
         // ============================================================
@@ -1394,38 +1414,6 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 .ToDictionaryAsync(x => x.DokterId, x => x.NmDokter, ct);
         }
 
-        // tarif kelas bulk (kunci selalu Guid,Guid)
-        //Dictionary<(Guid DokterId, Guid KelasId), decimal> tarifMap = new();
-
-        //var kelasIds = visitRows
-        //    .Where(x => x.KelasId != null)
-        //    .Select(x => x.KelasId!.Value)
-        //    .Distinct()
-        //    .ToList();
-
-        //if (dokterIds.Any() && kelasIds.Any())
-        //{
-        //    var tarifRows = await _db.TarifKelass.AsNoTracking()
-        //        .Where(t => (t.IsDelete == false || t.IsDelete == null))
-        //        .Where(t => t.DokterId != null && dokterIds.Contains(t.DokterId.Value))
-        //        .Where(t => t.KelasId != null && kelasIds.Contains(t.KelasId.Value))
-        //        .Select(t => new
-        //        {
-        //            DokterId = t.DokterId!.Value, // Guid
-        //            KelasId = t.KelasId!.Value,   // Guid
-        //            TarifDokter = (decimal?)t.TarifDokter ?? 0m,
-        //            t.CreateDateTime
-        //        })
-        //        .ToListAsync(ct);
-
-        //    tarifMap = tarifRows
-        //        .GroupBy(x => (x.DokterId, x.KelasId))
-        //        .ToDictionary(
-        //            g => g.Key,
-        //            g => g.OrderByDescending(x => x.CreateDateTime).First().TarifDokter
-        //        );
-        //}
-
         // ============================================================
         // KAMAR RANAP bulk
         // ============================================================
@@ -1513,7 +1501,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             }
 
             // LAB
-            if (labByPasien.TryGetValue(h.PasienId, out var labsForPasien))
+            if (labRowsByKunjunganId.TryGetValue(h.PasienId, out var labsForPasien))
             {
                 dto.DaftarPemeriksaanLab = labsForPasien
                     .GroupBy(x => x.DetailBookingLabId)
@@ -1729,76 +1717,78 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             dto.TotalAlkes = dto.DaftarAlkes.Sum(x => (decimal)((dynamic)x).Subtotal);
 
             // VISIT DOKTER
-            //dto.DaftarVisitDokter = new List<object>();
-            //dto.TotalBiayaVisitDokter = 0m;
+            dto.DaftarVisitDokter = new List<object>();
+            dto.TotalBiayaVisitDokter = 0m;
+            if (visitByKunjungan.TryGetValue(kid, out var visits))
+            {
+                foreach (var grp in visits.GroupBy(x => new { x.DokterId, x.KelasId }))
+                {
+                    var dokterId = grp.Key.DokterId;
+                    var kelasId = grp.Key.KelasId;
 
-            //if (visitByKunjungan.TryGetValue(kid, out var visits))
-            //{
-            //    // Billing Visit per kunjungan: JenisBilling = "Visit Dokter", ItemId = VisitDokterId
-            //    var billingVisitMap = billings
-            //        .Where(b => b.KunjunganId == kid
-            //                    && b.ItemId != null
-            //                    && string.Equals(b.JenisBilling, "Visit Dokter", StringComparison.OrdinalIgnoreCase))
-            //        .GroupBy(b => b.ItemId!.Value)
-            //        .ToDictionary(
-            //            g => g.Key,
-            //            g => g.OrderByDescending(x => x.CreateDateTime ?? DateTime.MinValue).First()
-            //        );
+                    dokterNameMap.TryGetValue(dokterId, out var nmDokter);
 
-            //    foreach (var grp in visits.GroupBy(x => new { x.DokterId, x.KelasId }))
-            //    {
-            //        var dokterId = grp.Key.DokterId; // Guid
-            //        var kelasId = grp.Key.KelasId;   // Guid?
+                    var visitDetails = grp
+                        .OrderBy(x => x.TanggalVisit ?? DateTime.MinValue)
+                        .Select(v =>
+                        {
+                            var bill = FindBilling(kid, "Visit Dokter", v.VisitDokterId);
 
-            //        dokterNameMap.TryGetValue(dokterId, out var nmDokter);
+                            var qty = bill?.QtyItem ?? 1;
+                            var harga = bill?.HargaItem ?? 0m;
+                            var subtotal = bill?.SubTotalItem ?? 0m;
 
-            //        decimal tarifPerVisit = 0m;
-            //        if (kelasId.HasValue && tarifMap.TryGetValue((dokterId, kelasId.Value), out var tarif))
-            //            tarifPerVisit = tarif;
+                            return new
+                            {
+                                v.VisitDokterId,
+                                v.TanggalVisit,
+                                v.WaktuVisit,
+                                v.Keterangan,
 
-            //        var visitDetails = grp
-            //            .OrderBy(x => x.TanggalVisit ?? DateTime.MinValue)
-            //            .Select(v =>
-            //            {
-            //                billingVisitMap.TryGetValue(v.VisitDokterId, out var bill);
+                                AsuransiId = bill?.AsuransiId,
+                                IsCovered = bill?.IsCovered,
+                                AsuransiExcessId = bill?.AsuransiExcessId,
+                                IsCoveredExcess = bill?.IsCoveredExcess,
 
-            //                var qty = bill?.QtyItem ?? 1;
-            //                var harga = bill?.HargaItem ?? tarifPerVisit;
-            //                var subtotal = bill?.SubTotalItem ?? (qty * harga);
+                                Qty = qty,
+                                Harga = harga,
+                                Subtotal = subtotal,
 
-            //                return new
-            //                {
-            //                    v.VisitDokterId,
-            //                    v.TanggalVisit,
-            //                    v.WaktuVisit,
-            //                    v.Keterangan,
+                                BillingId = bill?.BillingId,
+                                BillingKode = bill?.BillingKode,
+                                jenisBilling = bill?.JenisBilling,
+                                StatusBilling = bill?.StatusBilling,
+                                TanggalInvoice = bill?.TanggalInvoice,
+                                TanggalJatuhTempo = bill?.TanggalJatuhTempo
+                            };
+                        })
+                        .ToList();
 
-            //                    Qty = qty,
-            //                    Harga = harga,
-            //                    Subtotal = subtotal,
+                    var subtotalGroup = visitDetails.Sum(x => x.Subtotal);
+                    var qtyGroup = visitDetails.Sum(x => x.Qty);
 
-            //                    BillingId = bill?.BillingId,
-            //                    BillingKode = bill?.BillingKode,
-            //                    StatusBilling = bill?.StatusBilling
-            //                };
-            //            })
-            //            .ToList();
+                    dto.TotalBiayaVisitDokter += subtotalGroup;
 
-            //        var subtotalGroup = visitDetails.Sum(x => x.Subtotal);
-            //        dto.TotalBiayaVisitDokter += subtotalGroup;
+                    dto.DaftarVisitDokter.Add(new
+                    {
+                        DokterId = dokterId,
+                        NmDokter = nmDokter,
+                        KelasId = kelasId,
 
-            //        dto.DaftarVisitDokter.Add(new
-            //        {
-            //            DokterId = dokterId,
-            //            NmDokter = nmDokter,
-            //            KelasId = kelasId,
-            //            Qty = visitDetails.Count,
-            //            HargaPerVisit = tarifPerVisit,
-            //            Subtotal = subtotalGroup,
-            //            Visits = visitDetails
-            //        });
-            //    }
-            //}
+                        Qty = qtyGroup,
+
+                        // Harga ini hanya display harga visit terakhir.
+                        // Total tetap dihitung dari subtotal masing-masing billing.
+                        HargaPerVisit = visitDetails
+                            .OrderByDescending(x => x.TanggalVisit ?? DateTime.MinValue)
+                            .Select(x => x.Harga)
+                            .FirstOrDefault(),
+
+                        Subtotal = subtotalGroup,
+                        Visits = visitDetails
+                    });
+                }
+            }
 
             // KAMAR RANAP
             dto.TotalKamarRanap = 0m;

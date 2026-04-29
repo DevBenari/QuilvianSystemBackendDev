@@ -48,5 +48,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public ICollection<DetailPenerimaanUnit> DetailPenerimaanUnits { get; set; } = new List<DetailPenerimaanUnit>();
         public ICollection<FarmasiRJ> FarmasiRJs { get; set; } = new List<FarmasiRJ>();
         public ICollection<ObatReturnDetail> ObatReturnDetails { get; set; } = new HashSet<ObatReturnDetail>();
+
+        public ICollection<RacikanDetail> RacikanDetails { get; set; } = new HashSet<RacikanDetail>();
+        public ICollection<ResepDetail> ResepDetails { get; set; } = new HashSet<ResepDetail>();
     }
 }

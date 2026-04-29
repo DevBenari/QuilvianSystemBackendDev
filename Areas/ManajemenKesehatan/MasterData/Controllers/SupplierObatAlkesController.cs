@@ -1,5 +1,4 @@
-﻿using System.Security.Claims;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -12,6 +11,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
+using System.Security.Claims;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
@@ -19,21 +19,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class KonversiSatuanController : Controller
+    public class SupplierObatAlkesController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<KonversiSatuanController> _logger;
+        private readonly ILogger<SupplierObatAlkesController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public KonversiSatuanController(
-            ApplicationDbContext applicationDbContext,
-            UserManager<ApplicationUser> userManager,
-            SignInManager<ApplicationUser> signInManager,
-            ILogger<KonversiSatuanController> logger,
-            IWebHostEnvironment webHostEnvironment)
+        public SupplierObatAlkesController(
+        ApplicationDbContext applicationDbContext,
+        UserManager<ApplicationUser> userManager,
+        SignInManager<ApplicationUser> signInManager,
+        ILogger<SupplierObatAlkesController> logger,
+        IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
@@ -42,65 +42,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             _webHostEnvironment = webHostEnvironment;
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetAllKonversiSatuan(int page = 1, int perPage = 10)
-        {
-            // Validasi agar page dan perPage minimal bernilai 1
-            if (page < 1) page = 1;
-            if (perPage < 1) perPage = 10;
-
-            // Query data
-            var query = (from a in _applicationDbContext.KonversiSatuans
-                         join u in _applicationDbContext.UserActives
-                         on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false
-                         select new
-                         {
-                             CreateDateTime = a.CreateDateTime,
-                             CreateBy = a.CreateBy,
-                             CreateByName = u.FullName,
-                             KonversiSatuanId = a.KonversiSatuanId,
-                             ObatAlkesId = a.ObatAlkesId,
-                             SatuanBesarId = a.SatuanBesarId,
-                             SatuanKecilId = a.SatuanKecilId,
-                             NilaiKonversi = a.NilaiKonversi,
-                         }).OrderByDescending(a => a.CreateDateTime);
-
-            // Hitung total data sebelum paginasi
-            var totalRows = query.Count();
-            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-
-            // Ambil data sesuai paging
-            var listdata = query
-                .Skip((page - 1) * perPage)
-                .Take(perPage)
-                .ToList();
-
-            if (!listdata.Any())
-            {
-                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
-            }
-
-            // Return hasil dengan paging info
-            return Ok(new
-            {
-                message = "Berhasil || 200 OK",
-                data = listdata,
-                pagination = new
-                {
-                    CurrentPage = page,
-                    PerPage = perPage,
-                    TotalRows = totalRows,
-                    TotalPages = totalPages
-                }
-            });
-
-        }
-
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.KonversiSatuans.Find(id);
+            var listdata = _applicationDbContext.SupplierObatAlkess.Find(id);
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -114,7 +59,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] KonversiSatuanViewModel vm)
+        public async Task<IActionResult> Create([FromBody] SupplierObatAlkesViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -143,30 +88,34 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
-                ////// **Cek Duplikasi**
-                //bool isDuplicate = _applicationDbContext.Benefits
-                //                    .Any(c => c.NamaBenefit == vm.NamaBenefit);
+                //cek duplikasi
+                bool isDuplicate = await _applicationDbContext.SupplierObatAlkess
+                    .AnyAsync(c => c.SupplierId == vm.SupplierId 
+                    && c.ObatAlkesId == vm.ObatAlkesId
+                    && c.IsDelete == false);
 
-                //if (isDuplicate)
-                //{
-                //    return Conflict(new { message = "Nama benefit ini telah tersedia" });
-                //}
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Supplier obat/alkes ini telah tersedia" });
+                }
 
                 // **Buat Data Baru**
-                var data = new KonversiSatuan
+                var data = new SupplierObatAlkes
                 {
-                    KonversiSatuanId = Guid.NewGuid(),
+                    SupplierObatAlkesId = Guid.NewGuid(),
                     ObatAlkesId = vm.ObatAlkesId,
-                    SatuanBesarId = vm.SatuanBesarId,
-                    SatuanKecilId = vm.SatuanKecilId,
-                    NilaiKonversi = vm.NilaiKonversi,
+                    SupplierId = vm.SupplierId,
+                    MinOrder = vm.MinOrder,
+                    HargaBeli = vm.HargaBeli,
+                    IsUtama = vm.IsUtama,
+                    Keterangan = vm.Keterangan,
+
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
-               
 
                 // **Simpan ke Database**
-                _applicationDbContext.KonversiSatuans.Add(data);
+                _applicationDbContext.SupplierObatAlkess.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -189,7 +138,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] KonversiSatuanViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] SupplierObatAlkesViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -220,22 +169,36 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.KonversiSatuans.FindAsync(id);
+                var data = await _applicationDbContext.SupplierObatAlkess.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
+                //cek duplikasi
+                bool isDuplicate = await _applicationDbContext.SupplierObatAlkess
+                    .AnyAsync(c => c.SupplierId == vm.SupplierId
+                    && c.ObatAlkesId == vm.ObatAlkesId
+                    && c.SupplierObatAlkesId != id
+                    && c.IsDelete == false);
+
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Supplier obat/alkes ini telah tersedia" });
+                }
+
                 // **Update Data**
                 data.ObatAlkesId = vm.ObatAlkesId;
-                data.SatuanBesarId = vm.SatuanBesarId;
-                data.SatuanKecilId = vm.SatuanKecilId;
-                data.NilaiKonversi = vm.NilaiKonversi;
+                data.SupplierId = vm.SupplierId;
+                data.MinOrder = vm.MinOrder;
+                data.HargaBeli = vm.HargaBeli;
+                data.IsUtama = vm.IsUtama;
+                data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.KonversiSatuans.Update(data);
+                _applicationDbContext.SupplierObatAlkess.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -284,7 +247,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.KonversiSatuans.FindAsync(id);
+                var data = await _applicationDbContext.SupplierObatAlkess.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -296,7 +259,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 data.IsDelete = true;
 
-                _applicationDbContext.KonversiSatuans.Update(data);
+                _applicationDbContext.SupplierObatAlkess.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -319,33 +282,39 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet("paged")]
-        public IActionResult Paged(
+        public async Task<IActionResult> Paged(
         int page = 1,
         int perPage = 10,
+        //string? search = null,
+        Guid? supplierId = null,
+        Guid? obatAlkesId = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                DateTime? startDate = null,
+                                DateTime? startDate = null,
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                DateTime? endDate = null,
+                                DateTime? endDate = null,
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
 
             // Query data
-            var query = (from a in _applicationDbContext.KonversiSatuans
-                         join u in _applicationDbContext.UserActives
+            var query = (from a in _applicationDbContext.SupplierObatAlkess
+                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
-                         where a.IsDelete == false
+                         where a.IsDelete == false || a.IsDelete == null
                          select new
                          {
-                             CreateDateTime = a.CreateDateTime,
-                             CreateBy = a.CreateBy,
+                             a.CreateDateTime,
+                             a.CreateBy,
                              CreateByName = u.FullName,
-                             KonversiSatuanId = a.KonversiSatuanId,
-                             ObatAlkesId = a.ObatAlkesId,
-                             a.SatuanBesarId,
-                             a.SatuanKecilId,
-                             NilaiKonversi = a.NilaiKonversi,
+                             a.SupplierObatAlkesId,
+                             a.ObatAlkesId,
+                             //a.ObatAlkes.NamaObatAlkes,
+                             a.SupplierId,
+                             a.MinOrder,
+                             a.HargaBeli,
+                             a.IsUtama,
+                             a.Keterangan,
                          });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
@@ -353,10 +322,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             //{
             //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
             //    query = query.Where(u =>
-            //        EF.Functions.ILike(u.NamaSatuan, search) ||
-            //        EF.Functions.ILike(u.TipeKonversi, search)
+            //        EF.Functions.ILike(u.NamaTipeAnastesi, search)
             //    );
             //}
+
+            // filter based on supplier id
+            if (supplierId.HasValue)
+            {
+                query = query.Where(u=>u.SupplierId== supplierId.Value);
+            }
+
+
+            // filter based on obatalkes id
+            if (obatAlkesId.HasValue)
+            {
+                query = query.Where(u => u.ObatAlkesId == obatAlkesId.Value);
+            }
 
             //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
@@ -381,14 +362,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         break;
                     case PeriodeFilter.ThisWeek:
                         query = query.Where(u =>
-                            u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
+                            u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
                             u.CreateDateTime.Date <= today
                         );
                         break;
                     case PeriodeFilter.LastWeek:
                         query = query.Where(u =>
                             u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek))
+                            u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)
                         );
                         break;
                     case PeriodeFilter.ThisMonth:
@@ -457,5 +438,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
             });
         }
+
     }
 }

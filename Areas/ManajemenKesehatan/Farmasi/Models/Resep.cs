@@ -1,5 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
 using QuilvianSystemBackendDev.Models;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
@@ -32,6 +35,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
         public string? PathTTDPetugasFarmasi{ get; set; }
         public string? PathTTDDokter { get; set; }
 
+        // navigation
+        public Kunjungan? Kunjungan { get; set; }
+        public PendaftaranPasienBaru? Pasien { get; set; }
+        public Poliklinik? Poliklinik { get; set; }
+        public Dokter? Dokter { get; set; }
+        public Asuransi? Asuransi { get; set; }
+        public UserActive? PetugasFarmasi { get; set; }
+
         public ICollection<LogRacikPenerimaan> LogRacikPenerimaans { get; set; } = new HashSet<LogRacikPenerimaan>();
+        public ICollection<Racikan> Racikans { get; set; } = new HashSet<Racikan>();
+        public ICollection<ResepDetail> ResepDetails { get; set; } = new HashSet<ResepDetail>();
+
+
+
     }
 }

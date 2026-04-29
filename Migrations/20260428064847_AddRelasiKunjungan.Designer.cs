@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -12,9 +13,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260428064847_AddRelasiKunjungan")]
+    partial class AddRelasiKunjungan
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -9348,44 +9350,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.ToTable("MstGolonganObat", "public");
                 });
 
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.GroupObatAlkes", b =>
-                {
-                    b.Property<Guid>("GroupObatAlkesId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("CreateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("DeleteBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("DeleteDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsDelete")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Keterangan")
-                        .HasColumnType("text");
-
-                    b.Property<string>("NamaGroupObatAlkes")
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("UpdateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("UpdateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("GroupObatAlkesId");
-
-                    b.ToTable("MstGroupObatAlkes", "public");
-                });
-
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Gudang", b =>
                 {
                     b.Property<Guid>("GudangId")
@@ -10657,13 +10621,10 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<decimal?>("NilaiKonversi")
                         .HasColumnType("numeric");
 
-                    b.Property<Guid?>("ObatAlkesId")
+                    b.Property<Guid?>("ObatId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("SatuanBesarId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("SatuanKecilId")
+                    b.Property<Guid?>("SatuanId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("UpdateBy")
@@ -11126,114 +11087,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.HasIndex("SatuanId");
 
                     b.ToTable("MstObat", "public");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.ObatAlkes", b =>
-                {
-                    b.Property<Guid?>("ObatAlkesId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("BZA")
-                        .HasColumnType("text");
-
-                    b.Property<Guid?>("BentukObatAlkesId")
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal?>("BentukSediaan")
-                        .HasColumnType("numeric");
-
-                    b.Property<Guid>("CreateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("DeleteBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("DeleteDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<decimal?>("Dosis")
-                        .HasColumnType("numeric");
-
-                    b.Property<string>("Etiket")
-                        .HasColumnType("text");
-
-                    b.Property<Guid?>("GolonganObatAlkesId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("GroupObatAlkesId")
-                        .HasColumnType("uuid");
-
-                    b.Property<bool?>("HighAlert")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsDelete")
-                        .HasColumnType("boolean");
-
-                    b.Property<Guid?>("JenisObatId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("KategoriTerapeutikId")
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal?>("KekuatanSediaan")
-                        .HasColumnType("numeric");
-
-                    b.Property<string>("Keterangan")
-                        .HasColumnType("text");
-
-                    b.Property<Guid?>("KodeKFAId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("KodeObatAlkes")
-                        .HasColumnType("text");
-
-                    b.Property<Guid?>("KomoditasId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("MaterialGroupId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("NamaObatAlkes")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid?>("ObatRuteId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("POAK")
-                        .HasColumnType("text");
-
-                    b.Property<string>("POV")
-                        .HasColumnType("text");
-
-                    b.Property<Guid?>("SatuanId")
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal?>("StockMaximal")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("StockMinimal")
-                        .HasColumnType("numeric");
-
-                    b.Property<Guid?>("SubKategoriTerapeutikId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("UpdateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("UpdateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<decimal?>("VolumeSediaan")
-                        .HasColumnType("numeric");
-
-                    b.HasKey("ObatAlkesId");
-
-                    b.ToTable("MstObatAlkes", "public");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.ObatAsuransi", b =>
@@ -13315,60 +13168,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.HasKey("SupplierId");
 
                     b.ToTable("MstSupplier", "public");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.SupplierObatAlkes", b =>
-                {
-                    b.Property<Guid>("SupplierObatAlkesId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("CreateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("DeleteBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("DeleteDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<decimal?>("HargaBeli")
-                        .HasColumnType("numeric");
-
-                    b.Property<bool>("IsDelete")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool?>("IsUtama")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Keterangan")
-                        .HasColumnType("text");
-
-                    b.Property<decimal?>("MinOrder")
-                        .HasColumnType("numeric");
-
-                    b.Property<Guid?>("ObatAlkesId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("SupplierId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("UpdateBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("UpdateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("SupplierObatAlkesId");
-
-                    b.HasIndex("ObatAlkesId");
-
-                    b.HasIndex("SupplierId");
-
-                    b.ToTable("SupplierObatAlkess");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.TarifAlkes", b =>
@@ -20892,21 +20691,6 @@ namespace QuilvianSystemBackendDev.Migrations
                         .IsRequired();
 
                     b.Navigation("Poliklinik");
-                });
-
-            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.SupplierObatAlkes", b =>
-                {
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.ObatAlkes", "ObatAlkes")
-                        .WithMany()
-                        .HasForeignKey("ObatAlkesId");
-
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Supplier", "Supplier")
-                        .WithMany()
-                        .HasForeignKey("SupplierId");
-
-                    b.Navigation("ObatAlkes");
-
-                    b.Navigation("Supplier");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.Finance.Po.Models.PurchaseOrder", b =>

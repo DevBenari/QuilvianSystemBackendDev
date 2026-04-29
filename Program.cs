@@ -5,7 +5,8 @@ using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
@@ -159,6 +160,44 @@ builder.Services.AddAuthentication(options =>
         ),
         ClockSkew = TimeSpan.Zero
     };
+
+    options.Events = new JwtBearerEvents
+    {
+        OnChallenge = async context =>
+        {
+            context.HandleResponse();
+
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            context.Response.ContentType = "application/json";
+
+            var message = "Unauthorized. Token tidak ditemukan, tidak valid, atau sudah expired.";
+
+            if (context.AuthenticateFailure is SecurityTokenExpiredException)
+            {
+                message = "Unauthorized. Token sudah expired. Silakan login ulang.";
+            }
+
+            await context.Response.WriteAsync(JsonSerializer.Serialize(new
+            {
+                status = "error",
+                code = 401,
+                message = message
+            }));
+        },
+
+        OnForbidden = async context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            context.Response.ContentType = "application/json";
+
+            await context.Response.WriteAsync(JsonSerializer.Serialize(new
+            {
+                status = "error",
+                code = 403,
+                message = "Forbidden. Anda tidak memiliki akses ke endpoint ini."
+            }));
+        }
+    };
 });
 #endregion
 
@@ -194,12 +233,49 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.SlidingExpiration = true;
     options.LoginPath = "/login";
     options.AccessDeniedPath = "/forbidden";
+
+    options.Events = new CookieAuthenticationEvents
+    {
+        OnRedirectToLogin = async context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            context.Response.ContentType = "application/json";
+
+            await context.Response.WriteAsync(JsonSerializer.Serialize(new
+            {
+                status = "error",
+                code = 401,
+                message = "Unauthorized. Token tidak ditemukan atau session login sudah berakhir."
+            }));
+        },
+
+        OnRedirectToAccessDenied = async context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            context.Response.ContentType = "application/json";
+
+            await context.Response.WriteAsync(JsonSerializer.Serialize(new
+            {
+                status = "error",
+                code = 403,
+                message = "Forbidden. Anda tidak memiliki akses ke endpoint ini."
+            }));
+        }
+    };
+
 });
 
 #endregion
 
 #region AUTHORIZATION
-builder.Services.AddAuthorization();
+
+builder.Services.AddAuthorization(options =>
+{
+    options.FallbackPolicy = new AuthorizationPolicyBuilder("SmartAuth")
+        .RequireAuthenticatedUser()
+        .Build();
+});
+
 #endregion
 
 #region SWAGGER
@@ -308,16 +384,12 @@ app.UseHttpsRedirection();
 
 app.UseStaticFiles();
 
-app.UseRouting();
+/*
+ * Swagger dibuat public.
+ * Jadi user belum login tetap bisa membuka halaman Swagger.
+ */
+#region Swagger
 
-app.UseCors("AllowSpecific");
-
-app.UseSession();
-
-app.UseAuthentication();
-app.UseAuthorization();
-
-#region Swagger Mapping
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
@@ -327,10 +399,23 @@ app.UseSwaggerUI(c =>
     c.SwaggerEndpoint("/swagger/hrd/swagger.json", "HRD API");
     c.SwaggerEndpoint("/swagger/finance/swagger.json", "Finance API");
     c.SwaggerEndpoint("/swagger/master/swagger.json", "Master API");
+
     c.RoutePrefix = "swagger";
     c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None);
+    // Supaya token tetap tersimpan saat pindah-pindah definition / reload Swagger
+    c.EnablePersistAuthorization();
 });
+
 #endregion
+
+app.UseRouting();
+
+app.UseCors("AllowSpecific");
+
+app.UseSession();
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 #region Hubs + Controllers
 
