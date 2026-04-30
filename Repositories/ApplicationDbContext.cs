@@ -524,6 +524,215 @@ namespace QuilvianSystemBackendDev.Repositories
             });
             #endregion
 
+            #region Lab Booking + detail
+            modelBuilder.Entity<LabBooking>(entity =>
+            {
+                entity.ToTable("LabBooking", "public");
+
+                entity.HasKey(e => e.BookingLabId);
+
+                // =========================
+                // INDEX UNTUK GET DATA BESAR
+                // =========================
+
+                entity.HasIndex(e => e.KunjunganId)
+                    .HasDatabaseName("IX_LabBooking_KunjunganId");
+
+                entity.HasIndex(e => e.PasienId)
+                    .HasDatabaseName("IX_LabBooking_PasienId");
+
+                entity.HasIndex(e => e.AsuransiId)
+                    .HasDatabaseName("IX_LabBooking_AsuransiId");
+
+                entity.HasIndex(e => e.KelasId)
+                    .HasDatabaseName("IX_LabBooking_KelasId");
+
+                entity.HasIndex(e => e.DokterId)
+                    .HasDatabaseName("IX_LabBooking_DokterId");
+
+                entity.HasIndex(e => e.DokterKonsulenId)
+                    .HasDatabaseName("IX_LabBooking_DokterKonsulenId");
+
+                entity.HasIndex(e => e.TerapisId)
+                    .HasDatabaseName("IX_LabBooking_TerapisId");
+
+                entity.HasIndex(e => e.NoOrder)
+                    .HasDatabaseName("IX_LabBooking_NoOrder");
+
+                entity.HasIndex(e => e.NoLab)
+                    .HasDatabaseName("IX_LabBooking_NoLab");
+
+                entity.HasIndex(e => e.NoPA)
+                    .HasDatabaseName("IX_LabBooking_NoPA");
+
+                entity.HasIndex(e => e.StatusPemeriksaan)
+                    .HasDatabaseName("IX_LabBooking_StatusPemeriksaan");
+
+                entity.HasIndex(e => e.StatusPembayaran)
+                    .HasDatabaseName("IX_LabBooking_StatusPembayaran");
+
+                entity.HasIndex(e => e.TglBooking)
+                    .HasDatabaseName("IX_LabBooking_TglBooking");
+
+                entity.HasIndex(e => e.TglPemeriksaan)
+                    .HasDatabaseName("IX_LabBooking_TglPemeriksaan");
+
+                entity.HasIndex(e => new { e.IsDelete, e.CreateDateTime })
+                    .HasDatabaseName("IX_LabBooking_IsDelete_CreateDateTime");
+
+                entity.HasIndex(e => new { e.PasienId, e.CreateDateTime })
+                    .HasDatabaseName("IX_LabBooking_PasienId_CreateDateTime");
+
+                entity.HasIndex(e => new { e.DokterId, e.CreateDateTime })
+                    .HasDatabaseName("IX_LabBooking_DokterId_CreateDateTime");
+
+                entity.HasIndex(e => new { e.KunjunganId, e.CreateDateTime })
+                    .HasDatabaseName("IX_LabBooking_KunjunganId_CreateDateTime");
+
+                // =========================
+                // RELASI
+                // =========================
+
+                entity.HasOne(e => e.Kunjungan)
+                    .WithMany()
+                    .HasForeignKey(e => e.KunjunganId)
+                    .IsRequired(false)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .HasConstraintName("FK_LabBooking_MstKunjungan_KunjunganId");
+
+                entity.HasOne(e => e.Pasien)
+                    .WithMany()
+                    .HasForeignKey(e => e.PasienId)
+                    .IsRequired(false)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .HasConstraintName("FK_LabBooking_MstPasien_PasienId");
+
+                entity.HasOne(e => e.Asuransi)
+                    .WithMany()
+                    .HasForeignKey(e => e.AsuransiId)
+                    .IsRequired(false)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .HasConstraintName("FK_LabBooking_MstAsuransi_AsuransiId");
+
+                entity.HasOne(e => e.Kelas)
+                    .WithMany()
+                    .HasForeignKey(e => e.KelasId)
+                    .IsRequired(false)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .HasConstraintName("FK_LabBooking_MstKelas_KelasId");
+
+                entity.HasOne(e => e.Dokter)
+                    .WithMany()
+                    .HasForeignKey(e => e.DokterId)
+                    .IsRequired(false)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .HasConstraintName("FK_LabBooking_MstDokter_DokterId");
+
+                entity.HasOne(e => e.DokterKonsulen)
+                    .WithMany()
+                    .HasForeignKey(e => e.DokterKonsulenId)
+                    .IsRequired(false)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .HasConstraintName("FK_LabBooking_MstDokter_DokterKonsulenId");
+
+                entity.HasMany(e => e.LabBookingDetails)
+                    .WithOne(e => e.LabBooking)
+                    .HasForeignKey(e => e.BookingLabId)
+                    .IsRequired(false)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .HasConstraintName("FK_LabBookingDetail_LabBooking_BookingLabId");
+            });
+
+            modelBuilder.Entity<LabBookingDetail>(entity =>
+            {
+                entity.ToTable("LabBookingDetail", "public");
+
+                entity.HasKey(e => e.DetailBookingLabId);
+
+                // =========================
+                // INDEX UNTUK GET DATA BESAR
+                // =========================
+
+                entity.HasIndex(e => e.BookingLabId)
+                    .HasDatabaseName("IX_LabBookingDetail_BookingLabId");
+
+                entity.HasIndex(e => e.PasienId)
+                    .HasDatabaseName("IX_LabBookingDetail_PasienId");
+
+                entity.HasIndex(e => e.PemeriksaanLabId)
+                    .HasDatabaseName("IX_LabBookingDetail_PemeriksaanLabId");
+
+                entity.HasIndex(e => e.LabId)
+                    .HasDatabaseName("IX_LabBookingDetail_LabId");
+
+                entity.HasIndex(e => e.AsalSpecimenId)
+                    .HasDatabaseName("IX_LabBookingDetail_AsalSpecimenId");
+
+                entity.HasIndex(e => e.NoOrder)
+                    .HasDatabaseName("IX_LabBookingDetail_NoOrder");
+
+                entity.HasIndex(e => e.StatusPemeriksaan)
+                    .HasDatabaseName("IX_LabBookingDetail_StatusPemeriksaan");
+
+                entity.HasIndex(e => e.StatusVerifikasi)
+                    .HasDatabaseName("IX_LabBookingDetail_StatusVerifikasi");
+
+                entity.HasIndex(e => e.TanggalSelesai)
+                    .HasDatabaseName("IX_LabBookingDetail_TanggalSelesai");
+
+                entity.HasIndex(e => new { e.IsDelete, e.CreateDateTime })
+                    .HasDatabaseName("IX_LabBookingDetail_IsDelete_CreateDateTime");
+
+                entity.HasIndex(e => new { e.BookingLabId, e.CreateDateTime })
+                    .HasDatabaseName("IX_LabBookingDetail_BookingLabId_CreateDateTime");
+
+                // Jika pakai PostgreSQL array uuid[]
+                entity.Property(e => e.SpecimenJenisId)
+                    .HasColumnType("uuid[]");
+
+                entity.Property(e => e.SpecimenMethodId)
+                    .HasColumnType("uuid[]");
+
+                // =========================
+                // RELASI
+                // =========================
+
+                entity.HasOne(e => e.LabBooking)
+                    .WithMany(e => e.LabBookingDetails)
+                    .HasForeignKey(e => e.BookingLabId)
+                    .IsRequired(false)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .HasConstraintName("FK_LabBookingDetail_LabBooking_BookingLabId");
+
+                entity.HasOne(e => e.Pasien)
+                    .WithMany()
+                    .HasForeignKey(e => e.PasienId)
+                    .IsRequired(false)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .HasConstraintName("FK_LabBookingDetail_MstPasien_PasienId");
+
+                entity.HasOne(e => e.PemeriksaanLab)
+                    .WithMany()
+                    .HasForeignKey(e => e.PemeriksaanLabId)
+                    .IsRequired(false)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .HasConstraintName("FK_LabBookingDetail_MstPemeriksaanLab_PemeriksaanLabId");
+
+                entity.HasOne(e => e.Lab)
+                    .WithMany()
+                    .HasForeignKey(e => e.LabId)
+                    .IsRequired(false)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .HasConstraintName("FK_LabBookingDetail_MstLab_LabId");
+
+                entity.HasOne(e => e.AsalSpecimen)
+                    .WithMany()
+                    .HasForeignKey(e => e.AsalSpecimenId)
+                    .IsRequired(false)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .HasConstraintName("FK_LabBookingDetail_MstAsalSpecimen_AsalSpecimenId");
+            });
+            #endregion
             #endregion
         }
 
@@ -874,10 +1083,12 @@ namespace QuilvianSystemBackendDev.Repositories
             public DbSet<LabHasilDetail> LabHasilDetails { get; set; }
             public DbSet<PenerimaDarahPasien> PenerimaDarahPasiens { get; set; }
             public DbSet<DarahDetail> DarahDetails { get; set; }
-            #endregion
+            public DbSet<LabBookingDetailSpecimenJenis> LabBookingDetailSpecimenJenises { get; set; }
+            public DbSet<LabBookingDetailSpecimenMethod> LabBookingDetailSpecimenMethods { get; set; }
+        #endregion
 
-            #region IGD
-            public DbSet<IGDTriage> IGDTriages { get; set; }
+        #region IGD
+        public DbSet<IGDTriage> IGDTriages { get; set; }
             public DbSet<IGDTriageDetail> IGDTriageDetails { get; set; }
             public DbSet<IGDPasienDetail> IGDPasienDetails { get; set; }
             public DbSet<IGDTindakanDetail> IGDTindakanDetails { get; set; }
