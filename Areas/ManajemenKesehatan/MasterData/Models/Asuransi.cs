@@ -1,8 +1,9 @@
-﻿using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers;
-using QuilvianSystemBackendDev.Models;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
+using QuilvianSystemBackendDev.Models;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
 {
@@ -40,5 +41,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? Alamat { get; set; }
         public string? Keterangan { get; set; }
         public bool? IsPKS { get; set; }
+
+        //public ICollection<Kunjungan> KunjunganAsuransis { get; set; } = new List<Kunjungan>();
+        //public ICollection<Kunjungan> KunjunganAsuransiExcesses { get; set; } = new List<Kunjungan>();
     }
 }

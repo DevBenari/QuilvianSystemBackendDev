@@ -305,7 +305,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-
         [HttpPut("{id}")]
         public async Task<IActionResult> Edit(Guid id, [FromBody] ObatAlkesViewModel vm)
         {
