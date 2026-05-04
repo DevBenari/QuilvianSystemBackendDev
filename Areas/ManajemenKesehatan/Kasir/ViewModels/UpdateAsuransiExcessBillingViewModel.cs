@@ -3,5 +3,6 @@
     public class UpdateAsuransiExcessBillingViewModel
     {
         public bool? IsCoveredExcess { get; set; }
+
     }
 }
