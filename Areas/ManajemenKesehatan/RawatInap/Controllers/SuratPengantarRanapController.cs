@@ -577,49 +577,49 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                 _applicationDbContext.SuratPengantarRawatInaps.Add(surat);
 
-                // Cari biaya admin rawat inap
-                var biayaAdmin = await _applicationDbContext.BiayaAdministrasis
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(b => b.BiayaAdministrasiKode == "IP");
+                //// Cari biaya admin rawat inap
+                //var biayaAdmin = await _applicationDbContext.BiayaAdministrasis
+                //    .AsNoTracking()
+                //    .FirstOrDefaultAsync(b => b.BiayaAdministrasiKode == "IP");
 
-                // Invoice billing
-                var invoice = await _generateInvoiceBillingService.GetOrCreateAsync(
-                    kunjunganId,
-                    now
-                );
+                //// Invoice billing
+                //var invoice = await _generateInvoiceBillingService.GetOrCreateAsync(
+                //    kunjunganId,
+                //    now
+                //);
 
-                // Tambahkan billing biaya admin bila ada
-                if (biayaAdmin != null)
-                {
-                    // Ambil urutan billing terakhir utk kunjungan ini
-                    var existingBillingCount = await _applicationDbContext.Billings
-                        .CountAsync(b => b.KunjunganId == kunjunganId);
+                //// Tambahkan billing biaya admin bila ada
+                //if (biayaAdmin != null)
+                //{
+                //    // Ambil urutan billing terakhir utk kunjungan ini
+                //    var existingBillingCount = await _applicationDbContext.Billings
+                //        .CountAsync(b => b.KunjunganId == kunjunganId);
 
-                    var billingKode = (existingBillingCount + 1).ToString("D3");
+                //    var billingKode = (existingBillingCount + 1).ToString("D3");
 
-                    var bill = new Billing
-                    {
-                        BillingId = Guid.NewGuid(),
-                        KunjunganId = kunjunganId,
-                        ItemId = biayaAdmin.BiayaAdministrasiId,
-                        NamaItem = biayaAdmin.NamaBiayaAdministrasi,
-                        HargaItem = biayaAdmin.NominalBiayaAdministrasi,
-                        QtyItem = 1,
-                        SubTotalItem = biayaAdmin.NominalBiayaAdministrasi,
-                        InvoiceBilling = invoice,
-                        IsListWhiteOff = false,
-                        BillingKode = billingKode,
-                        JenisBilling = "Biaya Admin",
-                        StatusBilling = false,
-                        BillingDate = now,
-                        TanggalInvoice = now,
-                        TanggalJatuhTempo = now.Date.AddDays(90),
-                        CreateDateTime = nowOffset,
-                        CreateBy = userActiveId
-                    };
+                //    var bill = new Billing
+                //    {
+                //        BillingId = Guid.NewGuid(),
+                //        KunjunganId = kunjunganId,
+                //        ItemId = biayaAdmin.BiayaAdministrasiId,
+                //        NamaItem = biayaAdmin.NamaBiayaAdministrasi,
+                //        HargaItem = biayaAdmin.NominalBiayaAdministrasi,
+                //        QtyItem = 1,
+                //        SubTotalItem = biayaAdmin.NominalBiayaAdministrasi,
+                //        InvoiceBilling = invoice,
+                //        IsListWhiteOff = false,
+                //        BillingKode = billingKode,
+                //        JenisBilling = "Biaya Admin",
+                //        StatusBilling = false,
+                //        BillingDate = now,
+                //        TanggalInvoice = now,
+                //        TanggalJatuhTempo = now.Date.AddDays(90),
+                //        CreateDateTime = nowOffset,
+                //        CreateBy = userActiveId
+                //    };
 
-                    _applicationDbContext.Billings.Add(bill);
-                }
+                //    _applicationDbContext.Billings.Add(bill);
+                //}
 
                 // Buat deposit ranap
                 //var noKwitansi = await _depositRanapNumberService.GenerateNoKwitansiAsync();

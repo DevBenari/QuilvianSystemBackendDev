@@ -122,7 +122,6 @@ builder.Services.AddSession(options =>
 
 #endregion
 
-
 #region AUTH JWT + COOKIE SMART SCHEME
 builder.Services.AddAuthentication(options =>
 {
@@ -362,6 +361,7 @@ builder.Services.AddScoped<IPerkiraanBillingRanapService, PerkiraanBillingRanapS
 builder.Services.AddScoped<IDepositRanapNumberService, DepositRanapNumberService>();
 builder.Services.AddScoped<IAsuransiCoverageService, AsuransiCoverageService>();
 builder.Services.AddScoped<INotification, NotificationService>();
+builder.Services.AddScoped<IKunjunganAdminBillingService, KunjunganAdminBillingService>();
 #endregion
 
 #region Setting Container

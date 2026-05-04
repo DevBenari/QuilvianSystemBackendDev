@@ -89,130 +89,232 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         [HttpGet]
         public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
         {
-            // Validasi agar page dan perPage minimal bernilai 1
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            // Query data
-            var query = (from b in _applicationDbContext.LabBookings
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on b.CreateBy equals u.UserActiveId
-
-                         // join ke lab booking detail
-                         join lb in _applicationDbContext.LabBookingDetails
-                         on b.BookingLabId equals lb.BookingLabId into labBookings
-                         from lb in labBookings.DefaultIfEmpty()
-
-                             // join ke lab
-                         join l in _applicationDbContext.Labs
-                         on lb.LabId equals l.LabId into labGroup
-                         from l in labGroup.DefaultIfEmpty()
-
-                            // join ke lab pemeriksaan
-                        join lp in _applicationDbContext.LabPemeriksaans
-                        on lb.PemeriksaanLabId equals lp.PemeriksaanLabId into lpGroup
-                        from lp in lpGroup.DefaultIfEmpty()
-
-                             // join ke kunjungan
-                         join k in _applicationDbContext.Kunjungans
-                         on b.KunjunganId equals k.KunjunganID into kGroup
-                         from k in kGroup.DefaultIfEmpty()
-
-                             // join ke asuransi
-                         join a in _applicationDbContext.Asuransis
-                         on b.AsuransiId equals a.AsuransiId into aGroup
-                         from a in aGroup.DefaultIfEmpty()
-
-                             // join ke pasien baru
-                         join p in _applicationDbContext.PendaftaranPasienBarus
-                         on b.PasienId equals p.PendaftaranPasienBaruId into pGroup
-                         from p in pGroup.DefaultIfEmpty()
-
-                             //join ke dokter
-                         join d1 in _applicationDbContext.Dokters
-                         on b.DokterId equals d1.DokterId into d1Group
-                         from d1 in d1Group.DefaultIfEmpty()
-
-                             // join ke dokter konsulen
-                         join d2 in _applicationDbContext.Dokters
-                         on b.DokterKonsulenId equals d2.DokterId into d2Group
-                         from d2 in d2Group.DefaultIfEmpty()
-
-                         where b.IsDelete == false || b.IsDelete == null
-                         select new
-                         {
-                             b.CreateDateTime,
-                             b.CreateBy,
-                             CreateByName = u.FullName,
-                             b.BookingLabId,
-                             b.NomorSuratJaminan,
-                             b.KunjunganId,
-                             k.AsalKunjungan,
-                             k.TipePasien,
-                             b.PasienId,
-                             p.NamaLengkap,
-                             p.NoRekamMedis,
-                             b.TglPemeriksaan,
-                             b.TglPenyerahanSampling,
-                             b.TglBooking,
-                             b.StatusPemeriksaan,
-                             b.KelasId,
-                             lb.PemeriksaanLabId,
-                             lp.NamaPemeriksaan,
-                             lp.HargaPemeriksaan,
-                             b.DokterId,
-                             NamaDokter = d1.NmDokter,
-                             b.Keterangan,
-                             b.IsCito,
-                             b.DiagnosaAwal,
-                             b.DokterKonsulenId,
-                             DokterKonsulen = d2.NmDokter,
-                             b.TerapisId,
-                             b.AsuransiId,
-                             a.NamaAsuransi,
-                             b.HemodialisaKe,
-                             NamaLab = l.NamaLab ?? null,
-                             AlasanPembatalan = lb.AlasanPembatalan ?? null,
-                             TTDPembatalanPath =lb.TTDPembatalanPath ?? null,
-                             b.NoLab,
-                             b.NoPA,
-                             b.StatusBookingLab,
-                             b.CatatanJaminan,
-                             b.StatusPembayaran,
-                             b.ProsesBooking,
-                             b.TindakLanjut,
-                             b.HasilPenunjangLab,
-                             b.AnjuranDiet
-                         }).OrderByDescending(a => a.CreateDateTime);
-
-            // Hitung total data sebelum paginasi
-            var totalRows = query.Count();
-            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-
-            // Ambil data sesuai paging
-            var listdata = query
-                .Skip((page - 1) * perPage)
-                .Take(perPage)
-                .ToList();
-
-            if (!listdata.Any())
+            try
             {
-                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
-            }
+                // =====================================================
+                // 1) Query LabBooking utama + LEFT JOIN UserActive
+                // Jangan join detail dulu supaya data tidak dobel
+                // =====================================================
+                var baseQuery =
+                    from b in _applicationDbContext.LabBookings.AsNoTracking()
 
-            // Return hasil dengan paging info
-            return Ok(new
-            {
-                message = "Berhasil || 200 OK",
-                data = listdata,
-                pagination = new
+                    join u0 in _applicationDbContext.UserActives.AsNoTracking()
+                        on b.CreateBy equals u0.UserActiveId into userGroup
+                    from u in userGroup.DefaultIfEmpty()
+
+                    where b.IsDelete == false || b.IsDelete == null
+
+                    select new
+                    {
+                        Booking = b,
+                        CreateByName = u != null ? u.FullName : null
+                    };
+
+                var totalRows = await baseQuery.CountAsync();
+                var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+                var rows = await baseQuery
+                    .OrderByDescending(x => x.Booking.CreateDateTime)
+                    .Skip((page - 1) * perPage)
+                    .Take(perPage)
+                    .Select(x => new
+                    {
+                        x.Booking.CreateDateTime,
+                        x.Booking.CreateBy,
+                        x.CreateByName,
+
+                        x.Booking.BookingLabId,
+                        x.Booking.NomorSuratJaminan,
+
+                        x.Booking.KunjunganId,
+                        AsalKunjungan = x.Booking.Kunjungan != null ? x.Booking.Kunjungan.AsalKunjungan : null,
+                        TipePasien = x.Booking.Kunjungan != null ? x.Booking.Kunjungan.TipePasien : null,
+
+                        x.Booking.PasienId,
+                        NamaLengkap = x.Booking.Pasien != null ? x.Booking.Pasien.NamaLengkap : null,
+                        NoRekamMedis = x.Booking.Pasien != null ? x.Booking.Pasien.NoRekamMedis : null,
+
+                        x.Booking.TglPemeriksaan,
+                        x.Booking.TglPenyerahanSampling,
+                        x.Booking.TglBooking,
+                        x.Booking.StatusPemeriksaan,
+
+                        x.Booking.KelasId,
+
+                        x.Booking.DokterId,
+                        NamaDokter = x.Booking.Dokter != null ? x.Booking.Dokter.NmDokter : null,
+
+                        x.Booking.Keterangan,
+                        x.Booking.IsCito,
+                        x.Booking.DiagnosaAwal,
+
+                        x.Booking.DokterKonsulenId,
+                        DokterKonsulen = x.Booking.DokterKonsulen != null ? x.Booking.DokterKonsulen.NmDokter : null,
+
+                        x.Booking.TerapisId,
+
+                        x.Booking.AsuransiId,
+                        NamaAsuransi = x.Booking.Asuransi != null ? x.Booking.Asuransi.NamaAsuransi : null,
+
+                        x.Booking.HemodialisaKe,
+                        x.Booking.NoLab,
+                        x.Booking.NoPA,
+                        x.Booking.StatusBookingLab,
+                        x.Booking.CatatanJaminan,
+                        x.Booking.StatusPembayaran,
+                        x.Booking.ProsesBooking,
+                        x.Booking.TindakLanjut,
+                        x.Booking.HasilPenunjangLab,
+                        x.Booking.AnjuranDiet
+                    })
+                    .ToListAsync();
+
+                if (!rows.Any())
                 {
-                    CurrentPage = page,
-                    PerPage = perPage,
-                    TotalRows = totalRows,
-                    TotalPages = totalPages
+                    return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
                 }
-            });
+
+                // =====================================================
+                // 2) Ambil detail hanya untuk booking yang tampil di page ini
+                // =====================================================
+                var bookingIds = rows.Select(x => x.BookingLabId).ToList();
+
+                var detailRows = await _applicationDbContext.LabBookingDetails
+                    .AsNoTracking()
+                    .Where(d =>
+                        (d.IsDelete == false || d.IsDelete == null) &&
+                        d.BookingLabId.HasValue &&
+                        bookingIds.Contains(d.BookingLabId.Value))
+                    .Select(d => new
+                    {
+                        d.BookingLabId,
+                        d.DetailBookingLabId,
+
+                        d.PemeriksaanLabId,
+                        NamaPemeriksaan = d.PemeriksaanLab != null ? d.PemeriksaanLab.NamaPemeriksaan : null,
+                        HargaPemeriksaan = d.PemeriksaanLab != null ? d.PemeriksaanLab.HargaPemeriksaan : null,
+
+                        d.LabId,
+                        NamaLab = d.Lab != null ? d.Lab.NamaLab : null,
+
+                        d.AsalSpecimenId,
+                        d.KategoriPatologiAnatomi,
+                        d.JenisSpecimen,
+                        d.LokasiSpecimen,
+                        d.KeteranganKlinik,
+                        d.PenyakitSebelumnya,
+                        d.PenggunaanFiksasi,
+                        d.JenisPemeriksaanGC,
+                        d.JenisGC,
+                        d.BahanNonGC,
+                        d.BahanMicrobiologi,
+                        d.MasaHaidTerakhir,
+
+                        d.Diagnosa,
+                        d.NoOrder,
+                        d.Satuan,
+                        d.StatusPemeriksaan,
+                        d.TanggalSelesai,
+                        d.StatusVerifikasi,
+
+                        d.AlasanPembatalan,
+                        d.TTDPembatalanPath,
+                        d.TipeLayanan
+                    })
+                    .ToListAsync();
+
+                var detailMap = detailRows
+                    .Where(x => x.BookingLabId.HasValue)
+                    .GroupBy(x => x.BookingLabId!.Value)
+                    .ToDictionary(
+                        g => g.Key,
+                        g => g.Cast<object>().ToList()
+                    );
+
+                // =====================================================
+                // 3) Gabungkan response
+                // =====================================================
+                var result = rows.Select(b =>
+                {
+                    detailMap.TryGetValue(b.BookingLabId, out var details);
+
+                    return new
+                    {
+                        b.CreateDateTime,
+                        b.CreateBy,
+                        b.CreateByName,
+
+                        b.BookingLabId,
+                        b.NomorSuratJaminan,
+
+                        b.KunjunganId,
+                        b.AsalKunjungan,
+                        b.TipePasien,
+
+                        b.PasienId,
+                        b.NamaLengkap,
+                        b.NoRekamMedis,
+
+                        b.TglPemeriksaan,
+                        b.TglPenyerahanSampling,
+                        b.TglBooking,
+                        b.StatusPemeriksaan,
+
+                        b.KelasId,
+
+                        b.DokterId,
+                        b.NamaDokter,
+
+                        b.Keterangan,
+                        b.IsCito,
+                        b.DiagnosaAwal,
+
+                        b.DokterKonsulenId,
+                        b.DokterKonsulen,
+
+                        b.TerapisId,
+
+                        b.AsuransiId,
+                        b.NamaAsuransi,
+
+                        b.HemodialisaKe,
+                        b.NoLab,
+                        b.NoPA,
+                        b.StatusBookingLab,
+                        b.CatatanJaminan,
+                        b.StatusPembayaran,
+                        b.ProsesBooking,
+                        b.TindakLanjut,
+                        b.HasilPenunjangLab,
+                        b.AnjuranDiet,
+
+                        Details = details ?? new List<object>()
+                    };
+                }).ToList();
+
+                return Ok(new
+                {
+                    message = "Berhasil || 200 OK",
+                    data = result,
+                    pagination = new
+                    {
+                        CurrentPage = page,
+                        PerPage = perPage,
+                        TotalRows = totalRows,
+                        TotalPages = totalPages
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = $"Terjadi kesalahan internal: {ex.Message}"
+                });
+            }
         }
 
         [HttpGet("{id}")]
@@ -220,163 +322,205 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         {
             try
             {
-                var baseQuery = from b in _applicationDbContext.LabBookings
-                                join u in _applicationDbContext.UserActives on b.CreateBy equals u.UserActiveId into uGroup
-                                from u in uGroup.DefaultIfEmpty()
+                // =====================================================
+                // 1) Ambil header LabBooking + LEFT JOIN UserActive
+                // =====================================================
+                var header = await (
+                    from b in _applicationDbContext.LabBookings.AsNoTracking()
 
-                                join k in _applicationDbContext.Kunjungans on b.KunjunganId equals k.KunjunganID into kGroup
-                                from k in kGroup.DefaultIfEmpty()
+                    join u0 in _applicationDbContext.UserActives.AsNoTracking()
+                        on b.CreateBy equals u0.UserActiveId into uGroup
+                    from u in uGroup.DefaultIfEmpty()
 
-                                join a in _applicationDbContext.Asuransis on b.AsuransiId equals a.AsuransiId into aGroup
-                                from a in aGroup.DefaultIfEmpty()
+                    where b.BookingLabId == id
+                          && (b.IsDelete == false || b.IsDelete == null)
 
-                                join p in _applicationDbContext.PendaftaranPasienBarus on b.PasienId equals p.PendaftaranPasienBaruId into pGroup
-                                from p in pGroup.DefaultIfEmpty()
-
-                                join d1 in _applicationDbContext.Dokters on b.DokterId equals d1.DokterId into d1Group
-                                from d1 in d1Group.DefaultIfEmpty()
-
-                                join d2 in _applicationDbContext.Dokters on b.DokterKonsulenId equals d2.DokterId into d2Group
-                                from d2 in d2Group.DefaultIfEmpty()
-
-                                join lb in _applicationDbContext.LabBookingDetails on b.BookingLabId equals lb.BookingLabId into lbGroup
-                                from lb in lbGroup.DefaultIfEmpty()
-
-                                join l in _applicationDbContext.Labs on lb.LabId equals l.LabId into lGroup
-                                from l in lGroup.DefaultIfEmpty()
-
-                                join lp in _applicationDbContext.LabPemeriksaans on lb.PemeriksaanLabId equals lp.PemeriksaanLabId into lpGroup
-                                from lp in lpGroup.DefaultIfEmpty()
-
-                                join po in _applicationDbContext.Polikliniks on k.PoliklinikId equals po.PoliklinikId into poGroup
-                                from po in poGroup.DefaultIfEmpty()
-
-                                where b.BookingLabId == id && (b.IsDelete == false )
-                                     
-                                select new
-                                {
-                                    // Header
-                                    b.BookingLabId,
-                                    KunjunganId = (Guid?)b.KunjunganId,
-                                    PoliId = (Guid?)po.PoliklinikId,
-                                    NamaPoli = po.NamaPoliklinik ?? null,
-                                    PasienId = (Guid?)b.PasienId,
-                                    PasienNama = p.NamaLengkap,
-                                    b.NomorSuratJaminan,
-                                    b.StatusBookingLab,
-                                    b.CatatanJaminan,
-                                    b.StatusPembayaran,
-                                    p.NoRekamMedis,
-                                    b.TglPemeriksaan,
-                                    b.TglBooking,
-                                    b.TglPenyerahanSampling,
-                                    b.KelasId,
-                                    b.Keterangan,
-                                    b.IsCito,
-                                    b.DiagnosaAwal,
-                                    b.HemodialisaKe,
-                                    b.StatusPemeriksaan,
-                                    b.TindakLanjut,
-                                    b.HasilPenunjangLab,
-                                    b.AnjuranDiet,
-                                    b.TTDPathPembatalan,
-                                    b.PetugasPembatalan,
-                                    AlasanPembatalanLabBooking=b.AlasanPembatalan,
-                                    AsuransiId = (Guid?)b.AsuransiId,
-                                    AsuransiNama = a.NamaAsuransi ?? null,
-                                    DokterId = (Guid?)b.DokterId,
-                                    DokterNama = d1.NmDokter ?? null,
-                                    DokterKonsulenId = b.DokterKonsulenId ?? null,
-                                    DokterKonsulen = d2.NmDokter ?? null,
-                                    AsalKunjungan = k != null ? k.AsalKunjungan : null,
-                                    TipePasien = k != null ? k.TipePasien : null,
-                                    b.CreateBy,
-                                    CreateByName = u.FullName,
-                                    b.CreateDateTime,
-                                    
-                                    // Detail
-                                    LabBookingDetailId = (Guid?)lb.DetailBookingLabId,
-                                    PemeriksaanLabId = (Guid?)lb.PemeriksaanLabId,
-                                    PemeriksaanNama = lp.NamaPemeriksaan,
-                                    TipeLayanan = lb.TipeLayanan ?? null,
-                                    HargaPemeriksaan = (decimal?)(lp.HargaPemeriksaan ?? 0),
-                                    NamaLab = l.NamaLab ?? null,
-                                    AlasanPembatalan = lb.AlasanPembatalan ?? null,
-                                    TTDPembatalanPath = lb.TTDPembatalanPath ?? null,
-                                    IsDeleteLBD = lb.IsDelete
-                                };
-
-                var rawData = baseQuery.ToList();
-
-                if (!rawData.Any())
-                    return NotFound(new { message = "Data tidak ditemukan untuk LabBookingId tersebut." });
-
-                // ✅ Grouping by BookingLabId
-                var grouped = rawData
-                    .GroupBy(x => x.BookingLabId)
-                    .Select(g => new
+                    select new
                     {
-                        BookingLabId = g.Key,
-                        g.First().KunjunganId,
-                        g.First().PoliId,
-                        g.First().NamaPoli,
-                        g.First().PasienId,
-                        g.First().PasienNama,
-                        g.First().NoRekamMedis,
-                        g.First().NomorSuratJaminan,
-                        g.First().TglPemeriksaan,
-                        g.First().TglBooking,
-                        g.First().TglPenyerahanSampling,
-                        g.First().StatusBookingLab,
-                        g.First().CatatanJaminan,
-                        g.First().StatusPembayaran,
-                        g.First().StatusPemeriksaan,
-                        g.First().AsuransiId,
-                        g.First().AsuransiNama,
-                        g.First().DokterId,
-                        g.First().DokterNama,
-                        g.First().DokterKonsulenId,
-                        g.First().DokterKonsulen,
-                        g.First().AsalKunjungan,
-                        g.First().TipePasien,
-                        g.First().IsCito,
-                        g.First().DiagnosaAwal,
-                        g.First().HemodialisaKe,
-                        g.First().TindakLanjut,
-                        g.First().HasilPenunjangLab,
-                        g.First().AnjuranDiet,
-                        g.First().Keterangan,
-                        g.First().TTDPathPembatalan,
-                        g.First().PetugasPembatalan,
-                        g.First().AlasanPembatalanLabBooking,
-                        g.First().CreateBy,
-                        g.First().CreateByName,
-                        g.First().CreateDateTime,
+                        b.BookingLabId,
 
-                        Details = g.Where(d => d.LabBookingDetailId != null && !d.IsDeleteLBD).Select(d => new
-                        {
-                            d.LabBookingDetailId,
-                            d.PemeriksaanLabId,
-                            d.PemeriksaanNama,
-                            d.HargaPemeriksaan,
-                            d.NamaLab,
-                            d.TipeLayanan,
-                            d.AlasanPembatalan,
-                            d.TTDPembatalanPath,
-                        }).ToList()
+                        KunjunganId = b.KunjunganId,
+                        PoliId = b.Kunjungan != null ? b.Kunjungan.PoliklinikId : null,
+                        NamaPoli = b.Kunjungan != null && b.Kunjungan.Poliklinik != null
+                            ? b.Kunjungan.Poliklinik.NamaPoliklinik
+                            : null,
+
+                        PasienId = b.PasienId,
+                        PasienNama = b.Pasien != null ? b.Pasien.NamaLengkap : null,
+                        NoRekamMedis = b.Pasien != null ? b.Pasien.NoRekamMedis : null,
+
+                        b.NomorSuratJaminan,
+                        b.StatusBookingLab,
+                        b.CatatanJaminan,
+                        b.StatusPembayaran,
+
+                        b.TglPemeriksaan,
+                        b.TglBooking,
+                        b.TglPenyerahanSampling,
+
+                        b.KelasId,
+                        b.Keterangan,
+                        b.IsCito,
+                        b.DiagnosaAwal,
+                        b.HemodialisaKe,
+                        b.StatusPemeriksaan,
+
+                        b.TindakLanjut,
+                        b.HasilPenunjangLab,
+                        b.AnjuranDiet,
+
+                        b.TTDPathPembatalan,
+                        b.PetugasPembatalan,
+                        AlasanPembatalanLabBooking = b.AlasanPembatalan,
+
+                        AsuransiId = b.AsuransiId,
+                        AsuransiNama = b.Asuransi != null ? b.Asuransi.NamaAsuransi : null,
+
+                        DokterId = b.DokterId,
+                        DokterNama = b.Dokter != null ? b.Dokter.NmDokter : null,
+
+                        DokterKonsulenId = b.DokterKonsulenId,
+                        DokterKonsulen = b.DokterKonsulen != null ? b.DokterKonsulen.NmDokter : null,
+
+                        AsalKunjungan = b.Kunjungan != null ? b.Kunjungan.AsalKunjungan : null,
+                        TipePasien = b.Kunjungan != null ? b.Kunjungan.TipePasien : null,
+
+                        b.CreateBy,
+                        CreateByName = u != null ? u.FullName : null,
+                        b.CreateDateTime
+                    }
+                ).FirstOrDefaultAsync();
+
+                if (header == null)
+                {
+                    return NotFound(new { message = "Data tidak ditemukan untuk LabBookingId tersebut." });
+                }
+
+                // =====================================================
+                // 2) Ambil detail berdasarkan BookingLabId
+                // =====================================================
+                var details = await _applicationDbContext.LabBookingDetails
+                    .AsNoTracking()
+                    .Where(d =>
+                        d.BookingLabId == id &&
+                        (d.IsDelete == false || d.IsDelete == null))
+                    .Select(d => new
+                    {
+                        LabBookingDetailId = d.DetailBookingLabId,
+
+                        d.PemeriksaanLabId,
+                        PemeriksaanNama = d.PemeriksaanLab != null
+                            ? d.PemeriksaanLab.NamaPemeriksaan
+                            : null,
+
+                        HargaPemeriksaan = d.PemeriksaanLab != null
+                            ? d.PemeriksaanLab.HargaPemeriksaan
+                            : null,
+
+                        d.LabId,
+                        NamaLab = d.Lab != null ? d.Lab.NamaLab : null,
+
+                        d.AsalSpecimenId,
+
+                        // Kalau kolom lama ini masih ada di entity, boleh tampilkan dulu.
+                        d.SpecimenJenisId,
+                        d.SpecimenMethodId,
+
+                        d.KategoriPatologiAnatomi,
+                        d.JenisSpecimen,
+                        d.LokasiSpecimen,
+                        d.KeteranganKlinik,
+                        d.PenyakitSebelumnya,
+                        d.PenggunaanFiksasi,
+                        d.JenisPemeriksaanGC,
+                        d.JenisGC,
+                        d.BahanNonGC,
+                        d.BahanMicrobiologi,
+                        d.MasaHaidTerakhir,
+
+                        d.Diagnosa,
+                        d.NoOrder,
+                        d.Satuan,
+                        d.StatusPemeriksaan,
+                        d.TanggalSelesai,
+                        d.StatusVerifikasi,
+
+                        d.TipeLayanan,
+                        d.AlasanPembatalan,
+                        d.TTDPembatalanPath
                     })
-                    .FirstOrDefault();
+                    .ToListAsync();
+
+                // =====================================================
+                // 3) Response
+                // =====================================================
+                var result = new
+                {
+                    header.BookingLabId,
+
+                    header.KunjunganId,
+                    header.PoliId,
+                    header.NamaPoli,
+
+                    header.PasienId,
+                    header.PasienNama,
+                    header.NoRekamMedis,
+
+                    header.NomorSuratJaminan,
+                    header.TglPemeriksaan,
+                    header.TglBooking,
+                    header.TglPenyerahanSampling,
+
+                    header.StatusBookingLab,
+                    header.CatatanJaminan,
+                    header.StatusPembayaran,
+                    header.StatusPemeriksaan,
+
+                    header.AsuransiId,
+                    header.AsuransiNama,
+
+                    header.DokterId,
+                    header.DokterNama,
+
+                    header.DokterKonsulenId,
+                    header.DokterKonsulen,
+
+                    header.AsalKunjungan,
+                    header.TipePasien,
+
+                    header.IsCito,
+                    header.DiagnosaAwal,
+                    header.HemodialisaKe,
+
+                    header.TindakLanjut,
+                    header.HasilPenunjangLab,
+                    header.AnjuranDiet,
+
+                    header.Keterangan,
+                    header.TTDPathPembatalan,
+                    header.PetugasPembatalan,
+                    header.AlasanPembatalanLabBooking,
+
+                    header.CreateBy,
+                    header.CreateByName,
+                    header.CreateDateTime,
+
+                    Details = details
+                };
 
                 return Ok(new
                 {
                     status = "success",
                     message = "Data retrieved successfully",
-                    data = grouped
+                    data = result
                 });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+                return StatusCode(500, new
+                {
+                    message = $"Terjadi kesalahan internal: {ex.Message}"
+                });
             }
         }
 

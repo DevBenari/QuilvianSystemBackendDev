@@ -86,6 +86,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.TanggalPemeriksaan,
                             a.Disposition,
                             a.TipeLayanan,
+                            a.IsFoC,
                             a.Keterangan,
                         }).OrderByDescending(a => a.CreateDateTime);
 
@@ -221,6 +222,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     Total = totalqty, // Masukkan nilai Total yang telah dihitung
                     TipeLayanan = vm.TipeLayanan,
                     TanggalPemeriksaan = vm.TanggalPemeriksaan,
+                    IsFoC = vm.IsFoC,
                     Keterangan = vm.Keterangan,
                     Disposition = vm.Disposition,
                     CreateBy = userActiveId,
@@ -390,6 +392,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.Total = totalqty;
                 data.TipeLayanan = vm.TipeLayanan;
                 data.TanggalPemeriksaan = vm.TanggalPemeriksaan;
+                data.IsFoC = vm.IsFoC;
                 data.Disposition = vm.Disposition;
                 data.Keterangan = vm.Keterangan;
 
@@ -707,6 +710,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.Total,
                         a.TanggalPemeriksaan,
                         a.TipeLayanan,
+                        a.IsFoC,
                         a.Keterangan,
                     };
 

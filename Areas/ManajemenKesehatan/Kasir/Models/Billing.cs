@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
 using QuilvianSystemBackendDev.Models;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models
@@ -35,6 +36,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models
         public DateTime? TanggalJatuhTempo { get; set; }
         public int? DPD {  get; set; }
         public Guid? LayananId { get; set; }
-        
+
+
+        // Navigation ke Kunjungan
+        public Kunjungan? Kunjungan { get; set; }
     }
 }

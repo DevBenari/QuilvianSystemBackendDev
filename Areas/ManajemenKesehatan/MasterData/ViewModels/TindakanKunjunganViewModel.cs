@@ -14,5 +14,6 @@
         public string? Disposition { get; set; }
         public string? Keterangan { get; set; }
         public Guid? DiskonId { get; set; }
+        public bool? IsFoC { get; set; }
     }
 }

@@ -521,6 +521,7 @@ namespace QuilvianSystemBackendDev.Repositories
                     .IsRequired(false)
                     .OnDelete(DeleteBehavior.Restrict)
                     .HasConstraintName("FK_MstKunjungan_MstPendaftaranPasienBaru_PasienId");
+
             });
             #endregion
 
@@ -733,6 +734,22 @@ namespace QuilvianSystemBackendDev.Repositories
                     .HasConstraintName("FK_LabBookingDetail_MstAsalSpecimen_AsalSpecimenId");
             });
             #endregion
+
+            #region Billing
+            modelBuilder.Entity<Billing>(entity =>
+            {
+                entity.HasKey(e => e.BillingId);
+
+                entity.HasOne(e => e.Kunjungan)
+                    .WithMany(e => e.Billings)
+                    .HasForeignKey(e => e.KunjunganId)
+                    .HasPrincipalKey(e => e.KunjunganID)
+                    .IsRequired(false)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .HasConstraintName("FK_Billing_MstKunjungan_KunjunganId");
+            });
+            #endregion
+
             #endregion
         }
 
