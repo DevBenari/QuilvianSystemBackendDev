@@ -38,7 +38,7 @@ jobs:
           DEPLOY_TIME=$(date +"%A, %d-%m-%Y %H:%M:%S") 
 
           echo "Building new Docker image..."
-          docker build -t $IMAGE_NAME .
+          docker build -t --no-cache $IMAGE_NAME .
 
           echo "Stopping and removing old container..."
           docker stop $CONTAINER_NAME || true
