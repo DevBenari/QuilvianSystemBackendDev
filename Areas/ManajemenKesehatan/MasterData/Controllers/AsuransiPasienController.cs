@@ -132,6 +132,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 ap.CreateDateTime,
                                 NamaPasien = p.NamaLengkap,
                                 NamaAsuransi = a.NamaAsuransi,
+                                JenisAsuransi = a.JenisAsuransi,
                                 a.IsPKS,
                                 ap.NoPolis,
                                 ap.Umur,
@@ -598,6 +599,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         int page = 1,
         int perPage = 10,
         string? search = null,
+        Guid? pasienId = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -619,12 +621,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             ap.AsuransiPasienId,
                             NamaPasien = p.NamaLengkap,
                             NamaAsuransi = a.NamaAsuransi,
+                            JenisAsuransi = a.JenisAsuransi ?? null,
                             a.IsPKS,
                             ap.NoPolis,
                             ap.Umur,
                             ap.IsUtama,
                             ap.IsExcess
                         };
+
+            if (pasienId.HasValue)
+            {
+                query = query.Where(u=>u.PasienId == pasienId.Value);
+            }
 
             // Filter berdasarkan search
             if (!string.IsNullOrWhiteSpace(search))

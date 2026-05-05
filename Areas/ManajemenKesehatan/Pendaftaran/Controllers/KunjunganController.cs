@@ -899,10 +899,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     ? "IP"
                     : "OP";
 
-                /*
-                 * IP = pasien menuju Rawat Inap.
-                 * OP = pasien Rawat Jalan.
-                 */
                 if (kodeJenis == "IP" &&
                     (request.DepositRanap == null || request.DepositRanap <= 0))
                 {
@@ -1064,18 +1060,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                      */
                     await _applicationDbContext.SaveChangesAsync(ct);
 
-                    /*
-                     * Terapkan biaya admin.
-                     *
-                     * Jika kodeJenis = OP:
-                     * - pasien rawat jalan
-                     * - biaya admin OP hanya 1 kali per pasien per hari
-                     *
-                     * Jika kodeJenis = IP:
-                     * - pasien menuju rawat inap
-                     * - jika sebelumnya sudah ada admin OP hari ini,
-                     *   maka admin OP diubah menjadi admin IP
-                     */
                     await _kunjunganAdminBillingService.ApplyBiayaAdminAsync(
                         kunjunganId: newKunjungan.KunjunganID,
                         kodeJenis: kodeJenis,

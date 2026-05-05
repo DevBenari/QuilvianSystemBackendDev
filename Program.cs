@@ -384,10 +384,6 @@ app.UseHttpsRedirection();
 
 app.UseStaticFiles();
 
-/*
- * Swagger dibuat public.
- * Jadi user belum login tetap bisa membuka halaman Swagger.
- */
 #region Swagger
 
 app.UseSwagger();
@@ -422,6 +418,7 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.MapHub<KunjunganHub>("/hubs/kunjungan");
+app.MapHub<TindakanKunjunganHub>("/hubs/tindakankunjungan");
 app.MapHub<VitalSignHub>("/hubs/vitalsign");
 app.MapHub<SOAPHub>("/hubs/soap");
 app.MapHub<PainAssesmentHub>("/hubs/painassessment");

@@ -564,24 +564,44 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 {
                     TindakanKunjunganId = latestLog.TindakanKunjunganId,
                     TindakanId = tindakanId,
-                    NamaTindakan = nama,
+                    NamaTindakan = latestLog.NamaTindakan,
 
                     IsFoC = isFoC,
 
                     AsuransiId = bill?.AsuransiId,
-                    IsCovered = bill?.IsCovered,
+                    IsCovered = bill?.IsCovered ?? false,
                     AsuransiExcessId = bill?.AsuransiExcessId,
-                    IsCoveredExcess = bill?.IsCoveredExcess,
+                    IsCoveredExcess = bill?.IsCoveredExcess ?? false,
 
                     Qty = qtyFinal,
                     Harga = hargaEfektif,
+
+                    // Tetap tampil harga penuh, baik FoC maupun bukan
                     Subtotal = subtotal,
+
+                    // Khusus informasi FoC
+                    SubtotalDiskonDokter = isFoC ? subtotal : 0m,
+
+                    SubtotalDiskonDokterAsuransi =
+                        isFoC && (bill?.IsCovered ?? false) ? subtotal : 0m,
+
+                    SubtotalDiskonDokterAsuransiExcess =
+                        isFoC && (bill?.IsCoveredExcess ?? false) ? subtotal : 0m,
+
+                    SubtotalDiskonDokterMandiri =
+                        isFoC &&
+                        !(bill?.IsCovered ?? false) &&
+                        !(bill?.IsCoveredExcess ?? false)
+                            ? subtotal
+                            : 0m,
 
                     BillingId = bill?.BillingId,
                     BillingKode = bill?.BillingKode,
                     StatusBilling = bill?.StatusBilling,
 
-                    jenisBilling = isFoC ? "Diskon Dokter" : bill?.JenisBilling ?? "Tindakan",
+                    jenisBilling = isFoC
+                        ? "Diskon Dokter"
+                        : bill?.JenisBilling ?? "Tindakan",
 
                     TanggalInvoice = bill?.TanggalInvoice,
                     TanggalJatuhTempo = bill?.TanggalJatuhTempo,
@@ -590,18 +610,21 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             })
             .ToList();
 
+        dto.TotalTindakan = dto.DaftarTindakan
+            .Where(x => !GetBoolProp(x, "IsFoC"))
+            .Sum(x => GetDecimalProp(x, "Subtotal"));
 
-            dto.TotalTindakan = dto.DaftarTindakan
-                .Where(x => !GetBoolProp(x, "IsFoC"))
-                .Sum(x => GetDecimalProp(x, "Subtotal"));
+        dto.DaftarDiskonDokter = dto.DaftarTindakan
+            .Where(x => GetBoolProp(x, "IsFoC"))
+            .ToList();
 
-            dto.TotalDiskonDokter = dto.DaftarTindakan
-                .Where(x => GetBoolProp(x, "IsFoC"))
-                .Sum(x => GetDecimalProp(x, "Subtotal"));
+        dto.TotalDiskonDokter = SumFoC(dto.DaftarTindakan);
 
-            dto.DaftarDiskonDokter = dto.DaftarTindakan
-                .Where(x => GetBoolProp(x, "IsFoC"))
-                .ToList();
+        dto.TotalDiskonDokterAsuransi = SumFoCCovered(dto.DaftarTindakan);
+
+        dto.TotalDiskonDokterAsuransiExcess = SumFoCCoveredExcess(dto.DaftarTindakan);
+
+        dto.TotalDiskonDokterMandiri = SumFoCUncovered(dto.DaftarTindakan);
 
         // =========================
         // 6) BIAYA ADMIN (dari billings)
@@ -1643,6 +1666,9 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             }
 
             // TINDAKAN
+            // =========================
+            // TINDAKAN
+            // =========================
             if (tindakanByKunjungan.TryGetValue(kid, out var tindakanForKunjungan))
             {
                 var daftarTindakanMapped = tindakanForKunjungan
@@ -1654,12 +1680,24 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
                         var isFoC = x.tk.IsFoC ?? false;
 
-                        var bill = FindBilling(kid, "Tindakan", x.tk.TindakanId);
+                        /*
+                         * Jika IsFoC = true, billing dicari sebagai "Diskon Dokter".
+                         * Kalau tidak ditemukan, fallback cari sebagai "Tindakan".
+                         */
+                        var jenisBillingLookup = isFoC ? "Diskon Dokter" : "Tindakan";
+
+                        var bill =
+                            FindBilling(kid, jenisBillingLookup, x.tk.TindakanId)
+                            ?? (isFoC ? FindBilling(kid, "Tindakan", x.tk.TindakanId) : null);
 
                         var qty = bill?.QtyItem ?? x.tk.Quantity ?? 1;
+
                         var totalTindakan = (decimal?)x.tk.Total ?? 0m;
                         var harga = bill?.HargaItem ?? totalTindakan;
                         var subtotal = bill?.SubTotalItem ?? (qty * harga);
+
+                        var isCovered = bill?.IsCovered ?? false;
+                        var isCoveredExcess = bill?.IsCoveredExcess ?? false;
 
                         return new
                         {
@@ -1669,32 +1707,54 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                             IsFoC = isFoC,
 
                             AsuransiId = bill?.AsuransiId,
-                            IsCovered = bill?.IsCovered,
+                            IsCovered = isCovered,
                             AsuransiExcessId = bill?.AsuransiExcessId,
-                            IsCoveredExcess = bill?.IsCoveredExcess,
+                            IsCoveredExcess = isCoveredExcess,
 
                             Qty = qty,
                             Harga = harga,
+
+                            /*
+                             * Subtotal tetap harga penuh,
+                             * baik FoC maupun bukan.
+                             */
                             Subtotal = subtotal,
+
+                            /*
+                             * Breakdown khusus FoC / Diskon Dokter.
+                             */
+                            SubtotalDiskonDokter = isFoC ? subtotal : 0m,
+
+                            SubtotalDiskonDokterAsuransi =
+                                isFoC && isCovered ? subtotal : 0m,
+
+                            SubtotalDiskonDokterAsuransiExcess =
+                                isFoC && isCoveredExcess ? subtotal : 0m,
+
+                            SubtotalDiskonDokterMandiri =
+                                isFoC && !isCovered && !isCoveredExcess ? subtotal : 0m,
 
                             BillingId = bill?.BillingId,
                             BillingKode = bill?.BillingKode,
                             StatusBilling = bill?.StatusBilling,
 
-                            jenisBilling = isFoC ? "Diskon Dokter" : bill?.JenisBilling ?? "Tindakan"
+                            jenisBilling = isFoC
+                                ? "Diskon Dokter"
+                                : bill?.JenisBilling ?? "Tindakan"
                         };
                     })
                     .ToList();
 
                 /*
                  * Semua tindakan tetap masuk ke DaftarTindakan,
-                 * termasuk tindakan dengan IsFoC = true.
+                 * termasuk tindakan IsFoC = true.
                  */
                 dto.DaftarTindakan = daftarTindakanMapped
                     .Select(x => (object)new
                     {
                         x.TindakanId,
                         x.NamaTindakan,
+
                         x.IsFoC,
 
                         x.AsuransiId,
@@ -1706,6 +1766,11 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                         x.Harga,
                         x.Subtotal,
 
+                        x.SubtotalDiskonDokter,
+                        x.SubtotalDiskonDokterAsuransi,
+                        x.SubtotalDiskonDokterAsuransiExcess,
+                        x.SubtotalDiskonDokterMandiri,
+
                         x.BillingId,
                         x.BillingKode,
                         x.StatusBilling,
@@ -1715,31 +1780,87 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
                 /*
                  * Khusus tindakan IsFoC = true,
-                 * simpan juga sebagai daftar Diskon Dokter.
+                 * disimpan juga sebagai DaftarDiskonDokter.
                  */
                 dto.DaftarDiskonDokter = daftarTindakanMapped
-                    .Where(x => x.IsFoC == true)
+                    .Where(x => x.IsFoC)
                     .Select(x => (object)new
                     {
                         x.TindakanId,
                         x.NamaTindakan,
+
                         x.IsFoC,
+
+                        x.AsuransiId,
+                        x.IsCovered,
+                        x.AsuransiExcessId,
+                        x.IsCoveredExcess,
 
                         x.Qty,
                         Biaya = x.Harga,
                         x.Subtotal,
 
+                        x.SubtotalDiskonDokter,
+                        x.SubtotalDiskonDokterAsuransi,
+                        x.SubtotalDiskonDokterAsuransiExcess,
+                        x.SubtotalDiskonDokterMandiri,
+
+                        x.BillingId,
+                        x.BillingKode,
+                        x.StatusBilling,
+
                         jenisBilling = "Diskon Dokter"
                     })
                     .ToList();
             }
+            else
+            {
+                dto.DaftarTindakan = new List<object>();
+                dto.DaftarDiskonDokter = new List<object>();
+            }
 
+            /*
+             * Total tindakan normal.
+             * IsFoC = true tidak masuk ke TotalTindakan.
+             */
             dto.TotalTindakan = dto.DaftarTindakan
                 .Where(x => !GetBoolProp(x, "IsFoC"))
                 .Sum(x => GetDecimalProp(x, "Subtotal"));
 
+            /*
+             * Total khusus Diskon Dokter / FoC.
+             */
             dto.TotalDiskonDokter = dto.DaftarTindakan
                 .Where(x => GetBoolProp(x, "IsFoC"))
+                .Sum(x => GetDecimalProp(x, "Subtotal"));
+
+            /*
+             * Total semua tindakan:
+             * non-FoC + FoC.
+             */
+            dto.TotalTindakanKeseluruhan = dto.DaftarTindakan
+                .Sum(x => GetDecimalProp(x, "Subtotal"));
+
+            /*
+             * Total FoC berdasarkan kategori pembayaran.
+             */
+            dto.TotalDiskonDokterAsuransi = dto.DaftarTindakan
+                .Where(x =>
+                    GetBoolProp(x, "IsFoC") &&
+                    GetBoolProp(x, "IsCovered"))
+                .Sum(x => GetDecimalProp(x, "Subtotal"));
+
+            dto.TotalDiskonDokterAsuransiExcess = dto.DaftarTindakan
+                .Where(x =>
+                    GetBoolProp(x, "IsFoC") &&
+                    GetBoolProp(x, "IsCoveredExcess"))
+                .Sum(x => GetDecimalProp(x, "Subtotal"));
+
+            dto.TotalDiskonDokterMandiri = dto.DaftarTindakan
+                .Where(x =>
+                    GetBoolProp(x, "IsFoC") &&
+                    !GetBoolProp(x, "IsCovered") &&
+                    !GetBoolProp(x, "IsCoveredExcess"))
                 .Sum(x => GetDecimalProp(x, "Subtotal"));
 
             // ADMIN (dari billings)
@@ -2056,11 +2177,15 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 dto.TotalObat,
                 dto.TotalRacikan,
                 dto.TotalTindakan,
+                dto.TotalTindakanKeseluruhan,
                 dto.TotalBiayaAdmin,
                 dto.TotalAlkes,
                 dto.TotalBiayaVisitDokter,
                 dto.TotalKamarRanap,
                 dto.TotalDiskonDokter,
+                dto.TotalDiskonDokterAsuransi,
+                dto.TotalDiskonDokterAsuransiExcess,
+                dto.TotalDiskonDokterMandiri,
                 dto.TotalBiayaLain,
                 dto.SubTotalAsuransi,
                 dto.SubTotalAsuransiExcess,
@@ -2915,71 +3040,112 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
     #endregion
 
-    #region Hitung Sub total mandiri + asuransi + excess
+    #region Hitung subtotal mandiri + asuransi + excess + FoC
+
     private static bool GetBoolProp(object o, string propName)
     {
-        var p = o.GetType().GetProperty(propName);
-        if (p == null) return false;
-        var v = p.GetValue(o);
-        return v is bool b && b;
+        var prop = o.GetType().GetProperty(propName);
+        if (prop == null) return false;
+
+        var value = prop.GetValue(o);
+        return value is bool boolValue && boolValue;
     }
 
     private static decimal GetDecimalProp(object o, string propName)
     {
-        var p = o.GetType().GetProperty(propName);
-        if (p == null) return 0m;
-        var v = p.GetValue(o);
-        if (v == null) return 0m;
-        return Convert.ToDecimal(v);
+        var prop = o.GetType().GetProperty(propName);
+        if (prop == null) return 0m;
+
+        var value = prop.GetValue(o);
+        if (value == null) return 0m;
+
+        return Convert.ToDecimal(value);
     }
 
+    private static decimal SumRows(
+        IEnumerable<object>? rows,
+        Func<object, bool> predicate)
+    {
+        if (rows == null) return 0m;
+
+        return rows
+            .Where(predicate)
+            .Sum(row => GetDecimalProp(row, "Subtotal"));
+    }
+
+    private static bool IsFoC(object row)
+    {
+        return GetBoolProp(row, "IsFoC");
+    }
+
+    private static bool IsCovered(object row)
+    {
+        return GetBoolProp(row, "IsCovered");
+    }
+
+    private static bool IsCoveredExcess(object row)
+    {
+        return GetBoolProp(row, "IsCoveredExcess");
+    }
+
+    private static bool IsUncovered(object row)
+    {
+        return !IsCovered(row) && !IsCoveredExcess(row);
+    }
+
+    /*
+     * Subtotal utama.
+     * Menghitung semua pelayanan, termasuk IsFoC = true.
+     */
     private static decimal SumCovered(IEnumerable<object>? rows)
     {
-        if (rows == null) return 0m;
-        decimal sum = 0m;
-        foreach (var r in rows)
-        {
-            if (GetBoolProp(r, "IsFoC"))
-                continue;
-
-            if (GetBoolProp(r, "IsCovered"))
-                sum += GetDecimalProp(r, "Subtotal");
-        }
-
-        return sum;
-    }
-
-    private static decimal SumUncovered(IEnumerable<object>? rows)
-    {
-        if (rows == null) return 0m;
-        decimal sum = 0m;
-        foreach (var r in rows)
-        {
-            if (GetBoolProp(r, "IsFoC"))
-                continue;
-
-            if (!GetBoolProp(r, "IsCovered") && !GetBoolProp(r, "IsCoveredExcess")) // kalau prop tidak ada => false => masuk mandiri
-                sum += GetDecimalProp(r, "Subtotal");
-        }
-
-        return sum;
+        return SumRows(rows, row =>
+            IsCovered(row));
     }
 
     private static decimal SumCoveredExcess(IEnumerable<object>? rows)
     {
-        if (rows == null) return 0m;
-        decimal sum = 0m;
-        foreach (var r in rows)
-        {
-            if (GetBoolProp(r, "IsFoC"))
-                continue;
-
-            if (GetBoolProp(r, "IsCoveredExcess"))
-                sum += GetDecimalProp(r, "Subtotal");
-        }
-
-        return sum;
+        return SumRows(rows, row =>
+            IsCoveredExcess(row));
     }
+
+    private static decimal SumUncovered(IEnumerable<object>? rows)
+    {
+        return SumRows(rows, row =>
+            IsUncovered(row));
+    }
+
+    /*
+     * Subtotal khusus FoC / Diskon Dokter.
+     * Ini hanya rekap terpisah, tidak mengurangi subtotal utama.
+     */
+    private static decimal SumFoC(IEnumerable<object>? rows)
+    {
+        return SumRows(rows, row =>
+            IsFoC(row));
+    }
+
+    private static decimal SumFoCCovered(IEnumerable<object>? rows)
+    {
+        return SumRows(rows, row =>
+            IsFoC(row) &&
+            IsCovered(row));
+    }
+
+    private static decimal SumFoCCoveredExcess(IEnumerable<object>? rows)
+    {
+        return SumRows(rows, row =>
+            IsFoC(row) &&
+            IsCoveredExcess(row));
+    }
+
+    private static decimal SumFoCUncovered(IEnumerable<object>? rows)
+    {
+        return SumRows(rows, row =>
+            IsFoC(row) &&
+            IsUncovered(row));
+    }
+
     #endregion
 
     #region Get Latest Saldo Deposit Ranap

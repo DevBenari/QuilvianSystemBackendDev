@@ -44,11 +44,31 @@
         public decimal TotalPemeriksaanLab { get; set; } = 0m;
         public decimal TotalObat { get; set; } = 0m;
         public decimal TotalRacikan { get; set; } = 0m;
+
+
+        #region Total Tindakan + Tindakan FOC 
+        // Total tindakan
         public decimal TotalTindakan { get; set; } = 0m;
+
+        // Total tindakan normal + FoC
+        public decimal TotalTindakanKeseluruhan { get; set; } = 0m;
+
+        // Total FoC / Diskon Dokter keseluruhan
+        public decimal TotalDiskonDokter { get; set; } = 0m;
+
+        // Total FoC yang masuk asuransi
+        public decimal TotalDiskonDokterAsuransi { get; set; } = 0m;
+
+        // Total FoC yang masuk asuransi excess
+        public decimal TotalDiskonDokterAsuransiExcess { get; set; } = 0m;
+
+        // Optional: Total FoC mandiri
+        public decimal TotalDiskonDokterMandiri { get; set; } = 0m;
+        #endregion
+
         public decimal TotalBiayaAdmin { get; set; } = 0m;
         public decimal TotalBiayaLain { get; set; } = 0m;
         public decimal TotalAlkes { get; set; } = 0m;
-        public decimal? TotalDiskonDokter { get; set; } = 0m;
 
         public decimal? SubTotalMandiri { get; set; } = 0m;
         public decimal? PajakTotalMandiri { get; set; } = 0m;
