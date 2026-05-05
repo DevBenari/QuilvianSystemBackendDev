@@ -37,7 +37,7 @@ ENTRYPOINT ["dotnet", "QuilvianSystemBackendDev.dll"]
 #WORKDIR /app
 
 # Copy the main project file
-COPY QuilvianSystemBackendDev.csproj ./
+# COPY QuilvianSystemBackendDev.csproj ./
 
 # Restore dependencies
 #RUN dotnet restore QuilvianSystemBackendDev.csproj
