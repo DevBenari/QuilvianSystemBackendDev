@@ -38,6 +38,9 @@
         // List Item Diskon
         public List<object>? DaftarPaketDiskon { get; set; } = new();
 
+        // List Item Diskon Dokter / FoC
+        public List<object>? DaftarDiskonDokter { get; set; } = new();
+        
         public decimal TotalPemeriksaanLab { get; set; } = 0m;
         public decimal TotalObat { get; set; } = 0m;
         public decimal TotalRacikan { get; set; } = 0m;
@@ -45,6 +48,7 @@
         public decimal TotalBiayaAdmin { get; set; } = 0m;
         public decimal TotalBiayaLain { get; set; } = 0m;
         public decimal TotalAlkes { get; set; } = 0m;
+        public decimal? TotalDiskonDokter { get; set; } = 0m;
 
         public decimal? SubTotalMandiri { get; set; } = 0m;
         public decimal? PajakTotalMandiri { get; set; } = 0m;

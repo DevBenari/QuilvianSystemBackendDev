@@ -521,43 +521,48 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             from t in tg.DefaultIfEmpty()
             select new
             {
+                tk.TindakanKunjunganId,
                 tk.TindakanId,
                 NamaTindakan = t != null ? t.NamaTindakan : null,
                 Qty = tk.Quantity ?? 1,
                 HargaLog = (decimal?)tk.Total ?? 0m,
-                FoC = tk.IsFoC ?? false,
+
+                // Kolom FoC dari TindakanKunjungan
+                IsFoC = tk.IsFoC ?? false,
+
                 tk.CreateDateTime
             }
         ).ToListAsync(ct);
 
         dto.DaftarTindakan = tindakanLogs
             .Where(x => x.TindakanId != null)
-            .GroupBy(x => x.TindakanId)
+            .GroupBy(x => x.TindakanKunjunganId)
             .Select(g =>
             {
                 var latestLog = g
                     .OrderByDescending(x => x.CreateDateTime)
                     .First();
 
-                var tindakanId = g.Key;
+                var tindakanId = latestLog.TindakanId;
                 var nama = latestLog.NamaTindakan;
 
-                var qtyLogTotal = g.Sum(x => x.Qty);
+                var isFoC = latestLog.IsFoC;
 
-                var hargaLogTerbaru = latestLog.HargaLog;
+                /*
+                 * Kalau IsFoC = true, maka billing-nya dianggap Diskon Dokter.
+                 * Kalau false, tetap Tindakan.
+                 */
+                var jenisBillingLookup = isFoC ? "Diskon Dokter" : "Tindakan";
 
-                var isFoC = latestLog.FoC;
+                var bill = FindBilling(jenisBillingLookup, tindakanId);
 
-                var bill = FindBilling("Tindakan", tindakanId);
-
-                var hargaEfektif = bill?.HargaItem ?? hargaLogTerbaru;
-
-                var qtyFinal = bill?.QtyItem ?? qtyLogTotal;
-
+                var qtyFinal = bill?.QtyItem ?? latestLog.Qty;
+                var hargaEfektif = bill?.HargaItem ?? latestLog.HargaLog;
                 var subtotal = bill?.SubTotalItem ?? (qtyFinal * hargaEfektif);
 
                 return (object)new
                 {
+                    TindakanKunjunganId = latestLog.TindakanKunjunganId,
                     TindakanId = tindakanId,
                     NamaTindakan = nama,
 
@@ -571,10 +576,13 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     Qty = qtyFinal,
                     Harga = hargaEfektif,
                     Subtotal = subtotal,
+
                     BillingId = bill?.BillingId,
                     BillingKode = bill?.BillingKode,
                     StatusBilling = bill?.StatusBilling,
-                    jenisBilling = bill?.JenisBilling,
+
+                    jenisBilling = isFoC ? "Diskon Dokter" : bill?.JenisBilling ?? "Tindakan",
+
                     TanggalInvoice = bill?.TanggalInvoice,
                     TanggalJatuhTempo = bill?.TanggalJatuhTempo,
                     DPD = HitungDpd(bill?.TanggalJatuhTempo, snap)
@@ -582,9 +590,18 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             })
             .ToList();
 
-        dto.TotalTindakan = dto.DaftarTindakan
-            .Sum(x => (decimal)((dynamic)x).Subtotal);
 
+            dto.TotalTindakan = dto.DaftarTindakan
+                .Where(x => !GetBoolProp(x, "IsFoC"))
+                .Sum(x => GetDecimalProp(x, "Subtotal"));
+
+            dto.TotalDiskonDokter = dto.DaftarTindakan
+                .Where(x => GetBoolProp(x, "IsFoC"))
+                .Sum(x => GetDecimalProp(x, "Subtotal"));
+
+            dto.DaftarDiskonDokter = dto.DaftarTindakan
+                .Where(x => GetBoolProp(x, "IsFoC"))
+                .ToList();
 
         // =========================
         // 6) BIAYA ADMIN (dari billings)
@@ -1628,44 +1645,102 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             // TINDAKAN
             if (tindakanByKunjungan.TryGetValue(kid, out var tindakanForKunjungan))
             {
-                dto.DaftarTindakan = tindakanForKunjungan
+                var daftarTindakanMapped = tindakanForKunjungan
                     .Where(x => x.tk != null && x.t != null)
                     .GroupBy(x => x.tk.TindakanKunjunganId)
                     .Select(g =>
                     {
                         var x = g.First();
+
+                        var isFoC = x.tk.IsFoC ?? false;
+
                         var bill = FindBilling(kid, "Tindakan", x.tk.TindakanId);
 
                         var qty = bill?.QtyItem ?? x.tk.Quantity ?? 1;
                         var totalTindakan = (decimal?)x.tk.Total ?? 0m;
                         var harga = bill?.HargaItem ?? totalTindakan;
-                        var subtotal = bill?.SubTotalItem ?? ((x.tk.Quantity ?? 1) * totalTindakan);
+                        var subtotal = bill?.SubTotalItem ?? (qty * harga);
 
-                        //var isCovered =
-                        //    isAsuransiCase &&
-                        //    cover.TindakanMarkup.ContainsKey(x.tk.TindakanId);
-                        return (object)new
+                        return new
                         {
                             x.t!.TindakanId,
                             x.t.NamaTindakan,
-                            IsFoC = x.tk.IsFoC ?? false,
+
+                            IsFoC = isFoC,
+
                             AsuransiId = bill?.AsuransiId,
                             IsCovered = bill?.IsCovered,
                             AsuransiExcessId = bill?.AsuransiExcessId,
                             IsCoveredExcess = bill?.IsCoveredExcess,
+
                             Qty = qty,
                             Harga = harga,
                             Subtotal = subtotal,
+
                             BillingId = bill?.BillingId,
                             BillingKode = bill?.BillingKode,
                             StatusBilling = bill?.StatusBilling,
-                            jenisBilling = bill?.JenisBilling,
+
+                            jenisBilling = isFoC ? "Diskon Dokter" : bill?.JenisBilling ?? "Tindakan"
                         };
+                    })
+                    .ToList();
+
+                /*
+                 * Semua tindakan tetap masuk ke DaftarTindakan,
+                 * termasuk tindakan dengan IsFoC = true.
+                 */
+                dto.DaftarTindakan = daftarTindakanMapped
+                    .Select(x => (object)new
+                    {
+                        x.TindakanId,
+                        x.NamaTindakan,
+                        x.IsFoC,
+
+                        x.AsuransiId,
+                        x.IsCovered,
+                        x.AsuransiExcessId,
+                        x.IsCoveredExcess,
+
+                        x.Qty,
+                        x.Harga,
+                        x.Subtotal,
+
+                        x.BillingId,
+                        x.BillingKode,
+                        x.StatusBilling,
+                        x.jenisBilling
+                    })
+                    .ToList();
+
+                /*
+                 * Khusus tindakan IsFoC = true,
+                 * simpan juga sebagai daftar Diskon Dokter.
+                 */
+                dto.DaftarDiskonDokter = daftarTindakanMapped
+                    .Where(x => x.IsFoC == true)
+                    .Select(x => (object)new
+                    {
+                        x.TindakanId,
+                        x.NamaTindakan,
+                        x.IsFoC,
+
+                        x.Qty,
+                        Biaya = x.Harga,
+                        x.Subtotal,
+
+                        jenisBilling = "Diskon Dokter"
                     })
                     .ToList();
             }
 
-            dto.TotalTindakan = dto.DaftarTindakan.Sum(x => (decimal)((dynamic)x).Subtotal);
+            dto.TotalTindakan = dto.DaftarTindakan
+                .Where(x => !GetBoolProp(x, "IsFoC"))
+                .Sum(x => GetDecimalProp(x, "Subtotal"));
+
+            dto.TotalDiskonDokter = dto.DaftarTindakan
+                .Where(x => GetBoolProp(x, "IsFoC"))
+                .Sum(x => GetDecimalProp(x, "Subtotal"));
 
             // ADMIN (dari billings)
             dto.DaftarBiayaAdmin = billings
@@ -1970,11 +2045,13 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 dto.DaftarAlkes,
                 dto.DaftarVisitDokter,
                 dto.DaftarKamarRanap,
+                dto.DaftarDiskonDokter,
                 dto.DaftarBiayaLain,
                 dto.DPRanap,
                 dto.TotalSaldoDeposito,
                 dto.NominalMasuk,
                 dto.NominalKeluar,
+
                 dto.TotalPemeriksaanLab,
                 dto.TotalObat,
                 dto.TotalRacikan,
@@ -1983,6 +2060,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 dto.TotalAlkes,
                 dto.TotalBiayaVisitDokter,
                 dto.TotalKamarRanap,
+                dto.TotalDiskonDokter,
                 dto.TotalBiayaLain,
                 dto.SubTotalAsuransi,
                 dto.SubTotalAsuransiExcess,
@@ -2860,8 +2938,14 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         if (rows == null) return 0m;
         decimal sum = 0m;
         foreach (var r in rows)
+        {
+            if (GetBoolProp(r, "IsFoC"))
+                continue;
+
             if (GetBoolProp(r, "IsCovered"))
                 sum += GetDecimalProp(r, "Subtotal");
+        }
+
         return sum;
     }
 
@@ -2870,8 +2954,14 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         if (rows == null) return 0m;
         decimal sum = 0m;
         foreach (var r in rows)
+        {
+            if (GetBoolProp(r, "IsFoC"))
+                continue;
+
             if (!GetBoolProp(r, "IsCovered") && !GetBoolProp(r, "IsCoveredExcess")) // kalau prop tidak ada => false => masuk mandiri
                 sum += GetDecimalProp(r, "Subtotal");
+        }
+
         return sum;
     }
 
@@ -2880,8 +2970,14 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         if (rows == null) return 0m;
         decimal sum = 0m;
         foreach (var r in rows)
+        {
+            if (GetBoolProp(r, "IsFoC"))
+                continue;
+
             if (GetBoolProp(r, "IsCoveredExcess"))
                 sum += GetDecimalProp(r, "Subtotal");
+        }
+
         return sum;
     }
     #endregion
