@@ -524,50 +524,44 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 tk.TindakanId,
                 NamaTindakan = t != null ? t.NamaTindakan : null,
                 Qty = tk.Quantity ?? 1,
-                HargaLog = (decimal?)tk.Total ?? 0m, // asumsi: harga satuan (sesuai pola lama kamu)
+                HargaLog = (decimal?)tk.Total ?? 0m,
+                FoC = tk.IsFoC ?? false,
                 tk.CreateDateTime
             }
         ).ToListAsync(ct);
 
         dto.DaftarTindakan = tindakanLogs
             .Where(x => x.TindakanId != null)
-            .GroupBy(x => x.TindakanId) // ✅ 1 baris per master tindakan
+            .GroupBy(x => x.TindakanId)
             .Select(g =>
             {
-                var tindakanId = g.Key;
-                var nama = g.First().NamaTindakan;
+                var latestLog = g
+                    .OrderByDescending(x => x.CreateDateTime)
+                    .First();
 
-                // total tindakan yang sama dilakukan berapa kali
+                var tindakanId = g.Key;
+                var nama = latestLog.NamaTindakan;
+
                 var qtyLogTotal = g.Sum(x => x.Qty);
 
-                // harga log terbaru (fallback kalau billing & markup tidak ada)
-                var hargaLogTerbaru = g
-                    .OrderByDescending(x => x.CreateDateTime)
-                    .First().HargaLog;
+                var hargaLogTerbaru = latestLog.HargaLog;
 
-                // billing hanya 1x per tindakan master
+                var isFoC = latestLog.FoC;
+
                 var bill = FindBilling("Tindakan", tindakanId);
 
-                // cover: markup per tindakan master
-                //var isCovered =
-                //    isAsuransiCase &&
-                //    cover.TindakanMarkup.TryGetValue(tindakanId, out var markup);
+                var hargaEfektif = bill?.HargaItem ?? hargaLogTerbaru;
 
-                // harga: Billing > Markup cover > harga log
-                var hargaEfektif =
-                    bill?.HargaItem;
-                    //?? (isCovered ? markup : hargaLogTerbaru);
-
-                // qty final: billing qty kalau ada, kalau tidak pakai hasil agregasi log
                 var qtyFinal = bill?.QtyItem ?? qtyLogTotal;
 
-                // subtotal final: billing subtotal kalau ada, kalau tidak hitung sendiri
                 var subtotal = bill?.SubTotalItem ?? (qtyFinal * hargaEfektif);
 
                 return (object)new
                 {
                     TindakanId = tindakanId,
                     NamaTindakan = nama,
+
+                    IsFoC = isFoC,
 
                     AsuransiId = bill?.AsuransiId,
                     IsCovered = bill?.IsCovered,
@@ -588,7 +582,8 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             })
             .ToList();
 
-        dto.TotalTindakan = dto.DaftarTindakan.Sum(x => (decimal)((dynamic)x).Subtotal);
+        dto.TotalTindakan = dto.DaftarTindakan
+            .Sum(x => (decimal)((dynamic)x).Subtotal);
 
 
         // =========================
@@ -1653,6 +1648,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                         {
                             x.t!.TindakanId,
                             x.t.NamaTindakan,
+                            IsFoC = x.tk.IsFoC ?? false,
                             AsuransiId = bill?.AsuransiId,
                             IsCovered = bill?.IsCovered,
                             AsuransiExcessId = bill?.AsuransiExcessId,
