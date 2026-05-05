@@ -77,6 +77,33 @@ public class AiController : ControllerBase
         return await SendChatCompletions(cfg.apiUrl, cfg.apiKey, requestBody, parseAsJson: false);
     }
 
+    [HttpPost("all2")]
+    public async Task<IActionResult> All2([FromBody] PromptRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request?.Prompt))
+            return BadRequest("Prompt wajib diisi.");
+
+        (string apiUrl, string apiKey, string model) cfg;
+        try
+        {
+            cfg = await GetAiConfigAsync();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+
+        string fullPrompt = request.Prompt + " Jawab secara singkat dan jelas.";
+
+        var requestBody = new
+        {
+            model = cfg.model,
+            messages = new[] { new { role = "user", content = fullPrompt } },
+            temperature = 0.7
+        };
+
+        return await SendChatCompletions(cfg.apiUrl, cfg.apiKey, requestBody, parseAsJson: false);
+    }
     [HttpPost("extract-ktp")]
     public async Task<IActionResult> ExtractKtp([FromForm] KtpRequest request)
     {
