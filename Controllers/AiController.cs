@@ -77,80 +77,80 @@ public class AiController : ControllerBase
     //     return await SendChatCompletions(cfg.apiUrl, cfg.apiKey, requestBody, parseAsJson: false);
     // }
 
-    [HttpPost("extract-ktp")]
-    public async Task<IActionResult> ExtractKtp([FromForm] KtpRequest request)
-    {
-        if (request?.KtpImage == null || request.KtpImage.Length == 0)
-            return BadRequest("KtpImage wajib diisi.");
+    // [HttpPost("extract-ktp")]
+    // public async Task<IActionResult> ExtractKtp([FromForm] KtpRequest request)
+    // {
+    //     if (request?.KtpImage == null || request.KtpImage.Length == 0)
+    //         return BadRequest("KtpImage wajib diisi.");
 
-        (string apiUrl, string apiKey, string model) cfg;
-        try
-        {
-            cfg = await GetAiConfigAsync();
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(ex.Message);
-        }
+    //     (string apiUrl, string apiKey, string model) cfg;
+    //     try
+    //     {
+    //         cfg = await GetAiConfigAsync();
+    //     }
+    //     catch (InvalidOperationException ex)
+    //     {
+    //         return BadRequest(ex.Message);
+    //     }
 
-        using var ms = new MemoryStream();
-        await request.KtpImage.CopyToAsync(ms);
-        var base64 = Convert.ToBase64String(ms.ToArray());
-        var mime = string.IsNullOrWhiteSpace(request.KtpImage.ContentType) ? "image/jpeg" : request.KtpImage.ContentType;
+    //     using var ms = new MemoryStream();
+    //     await request.KtpImage.CopyToAsync(ms);
+    //     var base64 = Convert.ToBase64String(ms.ToArray());
+    //     var mime = string.IsNullOrWhiteSpace(request.KtpImage.ContentType) ? "image/jpeg" : request.KtpImage.ContentType;
 
-        var promptText = @"
-            Tolong ekstrak semua informasi dari KTP berikut dan kembalikan dalam format JSON:
-            - Nama
-            - Tempat/Tanggal Lahir
-            - Jenis Kelamin
-            - Alamat
-            - RT/RW
-            - Kelurahan/Desa
-            - Kecamatan
-            - Agama
-            - Status Perkawinan
-            - Pekerjaan
-            - Kewarganegaraan
-            - Nomor KTP
-            - Berlaku Hingga
+    //     var promptText = @"
+    //         Tolong ekstrak semua informasi dari KTP berikut dan kembalikan dalam format JSON:
+    //         - Nama
+    //         - Tempat/Tanggal Lahir
+    //         - Jenis Kelamin
+    //         - Alamat
+    //         - RT/RW
+    //         - Kelurahan/Desa
+    //         - Kecamatan
+    //         - Agama
+    //         - Status Perkawinan
+    //         - Pekerjaan
+    //         - Kewarganegaraan
+    //         - Nomor KTP
+    //         - Berlaku Hingga
 
-            Output WAJIB JSON valid, tanpa markdown, tanpa ```.
-            ".Trim();
+    //         Output WAJIB JSON valid, tanpa markdown, tanpa ```.
+    //         ".Trim();
 
-        var requestBody = new
-        {
-            model = cfg.model,
-            messages = new object[]
-            {
-                new
-                {
-                    role = "user",
-                    content = new object[]
-                    {
-                        new { type = "text", text = promptText },
-                        new { type = "image_url", image_url = new { url = $"data:{mime};base64,{base64}" } }
-                    }
-                }
-            },
-            temperature = 0
-        };
+    //     var requestBody = new
+    //     {
+    //         model = cfg.model,
+    //         messages = new object[]
+    //         {
+    //             new
+    //             {
+    //                 role = "user",
+    //                 content = new object[]
+    //                 {
+    //                     new { type = "text", text = promptText },
+    //                     new { type = "image_url", image_url = new { url = $"data:{mime};base64,{base64}" } }
+    //                 }
+    //             }
+    //         },
+    //         temperature = 0
+    //     };
 
-        return await SendChatCompletions(cfg.apiUrl, cfg.apiKey, requestBody, parseAsJson: true);
-    }
-    private async Task<Setting> GetActiveAiSettingAsync()
-    {
-        var setting = await _context.Settings
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.StatusAi == true);
+    //     return await SendChatCompletions(cfg.apiUrl, cfg.apiKey, requestBody, parseAsJson: true);
+    // }
+    // private async Task<Setting> GetActiveAiSettingAsync()
+    // {
+    //     var setting = await _context.Settings
+    //         .AsNoTracking()
+    //         .FirstOrDefaultAsync(x => x.StatusAi == true);
 
-        if (setting == null)
-            throw new InvalidOperationException("Setting AI aktif tidak ditemukan.");
+    //     if (setting == null)
+    //         throw new InvalidOperationException("Setting AI aktif tidak ditemukan.");
 
-        if (string.IsNullOrWhiteSpace(setting.Prompt))
-            throw new InvalidOperationException("Prompt AI kosong di database.");
+    //     if (string.IsNullOrWhiteSpace(setting.Prompt))
+    //         throw new InvalidOperationException("Prompt AI kosong di database.");
 
-        return setting;
-    }
+    //     return setting;
+    // }
 
     [HttpPost("analyze-radiology")]
     public async Task<IActionResult> AnalyzeRadiology([FromForm] RadiologyPromptRequest request)
