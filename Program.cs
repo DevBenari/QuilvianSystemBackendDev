@@ -61,7 +61,7 @@ builder.Services.Configure<AutoLoginDTO>(builder.Configuration.GetSection("AutoL
 #region CORS
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowSpecific", policy =>
+    options.AddPolicy("CorsPolicy", policy =>
     {
         policy
             .SetIsOriginAllowed(origin => true)
