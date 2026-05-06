@@ -2,26 +2,29 @@ FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
 
 WORKDIR /app
 
-# copy csproj dulu (cache layer lebih efisien)
+# 1. COPY project file dulu (cache layer)
 COPY QuilvianSystemBackendDev.csproj ./
 
-RUN dotnet restore
+# 2. restore dengan project spesifik
+RUN dotnet restore QuilvianSystemBackendDev.csproj
 
-# copy semua source
+# 3. baru copy source
 COPY . ./
 
-# publish (OPTIMIZED)
+# 4. publish lebih stabil (anti RAM spike)
 RUN dotnet publish QuilvianSystemBackendDev.csproj \
-    -c Release \
-    -o out \
-    --no-restore \
-    /m:1 \
-    /p:UseSharedCompilation=false \
-    /p:Deterministic=true \
-    /p:DebugType=None \
-    /p:DebugSymbols=false
+  -c Release \
+  -o /app/out \
+  --no-restore \
+  /m:1 \
+  /p:UseSharedCompilation=false \
+  /p:Deterministic=true \
+  /p:DebugType=None \
+  /p:DebugSymbols=false \
+  /p:WarningLevel=0 \
+  /p:ContinuousIntegrationBuild=true
 
-# runtime image
+# runtime image kecil
 FROM mcr.microsoft.com/dotnet/aspnet:6.0
 
 WORKDIR /app
@@ -29,6 +32,10 @@ WORKDIR /app
 COPY --from=build /app/out .
 
 ENTRYPOINT ["dotnet", "QuilvianSystemBackendDev.dll"]
+
+
+
+
 # FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
 
 # # Set the working directory inside the container
