@@ -9,6 +9,7 @@
         public string? JenisKunjungan { get; set; }
         public string? AsalKunjungan { get; set; }
         public bool? IsClosed { get; set; }
+        public bool? IsPresent { get; set; }
         public DateTime? TanggalKunjungan { get; set; }
         public Guid? KasirId { get; set; }
 
