@@ -17,6 +17,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModel
         public string? TanggalAkhirKerjasama { get; set; }
 
         // Informasi Klaim
+        public decimal? CoveragePercentage { get; set; }
         public string? MetodeKlaim { get; set; }
 
         // Informasi Pertanggungan

@@ -8,8 +8,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
     public class BentukObat : UserActivity
     {
         [Key]
-        public Guid BentukObatId { get; set; }
-        public string KodeBentukObat { get; set; }
-        public string NamaBentukObat { get; set; }
+        public Guid BentukSatuanId { get; set; }
+        public string KodeBentukSatuan { get; set; }
+        public string NamaBentukSatuan { get; set; }
+
+        public ICollection<Obat> Obats { get; set; } = new HashSet<Obat>();
     }
 }

@@ -9,6 +9,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Models
         public Guid BookingRuanganBedahId { get; set; } // Generate Otomatis
         public Guid? KunjunganId { get; set; }
         public Guid? PasienId { get; set; }
+        public Guid? KelasId { get; set; }
         public DateTime? TglOperasi { get; set; }
         public TimeSpan? WaktuOperasi { get; set; }
         public string? RuangTindakan { get; set; }
@@ -30,5 +31,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Models
         public bool? isSuratIzinOperasi { get; set; } = false; // Default: Belum
         public bool? isBedahBersalin { get; set; } = false; // Default: false
         public string? Keterangan { get; set; }
+        public DateTime? TglSelesai { get; set; }
+        public bool? IsTerverifikasi {get; set; }
+        public string? TipeTindakan { get; set; }
+        public string? TipeOperasi { get; set; }
+        public TimeOnly? JamPerpanjangan { get; set; }
+        public decimal? BiayaPerpanjangan { get; set; }
+        public Guid? KamarRecoveryId {  get; set; }
+        public Guid? TipeAnastesiId { get; set; }
+        public Guid? TipeASAId { get; set; }
+        public string? KelompokPasienAnastesi { get; set; }
+        public List<Guid>? PetugasId { get; set; } = new List<Guid>();
+        public string? NoOrder {  get; set; }
+        public string? StatusOperasi { get; set; }
+        public Guid? DepartementId { get; set; }
     }
 }

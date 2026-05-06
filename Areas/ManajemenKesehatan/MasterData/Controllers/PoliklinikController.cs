@@ -215,7 +215,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Cek duplikasi
                 bool isDuplicate = _applicationDbContext.Polikliniks
-                    .Any(c => c.KodePoliklinik == kodePoliklinik && c.NamaPoliklinik == vm.NamaPoliklinik);
+                    .Any(c => c.NamaPoliklinik.ToLower().Trim() == vm.NamaPoliklinik.ToLower().Trim() 
+                    && c.IsDelete == false );
 
                 if (isDuplicate)
                     return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
@@ -278,7 +279,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
                 // cek duplikasi
                 var isDuplicate = _applicationDbContext.Polikliniks
-                    .Any(c => c.PoliklinikId != id && c.NamaPoliklinik == vm.NamaPoliklinik);
+                    .Any(c => c.PoliklinikId != id && c.NamaPoliklinik == vm.NamaPoliklinik && c.IsDelete == false);
                 if (isDuplicate)
                 {
                     return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
@@ -366,9 +367,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-        DateTime? startDate = null,
+                DateTime? startDate = null,
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-        DateTime? endDate = null,
+                DateTime? endDate = null,
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
             var query = from a in _applicationDbContext.Polikliniks
@@ -403,7 +404,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             {
                 search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
-                    EF.Functions.ILike(u.KodePoliklinik, search) ||
                     EF.Functions.ILike(u.NamaPoliklinik, search)
                 );
             }

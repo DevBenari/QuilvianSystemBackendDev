@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.ComponentModel;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
@@ -100,7 +101,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             RanapId = a.RanapId,
                             RPD = a.RPD,
                             RPS = a.RPS,
-                            CurrentMedication = a.CurrentMedication
+                            CurrentMedication = a.CurrentMedication,
+                            a.RiwayatPenyakit,
+                            a.IsIGD,
+                            a.MasukIGD,
+                            a.KondisiMasukIGD,
+                            a.IsPengobatanSaatIni,
+                            a.IsTubuhTidakSeimbang,
+                            a.IsMenggunakanPenopang,
+                            a.KeluhanTambahan,
+                            a.IsFarmakologi,
+                            a.KeadaanUmum,
+                            a.IsKonjungtiva,
+                            a.Ekstremitas,
+                            a.SkorSedasi,
 
                         }).OrderByDescending(a => a.CreateDateTime); ;
 
@@ -200,7 +214,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             RanapId = a.RanapId,
                             RPD = a.RPD,
                             RPS = a.RPS,
-                            CurrentMedication = a.CurrentMedication
+                            CurrentMedication = a.CurrentMedication,
+                            a.RiwayatPenyakit,
+                            a.IsIGD,
+                            a.MasukIGD,
+                            a.KondisiMasukIGD,
+                            a.IsPengobatanSaatIni,
+                            a.IsTubuhTidakSeimbang,
+                            a.IsMenggunakanPenopang,
+                            a.KeluhanTambahan,
+                            a.IsFarmakologi,
+                            a.KeadaanUmum,
+                            a.IsKonjungtiva,
+                            a.Ekstremitas,
+                            a.SkorSedasi,
                         }).ToList();
 
             if (!data.Any())
@@ -310,7 +337,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     RanapId = vm.RanapId,
                     RPD = vm.RPD,
                     RPS = vm.RPS,
-                    CurrentMedication = vm.CurrentMedication
+                    CurrentMedication = vm.CurrentMedication,
+                    RiwayatPenyakit = vm.RiwayatPenyakit,
+                    IsIGD = vm.IsIGD,
+                    MasukIGD = vm.MasukIGD,
+                    KondisiMasukIGD = vm.KondisiMasukIGD,
+                    IsPengobatanSaatIni = vm.IsPengobatanSaatIni,
+                    IsTubuhTidakSeimbang = vm.IsTubuhTidakSeimbang,
+                    IsMenggunakanPenopang = vm.IsMenggunakanPenopang,
+                    KeluhanTambahan = vm.KeluhanTambahan,
+                    IsFarmakologi = vm.IsFarmakologi,
+                    KeadaanUmum = vm.KeadaanUmum,
+                    IsKonjungtiva = vm.IsKonjungtiva,
+                    Ekstremitas = vm.Ekstremitas,
+                    SkorSedasi = vm.SkorSedasi,
                 };
 
                 _applicationDbContext.PainAssessments.Add(data);
@@ -446,6 +486,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.CurrentMedication = vm.CurrentMedication;
                 data.RanapId = vm.RanapId;
                 data.KunjunganId = vm.KunjunganId;
+                data.CurrentMedication = vm.CurrentMedication;
+                data.RiwayatPenyakit = vm.RiwayatPenyakit;
+                data.IsIGD = vm.IsIGD;
+                data.MasukIGD = vm.MasukIGD;
+                data.KondisiMasukIGD = vm.KondisiMasukIGD;
+                data.IsPengobatanSaatIni = vm.IsPengobatanSaatIni;
+                data.IsTubuhTidakSeimbang = vm.IsTubuhTidakSeimbang;
+                data.IsMenggunakanPenopang = vm.IsMenggunakanPenopang;
+                data.KeluhanTambahan = vm.KeluhanTambahan;
+                data.IsFarmakologi = vm.IsFarmakologi;
+                data.KeadaanUmum = vm.KeadaanUmum;
+                data.IsKonjungtiva = vm.IsKonjungtiva;
+                data.Ekstremitas = vm.Ekstremitas;
+                data.SkorSedasi = vm.SkorSedasi;
 
                 data.UpdateBy = modifyBy;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -808,7 +862,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 RanapId = a.RanapId,
                                 RPD = a.RPD,
                                 RPS = a.RPS,
-                                CurrentMedication = a.CurrentMedication
+                                CurrentMedication = a.CurrentMedication,
+                                a.RiwayatPenyakit,
+                                a.IsIGD,
+                                a.MasukIGD,
+                                a.KondisiMasukIGD,
+                                a.IsPengobatanSaatIni,
+                                a.IsTubuhTidakSeimbang,
+                                a.IsMenggunakanPenopang,
+                                a.KeluhanTambahan,
+                                a.IsFarmakologi,
+                                a.KeadaanUmum,
+                                a.IsKonjungtiva,
+                                a.Ekstremitas,
+                                a.SkorSedasi
                             };
 
                 // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**

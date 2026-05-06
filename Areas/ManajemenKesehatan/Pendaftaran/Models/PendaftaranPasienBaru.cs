@@ -1,8 +1,9 @@
-﻿using Microsoft.EntityFrameworkCore;
-using QuilvianSystemBackendDev.Models;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
+using Microsoft.EntityFrameworkCore;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Models;
+using QuilvianSystemBackendDev.Models;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
 {
@@ -27,7 +28,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
         public string? JenisKelamin { get; set; }
         public string? StatusPerkawinan { get; set; }
         public Guid? AgamaId { get; set; }
+        public string? NamaAgama {  get; set; }
         public Guid? PendidikanTerakhirId { get; set; }
+        public string? CatatanKhusus {  get; set; }
+        public string? TinggalBersama { get; set; }
+        public string? NoKaryawan { get; set; }
 
         // Informasi Alamat
         public string? AlamatIdentitas { get; set; }
@@ -40,8 +45,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
         public string? KodePos { get; set; }
         public string? Email { get; set; }
         public string? NoPasien { get; set; }
+        public string? NoWali1 { get; set; }
         public string? NoWali2 { get; set; }
-        public string? NoWali3 { get; set; }
 
         // Informasi Grafis
         public string? Kewarganegaraan { get; set; }
@@ -62,8 +67,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
         public string? RiwayatPenyakitKeluarga { get; set; }
 
         // Informasi Darurat
+        public string? NamaWali1 { get; set; }
         public string? NamaWali2 { get; set; }
-        public string? NamaWali3 { get; set; }
         public string? HubunganKeluarga1 { get; set; }
         public string? HubunganPasien { get; set; }
         public string? AlamatDarurat { get; set; }
@@ -85,6 +90,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
         public string? FotoPath { get; set; }
         public string? QrCode { get; set; }
         public byte[]? QrCodeImage { get; set; }
+
+
+        // Navigation Property
+        public ICollection<AlatPemakaian> AlatPemakaians { get; set; } = new List<AlatPemakaian>();
     }
 
 }

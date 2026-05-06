@@ -213,7 +213,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
                 // cek duplikasi
                 var isDuplicate = _applicationDbContext.JadwalPrakteks
-                    .Any(c => c.KodeJadwalPraktek == kode);
+                    .Any(c => c.DokterPoliId == vm.DokterPoliId 
+                    && c.WaktuPraktek == vm.WaktuPraktek
+                    && c.HariPraktek == vm.HariPraktek
+                    && c.JamMulai == vm.JamMulai
+                    && c.JamBerakhir == vm.JamBerakhir
+                    && c.IsDelete == false);
 
                 if (isDuplicate)
                 {
@@ -277,6 +282,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 if (string.IsNullOrEmpty(EmailLogin))
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                var isDuplicate = _applicationDbContext.JadwalPrakteks
+                    .Any(c => c.DokterPoliId == vm.DokterPoliId
+                    && c.WaktuPraktek == vm.WaktuPraktek
+                    && c.HariPraktek == vm.HariPraktek
+                    && c.JamMulai == vm.JamMulai
+                    && c.JamBerakhir == vm.JamBerakhir
+                    && c.JadwalPraktekId != id
+                    && c.IsDelete == false);
+
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
                 }
 
                 // Validate ModelState

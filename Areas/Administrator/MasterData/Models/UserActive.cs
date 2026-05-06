@@ -16,36 +16,38 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models
         public string PlaceOfBirth { get; set; }
         public DateTime DateOfBirth { get; set; }
         public string Gender { get; set; }
-        public string Address { get; set; }
+        public string? Address { get; set; }
         public string Handphone { get; set; }
         public string Email { get; set; }
-        public string? NoPolisAsuransi { get; set; }
-        public string? NomorRekening { get; set; }
-        public string? NamaBank { get; set; }
         [MaxLength(64)]
         public string? PinPegawai { get; set; }
-        public Guid? ProvinsiId { get; set; }
-        public Guid? KabupatenKotaId { get; set; }
-        public Guid? KecamatanId { get; set; }
-        public Guid? KelurahanId { get; set; }
-        public string? Kewarganegaraan { get; set; }
-        public Guid? AgamaId { get; set; }
-        public bool? IsPerawat { get; set; }
         public string? NoSTR { get; set; }
         public string? StatusPegawai { get; set; }
-        public string? JenisPegawai { get; set; }
         public bool IsActive { get; set; } = true;
         public Guid? DepartemenId { get; set; }
         public Guid? PositionId { get; set; }
         public Guid? TipeUserId { get; set; }
-        public Guid? GolonganDarahId { get; set; }
-        public DateTime? TglMasuk { get; set; }
-        public DateTime? TglKeluar { get; set; }
-        public DateTime? TglAwalKontrak { get; set; }
-        public DateTime? TglAkhirKontrak { get; set; }
+        public Guid? InstalasiUnitId { get; set; }
 
-        // untuk foto
-        public string? FotoName { get; set; }
+
+        //karyawan
+        //public Guid KaryawanId { get; set; }
+        public Guid? DepartementId { get; set; }
+        public Guid? JabatanId { get; set; }
+
+        public string? NoIdentitas { get; set; }
+        public string? KodeKaryawan { get; set; }
+        public string? NoRekening { get; set; }
+        public string? NoKaryawan { get; set; }
+        public string? BankId { get; set; }
+
+        public DateTime? TanggalKontrak { get; set; }
+        public DateTime? TanggalAwalKerja { get; set; }
+        public DateTime? TanggalAkhirKerja { get; set; }
+
+        public string? NoHandphone { get; set; }
+        public string? Alamat { get; set; }
         public string? FotoPath { get; set; }
+        public string? FotoName { get; set; }
     }
 }

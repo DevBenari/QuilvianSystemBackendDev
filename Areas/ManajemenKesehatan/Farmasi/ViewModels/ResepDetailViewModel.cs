@@ -26,6 +26,9 @@
         public bool? ObatPagiDiambil { get; set; }
         public bool? ObatSiangDiambil { get; set; }
         public bool? ObatMalamDiambil { get; set; }
+        public bool? IsIntervensiFarmakologi { get; set; }
+
+
         //public decimal? JumlahIteratur { get; set; }
         //public string? TglMulaiIteratur { get; set; }
         //public decimal? JarakPenebusan { get; set; }

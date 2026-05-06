@@ -2,10 +2,9 @@
 {
     public class KonversiSatuanViewModel
     {
-        public Guid? ObatId { get; set; }
-        public Guid? SatuanId { get; set; }
-        public string? NamaSatuan { get; set; }
-        public string? TipeKonversi { get; set; } // e.g., "Pcs", "Box", "Botol"
+        public Guid? ObatAlkesId { get; set; }
+        public Guid? SatuanBesarId { get; set; }
+        public Guid? SatuanKecilId { get; set; }
         public decimal? NilaiKonversi { get; set; }
     }
 }

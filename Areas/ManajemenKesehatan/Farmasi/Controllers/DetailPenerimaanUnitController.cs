@@ -66,7 +66,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
                              // Left Join bentuk obat
                          join b in _applicationDbContext.BentukObats
-                         on ob.BentukObatId equals b.BentukObatId into bentukObat
+                         on ob.BentukObatId equals b.BentukSatuanId into bentukObat
                          from b in bentukObat.DefaultIfEmpty()
 
                          where a.IsDelete == false || a.IsDelete == null
@@ -79,7 +79,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.PenerimaanUnitId,
                              a.ObatId,
                              NamaObat = ob != null ? ob.ObatName : null,
-                             Bentuk = b != null ? b.NamaBentukObat : null,
+                             Bentuk = b != null ? b.NamaBentukSatuan : null,
                              StokObat = ob != null ? ob.Stock : 0,
                              StockMinimal = ob != null ? ob.Minimal : 0,
                              StockMaksimal = ob != null ? ob.Maximal : 0,
@@ -138,7 +138,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
                             // Left Join Bentuk Obat
                         join b in _applicationDbContext.BentukObats
-                            on ob.BentukObatId equals b.BentukObatId into bentukObat
+                            on ob.BentukObatId equals b.BentukSatuanId into bentukObat
                         from b in bentukObat.DefaultIfEmpty()
 
                         where a.IsDelete == false && a.DetailPenerimaanUnitId == id
@@ -151,7 +151,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                             a.PenerimaanUnitId,
                             a.ObatId,
                             NamaObat = ob != null ? ob.ObatName : null,
-                            Bentuk = b != null ? b.NamaBentukObat : null,
+                            Bentuk = b != null ? b.NamaBentukSatuan : null,
                             StokObat = ob != null ? ob.Stock : 0,
                             StockMinimal = ob != null ? ob.Minimal : 0,
                             StockMaksimal = ob != null ? ob.Maximal : 0,
@@ -418,7 +418,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
                              // Left Join bentuk obat
                          join b in _applicationDbContext.BentukObats
-                         on ob.BentukObatId equals b.BentukObatId into bentukObat
+                         on ob.BentukObatId equals b.BentukSatuanId into bentukObat
                          from b in bentukObat.DefaultIfEmpty()
 
                          where a.IsDelete == false || a.IsDelete == null
@@ -431,7 +431,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.PenerimaanUnitId,
                              a.ObatId,
                              NamaObat = ob != null ? ob.ObatName : null,
-                             Bentuk = b != null ? b.NamaBentukObat : null,
+                             Bentuk = b != null ? b.NamaBentukSatuan : null,
                              StokObat = ob != null ? ob.Stock : 0,
                              StockMinimal = ob != null ? ob.Minimal : 0,
                              StockMaksimal = ob != null ? ob.Maximal : 0,

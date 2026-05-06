@@ -1,14 +1,16 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using QuilvianSystemBackendDev.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.ViewModels;
-using System.Security.Claims;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
-using Swashbuckle.AspNetCore.Annotations;
-using QuilvianSystemBackendDev.Repositories;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.ViewModels;
+using QuilvianSystemBackendDev.Interfaces;
+using QuilvianSystemBackendDev.Models;
+using QuilvianSystemBackendDev.Repositories;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Observasi.Controllers
 {
@@ -20,14 +22,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Observasi.Controller
     {
         private readonly ApplicationDbContext _db;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly ITTDService _ttdService;
+        private readonly ILogger<DiskonController> _logger;
+        private readonly IWebHostEnvironment _webHostEnvironment;
 
         public ObservasiCairanWsdController(
             ApplicationDbContext db,
-            UserManager<ApplicationUser> userManager
+            UserManager<ApplicationUser> userManager,
+            SignInManager<ApplicationUser> signInManager,
+            ILogger<DiskonController> logger,
+            IWebHostEnvironment webHostEnvironment,
+            ITTDService ttdService
         )
         {
             _db = db;
             _userManager = userManager;
+            _signInManager = signInManager;
+            _logger = logger;
+            _webHostEnvironment = webHostEnvironment;
+            _ttdService = ttdService;
         }
 
         [HttpGet]
@@ -96,6 +110,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Observasi.Controller
             if (user == null)
                 return Unauthorized(new { message = "User tidak ditemukan." });
 
+            // cek ttd 
+            var ttd = await _ttdService.CheckTTDAsync(vm.TtdId ?? Guid.Empty);
+
             var entity = new ObservasiCairanWsd
             {
                 ObservasiCairanWSDId = Guid.NewGuid(),
@@ -108,7 +125,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Observasi.Controller
                 CairanWSDBertambah = vm.CairanWSDBertambah,
                 CairanSisaWSDTabung = vm.CairanSisaWSDTabung,
                 TtdId = vm.TtdId,
-                PathTtd = vm.PathTtd,
+                PathTtd = ttd.Path,
                 Keterangan = vm.Keterangan,
                 CreateDateTime = DateTime.UtcNow,
                 CreateBy = user.UserActiveId
@@ -117,7 +134,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Observasi.Controller
             _db.ObservasiCairanWsds.Add(entity);
             await _db.SaveChangesAsync();
 
-            return Created("", new { message = "Data berhasil ditambahkan." });
+            return Created("", new { message = "Data berhasil ditambahkan.", ttdPetugasId = ttd.TTDId});
         }
 
         [HttpPut("{id}")]
@@ -132,6 +149,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Observasi.Controller
             if (user == null)
                 return Unauthorized(new { message = "User tidak ditemukan." });
 
+            // cek ttd
+            var ttd = await _ttdService.CheckTTDAsync(vm.TtdId ?? Guid.Empty);
+
             item.KunjunganId = vm.KunjunganId;
             item.PasienId = vm.PasienId;
             item.TglAwalObservasiWSD = vm.TglAwalObservasiWSD;
@@ -140,7 +160,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Observasi.Controller
             item.CairanWSDBertambah = vm.CairanWSDBertambah;
             item.CairanSisaWSDTabung = vm.CairanSisaWSDTabung;
             item.TtdId = vm.TtdId;
-            item.PathTtd = vm.PathTtd;
+            item.PathTtd = ttd.Path;
             item.Keterangan = vm.Keterangan;
             item.UpdateBy = user.UserActiveId;
             item.UpdateDateTime = DateTime.UtcNow;
@@ -148,7 +168,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Observasi.Controller
             _db.ObservasiCairanWsds.Update(item);
             await _db.SaveChangesAsync();
 
-            return Ok(new { message = "Data berhasil diperbarui." });
+            return Ok(new { message = "Data berhasil diperbarui.", ttdPetugasId = ttd.TTDId });
         }
 
         [HttpDelete("{id}")]
@@ -178,6 +198,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Observasi.Controller
             int page = 1,
             int perPage = 10,
             string? search = null,
+            Guid? kunjunganId = null,
+            Guid? pasienId = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -212,8 +234,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Observasi.Controller
                                     o.CreateDateTime
                                 };
 
-                    // Search
-                    if (!string.IsNullOrWhiteSpace(search))
+                    // filter based on kunjungan id
+                    if (kunjunganId.HasValue )
+                    {
+                        query = query.Where(u=>u.KunjunganId==kunjunganId.Value);
+                    }
+
+                    // filter based on pasien id
+                    if (pasienId.HasValue)
+                    {
+                        query = query.Where(u => u.PasienId == pasienId.Value);
+                    }
+
+                // Search
+                if (!string.IsNullOrWhiteSpace(search))
                     {
                         search = $"%{search.ToLower()}%";
                         query = query.Where(x =>

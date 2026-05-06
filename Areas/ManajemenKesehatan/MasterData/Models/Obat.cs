@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Newtonsoft.Json;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
 using QuilvianSystemBackendDev.Models;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
@@ -31,11 +32,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? Dosis { get; set; }
         public string? Note { get; set; }
         public decimal? Cogs { get; set; }
-
         public string? Kategori{ get; set; }
-        //public string Asuransi { get; set; }
-        //public string KandunganObat { get; set; }
-        //public string TipeHarga { get; set; }
+        public Guid? ItemId { get; set; }
+        public Guid? ObatRuteId { get; set; }
+        public string? KategoriObat { get; set; }
+        public bool? IsControlled { get; set; }
 
+
+        // Navigation ke master
+        public Satuan? Satuan { get; set; }
+        public BentukObat? BentukObat { get; set; }
+
+        // icollection ke transaksi
+        public ICollection<DetailPermintaanUnit> DetailPermintaanUnits { get; set; } = new List<DetailPermintaanUnit>();
+        public ICollection<DetailPenerimaanUnit> DetailPenerimaanUnits { get; set; } = new List<DetailPenerimaanUnit>();
+        public ICollection<FarmasiRJ> FarmasiRJs { get; set; } = new List<FarmasiRJ>();
+        public ICollection<ObatReturnDetail> ObatReturnDetails { get; set; } = new HashSet<ObatReturnDetail>();
+
+        public ICollection<RacikanDetail> RacikanDetails { get; set; } = new HashSet<RacikanDetail>();
+        public ICollection<ResepDetail> ResepDetails { get; set; } = new HashSet<ResepDetail>();
     }
 }

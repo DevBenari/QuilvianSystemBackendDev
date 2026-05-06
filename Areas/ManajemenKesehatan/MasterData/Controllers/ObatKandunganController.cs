@@ -127,7 +127,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Cek jika sudah ada hubungan antara Obat dan Kandungan yang sama
                 var isDuplicate = await _applicationDbContext.ObatKandungans
-                    .AnyAsync(ok => ok.ObatId == obatKandungan.ObatId && ok.KandunganId == obatKandungan.KandunganId);
+                    .AnyAsync(ok => ok.ObatId == obatKandungan.ObatId && 
+                    ok.KandunganId == obatKandungan.KandunganId
+                    && ok.IsDelete == false);
 
                 if (isDuplicate)
                 {

@@ -1,5 +1,4 @@
-﻿using Microsoft.Data.SqlClient.Server;
-using Swashbuckle.AspNetCore.Annotations;
+﻿using Swashbuckle.AspNetCore.Annotations;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewModels
 {
@@ -10,6 +9,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewMode
         public string? TipePendaftaran { get; set; } // Rawat Jalan, Rawat Inap, Darurat, dll.
         public Guid? TitleId { get; set; }
         public string NamaLengkap { get; set; }
+        public string? NoKaryawan { get; set; }
         public Guid IdentitasId { get; set; }
         public string NoIdentitas { get; set; } // KTP atau Passport
         public string? TempatLahir { get; set; }
@@ -17,7 +17,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewMode
         public string? JenisKelamin { get; set; }
         public string? StatusPerkawinan { get; set; }
         public Guid? AgamaId { get; set; }
+        public string? NamaAgama { get; set; }
         public Guid? PendidikanTerakhirId { get; set; }
+        public string? CatatanKhusus { get; set; }
+        public string? TinggalBersama { get; set; }
 
         // Informasi Alamat
         public string? AlamatIdentitas { get; set; }
@@ -30,8 +33,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewMode
         public string? KodePos { get; set; }
         public string? Email { get; set; }
         public string? NoPasien { get; set; }
+        public string? NoWali1 { get; set; }
         public string? NoWali2 { get; set; }
-        public string? NoWali3 { get; set; }
 
         // Informasi Grafis
         public string? Kewarganegaraan { get; set; }
@@ -52,8 +55,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewMode
         public string? RiwayatPenyakitKeluarga { get; set; }
 
         // Informasi Darurat
+        public string? NamaWali1 { get; set; }
         public string? NamaWali2 { get; set; }
-        public string? NamaWali3 { get; set; }
         public string? HubunganKeluarga1 { get; set; }
         public string? HubunganPasien { get; set; }
         public string? AlamatDarurat { get; set; }

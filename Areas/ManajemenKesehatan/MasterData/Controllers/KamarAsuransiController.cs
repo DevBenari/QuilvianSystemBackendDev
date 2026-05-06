@@ -179,13 +179,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 //// **Cek Duplikasi**
-                //bool isDuplicate = _applicationDbContext.Diskons
-                //                    .Any(c => c.NamaDiskon == vm.NamaDiskon);
+                bool isDuplicate = await _applicationDbContext.KamarAsuransis
+                                    .AnyAsync(c => c.KamarId == vm.KamarId && c.AsuransiId == vm.AsuransiId
+                                    && c.IsDelete == false);
 
-                //if (isDuplicate)
-                //{
-                //    return Conflict(new { message = "Nama benefit ini telah tersedia" });
-                //}
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Nama benefit ini telah tersedia" });
+                }
 
                 // **Buat Data Baru**
                 var data = new KamarAsuransi
@@ -257,6 +258,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                bool isDuplicate = await _applicationDbContext.KamarAsuransis
+                    .AnyAsync(c => c.KamarId == vm.KamarId && c.AsuransiId == vm.AsuransiId
+                    && c.IsDelete == false && c.KamarAsuransiId != id);
+
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Nama benefit ini telah tersedia" });
                 }
 
                 // **Update Data**

@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Identity;
 using QuilvianSystemBackendDev.Models;
 using Microsoft.Extensions.Logging;
 using System.Security.Claims;
-using Microsoft.Data.SqlClient.Server;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using Swashbuckle.AspNetCore.Annotations;
 using Newtonsoft.Json;
@@ -162,7 +161,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Cek Duplikasi
                 var isDuplicate = _applicationDbContext.Negaras
-                    .Any(c => c.KodeNegara == kode && c.NamaNegara == vm.NamaNegara);
+                    .Any(c => c.NamaNegara.ToLower().Trim() == vm.NamaNegara.ToLower().Trim() && c.IsDelete == false);
 
                 if (isDuplicate)
                 {
@@ -226,6 +225,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                // Cek Duplikasi
+                var isDuplicate = _applicationDbContext.Negaras
+                    .Any(c => c.NamaNegara.ToLower().Trim() == vm.NamaNegara.ToLower().Trim() && c.IsDelete == false && c.NegaraId != id);
+
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
                 }
 
                 // **Update Data Pasien**

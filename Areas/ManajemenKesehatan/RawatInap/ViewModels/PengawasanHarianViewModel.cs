@@ -4,10 +4,10 @@
     {
         public Guid KunjunganId { get; set; }          // Relasi ke tabel kunjungan
         public Guid PasienId { get; set; }             // Relasi ke tabel pendaftaran pasien baru
-        public Guid? VitalSignId { get; set; }
-        public Guid? PainAssesmentId { get; set; }
-        public Guid? ResepId { get; set; }
-        public DateTime? TglPengawasanHarian { get; set; }
+        public string? VitalSign { get; set; }
+        public string? PainAssesment { get; set; }
+        public string? Resep { get; set; }
+        public string? TglPengawasanHarian { get; set; }
         public TimeOnly? WaktuPengawasan { get; set; }
 
         // ✅ Aktivitas/Intervensi

@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Linq;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
@@ -51,97 +52,112 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         {
             try
             {
-                // 🔹 1️⃣ Ambil semua data utama (Lab Pemeriksaan + Kategori + Lab + User)
+                // 🔹 Hitung offset (paging)
+                int skip = (page - 1) * perPage;
+
+                // 🔹 Query data utama pemeriksaan
                 var mainData = await (
                     from a in _applicationDbContext.LabPemeriksaans
                     join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId into userGroup
                     from u in userGroup.DefaultIfEmpty()
+
                     join k in _applicationDbContext.LabKategoriPemeriksaans on a.KategoriPemeriksaanId equals k.KategoriPemeriksaanId into kategoriGroup
                     from k in kategoriGroup.DefaultIfEmpty()
+
                     join l in _applicationDbContext.Labs on k.LabId equals l.LabId into labGroup
                     from l in labGroup.DefaultIfEmpty()
+
                     where a.IsDelete == false || a.IsDelete == null
-                    select new
+
+                    orderby a.CreateDateTime descending
+
+                    select new 
                     {
-                        a.PemeriksaanLabId,
-                        a.NamaPemeriksaan,
-                        a.HargaPemeriksaan,
-                        a.KodePemeriksaan,
-                        a.Keterangan,
-                        a.CreateDateTime,
-                        a.CreateBy,
+                        PemeriksaanLabId = a.PemeriksaanLabId,
+                        NamaPemeriksaan = a.NamaPemeriksaan,
+                        HargaPemeriksaan = a.HargaPemeriksaan,
+                        KodePemeriksaan = a.KodePemeriksaan,
+                        Keterangan = a.Keterangan,
+                        CreateDateTime = a.CreateDateTime,
+                        CreateBy = a.CreateBy,
                         CreateByName = u != null ? u.FullName : null,
+
                         KategoriPemeriksaanId = a.KategoriPemeriksaanId,
                         NamaKategori = k != null ? k.NamaKategori : null,
                         KodeKategoriPemeriksaan = k != null ? k.KodeKategori : null,
-                        LabId = l != null ? l.LabId : (Guid?)null,
+
+                        LabId = l != null ? l.LabId : null,
                         NamaLab = l != null ? l.NamaLab : null,
-                        KodeLab = l != null ? l.KodeKategori : null
+                        KodeLab = l != null ? l.KodeKategori : null,
+                        TarifKelas = new List<object>()
+
                     }
-                ).OrderByDescending(x => x.CreateDateTime)
-                 .ToListAsync();
+                )
+                .Skip(skip)
+                .Take(perPage)
+                .ToListAsync();
 
                 if (!mainData.Any())
                 {
-                    return NotFound(new { message = "Belum ada data Lab Pemeriksaan yang tersedia. || 404 Not Found" });
+                    return NotFound(new { message = "Belum ada data Lab Pemeriksaan. || 404 Not Found" });
                 }
 
-                // 🔹 2️⃣ Ambil semua TarifKelas sekaligus (hanya satu query)
-                var allTarifKelas = await (
-                    from tk in _applicationDbContext.TarifKelass
-                    join kl in _applicationDbContext.Kelass on tk.KelasId equals kl.KelasId
-                    select new
-                    {
-                        tk.PemeriksaanLabId,
-                        tk.KelasId,
-                        tk.TarifKelasId,
-                        tk.TarifDokter,
-                        tk.TarifRs,
-                        tk.TarifJp,
-                        tk.TarifBahp,
-                        tk.TarifLain,
-                        tk.TarifTotal,
-                        tk.KSO,
-                        NamaKelas = kl.NamaKelas
-                    }
-                ).ToListAsync();
+                // 🔹 Ambil list PemeriksaanLabId
+                var pemeriksaanIds = mainData.Select(x => x.PemeriksaanLabId).ToList();
 
-                // 🔹 3️⃣ Gabungkan TarifKelas dengan Pemeriksaan berdasarkan PemeriksaanLabId
-                var result = mainData.Select(r => new
-                {
-                    r.PemeriksaanLabId,
-                    r.NamaPemeriksaan,
-                    r.HargaPemeriksaan,
-                    r.KodePemeriksaan,
-                    r.Keterangan,
-                    r.CreateDateTime,
-                    r.CreateBy,
-                    r.CreateByName,
-                    r.KategoriPemeriksaanId,
-                    r.NamaKategori,
-                    r.KodeKategoriPemeriksaan,
-                    r.LabId,
-                    r.NamaLab,
-                    r.KodeLab,
+                // 🔹 Ambil semua tarif kelas sekaligus (1 query)
+                //var tarifKelas = await (
+                //    from tk in _applicationDbContext.TarifKelass
+                //    join kl in _applicationDbContext.Kelass on tk.KelasId equals kl.KelasId
+                //    where pemeriksaanIds.Contains((Guid)tk.PemeriksaanLabId)
+                //    select new 
+                //    {
+                //        TarifKelasId = tk.TarifKelasId,
+                //        KelasId = tk.KelasId,
+                //        NamaKelas = kl.NamaKelas,
 
-                    // 🔹 Ambil semua tarif kelas yang cocok
-                    TarifKelas = allTarifKelas
-                        .Where(t => t.PemeriksaanLabId == r.PemeriksaanLabId)
-                        .ToList()
-                }).ToList();
+                //        TarifDokter = tk.TarifDokter,
+                //        TarifRs = tk.TarifRs,
+                //        TarifJp = tk.TarifJp,
+                //        TarifBahp = tk.TarifBahp,
+                //        TarifLain = tk.TarifLain,
+                //        TarifTotal = tk.TarifTotal,
+                //        KSO = tk.KSO,
 
-                // ✅ Return hasil akhir
+                //        // mapping PM Lab Id
+                //        PemeriksaanLabId = tk.PemeriksaanLabId
+                //    }
+                //).ToListAsync();
+
+                // 🔹 Gabungkan tarif kelas ke pemeriksaan
+                //foreach (var item in mainData)
+                //{
+                //    var tk = tarifKelas
+                //        .Where(x => x.PemeriksaanLabId == item.PemeriksaanLabId)
+                //        .Cast<object>()
+                //        .ToList();
+
+                //    item.TarifKelas.AddRange(tk);
+                //}
+
+                // 🔹 Total data (tanpa paging)
+                int totalData = await _applicationDbContext.LabPemeriksaans
+                    .CountAsync(a => a.IsDelete == false || a.IsDelete == null);
+
                 return Ok(new
                 {
                     status = "success",
                     message = "Data retrieved successfully",
-                    total = result.Count,
-                    data = result
+                    page,
+                    perPage,
+                    totalData,
+                    totalFiltered = mainData.Count,
+                    data = mainData
                 });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+                return StatusCode(500, new { message = $"Internal Server Error: {ex.Message}" });
             }
         }
 
@@ -185,24 +201,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 }
 
                 // 🔹 2️⃣ Ambil semua tarif kelas terkait sekali query (tanpa N+1)
-                var tarifKelasList = await (
-                    from tk in _applicationDbContext.TarifKelass
-                    join kl in _applicationDbContext.Kelass on tk.KelasId equals kl.KelasId
-                    where tk.PemeriksaanLabId == id
-                    select new
-                    {
-                        tk.KelasId,
-                        tk.TarifKelasId,
-                        tk.TarifDokter,
-                        tk.TarifRs,
-                        tk.TarifJp,
-                        tk.TarifBahp,
-                        tk.TarifLain,
-                        tk.TarifTotal,
-                        tk.KSO,
-                        NamaKelas = kl.NamaKelas
-                    }
-                ).ToListAsync();
+                //var tarifKelasList = await (
+                //    from tk in _applicationDbContext.TarifKelass
+                //    join kl in _applicationDbContext.Kelass on tk.KelasId equals kl.KelasId
+                //    where tk.PemeriksaanLabId == id
+                //    select new
+                //    {
+                //        tk.KelasId,
+                //        tk.TarifKelasId,
+                //        tk.TarifDokter,
+                //        tk.TarifRs,
+                //        tk.TarifJp,
+                //        tk.TarifBahp,
+                //        tk.TarifLain,
+                //        tk.TarifTotal,
+                //        tk.KSO,
+                //        NamaKelas = kl.NamaKelas
+                //    }
+                //).ToListAsync();
 
                 // 🔹 3️⃣ Gabungkan hasil ke satu objek
                 var result = new
@@ -221,7 +237,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     mainData.LabId,
                     mainData.NamaLab,
                     mainData.KodeLab,
-                    TarifKelas = tarifKelasList
+                    //TarifKelas = tarifKelasList
                 };
 
                 // ✅ Return hasil
@@ -270,13 +286,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 var userActiveId = getUserActive.UserActiveId;
 
                 //// **Cek Duplikasi**
-                //bool isDuplicate = _applicationDbContext.Diskons
-                //                    .Any(c => c.NamaDiskon == vm.NamaDiskon);
+                bool isDuplicate = await _applicationDbContext.LabPemeriksaans
+                                    .AnyAsync(c => c.NamaPemeriksaan.ToLower().Trim()
+                                    == vm.NamaPemeriksaan.ToLower().Trim() && c.IsDelete == false);
 
-                //if (isDuplicate)
-                //{
-                //    return Conflict(new { message = "Nama benefit ini telah tersedia" });
-                //}
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Nama benefit ini telah tersedia" });
+                }
 
                 // **Buat Data Baru**
                 var data = new LabPemeriksaan
@@ -491,117 +508,131 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
         [HttpGet("paged")]
         public async Task<IActionResult> Paged(
-        int page = 1,
-        int perPage = 10,
-        Guid? KategoriPemeriksaanId = null,
-        Guid? Labid = null,
-        string? search = null,
-        string? kodePemeriksaan = null,
-        string? namaLab = null,
-        string? namaKategori = null,
-        string? orderBy = "CreateDateTime",
-        string? sortDirection = "desc",
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? startDate = null,
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? endDate = null,
-        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+            int page = 1,
+            int perPage = 10,
+            Guid? KategoriPemeriksaanId = null,
+            Guid? Labid = null,
+            Guid? kelasId = null,
+            Guid? asuransiId = null,
+            string? search = null,
+            string? kodePemeriksaan = null,
+            string? namaLab = null,
+            string? namaKategori = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null,
+            CancellationToken ct = default)
         {
             try
             {
-                // ⚡ Ambil semua tarif kelas hanya sekali
-                var allTarifKelas = await (
-                    from tk in _applicationDbContext.TarifKelass
-                    join kl in _applicationDbContext.Kelass on tk.KelasId equals kl.KelasId
+                if (page < 1) page = 1;
+                if (perPage < 1) perPage = 10;
+                if (perPage > 100) perPage = 100;
+
+                // ======================================================
+                // 1) BASE QUERY
+                // ======================================================
+                var query =
+                    from a in _applicationDbContext.LabPemeriksaans.AsNoTracking()
+                    where (a.IsDelete == false || a.IsDelete == null)
+
+                    join u0 in _applicationDbContext.UserActives.AsNoTracking()
+                        on a.CreateBy equals u0.UserActiveId into userJoin
+                    from u in userJoin.DefaultIfEmpty()
+
+                    join k0 in _applicationDbContext.LabKategoriPemeriksaans.AsNoTracking()
+                        on a.KategoriPemeriksaanId equals k0.KategoriPemeriksaanId into kategoriGroup
+                    from k in kategoriGroup.DefaultIfEmpty()
+
+                    join l0 in _applicationDbContext.Labs.AsNoTracking()
+                        on k.LabId equals l0.LabId into labGroup
+                    from l in labGroup.DefaultIfEmpty()
+
                     select new
                     {
-                        tk.PemeriksaanLabId,
-                        tk.KelasId,
-                        tk.TarifKelasId,
-                        tk.TarifDokter,
-                        tk.TarifRs,
-                        tk.TarifJp,
-                        tk.TarifBahp,
-                        tk.TarifLain,
-                        tk.TarifTotal,
-                        tk.KSO,
-                        NamaKelas = kl.NamaKelas
-                    }
-                ).ToListAsync();
+                        a.CreateDateTime,
+                        a.CreateBy,
+                        CreateByName = u != null ? u.FullName : null,
 
-                // 🔹 Query utama
-                var query = from a in _applicationDbContext.LabPemeriksaans
-                            join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                                on a.CreateBy equals u.UserActiveId
-                            join k in _applicationDbContext.LabKategoriPemeriksaans
-                                on a.KategoriPemeriksaanId equals k.KategoriPemeriksaanId into kategoriGroup
-                            from k in kategoriGroup.DefaultIfEmpty()
-                            join l in _applicationDbContext.Labs
-                                on k.LabId equals l.LabId into labGroup
-                            from l in labGroup.DefaultIfEmpty()
-                            where a.IsDelete == false || a.IsDelete == null
-                            select new
-                            {
-                                a.CreateDateTime,
-                                a.CreateBy,
-                                CreateByName = u.FullName,
-                                a.PemeriksaanLabId,
-                                a.NamaPemeriksaan,
-                                a.HargaPemeriksaan,
-                                a.KodePemeriksaan,
-                                a.KategoriPemeriksaanId,
-                                k.NamaKategori,
-                                KodeKategoriPemeriksaan = k.KodeKategori,
-                                l.LabId,
-                                l.NamaLab,
-                                KodeLab = l.KodeKategori,
-                                a.Keterangan
-                            };
+                        a.PemeriksaanLabId,
+                        a.NamaPemeriksaan,
+                        a.HargaPemeriksaan,
+                        a.KodePemeriksaan,
+                        a.KategoriPemeriksaanId,
 
-                // 🔍 Filter pencarian
+                        NamaKategori = k != null ? k.NamaKategori : null,
+                        KodeKategoriPemeriksaan = k != null ? k.KodeKategori : null,
+
+                        LabId = l != null ? (Guid?)l.LabId : null,
+                        NamaLab = l != null ? l.NamaLab : null,
+                        KodeLab = l != null ? l.KodeKategori : null,
+
+                        a.Keterangan
+                    };
+
+                // ======================================================
+                // 2) FILTERS
+                // ======================================================
                 if (!string.IsNullOrWhiteSpace(search))
                 {
-                    string pattern = $"%{search.ToLower()}%";
-                    query = query.Where(u =>
-                        EF.Functions.ILike(u.NamaPemeriksaan, pattern) ||
-                        EF.Functions.ILike(u.KodeLab, pattern) ||
-                        EF.Functions.ILike(u.KodeKategoriPemeriksaan, pattern));
+                    var pattern = $"%{search.Trim()}%";
+                    query = query.Where(x =>
+                        (x.NamaPemeriksaan != null && EF.Functions.ILike(x.NamaPemeriksaan, pattern)) ||
+                        (x.KodePemeriksaan != null && EF.Functions.ILike(x.KodePemeriksaan, pattern)) ||
+                        (x.KodeLab != null && EF.Functions.ILike(x.KodeLab, pattern)) ||
+                        (x.KodeKategoriPemeriksaan != null && EF.Functions.ILike(x.KodeKategoriPemeriksaan, pattern)) ||
+                        (x.NamaLab != null && EF.Functions.ILike(x.NamaLab, pattern)) ||
+                        (x.NamaKategori != null && EF.Functions.ILike(x.NamaKategori, pattern))
+                    );
                 }
 
                 if (!string.IsNullOrWhiteSpace(kodePemeriksaan))
                 {
-                    string pattern = $"%{kodePemeriksaan.ToLower()}%";
-                    query = query.Where(u => EF.Functions.ILike(u.KodePemeriksaan, pattern));
+                    var pattern = $"%{kodePemeriksaan.Trim()}%";
+                    query = query.Where(x => x.KodePemeriksaan != null && EF.Functions.ILike(x.KodePemeriksaan, pattern));
                 }
 
                 if (!string.IsNullOrWhiteSpace(namaLab))
                 {
-                    string pattern = $"%{namaLab.ToLower()}%";
-                    query = query.Where(u => EF.Functions.ILike(u.NamaLab, pattern));
+                    var pattern = $"%{namaLab.Trim()}%";
+                    query = query.Where(x => x.NamaLab != null && EF.Functions.ILike(x.NamaLab, pattern));
                 }
 
                 if (!string.IsNullOrWhiteSpace(namaKategori))
                 {
-                    string pattern = $"%{namaKategori.ToLower()}%";
-                    query = query.Where(u => EF.Functions.ILike(u.NamaKategori, pattern));
+                    var pattern = $"%{namaKategori.Trim()}%";
+                    query = query.Where(x => x.NamaKategori != null && EF.Functions.ILike(x.NamaKategori, pattern));
                 }
 
                 if (KategoriPemeriksaanId.HasValue)
-                    query = query.Where(u => u.KategoriPemeriksaanId == KategoriPemeriksaanId);
+                    query = query.Where(x => x.KategoriPemeriksaanId == KategoriPemeriksaanId.Value);
 
                 if (Labid.HasValue)
-                    query = query.Where(u => u.LabId == Labid);
+                    query = query.Where(x => x.LabId == Labid.Value);
 
-                // 🔹 Filter tanggal
-                if (startDate.HasValue && endDate.HasValue)
+                // ✅ FILTER BY ASURANSI: hanya pemeriksaan lab yang dicover asuransi ini
+                if (asuransiId.HasValue)
                 {
-                    DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
-                    DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
-
-                    query = query.Where(u =>
-                        u.CreateDateTime >= startUtc &&
-                        u.CreateDateTime <= endUtc);
+                    var aid = asuransiId.Value;
+                    query = query.Where(x =>
+                        _applicationDbContext.PemeriksaanLabAsuransis.Any(pa =>
+                            (pa.IsDelete == false || pa.IsDelete == null)
+                            && pa.AsuransiId == aid
+                            && pa.PemeriksaanLabId == x.PemeriksaanLabId
+                        )
+                    );
                 }
 
-                // 🔹 Filter periode
+                // Date range (lebih sargable: < endExclusive)
+                if (startDate.HasValue && endDate.HasValue)
+                {
+                    var start = startDate.Value.Date;
+                    var endExclusive = endDate.Value.Date.AddDays(1);
+                    query = query.Where(x => x.CreateDateTime >= start && x.CreateDateTime < endExclusive);
+                }
+
                 if (periode.HasValue)
                 {
                     DateTime today = DateTime.UtcNow.Date;
@@ -609,88 +640,191 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     switch (periode)
                     {
                         case PeriodeFilter.Today:
-                            query = query.Where(u => u.CreateDateTime.Date == today);
+                            query = query.Where(x => x.CreateDateTime.Date == today);
                             break;
                         case PeriodeFilter.ThisWeek:
-                            query = query.Where(u =>
-                                u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
-                                u.CreateDateTime.Date <= today);
+                            query = query.Where(x =>
+                                x.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
+                                x.CreateDateTime.Date <= today);
                             break;
                         case PeriodeFilter.LastWeek:
-                            query = query.Where(u =>
-                                u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                                u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek));
+                            query = query.Where(x =>
+                                x.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
+                                x.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek));
                             break;
                         case PeriodeFilter.ThisMonth:
-                            query = query.Where(u =>
-                                u.CreateDateTime.Month == today.Month &&
-                                u.CreateDateTime.Year == today.Year);
+                            query = query.Where(x => x.CreateDateTime.Month == today.Month && x.CreateDateTime.Year == today.Year);
                             break;
                         case PeriodeFilter.LastMonth:
                             var lastMonth = today.AddMonths(-1);
-                            query = query.Where(u =>
-                                u.CreateDateTime.Month == lastMonth.Month &&
-                                u.CreateDateTime.Year == lastMonth.Year);
+                            query = query.Where(x => x.CreateDateTime.Month == lastMonth.Month && x.CreateDateTime.Year == lastMonth.Year);
                             break;
                         case PeriodeFilter.ThisYear:
-                            query = query.Where(u => u.CreateDateTime.Year == today.Year);
+                            query = query.Where(x => x.CreateDateTime.Year == today.Year);
                             break;
                         case PeriodeFilter.LastYear:
-                            query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
+                            query = query.Where(x => x.CreateDateTime.Year == today.Year - 1);
                             break;
                         case PeriodeFilter.Last3Months:
-                            query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
+                            query = query.Where(x => x.CreateDateTime >= today.AddMonths(-3));
                             break;
                         case PeriodeFilter.Last6Months:
-                            query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
+                            query = query.Where(x => x.CreateDateTime >= today.AddMonths(-6));
                             break;
                     }
                 }
 
-                // 🔹 Sorting
-                query = sortDirection?.ToLower() == "desc"
+                // ======================================================
+                // 3) SORTING
+                // ======================================================
+                bool desc = string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase);
+
+                query = desc
                     ? orderBy switch
                     {
-                        "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
-                        "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                        "NamaKategori" => query.OrderByDescending(u => u.NamaKategori),
-                        "NamaLab" => query.OrderByDescending(u => u.NamaLab),
-                        "NamaPemeriksaan" => query.OrderByDescending(u => u.NamaPemeriksaan),
-                        _ => query.OrderByDescending(u => u.CreateDateTime)
+                        "CreateDateTime" => query.OrderByDescending(x => x.CreateDateTime),
+                        "CreateByName" => query.OrderByDescending(x => x.CreateByName),
+                        "NamaKategori" => query.OrderByDescending(x => x.NamaKategori),
+                        "NamaLab" => query.OrderByDescending(x => x.NamaLab),
+                        "NamaPemeriksaan" => query.OrderByDescending(x => x.NamaPemeriksaan),
+                        _ => query.OrderByDescending(x => x.CreateDateTime)
                     }
                     : orderBy switch
                     {
-                        "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
-                        "CreateByName" => query.OrderBy(u => u.CreateByName),
-                        "NamaKategori" => query.OrderBy(u => u.NamaKategori),
-                        "NamaLab" => query.OrderBy(u => u.NamaLab),
-                        "NamaPemeriksaan" => query.OrderBy(u => u.NamaPemeriksaan),
-                        _ => query.OrderBy(u => u.CreateDateTime)
+                        "CreateDateTime" => query.OrderBy(x => x.CreateDateTime),
+                        "CreateByName" => query.OrderBy(x => x.CreateByName),
+                        "NamaKategori" => query.OrderBy(x => x.NamaKategori),
+                        "NamaLab" => query.OrderBy(x => x.NamaLab),
+                        "NamaPemeriksaan" => query.OrderBy(x => x.NamaPemeriksaan),
+                        _ => query.OrderBy(x => x.CreateDateTime)
                     };
 
-                // 🔹 Eksekusi dan pagination
-                var totalRows = await query.CountAsync();
+                // ======================================================
+                // 4) PAGING
+                // ======================================================
+                var totalRows = await query.CountAsync(ct);
                 var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-                var rows = await query.Skip((page - 1) * perPage).Take(perPage).ToListAsync();
 
-                if (rows.Count == 0 && page > totalPages)
+                if (totalRows == 0)
+                {
+                    return Ok(new
+                    {
+                        status = "success",
+                        message = "No data found",
+                        data = new
+                        {
+                            Rows = Array.Empty<object>(),
+                            TotalRows = 0,
+                            CurrentPage = page,
+                            PerPage = perPage,
+                            TotalPages = 0
+                        }
+                    });
+                }
+
+                if (page > totalPages)
                     return NotFound(new { message = "Page not found." });
 
-                // ✅ Gabungkan data tarif kelas di memory (tanpa N+1)
-                var result = rows.Select(r => new
+                var rows = await query
+                    .Skip((page - 1) * perPage)
+                    .Take(perPage)
+                    .ToListAsync(ct);
+
+                // ======================================================
+                // 5) COVERAGE ASURANSI (BATCH) + LOOKUP (tanpa Max(uuid))
+                // ======================================================
+                var pemeriksaanIds = rows.Select(r => r.PemeriksaanLabId).Distinct().ToList();
+
+                var baseCover = _applicationDbContext.PemeriksaanLabAsuransis.AsNoTracking()
+                    .Where(x => (x.IsDelete == false || x.IsDelete == null))
+                    .Where(x => x.PemeriksaanLabId != null && pemeriksaanIds.Contains(x.PemeriksaanLabId.Value))
+                    .Where(x => x.AsuransiId != null); // biar aman dari null
+
+                if (asuransiId.HasValue)
                 {
-                    r.PemeriksaanLabId,
-                    r.NamaPemeriksaan,
-                    r.NamaLab,
-                    r.NamaKategori,
-                    r.KodePemeriksaan,
-                    r.HargaPemeriksaan,
-                    r.CreateDateTime,
-                    r.CreateByName,
-                    r.Keterangan,
-                    TarifKelas = allTarifKelas
-                        .Where(t => t.PemeriksaanLabId == r.PemeriksaanLabId)
-                        .ToList()
+                    var aid = asuransiId.Value;
+                    baseCover = baseCover.Where(x => x.AsuransiId == aid);
+                }
+
+                // 1) ambil CreateDateTime terbaru per (PemeriksaanLabId, AsuransiId)
+                var latestCreateQ =
+                    from x in baseCover
+                    group x by new { LabId = x.PemeriksaanLabId!.Value, AsuId = x.AsuransiId!.Value } into g
+                    select new
+                    {
+                        PemeriksaanLabId = g.Key.LabId,
+                        AsuransiId = g.Key.AsuId,
+                        MaxCreate = g.Max(z => z.CreateDateTime)
+                    };
+
+                // 2) ambil kandidat row yang timestamp-nya sama dengan MaxCreate (bisa lebih dari 1 kalau tie)
+                var candidates = await (
+                    from x in baseCover
+                    join lc in latestCreateQ
+                        on new
+                        {
+                            LabId = x.PemeriksaanLabId!.Value,
+                            AsuId = x.AsuransiId!.Value,
+                            Create = x.CreateDateTime
+                        }
+                        equals new
+                        {
+                            LabId = lc.PemeriksaanLabId,
+                            AsuId = lc.AsuransiId,
+                            Create = lc.MaxCreate
+                        }
+                    join a in _applicationDbContext.Asuransis.AsNoTracking()
+                        on x.AsuransiId equals a.AsuransiId
+                    select new
+                    {
+                        PemeriksaanLabId = x.PemeriksaanLabId!.Value,
+                        AsuransiId = x.AsuransiId!.Value,
+                        NamaAsuransi = a.NamaAsuransi,
+                        MarkupTotal = (decimal?)x.MarkupTotal ?? 0m,
+
+                        // PK untuk tie-break di memory
+                        Id = x.PemeriksaanLabAsuransiId
+                    }
+                ).ToListAsync(ct);
+
+                // 3) final coverRows: 1 row per (PemeriksaanLabId, AsuransiId)
+                //    tie-break: pilih Id terbesar (hanya untuk kasus CreateDateTime sama)
+                var coverRows = candidates
+                    .GroupBy(x => new { x.PemeriksaanLabId, x.AsuransiId })
+                    .Select(g => g.OrderByDescending(x => x.Id).First())
+                    .ToList();
+
+                // lookup per PemeriksaanLabId (untuk list cover)
+                var coverByPemeriksaan = coverRows.ToLookup(x => x.PemeriksaanLabId);
+
+                // lookup cepat untuk asuransi terpilih (kalau asuransiId dikirim)
+                Dictionary<Guid, (Guid AsuransiId, string? NamaAsuransi, decimal MarkupTotal)> coverForSelectedAsuransi = new();
+
+                if (asuransiId.HasValue)
+                {
+                    coverForSelectedAsuransi = coverRows.ToDictionary(
+                        x => x.PemeriksaanLabId,
+                        x => (x.AsuransiId, (string?)x.NamaAsuransi, x.MarkupTotal)
+                    );
+                }
+                // ======================================================
+                // 6) BUILD RESULT
+                // ======================================================
+                var result = rows.Select(r =>
+                {
+                    var coverList = coverByPemeriksaan[r.PemeriksaanLabId]
+                        .Select(x => new { x.AsuransiId, x.NamaAsuransi, x.MarkupTotal })
+                        .ToList();
+                    return new
+                    {
+                        r.PemeriksaanLabId,
+                        r.NamaPemeriksaan,
+                        r.NamaLab,
+                        r.NamaKategori,
+                        r.KodePemeriksaan,
+                        r.HargaPemeriksaan,
+                        AsuransiCoverages = coverList
+                    };
                 });
 
                 return Ok(new
@@ -712,6 +846,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
 
 
         //[HttpGet("paged")]

@@ -80,6 +80,25 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             LingkarKepalaBayi = a.LingkarKepalaBayi,
                             RanapId = a.RanapId,
                             Nadi = a.Nadi,
+                            a.PenggunaanOksigen,
+                            a.OksigenTambahan,
+                            a.MAP,
+                            a.HasilMAP,
+                            a.SkorEWS,
+                            a.FrekuensiMonitoring,
+                            a.Kesadaran,
+                            a.IsNadiTeraba,
+                            a.IsRegularNadi,
+                            a.Respirasi,
+                            a.PolaNapas,
+                            a.BBPreHD,
+                            a.BBPostHD,
+                            a.PenambahanBBHD,
+                            a.PenguranganBBHD,
+                            a.BBKering,
+                            a.PengkajianScoreId,
+                            a.ScoreGizi,
+                            a.IsLaporanSedasi,
                         }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -157,6 +176,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             LingkarKepalaBayi = a.LingkarKepalaBayi,
                             RanapId = a.RanapId,
                             Nadi = a.Nadi,
+                            a.PenggunaanOksigen,
+                            a.OksigenTambahan,
+                            a.MAP,
+                            a.HasilMAP,
+                            a.SkorEWS,
+                            a.FrekuensiMonitoring,
+                            a.IsNadiTeraba,
+                            a.Kesadaran,
+                            a.IsRegularNadi,
+                            a.Respirasi,
+                            a.PolaNapas,
+                            a.BBPreHD,
+                            a.BBPostHD,
+                            a.PenambahanBBHD,
+                            a.PenguranganBBHD,
+                            a.BBKering,
+                            a.LingkarLenganAtas,
+                            a.PengkajianScoreId,
+                            a.ScoreGizi,
+                            a.IsLaporanSedasi,
                         }).ToList();
 
             if (!data.Any())
@@ -245,6 +284,27 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     LingkarKepalaBayi = vm.LingkarKepalaBayi,
                     Nadi = vm.Nadi,
                     //RanapId = vm.RanapId,
+                    PenggunaanOksigen = vm.PenggunaanOksigen,
+                    OksigenTambahan = vm.OksigenTambahan,
+                    MAP = vm.MAP,
+                    HasilMAP = vm.HasilMAP,
+                    SkorEWS = vm.SkorEWS,
+                    FrekuensiMonitoring = vm.FrekuensiMonitoring,
+                    IsNadiTeraba = vm.IsNadiTeraba,
+                    Kesadaran = vm.Kesadaran,
+                    IsRegularNadi = vm.IsRegularNadi,
+                    Respirasi = vm.Respirasi,
+                    PolaNapas = vm.PolaNapas,
+                    BBPreHD = vm.BBPreHD,
+                    BBPostHD = vm.BBPostHD,
+                    PenguranganBBHD = vm.BBPreHD - vm.BBPostHD,
+                    PenambahanBBHD =  vm.BBPostHD - vm.BBPreHD,
+                    BBKering = vm.BBKering,
+                    LingkarLenganAtas = vm.LingkarLenganAtas,
+                    PengkajianScoreId = vm.PengkajianScoreId,
+                    ScoreGizi = vm.ScoreGizi,
+                    IsLaporanSedasi = vm.IsLaporanSedasi,
+
                     CreateBy = createBy,
                     CreateDateTime = DateTimeOffset.UtcNow
                 };
@@ -365,6 +425,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.BMI = vm.BMI;
                 data.LingkarKepalaBayi = vm.LingkarKepalaBayi;
                 data.Nadi = vm.Nadi;
+                data.PenggunaanOksigen = vm.PenggunaanOksigen;
+                data.OksigenTambahan = vm.OksigenTambahan;
+                data.MAP = vm.MAP;
+                data.HasilMAP = vm.HasilMAP;
+                data.SkorEWS = vm.SkorEWS;
+                data.FrekuensiMonitoring = vm.FrekuensiMonitoring;
+                data.IsNadiTeraba = vm.IsNadiTeraba;
+                data.Kesadaran = vm.Kesadaran;
+                data.IsRegularNadi = vm.IsRegularNadi;
+                data.Respirasi = vm.Respirasi;
+                data.PolaNapas = vm.PolaNapas;
+                data.BBPreHD = vm.BBPreHD;
+                data.BBPostHD = vm.BBPostHD;
+                data.PenguranganBBHD = vm.BBPreHD - vm.BBPostHD;
+                data.PenambahanBBHD = vm.BBPostHD - vm.BBPreHD;
+                data.BBKering = vm.BBKering;
+                data.LingkarLenganAtas = vm.LingkarLenganAtas;
+                data.PengkajianScoreId = vm.PengkajianScoreId;
+                data.ScoreGizi = vm.ScoreGizi;
+                data.IsLaporanSedasi = vm.IsLaporanSedasi;
 
                 data.UpdateBy = modifyBy;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -666,7 +746,27 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 BMI = a.BMI,
                                 LingkarKepalaBayi = a.LingkarKepalaBayi,
                                 Nadi = a.Nadi,
-                                RanapId = a.RanapId
+                                RanapId = a.RanapId,
+                                a.PenggunaanOksigen,
+                                a.OksigenTambahan,
+                                a.MAP,
+                                a.HasilMAP,
+                                a.SkorEWS,
+                                a.FrekuensiMonitoring,
+                                a.IsNadiTeraba,
+                                a.Kesadaran,
+                                a.IsRegularNadi,
+                                a.Respirasi,
+                                a.PolaNapas,
+                                a.BBPreHD,
+                                a.BBPostHD,
+                                a.PenambahanBBHD,
+                                a.PenguranganBBHD,
+                                a.BBKering,
+                                a.LingkarLenganAtas,
+                                a.PengkajianScoreId,
+                                a.ScoreGizi,
+                                a.IsLaporanSedasi   
                             };
 
                 //**Filter berdasarkan search(Perbaikan agar bisa mencari 1 huruf)**

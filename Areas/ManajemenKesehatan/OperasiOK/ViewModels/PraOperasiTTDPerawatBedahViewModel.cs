@@ -2,6 +2,6 @@
 {
     public class PraOperasiTTDPerawatBedahViewModel
     {
-        public IFormFile? TTDPerawatBedah { get; set; }
+        public Guid? TTDPerawatBedah { get; set; }
     }
 }

@@ -61,7 +61,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.CreateBy,
                             CreateByName = u.FullName,
                             a.TindakanPoliId,
-                            a.PoliId,
+                            a.PoliklinikId,
                             a.TindakanId
                         };
 
@@ -121,7 +121,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // **Cek Duplikasi**
                 bool isDuplicate = _applicationDbContext.TindakanPolis
-                    .Any(c => c.TindakanId == vm.TindakanId && c.PoliId == vm.PoliId);
+                    .Any(c => c.TindakanId == vm.TindakanId && c.PoliklinikId == vm.PoliId && c.IsDelete == false);
 
                 if (isDuplicate)
                 {
@@ -133,7 +133,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     TindakanPoliId = Guid.NewGuid(),
                     TindakanId = vm.TindakanId,
-                    PoliId = vm.PoliId,
+                    PoliklinikId = vm.PoliId,
                     CreateDateTime = DateTime.UtcNow,
                     CreateBy = userActiveId
                 };

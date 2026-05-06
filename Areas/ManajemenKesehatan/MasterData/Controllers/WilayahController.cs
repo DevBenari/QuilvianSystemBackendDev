@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.Data.SqlClient.Server;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -396,7 +395,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Cek Duplikasi
                 var isDuplicate = _applicationDbContext.Provinsis
-                    .Any(c => c.KodeProvinsi == kode && c.NamaProvinsi == vm.NamaProvinsi);
+                    .Any(c =>c.NamaProvinsi.ToLower().Trim() == vm.NamaProvinsi.ToLower().Trim() && c.IsDelete == false);
 
                 if (isDuplicate)
                 {
@@ -491,7 +490,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Cek Duplikasi
                 var isDuplicate = _applicationDbContext.KabupatenKotas
-                    .Any(c => c.KodeKabupatenKota == kode && c.NamaKabupatenKota == vm.NamaKabupatenKota && c.ProvinsiId == vm.ProvinsiId);
+                    .Any(c => c.NamaKabupatenKota.ToLower().Trim() == vm.NamaKabupatenKota.ToLower().Trim() && c.ProvinsiId == vm.ProvinsiId
+                    && c.IsDelete == false);
 
                 if (isDuplicate)
                 {
@@ -586,7 +586,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Cek Duplikasi
                 var isDuplicate = _applicationDbContext.Kecamatans
-                    .Any(c => c.KodeKecamatan == kode && c.NamaKecamatan == vm.NamaKecamatan && c.KabupatenKotaId == vm.KabupatenKotaId);
+                    .Any(c => c.NamaKecamatan.ToLower().Trim() == vm.NamaKecamatan.ToLower().Trim() 
+                    && c.KabupatenKotaId == vm.KabupatenKotaId && c.IsDelete == false);
 
                 if (isDuplicate)
                 {
@@ -681,7 +682,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Cek Duplikasi
                 var isDuplicate = _applicationDbContext.Kelurahans
-                    .Any(c => c.KodeKelurahan == kode && c.NamaKelurahan == vm.NamaKelurahan && c.KecamatanId == vm.KecamatanId);
+                    .Any(c => c.NamaKelurahan.ToLower().Trim() == vm.NamaKelurahan.ToLower().Trim() && 
+                    c.KecamatanId == vm.KecamatanId
+                    && c.IsDelete == false);
 
                 if (isDuplicate)
                 {
@@ -753,6 +756,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
+                // Cek Duplikasi
+                var isDuplicate = _applicationDbContext.Provinsis
+                    .Any(c => c.NamaProvinsi.ToLower().Trim() == vm.NamaProvinsi.ToLower().Trim() && c.IsDelete == false && c.ProvinsiId != id);
+
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
+                }
+
                 // **Update Data Pasien**
                 data.NamaProvinsi = vm.NamaProvinsi;
                 data.NegaraId = vm.NegaraId;
@@ -799,6 +811,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                // Cek Duplikasi
+                var isDuplicate = _applicationDbContext.KabupatenKotas
+                    .Any(c => c.NamaKabupatenKota.ToLower().Trim() == vm.NamaKabupatenKota.ToLower().Trim() && c.ProvinsiId == vm.ProvinsiId
+                    && c.IsDelete == false && c.KabupatenKotaId != id);
+
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
                 }
 
                 // **Update Data Wilayah**
@@ -849,6 +871,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
+                // Cek Duplikasi
+                var isDuplicate = _applicationDbContext.Kecamatans
+                    .Any(c => c.NamaKecamatan.ToLower().Trim() == vm.NamaKecamatan.ToLower().Trim()
+                    && c.KabupatenKotaId == vm.KabupatenKotaId && c.IsDelete == false && c.KabupatenKotaId != id);
+
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
+                }
+
                 // **Update Data Pasien**
                 data.NamaKecamatan = vm.NamaKecamatan;
                 data.KabupatenKotaId = vm.KabupatenKotaId;
@@ -897,6 +929,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
+
+                // Cek Duplikasi
+                var isDuplicate = _applicationDbContext.Kelurahans
+                    .Any(c => c.NamaKelurahan.ToLower().Trim() == vm.NamaKelurahan.ToLower().Trim() &&
+                    c.KecamatanId == vm.KecamatanId
+                    && c.IsDelete == false && c.KelurahanId != id);
 
                 // **Update Data Pasien**
                 data.NamaKelurahan = vm.NamaKelurahan;
@@ -1814,7 +1852,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Cek Duplikasi
                 var isDuplicate = _applicationDbContext.KodePoss
-                    .Any(c => c.UniqueKodePos == kode);
+                    .Any(c => c.UniqueKodePos == kode && c.IsDelete == false);
 
                 if (ModelState.IsValid)
                 {

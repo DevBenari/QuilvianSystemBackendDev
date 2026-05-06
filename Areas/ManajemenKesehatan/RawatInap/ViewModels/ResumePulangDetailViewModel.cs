@@ -28,7 +28,8 @@
         public bool? Status {  get; set; }
         public DateTime? TglDetailResumePulang { get; set; }
 
-        public Guid? TTId { get; set; }                  // Perawat Id
-        public IFormFile? TTDFile { get; set; }
+        public Guid? PerawatId { get; set; }                  // Perawat Id
+
+
     }
 }

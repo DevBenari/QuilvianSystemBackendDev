@@ -2,7 +2,7 @@
 {
     public class PraOperasiTTDDokterBedahViewModel
     {
-        public IFormFile? TTDDokter {  get; set; }
+        public Guid? TTDDokter {  get; set; }
         public string? TglPernyataanDokter { get; set; }
     }
 }

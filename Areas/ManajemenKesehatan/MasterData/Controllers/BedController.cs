@@ -519,5 +519,232 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
             });
         }
+
+
+        [HttpGet("pagedBedInformation")]
+        public async Task<IActionResult> PagedGetAllBed(
+            int page = 1,
+            int perPage = 10,
+            Guid? bedId = null,
+            Guid? kamarId = null,
+            Guid? kelasId = null,
+            string? search = null,
+            string? namaKamar = null,
+            string? orderBy = "TarifHarian",
+            string? sortDirection = "desc",
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")] DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null,
+            CancellationToken ct = default)
+        {
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
+            if (perPage > 100) perPage = 100;
+
+            // =========================
+            // 1) BASE QUERY + LEFT JOIN yang benar
+            // =========================
+            var query =
+                from a in _applicationDbContext.Beds.AsNoTracking()
+                where a.IsDelete != true
+
+                join u0 in _applicationDbContext.UserActives.AsNoTracking()
+                    on a.CreateBy equals u0.UserActiveId into uJoin
+                from u in uJoin.DefaultIfEmpty()
+
+                join k0 in _applicationDbContext.Kamars.AsNoTracking()
+                    on a.KamarId equals k0.KamarId into kJoin
+                from k in kJoin.DefaultIfEmpty()
+
+                join kl0 in _applicationDbContext.Kelass.AsNoTracking()
+                    on k.KelasId equals kl0.KelasId into klJoin
+                from kl in klJoin.DefaultIfEmpty()
+
+                select new
+                {
+                    a.CreateDateTime,
+                    a.CreateBy,
+                    CreateByName = u != null ? u.FullName : null,
+
+                    a.BedId,
+                    a.NomorBed,
+                    a.PosisiBed,
+                    a.Status,
+                    a.Deskripsi,
+
+                    a.KamarId,
+                    NamaKamar = k != null ? k.NamaKamar : null,
+                    Lantai = k != null ? k.Lantai : null,
+                    PosisiKamar = k != null ? k.PosisiRuangan : null,
+                    KodeKamar = k != null ? k.KodeKamar : null,
+
+                    // penting: bikin nullable supaya aman kalau k null
+                    TarifHarian = k != null ? (decimal?)k.TarifHarian : null,
+                    DeskripsiKamar = k != null ? k.Deskripsi : null,
+
+                    // penting: bikin nullable supaya aman kalau kl null
+                    KelasId = kl != null ? (Guid?)kl.KelasId : null,
+                    NamaKelas = kl != null ? kl.NamaKelas : null,
+                    KodeKelas = kl != null ? kl.KodeKelas : null,
+                    DeskripsiKelas = kl != null ? kl.DeskripsiKelas : null,
+                };
+
+            // =========================
+            // 2) FILTERS
+            // =========================
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var like = $"%{search.Trim()}%";
+                query = query.Where(x =>
+                    (x.NamaKelas != null && EF.Functions.ILike(x.NamaKelas, like)) ||
+                    (x.NamaKamar != null && EF.Functions.ILike(x.NamaKamar, like))
+                );
+            }
+
+            if (!string.IsNullOrWhiteSpace(namaKamar))
+            {
+                var like = $"%{namaKamar.Trim()}%";
+                query = query.Where(x => x.NamaKamar != null && EF.Functions.ILike(x.NamaKamar, like));
+            }
+
+            if (bedId.HasValue && bedId.Value != Guid.Empty)
+                query = query.Where(x => x.BedId == bedId.Value);
+
+            if (kamarId.HasValue && kamarId.Value != Guid.Empty)
+                query = query.Where(x => x.KamarId == kamarId.Value);
+
+            if (kelasId.HasValue && kelasId.Value != Guid.Empty)
+                query = query.Where(x => x.KelasId.HasValue && x.KelasId.Value == kelasId.Value);
+
+            // Date range (sargable)
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                var start = startDate.Value.Date.ToUniversalTime();
+                var endExclusive = endDate.Value.Date.AddDays(1).ToUniversalTime();
+
+                DateTimeOffset startOff = new DateTimeOffset(start, TimeSpan.Zero);
+                DateTimeOffset endOff = new DateTimeOffset(endExclusive, TimeSpan.Zero);
+
+                query = query.Where(x => x.CreateDateTime >= startOff && x.CreateDateTime < endOff);
+            }
+
+            // Periode (pakai range, bukan .Date ==)
+            if (periode.HasValue)
+            {
+                var today = DateTime.UtcNow.Date;
+                DateTime start;
+                DateTime endExclusive;
+
+                switch (periode.Value)
+                {
+                    case PeriodeFilter.Today:
+                        start = today;
+                        endExclusive = today.AddDays(1);
+                        break;
+
+                    case PeriodeFilter.Yesterday:
+                        start = today.AddDays(-1);
+                        endExclusive = today;
+                        break;
+
+                    case PeriodeFilter.ThisWeek:
+                        start = today.AddDays(-(int)today.DayOfWeek);
+                        endExclusive = today.AddDays(1);
+                        break;
+
+                    case PeriodeFilter.LastWeek:
+                        var thisWeekStart = today.AddDays(-(int)today.DayOfWeek);
+                        start = thisWeekStart.AddDays(-7);
+                        endExclusive = thisWeekStart;
+                        break;
+
+                    case PeriodeFilter.ThisMonth:
+                        start = new DateTime(today.Year, today.Month, 1);
+                        endExclusive = start.AddMonths(1);
+                        break;
+
+                    case PeriodeFilter.LastMonth:
+                        var thisMonthStart = new DateTime(today.Year, today.Month, 1);
+                        start = thisMonthStart.AddMonths(-1);
+                        endExclusive = thisMonthStart;
+                        break;
+
+                    case PeriodeFilter.ThisYear:
+                        start = new DateTime(today.Year, 1, 1);
+                        endExclusive = start.AddYears(1);
+                        break;
+
+                    case PeriodeFilter.LastYear:
+                        start = new DateTime(today.Year - 1, 1, 1);
+                        endExclusive = start.AddYears(1);
+                        break;
+
+                    case PeriodeFilter.Last3Months:
+                        start = today.AddMonths(-3);
+                        endExclusive = today.AddDays(1);
+                        break;
+
+                    case PeriodeFilter.Last6Months:
+                        start = today.AddMonths(-6);
+                        endExclusive = today.AddDays(1);
+                        break;
+
+                    default:
+                        start = DateTime.MinValue;
+                        endExclusive = DateTime.MaxValue;
+                        break;
+                }
+
+                var startOff = new DateTimeOffset(start, TimeSpan.Zero);
+                var endOff = new DateTimeOffset(endExclusive, TimeSpan.Zero);
+
+                query = query.Where(x => x.CreateDateTime >= startOff && x.CreateDateTime < endOff);
+            }
+
+            // =========================
+            // 3) SORT
+            // =========================
+            bool desc = string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase);
+
+            query = desc
+                ? (orderBy == "TarifHarian"
+                    ? query.OrderByDescending(x => x.TarifHarian)
+                    : query.OrderByDescending(x => x.CreateDateTime))
+                : (orderBy == "TarifHarian"
+                    ? query.OrderBy(x => x.TarifHarian)
+                    : query.OrderBy(x => x.CreateDateTime));
+
+            // =========================
+            // 4) PAGING (async)
+            // =========================
+            var totalRows = await query.CountAsync(ct);
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            if (totalRows == 0)
+                return NotFound(new { message = "Data tidak ditemukan." });
+
+            if (page > totalPages)
+                return NotFound(new { message = "Page not found." });
+
+            var rows = await query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToListAsync(ct);
+
+            return Ok(new
+            {
+                status = "success",
+                message = "Data retrieved successfully",
+                data = new
+                {
+                    Rows = rows,
+                    TotalRows = totalRows,
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalPages = totalPages
+                }
+            });
+        }
+
     }
 }

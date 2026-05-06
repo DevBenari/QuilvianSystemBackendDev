@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Diagnostics;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
@@ -112,6 +113,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         CreateByName = u.FullName,
                         a.SOAPID,
                         a.KunjunganId,
+                        k.JenisKunjungan,
                         PasienId = k.PasienId,
                         a.Subjective,
                         a.Objective,
@@ -122,7 +124,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.Evaluasi,
                         a.Intervensi,
                         a.Reevaluasi,
-                        a.Profesi,
+                        NamaProfesi = string.Equals(a.Profesi, "null", StringComparison.OrdinalIgnoreCase)
+                            ? null
+                            : a.Profesi,
                         NamaDokter = d.NmDokter,
                         DokterId = d.DokterId,
                         NamaPasien = p.NamaLengkap
@@ -192,6 +196,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.CreateByName,
                             a.SOAPID,
                             a.KunjunganId,
+                            a.JenisKunjungan,
                             a.PasienId,
                             a.Subjective,
                             a.Objective,
@@ -204,7 +209,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.Evaluasi,
                             a.Intervensi,
                             a.Reevaluasi,
-                            a.Profesi,
+                            NamaProfesi = string.Equals(a.NamaProfesi, "null", StringComparison.OrdinalIgnoreCase)
+                            ? null
+                            : a.NamaProfesi,
                             a.NamaDokter,
                             a.DokterId,
                             a.NamaPasien
@@ -414,6 +421,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         CreateByName = u.FullName,
                         a.SOAPID,
                         a.KunjunganId,
+                        k.JenisKunjungan,
                         PasienId = k.PasienId,
                         a.Subjective,
                         a.Objective,
@@ -424,7 +432,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.Evaluasi,
                         a.Intervensi,
                         a.Reevaluasi,
-                        a.Profesi,
+                        NamaProfesi = string.Equals(a.Profesi, "null", StringComparison.OrdinalIgnoreCase)
+                            ? null
+                            : a.Profesi,
                         NamaDokter = d.NmDokter,
                         DokterId = d.DokterId,
                         NamaPasien = p.NamaLengkap
@@ -475,6 +485,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     data.CreateByName,
                     data.SOAPID,
                     data.KunjunganId,
+                    data.JenisKunjungan,
                     data.PasienId,
                     data.Subjective,
                     data.Objective,
@@ -487,7 +498,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     data.Evaluasi,
                     data.Intervensi,
                     data.Reevaluasi,
-                    data.Profesi,
+                    data.NamaProfesi,
                     data.NamaDokter,
                     data.DokterId,
                     data.NamaPasien
@@ -646,35 +657,60 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 // =========================
                 // 2) Query utama: AMBIL SEMUA RECORD (by kunjungan)
                 // =========================
-                var dataList = await (
-                    from a in _applicationDbContext.SOAPs
-                    join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId
-                    join k in _applicationDbContext.Kunjungans on a.KunjunganId equals k.KunjunganID
-                    join d in _applicationDbContext.Dokters on k.DokterId equals d.DokterId
-                    join p in _applicationDbContext.PendaftaranPasienBarus on k.PasienId equals p.PendaftaranPasienBaruId
-                    where a.IsDelete == false && a.KunjunganId == kunjunganid
-                    select new
-                    {
-                        a.CreateDateTime,
-                        a.CreateBy,
-                        CreateByName = u.FullName,
-                        a.SOAPID,
-                        a.KunjunganId,
-                        PasienId = k.PasienId,
-                        a.Subjective,
-                        a.Objective,
-                        a.DaftarICD10, // CSV
-                        a.DaftarSDKI,  // CSV
-                        a.Assessment,
-                        a.Planning,
-                        a.Evaluasi,
-                        a.Intervensi,
-                        a.Reevaluasi,
-                        a.Profesi,
-                        NamaDokter = d.NmDokter,
-                        DokterId = d.DokterId,
-                        NamaPasien = p.NamaLengkap
-                    })
+                var dataList = await (from a in _applicationDbContext.SOAPs
+
+                                   // Kunjungan biasanya wajib → boleh tetap inner join
+                               join k in _applicationDbContext.Kunjungans
+                                   on a.KunjunganId equals k.KunjunganID
+
+                               // LEFT JOIN UserActives
+                               join u0 in _applicationDbContext.UserActives
+                                   on a.CreateBy equals u0.UserActiveId into uu
+                               from u in uu.DefaultIfEmpty()
+
+                                   // LEFT JOIN Dokters (karena bisa null/tidak ketemu)
+                               join d0 in _applicationDbContext.Dokters
+                                   on k.DokterId equals d0.DokterId into dd
+                               from d in dd.DefaultIfEmpty()
+
+                                   // LEFT JOIN PendaftaranPasienBarus (bisa null/tidak ketemu)
+                               join p0 in _applicationDbContext.PendaftaranPasienBarus
+                                   on k.PasienId equals p0.PendaftaranPasienBaruId into pp
+                               from p in pp.DefaultIfEmpty()
+
+                                   // penting: kalau IsDelete nullable, gunakan != true
+                               where a.IsDelete != true && a.KunjunganId == kunjunganid
+
+                               select new
+                               {
+                                   a.CreateDateTime,
+                                   a.CreateBy,
+                                   CreateByName = u != null ? u.FullName : null,
+
+                                   a.SOAPID,
+                                   a.KunjunganId,
+                                   k.JenisKunjungan,
+                                   PasienId = k.PasienId,
+
+                                   a.Subjective,
+                                   a.Objective,
+                                   a.DaftarICD10,
+                                   a.DaftarSDKI,
+                                   a.Assessment,
+                                   a.Planning,
+                                   a.Evaluasi,
+                                   a.Intervensi,
+                                   a.Reevaluasi,
+
+                                   NamaProfesi = string.Equals(a.Profesi, "null", StringComparison.OrdinalIgnoreCase)
+                                       ? null
+                                       : a.Profesi,
+
+                                   NamaDokter = d != null ? d.NmDokter : null,
+                                   DokterId = d != null ? d.DokterId : (Guid?)null,
+
+                                   NamaPasien = p != null ? p.NamaLengkap : null
+                               })
                     .AsNoTracking()
                     .OrderByDescending(x => x.CreateDateTime)
                     .ToListAsync();
@@ -724,6 +760,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         data.CreateByName,
                         data.SOAPID,
                         data.KunjunganId,
+                        data.JenisKunjungan,
                         data.PasienId,
                         data.Subjective,
                         data.Objective,
@@ -736,7 +773,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         data.Evaluasi,
                         data.Intervensi,
                         data.Reevaluasi,
-                        data.Profesi,
+                        data.NamaProfesi,
                         data.NamaDokter,
                         data.DokterId,
                         data.NamaPasien
@@ -808,20 +845,36 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 // 2) Query utama: AMBIL SEMUA RECORD utk pasien tsb
                 // =========================
                 var dataList = await (
-                    from a in _applicationDbContext.SOAPs
-                    join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId
-                    join k in _applicationDbContext.Kunjungans on a.KunjunganId equals k.KunjunganID
-                    join d in _applicationDbContext.Dokters on k.DokterId equals d.DokterId
-                    join p in _applicationDbContext.PendaftaranPasienBarus on k.PasienId equals p.PendaftaranPasienBaruId
-                    where a.IsDelete == false && k.PasienId == pasienid
+                     from a in _applicationDbContext.SOAPs
+
+                         // Kunjungan biasanya wajib → boleh tetap inner join
+                     join k in _applicationDbContext.Kunjungans.AsNoTracking()
+                         on a.KunjunganId equals k.KunjunganID
+
+                     // LEFT JOIN UserActives
+                     join u0 in _applicationDbContext.UserActives.AsNoTracking()
+                         on a.CreateBy equals u0.UserActiveId into uu
+                     from u in uu.DefaultIfEmpty()
+
+                         // LEFT JOIN Dokters (karena bisa null/tidak ketemu)
+                     join d0 in _applicationDbContext.Dokters.AsNoTracking()
+                         on k.DokterId equals d0.DokterId into dd
+                     from d in dd.DefaultIfEmpty()
+
+                         // LEFT JOIN PendaftaranPasienBarus (bisa null/tidak ketemu)
+                     join p0 in _applicationDbContext.PendaftaranPasienBarus.AsNoTracking()
+                         on k.PasienId equals p0.PendaftaranPasienBaruId into pp
+                     from p in pp.DefaultIfEmpty()
+                        where a.IsDelete == false && k.PasienId == pasienid
                     select new
                     {
                         a.CreateDateTime,
                         a.CreateBy,
-                        CreateByName = u.FullName,
+                        CreateByName = u != null ? u.FullName : null,
                         a.SOAPID,
                         a.KunjunganId,
                         PasienId = k.PasienId,
+                        k.JenisKunjungan,
                         a.Subjective,
                         a.Objective,
                         a.DaftarICD10, // CSV
@@ -831,10 +884,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.Evaluasi,
                         a.Intervensi,
                         a.Reevaluasi,
-                        a.Profesi,
-                        NamaDokter = d.NmDokter,
-                        DokterId = d.DokterId,
-                        NamaPasien = p.NamaLengkap
+                        NamaProfesi = string.Equals(a.Profesi, "null", StringComparison.OrdinalIgnoreCase)
+                            ? null
+                            : a.Profesi,
+                        NamaDokter = d != null ? d.NmDokter : null,
+                        DokterId = d != null ? (Guid?)d.DokterId : null,   // <<< kunci perbaikan
+                        NamaPasien = p != null ? p.NamaLengkap : null
                     })
                     .AsNoTracking()
                     .OrderByDescending(x => x.CreateDateTime) // urut terbaru dulu
@@ -886,6 +941,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         data.SOAPID,
                         data.KunjunganId,
                         data.PasienId,
+                        data.JenisKunjungan,
                         data.Subjective,
                         data.Objective,
                         DaftarICD10 = icdCodes,
@@ -897,7 +953,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         data.Evaluasi,
                         data.Intervensi,
                         data.Reevaluasi,
-                        data.Profesi,
+                        data.NamaProfesi,
                         data.NamaDokter,
                         data.DokterId,
                         data.NamaPasien
@@ -918,6 +974,186 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             catch (Exception ex)
             {
                 // TODO: log ex
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    message = "Terjadi kesalahan tak terduga.",
+                    error = ex.Message
+                });
+            }
+        }
+        
+        [HttpGet("kunjungan/{kunjunganId}/dokter/{dokterId}")]
+        public async Task<IActionResult> GetAllByKunjunganIdAndDokterId(Guid kunjunganId, Guid dokterId, string namaProfesi)
+        {
+            try
+            {
+                // =========================
+                // 1️⃣ Ambil & rapikan kamus ICD dan SDKI (menghindari duplikat)
+                // =========================
+                var icdRows = await _applicationDbContext.ICD10s
+                    .AsNoTracking()
+                    .Select(x => new { x.ICDCode, x.ICDName })
+                    .ToListAsync();
+
+                var icdDict = icdRows
+                    .Where(x => !string.IsNullOrWhiteSpace(x.ICDCode))
+                    .Select(x => new { Code = x.ICDCode.Trim(), x.ICDName })
+                    .GroupBy(x => x.Code, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(
+                        g => g.Key,
+                        g => g.First().ICDName,
+                        StringComparer.OrdinalIgnoreCase
+                    );
+
+                var sdkiRows = await _applicationDbContext.SDKIDiagnosas
+                    .AsNoTracking()
+                    .Select(x => new { x.SDKIKodeDiagnosa, x.NamaDiagnosa })
+                    .ToListAsync();
+
+                var sdkiDict = sdkiRows
+                    .Where(x => !string.IsNullOrWhiteSpace(x.SDKIKodeDiagnosa))
+                    .Select(x => new { Code = x.SDKIKodeDiagnosa.Trim(), x.NamaDiagnosa })
+                    .GroupBy(x => x.Code, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(
+                        g => g.Key,
+                        g => g.First().NamaDiagnosa,
+                        StringComparer.OrdinalIgnoreCase
+                    );
+
+                // =========================
+                // 2️⃣ Query utama: filter by kunjunganId & dokterId
+                // =========================
+                var dataList = await (
+                     from a in _applicationDbContext.SOAPs
+
+                         // Kunjungan biasanya wajib → boleh tetap inner join
+                     join k in _applicationDbContext.Kunjungans
+                         on a.KunjunganId equals k.KunjunganID
+
+                     // LEFT JOIN UserActives
+                     join u0 in _applicationDbContext.UserActives
+                         on a.CreateBy equals u0.UserActiveId into uu
+                     from u in uu.DefaultIfEmpty()
+
+                         // LEFT JOIN Dokters (karena bisa null/tidak ketemu)
+                     join d0 in _applicationDbContext.Dokters
+                         on k.DokterId equals d0.DokterId into dd
+                     from d in dd.DefaultIfEmpty()
+
+                         // LEFT JOIN PendaftaranPasienBarus (bisa null/tidak ketemu)
+                     join p0 in _applicationDbContext.PendaftaranPasienBarus
+                         on k.PasienId equals p0.PendaftaranPasienBaruId into pp
+                     from p in pp.DefaultIfEmpty()
+                     where a.IsDelete == false
+                          && a.KunjunganId == kunjunganId
+                          && d.DokterId == dokterId
+                          && a.Profesi == namaProfesi
+                    select new
+                    {
+                        a.CreateDateTime,
+                        a.CreateBy,
+                        CreateByName = u.FullName,
+                        a.SOAPID,
+                        a.KunjunganId,
+                        PasienId = k.PasienId,
+                        k.JenisKunjungan,
+                        a.Subjective,
+                        a.Objective,
+                        a.DaftarICD10, // CSV
+                        a.DaftarSDKI,  // CSV
+                        a.Assessment,
+                        a.Planning,
+                        a.Evaluasi,
+                        a.Intervensi,
+                        a.Reevaluasi,
+                        NamaProfesi = string.Equals(a.Profesi, "null", StringComparison.OrdinalIgnoreCase)
+                            ? null
+                            : a.Profesi,
+                        NamaDokter = d.NmDokter,
+                        DokterId = d.DokterId,
+                        NamaPasien = p.NamaLengkap
+                    })
+                    .AsNoTracking()
+                    .OrderByDescending(x => x.CreateDateTime)
+                    .ToListAsync();
+
+                if (dataList.Count == 0)
+                {
+                    return NotFound(new { message = $"Data SOAP dengan KunjunganId {kunjunganId} dan DokterId {dokterId} tidak ditemukan. || 404 Not Found" });
+                }
+
+                // =========================
+                // 3️⃣ Parse ICD & SDKI menjadi list nama
+                // =========================
+                var result = dataList.Select(data =>
+                {
+                    // ICD
+                    var icdCodes = (data.DaftarICD10 ?? string.Empty)
+                        .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(s => s.Trim())
+                        .Where(s => !string.IsNullOrWhiteSpace(s))
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToList();
+
+                    var icdNames = icdCodes
+                        .Select(code => icdDict.TryGetValue(code, out var nama)
+                            ? nama
+                            : $"(Kode tidak ditemukan: {code})")
+                        .ToList();
+
+                    // SDKI
+                    var sdkiCodes = (data.DaftarSDKI ?? string.Empty)
+                        .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(s => s.Trim())
+                        .Where(s => !string.IsNullOrWhiteSpace(s))
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToList();
+
+                    var sdkiNames = sdkiCodes
+                        .Select(code => sdkiDict.TryGetValue(code, out var nama)
+                            ? nama
+                            : $"(Kode tidak ditemukan: {code})")
+                        .ToList();
+
+                    return new
+                    {
+                        data.CreateDateTime,
+                        data.CreateBy,
+                        data.CreateByName,
+                        data.SOAPID,
+                        data.KunjunganId,
+                        data.PasienId,
+                        data.JenisKunjungan,
+                        data.Subjective,
+                        data.Objective,
+                        DaftarICD10 = icdCodes,
+                        NamaICD = icdNames,
+                        DaftarSDKI = sdkiCodes,
+                        NamaSDKI = sdkiNames,
+                        data.Assessment,
+                        data.Planning,
+                        data.Evaluasi,
+                        data.Intervensi,
+                        data.Reevaluasi,
+                        data.NamaProfesi,
+                        data.NamaDokter,
+                        data.DokterId,
+                        data.NamaPasien
+                    };
+                }).ToList();
+
+                // =========================
+                // 4️⃣ Return hasil
+                // =========================
+                return Ok(new
+                {
+                    message = "Berhasil || 200 OK",
+                    count = result.Count,
+                    data = result
+                });
+            }
+            catch (Exception ex)
+            {
                 return StatusCode(StatusCodes.Status500InternalServerError, new
                 {
                     message = "Terjadi kesalahan tak terduga.",
@@ -1414,7 +1650,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         public async Task<IActionResult> PagedSOAP(
         int page = 1,
         int perPage = 10,
-        Guid? search = null,                         // pasienId
+        Guid? search = null,                       
+        Guid? kunjunganId = null,
+        Guid? dokterId = null,
+        Guid? CreateById = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -1424,29 +1663,47 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null
         )
         {
-            if (!search.HasValue)
-                return BadRequest(new { message = "PasienId (search) is required." });
 
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
+
             // --- Base query: WAJIB filter pasien di sini ---
             var query =
                 from a in _applicationDbContext.SOAPs
-                join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId
-                join k in _applicationDbContext.Kunjungans on a.KunjunganId equals k.KunjunganID
-                join d in _applicationDbContext.Dokters on k.DokterId equals d.DokterId
-                join p in _applicationDbContext.PendaftaranPasienBarus on k.PasienId equals p.PendaftaranPasienBaruId
-                where a.IsDelete == false
-                   && k.PasienId == search.Value                    
+
+                    // Kunjungan biasanya wajib → boleh tetap inner join
+                join k in _applicationDbContext.Kunjungans
+                    on a.KunjunganId equals k.KunjunganID
+
+                // LEFT JOIN UserActives
+                join u0 in _applicationDbContext.UserActives
+                    on a.CreateBy equals u0.UserActiveId into uu
+                from u in uu.DefaultIfEmpty()
+
+                    // LEFT JOIN Dokters (karena bisa null/tidak ketemu)
+                join d0 in _applicationDbContext.Dokters
+                    on k.DokterId equals d0.DokterId into dd
+                from d in dd.DefaultIfEmpty()
+
+                    // LEFT JOIN PendaftaranPasienBarus (bisa null/tidak ketemu)
+                join p0 in _applicationDbContext.PendaftaranPasienBarus
+                    on k.PasienId equals p0.PendaftaranPasienBaruId into pp
+                from p in pp.DefaultIfEmpty()
+
+                    // penting: kalau IsDelete nullable, gunakan != true
+                where a.IsDelete != true 
+
                 select new
                 {
                     a.CreateDateTime,
                     a.CreateBy,
-                    CreateByName = u.FullName,
+                    CreateByName = u != null ? u.FullName : null,
+
                     a.SOAPID,
                     a.KunjunganId,
                     PasienId = k.PasienId,
+                    k.JenisKunjungan,
                     a.Subjective,
                     a.Objective,
                     a.DaftarICD10,
@@ -1456,11 +1713,41 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     a.Evaluasi,
                     a.Intervensi,
                     a.Reevaluasi,
-                    a.Profesi,
-                    NamaDokter = d.NmDokter,
-                    DokterId = d.DokterId,
-                    NamaPasien = p.NamaLengkap,
+
+                    NamaProfesi = string.Equals(a.Profesi, "null", StringComparison.OrdinalIgnoreCase)
+                        ? null
+                        : a.Profesi,
+
+                    NamaDokter = d != null ? d.NmDokter : null,
+                    DokterId = d != null ? d.DokterId : (Guid?)null,
+
+                    NamaPasien = p != null ? p.NamaLengkap : null
                 };
+
+
+            // filter berdasarkan pasien id
+            if (search.HasValue)
+            {
+                query = query.Where(u=>u.PasienId == search.Value);
+            }
+
+            // filter based on kunjungan id
+            if (kunjunganId.HasValue)
+            {
+                query = query.Where(u=>u.KunjunganId == kunjunganId.Value);
+            }
+
+            // filter based on dokter id
+            if (dokterId.HasValue) 
+            { 
+                query = query.Where(u=>u.DokterId== dokterId.Value);
+            }
+
+            // filter based on create by id
+            if (CreateById.HasValue)
+            { 
+                query = query.Where(u=>u.CreateBy == CreateById.Value);
+            }
 
             // --- Filter tanggal rentang eksplisit ---
             if (startDate.HasValue && endDate.HasValue)
@@ -1574,6 +1861,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 x.SOAPID,
                 x.KunjunganId,
                 x.PasienId,
+                x.JenisKunjungan,
                 x.Subjective,
                 x.Objective,
                 daftarICD10 = (x.DaftarICD10 ?? string.Empty)
@@ -1587,7 +1875,257 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 x.Evaluasi,
                 x.Intervensi,
                 x.Reevaluasi,
-                x.Profesi,
+                x.NamaProfesi,
+                x.NamaDokter,
+                x.DokterId,
+                x.NamaPasien
+            });
+
+            return Ok(new
+            {
+                status = "success",
+                message = "Data retrieved successfully",
+                data = new
+                {
+                    Rows = rows,
+                    TotalRows = totalRows,
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalPages = totalPages
+                }
+            });
+        }
+
+        [HttpGet("pagedByDokter/{kunjunganid}")]
+        public async Task<IActionResult> PagedSOAPDokter(
+            int page = 1,
+            int perPage = 10,
+            Guid? search = null,
+            Guid? kunjunganid = null,
+            Guid? dokterId = null,
+            Guid? CreateById = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+                    DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+                    DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null
+            )
+        {
+
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
+
+
+            // --- Base query: WAJIB filter pasien di sini ---
+            var query =
+                from a in _applicationDbContext.SOAPs
+
+                    // Kunjungan biasanya wajib → boleh tetap inner join
+                join k in _applicationDbContext.Kunjungans
+                    on a.KunjunganId equals k.KunjunganID
+
+                // LEFT JOIN UserActives
+                join u0 in _applicationDbContext.UserActives
+                    on a.CreateBy equals u0.UserActiveId into uu
+                from u in uu.DefaultIfEmpty()
+
+                    // LEFT JOIN Dokters (karena bisa null/tidak ketemu)
+                join d0 in _applicationDbContext.Dokters
+                    on k.DokterId equals d0.DokterId into dd
+                from d in dd.DefaultIfEmpty()
+
+                    // LEFT JOIN PendaftaranPasienBarus (bisa null/tidak ketemu)
+                join p0 in _applicationDbContext.PendaftaranPasienBarus
+                    on k.PasienId equals p0.PendaftaranPasienBaruId into pp
+                from p in pp.DefaultIfEmpty()
+
+                    // penting: kalau IsDelete nullable, gunakan != true
+                where a.IsDelete != true && a.Profesi.ToLower() == "dokter" && a.KunjunganId == kunjunganid
+
+                select new
+                {
+                    a.CreateDateTime,
+                    a.CreateBy,
+                    CreateByName = u != null ? u.FullName : null,
+
+                    a.SOAPID,
+                    a.KunjunganId,
+                    PasienId = k.PasienId,
+                    k.JenisKunjungan,
+                    a.Subjective,
+                    a.Objective,
+                    a.DaftarICD10,
+                    a.DaftarSDKI,
+                    a.Assessment,
+                    a.Planning,
+                    a.Evaluasi,
+                    a.Intervensi,
+                    a.Reevaluasi,
+
+                    NamaProfesi = string.Equals(a.Profesi, "null", StringComparison.OrdinalIgnoreCase)
+                        ? null
+                        : a.Profesi,
+
+                    NamaDokter = d != null ? d.NmDokter : null,
+                    DokterId = d != null ? d.DokterId : (Guid?)null,
+
+                    NamaPasien = p != null ? p.NamaLengkap : null
+                };
+
+
+            // filter berdasarkan pasien id
+            if (search.HasValue)
+            {
+                query = query.Where(u => u.PasienId == search.Value);
+            }
+
+            // filter based on kunjungan id
+            //if (kunjunganid.HasValue)
+            //{
+            //    query = query.Where(u => u.KunjunganId == kunjunganid.Value);
+            //}
+
+            // filter based on dokter id
+            if (dokterId.HasValue)
+            {
+                query = query.Where(u => u.DokterId == dokterId.Value);
+            }
+
+            // filter based on create by id
+            if (CreateById.HasValue)
+            {
+                query = query.Where(u => u.CreateBy == CreateById.Value);
+            }
+
+            // --- Filter tanggal rentang eksplisit ---
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                // Jadikan rentang [start 00:00:00, end 23:59:59.999...] dalam UTC
+                var startUtc = DateTime.SpecifyKind(startDate.Value.Date, DateTimeKind.Utc);
+                var endUtc = DateTime.SpecifyKind(endDate.Value.Date.AddDays(1).AddTicks(-1), DateTimeKind.Utc);
+
+                query = query.Where(u => u.CreateDateTime >= startUtc && u.CreateDateTime <= endUtc);
+            }
+
+            // --- Filter periode relatif ---
+            if (periode.HasValue)
+            {
+                var todayUtc = DateTime.UtcNow.Date;
+
+                switch (periode)
+                {
+                    case PeriodeFilter.Today:
+                        query = query.Where(u => u.CreateDateTime.Date == todayUtc);
+                        break;
+
+                    case PeriodeFilter.ThisWeek:
+                        // Minggu ini (Mulai Minggu s/d hari ini)
+                        var startOfWeek = todayUtc.AddDays(-((int)todayUtc.DayOfWeek));
+                        query = query.Where(u => u.CreateDateTime.Date >= startOfWeek && u.CreateDateTime.Date <= todayUtc);
+                        break;
+
+                    case PeriodeFilter.LastWeek:
+                        var startOfThisWeek = todayUtc.AddDays(-((int)todayUtc.DayOfWeek));
+                        var startOfLastWeek = startOfThisWeek.AddDays(-7);
+                        query = query.Where(u => u.CreateDateTime.Date >= startOfLastWeek && u.CreateDateTime.Date < startOfThisWeek);
+                        break;
+
+                    case PeriodeFilter.ThisMonth:
+                        query = query.Where(u => u.CreateDateTime.Month == todayUtc.Month && u.CreateDateTime.Year == todayUtc.Year);
+                        break;
+
+                    case PeriodeFilter.LastMonth:
+                        var lastMonthDate = todayUtc.AddMonths(-1);
+                        query = query.Where(u => u.CreateDateTime.Month == lastMonthDate.Month && u.CreateDateTime.Year == lastMonthDate.Year);
+                        break;
+
+                    case PeriodeFilter.ThisYear:
+                        query = query.Where(u => u.CreateDateTime.Year == todayUtc.Year);
+                        break;
+
+                    case PeriodeFilter.LastYear:
+                        query = query.Where(u => u.CreateDateTime.Year == todayUtc.Year - 1);
+                        break;
+
+                    case PeriodeFilter.Last3Months:
+                        query = query.Where(u => u.CreateDateTime >= todayUtc.AddMonths(-3));
+                        break;
+
+                    case PeriodeFilter.Last6Months:
+                        query = query.Where(u => u.CreateDateTime >= todayUtc.AddMonths(-6));
+                        break;
+                }
+            }
+
+            // --- Sorting ---
+            bool desc = string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase);
+            query = desc
+                ? orderBy switch
+                {
+                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
+                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
+                    "Subjective" => query.OrderByDescending(u => u.Subjective),
+                    "Objective" => query.OrderByDescending(u => u.Objective),
+                    "Assessment" => query.OrderByDescending(u => u.Assessment),
+                    "Planning" => query.OrderByDescending(u => u.Planning),
+                    _ => query.OrderByDescending(u => u.CreateDateTime)
+                }
+                : orderBy switch
+                {
+                    "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
+                    "CreateByName" => query.OrderBy(u => u.CreateByName),
+                    "Subjective" => query.OrderBy(u => u.Subjective),
+                    "Objective" => query.OrderBy(u => u.Objective),
+                    "Assessment" => query.OrderBy(u => u.Assessment),
+                    "Planning" => query.OrderBy(u => u.Planning),
+                    _ => query.OrderBy(u => u.CreateDateTime)
+                };
+
+            // --- Paging ---
+            var totalRows = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            if (totalRows == 0)
+            {
+                return NotFound(new { message = "Data untuk pasien ini tidak ditemukan." });
+            }
+            if (page > totalPages)
+            {
+                return NotFound(new { message = "Page not found." });
+            }
+
+            // Ambil halaman
+            var pageRows = await query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToListAsync();
+
+            // --- (Opsional) Ubah CSV ICD menjadi List<string> setelah materialize ---
+            var rows = pageRows.Select(x => new
+            {
+                x.CreateDateTime,
+                x.CreateBy,
+                x.CreateByName,
+                x.SOAPID,
+                x.KunjunganId,
+                x.PasienId,
+                x.JenisKunjungan,
+                x.Subjective,
+                x.Objective,
+                daftarICD10 = (x.DaftarICD10 ?? string.Empty)
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s => s.Trim())
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList(),
+                x.Assessment,
+                x.Planning,
+                x.Evaluasi,
+                x.Intervensi,
+                x.Reevaluasi,
+                x.NamaProfesi,
                 x.NamaDokter,
                 x.DokterId,
                 x.NamaPasien
@@ -1609,176 +2147,250 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
 
-        //[HttpGet("paged")]
-        //public async Task<IActionResult> PagedSOAP(
-        //    int page = 1,
-        //    int perPage = 10,
-        //    Guid? search = null,
-        //    string? orderBy = "CreateDateTime",
-        //    string? sortDirection = "desc",
-        //    [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-        //    DateTime? startDate = null,
-        //    [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-        //    DateTime? endDate = null,
-        //    [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null
-        //)
-        //{
-        //    if (!search.HasValue)
-        //    {
-        //        return BadRequest(new { message = "PasienId (search) is required." });
-        //    }
+        [HttpGet("pagedByPerawat/{kunjunganid}")]
+        public async Task<IActionResult> PagedSOAPPerawat(
+            int page = 1,
+            int perPage = 10,
+            Guid? search = null,
+            Guid? kunjunganid = null,
+            Guid? perawatId = null,
+            Guid? CreateById = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+                            DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+                            DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null
+            )
+        {
 
-        //    // Cari Kunjungan berdasarkan PasienId
-        //    var kunjungan = await _applicationDbContext.Kunjungans
-        //        .FirstOrDefaultAsync(k => k.PasienId == search);
-
-        //    if (kunjungan == null)
-        //    {
-        //        return NotFound(new { message = "Kunjungan untuk pasien ini tidak ditemukan." });
-        //    }
-
-        //    // Query data SOAP berdasarkan KunjunganId yang ditemukan
-        //    var query = (from a in _applicationDbContext.SOAPs
-        //                 join u in _applicationDbContext.UserActives
-        //                     on a.CreateBy equals u.UserActiveId
-        //                 join k in _applicationDbContext.Kunjungans
-        //                     on a.KunjunganId equals k.KunjunganID
-        //                join d in _applicationDbContext.Dokters
-        //                     on k.DokterId equals d.DokterId
-        //                 join p in _applicationDbContext.PendaftaranPasienBarus
-        //                        on k.PasienId equals p.PendaftaranPasienBaruId
-        //                 where a.IsDelete == false
-        //                 select new
-        //                 {
-        //                     CreateDateTime = a.CreateDateTime,
-        //                     CreateBy = a.CreateBy,
-        //                     CreateByName = u.FullName,
-        //                     SOAPID = a.SOAPID,
-        //                     KunjunganId = a.KunjunganId,
-        //                     PasienId = k.PasienId, // Tambahan ini
-        //                     Subjective = a.Subjective,
-        //                     Objective = a.Objective,
-        //                     DaftarICD10 = (a.DaftarICD10 ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
-        //                     Assessment = a.Assessment,
-        //                     Planning = a.Planning,
-        //                     Evaluasi = a.Evaluasi,
-        //                     Intervensi = a.Intervensi,
-        //                     Reevaluasi = a.Reevaluasi,
-        //                     Profesi = a.Profesi,
-        //                     NamaDokter = d.NmDokter,
-        //                     DokterId = d.DokterId, // Tambahan ini untuk mendapatkan DokterId
-        //                     NamaPasien = p.NamaLengkap, // Tambahan ini untuk mendapatkan Nama Pasien
-        //                 });
-
-        //    // **Filter berdasarkan tanggal**
-        //    if (startDate.HasValue && endDate.HasValue)
-        //    {
-        //        DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
-        //        DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
-
-        //        query = query.Where(u =>
-        //            u.CreateDateTime >= startUtc &&
-        //            u.CreateDateTime <= endUtc);
-        //    }
-
-        //    // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll)
-        //    if (periode.HasValue)
-        //    {
-        //        DateTime today = DateTime.UtcNow.Date;
-
-        //        switch (periode)
-        //        {
-        //            case PeriodeFilter.Today:
-        //                query = query.Where(u => u.CreateDateTime.Date == today);
-        //                break;
-        //            case PeriodeFilter.ThisWeek:
-        //                query = query.Where(u =>
-        //                    u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
-        //                    u.CreateDateTime.Date <= today
-        //                );
-        //                break;
-        //            case PeriodeFilter.LastWeek:
-        //                query = query.Where(u =>
-        //                    u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-        //                    u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek))
-        //                );
-        //                break;
-        //            case PeriodeFilter.ThisMonth:
-        //                query = query.Where(u =>
-        //                    u.CreateDateTime.Month == today.Month &&
-        //                    u.CreateDateTime.Year == today.Year
-        //                );
-        //                break;
-        //            case PeriodeFilter.LastMonth:
-        //                query = query.Where(u =>
-        //                    u.CreateDateTime.Month == today.Month - 1 &&
-        //                    u.CreateDateTime.Year == today.Year
-        //                );
-        //                break;
-        //            case PeriodeFilter.ThisYear:
-        //                query = query.Where(u => u.CreateDateTime.Year == today.Year);
-        //                break;
-        //            case PeriodeFilter.LastYear:
-        //                query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
-        //                break;
-        //            case PeriodeFilter.Last3Months:
-        //                query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
-        //                break;
-        //            case PeriodeFilter.Last6Months:
-        //                query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
-        //                break;
-        //        }
-        //    }
-
-        //    // Sorting Data
-        //    query = sortDirection?.ToLower() == "desc"
-        //        ? orderBy switch
-        //        {
-        //            "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
-        //            "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-        //            "Subjective" => query.OrderByDescending(u => u.Subjective),
-        //            "Objective" => query.OrderByDescending(u => u.Objective),
-        //            "Assessment" => query.OrderByDescending(u => u.Assessment),
-        //            "Planning" => query.OrderByDescending(u => u.Planning),
-        //            _ => query.OrderByDescending(u => u.CreateDateTime)
-        //        }
-        //        : orderBy switch
-        //        {
-        //            "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
-        //            "CreateByName" => query.OrderBy(u => u.CreateByName),
-        //            "Subjective" => query.OrderBy(u => u.Subjective),
-        //            "Objective" => query.OrderBy(u => u.Objective),
-        //            "Assessment" => query.OrderBy(u => u.Assessment),
-        //            "Planning" => query.OrderBy(u => u.Planning),
-        //            _ => query.OrderBy(u => u.CreateDateTime)
-        //        };
-
-        //    // Pagination
-        //    var totalRows = await query.CountAsync();
-        //    var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-        //    var rows = await query.Skip((page - 1) * perPage).Take(perPage).ToListAsync();
-
-        //    if (rows.Count == 0 && page > totalPages)
-        //    {
-        //        return NotFound(new { message = "Page not found." });
-        //    }
-
-        //    return Ok(new
-        //    {
-        //        status = "success",
-        //        message = "Data retrieved successfully",
-        //        data = new
-        //        {
-        //            Rows = rows,
-        //            TotalRows = totalRows,
-        //            CurrentPage = page,
-        //            PerPage = perPage,
-        //            TotalPages = totalPages
-        //        }
-        //    });
-        //}
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
 
 
+            // --- Base query: WAJIB filter pasien di sini ---
+            var query =
+                from a in _applicationDbContext.SOAPs
 
+                    // Kunjungan biasanya wajib → boleh tetap inner join
+                join k in _applicationDbContext.Kunjungans
+                    on a.KunjunganId equals k.KunjunganID
+
+                // LEFT JOIN UserActives
+                join u0 in _applicationDbContext.UserActives
+                    on a.CreateBy equals u0.UserActiveId into uu
+                from u in uu.DefaultIfEmpty()
+
+
+                    // LEFT JOIN PendaftaranPasienBarus (bisa null/tidak ketemu)
+                join p0 in _applicationDbContext.PendaftaranPasienBarus
+                    on k.PasienId equals p0.PendaftaranPasienBaruId into pp
+                from p in pp.DefaultIfEmpty()
+
+                    // penting: kalau IsDelete nullable, gunakan != true
+                where a.IsDelete != true && a.Profesi.ToLower() == "perawat" && a.KunjunganId == kunjunganid
+
+                select new
+                {
+                    a.CreateDateTime,
+                    a.CreateBy,
+                    CreateByName = u != null ? u.FullName : null,
+
+                    a.SOAPID,
+                    a.KunjunganId,
+                    PasienId = k.PasienId,
+                    k.JenisKunjungan,
+                    a.Subjective,
+                    a.Objective,
+                    a.DaftarICD10,
+                    a.DaftarSDKI,
+                    a.Assessment,
+                    a.Planning,
+                    a.Evaluasi,
+                    a.Intervensi,
+                    a.Reevaluasi,
+
+                    NamaProfesi = string.Equals(a.Profesi, "null", StringComparison.OrdinalIgnoreCase)
+                        ? null
+                        : a.Profesi,
+
+                    NamaPerawat = u != null ? u.FullName : null,
+                    
+
+                    NamaPasien = p != null ? p.NamaLengkap : null
+                };
+
+
+            // filter berdasarkan pasien id
+            if (search.HasValue)
+            {
+                query = query.Where(u => u.PasienId == search.Value);
+            }
+
+            // filter based on kunjungan id
+            //if (kunjunganid.HasValue)
+            //{
+            //    query = query.Where(u => u.KunjunganId == kunjunganid.Value);
+            //}
+
+            // filter based on dokter id
+            if (perawatId.HasValue)
+            {
+                query = query.Where(u => u.CreateBy == perawatId.Value);
+            }
+
+            // filter based on create by id
+            if (CreateById.HasValue)
+            {
+                query = query.Where(u => u.CreateBy == CreateById.Value);
+            }
+
+            // --- Filter tanggal rentang eksplisit ---
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                // Jadikan rentang [start 00:00:00, end 23:59:59.999...] dalam UTC
+                var startUtc = DateTime.SpecifyKind(startDate.Value.Date, DateTimeKind.Utc);
+                var endUtc = DateTime.SpecifyKind(endDate.Value.Date.AddDays(1).AddTicks(-1), DateTimeKind.Utc);
+
+                query = query.Where(u => u.CreateDateTime >= startUtc && u.CreateDateTime <= endUtc);
+            }
+
+            // --- Filter periode relatif ---
+            if (periode.HasValue)
+            {
+                var todayUtc = DateTime.UtcNow.Date;
+
+                switch (periode)
+                {
+                    case PeriodeFilter.Today:
+                        query = query.Where(u => u.CreateDateTime.Date == todayUtc);
+                        break;
+
+                    case PeriodeFilter.ThisWeek:
+                        // Minggu ini (Mulai Minggu s/d hari ini)
+                        var startOfWeek = todayUtc.AddDays(-((int)todayUtc.DayOfWeek));
+                        query = query.Where(u => u.CreateDateTime.Date >= startOfWeek && u.CreateDateTime.Date <= todayUtc);
+                        break;
+
+                    case PeriodeFilter.LastWeek:
+                        var startOfThisWeek = todayUtc.AddDays(-((int)todayUtc.DayOfWeek));
+                        var startOfLastWeek = startOfThisWeek.AddDays(-7);
+                        query = query.Where(u => u.CreateDateTime.Date >= startOfLastWeek && u.CreateDateTime.Date < startOfThisWeek);
+                        break;
+
+                    case PeriodeFilter.ThisMonth:
+                        query = query.Where(u => u.CreateDateTime.Month == todayUtc.Month && u.CreateDateTime.Year == todayUtc.Year);
+                        break;
+
+                    case PeriodeFilter.LastMonth:
+                        var lastMonthDate = todayUtc.AddMonths(-1);
+                        query = query.Where(u => u.CreateDateTime.Month == lastMonthDate.Month && u.CreateDateTime.Year == lastMonthDate.Year);
+                        break;
+
+                    case PeriodeFilter.ThisYear:
+                        query = query.Where(u => u.CreateDateTime.Year == todayUtc.Year);
+                        break;
+
+                    case PeriodeFilter.LastYear:
+                        query = query.Where(u => u.CreateDateTime.Year == todayUtc.Year - 1);
+                        break;
+
+                    case PeriodeFilter.Last3Months:
+                        query = query.Where(u => u.CreateDateTime >= todayUtc.AddMonths(-3));
+                        break;
+
+                    case PeriodeFilter.Last6Months:
+                        query = query.Where(u => u.CreateDateTime >= todayUtc.AddMonths(-6));
+                        break;
+                }
+            }
+
+            // --- Sorting ---
+            bool desc = string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase);
+            query = desc
+                ? orderBy switch
+                {
+                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
+                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
+                    "Subjective" => query.OrderByDescending(u => u.Subjective),
+                    "Objective" => query.OrderByDescending(u => u.Objective),
+                    "Assessment" => query.OrderByDescending(u => u.Assessment),
+                    "Planning" => query.OrderByDescending(u => u.Planning),
+                    _ => query.OrderByDescending(u => u.CreateDateTime)
+                }
+                : orderBy switch
+                {
+                    "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
+                    "CreateByName" => query.OrderBy(u => u.CreateByName),
+                    "Subjective" => query.OrderBy(u => u.Subjective),
+                    "Objective" => query.OrderBy(u => u.Objective),
+                    "Assessment" => query.OrderBy(u => u.Assessment),
+                    "Planning" => query.OrderBy(u => u.Planning),
+                    _ => query.OrderBy(u => u.CreateDateTime)
+                };
+
+            // --- Paging ---
+            var totalRows = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            if (totalRows == 0)
+            {
+                return NotFound(new { message = "Data untuk pasien ini tidak ditemukan." });
+            }
+            if (page > totalPages)
+            {
+                return NotFound(new { message = "Page not found." });
+            }
+
+            // Ambil halaman
+            var pageRows = await query
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToListAsync();
+
+            // --- (Opsional) Ubah CSV ICD menjadi List<string> setelah materialize ---
+            var rows = pageRows.Select(x => new
+            {
+                x.CreateDateTime,
+                x.CreateBy,
+                x.CreateByName,
+                x.SOAPID,
+                x.KunjunganId,
+                x.PasienId,
+                x.JenisKunjungan,
+                x.Subjective,
+                x.Objective,
+                daftarICD10 = (x.DaftarICD10 ?? string.Empty)
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s => s.Trim())
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList(),
+                x.Assessment,
+                x.Planning,
+                x.Evaluasi,
+                x.Intervensi,
+                x.Reevaluasi,
+                x.NamaProfesi,
+                x.NamaPerawat,
+                //x.DokterId,
+                x.NamaPasien
+            });
+
+            return Ok(new
+            {
+                status = "success",
+                message = "Data retrieved successfully",
+                data = new
+                {
+                    Rows = rows,
+                    TotalRows = totalRows,
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalPages = totalPages
+                }
+            });
+        }
     }
 }

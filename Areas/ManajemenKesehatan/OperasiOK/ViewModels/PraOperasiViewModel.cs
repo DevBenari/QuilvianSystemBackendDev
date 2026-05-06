@@ -1,4 +1,6 @@
-﻿namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.ViewModels
+﻿using Microsoft.AspNetCore.Mvc;
+
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.ViewModels
 {
     public class PraOperasiViewModel
     {
@@ -28,19 +30,19 @@
         // Relasi ke tabel TTD
         public Guid? TTDPerawatRuanganId { get; set; } //ke-1
 
-        // Path file tanda tangan
-        public string? TTDPerawatRuanganPath { get; set; }
-
         //// Penandaan Operasi
-        public string? PenandaanOperasiBag1 { get; set; }
-        public string? PenandaanOperasiBag2 { get; set; }
+        //public string? PenandaanOperasiBag1 { get; set; }
+        //public string? PenandaanOperasiBag2 { get; set; }
 
         // Tanggal-tanggal penting
         public string? TglCatatan { get; set; }
 
         //// File upload tanda tangan
-        public IFormFile? FileTTDPerawatRuangan { get; set; }
+        //public IFormFile? FileTTDPerawatRuangan { get; set; }
+        [FromForm]
         public IFormFile? FilePenandaanOperasiBag1 { get; set; }
+
+        [FromForm]
         public IFormFile? FilePenandaanOperasiBag2 { get; set; }
     }
 }

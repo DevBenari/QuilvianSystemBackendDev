@@ -70,7 +70,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.TarifLain,
                             a.TarifTotal,
                             a.KSO,
-                            a.PemeriksaanLabId
+                            //a.PemeriksaanLabId,
+                            //a.PeralatanId,
+                            //a.DokterId,
                         }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -157,7 +159,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 bool isDuplicate = _applicationDbContext.TarifKelass
                     .Any(t => t.TindakanId == vm.TindakanId &&
-                              t.KelasId == vm.KelasId);
+                              t.KelasId == vm.KelasId
+                              && t.IsDelete == false);
 
                 if (isDuplicate)
                 {
@@ -183,8 +186,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     TarifBahp = vm.TarifBahp,
                     TarifLain = vm.TarifLain,
                     TarifTotal = total,
+                    KodeLayanan = vm.KodeLayanan,
+                    KategoriTindakan = vm.KategoriTindakan,
                     KSO = vm.KSO,
-                    PemeriksaanLabId = vm.PemeriksaanLabId,
+                    //PemeriksaanLabId = vm.PemeriksaanLabId,
+                    //PeralatanId = vm.PeralatanId,
+                    //DokterId = vm.DokterId,
 
                     // **User Activity**
                     CreateBy = userActiveId,
@@ -255,7 +262,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 // **Update Data**
                 data.TindakanId = vm.TindakanId;
                 data.KelasId = vm.KelasId;
-                data.PemeriksaanLabId = vm.PemeriksaanLabId;
+                //data.PemeriksaanLabId = vm.PemeriksaanLabId;
+                //data.PeralatanId = vm.PeralatanId;
+                data.KodeLayanan = vm.KodeLayanan;
+                data.KategoriTindakan = vm.KategoriTindakan;
                 data.TarifDokter = vm.TarifDokter;
                 data.TarifRs = vm.TarifRs;
                 data.TarifJp = vm.TarifJp;
@@ -267,13 +277,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     (vm.TarifBahp ?? 0) +
                     (vm.TarifLain ?? 0);
                 data.KSO = vm.KSO;
+                //data.DokterId = vm.DokterId;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
                 bool isDuplicate = _applicationDbContext.TarifKelass
                 .Any(t => t.TindakanId == vm.TindakanId &&
-                          t.KelasId == vm.KelasId);
+                          t.KelasId == vm.KelasId
+                          && t.IsDelete == false && t.TarifKelasId != id);
 
                 if (isDuplicate)
                 {
@@ -363,152 +375,267 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-        //[HttpGet("paged")]
-        //public IActionResult PagedTarifTindakan(
-        //int page = 1,
-        //int perPage = 10,
-        //string? search = null,
-        //string? orderBy = "CreateDateTime",
-        //string? sortDirection = "desc",
-        //[FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-        //DateTime? startDate = null,
-        //[FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-        //DateTime? endDate = null,
-        //[FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
-        //{
-        //    // Query data
-        //    var query = from a in _applicationDbContext.TarifKelass
-        //                join u in _applicationDbContext.UserActives
-        //                on a.CreateBy equals u.UserActiveId
-        //                where a.IsDelete == false
-        //                select new
-        //                {
-        //                    CreateDateTime = a.CreateDateTime,
-        //                    CreateBy = a.CreateBy,
-        //                    CreateByName = u.FullName,
-        //                    a.TarifKelasId,
-        //                    a.TindakanId,
-        //                    a.KelasId,
-        //                    a.TarifDokter,
-        //                    a.TarifRs,
-        //                    a.TarifJp,
-        //                    a.TarifBahp,
-        //                    a.TarifLain,
-        //                    a.TarifTotal,
-        //                    a.KSO,
-        //                };
-        //    // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-        //    if (!string.IsNullOrWhiteSpace(search))
-        //    {
-        //        search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-        //        query = query.Where(u =>
-        //            EF.Functions.ILike(u.NamaKelas, search) ||
-        //            EF.Functions.ILike(u.NamaPoliklinik, search)
-        //        );
-        //    }
+        [HttpGet("paged")]
+        public async Task<IActionResult> PagedTarifTindakan(
+            int page = 1,
+            int perPage = 10,
+            string? search = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+    DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+    DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null,
 
-        //    //// **Filter berdasarkan tanggal**
-        //    if (startDate.HasValue && endDate.HasValue)
-        //    {
-        //        DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
-        //        DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+            // ✅ filter spesifik
+            string? namaTindakan = null,
+            string? namaKelas = null,
+            string? namaDokter = null,
+            string? kategori = null,
 
-        //        query = query.Where(u =>
-        //            u.CreateDateTime >= startUtc &&
-        //            u.CreateDateTime <= endUtc);
-        //    }
+            CancellationToken cancellationToken = default
+        )
+        {
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
+            if (perPage > 100) perPage = 100; // biar gak membebani server
 
-        //    // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
-        //    if (periode.HasValue)
-        //    {
-        //        DateTime today = DateTime.UtcNow.Date;
+            // Base query (projection ringan + AsNoTracking)
+            var q =
+                from a in _applicationDbContext.TarifKelass.AsNoTracking()
+                join t in _applicationDbContext.Tindakans.AsNoTracking()
+                    on a.TindakanId equals t.TindakanId
+                join kls in _applicationDbContext.Kelass.AsNoTracking()
+                    on a.KelasId equals kls.KelasId
 
-        //        switch (periode)
-        //        {
-        //            case PeriodeFilter.Today:
-        //                query = query.Where(u => u.CreateDateTime.Date == today);
-        //                break;
-        //            case PeriodeFilter.ThisWeek:
-        //                query = query.Where(u =>
-        //                    u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
-        //                    u.CreateDateTime.Date <= today
-        //                );
-        //                break;
-        //            case PeriodeFilter.LastWeek:
-        //                query = query.Where(u =>
-        //                    u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-        //                    u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek))
-        //                );
-        //                break;
-        //            case PeriodeFilter.ThisMonth:
-        //                query = query.Where(u =>
-        //                    u.CreateDateTime.Month == today.Month &&
-        //                    u.CreateDateTime.Year == today.Year
-        //                );
-        //                break;
-        //            case PeriodeFilter.LastMonth:
-        //                query = query.Where(u =>
-        //                    u.CreateDateTime.Month == today.Month - 1 &&
-        //                    u.CreateDateTime.Year == today.Year
-        //                );
-        //                break;
-        //            case PeriodeFilter.ThisYear:
-        //                query = query.Where(u => u.CreateDateTime.Year == today.Year);
-        //                break;
-        //            case PeriodeFilter.LastYear:
-        //                query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
-        //                break;
-        //            case PeriodeFilter.Last3Months:
-        //                query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
-        //                break;
-        //            case PeriodeFilter.Last6Months:
-        //                query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
-        //                break;
-        //        }
-        //    }
+                // Dokter bisa nullable => LEFT JOIN
+                //join d in _applicationDbContext.Dokters.AsNoTracking()
+                //    on a.DokterId equals d.DokterId into dokterGroup
+                //from d in dokterGroup.DefaultIfEmpty()
 
-        //    // Sorting Data dengan cara yang lebih aman
-        //    query = sortDirection?.ToLower() == "desc"
-        //        ? orderBy switch
-        //        {
-        //            "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
-        //            "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-        //            "NamaKelas" => query.OrderByDescending(u => u.NamaKelas),
-        //            "NamaPoliklinik" => query.OrderByDescending(u => u.NamaPoliklinik),
-        //            _ => query.OrderByDescending(u => u.CreateDateTime)
-        //        }
-        //        : orderBy switch
-        //        {
-        //            "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
-        //            "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-        //            "NamaKelas" => query.OrderByDescending(u => u.NamaKelas),
-        //            "NamaPoliklinik" => query.OrderByDescending(u => u.NamaPoliklinik),
-        //            _ => query.OrderByDescending(u => u.CreateDateTime)
-        //        };
+                    // CreateBy bisa nullable => LEFT JOIN
+                join u in _applicationDbContext.UserActives.AsNoTracking()
+                    on a.CreateBy equals u.UserActiveId into userGroup
+                from u in userGroup.DefaultIfEmpty()
 
-        //    // Pagination
-        //    var totalRows = query.Count();
-        //    var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-        //    var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
+                where a.IsDelete == false
 
-        //    if (rows.Count == 0 && page > totalPages)
-        //    {
-        //        return NotFound(new { message = "Page not found." });
-        //    }
+                select new
+                {
+                    a.CreateDateTime,
+                    a.CreateBy,
+                    CreateByName = u != null ? u.FullName : null,
 
-        //    return Ok(new
-        //    {
-        //        status = "success",
-        //        message = "Data retrieved successfully",
-        //        data = new
-        //        {
-        //            Rows = rows,
-        //            TotalRows = totalRows,
-        //            CurrentPage = page,
-        //            PerPage = perPage,
-        //            TotalPages = totalPages
-        //        }
-        //    });
-        //}
+                    a.TarifKelasId,
+                    a.TindakanId,
+                    a.KelasId,
+                    //a.DokterId,
+
+                    NamaTindakan = t.NamaTindakan,
+                    NamaKelas = kls.NamaKelas,
+                    a.KategoriTindakan,
+                    a.KodeLayanan,
+                    //NamaDokter = d != null ? d.NmDokter : null,
+
+                    a.TarifDokter,
+                    a.TarifRs,
+                    a.TarifJp,
+                    a.TarifBahp,
+                    a.TarifLain,
+                    a.TarifTotal,
+                    a.KSO,
+                };
+
+            // =========================
+            // FILTER: search global (nama tindakan/kelas/dokter)
+            // (1 huruf: prefix search biar lebih ringan daripada %...%)
+            // =========================
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                search = search.Trim().ToLower();
+
+                var pattern = (search.Length <= 1)
+                    ? $"{search}%"
+                    : $"%{search}%";
+
+                q = q.Where(x =>
+                    (x.NamaTindakan != null && EF.Functions.ILike(x.NamaTindakan, pattern)) ||
+                    (x.NamaKelas != null && EF.Functions.ILike(x.NamaKelas, pattern)) 
+                );
+            }
+
+            // =========================
+            // FILTER: spesifik per kolom
+            // =========================
+            if (!string.IsNullOrWhiteSpace(namaTindakan))
+            {
+                var p = $"%{namaTindakan.Trim().ToLower()}%";
+                q = q.Where(x => x.NamaTindakan != null && EF.Functions.ILike(x.NamaTindakan, p));
+            }
+
+            if (!string.IsNullOrWhiteSpace(namaKelas))
+            {
+                var p = $"%{namaKelas.Trim().ToLower()}%";
+                q = q.Where(x => x.NamaKelas != null && EF.Functions.ILike(x.NamaKelas, p));
+            }
+
+            if (!string.IsNullOrWhiteSpace(kategori))
+            {
+                var p = $"%{kategori.Trim().ToLower()}%";
+                q = q.Where(x => x.KategoriTindakan != null && EF.Functions.ILike(x.KategoriTindakan, p));
+            }
+
+            // =========================
+            // FILTER: tanggal range (pakai boundary, jangan .Date)
+            // =========================
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                var start = DateTime.SpecifyKind(startDate.Value.Date, DateTimeKind.Utc);
+                var endExclusive = DateTime.SpecifyKind(endDate.Value.Date.AddDays(1), DateTimeKind.Utc);
+
+                var startUtc = new DateTimeOffset(start);
+                var endUtcExclusive = new DateTimeOffset(endExclusive);
+
+                q = q.Where(x => x.CreateDateTime >= startUtc && x.CreateDateTime < endUtcExclusive);
+            }
+
+            // =========================
+            // FILTER: periode (pakai boundary juga)
+            // =========================
+            if (periode.HasValue)
+            {
+                var todayUtc = DateTime.UtcNow.Date;
+                DateTimeOffset start, endExclusive;
+
+                switch (periode.Value)
+                {
+                    case PeriodeFilter.Today:
+                        start = new DateTimeOffset(todayUtc, TimeSpan.Zero);
+                        endExclusive = new DateTimeOffset(todayUtc.AddDays(1), TimeSpan.Zero);
+                        q = q.Where(x => x.CreateDateTime >= start && x.CreateDateTime < endExclusive);
+                        break;
+
+                    case PeriodeFilter.ThisWeek:
+                        var diff = (int)todayUtc.DayOfWeek; // Sunday=0
+                        var weekStart = todayUtc.AddDays(-diff);
+                        start = new DateTimeOffset(weekStart, TimeSpan.Zero);
+                        endExclusive = new DateTimeOffset(todayUtc.AddDays(1), TimeSpan.Zero);
+                        q = q.Where(x => x.CreateDateTime >= start && x.CreateDateTime < endExclusive);
+                        break;
+
+                    case PeriodeFilter.LastWeek:
+                        var diff2 = (int)todayUtc.DayOfWeek;
+                        var thisWeekStart = todayUtc.AddDays(-diff2);
+                        var lastWeekStart = thisWeekStart.AddDays(-7);
+                        start = new DateTimeOffset(lastWeekStart, TimeSpan.Zero);
+                        endExclusive = new DateTimeOffset(thisWeekStart, TimeSpan.Zero);
+                        q = q.Where(x => x.CreateDateTime >= start && x.CreateDateTime < endExclusive);
+                        break;
+
+                    case PeriodeFilter.ThisMonth:
+                        var monthStart = new DateTime(todayUtc.Year, todayUtc.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+                        start = new DateTimeOffset(monthStart);
+                        endExclusive = new DateTimeOffset(monthStart.AddMonths(1));
+                        q = q.Where(x => x.CreateDateTime >= start && x.CreateDateTime < endExclusive);
+                        break;
+
+                    case PeriodeFilter.LastMonth:
+                        var thisMonthStart = new DateTime(todayUtc.Year, todayUtc.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+                        var lastMonthStart = thisMonthStart.AddMonths(-1);
+                        start = new DateTimeOffset(lastMonthStart);
+                        endExclusive = new DateTimeOffset(thisMonthStart);
+                        q = q.Where(x => x.CreateDateTime >= start && x.CreateDateTime < endExclusive);
+                        break;
+
+                    case PeriodeFilter.ThisYear:
+                        var yearStart = new DateTime(todayUtc.Year, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                        start = new DateTimeOffset(yearStart);
+                        endExclusive = new DateTimeOffset(yearStart.AddYears(1));
+                        q = q.Where(x => x.CreateDateTime >= start && x.CreateDateTime < endExclusive);
+                        break;
+
+                    case PeriodeFilter.LastYear:
+                        var thisYearStart2 = new DateTime(todayUtc.Year, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                        var lastYearStart = thisYearStart2.AddYears(-1);
+                        start = new DateTimeOffset(lastYearStart);
+                        endExclusive = new DateTimeOffset(thisYearStart2);
+                        q = q.Where(x => x.CreateDateTime >= start && x.CreateDateTime < endExclusive);
+                        break;
+
+                    case PeriodeFilter.Last3Months:
+                        start = new DateTimeOffset(todayUtc.AddMonths(-3), TimeSpan.Zero);
+                        endExclusive = new DateTimeOffset(todayUtc.AddDays(1), TimeSpan.Zero);
+                        q = q.Where(x => x.CreateDateTime >= start && x.CreateDateTime < endExclusive);
+                        break;
+
+                    case PeriodeFilter.Last6Months:
+                        start = new DateTimeOffset(todayUtc.AddMonths(-6), TimeSpan.Zero);
+                        endExclusive = new DateTimeOffset(todayUtc.AddDays(1), TimeSpan.Zero);
+                        q = q.Where(x => x.CreateDateTime >= start && x.CreateDateTime < endExclusive);
+                        break;
+                }
+            }
+
+            // =========================
+            // SORTING aman
+            // =========================
+            bool desc = string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase);
+
+            q = (orderBy ?? "CreateDateTime") switch
+            {
+                "CreateByName" => desc ? q.OrderByDescending(x => x.CreateByName) : q.OrderBy(x => x.CreateByName),
+                "NamaTindakan" => desc ? q.OrderByDescending(x => x.NamaTindakan) : q.OrderBy(x => x.NamaTindakan),
+                "NamaKelas" => desc ? q.OrderByDescending(x => x.NamaKelas) : q.OrderBy(x => x.NamaKelas),
+                //"NamaDokter" => desc ? q.OrderByDescending(x => x.NamaDokter) : q.OrderBy(x => x.NamaDokter),
+                _ => desc ? q.OrderByDescending(x => x.CreateDateTime) : q.OrderBy(x => x.CreateDateTime)
+            };
+
+            // =========================
+            // COUNT + PAGE (async)
+            // =========================
+            var totalRows = await q.CountAsync(cancellationToken);
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            if (totalRows == 0)
+            {
+                return Ok(new
+                {
+                    status = "success",
+                    message = "Data retrieved successfully",
+                    data = new
+                    {
+                        Rows = Array.Empty<object>(),
+                        TotalRows = 0,
+                        CurrentPage = page,
+                        PerPage = perPage,
+                        TotalPages = 0
+                    }
+                });
+            }
+
+            if (page > totalPages)
+                return NotFound(new { message = "Page not found." });
+
+            var rows = await q
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToListAsync(cancellationToken);
+
+            return Ok(new
+            {
+                status = "success",
+                message = "Data retrieved successfully",
+                data = new
+                {
+                    Rows = rows,
+                    TotalRows = totalRows,
+                    CurrentPage = page,
+                    PerPage = perPage,
+                    TotalPages = totalPages
+                }
+            });
+        }
+
     }
 }

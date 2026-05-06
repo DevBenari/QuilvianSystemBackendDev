@@ -176,7 +176,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 //// **Cek Duplikasi**
                 bool isDuplicate = await _applicationDbContext.SpecimenJeniss
-                                    .AnyAsync(c => c.NamaJenisSpecimen.ToLower() == vm.NamaJenisSpecimen.ToLower());
+                                    .AnyAsync(c => c.NamaJenisSpecimen.ToLower().Trim()
+                                    == vm.NamaJenisSpecimen.ToLower().Trim() && c.IsDelete == false);
 
                 if (isDuplicate)
                 {
@@ -393,6 +394,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         int page = 1,
         int perPage = 10,
         string? search = null,
+        Guid? asalSpecimenId = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -419,6 +421,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.AsalSpecimenId,
                              a.Keterangan,
                          });
+
+            // filter based on asal speciment id
+            if (asalSpecimenId.HasValue)
+            {
+                query = query.Where(u=>u.AsalSpecimenId == asalSpecimenId.Value);
+            }
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
             if (!string.IsNullOrWhiteSpace(search))

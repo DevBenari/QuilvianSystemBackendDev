@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
@@ -164,7 +165,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // cek duplikasi
                 var isDuplicate = _applicationDbContext.Positions
-                    .Any(c => c.PositionCode == kode && c.PositionName == vm.PositionName);
+                    .Any(c => c.PositionName.ToLower().Trim() == vm.PositionName.ToLower().Trim() && c.IsDelete == false);
 
                 if (isDuplicate)
                 {
@@ -236,6 +237,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
+
+                // Cek duplikasi
+                bool isDuplicate = _applicationDbContext.Positions
+                    .Any(c => c.PositionName.ToLower().Trim() == vm.PositionName.ToLower().Trim()
+                    && c.IsDelete == false && c.PositionId != id);
+
+                if (isDuplicate)
+                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
 
                 // **Update Data**
                 data.PositionName = vm.PositionName;

@@ -60,10 +60,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              CreateBy = a.CreateBy,
                              CreateByName = u.FullName,
                              KonversiSatuanId = a.KonversiSatuanId,
-                             ObatId = a.ObatId,
-                             SatuanId = a.SatuanId,
-                             NamaSatuan = a.NamaSatuan,
-                             TipeKonversi = a.TipeKonversi,
+                             ObatAlkesId = a.ObatAlkesId,
+                             SatuanBesarId = a.SatuanBesarId,
+                             SatuanKecilId = a.SatuanKecilId,
                              NilaiKonversi = a.NilaiKonversi,
                          }).OrderByDescending(a => a.CreateDateTime);
 
@@ -157,10 +156,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var data = new KonversiSatuan
                 {
                     KonversiSatuanId = Guid.NewGuid(),
-                    ObatId = vm.ObatId,
-                    SatuanId = vm.SatuanId,
-                    NamaSatuan = vm.NamaSatuan,
-                    TipeKonversi = vm.TipeKonversi,
+                    ObatAlkesId = vm.ObatAlkesId,
+                    SatuanBesarId = vm.SatuanBesarId,
+                    SatuanKecilId = vm.SatuanKecilId,
                     NilaiKonversi = vm.NilaiKonversi,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
@@ -229,10 +227,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // **Update Data**
-                data.ObatId = vm.ObatId;
-                data.SatuanId = vm.SatuanId;
-                data.NamaSatuan = vm.NamaSatuan;
-                data.TipeKonversi = vm.TipeKonversi;
+                data.ObatAlkesId = vm.ObatAlkesId;
+                data.SatuanBesarId = vm.SatuanBesarId;
+                data.SatuanKecilId = vm.SatuanKecilId;
                 data.NilaiKonversi = vm.NilaiKonversi;
 
                 data.UpdateBy = userActiveId;
@@ -325,7 +322,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         public IActionResult Paged(
         int page = 1,
         int perPage = 10,
-        string? search = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -346,22 +342,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              CreateBy = a.CreateBy,
                              CreateByName = u.FullName,
                              KonversiSatuanId = a.KonversiSatuanId,
-                             ObatId = a.ObatId,
-                             SatuanId = a.SatuanId,
-                             NamaSatuan = a.NamaSatuan,
-                             TipeKonversi = a.TipeKonversi,
+                             ObatAlkesId = a.ObatAlkesId,
+                             a.SatuanBesarId,
+                             a.SatuanKecilId,
                              NilaiKonversi = a.NilaiKonversi,
                          });
 
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-                query = query.Where(u =>
-                    EF.Functions.ILike(u.NamaSatuan, search) ||
-                    EF.Functions.ILike(u.TipeKonversi, search)
-                );
-            }
+            //if (!string.IsNullOrWhiteSpace(search))
+            //{
+            //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+            //    query = query.Where(u =>
+            //        EF.Functions.ILike(u.NamaSatuan, search) ||
+            //        EF.Functions.ILike(u.TipeKonversi, search)
+            //    );
+            //}
 
             //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)
@@ -429,16 +424,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "NamaSatuan" => query.OrderByDescending(u => u.NamaSatuan),
-                    "TipeKonversi" => query.OrderByDescending(u => u.TipeKonversi),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
                     "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
                     "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    "NamaSatuan" => query.OrderBy(u => u.NamaSatuan),
-                    "TipeKonversi" => query.OrderBy(u => u.TipeKonversi),
                     _ => query.OrderBy(u => u.CreateDateTime)
                 };
 

@@ -10,11 +10,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
         [Key]
         public Guid RacikanId { get; set; }
         public Guid? ResepId { get; set; }
+        public Guid? BentukRacikanId { get; set; }
         public string? NamaRacikan { get; set; }
         public string? Keterangan { get; set; }
         public string? Signa { get; set; }
         public string? SignaTambahan { get; set; } 
         public int? QtyRacikan { get; set; }
         public string? KodeRacikan { get; set; }
+
+        // Navigation
+        public Resep? Resep { get; set; }
+        public RacikanBentuk? BentukRacikan { get; set; }
+
+        public ICollection<RacikanDetail> RacikanDetails { get; set; } = new HashSet<RacikanDetail>();
+        public ICollection<ResepDetail> ResepDetails { get; set; } = new HashSet<ResepDetail>();
+
     }
 }

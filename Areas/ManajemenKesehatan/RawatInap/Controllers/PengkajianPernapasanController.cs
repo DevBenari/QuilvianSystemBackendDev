@@ -71,6 +71,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                              a.IsBatukProduktive,
                              a.PolaPernapasan,
                              a.MasalahPernapasan,
+                             a.IsGerakanDadaSimetris,
+                             a.IramaNapas,
+                             a.IsPolaNapasTeratur,
+                             a.IsAdaRetraksiDada,
+                             a.IsAdaSesakNapas,
+                             a.Obstruksi,
+                             a.IsJalanNapasPaten,
+                             a.SuaraNapas,
                              a.Keterangan,
 
                          }).OrderByDescending(a => a.CreateDateTime);
@@ -172,6 +180,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     IsBatukProduktive = vm.IsBatukProduktive,
                     PolaPernapasan = vm.PolaPernapasan,
                     MasalahPernapasan = vm.MasalahPernapasan,
+                    IsGerakanDadaSimetris = vm.IsGerakanDadaSimetris,
+                    IramaNapas = vm.IramaNapas,
+                    IsPolaNapasTeratur = vm.IsPolaNapasTeratur,
+                    IsAdaRetraksiDada = vm.IsAdaRetraksiDada,
+                    IsAdaSesakNapas = vm.IsAdaSesakNapas,
+                    Obstruksi = vm.Obstruksi,
+                    IsJalanNapasPaten = vm.IsJalanNapasPaten,
+                    SuaraNapas = vm.SuaraNapas,
+
                     Keterangan = vm.Keterangan,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
@@ -247,6 +264,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 data.IsBatukProduktive = vm.IsBatukProduktive;
                 data.PolaPernapasan = vm.PolaPernapasan;
                 data.MasalahPernapasan = vm.MasalahPernapasan;
+                data.IsGerakanDadaSimetris = vm.IsGerakanDadaSimetris;
+                data.IramaNapas = vm.IramaNapas;
+                data.IsPolaNapasTeratur = vm.IsPolaNapasTeratur;
+                data.IsAdaRetraksiDada = vm.IsAdaRetraksiDada;
+                data.IsAdaSesakNapas = vm.IsAdaSesakNapas;
+                data.Obstruksi = vm.Obstruksi;
+                data.IsJalanNapasPaten = vm.IsJalanNapasPaten;
+                data.SuaraNapas = vm.SuaraNapas;
+
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
@@ -370,6 +396,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                             a.IsBatukProduktive,
                             a.PolaPernapasan,
                             a.MasalahPernapasan,
+                            a.IsGerakanDadaSimetris,
+                            a.IramaNapas,
+                            a.IsPolaNapasTeratur,
+                            a.IsAdaRetraksiDada,
+                            a.IsAdaSesakNapas,
+                            a.Obstruksi,
+                            a.IsJalanNapasPaten,
+                            a.SuaraNapas,
                             a.Keterangan,
                         };
 

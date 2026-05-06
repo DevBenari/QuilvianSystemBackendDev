@@ -9,7 +9,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
     {
         [Key]
         public Guid SatuanId { get; set; }
-        public string KodeSatuan { get; set; }
-        public string NamaSatuan { get; set; }
+        public string? KodeSatuan { get; set; }
+        public string? NamaSatuan { get; set; }
+        public string? SingkatanSatuan { get; set; }
+        public string? EnSatuan { get; set; }
+
+        public ICollection<Obat> Obats { get; set; } = new HashSet<Obat>();
     }
 }

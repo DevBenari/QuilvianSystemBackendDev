@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using System.Linq;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
@@ -16,6 +17,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.ViewModels;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controllers
 {
@@ -73,53 +75,88 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         [HttpGet]
         public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
         {
-            // Validasi agar page dan perPage minimal bernilai 1
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            // Query data
-            var query = (from a in _applicationDbContext.TindakanHarians
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
+            // 🔹 Ambil data utama (paged)
+            var tindakanHariansQuery =
+                from a in _applicationDbContext.TindakanHarians
+                join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId into userGroup
+                from u in userGroup.DefaultIfEmpty()
+                where a.IsDelete == false || a.IsDelete == null
+                orderby a.CreateDateTime descending
+                select new
+                {
+                    a.TindakanHarianId,
+                    a.TindakanPerawatId,
+                    a.KunjunganId,
+                    a.PasienId,
+                    a.TglTindakanHarian,
+                    a.WaktuTindakanHarian,
+                    a.ShiftTime,
+                    a.NamaPerawat,
+                    a.Diagnosa,
+                    a.Keterangan,
+                    a.CreateDateTime,
+                    a.CreateBy,
+                    CreateByName = u.FullName
+                };
 
-
-                         where a.IsDelete == false || a.IsDelete == null
-                         select new
-                         {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = u.FullName,
-                             a.TindakanHarianId,
-                             a.TindakanPerawatId,
-                             a.KunjunganId,
-                             a.PasienId,
-                             a.TglTindakanHarian,
-                             a.WaktuTindakanHarian,
-                             a.ShiftTime,
-                             a.NamaPerawat,
-                             a.Keterangan,
-                         }).OrderByDescending(a => a.CreateDateTime);
-
-            // Hitung total data sebelum paginasi
-            var totalRows = query.Count();
+            var totalRows = await tindakanHariansQuery.CountAsync();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
 
-            // Ambil data sesuai paging
-            var listdata = query
+            var tindakanHarians = await tindakanHariansQuery
                 .Skip((page - 1) * perPage)
                 .Take(perPage)
+                .ToListAsync();
+
+            if (!tindakanHarians.Any())
+                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
+
+            // 🔹 Ambil semua ID tindakan perawat unik dari seluruh record
+            var allTindakanIds = tindakanHarians
+                .Where(x => x.TindakanPerawatId != null)
+                .SelectMany(x => x.TindakanPerawatId!)
+                .Distinct()
                 .ToList();
 
-            if (!listdata.Any())
-            {
-                return NotFound(new { message = "Belum ada data atau halaman tidak ditemukan. || 404 Not Found" });
-            }
+            // 🔹 Ambil semua data TindakanPerawat yang berhubungan dalam satu query
+            var tindakanPerawats = await _applicationDbContext.TindakanPerawats
+                .Where(tp => allTindakanIds.Contains((Guid)tp.TindakanPerawatId))
+                .ToListAsync();
 
-            // Return hasil dengan paging info
+            // 🔹 Gabungkan hasilnya di memory
+            var result = tindakanHarians.Select(a => new
+            {
+                a.TindakanHarianId,
+                a.KunjunganId,
+                a.PasienId,
+                a.TglTindakanHarian,
+                a.WaktuTindakanHarian,
+                a.ShiftTime,
+                a.Diagnosa,
+                a.NamaPerawat,
+                a.Keterangan,
+                a.CreateDateTime,
+                a.CreateBy,
+                a.CreateByName,
+                DaftarTindakan = tindakanPerawats
+                    .Where(tp => a.TindakanPerawatId != null && a.TindakanPerawatId.Contains((Guid)tp.TindakanPerawatId))
+                    .Select(tp => new
+                    {
+                        tp.TindakanPerawatId,
+                        tp.NamaTindakanPerawat,
+                        tp.KategoriTindakan,
+                        tp.Keterangan
+                    })
+                    .ToList()
+            });
+
+            // 🔹 Return hasil
             return Ok(new
             {
                 message = "Berhasil || 200 OK",
-                data = listdata,
+                data = result,
                 pagination = new
                 {
                     CurrentPage = page,
@@ -130,21 +167,81 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             });
         }
 
+
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.TindakanHarians.Find(id);
-            if (listdata == null)
+            // 🔹 Ambil data utama
+            var tindakanHarian = await (
+                from a in _applicationDbContext.TindakanHarians
+                join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId into userGroup
+                from u in userGroup.DefaultIfEmpty()
+                where a.TindakanHarianId == id && (a.IsDelete == false || a.IsDelete == null)
+                select new
+                {
+                    a.TindakanHarianId,
+                    a.TindakanPerawatId,
+                    a.KunjunganId,
+                    a.PasienId,
+                    a.TglTindakanHarian,
+                    a.WaktuTindakanHarian,
+                    a.ShiftTime,
+                    a.NamaPerawat,
+                    a.Diagnosa,
+                    a.Keterangan,
+                    a.CreateDateTime,
+                    a.CreateBy,
+                    CreateByName = u.FullName
+                }
+            ).FirstOrDefaultAsync();
+
+            if (tindakanHarian == null)
             {
-                return NotFound(new { message = "Data tidak ditemukan." });
+                return NotFound(new { message = "Data tindakan harian tidak ditemukan. || 404 Not Found" });
             }
 
+            // 🔹 Ambil semua ID tindakan perawat dari list
+            var tindakanIds = tindakanHarian.TindakanPerawatId ?? new List<Guid>();
+
+            // 🔹 Ambil data tindakan perawat terkait dalam satu query
+            var tindakanPerawats = await _applicationDbContext.TindakanPerawats
+                .Where(tp => tindakanIds.Contains((Guid)tp.TindakanPerawatId))
+                .Select(tp => new
+                {
+                    tp.TindakanPerawatId,
+                    tp.NamaTindakanPerawat,
+                    tp.KategoriTindakan,
+                    tp.Keterangan
+                })
+                .ToListAsync();
+
+            // 🔹 Gabungkan hasil
+            var result = new
+            {
+                tindakanHarian.TindakanHarianId,
+                tindakanHarian.KunjunganId,
+                tindakanHarian.PasienId,
+                tindakanHarian.TglTindakanHarian,
+                tindakanHarian.WaktuTindakanHarian,
+                tindakanHarian.ShiftTime,
+                tindakanHarian.NamaPerawat,
+                tindakanHarian.Diagnosa,
+                tindakanHarian.Keterangan,
+                tindakanHarian.CreateDateTime,
+                tindakanHarian.CreateBy,
+                tindakanHarian.CreateByName,
+                DaftarTindakan = tindakanPerawats
+            };
+
+            // 🔹 Return hasil
             return Ok(new
             {
-                message = "Ditemukan || 200 OK",
-                data = listdata
+                message = "Berhasil || 200 OK",
+                data = result
             });
         }
+
 
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] TindakanHarianViewModel vm)
@@ -196,6 +293,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                     WaktuTindakanHarian = vm.WaktuTindakanHarian,
                     ShiftTime = vm.ShiftTime,
                     NamaPerawat = vm.NamaPerawat,
+                    Diagnosa = vm.Diagnosa,
                     Keterangan = vm.Keterangan,
                     
                     CreateBy = userActiveId,
@@ -271,6 +369,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 data.WaktuTindakanHarian = vm.WaktuTindakanHarian;
                 data.ShiftTime = vm.ShiftTime;
                 data.NamaPerawat = vm.NamaPerawat;
+                data.Diagnosa = vm.Diagnosa;
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
@@ -360,143 +459,222 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
         }
 
         [HttpGet("paged")]
-        public IActionResult Paged(
-        int page = 1,
-        int perPage = 10,
-        string? search = null,
-        string? orderBy = "CreateDateTime",
-        string? sortDirection = "desc",
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                        DateTime? startDate = null,
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                        DateTime? endDate = null,
-        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        public async Task<IActionResult> PagedAsync(
+            int page = 1,
+            int perPage = 10,
+            Guid? kunjunganId = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery] DateTimeOffset? createDate = null,
+            string? keterangan = null,
+            [FromQuery] DateTime? startDate = null,
+            [FromQuery] DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
+            if (page < 1) page = 1;
+            if (perPage < 1) perPage = 10;
 
-            // Query data
-            var query = (from a in _applicationDbContext.TindakanHarians
-                         join u in _applicationDbContext.UserActives.DefaultIfEmpty()
-                         on a.CreateBy equals u.UserActiveId
+            // ===============================================================
+            // 🔹 Step 1 — BaseQuery
+            // ===============================================================
+            var baseQuery =
+                from a in _applicationDbContext.TindakanHarians
+                join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId into userGroup
+                from u in userGroup.DefaultIfEmpty()
+                where a.IsDelete == false || a.IsDelete == null
+                select new
+                {
+                    a.TindakanHarianId,
+                    a.TindakanPerawatId,
+                    a.KunjunganId,
+                    a.PasienId,
+                    a.TglTindakanHarian,
+                    a.WaktuTindakanHarian,
+                    a.ShiftTime,
+                    a.NamaPerawat,
+                    a.Diagnosa,
+                    a.Keterangan,
+                    a.CreateDateTime,
+                    a.CreateBy,
+                    CreateByName = u.FullName
+                };
 
-
-                         where a.IsDelete == false || a.IsDelete == null
-                         select new
-                         {
-                             a.CreateDateTime,
-                             a.CreateBy,
-                             CreateByName = u.FullName,
-                             a.TindakanHarianId,
-                             a.TindakanPerawatId,
-                             a.KunjunganId,
-                             a.PasienId,
-                             a.TglTindakanHarian,
-                             a.WaktuTindakanHarian,
-                             a.ShiftTime,
-                             a.NamaPerawat,
-                             a.Keterangan,
-                         });
-
-            // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-            //if (!string.IsNullOrWhiteSpace(search))
-            //{
-            //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-            //    query = query.Where(u =>
-            //        EF.Functions.ILike(u.NamaDiskon, search)
-            //    );
-            //}
-
-            //// **Filter berdasarkan tanggal**
+            // ===============================================================
+            // 🔹 Step 2 — Filter tanggal (range)
+            // ===============================================================
             if (startDate.HasValue && endDate.HasValue)
             {
-                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
-                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+                var start = new DateTimeOffset(startDate.Value.Date, TimeSpan.Zero);
+                var end = new DateTimeOffset(endDate.Value.Date.AddDays(1).AddTicks(-1), TimeSpan.Zero);
 
-                query = query.Where(u =>
-                    u.CreateDateTime >= startUtc &&
-                    u.CreateDateTime <= endUtc);
+                baseQuery = baseQuery.Where(u =>
+                    u.CreateDateTime >= start &&
+                    u.CreateDateTime <= end);
             }
 
-            // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
+            // ===============================================================
+            // 🔹 Step 2B — Filter exact CreateDateTime (per hari)
+            // ===============================================================
+            if (createDate.HasValue)
+            {
+                var dayStart = createDate.Value.Date;
+                var dayEnd = createDate.Value.Date.AddDays(1).AddTicks(-1);
+
+                baseQuery = baseQuery.Where(x =>
+                    x.CreateDateTime >= dayStart &&
+                    x.CreateDateTime <= dayEnd);
+            }
+
+            // ===============================================================
+            // 🔹 Step 3 — Filter periode
+            // ===============================================================
             if (periode.HasValue)
             {
-                DateTime today = DateTime.UtcNow.Date;
+                var today = DateTime.UtcNow.Date;
 
-                switch (periode)
+                baseQuery = periode switch
                 {
-                    case PeriodeFilter.Today:
-                        query = query.Where(u => u.CreateDateTime.Date == today);
-                        break;
-                    case PeriodeFilter.ThisWeek:
-                        query = query.Where(u =>
+                    PeriodeFilter.Today =>
+                        baseQuery.Where(u => u.CreateDateTime.Date == today),
+
+                    PeriodeFilter.ThisWeek =>
+                        baseQuery.Where(u =>
                             u.CreateDateTime.Date >= today.AddDays(-(int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date <= today
-                        );
-                        break;
-                    case PeriodeFilter.LastWeek:
-                        query = query.Where(u =>
+                            u.CreateDateTime.Date <= today),
+
+                    PeriodeFilter.LastWeek =>
+                        baseQuery.Where(u =>
                             u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-                            u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)
-                        );
-                        break;
-                    case PeriodeFilter.ThisMonth:
-                        query = query.Where(u =>
+                            u.CreateDateTime.Date < today.AddDays(-(int)today.DayOfWeek)),
+
+                    PeriodeFilter.ThisMonth =>
+                        baseQuery.Where(u =>
                             u.CreateDateTime.Month == today.Month &&
-                            u.CreateDateTime.Year == today.Year
-                        );
-                        break;
-                    case PeriodeFilter.LastMonth:
-                        query = query.Where(u =>
+                            u.CreateDateTime.Year == today.Year),
+
+                    PeriodeFilter.LastMonth =>
+                        baseQuery.Where(u =>
                             u.CreateDateTime.Month == today.Month - 1 &&
-                            u.CreateDateTime.Year == today.Year
-                        );
-                        break;
-                    case PeriodeFilter.ThisYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year);
-                        break;
-                    case PeriodeFilter.LastYear:
-                        query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
-                        break;
-                    case PeriodeFilter.Last3Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
-                        break;
-                    case PeriodeFilter.Last6Months:
-                        query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
-                        break;
-                }
+                            u.CreateDateTime.Year == today.Year),
+
+                    PeriodeFilter.ThisYear =>
+                        baseQuery.Where(u => u.CreateDateTime.Year == today.Year),
+
+                    PeriodeFilter.LastYear =>
+                        baseQuery.Where(u => u.CreateDateTime.Year == today.Year - 1),
+
+                    PeriodeFilter.Last3Months =>
+                        baseQuery.Where(u => u.CreateDateTime >= today.AddMonths(-3)),
+
+                    PeriodeFilter.Last6Months =>
+                        baseQuery.Where(u => u.CreateDateTime >= today.AddMonths(-6)),
+
+                    _ => baseQuery
+                };
             }
 
-            // Sorting Data dengan cara yang lebih aman
-            query = sortDirection?.ToLower() == "desc"
+            // ===============================================================
+            // 🔹 Step 4 — Filter berdasarkan KunjunganId (HARUS di SQL!)
+            // ===============================================================
+            if (kunjunganId.HasValue)
+            {
+                baseQuery = baseQuery.Where(u => u.KunjunganId == kunjunganId.Value);
+            }
+
+            // ===============================================================
+            // 🔹 Step 5 — Filter berdasarkan keterangan (ILIKE, SQL)
+            // ===============================================================
+            if (!string.IsNullOrWhiteSpace(keterangan))
+            {
+                string pattern = $"%{keterangan.Trim()}%";
+                baseQuery = baseQuery.Where(u =>
+                    EF.Functions.ILike(u.Keterangan ?? "", pattern));
+            }
+
+            // ===============================================================
+            // 🔹 Step 6 — Sorting
+            // ===============================================================
+            baseQuery = sortDirection?.ToLower() == "desc"
                 ? orderBy switch
                 {
-                    "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    _ => query.OrderByDescending(u => u.CreateDateTime)
+                    "CreateByName" => baseQuery.OrderByDescending(u => u.CreateByName),
+                    "TglTindakanHarian" => baseQuery.OrderByDescending(u => u.TglTindakanHarian),
+                    _ => baseQuery.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
-                    "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
-                    "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    _ => query.OrderBy(u => u.CreateDateTime)
+                    "CreateByName" => baseQuery.OrderBy(u => u.CreateByName),
+                    "TglTindakanHarian" => baseQuery.OrderBy(u => u.TglTindakanHarian),
+                    _ => baseQuery.OrderBy(u => u.CreateDateTime)
                 };
 
-            // Pagination
-            var totalRows = query.Count();
+            // ===============================================================
+            // 🔹 Step 7 — Paging (SQL)
+            // ===============================================================
+            var totalRows = await baseQuery.CountAsync();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
 
-            if (rows.Count == 0 && page > totalPages)
+            var pagedData = await baseQuery
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .ToListAsync();
+
+            if (!pagedData.Any())
+                return NotFound(new { message = "Tidak ada data untuk halaman ini." });
+
+            // ===============================================================
+            // 🔹 Step 8 — Load Tindakan Perawat
+            // ===============================================================
+            var allTindakanIds = pagedData
+                .Where(x => x.TindakanPerawatId != null)
+                .SelectMany(x => x.TindakanPerawatId!)
+                .Distinct()
+                .ToList();
+
+            var tindakanPerawats = await _applicationDbContext.TindakanPerawats
+                .Where(tp => allTindakanIds.Contains(tp.TindakanPerawatId ?? Guid.Empty))
+                .Select(tp => new
+                {
+                    tp.TindakanPerawatId,
+                    tp.NamaTindakanPerawat,
+                    tp.KategoriTindakan,
+                    tp.Keterangan
+                })
+                .ToListAsync();
+
+            // ===============================================================
+            // 🔹 Step 9 — Merge hasil
+            // ===============================================================
+            var result = pagedData.Select(a => new
             {
-                return NotFound(new { message = "Page not found." });
-            }
+                a.TindakanHarianId,
+                a.KunjunganId,
+                a.PasienId,
+                a.TglTindakanHarian,
+                a.WaktuTindakanHarian,
+                a.ShiftTime,
+                a.NamaPerawat,
+                a.Diagnosa,
+                a.Keterangan,
+                a.CreateDateTime,
+                a.CreateBy,
+                a.CreateByName,
+                DaftarTindakan = tindakanPerawats
+                    .Where(tp => a.TindakanPerawatId != null &&
+                                 a.TindakanPerawatId.Contains(tp.TindakanPerawatId!.Value))
+                    .ToList()
+            });
 
+            // ===============================================================
+            // 🔹 Step 10 — Return
+            // ===============================================================
             return Ok(new
             {
                 status = "success",
                 message = "Data retrieved successfully",
                 data = new
                 {
-                    Rows = rows,
+                    Rows = result,
                     TotalRows = totalRows,
                     CurrentPage = page,
                     PerPage = perPage,
@@ -504,6 +682,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                 }
             });
         }
+
+
 
 
     }

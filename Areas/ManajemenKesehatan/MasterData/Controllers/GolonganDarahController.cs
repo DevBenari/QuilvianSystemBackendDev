@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient.Server;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -164,7 +163,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Cek Duplikasi
                 var isDuplicate = _applicationDbContext.GolonganDarahs
-                    .Any(c => c.KodeGolonganDarah == kode && c.NamaGolonganDarah == vm.NamaGolonganDarah);
+                    .Any(c =>c.NamaGolonganDarah.ToLower().Trim() == vm.NamaGolonganDarah.ToLower().Trim());
 
                 if (isDuplicate)
                 {

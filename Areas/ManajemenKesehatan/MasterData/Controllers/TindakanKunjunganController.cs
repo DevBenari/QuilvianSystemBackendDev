@@ -1,17 +1,22 @@
 ﻿using System.Security.Claims;
+using Microsoft.AspNet.SignalR.Client.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using OpenCvSharp;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Tindakan.Models;
+using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
@@ -27,22 +32,30 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-
+        private readonly IGenerateInvoiceBillingService _generateInvoiceBillingService;
         private readonly ILogger<TindakanKunjunganController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly IAsuransiCoverageService _asuransiCoverageService;
+        private readonly IHubContext<TindakanKunjunganHub> _hubContext;
 
         public TindakanKunjunganController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ILogger<TindakanKunjunganController> logger,
-            IWebHostEnvironment webHostEnvironment)
+            IWebHostEnvironment webHostEnvironment,
+            IGenerateInvoiceBillingService generateInvoiceBillingService,
+            IAsuransiCoverageService asuransiCoverageService,
+            IHubContext<TindakanKunjunganHub> hubContext)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+            _generateInvoiceBillingService = generateInvoiceBillingService;
+            _asuransiCoverageService = asuransiCoverageService;
+            _hubContext = hubContext;
         }
 
 
@@ -56,6 +69,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             var query = (from a in _applicationDbContext.TindakanKunjungans
                         join u in _applicationDbContext.UserActives
                             on a.CreateBy equals u.UserActiveId
+
+                        // join ke table tindakan
+                        join t in _applicationDbContext.Tindakans.AsNoTracking()
+                        on a.TindakanId equals t.TindakanId into tindakanGroup
+                        from t in tindakanGroup.DefaultIfEmpty()
+
                         where a.IsDelete == false
                         select new
                         {
@@ -64,11 +83,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             CreateByName = u.FullName,
                             a.TindakanKunjunganId,
                             a.KunjunganId,
+                            a.DepartementId,
+                            a.DokterPemeriksaId,
+                            a.KelasId,
                             a.TindakanId,
+                            t.NamaTindakan,
                             a.Quantity,
                             a.Total,
+                            a.TanggalPemeriksaan,
                             a.Disposition,
-                            a.RanapId,
+                            a.TipeLayanan,
+                            a.IsFoC,
+                            a.Keterangan,
                         }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -118,7 +144,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateTindakanKunjungan([FromBody] TindakanKunjunganViewModel vm)
+        public async Task<IActionResult> CreateTindakanKunjungan([FromBody] TindakanKunjunganViewModel vm, CancellationToken ct)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -196,9 +222,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     TindakanKunjunganId = Guid.NewGuid(),
                     KunjunganId = vm.KunjunganId,
                     TindakanId = vm.TindakanId,
+                    DepartementId = vm.DepartementId,
+                    DokterPemeriksaId = vm.DokterPemeriksaId,
+                    KelasId = vm.KelasId,
                     Quantity = vm.Quantity,
                     Total = totalqty, // Masukkan nilai Total yang telah dihitung
-                    RanapId = vm.RanapId,
+                    TipeLayanan = vm.TipeLayanan,
+                    TanggalPemeriksaan = vm.TanggalPemeriksaan,
+                    IsFoC = vm.IsFoC,
+                    Keterangan = vm.Keterangan,
+                    Disposition = vm.Disposition,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow
                 };
@@ -214,6 +247,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     return NotFound(new { message = "Data tindakan tidak ditemukan." });
                 }
+
+                var coverage = await _asuransiCoverageService.ResolveCoverageAsync(
+                    vm.KunjunganId,
+                    "Tindakan",
+                    vm.TindakanId,
+                    ct);
 
                 // Hitung jumlah billing sebelumnya untuk kunjungan ini
                 int billingTindakanCount = await _applicationDbContext.Billings
@@ -233,23 +272,41 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     BillingKode = billingKode,
                     DiskonId = vm.DiskonId,
                     ItemId = vm.TindakanId,
+                    InvoiceBilling = await _generateInvoiceBillingService.GetOrCreateAsync(
+                                (Guid)vm.KunjunganId,
+                                DateTime.UtcNow),
+                    IsListWhiteOff = false,
                     NamaItem = tindakan.NamaTindakan,
                     QtyItem = vm.Quantity,
                     HargaItem = tarifKelas.TarifTotal,
                     SubTotalItem = totalqty,
                     JenisBilling = "Tindakan", // Menandakan ini adalah billing untuk tindakan
+                    StatusBilling= false,
+
+                    IsCovered = coverage?.IsCovered,
+                    IsCoveredExcess = coverage?.IsCoveredExcess,
+                    AsuransiId = coverage?.AsuransiId,
+                    AsuransiExcessId = coverage?.AsuransiExcessId,
+                    TipeLayanan = vm.TipeLayanan,
+                    TanggalInvoice = DateTime.UtcNow,
+                    TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
-                    Keterangan = vm.Disposition,
+                    Keterangan = vm.Keterangan,
                 };
 
-                    _applicationDbContext.Billings.Add(billing);
-              
+                _applicationDbContext.Billings.Add(billing);
 
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
                 {
+                    // Notifikasi SignalR
+                    await _hubContext.Clients.All.SendAsync("TindakanKunjungan Added", new
+                    {
+                        action = "AddTindakanKunjungan",
+                    });
+
                     return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
                 }
                 else
@@ -267,10 +324,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-
-
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateTindakanKunjungan(Guid id, [FromBody] TindakanKunjunganViewModel vm)
+        public async Task<IActionResult> UpdateTindakanKunjungan(Guid id, [FromBody] TindakanKunjunganViewModel vm, CancellationToken ct)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -343,9 +398,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 // **Update Data**
                 data.KunjunganId = vm.KunjunganId;
                 data.TindakanId = vm.TindakanId;
+                data.KelasId = vm.KelasId;
+                data.DokterPemeriksaId = vm.DokterPemeriksaId;
+                data.DepartementId = vm.DepartementId;
                 data.Quantity = vm.Quantity;
                 data.Total = totalqty;
-                data.RanapId = vm.RanapId;
+                data.TipeLayanan = vm.TipeLayanan;
+                data.TanggalPemeriksaan = vm.TanggalPemeriksaan;
+                data.IsFoC = vm.IsFoC;
+                data.Disposition = vm.Disposition;
+                data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -373,6 +435,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     billingIndex++;
                     string billingKode = $"{billingIndex.ToString("D3")}";
 
+                    var coverage = await _asuransiCoverageService.ResolveCoverageAsync(
+                        vm.KunjunganId,
+                        "Tindakan",
+                        vm.TindakanId,
+                        ct);
+
                     var newBilling = new Billing
                     {
                         BillingId = Guid.NewGuid(),
@@ -381,13 +449,26 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         BillingKode = billingKode,
                         DiskonId = vm.DiskonId,
                         ItemId = vm.TindakanId,
+                        InvoiceBilling = await _generateInvoiceBillingService.GetOrCreateAsync(
+                                (Guid)vm.KunjunganId,
+                                DateTime.UtcNow),
+                        IsListWhiteOff = false,
                         NamaItem = tindakan.NamaTindakan,
                         HargaItem = tarifKelas.TarifTotal,
                         QtyItem = vm.Quantity,
                         SubTotalItem = totalqty,
-                        Keterangan = vm.Disposition,
+                        Keterangan = vm.Keterangan,
                         JenisBilling = "Tindakan",
                         StatusPengambilan = true,
+                        StatusBilling = false,
+                        TipeLayanan = vm.TipeLayanan,
+
+                        IsCovered = coverage?.IsCovered,
+                        IsCoveredExcess = coverage?.IsCoveredExcess,
+                        AsuransiId = coverage?.AsuransiId,
+                        AsuransiExcessId = coverage?.AsuransiExcessId,
+                        TanggalInvoice = DateTime.UtcNow,
+                        TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
                         CreateBy = userActiveId,
                         CreateDateTime = DateTimeOffset.UtcNow,
                     };
@@ -399,7 +480,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     existingBilling.HargaItem = tarifKelas.TarifTotal;
                     existingBilling.SubTotalItem = totalqty;
                     existingBilling.QtyItem = vm.Quantity;
-                    existingBilling.Keterangan = vm.Disposition;
+                    existingBilling.Keterangan = vm.Keterangan;
                     existingBilling.DiskonId = vm.DiskonId;
                     existingBilling.UpdateBy = userActiveId;
                     existingBilling.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -410,6 +491,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 if (result > 0)
                 {
+                    // Notifikasi SignalR
+                    await _hubContext.Clients.All.SendAsync("TindakanKunjungan Changed", new
+                    {
+                        action = "EditTindakanKunjungan",
+                    });
+
                     return Ok(new { message = "Update Data Berhasil || 200 OK" });
                 }
                 else
@@ -425,6 +512,36 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             {
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
+        }
+
+        [HttpPut("{id}/is-FoC")]
+        public async Task<IActionResult> UpdateIsCTTPasienIGD(Guid id, [FromBody] UpdateIsFoCViewModel request)
+        {
+            var kunjungan = await _applicationDbContext.TindakanKunjungans.FindAsync(id);
+            if (kunjungan == null)
+                return NotFound(new { message = "Kunjungan tidak ditemukan." });
+
+            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(EmailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = _applicationDbContext.UserActives.AsNoTracking().FirstOrDefault(u => u.Email == EmailLogin);
+            var userId = user?.UserActiveId ?? Guid.Empty;
+
+            kunjungan.IsFoC = request.IsFoC;
+            kunjungan.UpdateDateTime = DateTimeOffset.UtcNow;
+            kunjungan.UpdateBy = userId;
+            await _applicationDbContext.SaveChangesAsync();
+
+            // Notifikasi SignalR
+            await _hubContext.Clients.All.SendAsync("IsFoC Changed", new
+            {
+                action = "updateIsFoC",
+                kunjunganId = kunjungan.KunjunganId,
+                IsFoC = request.IsFoC
+            });
+
+            return Ok(new { message = "Status IsCTTPasienIGD berhasil diperbarui." });
         }
 
         [HttpDelete("{id}")]
@@ -486,148 +603,230 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             }
         }
 
-        //[HttpGet("paged")]
-        //public IActionResult Paged(
-        //int page = 1,
-        //int perPage = 10,
-        //string? search = null,
-        //string? orderBy = "CreateDateTime",
-        //string? sortDirection = "desc",
-        //[FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-        //DateTime? startDate = null,
-        //[FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-        //DateTime? endDate = null,
-        //[FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
-        //{
-        //    var query = from a in _applicationDbContext.TindakanKunjungans
-        //                join u in _applicationDbContext.UserActives
-        //                    on a.CreateBy equals u.UserActiveId
-        //                where a.IsDelete == false
-        //                select new
-        //                {
-        //                    a.CreateDateTime,
-        //                    a.CreateBy,
-        //                    CreateByName = u.FullName,
-        //                    a.TindakanKunjunganId,
-        //                    a.KunjunganId,
-        //                    a.TindakanId,
-        //                    a.Quantity,
-        //                    a.Total
-        //                };
+        [HttpGet("paged")]
+        public async Task<IActionResult> Paged(
+            int page = 1,
+            int perPage = 10,
+            Guid? kunjunganId = null,
+            Guid? pasienId = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+            DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+            DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        {
+            try
+            {
+                if (page < 1) page = 1;
+                if (perPage < 1) perPage = 10;
 
+                // ======================================================
+                // 1) BASE QUERY (FILTER DULU sebelum JOIN) ✅
+                // ======================================================
+                var baseQuery = _applicationDbContext.TindakanKunjungans
+                    .AsNoTracking()
+                    .Where(a => a.IsDelete == false);
 
-        //    // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-        //    if (!string.IsNullOrWhiteSpace(search))
-        //    {
-        //        search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-        //        query = query.Where(u =>
-        //            EF.Functions.ILike(u.NamaPasien, search) ||
-        //            EF.Functions.ILike(u.NamaPoliklinik, search)
-        //        );
-        //    }
+                // filter based on kunjungan id
+                if (kunjunganId.HasValue)
+                {
+                    baseQuery = baseQuery.Where(a => a.KunjunganId == kunjunganId.Value);
+                }
 
-        //    //// **Filter berdasarkan tanggal**
-        //    if (startDate.HasValue && endDate.HasValue)
-        //    {
-        //        DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
-        //        DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
+                // filter based on pasien id (via Kunjungan)
+                if (pasienId.HasValue)
+                {
+                    var pid = pasienId.Value;
 
-        //        query = query.Where(u =>
-        //            u.CreateDateTime >= startUtc &&
-        //            u.CreateDateTime <= endUtc);
-        //    }
+                    baseQuery = baseQuery.Where(a =>
+                        _applicationDbContext.Kunjungans.Any(k =>
+                            k.KunjunganID == a.KunjunganId &&
+                            k.PasienId == pid));
+                }
 
-        //    // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll) hanya jika periode memiliki nilai
-        //    if (periode.HasValue)
-        //    {
-        //        DateTime today = DateTime.UtcNow.Date;
+                // Filter berdasarkan tanggal
+                if (startDate.HasValue && endDate.HasValue)
+                {
+                    DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
+                    DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
 
-        //        switch (periode)
-        //        {
-        //            case PeriodeFilter.Today:
-        //                query = query.Where(u => u.CreateDateTime.Date == today);
-        //                break;
-        //            case PeriodeFilter.ThisWeek:
-        //                query = query.Where(u =>
-        //                    u.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
-        //                    u.CreateDateTime.Date <= today
-        //                );
-        //                break;
-        //            case PeriodeFilter.LastWeek:
-        //                query = query.Where(u =>
-        //                    u.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
-        //                    u.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek))
-        //                );
-        //                break;
-        //            case PeriodeFilter.ThisMonth:
-        //                query = query.Where(u =>
-        //                    u.CreateDateTime.Month == today.Month &&
-        //                    u.CreateDateTime.Year == today.Year
-        //                );
-        //                break;
-        //            case PeriodeFilter.LastMonth:
-        //                query = query.Where(u =>
-        //                    u.CreateDateTime.Month == today.Month - 1 &&
-        //                    u.CreateDateTime.Year == today.Year
-        //                );
-        //                break;
-        //            case PeriodeFilter.ThisYear:
-        //                query = query.Where(u => u.CreateDateTime.Year == today.Year);
-        //                break;
-        //            case PeriodeFilter.LastYear:
-        //                query = query.Where(u => u.CreateDateTime.Year == today.Year - 1);
-        //                break;
-        //            case PeriodeFilter.Last3Months:
-        //                query = query.Where(u => u.CreateDateTime >= today.AddMonths(-3));
-        //                break;
-        //            case PeriodeFilter.Last6Months:
-        //                query = query.Where(u => u.CreateDateTime >= today.AddMonths(-6));
-        //                break;
-        //        }
-        //    }
+                    baseQuery = baseQuery.Where(a =>
+                        a.CreateDateTime >= startUtc &&
+                        a.CreateDateTime <= endUtc);
+                }
 
-        //    // Sorting Data dengan cara yang lebih aman
-        //    query = sortDirection?.ToLower() == "desc"
-        //        ? orderBy switch
-        //        {
-        //            "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
-        //            "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-        //            "NamaPoliklinik" => query.OrderByDescending(u => u.NamaPoliklinik),
-        //            "NamaPasien" => query.OrderByDescending(u => u.NamaPasien),
-        //            _ => query.OrderByDescending(u => u.CreateDateTime)
-        //        }
-        //        : orderBy switch
-        //        {
-        //            "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
-        //            "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-        //            "NamaPoliklinik" => query.OrderByDescending(u => u.NamaPoliklinik),
-        //            "NamaPasien" => query.OrderByDescending(u => u.NamaPasien),
-        //            _ => query.OrderByDescending(u => u.CreateDateTime)
-        //        };
+                // Filter berdasarkan periode (Hari Ini, Minggu Ini, dll)
+                if (periode.HasValue)
+                {
+                    DateTime today = DateTime.UtcNow.Date;
 
-        //    // Pagination
-        //    var totalRows = query.Count();
-        //    var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-        //    var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
+                    switch (periode)
+                    {
+                        case PeriodeFilter.Today:
+                            baseQuery = baseQuery.Where(a => a.CreateDateTime.Date == today);
+                            break;
 
-        //    if (rows.Count == 0 && page > totalPages)
-        //    {
-        //        return NotFound(new { message = "Page not found." });
-        //    }
+                        case PeriodeFilter.ThisWeek:
+                            baseQuery = baseQuery.Where(a =>
+                                a.CreateDateTime.Date >= today.AddDays(-((int)today.DayOfWeek)) &&
+                                a.CreateDateTime.Date <= today
+                            );
+                            break;
 
-        //    return Ok(new
-        //    {
-        //        status = "success",
-        //        message = "Data retrieved successfully",
-        //        data = new
-        //        {
-        //            Rows = rows,
-        //            TotalRows = totalRows,
-        //            CurrentPage = page,
-        //            PerPage = perPage,
-        //            TotalPages = totalPages
-        //        }
-        //    });
-        //}
+                        case PeriodeFilter.LastWeek:
+                            baseQuery = baseQuery.Where(a =>
+                                a.CreateDateTime.Date >= today.AddDays(-7 - (int)today.DayOfWeek) &&
+                                a.CreateDateTime.Date < today.AddDays(-((int)today.DayOfWeek))
+                            );
+                            break;
+
+                        case PeriodeFilter.ThisMonth:
+                            baseQuery = baseQuery.Where(a =>
+                                a.CreateDateTime.Month == today.Month &&
+                                a.CreateDateTime.Year == today.Year
+                            );
+                            break;
+
+                        case PeriodeFilter.LastMonth:
+                            var lastMonth = today.AddMonths(-1);
+                            baseQuery = baseQuery.Where(a =>
+                                a.CreateDateTime.Month == lastMonth.Month &&
+                                a.CreateDateTime.Year == lastMonth.Year
+                            );
+                            break;
+
+                        case PeriodeFilter.ThisYear:
+                            baseQuery = baseQuery.Where(a => a.CreateDateTime.Year == today.Year);
+                            break;
+
+                        case PeriodeFilter.LastYear:
+                            baseQuery = baseQuery.Where(a => a.CreateDateTime.Year == today.Year - 1);
+                            break;
+
+                        case PeriodeFilter.Last3Months:
+                            baseQuery = baseQuery.Where(a => a.CreateDateTime >= today.AddMonths(-3));
+                            break;
+
+                        case PeriodeFilter.Last6Months:
+                            baseQuery = baseQuery.Where(a => a.CreateDateTime >= today.AddMonths(-6));
+                            break;
+                    }
+                }
+
+                // ======================================================
+                // 2) JOIN QUERY (baru join setelah filter) ✅
+                // ======================================================
+                var query =
+                    from a in baseQuery
+                    join u in _applicationDbContext.UserActives.AsNoTracking()
+                        on a.CreateBy equals u.UserActiveId
+
+                    // join ke table tindakan (LEFT JOIN)
+                    join t in _applicationDbContext.Tindakans.AsNoTracking()
+                        on a.TindakanId equals t.TindakanId into tindakanGroup
+                    from t in tindakanGroup.DefaultIfEmpty()
+
+                        // join ke table kunjungan (LEFT JOIN)
+                    join k in _applicationDbContext.Kunjungans.AsNoTracking()
+                        on a.KunjunganId equals k.KunjunganID into kunjunganGroup
+                    from k in kunjunganGroup.DefaultIfEmpty()
+
+                        // join ke table asuransi (LEFT JOIN)
+                    join ar in _applicationDbContext.Asuransis.AsNoTracking()
+                        on k.AsuransiId equals ar.AsuransiId into arGroup
+                    from ar in arGroup.DefaultIfEmpty()
+
+                    select new
+                    {
+                        a.CreateDateTime,
+                        a.CreateBy,
+                        CreateByName = u.FullName,
+                        a.TindakanKunjunganId,
+                        a.KunjunganId,
+                        a.Disposition,
+                        k.PasienId,
+                        JenisKunjungan = k != null ? k.JenisKunjungan : null,
+                        AsuransiId = k != null ? k.AsuransiId : null,
+                        NamaAsuransi = ar != null ? ar.NamaAsuransi : null,
+                        a.DepartementId,
+                        a.DokterPemeriksaId,
+                        a.KelasId,
+                        a.TindakanId,
+                        NamaTindakan = t != null ? t.NamaTindakan : null,
+                        a.Quantity,
+                        a.Total,
+                        a.TanggalPemeriksaan,
+                        a.TipeLayanan,
+                        a.IsFoC,
+                        a.Keterangan,
+                    };
+
+                // ======================================================
+                // 3) SORTING ✅ (PERBAIKAN: ASC vs DESC)
+                // ======================================================
+                bool desc = string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase);
+
+                query = desc
+                    ? orderBy switch
+                    {
+                        "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
+                        "CreateByName" => query.OrderByDescending(u => u.CreateByName),
+                        "NamaTindakan" => query.OrderByDescending(u => u.NamaTindakan),
+                        _ => query.OrderByDescending(u => u.CreateDateTime)
+                    }
+                    : orderBy switch
+                    {
+                        "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
+                        "CreateByName" => query.OrderBy(u => u.CreateByName),
+                        "NamaTindakan" => query.OrderBy(u => u.NamaTindakan),
+                        _ => query.OrderBy(u => u.CreateDateTime)
+                    };
+
+                // ======================================================
+                // 4) PAGINATION ✅ (ASYNC)
+                // ======================================================
+                var totalRows = await query.CountAsync();
+                var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+                if (totalRows == 0)
+                {
+                    return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                if (page > totalPages)
+                {
+                    return NotFound(new { message = "Page not found." });
+                }
+
+                var rows = await query
+                    .Skip((page - 1) * perPage)
+                    .Take(perPage)
+                    .ToListAsync();
+
+                // ======================================================
+                // 5) RETURN RESPONSE ✅
+                // ======================================================
+                return Ok(new
+                {
+                    status = "success",
+                    message = "Data retrieved successfully",
+                    data = new
+                    {
+                        Rows = rows,
+                        TotalRows = totalRows,
+                        CurrentPage = page,
+                        PerPage = perPage,
+                        TotalPages = totalPages
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
+
     }
 }

@@ -21,10 +21,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? Nohp { get; set; }
         public string? Alamat { get; set; }
         public bool? IsAsuransi { get; set; }
-        public string? FotoName { get; set; }
-        public string? FotoPath { get; set; }
+        //public string? FotoName { get; set; }
+        //public string? FotoPath { get; set; }
         public bool? IsActive { get; set; }
         public Guid? UserActiveId { get; set; }
+        public decimal? HargaVisit { get; set; }
 
         // Navigation properties
         //public virtual ICollection<DokterPoli>? DokterPolis { get; set; }

@@ -78,6 +78,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                             // Informasi Klaim
                             MetodeKlaim = a.MetodeKlaim,
+                            CoveragePercentage = a.CoveragePercentage,
 
                             // Pertanggungan
                             TambahanTanggungan = a.TambahanTanggungan,
@@ -194,8 +195,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
 
                 // cek duplikasi
-                var isDuplicate = _applicationDbContext.Asuransis
-                    .Any(c => c.KodeAsuransi == kode && c.NamaAsuransi == vm.NamaAsuransi);
+                var isDuplicate = await _applicationDbContext.Asuransis
+                    .AnyAsync(c =>c.NamaAsuransi.ToLower().Trim() == vm.NamaAsuransi.ToLower().Trim() && c.IsDelete == false);
 
                 if (isDuplicate)
                 {
@@ -220,6 +221,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                         // Informasi Klaim
                         MetodeKlaim = vm.MetodeKlaim,
+                        CoveragePercentage = vm.CoveragePercentage,
 
                         // Informasi Pertanggungan
                         TambahanTanggungan = vm.TambahanTanggungan,
@@ -302,6 +304,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     asuransi.TanggalAkhirKerjasama = vm.TanggalAkhirKerjasama ?? asuransi.TanggalAkhirKerjasama;
                     asuransi.IsPKS = vm.IsPKS;
                     asuransi.MetodeKlaim = vm.MetodeKlaim ?? asuransi.MetodeKlaim;
+                    asuransi.CoveragePercentage = vm.CoveragePercentage ?? asuransi.CoveragePercentage;
                     asuransi.TambahanTanggungan = vm.TambahanTanggungan ?? asuransi.TambahanTanggungan;
                     asuransi.TermOfPayment = vm.TermOfPayment ?? asuransi.TermOfPayment;
                     asuransi.NamaPerusahaanAsuransi = vm.NamaPerusahaanAsuransi ?? asuransi.NamaPerusahaanAsuransi;
@@ -404,6 +407,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             TanggalMulaiKerjasama = a.TanggalMulaiKerjasama,
                             TanggalAkhirKerjasama = a.TanggalAkhirKerjasama,
                             MetodeKlaim = a.MetodeKlaim,
+                            CoveragePercentage = a.CoveragePercentage,
                             TambahanTanggungan = a.TambahanTanggungan,
                             TermOfPayment = a.TermOfPayment,
                             NamaPerusahaanAsuransi = a.NamaPerusahaanAsuransi,
@@ -414,8 +418,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             // Filter berdasarkan search
             if (!string.IsNullOrWhiteSpace(search))
             {
+                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
-                    u.KodeAsuransi.Contains(search) || u.NamaAsuransi.Contains(search) || u.JenisAsuransi.Contains(search)
+                    EF.Functions.ILike(u.NamaAsuransi, search) ||
+                    EF.Functions.ILike(u.KodeAsuransi, search) ||
+                    EF.Functions.ILike(u.JenisAsuransi, search) ||
+                    EF.Functions.ILike(u.NamaPerusahaanAsuransi, search)
                 );
             }
 

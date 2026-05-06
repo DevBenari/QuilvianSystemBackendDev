@@ -333,6 +333,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
             var query = from a in _applicationDbContext.Indikators
                         join u in _applicationDbContext.UserActives
                         on a.CreateBy equals u.UserActiveId
+
+                        // join ke tabel kategori indikator
+                        //join k in _applicationDbContext.KategoriIndikators
+                        //on a.IndikatorId equals k.
                         where a.IsDelete == false || a.IsDelete == null
                         select new
                         {

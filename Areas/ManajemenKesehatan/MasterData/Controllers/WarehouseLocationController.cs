@@ -163,7 +163,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Cek Duplikasi
                 var isDuplicate = _applicationDbContext.WarehouseLocations
-                    .Any(c => c.WarehouseLocationCode == kode && c.WarehouseLocationName == vm.WarehouseLocationName);
+                    .Any(c => c.WarehouseLocationCode == kode && c.WarehouseLocationName == vm.WarehouseLocationName && c.IsDelete == false);
 
                 if (isDuplicate)
                 {

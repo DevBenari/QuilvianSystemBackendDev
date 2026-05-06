@@ -83,39 +83,40 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     d.UserActiveId,
                     d.IsAsuransi,
                     d.IsActive,
-                    d.FotoName,
-                    d.FotoPath,
-                    imageUrl = !string.IsNullOrEmpty(d.FotoName)
-                        ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
-                        : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg",
+                    d.HargaVisit,
+                    //d.FotoName,
+                    //d.FotoPath,
+                    //imageUrl = !string.IsNullOrEmpty(d.FotoName)
+                    //    ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
+                    //    : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg",
                     // Menambahkan daftar ID Asuransi
-                    AsuransiIds = _context.DokterAsuransis
+                    AsuransiIds = _context.DokterAsuransis.AsNoTracking()
                         .Where(da => da.DokterId == d.DokterId)
                         .Select(da => da.AsuransiId)
                         .Distinct()
                         .ToList(),
 
-                    NamaAsuransi = _context.DokterAsuransis
+                    NamaAsuransi = _context.DokterAsuransis.AsNoTracking()
                         .Where(da => da.DokterId == d.DokterId)
                         .Join(_context.Asuransis, da => da.AsuransiId, a => a.AsuransiId, (da, a) => a.NamaAsuransi)
                         .Distinct()
                         .ToList(),
 
                     // Menambahkan daftar ID Poli
-                    PoliIds = _context.DokterPolis
+                    PoliIds = _context.DokterPolis.AsNoTracking()
                         .Where(dp => dp.DokterId == d.DokterId)
                         .Select(dp => dp.PoliId)
                         .Distinct()
                         .ToList(),
 
-                    NamaPoli = _context.DokterPolis
+                    NamaPoli = _context.DokterPolis.AsNoTracking()
                         .Where(dp => dp.DokterId == d.DokterId)
                         .Join(_context.Polikliniks, dp => dp.PoliId, p => p.PoliklinikId, (dp, p) => p.NamaPoliklinik)
                         .Distinct()
                         .ToList(),
 
                     JadwalPraktek = (
-                    from dp in _context.DokterPolis
+                    from dp in _context.DokterPolis.AsNoTracking()
                     join jp in _context.JadwalPrakteks on dp.DokterPoliId equals jp.DokterPoliId
                     join p in _context.Polikliniks on dp.PoliId equals p.PoliklinikId
                     where dp.DokterId == d.DokterId
@@ -171,125 +172,354 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         [HttpGet("{id}")]
         public async Task<IActionResult> GetDokterById(Guid id)
         {
-            var dokter = await _context.Dokters
-                .Where(d => !d.IsDelete && d.DokterId == id)
-                .Select(d => new
+            try
+            {
+                // =========================================================
+                // 1) Dokter + CreateByName + Email (1 query)
+                // =========================================================
+                var dokterRow = await (
+                    from d in _context.Dokters.AsNoTracking()
+                    where !d.IsDelete && d.DokterId == id
+
+                    join cb0 in _context.UserActives.AsNoTracking()
+                        on d.CreateBy equals cb0.UserActiveId into cbJoin
+                    from cb in cbJoin.DefaultIfEmpty()
+
+                        // Ambil email dokter dari UserActiveId dokter (bukan FullName)
+                    join ua0 in _context.UserActives.AsNoTracking()
+                        on d.UserActiveId equals ua0.UserActiveId into uaJoin
+                    from ua in uaJoin.DefaultIfEmpty()
+
+                    select new
+                    {
+                        Dokter = d,
+                        CreateByName = cb != null ? cb.FullName : null,
+                        Email = ua != null ? ua.Email : null,
+                        FotoName = ua != null ? ua.FotoName : null,
+                        FotoPath = ua != null ? ua.FotoPath : null,
+                    }
+                ).FirstOrDefaultAsync();
+
+                if (dokterRow == null)
+                    return NotFound(new { message = $"Dokter dengan ID {id} tidak ditemukan || 404 Not Found" });
+
+                var dokter = dokterRow.Dokter;
+
+                // =========================================================
+                // 2) Asuransi Dokter (1 query)
+                // =========================================================
+                var asuransiList = await (
+                    from da in _context.DokterAsuransis.AsNoTracking()
+                    join a in _context.Asuransis.AsNoTracking()
+                        on da.AsuransiId equals a.AsuransiId
+                    where da.DokterId == id && !da.IsDelete
+                    select new { da.AsuransiId, a.NamaAsuransi }
+                ).Distinct().ToListAsync();
+
+                var AsuransiIds = asuransiList.Select(x => x.AsuransiId).ToList();
+                var NamaAsuransi = asuransiList.Select(x => x.NamaAsuransi).ToList();
+
+                // =========================================================
+                // 3) Poli + Jadwal (1 query)
+                // =========================================================
+                var poliJadwalRaw = await (
+                    from dp in _context.DokterPolis.AsNoTracking()
+                    join p in _context.Polikliniks.AsNoTracking()
+                        on dp.PoliId equals p.PoliklinikId
+
+                    // left join jadwal (karena bisa saja belum ada jadwal)
+                    join jp0 in _context.JadwalPrakteks.AsNoTracking()
+                        on dp.DokterPoliId equals jp0.DokterPoliId into jpJoin
+                    from jp in jpJoin.DefaultIfEmpty()
+
+                    where dp.DokterId == id && !dp.IsDelete
+                    select new
+                    {
+                        dp.PoliId,
+                        p.NamaPoliklinik,
+                        dp.DokterPoliId,
+
+                        Jadwal = jp == null || jp.IsDelete
+                            ? null
+                            : new
+                            {
+                                jp.JadwalPraktekId,
+                                jp.HariPraktek,
+                                jp.WaktuPraktek,
+                                jp.JamMulai,
+                                jp.JamBerakhir
+                            }
+                    }
+                ).ToListAsync();
+
+                var PoliIds = poliJadwalRaw
+                    .Select(x => x.PoliId)
+                    .Distinct()
+                    .ToList();
+
+                var NamaPoli = poliJadwalRaw
+                    .Select(x => x.NamaPoliklinik)
+                    .Where(x => x != null)
+                    .Distinct()
+                    .ToList();
+
+                var JadwalPraktek = poliJadwalRaw
+                    .Where(x => x.Jadwal != null)
+                    .Select(x => x.Jadwal!)
+                    .Distinct()
+                    .OrderBy(j => j.HariPraktek)
+                    .ThenBy(j => j.JamMulai)
+                    .ToList();
+
+                // =========================================================
+                // 4) Image URL
+                // =========================================================
+                //string imageUrl = !string.IsNullOrEmpty(dokter.FotoName)
+                //    ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{dokter.FotoName}"
+                //    : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg";
+
+                // =========================================================
+                // 5) Result
+                // =========================================================
+                var result = new
                 {
-                    d.CreateDateTime,
-                    d.CreateBy,
-                    CreateByName = _context.UserActives
-                        .Where(u => u.UserActiveId == d.CreateBy)
-                        .Select(u => u.FullName)
-                        .FirstOrDefault(),
-                    Email = _context.UserActives
-                        .Where(u => u.FullName == d.NmDokter)
-                        .Select(u => u.Email)
-                        .FirstOrDefault(),
-                    d.DokterId,
-                    d.KdDokter,
-                    d.NmDokter,
-                    d.Spesialis,
-                    d.Sip,
-                    d.Str,
-                    d.TglSip,
-                    d.TglStr,
-                    d.Nik,
-                    d.Nohp,
-                    d.Alamat,
-                    d.IsAsuransi,
-                    d.IsActive,
-                    d.UserActiveId,
-                    d.FotoName,
-                    d.FotoPath,
-                    imageUrl = !string.IsNullOrEmpty(d.FotoName)
-                        ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
-                        : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg",
+                    dokter.CreateDateTime,
+                    dokter.CreateBy,
+                    dokterRow.CreateByName,
 
-                    // Menambahkan daftar ID Asuransi
-                    AsuransiIds = _context.DokterAsuransis
-                        .Where(da => da.DokterId == d.DokterId)
-                        .Select(da => da.AsuransiId)
-                        .Distinct()
-                        .ToList(),
+                    dokterRow.Email,
 
-                    NamaAsuransi = _context.DokterAsuransis
-                        .Where(da => da.DokterId == d.DokterId)
-                        .Join(_context.Asuransis, da => da.AsuransiId, a => a.AsuransiId, (da, a) => a.NamaAsuransi)
-                        .Distinct()
-                        .ToList(),
+                    dokter.DokterId,
+                    dokter.KdDokter,
+                    dokter.NmDokter,
+                    dokter.Spesialis,
+                    dokter.Sip,
+                    dokter.Str,
+                    dokter.TglSip,
+                    dokter.TglStr,
+                    dokter.HargaVisit,
+                    dokter.Nik,
+                    dokter.Nohp,
+                    dokter.Alamat,
+                    dokter.IsAsuransi,
+                    dokter.IsActive,
+                    dokter.UserActiveId,
+                    dokterRow.FotoName,
+                    dokterRow.FotoPath,
 
-                    // Menambahkan daftar ID Poli
-                    PoliIds = _context.DokterPolis
-                        .Where(dp => dp.DokterId == d.DokterId)
-                        .Select(dp => dp.PoliId)
-                        .Distinct()
-                        .ToList(),
+                    //imageUrl,
 
-                    NamaPoli = _context.DokterPolis
-                        .Where(dp => dp.DokterId == d.DokterId)
-                        .Join(_context.Polikliniks, dp => dp.PoliId, p => p.PoliklinikId, (dp, p) => p.NamaPoliklinik)
-                        .Distinct()
-                        .ToList(),
+                    AsuransiIds,
+                    NamaAsuransi,
 
-                    JadwalPraktek = (
-                        from dp in _context.DokterPolis
-                        join jp in _context.JadwalPrakteks on dp.DokterPoliId equals jp.DokterPoliId
-                        join p in _context.Polikliniks on dp.PoliId equals p.PoliklinikId
-                        where dp.DokterId == d.DokterId
-                              && !dp.IsDelete
-                              && !jp.IsDelete
-                        select new
-                        {
-                            jp.JadwalPraktekId,
-                            jp.HariPraktek,
-                            jp.WaktuPraktek,
-                            jp.JamMulai,
-                            jp.JamBerakhir
-                        })
-                    .OrderBy(x => x.HariPraktek)
-                    .ThenBy(x => x.JamMulai)
-                    .ToList()
-                })
-                .FirstOrDefaultAsync();
+                    PoliIds,
+                    NamaPoli,
 
-            if (dokter == null)
-            {
-                return NotFound(new { message = $"Dokter dengan ID {id} tidak ditemukan || 404 Not Found" });
+                    JadwalPraktek
+                };
+
+                return Ok(new
+                {
+                    message = "Berhasil mengambil data dokter || 200 OK",
+                    data = result
+                });
             }
-
-            return Ok(new
+            catch (Exception ex)
             {
-                message = "Berhasil mengambil data dokter || 200 OK",
-                data = dokter
-            });
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
         }
 
 
-        [HttpGet("get-image/{id}")]
-        public async Task<IActionResult> GetImage(Guid id)
+        // GET: api/Dokter/by-email?email=xxx@xxx.com
+        [HttpGet("by-email")]
+        public async Task<IActionResult> GetDokterByEmail([FromQuery] string email)
         {
-            var fotoPath = _context.Dokters
-                .Where(p => p.DokterId == id)
-                .Select(p => p.FotoPath)
-                .FirstOrDefault();
-
-            if (string.IsNullOrEmpty(fotoPath))
+            try
             {
-                return NotFound(new { message = "Foto tidak ditemukan." });
+                if (string.IsNullOrWhiteSpace(email))
+                    return BadRequest(new { message = "Email wajib diisi." });
+
+                email = email.Trim().ToLower();
+
+                // =========================================================
+                // 1) Dokter + CreateByName + Email (1 query)
+                //    - Cari user active berdasarkan email
+                //    - Ambil dokter berdasarkan Dokter.UserActiveId
+                // =========================================================
+                var dokterRow = await (
+                    from ua in _context.UserActives.AsNoTracking()
+                    where ua.Email != null && ua.Email.ToLower() == email
+
+                    join d0 in _context.Dokters.AsNoTracking()
+                        on ua.UserActiveId equals d0.UserActiveId
+                    where !d0.IsDelete
+
+                    join cb0 in _context.UserActives.AsNoTracking()
+                        on d0.CreateBy equals cb0.UserActiveId into cbJoin
+                    from cb in cbJoin.DefaultIfEmpty()
+
+                    select new
+                    {
+                        Dokter = d0,
+                        Email = ua.Email,
+                        CreateByName = cb != null ? cb.FullName : null,
+                        FotoName = ua != null ? ua.FotoName : null,
+                        FotoPath = ua != null ? ua.FotoPath : null,
+                    }
+                ).FirstOrDefaultAsync();
+
+                if (dokterRow == null)
+                {
+                    return NotFound(new
+                    {
+                        message = $"Dokter dengan email {email} tidak ditemukan || 404 Not Found",
+                        hint = "Pastikan Dokter.UserActiveId terisi dan terhubung ke UserActives.UserActiveId"
+                    });
+                }
+
+                var dokter = dokterRow.Dokter;
+
+                // =========================================================
+                // 2) Asuransi Dokter (1 query)
+                // =========================================================
+                var asuransiList = await (
+                    from da in _context.DokterAsuransis.AsNoTracking()
+                    join a in _context.Asuransis.AsNoTracking()
+                        on da.AsuransiId equals a.AsuransiId
+                    where da.DokterId == dokter.DokterId && !da.IsDelete
+                    select new { da.AsuransiId, a.NamaAsuransi }
+                ).Distinct().ToListAsync();
+
+                var AsuransiIds = asuransiList.Select(x => x.AsuransiId).ToList();
+                var NamaAsuransi = asuransiList.Select(x => x.NamaAsuransi).ToList();
+
+                // =========================================================
+                // 3) Poli + Jadwal (1 query)
+                // =========================================================
+                var poliJadwalRaw = await (
+                    from dp in _context.DokterPolis.AsNoTracking()
+                    join p in _context.Polikliniks.AsNoTracking()
+                        on dp.PoliId equals p.PoliklinikId
+
+                    join jp0 in _context.JadwalPrakteks.AsNoTracking()
+                        on dp.DokterPoliId equals jp0.DokterPoliId into jpJoin
+                    from jp in jpJoin.DefaultIfEmpty()
+
+                    where dp.DokterId == dokter.DokterId && !dp.IsDelete
+                    select new
+                    {
+                        dp.PoliId,
+                        p.NamaPoliklinik,
+                        dp.DokterPoliId,
+                        Jadwal = (jp == null || jp.IsDelete)
+                            ? null
+                            : new
+                            {
+                                jp.JadwalPraktekId,
+                                jp.HariPraktek,
+                                jp.WaktuPraktek,
+                                jp.JamMulai,
+                                jp.JamBerakhir
+                            }
+                    }
+                ).ToListAsync();
+
+                var PoliIds = poliJadwalRaw.Select(x => x.PoliId).Distinct().ToList();
+                var NamaPoli = poliJadwalRaw.Select(x => x.NamaPoliklinik).Where(x => x != null).Distinct().ToList();
+
+                var JadwalPraktek = poliJadwalRaw
+                    .Where(x => x.Jadwal != null)
+                    .Select(x => x.Jadwal!)
+                    .Distinct()
+                    .OrderBy(j => j.HariPraktek)
+                    .ThenBy(j => j.JamMulai)
+                    .ToList();
+
+                // =========================================================
+                // 4) Image URL
+                // =========================================================
+                //string imageUrl = !string.IsNullOrEmpty(dokter.FotoName)
+                //    ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{dokter.FotoName}"
+                //    : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg";
+
+                // =========================================================
+                // 5) FINAL OBJECT
+                // =========================================================
+                var result = new
+                {
+                    dokter.CreateDateTime,
+                    dokter.CreateBy,
+                    dokterRow.CreateByName,
+
+                    Email = dokterRow.Email,
+
+                    dokter.DokterId,
+                    dokter.KdDokter,
+                    dokter.NmDokter,
+                    dokter.Spesialis,
+                    dokter.Sip,
+                    dokter.Str,
+                    dokter.TglSip,
+                    dokter.TglStr,
+                    dokter.Nik,
+                    dokter.Nohp,
+                    dokter.Alamat,
+                    dokter.IsAsuransi,
+                    dokter.IsActive,
+                    dokter.UserActiveId,
+                    dokterRow.FotoName,
+                    dokterRow.FotoPath,
+
+                    //imageUrl,
+
+                    AsuransiIds,
+                    NamaAsuransi,
+
+                    PoliIds,
+                    NamaPoli,
+
+                    JadwalPraktek
+                };
+
+                return Ok(new
+                {
+                    message = "Berhasil mengambil data dokter berdasarkan email || 200 OK",
+                    data = result
+                });
             }
-
-            // Pastikan path lengkap menggunakan wwwroot
-            var fullPath = Path.Combine(_webHostEnvironment.WebRootPath, fotoPath.TrimStart('/'));
-
-            if (!System.IO.File.Exists(fullPath))
+            catch (Exception ex)
             {
-                return NotFound(new { message = "File tidak ditemukan di server." });
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
-
-            var image = System.IO.File.OpenRead(fullPath);
-            var contentType = GetContentType(fullPath);
-            return File(image, contentType);
         }
+
+
+        //[HttpGet("get-image/{id}")]
+        //public async Task<IActionResult> GetImage(Guid id)
+        //{
+        //    var fotoPath = _context.Dokters
+        //        .Where(p => p.DokterId == id)
+        //        .Select(p => p.FotoPath)
+        //        .FirstOrDefault();
+
+        //    if (string.IsNullOrEmpty(fotoPath))
+        //    {
+        //        return NotFound(new { message = "Foto tidak ditemukan." });
+        //    }
+
+        //    // Pastikan path lengkap menggunakan wwwroot
+        //    var fullPath = Path.Combine(_webHostEnvironment.WebRootPath, fotoPath.TrimStart('/'));
+
+        //    if (!System.IO.File.Exists(fullPath))
+        //    {
+        //        return NotFound(new { message = "File tidak ditemukan di server." });
+        //    }
+
+        //    var image = System.IO.File.OpenRead(fullPath);
+        //    var contentType = GetContentType(fullPath);
+        //    return File(image, contentType);
+        //}
 
         // Fungsi untuk mendapatkan MIME Type
         private string GetContentType(string path)
@@ -307,198 +537,199 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
         // Ga dipake
         // POST: api/Dokter
-        [HttpPost]
-        public async Task<IActionResult> Create([FromForm] DokterViewModel vm)
-        {
-            if (vm == null || !ModelState.IsValid)
-            {
-                return BadRequest(new { message = "Data tidak valid." });
-            }
+        //[HttpPost]
+        //public async Task<IActionResult> Create([FromForm] DokterViewModel vm)
+        //{
+        //    if (vm == null || !ModelState.IsValid)
+        //    {
+        //        return BadRequest(new { message = "Data tidak valid." });
+        //    }
 
-            try
-            {
-                // **Ambil User ID dari JWT Claims**
-                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var GetUserActive = _context.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
-                var UserActiveId = GetUserActive.UserActiveId;
+        //    try
+        //    {
+        //        // **Ambil User ID dari JWT Claims**
+        //        var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        //        var GetUserActive = _context.UserActives.Where(u => u.Email == EmailLogin).FirstOrDefault();
+        //        var UserActiveId = GetUserActive.UserActiveId;
 
-                if (string.IsNullOrEmpty(EmailLogin))
-                {
-                    return Unauthorized(new { message = "User tidak terautentikasi!" });
-                }
+        //        if (string.IsNullOrEmpty(EmailLogin))
+        //        {
+        //            return Unauthorized(new { message = "User tidak terautentikasi!" });
+        //        }
 
-                var dateNow = DateTime.UtcNow; ;
-                var setDateNow = DateTimeOffset.UtcNow.ToString("yyMMdd");
+        //        var dateNow = DateTime.UtcNow; ;
+        //        var setDateNow = DateTimeOffset.UtcNow.ToString("yyMMdd");
 
-                // Generate UserActiveCode
-                var lastCode = _context.Dokters
-                    .Where(d => d.CreateDateTime.Date == dateNow.Date)
-                    .OrderByDescending(k => k.KdDokter)
-                    .FirstOrDefault();
+        //        // Generate UserActiveCode
+        //        var lastCode = _context.Dokters
+        //            .Where(d => d.CreateDateTime.Date == dateNow.Date)
+        //            .OrderByDescending(k => k.KdDokter)
+        //            .FirstOrDefault();
 
-                string kode;
-                if (lastCode == null)
-                {
-                    kode = $"DKR{setDateNow}0001";
+        //        string kode;
+        //        if (lastCode == null)
+        //        {
+        //            kode = $"DKR{setDateNow}0001";
 
-                }
-                else
-                {
-                    var lastCodeTrim = lastCode.KdDokter.Substring(3, 6);
-                    if (lastCodeTrim != setDateNow)
-                    {
-                        kode = $"DKR{setDateNow}0001";
-                    }
-                    else
-                    {
-                        kode = $"DKR{setDateNow}" + (Convert.ToInt32(lastCode.KdDokter.Substring(9)) + 1).ToString("D4");
-                    }
-                }
+        //        }
+        //        else
+        //        {
+        //            var lastCodeTrim = lastCode.KdDokter.Substring(3, 6);
+        //            if (lastCodeTrim != setDateNow)
+        //            {
+        //                kode = $"DKR{setDateNow}0001";
+        //            }
+        //            else
+        //            {
+        //                kode = $"DKR{setDateNow}" + (Convert.ToInt32(lastCode.KdDokter.Substring(9)) + 1).ToString("D4");
+        //            }
+        //        }
 
 
-                // Cek Duplikasi
-                var isDuplicate = _context.Dokters
-                    .Any(c => c.KdDokter == kode && c.NmDokter == vm.NmDokter);
+        //        // Cek Duplikasi
+        //        var isDuplicate = await _context.Dokters
+        //            .AnyAsync(c =>c.NmDokter.ToLower().Trim() == vm.NmDokter.ToLower().Trim() && c.IsDelete==false);
 
-                // **Validasi & Simpan Foto Profil**
-                string fotoPath = null;
-                string fotoFileName = null;
-                if (vm.Foto != null && vm.Foto.Length > 0)
-                {
-                    var maxSize = 2 * 1024 * 1024;
-                    var allowedExtensions = new List<string> { ".jpg", ".jpeg", ".png" };
-                    var fileExtension = Path.GetExtension(vm.Foto.FileName).ToLower();
+        //        // **Validasi & Simpan Foto Profil**
+        //        string fotoPath = null;
+        //        string fotoFileName = null;
+        //        if (vm.Foto != null && vm.Foto.Length > 0)
+        //        {
+        //            var maxSize = 2 * 1024 * 1024;
+        //            var allowedExtensions = new List<string> { ".jpg", ".jpeg", ".png" };
+        //            var fileExtension = Path.GetExtension(vm.Foto.FileName).ToLower();
 
-                    if (vm.Foto.Length > maxSize)
-                    {
-                        return BadRequest(new { message = "Ukuran file terlalu besar! Maksimum 2MB." });
-                    }
+        //            if (vm.Foto.Length > maxSize)
+        //            {
+        //                return BadRequest(new { message = "Ukuran file terlalu besar! Maksimum 2MB." });
+        //            }
 
-                    if (!allowedExtensions.Contains(fileExtension))
-                    {
-                        return BadRequest(new { message = "Format file tidak valid! Gunakan JPG atau PNG." });
-                    }
+        //            if (!allowedExtensions.Contains(fileExtension))
+        //            {
+        //                return BadRequest(new { message = "Format file tidak valid! Gunakan JPG atau PNG." });
+        //            }
 
-                    var uploadFolder = Path.Combine(_webHostEnvironment.WebRootPath, "FotoDokter");
-                    if (!Directory.Exists(uploadFolder))
-                    {
-                        Directory.CreateDirectory(uploadFolder);
-                    }
+        //            var uploadFolder = Path.Combine(_webHostEnvironment.WebRootPath, "FotoDokter");
+        //            if (!Directory.Exists(uploadFolder))
+        //            {
+        //                Directory.CreateDirectory(uploadFolder);
+        //            }
 
-                    fotoFileName = $"{kode}{fileExtension}";
-                    var fotoFilePath = Path.Combine(uploadFolder, fotoFileName);
+        //            fotoFileName = $"{kode}{fileExtension}";
+        //            var fotoFilePath = Path.Combine(uploadFolder, fotoFileName);
 
-                    using (var stream = new FileStream(fotoFilePath, FileMode.Create))
-                    {
-                        vm.Foto.CopyTo(stream);
-                    }
+        //            using (var stream = new FileStream(fotoFilePath, FileMode.Create))
+        //            {
+        //                vm.Foto.CopyTo(stream);
+        //            }
 
-                    fotoPath = $"/FotoDokter/{fotoFileName}";
+        //            fotoPath = $"/FotoDokter/{fotoFileName}";
 
-                    // 📤 **Kirim foto ke server Python Flask**
-                    using var client = new HttpClient();
-                    using var ms = new MemoryStream();
-                    await vm.Foto.CopyToAsync(ms);
-                    ms.Position = 0;
+        //            // 📤 **Kirim foto ke server Python Flask**
+        //            using var client = new HttpClient();
+        //            using var ms = new MemoryStream();
+        //            await vm.Foto.CopyToAsync(ms);
+        //            ms.Position = 0;
 
-                    var content = new MultipartFormDataContent {
-                        // File utama
-                        { new StreamContent(ms) {
-                            Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.Foto.ContentType) }
-                        }, "file", fotoFileName },
+        //            var content = new MultipartFormDataContent {
+        //                // File utama
+        //                { new StreamContent(ms) {
+        //                    Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.Foto.ContentType) }
+        //                }, "file", fotoFileName },
 
-                        // Nama folder tujuan di server Flask
-                        { new StringContent("FotoDokter"), "folderTarget" }
-                    };
+        //                // Nama folder tujuan di server Flask
+        //                { new StringContent("FotoDokter"), "folderTarget" }
+        //            };
 
-                    // Ganti IP di bawah dengan alamat Python Flask server Anda
-                    var flaskResponse = await client.PostAsync(_uploadUrl, content);
+        //            // Ganti IP di bawah dengan alamat Python Flask server Anda
+        //            var flaskResponse = await client.PostAsync(_uploadUrl, content);
 
-                }
-                else
-                {
-                    //Jika user tidak upload foto, gunakan foto default
-                    fotoPath = "/FotoDokter/dokter.jpg";
-                    fotoFileName = "dokter.jpg";
-                }
+        //        }
+        //        else
+        //        {
+        //            //Jika user tidak upload foto, gunakan foto default
+        //            fotoPath = "/FotoDokter/dokter.jpg";
+        //            fotoFileName = "dokter.jpg";
+        //        }
 
-                if (ModelState.IsValid)
-                {
-                    var dokter = new Dokter
-                    {
-                        DokterId = Guid.NewGuid(),
-                        NmDokter = vm.NmDokter,
-                        Sip = vm.Sip,
-                        Str = vm.Str,
-                        TglSip = vm.TglSip,
-                        TglStr = vm.TglStr,
-                        FotoPath = fotoPath,
-                        FotoName = fotoFileName,
-                        Spesialis = vm.Spesialis,
-                        Nik = vm.Nik,
-                        KdDokter = kode,
-                        Email = vm.Email,
-                        Nohp = vm.Nohp,
-                        Alamat = vm.Alamat,
-                        CreateDateTime = DateTimeOffset.UtcNow,
-                        CreateBy = UserActiveId,
-                        IsDelete = false,
-                        IsAsuransi = vm.IsAsuransi,
-                        IsActive = true,
-                    };
-                    _context.Dokters.Add(dokter);
-                    _context.SaveChanges();
+        //        if (ModelState.IsValid)
+        //        {
+        //            var dokter = new Dokter
+        //            {
+        //                DokterId = Guid.NewGuid(),
+        //                NmDokter = vm.NmDokter,
+        //                Sip = vm.Sip,
+        //                Str = vm.Str,
+        //                TglSip = vm.TglSip,
+        //                TglStr = vm.TglStr,
+        //                FotoPath = fotoPath,
+        //                FotoName = fotoFileName,
+        //                Spesialis = vm.Spesialis,
+        //                Nik = vm.Nik,
+        //                KdDokter = kode,
+        //                Email = vm.Email,
+        //                Nohp = vm.Nohp,
+        //                Alamat = vm.Alamat,
+        //                HargaVisit = vm.HargaVisit,
+        //                CreateDateTime = DateTimeOffset.UtcNow,
+        //                CreateBy = UserActiveId,
+        //                IsDelete = false,
+        //                IsAsuransi = vm.IsAsuransi,
+        //                IsActive = true,
+        //            };
+        //            _context.Dokters.Add(dokter);
+        //            _context.SaveChanges();
 
-                    if (vm.AsuransiId != null && vm.AsuransiId.Any())
-                    {
-                        var dokterAsuransiList = vm.AsuransiId.Select(asuransiId => new DokterAsuransi
-                        {
-                            DokterAsuransiId = Guid.NewGuid(),
-                            DokterId = dokter.DokterId, // Gunakan ID dokter yang baru dibuat
-                            AsuransiId = asuransiId, // Ambil ID asuransi dari list
-                            CreateDateTime = DateTimeOffset.UtcNow,
-                            CreateBy = UserActiveId,
-                            IsDelete = false,
-                        }).ToList();
+        //            if (vm.AsuransiId != null && vm.AsuransiId.Any())
+        //            {
+        //                var dokterAsuransiList = vm.AsuransiId.Select(asuransiId => new DokterAsuransi
+        //                {
+        //                    DokterAsuransiId = Guid.NewGuid(),
+        //                    DokterId = dokter.DokterId, // Gunakan ID dokter yang baru dibuat
+        //                    AsuransiId = asuransiId, // Ambil ID asuransi dari list
+        //                    CreateDateTime = DateTimeOffset.UtcNow,
+        //                    CreateBy = UserActiveId,
+        //                    IsDelete = false,
+        //                }).ToList();
 
-                        _context.DokterAsuransis.AddRange(dokterAsuransiList);
-                        await _context.SaveChangesAsync();
-                    }
+        //                _context.DokterAsuransis.AddRange(dokterAsuransiList);
+        //                await _context.SaveChangesAsync();
+        //            }
 
-                    if (vm.PoliId != null && vm.PoliId.Any())
-                    {
-                        var dokterPoliList = vm.PoliId.Select(poliId => new DokterPoli
-                        {
-                            DokterPoliId = Guid.NewGuid(),
-                            DokterId = dokter.DokterId, // Gunakan ID dokter yang baru dibuat
-                            PoliId = poliId, // Ambil ID Poli dari list
-                            CreateDateTime = DateTimeOffset.UtcNow,
-                            CreateBy = UserActiveId,
-                            IsDelete = false,
-                        }).ToList();
+        //            if (vm.PoliId != null && vm.PoliId.Any())
+        //            {
+        //                var dokterPoliList = vm.PoliId.Select(poliId => new DokterPoli
+        //                {
+        //                    DokterPoliId = Guid.NewGuid(),
+        //                    DokterId = dokter.DokterId, // Gunakan ID dokter yang baru dibuat
+        //                    PoliId = poliId, // Ambil ID Poli dari list
+        //                    CreateDateTime = DateTimeOffset.UtcNow,
+        //                    CreateBy = UserActiveId,
+        //                    IsDelete = false,
+        //                }).ToList();
 
-                        _context.DokterPolis.AddRange(dokterPoliList);
-                        await _context.SaveChangesAsync();
-                    }
+        //                _context.DokterPolis.AddRange(dokterPoliList);
+        //                await _context.SaveChangesAsync();
+        //            }
 
-                    return Created("", new
-                    {
-                        message = "Tambah Data Berhasil || 201 Created",
-                        //uploadFotoUrl = fotoPath != null ? $"{Request.Scheme}://{Request.Host}{fotoPath}" : null
-                    });
+        //            return Created("", new
+        //            {
+        //                message = "Tambah Data Berhasil || 201 Created",
+        //                //uploadFotoUrl = fotoPath != null ? $"{Request.Scheme}://{Request.Host}{fotoPath}" : null
+        //            });
 
-                }
-                else
-                {
-                    return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
-                }
-            }
+        //        }
+        //        else
+        //        {
+        //            return BadRequest(new { message = "Data tidak valid !!! || 400 Bad Request" });
+        //        }
+        //    }
 
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
-            }
-        }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+        //    }
+        //}
 
 
         // PUT: api/Dokter/{id}
@@ -564,6 +795,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.Alamat = vm.Alamat ?? data.Alamat;
                 data.Spesialis = vm.Spesialis ?? data.Spesialis;
                 data.IsAsuransi = vm.IsAsuransi ?? data.IsAsuransi;
+                data.HargaVisit = vm.HargaVisit ?? data.HargaVisit;
 
                 if (userActive != null)
                 {
@@ -579,52 +811,65 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     _context.UserActives.Update(userActive);
                 }
 
-                // **Update Foto Profil Jika Ada**
-                if (vm.Foto != null && vm.Foto.Length > 0)
-                {
-                    var maxSize = 2 * 1024 * 1024; // Maksimum 2MB
-                    var allowedExtensions = new List<string> { ".jpg", ".jpeg", ".png" };
-                    var fileExtension = Path.GetExtension(vm.Foto.FileName).ToLower();
+                //// **Update Foto Profil Jika Ada**
+                //if (vm.Foto != null && vm.Foto.Length > 0)
+                //{
+                //    var maxSize = 2 * 1024 * 1024; // Maksimum 2MB
+                //    var allowedExtensions = new List<string> { ".jpg", ".jpeg", ".png" };
+                //    var fileExtension = Path.GetExtension(vm.Foto.FileName).ToLower();
 
-                    if (vm.Foto.Length > maxSize)
-                    {
-                        return BadRequest(new { message = "Ukuran file terlalu besar! Maksimum 2MB." });
-                    }
+                //    if (vm.Foto.Length > maxSize)
+                //    {
+                //        return BadRequest(new { message = "Ukuran file terlalu besar! Maksimum 2MB." });
+                //    }
 
-                    if (!allowedExtensions.Contains(fileExtension))
-                    {
-                        return BadRequest(new { message = "Format file tidak valid! Gunakan JPG atau PNG." });
-                    }
+                //    if (!allowedExtensions.Contains(fileExtension))
+                //    {
+                //        return BadRequest(new { message = "Format file tidak valid! Gunakan JPG atau PNG." });
+                //    }
 
-                    var fotoFileName = $"{data.KdDokter}{fileExtension}";
-                    var oldFileName = data.FotoName ?? "";
+                //    var fotoFileName = $"{data.KdDokter}{fileExtension}";
 
-                    using var client = new HttpClient();
-                    using var ms = new MemoryStream();
-                    await vm.Foto.CopyToAsync(ms);
-                    ms.Position = 0;
+                //    // ambil old file dari userActive karena sekarang foto utama ada di sana
+                //    var oldFileName = userActive?.FotoName ?? "";
 
-                    var content = new MultipartFormDataContent
-                    {
-                        {
-                            new StreamContent(ms)
-                            {
-                                Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.Foto.ContentType) }
-                            }, "file", fotoFileName
-                        },
-                        { new StringContent("FotoDokter"), "folderTarget" },
-                        { new StringContent(oldFileName), "oldFileName" }
-                    };
+                //    using var client = new HttpClient();
+                //    using var ms = new MemoryStream();
+                //    await vm.Foto.CopyToAsync(ms);
+                //    ms.Position = 0;
 
-                    var flaskResponse = await client.PostAsync(_uploadUrl, content);
-                    if (!flaskResponse.IsSuccessStatusCode)
-                    {
-                        return StatusCode(500, new { message = "Gagal upload foto ke server Flask." });
-                    }
+                //    var content = new MultipartFormDataContent
+                //    {
+                //        {
+                //            new StreamContent(ms)
+                //            {
+                //                Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.Foto.ContentType) }
+                //            },
+                //            "file",
+                //            fotoFileName
+                //        },
+                //        { new StringContent("FotoKaryawan"), "folderTarget" },
+                //        { new StringContent(oldFileName), "oldFileName" }
+                //    };
 
-                    data.FotoName = fotoFileName;
-                    data.FotoPath = $"/FotoDokter/{fotoFileName}";
-                }
+                //    var flaskResponse = await client.PostAsync(_uploadUrl, content);
+                //    if (!flaskResponse.IsSuccessStatusCode)
+                //    {
+                //        return StatusCode(500, new { message = "Gagal upload foto ke server Flask." });
+                //    }
+
+                //    // update foto utama di tabel UserActive
+                //    if (userActive != null)
+                //    {
+                //        userActive.FotoName = fotoFileName;
+                //        userActive.FotoPath = $"/FotoKaryawan/{fotoFileName}";
+                //        userActive.UpdateDateTime = DateTimeOffset.UtcNow;
+                //        userActive.UpdateBy = UserActiveId;
+
+                //        _context.UserActives.Update(userActive);
+                //    }
+
+                //}
 
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
                 data.UpdateBy = UserActiveId;
@@ -1058,204 +1303,346 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         //}
 
         [HttpGet("paged")]
-        public IActionResult PagedDokter(
-        int page = 1,
-        int perPage = 10,
-        string? search = null,
-        Guid? AsuransiId = null,
-        Guid? PoliId = null,
-        string? orderBy = "CreateDateTime",
-        string? sortDirection = "desc",
-        [FromQuery] DateTime? startDate = null,
-        [FromQuery] DateTime? endDate = null,
-        [FromQuery] PeriodeFilter? periode = null)
+        public async Task<IActionResult> PagedDokter(
+            int page = 1,
+            int perPage = 10,
+            string? search = null,
+            Guid? asuransiId = null,
+            Guid? poliId = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery] DateTime? startDate = null,
+            [FromQuery] DateTime? endDate = null,
+            [FromQuery] PeriodeFilter? periode = null,
+            CancellationToken ct = default)
         {
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
+            if (perPage > 100) perPage = 100; // biar swagger ga “meledak”
 
-            // 1) Base query ke Dokter (belum projection)
-            var baseQuery = _context.Dokters
+            // =========================================
+            // 1) BASE QUERY (Dokter saja, ringan)
+            // =========================================
+            IQueryable<Dokter> baseQuery = _context.Dokters
+                .AsNoTracking()
                 .Where(d => !d.IsDelete);
 
-            // 2) FILTER: by AsuransiId (GUID)
-            if (AsuransiId.HasValue)
+            // Filter AsuransiId via EXISTS (Any)
+            if (asuransiId.HasValue && asuransiId.Value != Guid.Empty)
             {
-                var asu = AsuransiId.Value;
+                var asu = asuransiId.Value;
                 baseQuery = baseQuery.Where(d =>
-                    _context.DokterAsuransis.Any(da => da.DokterId == d.DokterId && da.AsuransiId == asu));
+                    _context.DokterAsuransis.AsNoTracking().Any(da =>
+                        !da.IsDelete && da.DokterId == d.DokterId && da.AsuransiId == asu));
             }
 
-            // 3) FILTER: by PoliId (GUID)
-            if (PoliId.HasValue)
+            // Filter PoliId via EXISTS (Any)
+            if (poliId.HasValue && poliId.Value != Guid.Empty)
             {
-                var poli = PoliId.Value;
+                var poli = poliId.Value;
                 baseQuery = baseQuery.Where(d =>
-                    _context.DokterPolis.Any(dp => dp.DokterId == d.DokterId && dp.PoliId == poli));
+                    _context.DokterPolis.AsNoTracking().Any(dp =>
+                        !dp.IsDelete && dp.DokterId == d.DokterId && dp.PoliId == poli));
             }
 
-            // 4) SEARCH: kode/nama/email (seperti semula) + (opsional) nama asuransi/poli
+            // Search (kode/nama/email + nama asuransi/poli) pakai EXISTS, bukan join besar
             if (!string.IsNullOrWhiteSpace(search))
             {
-                string q = $"%{search.ToLower()}%";
+                var like = $"%{search.Trim()}%";
 
                 baseQuery = baseQuery.Where(d =>
-                    EF.Functions.ILike(d.KdDokter, q) ||
-                    EF.Functions.ILike(d.NmDokter, q) ||
-                    EF.Functions.ILike(d.Email, q) ||
+                    (d.KdDokter != null && EF.Functions.ILike(d.KdDokter, like)) ||
+                    (d.NmDokter != null && EF.Functions.ILike(d.NmDokter, like)) ||
+                    (d.Email != null && EF.Functions.ILike(d.Email, like)) ||
 
-                    // cari di NAMA ASURANSI (join via DokterAsuransis -> Asuransis)
-                    _context.DokterAsuransis
-                        .Join(_context.Asuransis, da => da.AsuransiId, a => a.AsuransiId, (da, a) => new { da.DokterId, a.NamaAsuransi })
-                        .Any(x => x.DokterId == d.DokterId && EF.Functions.ILike(x.NamaAsuransi, q)) ||
-                    // cari di NAMA POLI (join via DokterPolis -> Polikliniks)
-                    _context.DokterPolis
-                        .Join(_context.Polikliniks, dp => dp.PoliId, p => p.PoliklinikId, (dp, p) => new { dp.DokterId, p.NamaPoliklinik })
-                        .Any(x => x.DokterId == d.DokterId && EF.Functions.ILike(x.NamaPoliklinik, q))
+                    // exists nama asuransi
+                    (from da in _context.DokterAsuransis.AsNoTracking()
+                     join a in _context.Asuransis.AsNoTracking() on da.AsuransiId equals a.AsuransiId
+                     where !da.IsDelete && da.DokterId == d.DokterId
+                           && a.NamaAsuransi != null
+                           && EF.Functions.ILike(a.NamaAsuransi, like)
+                     select 1).Any() ||
+
+                    // exists nama poli
+                    (from dp in _context.DokterPolis.AsNoTracking()
+                     join p in _context.Polikliniks.AsNoTracking() on dp.PoliId equals p.PoliklinikId
+                     where !dp.IsDelete && dp.DokterId == d.DokterId
+                           && p.NamaPoliklinik != null
+                           && EF.Functions.ILike(p.NamaPoliklinik, like)
+                     select 1).Any()
                 );
             }
 
-            // 5) FILTER tanggal & periode (tetap)
+            // Filter tanggal (lebih sargable: < endExclusive)
             if (startDate.HasValue && endDate.HasValue)
             {
-                DateTimeOffset startUtc = startDate.Value.Date.ToUniversalTime();
-                DateTimeOffset endUtc = endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
-                baseQuery = baseQuery.Where(d => d.CreateDateTime >= startUtc && d.CreateDateTime <= endUtc);
+                var start = startDate.Value.Date.ToUniversalTime();
+                var endExclusive = endDate.Value.Date.AddDays(1).ToUniversalTime();
+                baseQuery = baseQuery.Where(d => d.CreateDateTime >= start && d.CreateDateTime < endExclusive);
             }
 
+            // Filter periode (usahakan range, bukan .Date)
             if (periode.HasValue)
             {
-                DateTime today = DateTime.UtcNow.Date;
-                switch (periode)
+                var today = DateTime.UtcNow.Date;
+                DateTime start;
+                DateTime endExclusive;
+
+                switch (periode.Value)
                 {
                     case PeriodeFilter.Today:
-                        baseQuery = baseQuery.Where(d => d.CreateDateTime.Date == today); break;
+                        start = today;
+                        endExclusive = today.AddDays(1);
+                        break;
+
+                    case PeriodeFilter.Yesterday:
+                        start = today.AddDays(-1);
+                        endExclusive = today;
+                        break;
+
                     case PeriodeFilter.ThisWeek:
-                        var weekStart = today.AddDays(-(int)today.DayOfWeek);
-                        baseQuery = baseQuery.Where(d => d.CreateDateTime.Date >= weekStart && d.CreateDateTime.Date <= today); break;
+                        start = today.AddDays(-(int)today.DayOfWeek);
+                        endExclusive = today.AddDays(1);
+                        break;
+
                     case PeriodeFilter.LastWeek:
-                        var lastWeekStart = today.AddDays(-7 - (int)today.DayOfWeek);
-                        var lastWeekEnd = lastWeekStart.AddDays(6);
-                        baseQuery = baseQuery.Where(d => d.CreateDateTime.Date >= lastWeekStart && d.CreateDateTime.Date <= lastWeekEnd); break;
+                        var thisWeekStart = today.AddDays(-(int)today.DayOfWeek);
+                        start = thisWeekStart.AddDays(-7);
+                        endExclusive = thisWeekStart;
+                        break;
+
                     case PeriodeFilter.ThisMonth:
-                        baseQuery = baseQuery.Where(d => d.CreateDateTime.Month == today.Month && d.CreateDateTime.Year == today.Year); break;
+                        start = new DateTime(today.Year, today.Month, 1);
+                        endExclusive = start.AddMonths(1);
+                        break;
+
                     case PeriodeFilter.LastMonth:
-                        var lastMonth = today.AddMonths(-1);
-                        baseQuery = baseQuery.Where(d => d.CreateDateTime.Month == lastMonth.Month && d.CreateDateTime.Year == lastMonth.Year); break;
+                        var thisMonthStart = new DateTime(today.Year, today.Month, 1);
+                        start = thisMonthStart.AddMonths(-1);
+                        endExclusive = thisMonthStart;
+                        break;
+
                     case PeriodeFilter.ThisYear:
-                        baseQuery = baseQuery.Where(d => d.CreateDateTime.Year == today.Year); break;
+                        start = new DateTime(today.Year, 1, 1);
+                        endExclusive = start.AddYears(1);
+                        break;
+
                     case PeriodeFilter.LastYear:
-                        baseQuery = baseQuery.Where(d => d.CreateDateTime.Year == today.Year - 1); break;
+                        start = new DateTime(today.Year - 1, 1, 1);
+                        endExclusive = start.AddYears(1);
+                        break;
+
                     case PeriodeFilter.Last3Months:
-                        baseQuery = baseQuery.Where(d => d.CreateDateTime >= today.AddMonths(-3)); break;
+                        start = today.AddMonths(-3);
+                        endExclusive = today.AddDays(1);
+                        break;
+
                     case PeriodeFilter.Last6Months:
-                        baseQuery = baseQuery.Where(d => d.CreateDateTime >= today.AddMonths(-6)); break;
+                        start = today.AddMonths(-6);
+                        endExclusive = today.AddDays(1);
+                        break;
+
+                    default:
+                        start = DateTime.MinValue;
+                        endExclusive = DateTime.MaxValue;
+                        break;
                 }
+
+                baseQuery = baseQuery.Where(d => d.CreateDateTime >= start && d.CreateDateTime < endExclusive);
             }
 
-            // 6) PROJECTION akhir (baru setelah semua filter)
-            var query = baseQuery.Select(d => new
-            {
-                d.CreateDateTime,
-                d.CreateBy,
-                CreateByName = _context.UserActives
-                    .Where(u => u.UserActiveId == d.CreateBy)
-                    .Select(u => u.FullName)
-                    .FirstOrDefault(),
-                d.DokterId,
-                d.KdDokter,
-                d.NmDokter,
-                d.Sip,
-                d.Str,
-                d.TglSip,
-                d.TglStr,
-                d.Spesialis,
-                d.Nik,
-                d.Nohp,
-                d.Alamat,
-                d.Email,
-                d.UserActiveId,
-                d.IsAsuransi,
-                d.IsActive,
-                d.FotoName,
-                d.FotoPath,
-                imageUrl = !string.IsNullOrEmpty(d.FotoName)
-                    ? $"{Request.Scheme}://{Request.Host}/FotoDokter/{d.FotoName}"
-                    : $"{Request.Scheme}://{Request.Host}/FotoDokter/dokter.jpg",
+            // =========================================
+            // 2) COUNT (hanya baseQuery, ringan)
+            // =========================================
+            var totalRows = await baseQuery.CountAsync(ct);
+            if (totalRows == 0)
+                return NotFound(new { message = "Data tidak ditemukan." });
 
-                AsuransiIds = _context.DokterAsuransis
-                    .Where(da => da.DokterId == d.DokterId)
-                    .Select(da => da.AsuransiId)
-                    .Distinct()
-                    .ToList(),
-
-                NamaAsuransi = _context.DokterAsuransis
-                    .Where(da => da.DokterId == d.DokterId)
-                    .Join(_context.Asuransis, da => da.AsuransiId, a => a.AsuransiId, (da, a) => a.NamaAsuransi)
-                    .Distinct()
-                    .ToList(),
-
-                PoliIds = _context.DokterPolis
-                    .Where(dp => dp.DokterId == d.DokterId)
-                    .Select(dp => dp.PoliId)
-                    .Distinct()
-                    .ToList(),
-
-                NamaPoli = _context.DokterPolis
-                    .Where(dp => dp.DokterId == d.DokterId)
-                    .Join(_context.Polikliniks, dp => dp.PoliId, p => p.PoliklinikId, (dp, p) => p.NamaPoliklinik)
-                    .Distinct()
-                    .ToList(),
-
-                JadwalPraktek = (
-                    from dp in _context.DokterPolis
-                    join jp in _context.JadwalPrakteks on dp.DokterPoliId equals jp.DokterPoliId
-                    join p in _context.Polikliniks on dp.PoliId equals p.PoliklinikId
-                    where dp.DokterId == d.DokterId
-                          && !dp.IsDelete
-                          && !jp.IsDelete
-                    select new
-                    {
-                        jp.JadwalPraktekId,
-                        jp.HariPraktek,
-                        jp.WaktuPraktek,
-                        jp.JamMulai,
-                        jp.JamBerakhir
-                    }
-                )
-                .OrderByDescending(x => x.HariPraktek)
-                .ThenBy(x => x.JamMulai)
-                .ToList()
-
-            });
-
-            // 7) SORTING (tetap; kecil catatan: pakai key lowercase biar konsisten)
-            query = sortDirection?.ToLower() == "desc"
-                ? (orderBy?.ToLower() switch
-                {
-                    "createdatetime" => query.OrderByDescending(d => d.CreateDateTime),
-                    "createbyname" => query.OrderByDescending(d => d.CreateByName),
-                    "Kode Dokter" => query.OrderByDescending(d => d.KdDokter),
-                    "Nama Dokter" => query.OrderByDescending(d => d.NmDokter),
-                    "Email" => query.OrderByDescending(d => d.Email),
-                    _ => query.OrderByDescending(d => d.CreateDateTime)
-                })
-                : (orderBy?.ToLower() switch
-                {
-                    "createdatetime" => query.OrderBy(d => d.CreateDateTime),
-                    "createbyname" => query.OrderBy(d => d.CreateByName),
-                    "Kode Dokter" => query.OrderBy(d => d.KdDokter),
-                    "Nama Dokter" => query.OrderBy(d => d.NmDokter),
-                    "Email" => query.OrderBy(d => d.Email),
-                    _ => query.OrderBy(d => d.CreateDateTime)
-                });
-
-            // 8) Pagination
-            var totalRows = query.Count();
             var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
-            var rows = query.Skip((page - 1) * perPage).Take(perPage).ToList();
-
-            if (rows.Count == 0 && page > totalPages)
+            if (page > totalPages)
                 return NotFound(new { message = "Page not found." });
+
+            // =========================================
+            // 3) SORTING (di baseQuery)
+            //    Catatan: sort CreateByName butuh join, jadi saya support basic saja
+            // =========================================
+            bool desc = string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase);
+            var order = (orderBy ?? "CreateDateTime").Trim().ToLowerInvariant();
+
+            IQueryable<Dokter> sortedQuery = order switch
+            {
+                "kddokter" => desc ? baseQuery.OrderByDescending(x => x.KdDokter) : baseQuery.OrderBy(x => x.KdDokter),
+                "nmdokter" => desc ? baseQuery.OrderByDescending(x => x.NmDokter) : baseQuery.OrderBy(x => x.NmDokter),
+                "email" => desc ? baseQuery.OrderByDescending(x => x.Email) : baseQuery.OrderBy(x => x.Email),
+                _ => desc ? baseQuery.OrderByDescending(x => x.CreateDateTime) : baseQuery.OrderBy(x => x.CreateDateTime),
+            };
+
+            // =========================================
+            // 4) PAGE IDS dulu (super ringan)
+            // =========================================
+            var pagedDokterIds = await sortedQuery
+                .Skip((page - 1) * perPage)
+                .Take(perPage)
+                .Select(d => d.DokterId)
+                .ToListAsync(ct);
+
+            if (pagedDokterIds.Count == 0)
+                return NotFound(new { message = "Data tidak ditemukan." });
+
+            var idSet = pagedDokterIds.ToHashSet();
+
+            // =========================================
+            // 5) LOAD DOKTER + CreateByName (1 query)
+            // =========================================
+            var dokterRows = await (
+                from d in _context.Dokters.AsNoTracking()
+                where idSet.Contains(d.DokterId)
+
+                join u0 in _context.UserActives.AsNoTracking()
+                    on d.CreateBy equals u0.UserActiveId into uj
+                from u in uj.DefaultIfEmpty()
+
+                join o in _context.UserActives.AsNoTracking()
+                    on d.UserActiveId equals o.UserActiveId into oJ
+                from o in oJ.DefaultIfEmpty()
+
+                select new
+                {
+                    d.CreateDateTime,
+                    d.CreateBy,
+                    CreateByName = u != null ? u.FullName : null,
+
+                    d.DokterId,
+                    d.KdDokter,
+                    d.NmDokter,
+                    d.Sip,
+                    d.Str,
+                    d.TglSip,
+                    d.TglStr,
+                    d.Spesialis,
+                    d.Nik,
+                    d.Nohp,
+                    d.Alamat,
+                    d.Email,
+                    d.UserActiveId,
+                    d.IsAsuransi,
+                    d.IsActive,
+                    d.HargaVisit,
+                    FotoName = o != null ? o.FotoName : null,
+                    FotoPath = o != null ? o.FotoPath : null,
+                }
+            ).ToListAsync(ct);
+
+            var dokterDict = dokterRows.ToDictionary(x => x.DokterId, x => x);
+            var dokterPaged = pagedDokterIds.Where(dokterDict.ContainsKey).Select(id => dokterDict[id]).ToList();
+
+            // =========================================
+            // 6) LOAD ASURANSI (1 query)
+            // =========================================
+            var asuransiData = await (
+                from da in _context.DokterAsuransis.AsNoTracking()
+                join a in _context.Asuransis.AsNoTracking()
+                    on da.AsuransiId equals a.AsuransiId
+                where !da.IsDelete && idSet.Contains(da.DokterId)
+                select new { da.DokterId, da.AsuransiId, a.NamaAsuransi }
+            ).ToListAsync(ct);
+
+            // =========================================
+            // 7) LOAD POLI (1 query)
+            // =========================================
+            var poliData = await (
+                from dp in _context.DokterPolis.AsNoTracking()
+                join p in _context.Polikliniks.AsNoTracking()
+                    on dp.PoliId equals p.PoliklinikId
+                where !dp.IsDelete && idSet.Contains(dp.DokterId)
+                select new { dp.DokterId, dp.DokterPoliId, dp.PoliId, p.NamaPoliklinik }
+            ).ToListAsync(ct);
+
+            // =========================================
+            // 8) LOAD JADWAL (1 query)
+            // =========================================
+            var jadwalData = await (
+                from dp in _context.DokterPolis.AsNoTracking()
+                join jp in _context.JadwalPrakteks.AsNoTracking()
+                    on dp.DokterPoliId equals jp.DokterPoliId
+                where !dp.IsDelete && !jp.IsDelete && idSet.Contains(dp.DokterId)
+                select new
+                {
+                    dp.DokterId,
+                    jp.JadwalPraktekId,
+                    jp.HariPraktek,
+                    jp.WaktuPraktek,
+                    jp.JamMulai,
+                    jp.JamBerakhir
+                }
+            ).ToListAsync(ct);
+
+            // =========================================
+            // 9) LOOKUP + BUILD RESULT
+            // =========================================
+            var asuransiLookup = asuransiData.ToLookup(x => x.DokterId);
+            var poliLookup = poliData.ToLookup(x => x.DokterId);
+            var jadwalLookup = jadwalData.ToLookup(x => x.DokterId);
+
+            var baseUrl = $"{Request.Scheme}://{Request.Host}";
+
+            var rows = dokterPaged.Select(d =>
+            {
+                var asuItems = asuransiLookup[d.DokterId].ToList();
+                var poliItems = poliLookup[d.DokterId].ToList();
+                var jadwalItems = jadwalLookup[d.DokterId]
+                    .OrderBy(x => x.HariPraktek)
+                    .ThenBy(x => x.JamMulai)
+                    .Select(x => new
+                    {
+                        x.JadwalPraktekId,
+                        x.HariPraktek,
+                        x.WaktuPraktek,
+                        x.JamMulai,
+                        x.JamBerakhir
+                    })
+                    .ToList();
+
+                //var imageUrl = !string.IsNullOrEmpty(d.FotoName)
+                //    ? $"{baseUrl}/FotoDokter/{d.FotoName}"
+                //    : $"{baseUrl}/FotoDokter/dokter.jpg";
+
+                return new
+                {
+                    d.CreateDateTime,
+                    d.CreateBy,
+                    d.CreateByName,
+
+                    d.DokterId,
+                    d.KdDokter,
+                    d.NmDokter,
+                    d.Sip,
+                    d.Str,
+                    d.TglSip,
+                    d.TglStr,
+                    d.Spesialis,
+                    d.Nik,
+                    d.Nohp,
+                    d.Alamat,
+                    d.Email,
+                    d.UserActiveId,
+                    d.IsAsuransi,
+                    d.IsActive,
+                    d.HargaVisit,
+                    d.FotoName,
+                    d.FotoPath,
+
+                    //imageUrl,
+
+                    AsuransiIds = asuItems.Select(x => x.AsuransiId).Distinct().ToList(),
+                    NamaAsuransi = asuItems.Select(x => x.NamaAsuransi).Where(x => x != null).Distinct().ToList(),
+
+                    PoliIds = poliItems.Select(x => x.PoliId).Distinct().ToList(),
+                    NamaPoli = poliItems.Select(x => x.NamaPoliklinik).Where(x => x != null).Distinct().ToList(),
+
+                    JadwalPraktek = jadwalItems
+                };
+            }).ToList();
 
             return Ok(new
             {
@@ -1271,6 +1658,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
             });
         }
+
 
     }
 

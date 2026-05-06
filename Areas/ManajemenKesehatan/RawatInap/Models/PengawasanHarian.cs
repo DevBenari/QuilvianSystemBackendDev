@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using QuilvianSystemBackendDev.Models;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models
@@ -9,10 +10,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models
         public Guid PengawasanHarianId { get; set; }   // Generate Otomatis
 
         public Guid KunjunganId { get; set; }          // Relasi ke tabel kunjungan
-        public Guid PasienId { get; set; }             // Relasi ke tabel pendaftaran pasien baru
-        public Guid? VitalSignId { get; set; }
-        public Guid? PainAssesmentId {  get; set; }
-        public Guid? ResepId { get; set; }
+        public Guid PasienId { get; set; }
+        // Relasi ke tabel pendaftaran pasien baru
+        [Column(TypeName = "text")]
+        public string? VitalSign { get; set; }
+        [Column(TypeName = "text")]
+        public string? PainAssesment {  get; set; }
+        [Column(TypeName = "text")]
+        public string? Resep { get; set; }
         public DateTime? TglPengawasanHarian { get; set; }
         public TimeOnly? WaktuPengawasan { get; set; }
 

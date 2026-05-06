@@ -174,7 +174,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // **Cek Duplikasi**
                 bool isDuplicate = _applicationDbContext.SkalaPains
-                    .Any(c => c.KodeSkalaPain == kode);
+                    .Any(c => c.KodeSkalaPain == kode && c.IsDelete == false);
 
                 if (isDuplicate)
                 {

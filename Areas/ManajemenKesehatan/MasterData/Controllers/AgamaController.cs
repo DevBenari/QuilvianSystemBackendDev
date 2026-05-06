@@ -14,6 +14,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System.Globalization;
 using Microsoft.IdentityModel.Tokens;
+using QuilvianSystemBackendDev.Helpers;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
@@ -45,6 +46,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             _signInManager = signInManager;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
+        }
+        private static string NormalizeNama(string nama)
+        {
+            nama = (nama ?? "").Trim();
+            while (nama.Contains("  "))
+                nama = nama.Replace("  ", " ");
+            return nama;
         }
 
         [HttpGet]
@@ -122,7 +130,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             {
                 return BadRequest(new { message = "Data tidak valid." });
             }
-
+            var Nama = NormalizeNama(vm.NamaAgama);
             try
             {
                 // **Cek koneksi ke database**
@@ -177,14 +185,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     }
                 }
 
-                // **Cek Duplikasi**
-                bool isDuplicate = _applicationDbContext.Agamas
-                    .Any(c => c.KodeAgama == kode && c.NamaAgama.ToLower() == vm.NamaAgama.ToLower());
-
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
-                }
+                
 
                 // **Buat Data Baru**
                 var data = new Agama
@@ -193,7 +194,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     CreateDateTime = dateNow.Date,// Konversi ke UTC,
                     CreateBy = userActiveId,
                     KodeAgama = kode,
-                    NamaAgama = vm.NamaAgama
+                    NamaAgama = Nama
                 };
 
                 // **Simpan ke Database**
@@ -209,9 +210,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
                 }
             }
-            catch (DbUpdateException dbEx)
+            catch (DbUpdateException ex) when (UniqueViolationError.IsUniqueViolation(ex))
             {
-                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+                // Karena citext + partial unique index, ini berarti sudah ada NAMA aktif yang sama
+                return Conflict(new
+                {
+                    status = "duplicate",
+                    message = $"Agama '{Nama}' sudah ada (aktif)."
+                });
             }
             catch (Exception ex)
             {

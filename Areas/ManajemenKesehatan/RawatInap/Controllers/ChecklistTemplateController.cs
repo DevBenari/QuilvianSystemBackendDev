@@ -147,7 +147,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
 
                 //// **Cek Duplikasi**
                 bool isDuplicate = _applicationDbContext.ChecklistTemplates
-                                    .Any(c => c.NamaTemplateChecklist == vm.NamaTemplateChecklist);
+                                    .Any(c => c.NamaTemplateChecklist.ToLower().Trim()
+                                    == vm.NamaTemplateChecklist.ToLower().Trim() && c.IsDelete == false);
 
                 if (isDuplicate)
                 {

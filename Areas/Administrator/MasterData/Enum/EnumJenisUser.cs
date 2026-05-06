@@ -34,7 +34,10 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Enum
         Guest = 8,
 
         [Display(Name = "Customer Service")]
-        CustomerService = 9
+        CustomerService = 9,
+
+        [Display(Name = "Direksi")]
+        Direksi = 9
     }
 }
 

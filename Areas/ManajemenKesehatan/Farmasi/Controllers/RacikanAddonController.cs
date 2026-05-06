@@ -63,8 +63,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.CreateBy,
                              CreateByName = u.FullName,
                              RacikanAddonId = a.AddonRacikanId,
-                             a.BentukObatId,
-                             a.NamaBentukObat,
+                             a.BentukSatuanId,
+                             a.NamaBentukSatuan,
                              a.BiayaJasaRacikan,
                              a.BiayaKemasanRacikan,
                              a.Keterangan,
@@ -160,8 +160,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 var data = new RacikanAddon
                 {
                     AddonRacikanId = Guid.NewGuid(),
-                    BentukObatId = vm.BentukObatId,
-                    NamaBentukObat = vm.NamaBentukObat,
+                    BentukSatuanId = vm.BentukSatuanId,
+                    NamaBentukSatuan = vm.NamaBentukSatuan,
                     BiayaJasaRacikan = vm.BiayaJasaRacikan,
                     BiayaKemasanRacikan = vm.BiayaKemasanRacikan,
                     Keterangan = vm.Keterangan,
@@ -231,8 +231,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 }
 
                 // **Update Data**
-                data.BentukObatId = vm.BentukObatId;
-                data.NamaBentukObat = vm.NamaBentukObat;
+                data.BentukSatuanId = vm.BentukSatuanId;
+                data.NamaBentukSatuan = vm.NamaBentukSatuan;
                 data.BiayaJasaRacikan = vm.BiayaJasaRacikan;
                 data.BiayaKemasanRacikan = vm.BiayaKemasanRacikan;
                 data.Keterangan = vm.Keterangan;
@@ -348,8 +348,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                              a.CreateBy,
                              CreateByName = u.FullName,
                              RacikanAddonId = a.AddonRacikanId,
-                             a.BentukObatId,
-                             a.NamaBentukObat,
+                             a.BentukSatuanId,
+                             a.NamaBentukSatuan,
                              a.BiayaJasaRacikan,
                              a.BiayaKemasanRacikan,
                              a.Keterangan,

@@ -33,7 +33,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models
         public string? Keterangan { get; set; }
         public DateTime? TglDetailResumePulang { get; set; }
         public string? PemakaianWC {  get; set; }
-        public Guid? TTId { get; set; }                  // Perawat Id
+        public Guid? PerawatId { get; set; }                  // Perawat Id
+        public string? TTDPerawatPath { get; set; }
 
         // Optional: Navigation Properties (jika pakai EF Core relasi)
         // public virtual ResumePulang ResumePulang { get; set; }

@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient.Server;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -165,7 +164,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // Cek Duplikasi
                 var isDuplicate = _applicationDbContext.Titles
-                    .Any(c => c.KodeTitle == kode && c.NamaTitle == vm.NamaTitle);
+                    .Any(c =>c.NamaTitle.ToLower().Trim() == vm.NamaTitle.ToLower().Trim() && c.IsDelete == false);
 
                 if (isDuplicate)
                 {
@@ -229,6 +228,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                // Cek Duplikasi
+                var isDuplicate = _applicationDbContext.Titles
+                    .Any(c => c.NamaTitle.ToLower().Trim() == vm.NamaTitle.ToLower().Trim() && c.IsDelete == false && c.TitleId != id);
+
+                if (isDuplicate)
+                {
+                    return Conflict(new { message = "Terdapat duplikasi data! || 409 Conflict Data" });
                 }
 
                 // **Update Data Pasien**

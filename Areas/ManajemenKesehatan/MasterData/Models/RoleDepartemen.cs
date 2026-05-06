@@ -13,13 +13,5 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public Guid DepartemenId { get; set; }
     }
 
-    [Table("AspNetRolePosition", Schema = "dbo")]
-    public class RolePosition : UserActivity
-    {
-        [Key]
-        public Guid RolePositionId { get; set; }
-        public Guid PositionId { get; set; }
-        public List<string> RoleId { get; set; }
-    }
 }
 
