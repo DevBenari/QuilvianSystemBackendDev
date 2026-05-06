@@ -50,6 +50,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
         private readonly IHubContext<KunjunganHub> _hubContext;
         private readonly IDepositRanapNumberService _depositRanapNumberService;
         private readonly IKunjunganAdminBillingService _kunjunganAdminBillingService;
+        private readonly IConfiguration _configuration;
 
 
         public KunjunganController
@@ -62,7 +63,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             IWebHostEnvironment webHostEnvironment,
             IHubContext<KunjunganHub> hubContext,
             IDepositRanapNumberService depositRanapNumberService,
-            IKunjunganAdminBillingService kunjunganAdminBillingService
+            IKunjunganAdminBillingService kunjunganAdminBillingService,
+            IConfiguration configuration
 
         )
         {
@@ -75,6 +77,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             _generateInvoiceBillingService = generateInvoiceBillingService;
             _depositRanapNumberService = depositRanapNumberService;
             _kunjunganAdminBillingService = kunjunganAdminBillingService;
+            _configuration = configuration;
         }
         private DateTime? TryParseTanggalLahir(string dateString)
         {
@@ -1065,6 +1068,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         kodeJenis: kodeJenis,
                         userActiveId: userActiveId,
                         cancellationToken: ct
+                    );
+
+                    var tindakanKonsultasiDokterId = Guid.Parse(
+                            _configuration["BillingSetting:TindakanKonsultasiDokterId"]
+                        );
+
+                    await _kunjunganAdminBillingService.ApplyBiayaKonsultasiDokterAsync(
+                        newKunjungan.KunjunganID,
+                        tindakanKonsultasiDokterId,
+                        userActiveId
                     );
 
                     // =============================================

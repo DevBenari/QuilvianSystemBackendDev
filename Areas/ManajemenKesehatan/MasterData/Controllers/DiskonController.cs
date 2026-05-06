@@ -78,8 +78,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.IsDiskonCombined,
                         a.KategoriDiskon,
                         a.Qty,
-                        a.TipeDiskonDokter,
-                        a.ValueDiskonDokter,
                         a.Keterangan,
                         a.CreateBy,
                         CreateByName = u != null ? u.FullName : null,
@@ -116,10 +114,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         d.DiskonId,
                         d.LayananId,
                         d.ItemId,
+                        d.KelasId,
                         d.KodeLayanan,
                         d.KategoriLayanan,
-                        d.MaxQty,
-                        d.MaxHarga,
+                        d.HargaItem,
                         d.Keterangan,
                         d.CreateBy,
                         d.CreateDateTime,
@@ -201,8 +199,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.IsDiskonCombined,
                         a.KategoriDiskon,
                         a.Qty,
-                        a.TipeDiskonDokter,
-                        a.ValueDiskonDokter,
                         a.Keterangan,
                         a.CreateBy,
                         CreateByName = u != null ? u.FullName : null,
@@ -226,10 +222,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         d.DiskonId,
                         d.LayananId,
                         d.ItemId,
+                        d.KelasId,
                         d.KodeLayanan,
                         d.KategoriLayanan,
-                        d.MaxQty,
-                        d.MaxHarga,
+                        d.HargaItem,
                         d.Keterangan,
                         d.CreateBy,
                         d.CreateDateTime
@@ -325,8 +321,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     IsDiskonCombined = false,
                     KategoriDiskon = vm.KategoriDiskon,
                     Qty = vm.Qty,
-                    TipeDiskonDokter = vm.TipeDiskonDokter,
-                    ValueDiskonDokter = vm.ValueDiskonDokter,
                     Keterangan = vm.Keterangan,
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
@@ -343,10 +337,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         DiskonId = diskonId,
                         LayananId = d.LayananId,
                         ItemId = d.ItemId,
+                        KelasId = d.KelasId,
                         KodeLayanan = d.KodeLayanan,
                         KategoriLayanan = d.KategoriLayanan,
-                        MaxQty = d.MaxQty,
-                        MaxHarga = d.MaxHarga,
+                        HargaItem = d.HargaItem,
                         Keterangan = d.Keterangan,
                         CreateBy = userActiveId,
                         CreateDateTime = DateTimeOffset.UtcNow,
@@ -474,8 +468,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 existingDiskon.NominalDiskon = vm.NominalDiskon;
                 existingDiskon.KategoriDiskon = vm.KategoriDiskon;
                 existingDiskon.Qty = vm.Qty;
-                existingDiskon.TipeDiskonDokter = vm.TipeDiskonDokter;
-                existingDiskon.ValueDiskonDokter = vm.ValueDiskonDokter;
                 existingDiskon.Keterangan = vm.Keterangan;
                 existingDiskon.UpdateBy = userActiveId;
                 existingDiskon.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -493,10 +485,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     {
                         bool detailSudahAda = existingDetails.Any(x =>
                             x.LayananId == d.LayananId &&
+                            x.KelasId == d.KelasId &&
                             x.KodeLayanan == d.KodeLayanan &&
                             x.KategoriLayanan == d.KategoriLayanan &&
-                            x.MaxQty == d.MaxQty &&
-                            x.MaxHarga == d.MaxHarga &&
+                            x.HargaItem == d.HargaItem &&
                             x.IsDelete == false);
 
                         if (!detailSudahAda)
@@ -509,8 +501,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                                 ItemId = d.ItemId,
                                 KodeLayanan = d.KodeLayanan,
                                 KategoriLayanan = d.KategoriLayanan,
-                                MaxQty = d.MaxQty,
-                                MaxHarga = d.MaxHarga,
+                                HargaItem = d.HargaItem,
+                                KelasId = d.KelasId,
                                 Keterangan = d.Keterangan,
                                 CreateBy = userActiveId,
                                 CreateDateTime = DateTimeOffset.UtcNow,
@@ -828,8 +820,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.IsDiskonCombined,
                         a.KategoriDiskon,
                         a.Qty,
-                        a.TipeDiskonDokter,
-                        a.ValueDiskonDokter,
                         a.Keterangan,
                         a.UpdateBy,
                         a.UpdateDateTime
@@ -1025,11 +1015,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         d.DiskonId,
                         d.LayananId,
                         d.ItemId,
+                        d.KelasId,
                         NamaLayanan = l != null ? l.NamaLayanan : null,
                         d.KodeLayanan,
                         d.KategoriLayanan,
-                        d.MaxQty,
-                        d.MaxHarga,
+                        d.HargaItem,
                         d.Keterangan,
                         d.CreateBy,
                         d.CreateDateTime,

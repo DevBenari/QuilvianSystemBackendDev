@@ -8,7 +8,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Interfac
                 Guid? kunjunganId,
                 string kodeJenis,
                 Guid userActiveId,
-                CancellationToken cancellationToken = default
-            );
+                CancellationToken cancellationToken = default);
+
+        Task ApplyBiayaKonsultasiDokterAsync(
+            Guid? kunjunganId,
+            Guid? tindakanKonsultasiDokterId,
+            Guid userActiveId,
+            CancellationToken cancellationToken = default);
     }
 }

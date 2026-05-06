@@ -16,8 +16,6 @@
         public bool? IsDiskonCombined { get; set; } = false;
         public string? KategoriDiskon { get; set; }
         public int? Qty { get; set; }
-        public string? TipeDiskonDokter { get; set; }
-        public int? ValueDiskonDokter { get; set; }
         public List<DetailDiskonViewModel>? Details { get; set; }
     }
 }
