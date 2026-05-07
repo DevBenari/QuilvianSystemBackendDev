@@ -59,14 +59,18 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =
 builder.Services.Configure<AutoLoginDTO>(builder.Configuration.GetSection("AutoLogin"));
 
 #region CORS
+var allowedOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins")
+    .Get<string[]>() ?? Array.Empty<string>();
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("CorsPolicy", policy =>
+    options.AddPolicy("FrontendCorsPolicy", policy =>
     {
         policy
-            .SetIsOriginAllowed(origin => true)
-            .AllowAnyMethod()
+            .WithOrigins(allowedOrigins)
             .AllowAnyHeader()
+            .AllowAnyMethod()
             .AllowCredentials();
     });
 });

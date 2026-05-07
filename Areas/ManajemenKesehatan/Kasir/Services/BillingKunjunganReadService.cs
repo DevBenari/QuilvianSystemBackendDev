@@ -1705,6 +1705,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
                         return new
                         {
+                            TindakanKunjunganId=x.tk!.TindakanKunjunganId,
                             x.t!.TindakanId,
                             x.t.NamaTindakan,
 
@@ -1756,6 +1757,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 dto.DaftarTindakan = daftarTindakanMapped
                     .Select(x => (object)new
                     {
+                        x.TindakanKunjunganId,
                         x.TindakanId,
                         x.NamaTindakan,
 
@@ -1790,6 +1792,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     .Where(x => x.IsFoC)
                     .Select(x => (object)new
                     {
+                        x.TindakanKunjunganId,
                         x.TindakanId,
                         x.NamaTindakan,
 

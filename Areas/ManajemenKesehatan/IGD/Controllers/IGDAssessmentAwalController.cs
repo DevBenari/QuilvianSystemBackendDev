@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using System.Linq;
 using System.Security.Claims;
+using System.Threading;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
@@ -9,10 +10,13 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Interfaces;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
 using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
@@ -34,6 +38,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
         private readonly string _uploadUrl;
         private readonly ITTDService _ttdService;
         private readonly IHubContext<IGDAssessmentAwalHub> _hubContext;
+        private readonly IKunjunganAdminBillingService _kunjunganAdminBillingService;
+        private readonly IConfiguration _configuration;
 
         public IGDAssessmentAwalController(
             ApplicationDbContext applicationDbContext,
@@ -43,7 +49,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
             IWebHostEnvironment webHostEnvironment,
             IConfiguration configuration,
             IHubContext<IGDAssessmentAwalHub> hubContext,
-            ITTDService ttdService)
+            ITTDService ttdService,
+            IKunjunganAdminBillingService kunjunganAdminBillingService
+            )
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
@@ -53,6 +61,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
             _uploadUrl = configuration["FileStorage:UploadUrl"];
             _hubContext = hubContext;
             _ttdService = ttdService;
+            _kunjunganAdminBillingService = kunjunganAdminBillingService;
+            _configuration = configuration;
         }
 
         // ====================== GET ALL ======================
@@ -152,7 +162,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
         // ====================== CREATE ======================
         [HttpPost]
-        public async Task<IActionResult> Create([FromForm] IGDAssessmentAwalViewModel vm)
+        public async Task<IActionResult> Create([FromForm] IGDAssessmentAwalViewModel vm, CancellationToken ct)
         {
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
@@ -213,7 +223,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                     gambarPath = json?.url ?? json?.fileUrl ?? json?.path ?? "";
                 }
 
-                
+                var assessmentIGDID = Guid.Parse(
+                    _configuration["BillingSetting:AssessmentIGDId"]
+                );
+
                 // ✅ Simpan ke database
                 var data = new IGDAssessmentAwal
                 {
@@ -242,6 +255,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
                 _applicationDbContext.IGDAssessmentAwals.Add(data);
                 await _applicationDbContext.SaveChangesAsync();
+
+                //await _kunjunganAdminBillingService.ApplyBillingIgdSaatSimpanTindakanAsync(
+                //        kunjunganId,
+                //        tarifKelasIdAssessmentMedis,
+                //        userActiveId,
+                //        cancellationToken
+                //    );
+
+                //await _applicationDbContext.SaveChangesAsync(cancellationToken);
 
                 await _hubContext.Clients.All.SendAsync("IGD Assessment awal Created", new
                 {
