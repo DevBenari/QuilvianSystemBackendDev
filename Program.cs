@@ -118,8 +118,11 @@ builder.Services.AddSession(options =>
     options.Cookie.Name = ".Quilvian.Session";
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
-    options.Cookie.SameSite = SameSiteMode.Lax;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.None;
+    
+    options.Cookie.SameSite = SameSiteMode.None;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    // options.Cookie.SameSite = SameSiteMode.Lax;
+    // options.Cookie.SecurePolicy = CookieSecurePolicy.None;
     //kalo pake https ini dinyalakan
     //options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
 });
