@@ -59,16 +59,19 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =
 builder.Services.Configure<AutoLoginDTO>(builder.Configuration.GetSection("AutoLogin"));
 
 #region CORS
-// Tambahkan layanan CORS
+var allowedOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins")
+    .Get<string[]>() ?? Array.Empty<string>();
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowSpecific", policy =>
+    options.AddPolicy("FrontendCorsPolicy", policy =>
     {
         policy
-            .SetIsOriginAllowed(origin => true) // <- ✅ allow semua origin
-            .AllowAnyMethod()
+            .WithOrigins(allowedOrigins)
             .AllowAnyHeader()
-            .AllowCredentials(); // <- ✅ wajib untuk SignalR WebSocket
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 });
 #endregion
