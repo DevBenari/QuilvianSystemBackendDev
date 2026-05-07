@@ -410,7 +410,7 @@ app.UseSwaggerUI(c =>
 
 app.UseRouting();
 
-app.UseCors("AllowSpecific");
+app.UseCors("FrontendCorsPolicy");
 
 app.UseSession();
 
