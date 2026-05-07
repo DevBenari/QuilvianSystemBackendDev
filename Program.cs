@@ -59,19 +59,16 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =
 builder.Services.Configure<AutoLoginDTO>(builder.Configuration.GetSection("AutoLogin"));
 
 #region CORS
-var allowedOrigins = builder.Configuration
-    .GetSection("Cors:AllowedOrigins")
-    .Get<string[]>() ?? Array.Empty<string>();
-
+// Tambahkan layanan CORS
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("FrontendCorsPolicy", policy =>
+    options.AddPolicy("AllowSpecific", policy =>
     {
         policy
-            .WithOrigins(allowedOrigins)
-            .AllowAnyHeader()
+            .SetIsOriginAllowed(origin => true) // <- ✅ allow semua origin
             .AllowAnyMethod()
-            .AllowCredentials();
+            .AllowAnyHeader()
+            .AllowCredentials(); // <- ✅ wajib untuk SignalR WebSocket
     });
 });
 #endregion
@@ -384,7 +381,7 @@ var app = builder.Build();
 
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
-// app.UseHttpsRedirection();
+app.UseHttpsRedirection();
 
 app.UseStaticFiles();
 
