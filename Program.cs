@@ -384,9 +384,9 @@ var app = builder.Build();
 
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 
-// app.UseStaticFiles();
+app.UseStaticFiles();
 
 #region Swagger
 
