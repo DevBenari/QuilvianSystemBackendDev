@@ -383,7 +383,7 @@ AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 app.UseHttpsRedirection();
 
-app.UseStaticFiles();
+// app.UseStaticFiles();
 
 #region Swagger
 
