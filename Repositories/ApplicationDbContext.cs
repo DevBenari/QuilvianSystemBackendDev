@@ -4,6 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using NuGet.Configuration;
 using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers;
 using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models;
+using QuilvianSystemBackendDev.Areas.Finance.Ar.Models;
+using QuilvianSystemBackendDev.Areas.Finance.AR.Models;
 using QuilvianSystemBackendDev.Areas.Finance.Po.Models;
 using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.HRD.Pengajuan.Models;
@@ -1157,6 +1159,9 @@ namespace QuilvianSystemBackendDev.Repositories
             #region Po
             public DbSet<PurchaseOrder> PurchaseOrders { get; set; }
             public DbSet<PurchaseOrderItem> PurchaseOrderItems { get; set; }
+            public DbSet<ARHeader> ARHeaders { get; set; }
+            public DbSet<ARDetail> ARDetails { get; set; }
+            public DbSet<ARDokumen> ARDokumens { get; set; }
 
             #endregion
         #endregion
