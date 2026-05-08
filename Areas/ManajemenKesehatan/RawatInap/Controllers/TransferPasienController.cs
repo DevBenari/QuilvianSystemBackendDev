@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using System.Security.Claims;
+using System.Threading;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
@@ -11,6 +12,7 @@ using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Interfaces;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.ViewModels;
 using QuilvianSystemBackendDev.Interfaces;
@@ -360,11 +362,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.RawatInap.Controller
                      * - kalau sudah OP, maka update menjadi admin IP
                      * - kalau sudah IP, tidak insert lagi
                      */
-                    await _kunjunganAdminBillingService.ApplyBiayaAdminAsync(
-                        kunjunganId: data.KunjunganId,
-                        kodeJenis: "IP",
-                        userActiveId: userActiveId,
-                        cancellationToken: ct
+                    await _kunjunganAdminBillingService.ApplyAdminTransferRanapAsync(
+                        data.KunjunganId,
+                        userActiveId,
+                        ct
                     );
 
                     var result = await _applicationDbContext.SaveChangesAsync(ct);

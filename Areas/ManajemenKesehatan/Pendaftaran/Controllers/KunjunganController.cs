@@ -4,6 +4,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
 using Microsoft.AspNet.SignalR.Client.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
@@ -1056,29 +1057,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
 
                     _applicationDbContext.Kunjungans.Add(newKunjungan);
 
-                    /*
-                     * Save dulu agar KunjunganId sudah ada di database.
-                     * Ini penting karena service ApplyBiayaAdminAsync menerima KunjunganId
-                     * dan akan mencari data kunjungan dari database.
-                     */
                     await _applicationDbContext.SaveChangesAsync(ct);
-
-                    await _kunjunganAdminBillingService.ApplyBiayaAdminAsync(
-                        kunjunganId: newKunjungan.KunjunganID,
-                        kodeJenis: kodeJenis,
-                        userActiveId: userActiveId,
-                        cancellationToken: ct
-                    );
-
-                    var tindakanKonsultasiDokterId = Guid.Parse(
-                            _configuration["BillingSetting:TindakanKonsultasiDokterId"]
-                        );
-
-                    await _kunjunganAdminBillingService.ApplyBiayaKonsultasiDokterAsync(
-                        newKunjungan.KunjunganID,
-                        tindakanKonsultasiDokterId,
-                        userActiveId
-                    );
 
                     // =============================================
                     // Deposit wajib untuk kunjungan IP / Rawat Inap
@@ -1101,6 +1080,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         };
 
                         _applicationDbContext.DepositRanaps.Add(depo);
+
+                        await _kunjunganAdminBillingService.ApplyBillingAdmisiRanapBaruAsync(
+                                newKunjungan.KunjunganID,
+                                userActiveId,
+                                ct
+                        );
                     }
 
                     var kasir = new MainKasir

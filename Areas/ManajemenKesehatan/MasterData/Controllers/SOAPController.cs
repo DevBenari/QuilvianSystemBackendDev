@@ -12,6 +12,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Interfaces;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
@@ -27,7 +28,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-
+        private readonly IKunjunganAdminBillingService _kunjunganAdminBillingService;
+        private readonly IConfiguration _configuration;
         private readonly ILogger<SOAPController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly IHubContext<SOAPHub> _hubContext;
@@ -38,7 +40,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             SignInManager<ApplicationUser> signInManager,
             ILogger<SOAPController> logger,
             IWebHostEnvironment webHostEnvironment,
-            IHubContext<SOAPHub> hubContext
+            IHubContext<SOAPHub> hubContext,
+            IKunjunganAdminBillingService kunjunganAdminBillingService,
+            IConfiguration configuration
             )
         {
             _applicationDbContext = applicationDbContext;
@@ -47,6 +51,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
             _hubContext = hubContext;
+            _kunjunganAdminBillingService = kunjunganAdminBillingService;
+            _configuration = configuration;
         }
 
         [HttpGet]
@@ -1205,6 +1211,177 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         //        data = result
         //    });
         //}
+
+        [HttpPost("Rawat-Jalan")]
+        public async Task<IActionResult> CreateSOAPRajal([FromBody] SOAPViewModel vm, CancellationToken ct)
+        {
+            if (vm == null || !ModelState.IsValid)
+            {
+                return BadRequest(new { message = "Data tidak valid." });
+            }
+
+            await using var transaction = await _applicationDbContext.Database.BeginTransactionAsync(ct);
+
+            try
+            {
+                // Cek koneksi database
+                if (!await _applicationDbContext.Database.CanConnectAsync(ct))
+                {
+                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+                }
+
+                // Ambil User ID dari JWT Claims
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (string.IsNullOrEmpty(emailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin, ct);
+
+                if (getUserActive == null)
+                {
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+                }
+
+                var userActiveId = getUserActive.UserActiveId;
+
+                if (!vm.KunjunganId.HasValue || vm.KunjunganId.Value == Guid.Empty)
+                {
+                    return BadRequest(new { message = "KunjunganId wajib diisi." });
+                }
+
+                // Cek kunjungan
+                var kunjungan = await _applicationDbContext.Kunjungans
+                    .FirstOrDefaultAsync(x =>
+                        x.KunjunganID == vm.KunjunganId.Value &&
+                        !x.IsDelete,
+                        ct);
+
+                if (kunjungan == null)
+                {
+                    return NotFound(new { message = "Data kunjungan tidak ditemukan." });
+                }
+
+                if (!kunjungan.PasienId.HasValue || kunjungan.PasienId.Value == Guid.Empty)
+                {
+                    return BadRequest(new { message = "PasienId pada kunjungan tidak valid." });
+                }
+
+                // Validasi khusus Rawat Jalan / Rajal
+                var asalKunjungan = kunjungan.AsalKunjungan?.Trim().ToLower() ?? "";
+                var jenisKunjungan = kunjungan.JenisKunjungan?.Trim().ToLower() ?? "";
+
+                var isRajal =
+                    asalKunjungan == "rawat jalan" ||
+                    asalKunjungan == "rajal" ||
+                    asalKunjungan == "op" ||
+                    jenisKunjungan == "rawat jalan" ||
+                    jenisKunjungan == "rajal" ||
+                    jenisKunjungan == "op";
+
+                if (!isRajal)
+                {
+                    return BadRequest(new
+                    {
+                        message = "Endpoint ini hanya untuk SOAP Rawat Jalan/Rajal."
+                    });
+                }
+
+                // Buat data SOAP
+                var data = new SOAP
+                {
+                    SOAPID = Guid.NewGuid(),
+                    KunjunganId = vm.KunjunganId,
+
+                    Subjective = vm.Subjective,
+                    Objective = vm.Objective,
+
+                    DaftarICD10 = vm.DaftarICD10 != null
+                        ? string.Join(",", vm.DaftarICD10)
+                        : null,
+
+                    DaftarSDKI = vm.DaftarSDKI != null
+                        ? string.Join(",", vm.DaftarSDKI)
+                        : null,
+
+                    Assessment = vm.Assessment,
+                    Planning = vm.Planning,
+                    Evaluasi = vm.Evaluasi,
+                    Intervensi = vm.Intervensi,
+                    Reevaluasi = vm.Reevaluasi,
+                    Profesi = vm.Profesi,
+
+                    CreateBy = userActiveId,
+                    CreateDateTime = DateTimeOffset.UtcNow,
+                    IsDelete = false
+                };
+
+                _applicationDbContext.SOAPs.Add(data);
+
+                /*
+                 * Billing biaya admin khusus Rajal.
+                 * Kode OP = Rawat Jalan.
+                 *
+                 * Service ini sudah mengatur:
+                 * - 1 pasien hanya 1 biaya admin per hari
+                 * - tidak double insert biaya admin
+                 * - bisa diganti menjadi admin ranap jika nanti transfer ranap
+                 */
+                await _kunjunganAdminBillingService.ApplyBillingRawatJalanSaatSimpanSoapAsync(
+                    data.KunjunganId,
+                    userActiveId,
+                    ct
+                );
+
+                var result = await _applicationDbContext.SaveChangesAsync(ct);
+
+                await transaction.CommitAsync(ct);
+
+                // Notifikasi SignalR Hub
+                await _hubContext.Clients.All.SendAsync("SOAP ditambah", new
+                {
+                    action = "create",
+                    soapid = data.SOAPID,
+                    kunjunganId = data.KunjunganId
+                }, ct);
+
+                if (result > 0)
+                {
+                    return Created("", new
+                    {
+                        message = "Tambah Data SOAP Rajal Berhasil || 201 Created",
+                        data = new
+                        {
+                            data.SOAPID,
+                            data.KunjunganId
+                        }
+                    });
+                }
+
+                return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
+            }
+            catch (DbUpdateException dbEx)
+            {
+                await transaction.RollbackAsync(ct);
+
+                return StatusCode(500, new
+                {
+                    message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}"
+                });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync(ct);
+
+                return StatusCode(500, new
+                {
+                    message = $"Terjadi kesalahan internal: {ex.Message}"
+                });
+            }
+        }
 
         [HttpPost]
         public async Task<IActionResult> CreateSOAP([FromBody] SOAPViewModel vm)

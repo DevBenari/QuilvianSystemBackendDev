@@ -12,23 +12,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Interfac
 
         Task ApplyBiayaKonsultasiDokterAsync(
             Guid? kunjunganId,
-            Guid? tarifKelasId,
             Guid userActiveId,
             CancellationToken cancellationToken = default);
 
         Task ApplyBillingRawatJalanSaatSimpanSoapAsync(
             Guid? kunjunganId,
-            Guid? tarifKelasIdKonsultasiDokter,
             Guid userActiveId,
             CancellationToken cancellationToken = default);
 
-        Task ApplyBillingIgdSaatSimpanTindakanAsync(
+        Task ApplyAdminIGDAsync(
             Guid? kunjunganId,
-            Guid? tarifKelasIdAssessmentMedis,
             Guid userActiveId,
             CancellationToken cancellationToken = default);
 
-        Task ApplyBillingTransferRanapAsync(
+        Task ApplyAdminTransferRanapAsync(
             Guid? kunjunganId,
             Guid userActiveId,
             CancellationToken cancellationToken = default);
