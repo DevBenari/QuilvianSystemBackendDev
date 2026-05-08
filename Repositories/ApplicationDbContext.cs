@@ -1066,6 +1066,7 @@ namespace QuilvianSystemBackendDev.Repositories
             public DbSet<ObatSubstitusi> ObatSubstitusis { get; set; }
             public DbSet<ObatTelaah> ObatTelaahs { get; set; }
             public DbSet<ObatRuteDetail> ObatRuteDetails { get; set; }
+            public DbSet<ObatUnit> ObatUnits { get; set; }
 
             #endregion
 

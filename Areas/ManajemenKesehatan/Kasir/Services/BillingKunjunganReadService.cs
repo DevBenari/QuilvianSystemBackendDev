@@ -1353,7 +1353,8 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         // ============================================================
         var labRows = await (
             from lb in _db.LabBookings.AsNoTracking()
-            where kunjunganIds.Contains((Guid)lb.KunjunganId)
+            where lb.KunjunganId.HasValue
+                  && kunjunganIds.Contains(lb.KunjunganId.Value)
                   && (lb.IsDelete == false || lb.IsDelete == null)
 
             join lbd in _db.LabBookingDetails.AsNoTracking()
@@ -1371,7 +1372,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
 
             select new
             {
-                lb.KunjunganId,
+                KunjunganId = lb.KunjunganId.Value,
                 lb.PasienId,
                 lbd.BookingLabId,
                 lbd.DetailBookingLabId,
@@ -1567,9 +1568,9 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             }
 
             // LAB
-            if (labRowsByKunjunganId.TryGetValue(h.PasienId, out var labsForPasien))
+            if (labRowsByKunjunganId.TryGetValue(kid, out var labsForKunjungan))
             {
-                dto.DaftarPemeriksaanLab = labsForPasien
+                dto.DaftarPemeriksaanLab = labsForKunjungan
                     .GroupBy(x => x.DetailBookingLabId)
                     .Select(g =>
                     {
@@ -1577,11 +1578,6 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                         var bill = FindBilling(kid, "Pemeriksaan Lab", x.DetailBookingLabId);
                         var qty = bill?.QtyItem ?? 1;
                         var subtotal = bill?.SubTotalItem ?? x.HargaPemeriksaan;
-
-                        //var isCovered =
-                        //    isAsuransiCase &&
-                        //    x.PemeriksaanLabId.HasValue &&
-                        //    cover.LabMarkup.ContainsKey(x.PemeriksaanLabId.Value);
 
                         return (object)new
                         {
@@ -1599,15 +1595,14 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                             BillingId = bill?.BillingId,
                             BillingKode = bill?.BillingKode,
                             StatusBilling = bill?.StatusBilling,
-                            jenisBilling = bill?.JenisBilling,
-
+                            jenisBilling = bill?.JenisBilling
                         };
                     })
                     .ToList();
             }
 
-            dto.TotalPemeriksaanLab = dto.DaftarPemeriksaanLab.Sum(x => (decimal)((dynamic)x).Subtotal);
-
+            dto.TotalPemeriksaanLab = dto.DaftarPemeriksaanLab
+                .Sum(x => (decimal)((dynamic)x).Subtotal);
             // RESEP
             if (resepByKunjungan.TryGetValue(kid, out var resepForKunjungan))
             {
