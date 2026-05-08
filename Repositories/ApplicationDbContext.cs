@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using NuGet.Configuration;
 using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers;
 using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models;
-using QuilvianSystemBackendDev.Areas.Finance.Ar.Models;
 using QuilvianSystemBackendDev.Areas.Finance.AR.Models;
 using QuilvianSystemBackendDev.Areas.Finance.Po.Models;
 using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
