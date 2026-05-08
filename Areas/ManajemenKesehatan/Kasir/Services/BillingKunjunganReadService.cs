@@ -995,24 +995,51 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             + dto.TotalBiayaVisitDokter
             + dto.TotalBiayaLain;
 
-        var ppnRate = dto.PPN / 100m;
         dto.SubTotalAsuransi = asuransi;
         dto.SubTotalAsuransiExcess = asuransiExcess;
 
-        dto.SebelumTaxTotalMandiri = Math.Round(mandiri, 2, MidpointRounding.AwayFromZero);
-        dto.PajakTotalMandiri = Math.Round((dto.SebelumTaxTotalMandiri ?? 0m) * ppnRate, 2, MidpointRounding.AwayFromZero);
-        dto.SubTotalMandiri = Math.Round((dto.SebelumTaxTotalMandiri ?? 0m) + (dto.PajakTotalMandiri ?? 0m), 2, MidpointRounding.AwayFromZero);
-        
-        //dto.TotalKeseluruhan = mandiri + Math.Round(mandiri * 0.11m);
-        //dto.TotalKeseluruhan =
-        //    dto.TotalPemeriksaanLab +
-        //    dto.TotalObat +
-        //    dto.TotalRacikan +
-        //    dto.TotalTindakan +
-        //    dto.TotalBiayaAdmin +
-        //    dto.TotalAlkes +
-        //    dto.TotalBiayaVisitDokter +
-        //    dto.TotalKamarRanap;
+        // Nilai awal
+        var ppnRate = dto.PPN / 100m;
+        var dasarPajakSebelumDiskon = Math.Round(mandiri, 2, MidpointRounding.AwayFromZero);
+
+        // Jika TotalDiskonDokterMandiri bertipe decimal, tidak perlu ??
+        var diskonDokterMandiri = Math.Round(dto.TotalDiskonDokterMandiri, 2, MidpointRounding.AwayFromZero);
+
+        // Supaya diskon negatif tidak merusak perhitungan
+        if (diskonDokterMandiri < 0)
+        {
+            diskonDokterMandiri = 0;
+        }
+
+        // SEBELUM DISKON
+        var pajakSebelumDiskon = Math.Round(dasarPajakSebelumDiskon * ppnRate, 2, MidpointRounding.AwayFromZero);
+
+        var subtotalSebelumDiskon = Math.Round(dasarPajakSebelumDiskon + pajakSebelumDiskon, 2, MidpointRounding.AwayFromZero);
+
+        // SETELAH DISKON
+        var dasarPajakSetelahDiskon = dasarPajakSebelumDiskon - diskonDokterMandiri;
+
+        // Supaya total tidak minus jika diskon lebih besar dari tagihan
+        if (dasarPajakSetelahDiskon < 0)
+        {
+            dasarPajakSetelahDiskon = 0;
+        }
+
+        dasarPajakSetelahDiskon = Math.Round(dasarPajakSetelahDiskon, 2, MidpointRounding.AwayFromZero);
+
+        var pajakSetelahDiskon = Math.Round(dasarPajakSetelahDiskon * ppnRate, 2, MidpointRounding.AwayFromZero);
+
+        var subtotalSetelahDiskon = Math.Round(dasarPajakSetelahDiskon + pajakSetelahDiskon, 2, MidpointRounding.AwayFromZero);
+
+        // Sebelum diskon
+        dto.SebelumTaxTotalMandiri = dasarPajakSebelumDiskon;
+        dto.PajakTotalMandiri = pajakSebelumDiskon;
+        dto.SubTotalMandiri = subtotalSebelumDiskon;
+
+        // Setelah diskon
+        dto.SebelumTaxTotalMandiriAfterDiskon = dasarPajakSetelahDiskon;
+        dto.PajakTotalMandiriAfterDiskon = pajakSetelahDiskon;
+        dto.SubTotalMandiriAfterDiskon = subtotalSetelahDiskon;
 
         return dto;
     }
@@ -2136,12 +2163,52 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 + dto.TotalAlkes
                 + dto.TotalBiayaVisitDokter;
 
-            var ppnRate = dto.PPN / 100m;
+            
             dto.SubTotalAsuransi = asuransi;
             dto.SubTotalAsuransiExcess = asuransiExcess;
-            dto.SebelumTaxTotalMandiri = Math.Round(mandiri, 2, MidpointRounding.AwayFromZero);
-            dto.PajakTotalMandiri = Math.Round((dto.SebelumTaxTotalMandiri ?? 0m) * ppnRate, 2, MidpointRounding.AwayFromZero);
-            dto.SubTotalMandiri = Math.Round((dto.SebelumTaxTotalMandiri ?? 0m) + (dto.PajakTotalMandiri ?? 0m), 2, MidpointRounding.AwayFromZero);
+
+            // Nilai awal
+            var ppnRate = dto.PPN / 100m;
+            var dasarPajakSebelumDiskon = Math.Round(mandiri,2,MidpointRounding.AwayFromZero);
+
+            // Jika TotalDiskonDokterMandiri bertipe decimal, tidak perlu ??
+            var diskonDokterMandiri = Math.Round(dto.TotalDiskonDokterMandiri,2,MidpointRounding.AwayFromZero);
+
+            // Supaya diskon negatif tidak merusak perhitungan
+            if (diskonDokterMandiri < 0)
+            {
+                diskonDokterMandiri = 0;
+            }
+
+            // SEBELUM DISKON
+            var pajakSebelumDiskon = Math.Round(dasarPajakSebelumDiskon * ppnRate,2,MidpointRounding.AwayFromZero);
+
+            var subtotalSebelumDiskon = Math.Round(dasarPajakSebelumDiskon + pajakSebelumDiskon,2,MidpointRounding.AwayFromZero);
+
+            // SETELAH DISKON
+            var dasarPajakSetelahDiskon = dasarPajakSebelumDiskon - diskonDokterMandiri;
+
+            // Supaya total tidak minus jika diskon lebih besar dari tagihan
+            if (dasarPajakSetelahDiskon < 0)
+            {
+                dasarPajakSetelahDiskon = 0;
+            }
+
+            dasarPajakSetelahDiskon = Math.Round(dasarPajakSetelahDiskon,2,MidpointRounding.AwayFromZero);
+
+            var pajakSetelahDiskon = Math.Round(dasarPajakSetelahDiskon * ppnRate,2,MidpointRounding.AwayFromZero);
+
+            var subtotalSetelahDiskon = Math.Round(dasarPajakSetelahDiskon + pajakSetelahDiskon,2,MidpointRounding.AwayFromZero);
+
+            // Sebelum diskon
+            dto.SebelumTaxTotalMandiri = dasarPajakSebelumDiskon;
+            dto.PajakTotalMandiri = pajakSebelumDiskon;
+            dto.SubTotalMandiri = subtotalSebelumDiskon;
+
+            // Setelah diskon
+            dto.SebelumTaxTotalMandiriAfterDiskon = dasarPajakSetelahDiskon;
+            dto.PajakTotalMandiriAfterDiskon = pajakSetelahDiskon;
+            dto.SubTotalMandiriAfterDiskon = subtotalSetelahDiskon;
 
             output.Add(new
             {
@@ -2175,7 +2242,6 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 dto.DaftarKamarRanap,
                 dto.DaftarDiskonDokter,
                 dto.DaftarBiayaLain,
-                dto.DPRanap,
                 dto.TotalSaldoDeposito,
                 dto.NominalMasuk,
                 dto.NominalKeluar,
@@ -2199,7 +2265,11 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 dto.SebelumTaxTotalMandiri,
                 dto.PajakTotalMandiri,
                 dto.SubTotalMandiri,
-                dto.PPN,
+
+                dto.SebelumTaxTotalMandiriAfterDiskon,
+                dto.PajakTotalMandiriAfterDiskon,
+                dto.SubTotalMandiriAfterDiskon,
+                dto.PPN
             });
         }
 
