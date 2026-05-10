@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -12,9 +13,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260510102537_AddTableKunjunganLayanan")]
+    partial class AddTableKunjunganLayanan
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -16490,10 +16492,10 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<Guid?>("DokterId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("InstalasiUnitId")
+                    b.Property<Guid>("InstalasiUnitId")
                         .HasColumnType("uuid");
 
-                    b.Property<bool?>("IsActive")
+                    b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("IsDelete")
@@ -16502,16 +16504,19 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("JenisLayanan")
                         .HasColumnType("text");
 
-                    b.Property<Guid?>("KunjunganId")
+                    b.Property<Guid>("KunjunganId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid?>("PoliklinikId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("RanapId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime?>("TglKeluarLayanan")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime?>("TglMasukLayanan")
+                    b.Property<DateTime>("TglMasukLayanan")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("UpdateBy")
@@ -21688,11 +21693,15 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasOne("QuilvianSystemBackendDev.Areas.HRD.MasterData.Models.InstalasiUnit", "InstalasiUnit")
                         .WithMany()
-                        .HasForeignKey("InstalasiUnitId");
+                        .HasForeignKey("InstalasiUnitId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models.Kunjungan", "Kunjungan")
                         .WithMany("KunjunganLayanans")
-                        .HasForeignKey("KunjunganId");
+                        .HasForeignKey("KunjunganId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Poliklinik", "Poliklinik")
                         .WithMany()

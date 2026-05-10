@@ -54,6 +54,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
         public ICollection<LogRacikPenerimaan> LogRacikPenerimaans { get; set; } = new HashSet<LogRacikPenerimaan>();
 
         public ICollection<Billing> Billings { get; set; } = new List<Billing>();
+
+        public ICollection<KunjunganLayanan> KunjunganLayanans { get; set; } = new List<KunjunganLayanan>();
     }
 
 }

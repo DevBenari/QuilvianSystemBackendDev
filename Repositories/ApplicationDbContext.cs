@@ -907,6 +907,8 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<GroupObatAlkes> GroupObatAlkess { get; set; }
         public DbSet<ObatAlkes> ObatAlkess { get; set; }
         public DbSet<SupplierObatAlkes> SupplierObatAlkess { get; set; }
+        public DbSet<DokterInstalasiUnit> DokterInstalasiUnits { get; set; }
+        public DbSet<KunjunganLayanan> KunjunganLayanans { get; set; }
 
 
         #endregion
