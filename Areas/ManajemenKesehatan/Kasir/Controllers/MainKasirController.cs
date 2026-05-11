@@ -487,7 +487,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     x.KasirId,
                     x.KunjunganId,
                     x.PasienId,
-
+                    x.NoBill,
+                    x.StatusBilling,
                     // ✅ tambahan pasien
                     NamaLengkap = p != null ? p.NamaLengkap : null,
                     NoRekamMedis = p != null ? p.NoRekamMedis : null,
@@ -592,6 +593,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                         header.PasienId,
                         header.NamaLengkap,
                         header.NoRekamMedis,
+                        header.NoBill,
+                        header.StatusBilling,
                         header.InvoiceBilling,
                         header.JumlahAngsuran,
                         header.StatusPembayaran,

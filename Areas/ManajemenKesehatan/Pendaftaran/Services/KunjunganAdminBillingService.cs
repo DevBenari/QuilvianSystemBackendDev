@@ -10,6 +10,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
 {
     public class KunjunganAdminBillingService : IKunjunganAdminBillingService
     {
+
+        #region CONSTANTA
         private const string BILLING_KODE_BIAYA_ADMIN = "001";
         private const string BILLING_KODE_TINDAKAN = "002";
 
@@ -26,6 +28,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly IGenerateInvoiceBillingService _generateInvoiceBillingService;
         private readonly IAsuransiCoverageService _asuransiCoverageService;
+        #endregion
 
         public KunjunganAdminBillingService(
             ApplicationDbContext applicationDbContext,
@@ -305,10 +308,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
             );
         }
 
+        #region HELPERS
+
+        #region Apply biaya admin generic
         // =====================================================
         // HELPER: BIAYA ADMIN GENERIC
         // Bisa untuk OP, IGD, IP/RANAP.
         // =====================================================
+
         private async Task ApplyBiayaAdministrasiByKodeAsync(
             Guid? kunjunganId,
             string kodeJenis,
@@ -505,7 +512,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
 
             _applicationDbContext.Billings.Add(billing);
         }
+        #endregion
 
+        #region Apply biaya konsultasi poli dan assesment igd
         // =====================================================
         // HELPER: TARIF KELAS -> TINDAKAN KUNJUNGAN + BILLING
         // Dipakai untuk:
@@ -786,7 +795,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
 
             _applicationDbContext.Billings.Add(billing);
         }
+        #endregion
 
+        #region range billing date
         private static (DateTime StartToday, DateTime EndToday, DateTime Now) GetTodayBillingRange()
         {
             var now = DateTime.Now;
@@ -795,7 +806,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
 
             return (startToday, endToday, now);
         }
+        #endregion
 
+        #region Apply tindakan by kode tindakan
         private async Task<Guid?> GetTarifKelasByKodeTindakanAsync(
             Guid? kunjunganId,
             string kodeTindakan,
@@ -882,5 +895,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services
 
             return tarif?.TarifKelasId;
         }
+
+        #endregion
+
+        #endregion
     }
 }

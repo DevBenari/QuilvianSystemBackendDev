@@ -52,7 +52,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
         private readonly IDepositRanapNumberService _depositRanapNumberService;
         private readonly IKunjunganAdminBillingService _kunjunganAdminBillingService;
         private readonly IConfiguration _configuration;
-
+        private readonly IKunjunganNoRegistrasiService _kunjunganNoRegistrasiService;
+        private readonly INoBillService _noBillService;
 
         public KunjunganController
         (
@@ -65,7 +66,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             IHubContext<KunjunganHub> hubContext,
             IDepositRanapNumberService depositRanapNumberService,
             IKunjunganAdminBillingService kunjunganAdminBillingService,
-            IConfiguration configuration
+            IConfiguration configuration,
+            IKunjunganNoRegistrasiService kunjunganNoRegistrasiService,
+            INoBillService noBillService
 
         )
         {
@@ -79,6 +82,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             _depositRanapNumberService = depositRanapNumberService;
             _kunjunganAdminBillingService = kunjunganAdminBillingService;
             _configuration = configuration;
+            _kunjunganNoRegistrasiService = kunjunganNoRegistrasiService;
+            _noBillService = noBillService;
+
         }
         private DateTime? TryParseTanggalLahir(string dateString)
         {
@@ -223,7 +229,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
 
                         a.PasienId,
                         a.AsalKunjungan,
-
+                        a.NoRegistrasi,
                         NamaLengkap = a.Pasien != null
                             ? a.Pasien.NamaLengkap
                             : null,
@@ -603,6 +609,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         NoPolis = a.AsuransiPasien != null
                             ? a.AsuransiPasien.NoPolis
                             : null,
+                        a.NoRegistrasi,
 
                         // =====================
                         // ASURANSI EXCESS
@@ -1022,6 +1029,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
 
                 try
                 {
+                    var noRegistrasi = await _kunjunganNoRegistrasiService
+                        .GenerateNoRegistrasiAsync(ct);
                     // =============================
                     // Simpan data kunjungan
                     // =============================
@@ -1035,8 +1044,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         AsuransiPasienId = request.AsuransiPasienId,
                         AsuransiExcessId = request.AsuransiExcessId,
                         JenisKunjungan = kodeJenis,
-                        CreateDateTime = DateTimeOffset.UtcNow,
-                        CreateBy = userActiveId,
+                        NoRegistrasi = noRegistrasi,
                         NoRekamMedis = request.NoRekamMedis,
                         TipePasien = request.TipePasien,
                         TipePembayaran = request.TipePembayaran,
@@ -1053,6 +1061,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         TglMasuk = request.TglMasuk,
                         CaraMasukRS = request.CaraMasukRS,
                         KondisiKeluar = request.KondisiKeluar,
+                        CreateDateTime = DateTimeOffset.UtcNow,
+                        CreateBy = userActiveId,
                     };
 
                     _applicationDbContext.Kunjungans.Add(newKunjungan);
@@ -1088,11 +1098,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         );
                     }
 
+                    var noBill = await _noBillService.GenerateNoBillAsync(
+                        newKunjungan.KunjunganID,
+                        ct
+                    );
+
                     var kasir = new MainKasir
                     {
                         KasirId = Guid.NewGuid(),
                         KunjunganId = newKunjungan.KunjunganID,
                         StatusPembayaran = "Belum Lunas",
+                        NoBill = noBill,
                         CreateDateTime = DateTime.UtcNow
                     };
 
@@ -1801,6 +1817,237 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             return Ok(new { message = "Status TransferPasien berhasil diperbarui." });
         }
 
+        //[HttpPut("{id}/Ubah-Asuransi")]
+        //public async Task<IActionResult> UpdateAsuransiKunjungan(
+        //    Guid kunjunganId,
+        //    [FromBody] UpdateAsuransiKunjunganViewModel vm,
+        //    CancellationToken ct)
+        //{
+        //    if (vm == null)
+        //    {
+        //        return BadRequest(new { message = "Data tidak valid." });
+        //    }
+
+        //    await using var transaction = await _applicationDbContext.Database.BeginTransactionAsync(ct);
+
+        //    try
+        //    {
+        //        if (!await _applicationDbContext.Database.CanConnectAsync(ct))
+        //        {
+        //            return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+        //        }
+
+        //        var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        //        if (string.IsNullOrEmpty(emailLogin))
+        //        {
+        //            return Unauthorized(new { message = "User tidak terautentikasi!" });
+        //        }
+
+        //        var userActive = await _applicationDbContext.UserActives
+        //            .FirstOrDefaultAsync(u => u.Email == emailLogin, ct);
+
+        //        if (userActive == null)
+        //        {
+        //            return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+        //        }
+
+        //        var kunjungan = await _applicationDbContext.Kunjungans
+        //            .FirstOrDefaultAsync(x =>
+        //                x.KunjunganID == kunjunganId &&
+        //                !x.IsDelete,
+        //                ct);
+
+        //        if (kunjungan == null)
+        //        {
+        //            return NotFound(new { message = "Data kunjungan tidak ditemukan." });
+        //        }
+
+        //        if (!kunjungan.PasienId.HasValue || kunjungan.PasienId.Value == Guid.Empty)
+        //        {
+        //            return BadRequest(new { message = "PasienId pada kunjungan tidak valid." });
+        //        }
+
+        //        // =====================================================
+        //        // VALIDASI BATAS WAKTU UBAH ASURANSI
+        //        // =====================================================
+        //        var tanggalKunjungan = GetTanggalKunjungan(kunjungan);
+
+        //        if (!tanggalKunjungan.HasValue)
+        //        {
+        //            return BadRequest(new
+        //            {
+        //                message = "Tanggal kunjungan tidak ditemukan, perubahan asuransi tidak dapat dilakukan."
+        //            });
+        //        }
+
+        //        var tanggalKunjunganDate = tanggalKunjungan.Value.Date;
+
+        //        // Boleh ubah sampai H+2 jam 23:59:59
+        //        var batasAkhirPerubahan = tanggalKunjunganDate
+        //            .AddDays(2)
+        //            .AddDays(1)
+        //            .AddTicks(-1);
+
+        //        var now = DateTime.Now;
+
+        //        if (now > batasAkhirPerubahan)
+        //        {
+        //            return BadRequest(new
+        //            {
+        //                alert = true,
+        //                message = "Perubahan asuransi hanya dapat dilakukan maksimal 2 hari dari tanggal kunjungan.",
+        //                tanggalKunjungan = tanggalKunjunganDate,
+        //                batasAkhirPerubahan,
+        //                waktuSekarang = now
+        //            });
+        //        }
+
+        //        // =====================================================
+        //        // VALIDASI ASURANSI
+        //        // =====================================================
+        //        if (vm.AsuransiId.HasValue && vm.AsuransiId.Value != Guid.Empty)
+        //        {
+        //            var asuransiExists = await _applicationDbContext.Asuransis
+        //                .AnyAsync(x =>
+        //                    x.AsuransiId == vm.AsuransiId.Value &&
+        //                    (x.IsDelete == false || x.IsDelete == null),
+        //                    ct);
+
+        //            if (!asuransiExists)
+        //            {
+        //                return BadRequest(new { message = "Asuransi utama tidak ditemukan atau sudah tidak aktif." });
+        //            }
+        //        }
+
+        //        if (vm.AsuransiExcessId.HasValue && vm.AsuransiExcessId.Value != Guid.Empty)
+        //        {
+        //            var asuransiExcessExists = await _applicationDbContext.Asuransis
+        //                .AnyAsync(x =>
+        //                    x.AsuransiId == vm.AsuransiExcessId.Value &&
+        //                    (x.IsDelete == false || x.IsDelete == null),
+        //                    ct);
+
+        //            if (!asuransiExcessExists)
+        //            {
+        //                return BadRequest(new { message = "Asuransi excess tidak ditemukan atau sudah tidak aktif." });
+        //            }
+        //        }
+
+        //        if (vm.AsuransiPasienId.HasValue && vm.AsuransiPasienId.Value != Guid.Empty)
+        //        {
+        //            var asuransiPasienExists = await _applicationDbContext.AsuransiPasiens
+        //                .AnyAsync(x =>
+        //                    x.AsuransiPasienId == vm.AsuransiPasienId.Value &&
+        //                    x.PasienId == kunjungan.PasienId &&
+        //                    (x.IsDelete == false || x.IsDelete == null),
+        //                    ct);
+
+        //            if (!asuransiPasienExists)
+        //            {
+        //                return BadRequest(new
+        //                {
+        //                    message = "Data asuransi pasien tidak valid untuk pasien pada kunjungan ini."
+        //                });
+        //            }
+        //        }
+
+        //        var oldAsuransiId = kunjungan.AsuransiId;
+        //        var oldAsuransiExcessId = kunjungan.AsuransiExcessId;
+        //        var oldAsuransiPasienId = kunjungan.AsuransiPasienId;
+        //        var oldTipePembayaran = kunjungan.TipePembayaran;
+
+        //        // =====================================================
+        //        // UPDATE ASURANSI PADA KUNJUNGAN
+        //        // =====================================================
+        //        kunjungan.AsuransiId = vm.AsuransiId.HasValue && vm.AsuransiId.Value != Guid.Empty
+        //            ? vm.AsuransiId
+        //            : null;
+
+        //        kunjungan.AsuransiExcessId = vm.AsuransiExcessId.HasValue && vm.AsuransiExcessId.Value != Guid.Empty
+        //            ? vm.AsuransiExcessId
+        //            : null;
+
+        //        kunjungan.AsuransiPasienId = vm.AsuransiPasienId.HasValue && vm.AsuransiPasienId.Value != Guid.Empty
+        //            ? vm.AsuransiPasienId
+        //            : null;
+
+        //        kunjungan.TipePembayaran =
+        //            kunjungan.AsuransiId.HasValue || kunjungan.AsuransiExcessId.HasValue
+        //                ? "Asuransi"
+        //                : "Mandiri";
+
+        //        kunjungan.UpdateDateTime = DateTimeOffset.UtcNow;
+        //        kunjungan.UpdateBy = userActive.UserActiveId;
+
+        //        /*
+        //         * Save dulu agar AsuransiCoverageService membaca AsuransiId terbaru
+        //         * dari tabel Kunjungan.
+        //         */
+        //        await _applicationDbContext.SaveChangesAsync(ct);
+
+        //        // =====================================================
+        //        // UPDATE COVERAGE BILLING AKTIF
+        //        // =====================================================
+        //        await RefreshCoverageBillingByKunjunganAsync(
+        //            kunjunganId,
+        //            userActive.UserActiveId,
+        //            ct
+        //        );
+
+        //        await _applicationDbContext.SaveChangesAsync(ct);
+        //        await transaction.CommitAsync(ct);
+
+        //        return Ok(new
+        //        {
+        //            message = "Perubahan asuransi kunjungan berhasil.",
+        //            data = new
+        //            {
+        //                kunjungan.KunjunganID,
+        //                kunjungan.PasienId,
+
+        //                before = new
+        //                {
+        //                    AsuransiId = oldAsuransiId,
+        //                    AsuransiExcessId = oldAsuransiExcessId,
+        //                    AsuransiPasienId = oldAsuransiPasienId,
+        //                    TipePembayaran = oldTipePembayaran
+        //                },
+
+        //                after = new
+        //                {
+        //                    kunjungan.AsuransiId,
+        //                    kunjungan.AsuransiExcessId,
+        //                    kunjungan.AsuransiPasienId,
+        //                    kunjungan.TipePembayaran
+        //                },
+
+        //                tanggalKunjungan = tanggalKunjunganDate,
+        //                batasAkhirPerubahan
+        //            }
+        //        });
+        //    }
+        //    catch (DbUpdateException dbEx)
+        //    {
+        //        await transaction.RollbackAsync(ct);
+
+        //        return StatusCode(500, new
+        //        {
+        //            message = $"Gagal mengubah asuransi: {dbEx.InnerException?.Message}"
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        await transaction.RollbackAsync(ct);
+
+        //        return StatusCode(500, new
+        //        {
+        //            message = $"Terjadi kesalahan internal: {ex.Message}"
+        //        });
+        //    }
+        //}
+
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
@@ -2352,6 +2599,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         NoPolis = a.AsuransiPasien != null
                             ? a.AsuransiPasien.NoPolis
                             : null,
+                        a.NoRegistrasi,
 
                         // =====================
                         // Asuransi excess
@@ -2813,6 +3061,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         r.NamaPasien,
                         r.TanggalLahir,
                         r.JenisKelamin,
+                        r.NoRegistrasi,
                         r.NoPasien,
                         r.NoWali1,
                         r.NoWali2,

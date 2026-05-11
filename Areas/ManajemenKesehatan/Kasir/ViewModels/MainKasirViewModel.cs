@@ -9,6 +9,8 @@ public class MainKasirViewModel
     public Guid? DiskonId { get; set; }
     public Guid? PasienId { get; set; }
     public string? StatusPembayaran { get; set; }
+    public string? StatusBilling { get; set; }
+
     public bool? IsVerified { get; set; }
     public Guid? TTDUserVerfiedId { get; set; }
     public decimal? DepositRanap {  get; set; }

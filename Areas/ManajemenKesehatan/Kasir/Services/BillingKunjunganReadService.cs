@@ -3257,7 +3257,8 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 x.KasirId,
                 x.KunjunganId,
                 x.PasienId,
-
+                x.NoBill,
+                x.StatusBilling,
                 NamaLengkap = p != null ? p.NamaLengkap : null,
                 NoRekamMedis = p != null ? p.NoRekamMedis : null,
 
@@ -3424,6 +3425,8 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                     h.PasienId,
                     h.NamaLengkap,
                     h.NoRekamMedis,
+                    h.NoBill,
+                    h.StatusBilling,
                     h.AsuransiId,
                     h.NamaAsuransi,
                     h.InvoiceBilling,

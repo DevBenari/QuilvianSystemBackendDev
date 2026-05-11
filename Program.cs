@@ -372,6 +372,8 @@ builder.Services.AddScoped<IDepositRanapNumberService, DepositRanapNumberService
 builder.Services.AddScoped<IAsuransiCoverageService, AsuransiCoverageService>();
 builder.Services.AddScoped<INotification, NotificationService>();
 builder.Services.AddScoped<IKunjunganAdminBillingService, KunjunganAdminBillingService>();
+builder.Services.AddScoped<IKunjunganNoRegistrasiService, KunjunganNoRegistrasiService>();
+builder.Services.AddScoped<INoBillService, NoBillService>();
 #endregion
 
 #region Setting Container
