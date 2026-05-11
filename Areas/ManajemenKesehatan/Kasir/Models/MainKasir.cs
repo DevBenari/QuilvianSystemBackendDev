@@ -11,6 +11,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models
         public Guid KasirId { get; set; }
         public Guid? KunjunganId { get; set; }
         public Guid? PasienId { get; set; }
+        public string? NoBill { get; set; }
+        public string? StatusBilling { get; set; }
         public string? InvoiceBilling {  get; set; }
         public int? JumlahAngsuran {  get; set; }
         public string? StatusPembayaran { get; set; }

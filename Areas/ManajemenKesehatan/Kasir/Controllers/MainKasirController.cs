@@ -649,20 +649,37 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         [HttpGet("Billing-Kasir/{kunjunganId:guid}")]
         public async Task<IActionResult> GetBillingKasirByKunjunganId(
             Guid kunjunganId,
-            //Guid? petugasId = null,
             [FromQuery] DateTime? asOf = null,
+            [FromQuery] string? jenisKunjungan = null,
+            [FromQuery] string? asalKunjungan = null,
             CancellationToken ct = default)
         {
-            // =========================
-            // 1) Billing keseluruhan (service)
-            // =========================
             var billingDto = await _billingKunjunganReadService
-                .GetBillingKeseluruhanAsync(kunjunganId, asOf, ct);
+                .GetBillingByKunjunganId(
+                    kunjunganId,
+                    asOf,
+                    jenisKunjungan,
+                    asalKunjungan,
+                    ct
+                );
 
-            // =========================
-            // 2) MAIN KASIR DAN DETAILNYA
-            // =========================
-            var kasirs = await _billingKunjunganReadService.GetMainKasirDanDetailPembayaranAsync(kunjunganId, ct);
+            if (billingDto == null)
+            {
+                return NotFound(new
+                {
+                    status = "not_found",
+                    message = "Data billing tidak ditemukan atau tidak sesuai filter kunjungan.",
+                    filter = new
+                    {
+                        kunjunganId,
+                        jenisKunjungan,
+                        asalKunjungan
+                    }
+                });
+            }
+
+            var kasirs = await _billingKunjunganReadService
+                .GetMainKasirDanDetailPembayaranAsync(kunjunganId, ct);
 
             return Ok(new
             {
@@ -670,14 +687,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 data = new
                 {
                     KunjunganId = kunjunganId,
-
-                    // billing keseluruhan dari service
                     Billing = billingDto,
-
-                    // pembayaran (kasir+detail) tetap ditampilkan walau detail kosong
                     Pembayaran = new
                     {
-                        //TotalKasir = kasirs.Count,
                         Kasirs = kasirs
                     }
                 }
