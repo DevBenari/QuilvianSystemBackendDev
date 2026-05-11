@@ -10,6 +10,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Interfaces
             DateTime? asOf = null,
             CancellationToken ct = default);
 
+        Task<BillingKunjunganDto?> GetBillingByKunjunganId
+            (Guid kunjunganId,
+            DateTime? asOf = null,
+            string? jenisKunjungan = null,
+            string? asalKunjungan = null,
+            CancellationToken ct = default);
+
         Task<PagedResult<object>> GetBillingPagedAsync(
             BillingPagedQuery query,
             CancellationToken ct = default);
