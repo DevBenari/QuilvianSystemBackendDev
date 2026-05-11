@@ -5,6 +5,7 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Services
 {
     using Microsoft.EntityFrameworkCore;
+    using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 
     public class AsuransiCoverageService : IAsuransiCoverageService
     {
@@ -124,6 +125,59 @@ namespace QuilvianSystemBackendDev.Services
             return result;
         }
 
+        public async Task RefreshCoverageBillingByKunjunganAsync(
+            Guid kunjunganId,
+            Guid userActiveId,
+            CancellationToken ct = default)
+        {
+            if (kunjunganId == Guid.Empty)
+                throw new ArgumentException("KunjunganId tidak valid.");
+
+            var billings = await _db.Billings
+                .Where(x =>
+                    x.KunjunganId == kunjunganId &&
+                    (x.IsDelete == false || x.IsDelete == null))
+                .ToListAsync(ct);
+
+            foreach (var bill in billings)
+            {
+                var jenisCoverage = ResolveJenisBillingForCoverage(bill.JenisBilling);
+
+                if (string.IsNullOrWhiteSpace(jenisCoverage) || !bill.ItemId.HasValue)
+                {
+                    ClearBillingCoverage(bill, userActiveId);
+                    continue;
+                }
+
+                var itemIdForCoverage = await ResolveItemIdForCoverageAsync(
+                    bill,
+                    jenisCoverage,
+                    ct
+                );
+
+                if (!itemIdForCoverage.HasValue || itemIdForCoverage.Value == Guid.Empty)
+                {
+                    ClearBillingCoverage(bill, userActiveId);
+                    continue;
+                }
+
+                var coverage = await ResolveCoverageAsync(
+                    kunjunganId: kunjunganId,
+                    jenisBilling: jenisCoverage,
+                    itemId: itemIdForCoverage.Value,
+                    ct: ct
+                );
+
+                bill.AsuransiId = coverage.AsuransiId;
+                bill.IsCovered = coverage.IsCovered;
+                bill.AsuransiExcessId = coverage.AsuransiExcessId;
+                bill.IsCoveredExcess = coverage.IsCoveredExcess;
+
+                bill.UpdateDateTime = DateTimeOffset.UtcNow;
+                bill.UpdateBy = userActiveId;
+            }
+        }
+
         private async Task<bool> CheckCoverageByJenisBillingAsync(
             Guid asuransiId,
             string jenisBilling,
@@ -180,6 +234,95 @@ namespace QuilvianSystemBackendDev.Services
                 default:
                     return false;
             }
+        }
+
+        private static string? ResolveJenisBillingForCoverage(string? jenisBilling)
+        {
+            if (string.IsNullOrWhiteSpace(jenisBilling))
+                return null;
+
+            var jenis = jenisBilling.Trim();
+
+            if (jenis.Equals("Tindakan", StringComparison.OrdinalIgnoreCase))
+                return "Tindakan";
+
+            /*
+             * Kalau Diskon Dokter berasal dari TindakanKunjungan.IsFoC
+             * dan Billing.ItemId berisi TindakanId, boleh diperlakukan sebagai Tindakan.
+             * Kalau tidak ingin Diskon Dokter ikut coverage, hapus blok ini.
+             */
+            if (jenis.Equals("Diskon Dokter", StringComparison.OrdinalIgnoreCase))
+                return "Tindakan";
+
+            if (jenis.Equals("Pemeriksaan Lab", StringComparison.OrdinalIgnoreCase))
+                return "Pemeriksaan Lab";
+
+            if (jenis.Equals("Obat", StringComparison.OrdinalIgnoreCase))
+                return "Obat";
+
+            if (jenis.Equals("Alkes", StringComparison.OrdinalIgnoreCase))
+                return "Alkes";
+
+            if (jenis.Equals("Kamar", StringComparison.OrdinalIgnoreCase) ||
+                jenis.Equals("Kamar Ranap", StringComparison.OrdinalIgnoreCase))
+                return "Kamar";
+
+            /*
+             * Tidak ada coverage untuk:
+             * - Biaya Admin
+             * - Biaya Lain - Lain
+             * - Visit Dokter
+             * dll.
+             */
+            return null;
+        }
+
+        private async Task<Guid?> ResolveItemIdForCoverageAsync(
+            Billing bill,
+            string jenisCoverage,
+            CancellationToken ct)
+        {
+            if (!bill.ItemId.HasValue || bill.ItemId.Value == Guid.Empty)
+                return null;
+
+            /*
+             * Billing Pemeriksaan Lab biasanya ItemId = DetailBookingLabId,
+             * sedangkan coverage asuransi butuh PemeriksaanLabId.
+             */
+            if (jenisCoverage == "Pemeriksaan Lab")
+            {
+                var pemeriksaanLabId = await _db.LabBookingDetails
+                    .AsNoTracking()
+                    .Where(x =>
+                        x.DetailBookingLabId == bill.ItemId.Value &&
+                        (x.IsDelete == false || x.IsDelete == null))
+                    .Select(x => x.PemeriksaanLabId)
+                    .FirstOrDefaultAsync(ct);
+
+                return pemeriksaanLabId ?? bill.ItemId;
+            }
+
+            /*
+             * Untuk jenis lain:
+             * Tindakan => ItemId = TindakanId
+             * Obat     => ItemId = ObatId
+             * Alkes    => ItemId = ObatId / AlkesId sesuai mapping kamu
+             * Kamar    => ItemId = KamarId
+             */
+            return bill.ItemId;
+        }
+
+        private static void ClearBillingCoverage(
+            Billing bill,
+            Guid userActiveId)
+        {
+            bill.AsuransiId = null;
+            bill.IsCovered = false;
+            bill.AsuransiExcessId = null;
+            bill.IsCoveredExcess = false;
+
+            bill.UpdateDateTime = DateTimeOffset.UtcNow;
+            bill.UpdateBy = userActiveId;
         }
     }
     public class AsuransiCoverageResult

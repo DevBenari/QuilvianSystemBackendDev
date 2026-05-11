@@ -1361,6 +1361,34 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             }
         }
 
+        [HttpPut("{id}/Update-StatusBilling")]
+        public async Task<IActionResult> UpdateStatusBilling(Guid id, [FromBody] UpdateStatusBillingViewModel request)
+        {
+            var data = await _applicationDbContext.MainKasirs.FindAsync(id);
+            if (data == null)
+                return NotFound(new { message = "Data kasir tidak ditemukan." });
+
+            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(EmailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = _applicationDbContext.UserActives.AsNoTracking().FirstOrDefault(u => u.Email == EmailLogin);
+            var userId = user?.UserActiveId ?? Guid.Empty;
+
+            data.StatusBilling = request.StatusBilling;
+            data.UpdateDateTime = DateTimeOffset.UtcNow;
+            data.UpdateBy = userId;
+            await _applicationDbContext.SaveChangesAsync();
+
+            // Notifikasi SignalR
+            await _hubContext.Clients.All.SendAsync("Status-Billing Changed", new
+            {
+                action = "updateStatusBilling",
+                kasirId = data.KasirId,
+            });
+
+            return Ok(new { message = "Status Billing berhasil diperbarui." });
+        }
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {

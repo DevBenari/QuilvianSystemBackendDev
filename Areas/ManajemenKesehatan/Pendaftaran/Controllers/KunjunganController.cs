@@ -54,6 +54,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
         private readonly IConfiguration _configuration;
         private readonly IKunjunganNoRegistrasiService _kunjunganNoRegistrasiService;
         private readonly INoBillService _noBillService;
+        private readonly IAsuransiCoverageService _asuransiCoverageService;
 
         public KunjunganController
         (
@@ -68,7 +69,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             IKunjunganAdminBillingService kunjunganAdminBillingService,
             IConfiguration configuration,
             IKunjunganNoRegistrasiService kunjunganNoRegistrasiService,
-            INoBillService noBillService
+            INoBillService noBillService,
+            IAsuransiCoverageService asuransiCoverageService
 
         )
         {
@@ -84,6 +86,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             _configuration = configuration;
             _kunjunganNoRegistrasiService = kunjunganNoRegistrasiService;
             _noBillService = noBillService;
+            _asuransiCoverageService = asuransiCoverageService;
 
         }
         private DateTime? TryParseTanggalLahir(string dateString)
@@ -96,6 +99,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 out DateTime parsedDate))
             {
                 return DateTime.SpecifyKind(parsedDate, DateTimeKind.Utc);
+            }
+
+            return null;
+        }
+
+        private static DateTime? GetTanggalKunjungan(Kunjungan kunjungan)
+        {
+            if (kunjungan == null)
+                return null;
+
+            if (kunjungan.TglMasuk.HasValue)
+            {
+                return kunjungan.TglMasuk.Value;
+            }
+
+            if (kunjungan.CreateDateTime != default)
+            {
+                return kunjungan.CreateDateTime.LocalDateTime;
             }
 
             return null;
@@ -1817,235 +1838,227 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             return Ok(new { message = "Status TransferPasien berhasil diperbarui." });
         }
 
-        //[HttpPut("{id}/Ubah-Asuransi")]
-        //public async Task<IActionResult> UpdateAsuransiKunjungan(
-        //    Guid kunjunganId,
-        //    [FromBody] UpdateAsuransiKunjunganViewModel vm,
-        //    CancellationToken ct)
-        //{
-        //    if (vm == null)
-        //    {
-        //        return BadRequest(new { message = "Data tidak valid." });
-        //    }
+        [HttpPut("{id}/Ubah-Asuransi")]
+        public async Task<IActionResult> UpdateAsuransiKunjungan(
+            Guid kunjunganId,
+            [FromBody] UbahAsuransiViewModel vm,
+            CancellationToken ct)
+        {
+            if (vm == null)
+            {
+                return BadRequest(new { message = "Data tidak valid." });
+            }
 
-        //    await using var transaction = await _applicationDbContext.Database.BeginTransactionAsync(ct);
+            await using var transaction = await _applicationDbContext.Database.BeginTransactionAsync(ct);
 
-        //    try
-        //    {
-        //        if (!await _applicationDbContext.Database.CanConnectAsync(ct))
-        //        {
-        //            return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
-        //        }
+            try
+            {
+                if (!await _applicationDbContext.Database.CanConnectAsync(ct))
+                {
+                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+                }
 
-        //        var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-        //        if (string.IsNullOrEmpty(emailLogin))
-        //        {
-        //            return Unauthorized(new { message = "User tidak terautentikasi!" });
-        //        }
+                if (string.IsNullOrEmpty(emailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
 
-        //        var userActive = await _applicationDbContext.UserActives
-        //            .FirstOrDefaultAsync(u => u.Email == emailLogin, ct);
+                var userActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin, ct);
 
-        //        if (userActive == null)
-        //        {
-        //            return Unauthorized(new { message = "User aktif tidak ditemukan!" });
-        //        }
+                if (userActive == null)
+                {
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+                }
 
-        //        var kunjungan = await _applicationDbContext.Kunjungans
-        //            .FirstOrDefaultAsync(x =>
-        //                x.KunjunganID == kunjunganId &&
-        //                !x.IsDelete,
-        //                ct);
+                var kunjungan = await _applicationDbContext.Kunjungans
+                    .FirstOrDefaultAsync(x =>
+                        x.KunjunganID == kunjunganId &&
+                        !x.IsDelete,
+                        ct);
 
-        //        if (kunjungan == null)
-        //        {
-        //            return NotFound(new { message = "Data kunjungan tidak ditemukan." });
-        //        }
+                if (kunjungan == null)
+                {
+                    return NotFound(new { message = "Data kunjungan tidak ditemukan." });
+                }
 
-        //        if (!kunjungan.PasienId.HasValue || kunjungan.PasienId.Value == Guid.Empty)
-        //        {
-        //            return BadRequest(new { message = "PasienId pada kunjungan tidak valid." });
-        //        }
+                if (!kunjungan.PasienId.HasValue || kunjungan.PasienId.Value == Guid.Empty)
+                {
+                    return BadRequest(new { message = "PasienId pada kunjungan tidak valid." });
+                }
 
-        //        // =====================================================
-        //        // VALIDASI BATAS WAKTU UBAH ASURANSI
-        //        // =====================================================
-        //        var tanggalKunjungan = GetTanggalKunjungan(kunjungan);
+                // =====================================================
+                // VALIDASI BATAS WAKTU UBAH ASURANSI
+                // =====================================================
+                var tanggalKunjungan = GetTanggalKunjungan(kunjungan);
 
-        //        if (!tanggalKunjungan.HasValue)
-        //        {
-        //            return BadRequest(new
-        //            {
-        //                message = "Tanggal kunjungan tidak ditemukan, perubahan asuransi tidak dapat dilakukan."
-        //            });
-        //        }
+                if (!tanggalKunjungan.HasValue)
+                {
+                    return BadRequest(new
+                    {
+                        message = "Tanggal kunjungan tidak ditemukan, perubahan asuransi tidak dapat dilakukan."
+                    });
+                }
 
-        //        var tanggalKunjunganDate = tanggalKunjungan.Value.Date;
+                var tanggalKunjunganDate = tanggalKunjungan.Value.Date;
 
-        //        // Boleh ubah sampai H+2 jam 23:59:59
-        //        var batasAkhirPerubahan = tanggalKunjunganDate
-        //            .AddDays(2)
-        //            .AddDays(1)
-        //            .AddTicks(-1);
+                // Boleh ubah sampai H+2 jam 23:59:59
+                var batasAkhirPerubahan = tanggalKunjunganDate
+                    .AddDays(2)
+                    .AddDays(1)
+                    .AddTicks(-1);
 
-        //        var now = DateTime.Now;
+                var now = DateTime.Now;
 
-        //        if (now > batasAkhirPerubahan)
-        //        {
-        //            return BadRequest(new
-        //            {
-        //                alert = true,
-        //                message = "Perubahan asuransi hanya dapat dilakukan maksimal 2 hari dari tanggal kunjungan.",
-        //                tanggalKunjungan = tanggalKunjunganDate,
-        //                batasAkhirPerubahan,
-        //                waktuSekarang = now
-        //            });
-        //        }
+                if (now > batasAkhirPerubahan)
+                {
+                    return BadRequest(new
+                    {
+                        alert = true,
+                        message = "Perubahan asuransi hanya dapat dilakukan maksimal 2 hari dari tanggal kunjungan.",
+                        tanggalKunjungan = tanggalKunjunganDate,
+                        batasAkhirPerubahan,
+                        waktuSekarang = now
+                    });
+                }
 
-        //        // =====================================================
-        //        // VALIDASI ASURANSI
-        //        // =====================================================
-        //        if (vm.AsuransiId.HasValue && vm.AsuransiId.Value != Guid.Empty)
-        //        {
-        //            var asuransiExists = await _applicationDbContext.Asuransis
-        //                .AnyAsync(x =>
-        //                    x.AsuransiId == vm.AsuransiId.Value &&
-        //                    (x.IsDelete == false || x.IsDelete == null),
-        //                    ct);
+                var oldAsuransiId = kunjungan.AsuransiId;
+                var oldAsuransiPasienId = kunjungan.AsuransiPasienId;
+                var oldTipePembayaran = kunjungan.TipePembayaran;
 
-        //            if (!asuransiExists)
-        //            {
-        //                return BadRequest(new { message = "Asuransi utama tidak ditemukan atau sudah tidak aktif." });
-        //            }
-        //        }
+                Guid? finalAsuransiPasienId = null;
 
-        //        if (vm.AsuransiExcessId.HasValue && vm.AsuransiExcessId.Value != Guid.Empty)
-        //        {
-        //            var asuransiExcessExists = await _applicationDbContext.Asuransis
-        //                .AnyAsync(x =>
-        //                    x.AsuransiId == vm.AsuransiExcessId.Value &&
-        //                    (x.IsDelete == false || x.IsDelete == null),
-        //                    ct);
+                // =====================================================
+                // JIKA ASURANSI NULL / EMPTY => UBAH KE MANDIRI
+                // =====================================================
+                if (!vm.AsuransiId.HasValue || vm.AsuransiId.Value == Guid.Empty)
+                {
+                    kunjungan.AsuransiId = null;
+                    kunjungan.AsuransiPasienId = null;
+                    kunjungan.TipePembayaran = "Mandiri";
+                }
+                else
+                {
+                    // =====================================================
+                    // VALIDASI ASURANSI MASTER
+                    // =====================================================
+                    var asuransi = await _applicationDbContext.Asuransis
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(x =>
+                            x.AsuransiId == vm.AsuransiId.Value &&
+                            (x.IsDelete == false || x.IsDelete == null),
+                            ct);
 
-        //            if (!asuransiExcessExists)
-        //            {
-        //                return BadRequest(new { message = "Asuransi excess tidak ditemukan atau sudah tidak aktif." });
-        //            }
-        //        }
+                    if (asuransi == null)
+                    {
+                        return BadRequest(new
+                        {
+                            message = "Asuransi tidak ditemukan atau sudah tidak aktif."
+                        });
+                    }
 
-        //        if (vm.AsuransiPasienId.HasValue && vm.AsuransiPasienId.Value != Guid.Empty)
-        //        {
-        //            var asuransiPasienExists = await _applicationDbContext.AsuransiPasiens
-        //                .AnyAsync(x =>
-        //                    x.AsuransiPasienId == vm.AsuransiPasienId.Value &&
-        //                    x.PasienId == kunjungan.PasienId &&
-        //                    (x.IsDelete == false || x.IsDelete == null),
-        //                    ct);
+                    // =====================================================
+                    // CEK APAKAH PASIEN SUDAH TERDAFTAR DI ASURANSI PASIEN
+                    // =====================================================
+                    var asuransiPasien = await _applicationDbContext.AsuransiPasiens
+                        .FirstOrDefaultAsync(x =>
+                            x.PasienId == kunjungan.PasienId.Value &&
+                            x.AsuransiId == vm.AsuransiId.Value &&
+                            (x.IsDelete == false || x.IsDelete == null),
+                            ct);
 
-        //            if (!asuransiPasienExists)
-        //            {
-        //                return BadRequest(new
-        //                {
-        //                    message = "Data asuransi pasien tidak valid untuk pasien pada kunjungan ini."
-        //                });
-        //            }
-        //        }
+                    if (asuransiPasien == null)
+                    {
+                        // =====================================================
+                        // JIKA BELUM ADA, DAFTARKAN KE ASURANSI PASIEN
+                        // =====================================================
+                        asuransiPasien = new AsuransiPasien
+                        {
+                            AsuransiPasienId = Guid.NewGuid(),
+                            PasienId = kunjungan.PasienId.Value,
+                            AsuransiId = vm.AsuransiId.Value,
 
-        //        var oldAsuransiId = kunjungan.AsuransiId;
-        //        var oldAsuransiExcessId = kunjungan.AsuransiExcessId;
-        //        var oldAsuransiPasienId = kunjungan.AsuransiPasienId;
-        //        var oldTipePembayaran = kunjungan.TipePembayaran;
+                            CreateDateTime = DateTimeOffset.UtcNow,
+                            CreateBy = userActive.UserActiveId,
+                            IsDelete = false
+                        };
 
-        //        // =====================================================
-        //        // UPDATE ASURANSI PADA KUNJUNGAN
-        //        // =====================================================
-        //        kunjungan.AsuransiId = vm.AsuransiId.HasValue && vm.AsuransiId.Value != Guid.Empty
-        //            ? vm.AsuransiId
-        //            : null;
+                        _applicationDbContext.AsuransiPasiens.Add(asuransiPasien);
+                    }
 
-        //        kunjungan.AsuransiExcessId = vm.AsuransiExcessId.HasValue && vm.AsuransiExcessId.Value != Guid.Empty
-        //            ? vm.AsuransiExcessId
-        //            : null;
+                    finalAsuransiPasienId = asuransiPasien.AsuransiPasienId;
 
-        //        kunjungan.AsuransiPasienId = vm.AsuransiPasienId.HasValue && vm.AsuransiPasienId.Value != Guid.Empty
-        //            ? vm.AsuransiPasienId
-        //            : null;
+                    kunjungan.AsuransiId = vm.AsuransiId.Value;
+                    kunjungan.AsuransiPasienId = finalAsuransiPasienId;
+                    kunjungan.TipePembayaran = "Asuransi";
+                }
 
-        //        kunjungan.TipePembayaran =
-        //            kunjungan.AsuransiId.HasValue || kunjungan.AsuransiExcessId.HasValue
-        //                ? "Asuransi"
-        //                : "Mandiri";
+                kunjungan.UpdateDateTime = DateTimeOffset.UtcNow;
+                kunjungan.UpdateBy = userActive.UserActiveId;
 
-        //        kunjungan.UpdateDateTime = DateTimeOffset.UtcNow;
-        //        kunjungan.UpdateBy = userActive.UserActiveId;
+                /*
+                 * Save dulu supaya AsuransiCoverageService membaca AsuransiId terbaru
+                 * dari tabel Kunjungan.
+                 */
+                await _applicationDbContext.SaveChangesAsync(ct);
 
-        //        /*
-        //         * Save dulu agar AsuransiCoverageService membaca AsuransiId terbaru
-        //         * dari tabel Kunjungan.
-        //         */
-        //        await _applicationDbContext.SaveChangesAsync(ct);
+                await _asuransiCoverageService.RefreshCoverageBillingByKunjunganAsync(
+                    kunjunganId,
+                    userActive.UserActiveId,
+                    ct
+                );
 
-        //        // =====================================================
-        //        // UPDATE COVERAGE BILLING AKTIF
-        //        // =====================================================
-        //        await RefreshCoverageBillingByKunjunganAsync(
-        //            kunjunganId,
-        //            userActive.UserActiveId,
-        //            ct
-        //        );
+                await _applicationDbContext.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
 
-        //        await _applicationDbContext.SaveChangesAsync(ct);
-        //        await transaction.CommitAsync(ct);
+                return Ok(new
+                {
+                    message = "Perubahan asuransi kunjungan berhasil.",
+                    data = new
+                    {
+                        kunjungan.KunjunganID,
+                        kunjungan.PasienId,
 
-        //        return Ok(new
-        //        {
-        //            message = "Perubahan asuransi kunjungan berhasil.",
-        //            data = new
-        //            {
-        //                kunjungan.KunjunganID,
-        //                kunjungan.PasienId,
+                        before = new
+                        {
+                            AsuransiId = oldAsuransiId,
+                            AsuransiPasienId = oldAsuransiPasienId,
+                            TipePembayaran = oldTipePembayaran
+                        },
 
-        //                before = new
-        //                {
-        //                    AsuransiId = oldAsuransiId,
-        //                    AsuransiExcessId = oldAsuransiExcessId,
-        //                    AsuransiPasienId = oldAsuransiPasienId,
-        //                    TipePembayaran = oldTipePembayaran
-        //                },
+                        after = new
+                        {
+                            kunjungan.AsuransiId,
+                            kunjungan.AsuransiPasienId,
+                            kunjungan.TipePembayaran
+                        },
 
-        //                after = new
-        //                {
-        //                    kunjungan.AsuransiId,
-        //                    kunjungan.AsuransiExcessId,
-        //                    kunjungan.AsuransiPasienId,
-        //                    kunjungan.TipePembayaran
-        //                },
+                        tanggalKunjungan = tanggalKunjunganDate,
+                        batasAkhirPerubahan
+                    }
+                });
+            }
+            catch (DbUpdateException dbEx)
+            {
+                await transaction.RollbackAsync(ct);
 
-        //                tanggalKunjungan = tanggalKunjunganDate,
-        //                batasAkhirPerubahan
-        //            }
-        //        });
-        //    }
-        //    catch (DbUpdateException dbEx)
-        //    {
-        //        await transaction.RollbackAsync(ct);
+                return StatusCode(500, new
+                {
+                    message = $"Gagal mengubah asuransi: {dbEx.InnerException?.Message}"
+                });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync(ct);
 
-        //        return StatusCode(500, new
-        //        {
-        //            message = $"Gagal mengubah asuransi: {dbEx.InnerException?.Message}"
-        //        });
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        await transaction.RollbackAsync(ct);
-
-        //        return StatusCode(500, new
-        //        {
-        //            message = $"Terjadi kesalahan internal: {ex.Message}"
-        //        });
-        //    }
-        //}
+                return StatusCode(500, new
+                {
+                    message = $"Terjadi kesalahan internal: {ex.Message}"
+                });
+            }
+        }
 
 
         [HttpDelete("{id}")]
