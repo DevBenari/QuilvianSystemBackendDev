@@ -5,6 +5,9 @@ using NuGet.Configuration;
 using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers;
 using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.Finance.AR.Models;
+using QuilvianSystemBackendDev.Areas.Finance.COA.Models;
+using QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers;
+using QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Models;
 using QuilvianSystemBackendDev.Areas.Finance.Po.Models;
 using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.HRD.Pengajuan.Models;
@@ -962,6 +965,8 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<InstalasiUnit> InstalasiUnits { get; set; }
         public DbSet<Karyawan> Karyawans { get; set; }
         public DbSet<MappingPosisi> MappingPosisis { get; set; }
+        public DbSet<BankAccount> BankAccounts { get; set; }
+
 
         #endregion
 
@@ -1166,6 +1171,23 @@ namespace QuilvianSystemBackendDev.Repositories
             public DbSet<ARDokumen> ARDokumens { get; set; }
 
             #endregion
+
+            #region COA
+            public DbSet<MasterCoa> MasterCoas { get; set; }
+            public DbSet<MasterGrup> MasterGrups { get; set; }
+            public DbSet<TipeAkun> TipeAkuns { get; set; }
+
+            #endregion
+
+            #region Pembayaran
+            public DbSet<DetailDokumenReceived> DetailDokumenReceiveds { get; set; }
+            public DbSet<DetailInvoiceReceived> DetailInvoiceReceiveds { get; set; }
+            public DbSet<DetailReceivedPayment> DetailReceivedPayments { get; set; }
+            public DbSet<ReceivedPayment> ReceivedPayments { get; set; }
+
+        #endregion
+
+        public DbSet<MasterBank> MasterBanks { get; set; }
         #endregion
     }
 }
