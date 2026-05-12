@@ -12,6 +12,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
 using QuilvianSystemBackendDev.DTO;
@@ -37,6 +38,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly AutoLoginDTO _optAutoLogin;
         private readonly INotification _serviceNotification;
+        private readonly IConfiguration _configuration;
+        private readonly string _uploadUrl;
 
         public DiskonDokterController(
             ApplicationDbContext applicationDbContext,
@@ -46,7 +49,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             IWebHostEnvironment webHostEnvironment,
             IHubContext <DiskonDokterHub> hubContext,
             IOptions<AutoLoginDTO> optAutoLogin,
-            INotification serviceNotification
+            INotification serviceNotification,
+            IConfiguration configuration
             )
         {
             _applicationDbContext = applicationDbContext;
@@ -57,6 +61,71 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             _hubContext = hubContext;
             _optAutoLogin = optAutoLogin.Value;
             _serviceNotification = serviceNotification;
+            _uploadUrl = configuration["FileStorage:UploadUrl"];
+        }
+
+        private async Task<(string? Path, string? FileName)> UploadFoCFileAsync(
+            IFormFile? file,
+            Guid diskonApprovedId,
+            Guid? kunjunganId,
+            Guid? pasienId,
+            CancellationToken ct = default)
+        {
+            if (file == null || file.Length == 0)
+                return (null, null);
+
+            var allowedExt = new[] { ".jpg", ".jpeg", ".png", ".pdf" };
+            var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+
+            if (!allowedExt.Contains(ext))
+                throw new Exception("File FoC hanya boleh JPG, JPEG, PNG, atau PDF.");
+
+            if (file.Length > 10 * 1024 * 1024)
+                throw new Exception("Ukuran file FoC maksimal 10MB.");
+
+            var folderTarget = "FileFoCDiskonDokter";
+            var safeTime = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss");
+
+            var fileName =
+                $"{diskonApprovedId}_{kunjunganId}_{pasienId}_FoC_{safeTime}{ext}";
+
+            var filePath = $"/{folderTarget}/{fileName}";
+
+            using var ms = new MemoryStream();
+            await file.CopyToAsync(ms, ct);
+            ms.Position = 0;
+
+            var contentType = string.IsNullOrWhiteSpace(file.ContentType)
+                ? GetDefaultContentType(ext)
+                : file.ContentType;
+
+            var fileContent = new StreamContent(ms);
+            fileContent.Headers.ContentType =
+                new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+
+            using var form = new MultipartFormDataContent();
+            form.Add(fileContent, "file", fileName);
+            form.Add(new StringContent(folderTarget), "folderTarget");
+
+            using var client = new HttpClient();
+            var response = await client.PostAsync(_uploadUrl, form, ct);
+
+            if (!response.IsSuccessStatusCode)
+                throw new Exception("Gagal upload file FoC ke Flask.");
+
+            return (filePath, fileName);
+        }
+
+        private static string GetDefaultContentType(string ext)
+        {
+            return ext switch
+            {
+                ".jpg" => "image/jpeg",
+                ".jpeg" => "image/jpeg",
+                ".png" => "image/png",
+                ".pdf" => "application/pdf",
+                _ => "application/octet-stream"
+            };
         }
 
         [HttpGet("{id}")]
@@ -120,7 +189,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] DiskonDokterViewModel vm)
+        [RequestSizeLimit(20_000_000)]
+        [RequestFormLimits(MultipartBodyLengthLimit = 20_000_000)]
+        public async Task<IActionResult> Create([FromForm] DiskonDokterViewModel vm, CancellationToken ct)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -129,7 +200,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
             try
             {
-                if (!_applicationDbContext.Database.CanConnect())
+                if (!await _applicationDbContext.Database.CanConnectAsync(ct))
                 {
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
                 }
@@ -141,77 +212,114 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 }
 
                 var getUserActive = await _applicationDbContext.UserActives
-                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin, ct);
 
                 if (getUserActive == null)
                 {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
                 }
 
-                bool isValid = await _applicationDbContext.Diskons
-                    .AnyAsync(c =>
-                        c.DiskonId == vm.DiskonId &&
-                        (c.IsDelete == false || c.IsDelete == null)
-                    );
+                var userActiveId = getUserActive.UserActiveId;
 
-                if (!isValid)
+                if (!vm.DiskonId.HasValue || vm.DiskonId.Value == Guid.Empty)
+                    return BadRequest(new { message = "DiskonId wajib diisi." });
+
+                if (!vm.KunjunganId.HasValue || vm.KunjunganId.Value == Guid.Empty)
+                    return BadRequest(new { message = "KunjunganId wajib diisi." });
+
+                if (!vm.PasienId.HasValue || vm.PasienId.Value == Guid.Empty)
+                    return BadRequest(new { message = "PasienId wajib diisi." });
+
+                if (!vm.Approved1Id.HasValue || vm.Approved1Id.Value == Guid.Empty)
+                    return BadRequest(new { message = "Approved1Id wajib diisi." });
+
+                var isDiskonValid = await _applicationDbContext.Diskons
+                    .AnyAsync(c =>
+                        c.DiskonId == vm.DiskonId.Value &&
+                        (c.IsDelete == false || c.IsDelete == null),
+                        ct);
+
+                if (!isDiskonValid)
                 {
                     return BadRequest(new { message = "Diskon tidak ditemukan." });
                 }
 
-                var userActiveId = getUserActive.UserActiveId;
+                var isKunjunganValid = await _applicationDbContext.Kunjungans
+                    .AnyAsync(x =>
+                        x.KunjunganID == vm.KunjunganId.Value &&
+                        x.PasienId == vm.PasienId.Value &&
+                        !x.IsDelete,
+                        ct);
 
-                var data = new DiskonDokter
+                if (!isKunjunganValid)
                 {
-                    DiskonApprovedId = Guid.NewGuid(),
-                    PasienId = vm.PasienId,
-                    KunjunganId = vm.KunjunganId,
-                    DiskonId = vm.DiskonId,
-                    Approved1Id = vm.Approved1Id,
-                    CreateBy = userActiveId,
-                    CreateDateTime = DateTimeOffset.UtcNow,
-                };
-
-                _applicationDbContext.DiskonDokters.Add(data);
-                int result = await _applicationDbContext.SaveChangesAsync();
-
-                if (result <= 0)
-                {
-                    return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
+                    return BadRequest(new
+                    {
+                        message = "Data kunjungan tidak valid atau tidak sesuai dengan pasien."
+                    });
                 }
 
-                // =========================================================
-                // USER TUJUAN WA
-                // sementara pakai user login dulu untuk testing
-                // nanti ganti ke approver sebenarnya
-                // =========================================================
                 var userApproval = await _applicationDbContext.UserActives
-                    .Where(c => c.UserActiveId == vm.Approved1Id)
+                    .Where(c => c.UserActiveId == vm.Approved1Id.Value)
                     .Select(c => new
                     {
                         c.UserActiveId,
                         c.NoHandphone,
                         c.FullName
                     })
-                    .FirstOrDefaultAsync();
+                    .FirstOrDefaultAsync(ct);
 
                 if (userApproval == null)
                 {
-                    return BadRequest(new { message = "User aktif tidak ditemukan." });
+                    return BadRequest(new { message = "User approval tidak ditemukan." });
                 }
 
-                // =========================================================
-                // TARGET HALAMAN SETELAH AUTO LOGIN
-                // =========================================================
-                //var targetUrl = "/kasir/diskon-approval/dokter/";
+                var diskonApprovedId = Guid.NewGuid();
+
+                var uploadResult = await UploadFoCFileAsync(
+                    vm.FormFile,
+                    diskonApprovedId,
+                    vm.KunjunganId,
+                    vm.PasienId,
+                    ct
+                );
+
+                var isFoCUploaded = vm.FormFile != null && vm.FormFile.Length > 0;
+
+                var data = new DiskonDokter
+                {
+                    DiskonApprovedId = diskonApprovedId,
+                    PasienId = vm.PasienId,
+                    KunjunganId = vm.KunjunganId,
+                    DiskonId = vm.DiskonId,
+                    Approved1Id = vm.Approved1Id,
+
+                    FoCFilePath = uploadResult.Path,
+
+                    IsApproved1 = isFoCUploaded ? true : false,
+
+                    CreateBy = userActiveId,
+                    CreateDateTime = DateTimeOffset.UtcNow,
+                    IsDelete = false
+                };
+
+                _applicationDbContext.DiskonDokters.Add(data);
+
+                var result = await _applicationDbContext.SaveChangesAsync(ct);
+
+                if (result <= 0)
+                {
+                    return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
+                }
+
                 var targetUrl = "/kasir/diskon-approval/dokter/table";
 
                 var token = AutoLoginHelper.GenerateAutoLoginToken(
-                   userApproval.UserActiveId.ToString(),
-                   targetUrl,
-                   _optAutoLogin.SecretKey,
-                   expiredMinutes: 10
-               );
+                    userApproval.UserActiveId.ToString(),
+                    targetUrl,
+                    _optAutoLogin.SecretKey,
+                    expiredMinutes: 10
+                );
 
                 var autoLoginUrl =
                     $"{_optAutoLogin.BaseUrl.TrimEnd('/')}/api/Auth/AutoLogin" +
@@ -226,8 +334,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     waResult = new WhatsAppResultDto
                     {
                         Success = false,
-                        Message = "Nomor handphone user approval kosong.",
-                        //PhoneNumber = ""
+                        Message = "Nomor handphone user approval kosong."
                     };
                 }
                 else
@@ -235,10 +342,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     var waMsg =
                         $"APPROVAL DISKON,\n\n" +
                         $"Yth. Bapak/Ibu {userApproval.FullName},\n" +
-                        $"Terdapat permintaan approval diskon yang menunggu tindak lanjut.\n" +
+                        $"Terdapat permintaan approval diskon dokter / FoC yang menunggu tindak lanjut.\n" +
                         $"Silakan klik link berikut untuk membuka detail approval:\n\n{autoLoginUrl}";
 
-                    waResult = await _serviceNotification.SendWhatsAppAsync(userApproval.NoHandphone, waMsg);
+                    waResult = await _serviceNotification.SendWhatsAppAsync(
+                        userApproval.NoHandphone,
+                        waMsg
+                    );
                 }
 
                 return Created("", new
@@ -247,6 +357,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     data = new
                     {
                         data.DiskonApprovedId,
+                        data.KunjunganId,
+                        data.PasienId,
+                        data.DiskonId,
+                        data.Approved1Id,
+                        data.IsApproved1,
+                        FileFoC = new
+                        {
+                            Path = data.FoCFilePath
+                        },
                         TargetUrl = $"{_optAutoLogin.BaseUrl.TrimEnd('/')}{targetUrl}",
                         AutoLoginUrl = autoLoginUrl,
                         WhatsAppSent = waResult.Success,
@@ -271,23 +390,27 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             }
         }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] DiskonDokterViewModel vm)
+        [HttpPost("{id:guid}/Upload-FoC")]
+        [RequestSizeLimit(20_000_000)]
+        [RequestFormLimits(MultipartBodyLengthLimit = 20_000_000)]
+        public async Task<IActionResult> UploadFoC(
+            Guid id,
+            [FromForm] FileFoCDiskonDokterViewModel vm,
+            CancellationToken ct)
+
         {
-            if (vm == null || !ModelState.IsValid)
+            if (vm == null || vm.FormFile == null || vm.FormFile.Length == 0)
             {
-                return BadRequest(new { message = "Data tidak valid." });
+                return BadRequest(new { message = "File FoC tidak valid." });
             }
 
             try
             {
-                // **Cek koneksi ke database**
-                if (!await _applicationDbContext.Database.CanConnectAsync())
+                if (!await _applicationDbContext.Database.CanConnectAsync(ct))
                 {
                     return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
                 }
 
-                // **Ambil User ID dari JWT Claims**
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
                 {
@@ -295,50 +418,87 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 }
 
                 var getUserActive = await _applicationDbContext.UserActives
-                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin, ct);
+
                 if (getUserActive == null)
                 {
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
                 }
+
                 var userActiveId = getUserActive.UserActiveId;
 
-                // **Cari Data**
-                var data = await _applicationDbContext.DiskonDokters.FindAsync(id);
-                if (data == null)
+                var diskonDokter = await _applicationDbContext.DiskonDokters
+                    .FirstOrDefaultAsync(x =>
+                        x.DiskonApprovedId == id &&
+                        (x.IsDelete == false || x.IsDelete == null),
+                        ct);
+
+                if (diskonDokter == null)
                 {
-                    return NotFound(new { message = "Data tidak ditemukan." });
+                    return NotFound(new { message = "Data diskon dokter tidak ditemukan." });
                 }
 
-                // **Update Data**
-                data.PasienId = vm.PasienId;
-                data.KunjunganId = vm.KunjunganId;
-                data.DiskonId = vm.DiskonId;
+                var uploadResult = await UploadFoCFileAsync(
+                    vm.FormFile,
+                    diskonDokter.DiskonApprovedId,
+                    diskonDokter.KunjunganId,
+                    diskonDokter.PasienId,
+                    ct
+                );
 
-                data.UpdateBy = userActiveId;
-                data.UpdateDateTime = DateTimeOffset.UtcNow;
+                diskonDokter.FoCFilePath = uploadResult.Path;
 
-                _applicationDbContext.DiskonDokters.Update(data);
-                int result = await _applicationDbContext.SaveChangesAsync();
+                /*
+                 * Validasi:
+                 * Jika file FoC terisi / berhasil diupload,
+                 * maka IsApproved1 otomatis true.
+                 */
+                diskonDokter.IsApproved1 = true;
 
-                if (result > 0)
+                diskonDokter.UpdateDateTime = DateTimeOffset.UtcNow;
+                diskonDokter.UpdateBy = userActiveId;
+
+                var result = await _applicationDbContext.SaveChangesAsync(ct);
+
+                if (result <= 0)
                 {
-                    return Ok(new { message = "Update Data Berhasil || 200 OK" });
+                    return StatusCode(500, new { message = "File FoC gagal diperbarui." });
                 }
-                else
+
+                return Ok(new
                 {
-                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
-                }
+                    message = "File FoC berhasil diupload.",
+                    data = new
+                    {
+                        diskonDokter.DiskonApprovedId,
+                        diskonDokter.KunjunganId,
+                        diskonDokter.PasienId,
+                        diskonDokter.IsApproved1,
+                        FileFoC = new
+                        {
+                            Path = diskonDokter.FoCFilePath,
+                        }
+                    }
+                });
             }
             catch (DbUpdateException dbEx)
             {
-                return StatusCode(500, new { message = $"Gagal menyimpan data: {dbEx.InnerException?.Message}" });
+                return StatusCode(500, new
+                {
+                    message = $"Gagal upload file FoC: {dbEx.InnerException?.Message ?? dbEx.Message}"
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+                _logger.LogError(ex, "Terjadi kesalahan saat UploadFoC DiskonDokter");
+                return StatusCode(500, new
+                {
+                    message = $"Terjadi kesalahan internal: {ex.Message}"
+                });
             }
         }
-
+        
+        
         [HttpPut("DiskonDokter-Approval/{id}")]
         public async Task<IActionResult> DiskonDokterApproval(Guid id, [FromBody] DiskonApprovalViewModel vm)
         {

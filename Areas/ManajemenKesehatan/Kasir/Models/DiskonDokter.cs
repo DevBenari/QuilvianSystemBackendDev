@@ -14,5 +14,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models
         public Guid? Approved1Id { get; set; }
         public bool? IsApproved1 { get; set; }
         public DateTime? ApprovedDate1 { get; set; }
+        public string? FoCFilePath { get; set; }
     }
 }
