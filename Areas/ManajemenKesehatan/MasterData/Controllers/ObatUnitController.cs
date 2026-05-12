@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNet.SignalR.Client.Http;
+﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
@@ -6,39 +6,33 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers;
+using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewModels;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
-using SkiaSharp;
 using Swashbuckle.AspNetCore.Annotations;
-using System.Security.Claims;
-using static Dapper.SqlMapper;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controllers
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("AllowSpecific")]
-    public class KunjunganLayananController : Controller
+    public class ObatUnitController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<KunjunganLayananController> _logger;
+        private readonly ILogger<ObatUnitController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
-
-        public KunjunganLayananController(
+        public ObatUnitController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<KunjunganLayananController> logger,
+            ILogger<ObatUnitController> logger,
             IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
@@ -51,28 +45,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var data = await _applicationDbContext.KunjunganLayanans
+            var data = await _applicationDbContext.ObatUnits
                 .AsNoTracking()
                 .Where(a =>
-                    a.KunjunganLayananId == id &&
+                    a.ObatUnitId == id &&
                     (a.IsDelete == false || a.IsDelete == null))
                 .Select(a => new
                 {
                     a.CreateDateTime,
                     a.CreateBy,
 
-                    a.KunjunganLayananId,
-                    a.KunjunganId,
+                    a.ObatUnitId,
 
-                    NoRekamMedis = a.Kunjungan != null ? a.Kunjungan.NoRekamMedis : null,
-                    JenisKunjungan = a.Kunjungan != null ? a.Kunjungan.JenisKunjungan : null,
-                    TipePasien = a.Kunjungan != null ? a.Kunjungan.TipePasien : null,
-                    Antrian = a.Kunjungan != null ? a.Kunjungan.Antrian : null,
-                    TglMasuk = a.Kunjungan != null ? a.Kunjungan.TglMasuk : null,
-                    IsFinished = a.Kunjungan != null ? a.Kunjungan.IsFinished : null,
-                    IsClosed = a.Kunjungan != null ? a.Kunjungan.IsClosed : null,
-
-                    PasienId = a.Kunjungan != null ? a.Kunjungan.PasienId : null,
+                    a.ObatId,
+                    ObatCode = a.Obat != null ? a.Obat.ObatCode : null,
+                    ObatName = a.Obat != null ? a.Obat.ObatName : null,
 
                     a.InstalasiUnitId,
                     KodeInstalasiUnit = a.InstalasiUnit != null
@@ -82,22 +69,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         ? a.InstalasiUnit.NamaInstalasiUnit
                         : null,
 
-                    a.PoliklinikId,
-                    NamaPoliklinik = a.Poliklinik != null
-                        ? a.Poliklinik.NamaPoliklinik
-                        : null,
-
-                    a.DokterId,
-                    KdDokter = a.Dokter != null ? a.Dokter.KdDokter : null,
-                    NamaDokter = a.Dokter != null ? a.Dokter.NmDokter : null,
-                    Sip = a.Dokter != null ? a.Dokter.Sip : null,
-                    Str = a.Dokter != null ? a.Dokter.Str : null,
-                    Spesialis = a.Dokter != null ? a.Dokter.Spesialis : null,
-
-                    a.JenisLayanan,
-                    a.TglMasukLayanan,
-                    a.TglKeluarLayanan,
-                    a.IsActive
+                    a.Qty,
+                    a.QtyAmbil,
+                    a.QtyTersedia
                 })
                 .FirstOrDefaultAsync();
 
@@ -106,76 +80,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 return NotFound(new
                 {
                     status = "error",
-                    message = "Kunjungan layanan tidak ditemukan."
-                });
-            }
-
-            return Ok(new
-            {
-                status = "success",
-                message = "Data retrieved successfully",
-                data
-            });
-        }
-        [HttpGet("ByKunjungan/{kunjunganId}")]
-        public async Task<IActionResult> GetByKunjunganId(Guid kunjunganId)
-        {
-            var data = await _applicationDbContext.KunjunganLayanans
-                .AsNoTracking()
-                .Where(a =>
-                    a.KunjunganId == kunjunganId &&
-                    (a.IsDelete == false || a.IsDelete == null))
-                .Select(a => new
-                {
-                    a.CreateDateTime,
-                    a.CreateBy,
-
-                    a.KunjunganLayananId,
-                    a.KunjunganId,
-
-                    NoRekamMedis = a.Kunjungan != null ? a.Kunjungan.NoRekamMedis : null,
-                    JenisKunjungan = a.Kunjungan != null ? a.Kunjungan.JenisKunjungan : null,
-                    TipePasien = a.Kunjungan != null ? a.Kunjungan.TipePasien : null,
-                    Antrian = a.Kunjungan != null ? a.Kunjungan.Antrian : null,
-                    TglMasuk = a.Kunjungan != null ? a.Kunjungan.TglMasuk : null,
-                    IsFinished = a.Kunjungan != null ? a.Kunjungan.IsFinished : null,
-                    IsClosed = a.Kunjungan != null ? a.Kunjungan.IsClosed : null,
-
-                    PasienId = a.Kunjungan != null ? a.Kunjungan.PasienId : null,
-
-                    a.InstalasiUnitId,
-                    KodeInstalasiUnit = a.InstalasiUnit != null
-                        ? a.InstalasiUnit.KodeInstalasiUnit
-                        : null,
-                    NamaInstalasiUnit = a.InstalasiUnit != null
-                        ? a.InstalasiUnit.NamaInstalasiUnit
-                        : null,
-
-                    a.PoliklinikId,
-                    NamaPoliklinik = a.Poliklinik != null
-                        ? a.Poliklinik.NamaPoliklinik
-                        : null,
-
-                    a.DokterId,
-                    KdDokter = a.Dokter != null ? a.Dokter.KdDokter : null,
-                    NamaDokter = a.Dokter != null ? a.Dokter.NmDokter : null,
-                    Sip = a.Dokter != null ? a.Dokter.Sip : null,
-                    Str = a.Dokter != null ? a.Dokter.Str : null,
-                    Spesialis = a.Dokter != null ? a.Dokter.Spesialis : null,
-
-                    a.JenisLayanan,
-                    a.TglMasukLayanan,
-                    a.TglKeluarLayanan,
-                    a.IsActive
-                })
-                .FirstOrDefaultAsync();
-
-            if (data == null)
-            {
-                return NotFound(new
-                {
-                    status = "error",
-                    message = "Kunjungan layanan tidak ditemukan."
+                    message = "Obat unit tidak ditemukan."
                 });
             }
 
@@ -188,7 +93,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] KunjunganLayananViewModel vm)
+        public async Task<IActionResult> Create([FromBody] ObatUnitViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -218,36 +123,32 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 var userActiveId = getUserActive.UserActiveId;
 
                 //cek duplikasi
-                bool isDuplicate = await _applicationDbContext.KunjunganLayanans
-                    .AnyAsync(c => c.KunjunganId == vm.KunjunganId &&
-                    c.InstalasiUnitId == vm.InstalasiUnitId &&
-                    c.IsActive == true &&
-                    c.IsDelete == false);
+                bool isDuplicate = await _applicationDbContext.ObatUnits
+                    .AnyAsync(c => c.ObatId == vm.ObatId
+                    && c.InstalasiUnitId == vm.InstalasiUnitId
+                    && c.IsDelete == false);
 
                 if (isDuplicate)
                 {
-                    return Conflict(new { message = "Kunjungan ini masih aktif dalam instalasi unit ini" });
+                    return Conflict(new { message = "Obat sudah tersedia pada unit ini" });
                 }
 
                 // **Buat Data Baru**
-                var data = new KunjunganLayanan
+                var data = new ObatUnit
                 {
-                    KunjunganLayananId = Guid.NewGuid(),
-                    KunjunganId = vm.KunjunganId,
+                    ObatUnitId = Guid.NewGuid(),
+                    ObatId = vm.ObatId,
                     InstalasiUnitId = vm.InstalasiUnitId,
-                    PoliklinikId = vm.PoliklinikId,
-                    DokterId = vm.DokterId,
-                    JenisLayanan = vm.JenisLayanan,
-                    TglMasukLayanan = vm.TglMasukLayanan,
-                    TglKeluarLayanan = vm.TglKeluarLayanan,
-                    IsActive = true,
+                    Qty = vm.Qty,
+                    QtyAmbil = vm.QtyAmbil,
+                    QtyTersedia = vm.QtyTersedia,
 
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
                 };
 
                 // **Simpan ke Database**
-                _applicationDbContext.KunjunganLayanans.Add(data);
+                _applicationDbContext.ObatUnits.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -270,7 +171,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] KunjunganLayananViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] ObatUnitViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -300,42 +201,36 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 }
                 var userActiveId = getUserActive.UserActiveId;
 
-                var data = await _applicationDbContext.KunjunganLayanans.FindAsync(id);
+                // **Cari Data**
+                var data = await _applicationDbContext.ObatUnits.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
-                // **Cari Data**
-                bool isDuplicate = await _applicationDbContext.KunjunganLayanans
-                    .AnyAsync(c => c.KunjunganId == vm.KunjunganId &&
-                    c.InstalasiUnitId == vm.InstalasiUnitId &&
-                    c.KunjunganLayananId != id &&
-                    c.IsActive == true &&
-                    c.IsDelete == false);
+                //cek duplikasi
+                bool isDuplicate = await _applicationDbContext.ObatUnits
+                    .AnyAsync(c => c.ObatId == vm.ObatId
+                    && c.InstalasiUnitId == vm.InstalasiUnitId
+                    && c.ObatUnitId != id
+                    && c.IsDelete == false);
 
                 if (isDuplicate)
                 {
-                    return Conflict(new { message = "Kunjungan ini masih aktif dalam instalasi unit ini" });
+                    return Conflict(new { message = "Obat sudah tersedia pada unit ini" });
                 }
 
                 // **Update Data**
-
+                data.ObatId = vm.ObatId;
                 data.InstalasiUnitId = vm.InstalasiUnitId;
-                data.PoliklinikId = vm.PoliklinikId;
-                data.DokterId = vm.DokterId;
-                data.JenisLayanan = vm.JenisLayanan;
-
-                if (vm.TglMasukLayanan.HasValue)
-                    // Remove the incorrect usage of HasValue since TglMasukLayanan is of type DateTime (non-nullable)
-                    data.TglMasukLayanan = vm.TglMasukLayanan;
-
-                data.TglKeluarLayanan = vm.TglKeluarLayanan;
+                data.Qty = vm.Qty;
+                data.QtyAmbil = vm.QtyAmbil;
+                data.QtyTersedia = vm.QtyTersedia;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.KunjunganLayanans.Update(data);
+                _applicationDbContext.ObatUnits.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -358,6 +253,66 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
         }
 
 
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(Guid id)
+        {
+            try
+            {
+                // **Cek koneksi ke database**
+                if (!await _applicationDbContext.Database.CanConnectAsync())
+                {
+                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+                }
+
+                // **Ambil User ID dari JWT Claims**
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin);
+                if (getUserActive == null)
+                {
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+                }
+                var userActiveId = getUserActive.UserActiveId;
+
+                // **Cari Data**
+                var data = await _applicationDbContext.ObatUnits.FindAsync(id);
+                if (data == null)
+                {
+                    return NotFound(new { message = "Data tidak ditemukan." });
+                }
+
+                // **Soft Delete (Tandai Data sebagai Terhapus)**
+                data.DeleteBy = userActiveId;
+                data.DeleteDateTime = DateTimeOffset.UtcNow;
+
+                data.IsDelete = true;
+
+                _applicationDbContext.ObatUnits.Update(data);
+                int result = await _applicationDbContext.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    return Ok(new { message = "Data berhasil dihapus (soft delete) || 200 OK" });
+                }
+                else
+                {
+                    return StatusCode(500, new { message = "Data tidak berhasil diperbarui." });
+                }
+            }
+            catch (DbUpdateException dbEx)
+            {
+                return StatusCode(500, new { message = $"Gagal menghapus data: {dbEx.InnerException?.Message}" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+            }
+        }
 
         [HttpGet("paged")]
         public async Task<IActionResult> Paged(
@@ -371,17 +326,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
             DateTime? endDate = null,
             [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null,
-            Guid? kunjunganId = null,
-            Guid? instalasiUnitId = null,
-            Guid? poliklinikId = null,
-            Guid? dokterId = null,
-            string? jenisLayanan = null,
-            bool? isActive = null)
+            Guid? obatId = null,
+            Guid? instalasiUnitId = null)
         {
             if (page <= 0) page = 1;
             if (perPage <= 0) perPage = 10;
 
-            var query = _applicationDbContext.KunjunganLayanans
+            var query = _applicationDbContext.ObatUnits
                 .AsNoTracking()
                 .Where(a => a.IsDelete == false || a.IsDelete == null)
                 .Select(a => new
@@ -389,34 +340,31 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                     a.CreateDateTime,
                     a.CreateBy,
 
-                    a.KunjunganLayananId,
-                    a.KunjunganId,
+                    a.ObatUnitId,
 
-                    NoRekamMedis = a.Kunjungan != null ? a.Kunjungan.NoRekamMedis : null,
-                    JenisKunjungan = a.Kunjungan != null ? a.Kunjungan.JenisKunjungan : null,
-                    TipePasien = a.Kunjungan != null ? a.Kunjungan.TipePasien : null,
+                    a.ObatId,
+                    ObatCode = a.Obat != null ? a.Obat.ObatCode : null,
+                    ObatName = a.Obat != null ? a.Obat.ObatName : null,
 
                     a.InstalasiUnitId,
-                    KodeInstalasiUnit = a.InstalasiUnit != null ? a.InstalasiUnit.KodeInstalasiUnit : null,
-                    NamaInstalasiUnit = a.InstalasiUnit != null ? a.InstalasiUnit.NamaInstalasiUnit : null,
+                    KodeInstalasiUnit = a.InstalasiUnit != null
+                        ? a.InstalasiUnit.KodeInstalasiUnit
+                        : null,
+                    NamaInstalasiUnit = a.InstalasiUnit != null
+                        ? a.InstalasiUnit.NamaInstalasiUnit
+                        : null,
 
-                    a.PoliklinikId,
-                    NamaPoliklinik = a.Poliklinik != null ? a.Poliklinik.NamaPoliklinik : null,
+                    a.Qty,
+                    a.QtyAmbil,
+                    a.QtyTersedia,
 
-
-                    a.DokterId,
-                    KdDokter = a.Dokter != null ? a.Dokter.KdDokter : null,
-                    NamaDokter = a.Dokter != null ? a.Dokter.NmDokter : null,
-
-                    a.JenisLayanan,
-                    a.TglMasukLayanan,
-                    a.TglKeluarLayanan,
-                    a.IsActive
+                    QtyAvailable = a.QtyTersedia,
+                    QtyPick = a.QtyAmbil
                 });
 
-            if (kunjunganId.HasValue)
+            if (obatId.HasValue)
             {
-                query = query.Where(a => a.KunjunganId == kunjunganId.Value);
+                query = query.Where(a => a.ObatId == obatId.Value);
             }
 
             if (instalasiUnitId.HasValue)
@@ -424,44 +372,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 query = query.Where(a => a.InstalasiUnitId == instalasiUnitId.Value);
             }
 
-            if (poliklinikId.HasValue)
-            {
-                query = query.Where(a => a.PoliklinikId == poliklinikId.Value);
-            }
-
-            if (dokterId.HasValue)
-            {
-                query = query.Where(a => a.DokterId == dokterId.Value);
-            }
-
-            if (!string.IsNullOrWhiteSpace(jenisLayanan))
-            {
-                var jenis = $"%{jenisLayanan}%";
-
-                query = query.Where(a =>
-                    a.JenisLayanan != null &&
-                    EF.Functions.ILike(a.JenisLayanan, jenis));
-            }
-
-            if (isActive.HasValue)
-            {
-                query = query.Where(a => a.IsActive == isActive.Value);
-            }
-
             if (!string.IsNullOrWhiteSpace(search))
             {
                 var searchPattern = $"%{search}%";
 
                 query = query.Where(a =>
-                    (a.NoRekamMedis != null && EF.Functions.ILike(a.NoRekamMedis, searchPattern)) ||
-                    (a.JenisKunjungan != null && EF.Functions.ILike(a.JenisKunjungan, searchPattern)) ||
-                    (a.TipePasien != null && EF.Functions.ILike(a.TipePasien, searchPattern)) ||
+                    (a.ObatCode != null && EF.Functions.ILike(a.ObatCode, searchPattern)) ||
+                    (a.ObatName != null && EF.Functions.ILike(a.ObatName, searchPattern)) ||
                     (a.KodeInstalasiUnit != null && EF.Functions.ILike(a.KodeInstalasiUnit, searchPattern)) ||
-                    (a.NamaInstalasiUnit != null && EF.Functions.ILike(a.NamaInstalasiUnit, searchPattern)) ||
-                    (a.NamaPoliklinik != null && EF.Functions.ILike(a.NamaPoliklinik, searchPattern)) ||
-                    (a.KdDokter != null && EF.Functions.ILike(a.KdDokter, searchPattern)) ||
-                    (a.NamaDokter != null && EF.Functions.ILike(a.NamaDokter, searchPattern)) ||
-                    (a.JenisLayanan != null && EF.Functions.ILike(a.JenisLayanan, searchPattern))
+                    (a.NamaInstalasiUnit != null && EF.Functions.ILike(a.NamaInstalasiUnit, searchPattern))
                 );
             }
 
@@ -505,6 +424,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
 
                     case PeriodeFilter.LastMonth:
                         var lastMonth = today.AddMonths(-1);
+
                         query = query.Where(a =>
                             a.CreateDateTime.Month == lastMonth.Month &&
                             a.CreateDateTime.Year == lastMonth.Year);
@@ -532,23 +452,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 ? orderBy switch
                 {
                     "CreateDateTime" => query.OrderByDescending(a => a.CreateDateTime),
-                    "JenisLayanan" => query.OrderByDescending(a => a.JenisLayanan),
-                    "TglMasukLayanan" => query.OrderByDescending(a => a.TglMasukLayanan),
+                    "KodeInstalasiUnit" => query.OrderByDescending(a => a.KodeInstalasiUnit),
                     "NamaInstalasiUnit" => query.OrderByDescending(a => a.NamaInstalasiUnit),
-                    "NamaPoliklinik" => query.OrderByDescending(a => a.NamaPoliklinik),
-                    "NamaDokter" => query.OrderByDescending(a => a.NamaDokter),
-                    "NoRekamMedis" => query.OrderByDescending(a => a.NoRekamMedis),
+                    "Qty" => query.OrderByDescending(a => a.Qty),
+                    "QtyAmbil" => query.OrderByDescending(a => a.QtyAmbil),
+                    "QtyTersedia" => query.OrderByDescending(a => a.QtyTersedia),
                     _ => query.OrderByDescending(a => a.CreateDateTime)
                 }
                 : orderBy switch
                 {
                     "CreateDateTime" => query.OrderBy(a => a.CreateDateTime),
-                    "JenisLayanan" => query.OrderBy(a => a.JenisLayanan),
-                    "TglMasukLayanan" => query.OrderBy(a => a.TglMasukLayanan),
+                    "KodeInstalasiUnit" => query.OrderBy(a => a.KodeInstalasiUnit),
                     "NamaInstalasiUnit" => query.OrderBy(a => a.NamaInstalasiUnit),
-                    "NamaPoliklinik" => query.OrderBy(a => a.NamaPoliklinik),
-                    "NamaDokter" => query.OrderBy(a => a.NamaDokter),
-                    "NoRekamMedis" => query.OrderBy(a => a.NoRekamMedis),
+                    "Qty" => query.OrderBy(a => a.Qty),
+                    "QtyAmbil" => query.OrderBy(a => a.QtyAmbil),
+                    "QtyTersedia" => query.OrderBy(a => a.QtyTersedia),
                     _ => query.OrderBy(a => a.CreateDateTime)
                 };
 

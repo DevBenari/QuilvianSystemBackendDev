@@ -83,6 +83,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
         public StatusBayarEnum? sb {  get; set; }
         public EnumJenisKunjungan? jk {  get; set; }
         public string? Search { get; set; }
+        public string? StatusBilling { get; set; }
         public bool? isClosed { get; set; }
         public bool? isPks { get; set; }
         public bool? isCovered { get; set; }
@@ -1988,6 +1989,8 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
     #endregion
 
     #endregion
+    
+    
     // ================================
     // FUNCTION GET ALL BILLING PAGED
     // ================================
@@ -2113,6 +2116,23 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                                  || (p.NoPasien != null && EF.Functions.ILike(p.NoPasien, $"%{s}%")))
                          )
                 select k;
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.StatusBilling))
+        {
+            var wantedStatusBilling = query.StatusBilling.Trim();
+
+            var billingQ = _db.MainKasirs
+                .AsNoTracking()
+                .Where(b =>
+                    b.KunjunganId != null &&
+                    (b.IsDelete == false || b.IsDelete == null));
+
+            baseQuery = baseQuery.Where(k =>
+                billingQ.Any(b =>
+                    b.KunjunganId == k.KunjunganID &&
+                    b.StatusBilling != null &&
+                    EF.Functions.ILike(b.StatusBilling, wantedStatusBilling)));
         }
 
         // date range

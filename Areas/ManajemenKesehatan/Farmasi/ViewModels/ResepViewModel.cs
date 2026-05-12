@@ -12,6 +12,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels
         public string? NamaAsuransi { get; set; }
         public Guid? PasienId { get; set; }
         public Guid? LayananId { get; set; }
+        public Guid? KunjunganLayananId { get; set; }
+        public Guid? InstalasiUnitId { get; set; }
+        public string? JenisLayanan { get; set; }
         public string? NamaPasien { get; set; }
         public Guid? PoliklinikId { get; set; }
         public string? NamaPoliklinik { get; set; }
