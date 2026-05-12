@@ -1159,16 +1159,23 @@ namespace QuilvianSystemBackendDev.Repositories
             public DbSet<AlatPemakaian> AlatPemakaians { get; set; }
             public DbSet<AlatPemakaianDetail> AlatPemakaianDetails { get; set; }
 
-            #endregion
+        #endregion
         #endregion
 
         #region Finance
-            #region Po
-            public DbSet<PurchaseOrder> PurchaseOrders { get; set; }
-            public DbSet<PurchaseOrderItem> PurchaseOrderItems { get; set; }
+
+
+            #region AR
             public DbSet<ARHeader> ARHeaders { get; set; }
             public DbSet<ARDetail> ARDetails { get; set; }
             public DbSet<ARDokumen> ARDokumens { get; set; }
+            public DbSet<ARSettlement> ARSettlements { get; set; }
+            public DbSet<ARSettlementDetail> ARSettlementDetails { get; set; }
+
+            #endregion
+            #region Po
+            public DbSet<PurchaseOrder> PurchaseOrders { get; set; }
+            public DbSet<PurchaseOrderItem> PurchaseOrderItems { get; set; }
 
             #endregion
 
