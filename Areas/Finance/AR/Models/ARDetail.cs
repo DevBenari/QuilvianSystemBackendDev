@@ -21,6 +21,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Models
         public DateTime? TglKeluar { get; set; }
 
         public decimal TotalPiutang { get; set; }
+        public decimal TotalPembayaran { get; set; }
         public decimal DiskonTagihan { get; set; }
         public decimal SelisihTagihan { get; set; }
         public decimal TotalSetelahDiskon { get; set; }

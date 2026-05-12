@@ -105,6 +105,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                         d.TglKeluar,
 
                         d.TotalPiutang,
+                        d.TotalPembayaran,
                         d.DiskonTagihan,
                         d.SelisihTagihan,
                         d.TotalSetelahDiskon,
@@ -314,6 +315,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                     TglKeluar = vm.TglKeluar,
 
                     TotalPiutang = vm.TotalPiutang,
+                    TotalPembayaran = vm.TotalPembayaran,
                     DiskonTagihan = vm.DiskonTagihan,
                     SelisihTagihan = vm.SelisihTagihan,
                     TotalSetelahDiskon = vm.TotalSetelahDiskon,
@@ -390,6 +392,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                 data.TglKeluar = vm.TglKeluar;
 
                 data.TotalPiutang = vm.TotalPiutang;
+                data.TotalPembayaran = vm.TotalPembayaran;
                 data.DiskonTagihan = vm.DiskonTagihan;
                 data.SelisihTagihan = vm.SelisihTagihan;
                 data.TotalSetelahDiskon = vm.TotalSetelahDiskon;
