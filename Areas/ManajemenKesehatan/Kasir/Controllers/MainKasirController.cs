@@ -1389,6 +1389,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
             return Ok(new { message = "Status Billing berhasil diperbarui." });
         }
+        
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
@@ -1436,6 +1437,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             Guid? kunjunganId = null,
             Guid? pasienId = null,
             //Guid? petugasId =null,
+            string? statusBilling = null,
             string? asalKunjungan = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
@@ -1458,6 +1460,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 PageSize = perPage,
                 KunjunganId = kunjunganId,
                 //PetugasId = petugasId,
+                StatusBilling = statusBilling,
                 sb = status,
                 PasienId = pasienId,
                 asal = asalKunjungan,

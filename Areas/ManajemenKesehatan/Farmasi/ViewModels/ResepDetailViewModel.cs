@@ -6,6 +6,8 @@
         public Guid? AsuransiId { get; set; }
         public string? NamaAsuransi { get; set; }
         public Guid? ObatId { get; set; }
+        public Guid? ObatUnitId { get; set; }
+        public Guid? InstalasiUnitId { get; set; }
         public int? Qty { get; set; }
         public decimal? TakaranDosis { get; set; }
         public string? Signa { get; set; }
