@@ -64,6 +64,9 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                         join u in _applicationDbContext.UserActives.AsNoTracking()
                         on ar.CreateBy equals u.UserActiveId
 
+                        join a in _applicationDbContext.Asuransis.AsNoTracking()
+                            on ar.AsuransiId equals a.AsuransiId
+
                         where ar.IsDelete == false
 
                         orderby ar.CreateDateTime descending
@@ -72,6 +75,11 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                         {
                             ar.ARHeaderId,
                             ar.AsuransiId,
+
+                            AsuransiName = a.NamaAsuransi, // ✅ tambahan
+
+                            ar.Tipe_Kunjungan,              // ✅ sudah ada di ARHeader
+                            ar.JenisAR,
 
                             ar.NoInvoice,
 
@@ -153,12 +161,19 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                     join u in _applicationDbContext.UserActives.AsNoTracking()
                     on ar.CreateBy equals u.UserActiveId
 
+                    join a in _applicationDbContext.Asuransis.AsNoTracking()
+                        on ar.AsuransiId equals a.AsuransiId
+
                     where ar.IsDelete == false
 
                     select new
                     {
                         ar.ARHeaderId,
                         ar.AsuransiId,
+                        AsuransiName = a.NamaAsuransi, // ✅ tambahan
+
+                        ar.Tipe_Kunjungan,              // ✅ sudah ada di ARHeader
+                        ar.JenisAR,                    // ✅ kalau memang ada di ARHeader
 
                         ar.NoInvoice,
 
@@ -184,11 +199,13 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                 // SEARCH
                 if (!string.IsNullOrWhiteSpace(search))
                 {
-                    search = $"%{search.Trim().ToLower()}%";
+                    var keyword = search.Trim();
 
                     query = query.Where(x =>
-                        EF.Functions.ILike(x.NoInvoice, search) ||
-                        EF.Functions.ILike(x.Keterangan ?? "", search)
+                        EF.Functions.ILike(x.NoInvoice, keyword) ||
+                        EF.Functions.ILike(x.Keterangan ?? "", keyword) ||
+                        EF.Functions.ILike(x.Tipe_Kunjungan, keyword) ||
+                        EF.Functions.ILike(x.AsuransiName, keyword)
                     );
                 }
 
@@ -321,10 +338,27 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
         // =========================================================
         // CREATE
         // =========================================================
-
+        private string GetRomanMonth(int month)
+        {
+            return month switch
+            {
+                1 => "I",
+                2 => "II",
+                3 => "III",
+                4 => "IV",
+                5 => "V",
+                6 => "VI",
+                7 => "VII",
+                8 => "VIII",
+                9 => "IX",
+                10 => "X",
+                11 => "XI",
+                12 => "XII",
+                _ => ""
+            };
+        }
         [HttpPost]
-        public async Task<IActionResult> Create(
-            [FromBody] ARHeaderViewModel vm)
+        public async Task<IActionResult> Create([FromBody] ARHeaderViewModel vm)
         {
             try
             {
@@ -333,58 +367,56 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                     return BadRequest(ModelState);
                 }
 
-                var emailLogin =
-                    User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
                 if (string.IsNullOrEmpty(emailLogin))
                 {
-                    return Unauthorized(new
-                    {
-                        message = "User tidak terautentikasi."
-                    });
+                    return Unauthorized(new { message = "User tidak terautentikasi." });
                 }
 
-                var getUserActive =
-                    await _applicationDbContext.UserActives
-                    .FirstOrDefaultAsync(x =>
-                        x.Email == emailLogin);
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(x => x.Email == emailLogin);
 
                 if (getUserActive == null)
                 {
-                    return Unauthorized(new
-                    {
-                        message = "User aktif tidak ditemukan."
-                    });
+                    return Unauthorized(new { message = "User aktif tidak ditemukan." });
                 }
 
-                bool isDuplicate =
-                    await _applicationDbContext.ARHeaders
-                    .AnyAsync(x =>
-                        x.NoInvoice.ToLower() ==
-                        vm.NoInvoice.ToLower()
-                        &&
-                        x.IsDelete == false);
+                // 🔥 GENERATE NO INVOICE DI BACKEND
+                var year = DateTime.UtcNow.Year;
+                var month = DateTime.UtcNow.Month;
+                string romanMonth = GetRomanMonth(month);
 
-                if (isDuplicate)
+                string tipeKunjungan = vm.Tipe_Kunjungan; // RJ / RI / IGD
+                string prefix = "RSMMC";
+
+                var lastInvoice = await _applicationDbContext.ARHeaders
+                    .Where(x => x.CreateDateTime.Year == year)
+                    .OrderByDescending(x => x.ARHeaderId)
+                    .FirstOrDefaultAsync();
+
+                int nextNumber = 1;
+
+                if (lastInvoice != null)
                 {
-                    return Conflict(new
-                    {
-                        message = "No Invoice sudah digunakan."
-                    });
+                    var lastNumber = lastInvoice.NoInvoice.Split('/')[0];
+                    nextNumber = int.Parse(lastNumber) + 1;
                 }
+
+                string noInvoice =
+                    $"{nextNumber:0000}/{tipeKunjungan}/{prefix}/{romanMonth}/{year}";
 
                 var data = new ARHeader
                 {
                     ARHeaderId = Guid.NewGuid(),
-
                     AsuransiId = vm.AsuransiId,
+                    Tipe_Kunjungan = vm.Tipe_Kunjungan,
 
-                    NoInvoice = vm.NoInvoice.Trim(),
+                    // 🔥 INI YANG PENTING
+                    NoInvoice = noInvoice,
 
                     TglPembuatanInvoice = vm.TglPembuatanInvoice,
-
                     DueDate = vm.DueDate,
-
                     TotalInvoice = vm.TotalInvoice,
 
                     TglKirim = vm.TglKirim,
@@ -393,41 +425,33 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                     TglJatuhTempo = vm.TglJatuhTempo,
 
                     IsDocumentComplited = vm.IsDocumentComplited,
-
                     Keterangan = vm.Keterangan,
 
                     CreateDateTime = DateTime.UtcNow,
                     CreateBy = getUserActive.UserActiveId,
-
                     IsDelete = false
                 };
 
                 _applicationDbContext.ARHeaders.Add(data);
 
-                int result =
-                    await _applicationDbContext.SaveChangesAsync();
+                int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
                 {
                     return Created("", new
                     {
-                        message = "Tambah data berhasil."
+                        message = "Tambah data berhasil.",
+                        noInvoice = noInvoice // optional tapi bagus untuk frontend
                     });
                 }
 
-                return StatusCode(500, new
-                {
-                    message = "Gagal menyimpan data."
-                });
+                return StatusCode(500, new { message = "Gagal menyimpan data." });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, ex.Message);
 
-                return StatusCode(500, new
-                {
-                    message = ex.Message
-                });
+                return StatusCode(500, new { message = ex.Message });
             }
         }
 

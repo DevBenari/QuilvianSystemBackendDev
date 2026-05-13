@@ -8,9 +8,9 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Models
     {
         public Guid ARHeaderId { get; set; }
         public Guid AsuransiId { get; set; }
-
+        public string JenisAR { get; set; }
         public string NoInvoice { get; set; }
-
+        public string Tipe_Kunjungan { get; set; }
         public DateTime TglPembuatanInvoice { get; set; }
 
         // numeric biasanya dipetakan ke int atau decimal
