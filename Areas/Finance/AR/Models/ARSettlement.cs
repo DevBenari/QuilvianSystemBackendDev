@@ -1,5 +1,5 @@
-﻿using MessagePack;
-using QuilvianSystemBackendDev.Models;
+﻿using QuilvianSystemBackendDev.Models;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace QuilvianSystemBackendDev.Areas.Finance.AR.Models
@@ -7,6 +7,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Models
     [Table("FIN_ARSettlement", Schema = "public")]
     public class ARSettlement : UserActivity
     {
+        [Key]
         public Guid SettlementARId { get; set; }
 
         public Guid KunjunganId { get; set; }
