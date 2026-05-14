@@ -127,23 +127,23 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
 
         [HttpGet("paged")]
         public async Task<IActionResult> PagedARHeader(
-    int page = 1,
-    int perPage = 10,
+            int page = 1,
+            int perPage = 10,
 
-    string? asuransi = null,
-    string? noInvoice = null,
-    string? tipePasien = null,
+            string? asuransi = null,
+            string? noInvoice = null,
+            string? tipePasien = null,
 
-    string? search = null,
-    string? orderBy = "CreateDateTime",
-    string? sortDirection = "desc",
+            string? search = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
 
-    [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-    DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+            DateTime? startDate = null,
 
-    [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-    DateTime? endDate = null
-)
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+            DateTime? endDate = null
+        )
         {
             try
             {
