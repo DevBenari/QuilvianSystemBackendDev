@@ -1171,13 +1171,14 @@ namespace QuilvianSystemBackendDev.Repositories
             public DbSet<ARDokumen> ARDokumens { get; set; }
             public DbSet<ARSettlement> ARSettlements { get; set; }
             public DbSet<ARSettlementDetail> ARSettlementDetails { get; set; }
-
+            public DbSet<ARCanceled> ARCanceleds { get; set; }
             #endregion
+
             #region Po
             public DbSet<PurchaseOrder> PurchaseOrders { get; set; }
-            public DbSet<PurchaseOrderItem> PurchaseOrderItems { get; set; }
+                public DbSet<PurchaseOrderItem> PurchaseOrderItems { get; set; }
 
-            #endregion
+                #endregion
 
             #region COA
             public DbSet<MasterCoa> MasterCoas { get; set; }
