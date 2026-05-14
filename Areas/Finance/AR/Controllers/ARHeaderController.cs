@@ -121,6 +121,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                 });
             }
         }
+
         // =========================================================
         // GET ALL PAGED
         // =========================================================
@@ -132,7 +133,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
 
             string? asuransi = null,
             string? noInvoice = null,
-            string? tipePasien = null,
+            string? tipeKunjungan = null,
 
             string? search = null,
             string? orderBy = "CreateDateTime",
@@ -179,10 +180,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                         AsuransiName = a.NamaAsuransi,
 
                         ar.Tipe_Kunjungan,
-
-                        // Saya anggap JenisAR ini adalah TipePasien.
-                        // Kalau nama kolom aslinya ar.TipePasien, ganti baris ini.
-                        TipePasien = ar.JenisAR,
+                        ar.JenisAR,
 
                         ar.NoInvoice,
 
@@ -225,18 +223,17 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                     );
                 }
 
-
-                // FILTER TIPE PASIEN SENDIRI
-                if (!string.IsNullOrWhiteSpace(tipePasien))
+                // FILTER TIPE KUNJUNGAN SENDIRI
+                if (!string.IsNullOrWhiteSpace(tipeKunjungan))
                 {
-                    var keywordTipePasien = $"%{tipePasien.Trim()}%";
+                    var keywordTipeKunjungan = $"%{tipeKunjungan.Trim()}%";
 
                     query = query.Where(x =>
-                        EF.Functions.ILike(x.TipePasien, keywordTipePasien)
+                        EF.Functions.ILike(x.Tipe_Kunjungan, keywordTipeKunjungan)
                     );
                 }
 
-                // SEARCH GLOBAL, BOLEH TETAP DIPAKAI
+                // SEARCH GLOBAL
                 if (!string.IsNullOrWhiteSpace(search))
                 {
                     var keyword = $"%{search.Trim()}%";
@@ -245,7 +242,6 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                         EF.Functions.ILike(x.NoInvoice, keyword) ||
                         EF.Functions.ILike(x.Keterangan ?? "", keyword) ||
                         EF.Functions.ILike(x.Tipe_Kunjungan, keyword) ||
-                        EF.Functions.ILike(x.TipePasien, keyword) ||
                         EF.Functions.ILike(x.AsuransiName, keyword)
                     );
                 }
@@ -281,10 +277,10 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                             ? query.OrderByDescending(x => x.AsuransiName)
                             : query.OrderBy(x => x.AsuransiName),
 
-                    "tipepasien" =>
+                    "tipekunjungan" =>
                         isDescending
-                            ? query.OrderByDescending(x => x.TipePasien)
-                            : query.OrderBy(x => x.TipePasien),
+                            ? query.OrderByDescending(x => x.Tipe_Kunjungan)
+                            : query.OrderBy(x => x.Tipe_Kunjungan),
 
                     "totalinvoice" =>
                         isDescending
@@ -437,7 +433,16 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                 var month = DateTime.UtcNow.Month;
 
                 string romanMonth = GetRomanMonth(month);
-                string tipeKunjungan = vm.Tipe_Kunjungan; // RJ / RI / IGD
+
+                // 🔥 mapping tipe kunjungan
+                string tipeKunjungan = vm.Tipe_Kunjungan switch
+                {
+                    "Rawat Jalan" => "OP",
+                    "Rawat Inap" => "IP",
+                    "IGD" => "IGD",
+                    _ => vm.Tipe_Kunjungan
+                };
+
                 string prefix = "RSMMC";
 
                 var lastInvoice = await _applicationDbContext.ARHeaders
