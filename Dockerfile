@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1.7
-
 # Runtime image
 FROM mcr.microsoft.com/dotnet/aspnet:6.0 AS base
 WORKDIR /app
@@ -12,26 +10,17 @@ EXPOSE 80
 FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
 WORKDIR /app
 
-# Copy csproj dulu agar restore bisa dicache
+# Copy csproj dulu agar restore bisa dicache oleh Docker layer
 COPY ["QuilvianSystemBackendDev.csproj", "./"]
 
-# Restore dependency dengan cache NuGet BuildKit
-RUN --mount=type=cache,id=nuget-quilvian-backend-dev,target=/root/.nuget/packages \
-    dotnet restore "QuilvianSystemBackendDev.csproj"
+# Restore dependency secara normal agar package masuk ke image layer
+RUN dotnet restore "QuilvianSystemBackendDev.csproj"
 
-# Copy source setelah restore
+# Copy semua source code setelah restore
 COPY . .
 
 # Publish aplikasi
-# Optimasi:
-# --no-restore              : tidak restore ulang
-# UseAppHost=false          : output lebih kecil
-# DebugType=None            : tidak generate debug info
-# DebugSymbols=false        : tidak generate pdb/symbol
-# RunAnalyzers=false        : mempercepat build jika analyzer aktif
-# clp:ErrorsOnly            : log lebih bersih
-RUN --mount=type=cache,id=nuget-quilvian-backend-dev,target=/root/.nuget/packages \
-    dotnet publish "QuilvianSystemBackendDev.csproj" \
+RUN dotnet publish "QuilvianSystemBackendDev.csproj" \
     -c Release \
     -o /app/out \
     --no-restore \
