@@ -9,6 +9,7 @@ using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
 using System.Security.Claims;
+using System.Text.RegularExpressions;
 
 namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
 {
@@ -126,18 +127,23 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
 
         [HttpGet("paged")]
         public async Task<IActionResult> PagedARHeader(
-            int page = 1,
-            int perPage = 10,
-            string? search = null,
-            string? orderBy = "CreateDateTime",
-            string? sortDirection = "desc",
+    int page = 1,
+    int perPage = 10,
 
-            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-            DateTime? startDate = null,
+    string? asuransi = null,
+    string? noInvoice = null,
+    string? tipePasien = null,
 
-            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-            DateTime? endDate = null
-        )
+    string? search = null,
+    string? orderBy = "CreateDateTime",
+    string? sortDirection = "desc",
+
+    [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+    DateTime? startDate = null,
+
+    [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+    DateTime? endDate = null
+)
         {
             try
             {
@@ -159,7 +165,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                     from ar in _applicationDbContext.ARHeaders.AsNoTracking()
 
                     join u in _applicationDbContext.UserActives.AsNoTracking()
-                    on ar.CreateBy equals u.UserActiveId
+                        on ar.CreateBy equals u.UserActiveId
 
                     join a in _applicationDbContext.Asuransis.AsNoTracking()
                         on ar.AsuransiId equals a.AsuransiId
@@ -170,10 +176,13 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                     {
                         ar.ARHeaderId,
                         ar.AsuransiId,
-                        AsuransiName = a.NamaAsuransi, // ✅ tambahan
+                        AsuransiName = a.NamaAsuransi,
 
-                        ar.Tipe_Kunjungan,              // ✅ sudah ada di ARHeader
-                        ar.JenisAR,                    // ✅ kalau memang ada di ARHeader
+                        ar.Tipe_Kunjungan,
+
+                        // Saya anggap JenisAR ini adalah TipePasien.
+                        // Kalau nama kolom aslinya ar.TipePasien, ganti baris ini.
+                        TipePasien = ar.JenisAR,
 
                         ar.NoInvoice,
 
@@ -196,15 +205,47 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                         CreateByName = u.FullName
                     };
 
-                // SEARCH
+                // FILTER ASURANSI SENDIRI
+                if (!string.IsNullOrWhiteSpace(asuransi))
+                {
+                    var keywordAsuransi = $"%{asuransi.Trim()}%";
+
+                    query = query.Where(x =>
+                        EF.Functions.ILike(x.AsuransiName, keywordAsuransi)
+                    );
+                }
+
+                // FILTER NO INVOICE SENDIRI
+                if (!string.IsNullOrWhiteSpace(noInvoice))
+                {
+                    var keywordInvoice = $"%{noInvoice.Trim()}%";
+
+                    query = query.Where(x =>
+                        EF.Functions.ILike(x.NoInvoice, keywordInvoice)
+                    );
+                }
+
+
+                // FILTER TIPE PASIEN SENDIRI
+                if (!string.IsNullOrWhiteSpace(tipePasien))
+                {
+                    var keywordTipePasien = $"%{tipePasien.Trim()}%";
+
+                    query = query.Where(x =>
+                        EF.Functions.ILike(x.TipePasien, keywordTipePasien)
+                    );
+                }
+
+                // SEARCH GLOBAL, BOLEH TETAP DIPAKAI
                 if (!string.IsNullOrWhiteSpace(search))
                 {
-                    var keyword = search.Trim();
+                    var keyword = $"%{search.Trim()}%";
 
                     query = query.Where(x =>
                         EF.Functions.ILike(x.NoInvoice, keyword) ||
                         EF.Functions.ILike(x.Keterangan ?? "", keyword) ||
                         EF.Functions.ILike(x.Tipe_Kunjungan, keyword) ||
+                        EF.Functions.ILike(x.TipePasien, keyword) ||
                         EF.Functions.ILike(x.AsuransiName, keyword)
                     );
                 }
@@ -212,11 +253,9 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                 // FILTER DATE
                 if (startDate.HasValue && endDate.HasValue)
                 {
-                    DateTime startUtc =
-                        startDate.Value.Date.ToUniversalTime();
+                    DateTime startUtc = startDate.Value.Date.ToUniversalTime();
 
-                    DateTime endUtc =
-                        endDate.Value.Date
+                    DateTime endUtc = endDate.Value.Date
                         .AddDays(1)
                         .AddTicks(-1)
                         .ToUniversalTime();
@@ -228,9 +267,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
 
                 // SORTING
                 var sortColumn = orderBy?.ToLower() ?? "createdatetime";
-
-                var isDescending =
-                    sortDirection?.ToLower() == "desc";
+                var isDescending = sortDirection?.ToLower() == "desc";
 
                 query = sortColumn switch
                 {
@@ -238,6 +275,16 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                         isDescending
                             ? query.OrderByDescending(x => x.NoInvoice)
                             : query.OrderBy(x => x.NoInvoice),
+
+                    "asuransi" =>
+                        isDescending
+                            ? query.OrderByDescending(x => x.AsuransiName)
+                            : query.OrderBy(x => x.AsuransiName),
+
+                    "tipepasien" =>
+                        isDescending
+                            ? query.OrderByDescending(x => x.TipePasien)
+                            : query.OrderBy(x => x.TipePasien),
 
                     "totalinvoice" =>
                         isDescending
@@ -261,8 +308,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                 // PAGINATION
                 int totalRows = await query.CountAsync();
 
-                int totalPages =
-                    (int)Math.Ceiling(totalRows / (double)perPage);
+                int totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
 
                 var rows = await query
                     .Skip((page - 1) * perPage)
@@ -357,6 +403,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                 _ => ""
             };
         }
+
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] ARHeaderViewModel vm)
         {
@@ -382,37 +429,53 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                     return Unauthorized(new { message = "User aktif tidak ditemukan." });
                 }
 
-                // 🔥 GENERATE NO INVOICE DI BACKEND
+                // =========================================================
+                // 🔥 GENERATE NO INVOICE (AMAN & STABLE)
+                // =========================================================
+
                 var year = DateTime.UtcNow.Year;
                 var month = DateTime.UtcNow.Month;
-                string romanMonth = GetRomanMonth(month);
 
+                string romanMonth = GetRomanMonth(month);
                 string tipeKunjungan = vm.Tipe_Kunjungan; // RJ / RI / IGD
                 string prefix = "RSMMC";
 
                 var lastInvoice = await _applicationDbContext.ARHeaders
-                    .Where(x => x.CreateDateTime.Year == year)
-                    .OrderByDescending(x => x.ARHeaderId)
+                    .Where(x =>
+                        x.CreateDateTime.Year == year &&
+                        x.IsDelete == false)
+                    .OrderByDescending(x => x.CreateDateTime)
                     .FirstOrDefaultAsync();
 
                 int nextNumber = 1;
 
-                if (lastInvoice != null)
+                if (lastInvoice != null &&
+                    !string.IsNullOrWhiteSpace(lastInvoice.NoInvoice))
                 {
-                    var lastNumber = lastInvoice.NoInvoice.Split('/')[0];
-                    nextNumber = int.Parse(lastNumber) + 1;
+                    // ambil angka di depan invoice (0001)
+                    var match = Regex.Match(lastInvoice.NoInvoice, @"^\d+");
+
+                    if (match.Success)
+                    {
+                        nextNumber = int.Parse(match.Value) + 1;
+                    }
                 }
 
                 string noInvoice =
                     $"{nextNumber:0000}/{tipeKunjungan}/{prefix}/{romanMonth}/{year}";
 
+                // =========================================================
+                // CREATE ENTITY
+                // =========================================================
+
                 var data = new ARHeader
                 {
                     ARHeaderId = Guid.NewGuid(),
+
                     AsuransiId = vm.AsuransiId,
+                    JenisAR = vm.JenisAR,
                     Tipe_Kunjungan = vm.Tipe_Kunjungan,
 
-                    // 🔥 INI YANG PENTING
                     NoInvoice = noInvoice,
 
                     TglPembuatanInvoice = vm.TglPembuatanInvoice,
@@ -441,29 +504,36 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                     return Created("", new
                     {
                         message = "Tambah data berhasil.",
-                        noInvoice = noInvoice // optional tapi bagus untuk frontend
+                        noInvoice = noInvoice
                     });
                 }
 
-                return StatusCode(500, new { message = "Gagal menyimpan data." });
+                return StatusCode(500, new
+                {
+                    message = "Gagal menyimpan data."
+                });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, ex.Message);
 
-                return StatusCode(500, new { message = ex.Message });
+                return StatusCode(500, new
+                {
+                    message = ex.Message,
+                    inner = ex.InnerException?.Message
+                });
             }
         }
 
-        // =========================================================
-        // UPDATE
-        // =========================================================
+            // =========================================================
+            // UPDATE
+            // =========================================================
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(
-            Guid id,
-            [FromBody] ARHeaderViewModel vm)
-        {
+            [HttpPut("{id}")]
+            public async Task<IActionResult> Update(
+                Guid id,
+                [FromBody] ARHeaderViewModel vm)
+            {
             try
             {
                 var data =
