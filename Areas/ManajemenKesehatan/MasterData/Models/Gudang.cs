@@ -13,5 +13,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public string? NamaGudang { get; set; }
         public string? Lokasi { get; set; }
         public string? Keterangan { get; set; }
+
+        public ICollection<GudangUnit>? GudangUnit { get; set; }
     }
 }

@@ -4,10 +4,9 @@
     {
         public Guid? GudangId { get; set; }
         public Guid? ObatId { get; set; }
-        public decimal? StockGudangUnit { get; set; }
-        public decimal? MinStockGudangUnit { get; set; }
-        public decimal? MaxStockGudangUnit { get; set; }
-        public decimal? StockPenyanggaGudangUnit { get; set; }
+        public Guid? InstalasiUnitId { get; set; }
+        public string? NamaGudangUnit { get; set; }
+        public string? KodeGudangUnit { get; set; }
         public string? Keterangan { get; set; }
     }
 }

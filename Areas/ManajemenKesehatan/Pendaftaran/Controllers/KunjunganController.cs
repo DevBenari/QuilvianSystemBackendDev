@@ -1840,7 +1840,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
 
         [HttpPut("{id}/Ubah-Asuransi")]
         public async Task<IActionResult> UpdateAsuransiKunjungan(
-            Guid kunjunganId,
+            Guid id,
             [FromBody] UbahAsuransiViewModel vm,
             CancellationToken ct)
         {
@@ -1875,7 +1875,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
 
                 var kunjungan = await _applicationDbContext.Kunjungans
                     .FirstOrDefaultAsync(x =>
-                        x.KunjunganID == kunjunganId &&
+                        x.KunjunganID == id &&
                         !x.IsDelete,
                         ct);
 
@@ -2005,7 +2005,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 await _applicationDbContext.SaveChangesAsync(ct);
 
                 await _asuransiCoverageService.RefreshCoverageBillingByKunjunganAsync(
-                    kunjunganId,
+                    id,
                     userActive.UserActiveId,
                     ct
                 );

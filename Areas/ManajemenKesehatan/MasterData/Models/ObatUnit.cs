@@ -11,13 +11,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         [Key]
         public Guid ObatUnitId { get; set; }
         public Guid? ObatId { get; set; }
-        public Guid? InstalasiUnitId { get; set; }
+        public Guid? GudangUnitId { get; set; }
         public decimal? Qty { get; set; }
         public decimal? QtyAmbil {  get; set; }
         public decimal? QtyTersedia { get; set; }
         
         // navigation
         public Obat? Obat { get; set; }
-        public InstalasiUnit? InstalasiUnit { get; set; }
+        public GudangUnit? GudangUnit { get; set; }
     }
 }

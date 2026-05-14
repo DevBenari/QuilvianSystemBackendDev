@@ -61,17 +61,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     ObatCode = a.Obat != null ? a.Obat.ObatCode : null,
                     ObatName = a.Obat != null ? a.Obat.ObatName : null,
 
-                    a.InstalasiUnitId,
-                    KodeInstalasiUnit = a.InstalasiUnit != null
-                        ? a.InstalasiUnit.KodeInstalasiUnit
-                        : null,
-                    NamaInstalasiUnit = a.InstalasiUnit != null
-                        ? a.InstalasiUnit.NamaInstalasiUnit
-                        : null,
-
                     a.Qty,
                     a.QtyAmbil,
-                    a.QtyTersedia
+                    a.QtyTersedia,
+
+                    a.GudangUnitId,
+                    NamaGudangUnit = a.GudangUnit != null ? a.GudangUnit.NamaGudangUnit : null,
+                    InstalasiUnitId = a.GudangUnit != null ? a.GudangUnit.InstalasiUnitId : null,
+                    NamaInstlasiUnit = a.GudangUnit.InstalasiUnit != null ? a.GudangUnit.InstalasiUnit.NamaInstalasiUnit : null,
+
                 })
                 .FirstOrDefaultAsync();
 
@@ -125,7 +123,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 //cek duplikasi
                 bool isDuplicate = await _applicationDbContext.ObatUnits
                     .AnyAsync(c => c.ObatId == vm.ObatId
-                    && c.InstalasiUnitId == vm.InstalasiUnitId
+                    && c.GudangUnitId == vm.GudangUnitId
                     && c.IsDelete == false);
 
                 if (isDuplicate)
@@ -138,7 +136,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     ObatUnitId = Guid.NewGuid(),
                     ObatId = vm.ObatId,
-                    InstalasiUnitId = vm.InstalasiUnitId,
+                    GudangUnitId = vm.GudangUnitId,
                     Qty = vm.Qty,
                     QtyAmbil = vm.QtyAmbil,
                     QtyTersedia = vm.QtyTersedia,
@@ -211,7 +209,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 //cek duplikasi
                 bool isDuplicate = await _applicationDbContext.ObatUnits
                     .AnyAsync(c => c.ObatId == vm.ObatId
-                    && c.InstalasiUnitId == vm.InstalasiUnitId
+                    && c.GudangUnitId == vm.GudangUnitId
                     && c.ObatUnitId != id
                     && c.IsDelete == false);
 
@@ -222,7 +220,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // **Update Data**
                 data.ObatId = vm.ObatId;
-                data.InstalasiUnitId = vm.InstalasiUnitId;
+                data.GudangUnitId = vm.GudangUnitId;
                 data.Qty = vm.Qty;
                 data.QtyAmbil = vm.QtyAmbil;
                 data.QtyTersedia = vm.QtyTersedia;
@@ -346,20 +344,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     ObatCode = a.Obat != null ? a.Obat.ObatCode : null,
                     ObatName = a.Obat != null ? a.Obat.ObatName : null,
 
-                    a.InstalasiUnitId,
-                    KodeInstalasiUnit = a.InstalasiUnit != null
-                        ? a.InstalasiUnit.KodeInstalasiUnit
-                        : null,
-                    NamaInstalasiUnit = a.InstalasiUnit != null
-                        ? a.InstalasiUnit.NamaInstalasiUnit
-                        : null,
 
                     a.Qty,
                     a.QtyAmbil,
                     a.QtyTersedia,
 
                     QtyAvailable = a.QtyTersedia,
-                    QtyPick = a.QtyAmbil
+                    QtyPick = a.QtyAmbil,
+
+
+                    a.GudangUnitId,
+                    NamaGudangUnit = a.GudangUnit != null ? a.GudangUnit.NamaGudangUnit : null,
+                    InstalasiUnitId = a.GudangUnit != null ? a.GudangUnit.InstalasiUnitId : null,
+                    NamaInstlasiUnit = a.GudangUnit.InstalasiUnit != null ? a.GudangUnit.InstalasiUnit.NamaInstalasiUnit : null,
                 });
 
             if (obatId.HasValue)
@@ -367,10 +364,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 query = query.Where(a => a.ObatId == obatId.Value);
             }
 
-            if (instalasiUnitId.HasValue)
-            {
-                query = query.Where(a => a.InstalasiUnitId == instalasiUnitId.Value);
-            }
+
 
             if (!string.IsNullOrWhiteSpace(search))
             {
@@ -378,9 +372,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 query = query.Where(a =>
                     (a.ObatCode != null && EF.Functions.ILike(a.ObatCode, searchPattern)) ||
-                    (a.ObatName != null && EF.Functions.ILike(a.ObatName, searchPattern)) ||
-                    (a.KodeInstalasiUnit != null && EF.Functions.ILike(a.KodeInstalasiUnit, searchPattern)) ||
-                    (a.NamaInstalasiUnit != null && EF.Functions.ILike(a.NamaInstalasiUnit, searchPattern))
+                    (a.ObatName != null && EF.Functions.ILike(a.ObatName, searchPattern)) 
                 );
             }
 
@@ -452,21 +444,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 ? orderBy switch
                 {
                     "CreateDateTime" => query.OrderByDescending(a => a.CreateDateTime),
-                    "KodeInstalasiUnit" => query.OrderByDescending(a => a.KodeInstalasiUnit),
-                    "NamaInstalasiUnit" => query.OrderByDescending(a => a.NamaInstalasiUnit),
-                    "Qty" => query.OrderByDescending(a => a.Qty),
-                    "QtyAmbil" => query.OrderByDescending(a => a.QtyAmbil),
-                    "QtyTersedia" => query.OrderByDescending(a => a.QtyTersedia),
                     _ => query.OrderByDescending(a => a.CreateDateTime)
                 }
                 : orderBy switch
                 {
                     "CreateDateTime" => query.OrderBy(a => a.CreateDateTime),
-                    "KodeInstalasiUnit" => query.OrderBy(a => a.KodeInstalasiUnit),
-                    "NamaInstalasiUnit" => query.OrderBy(a => a.NamaInstalasiUnit),
-                    "Qty" => query.OrderBy(a => a.Qty),
-                    "QtyAmbil" => query.OrderBy(a => a.QtyAmbil),
-                    "QtyTersedia" => query.OrderBy(a => a.QtyTersedia),
                     _ => query.OrderBy(a => a.CreateDateTime)
                 };
 

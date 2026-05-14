@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -12,9 +13,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260514044611_AddNavigationUntukGudang")]
+    partial class AddNavigationUntukGudang
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -10607,20 +10609,26 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<Guid?>("GudangId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("InstalasiUnitId")
-                        .HasColumnType("uuid");
-
                     b.Property<bool>("IsDelete")
                         .HasColumnType("boolean");
 
                     b.Property<string>("Keterangan")
                         .HasColumnType("text");
 
-                    b.Property<string>("KodeGudangUnit")
-                        .HasColumnType("text");
+                    b.Property<decimal?>("MaxStockGudangUnit")
+                        .HasColumnType("numeric");
 
-                    b.Property<string>("NamaGudangUnit")
-                        .HasColumnType("text");
+                    b.Property<decimal?>("MinStockGudangUnit")
+                        .HasColumnType("numeric");
+
+                    b.Property<Guid?>("ObatId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("StockGudangUnit")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("StockPenyanggaGudangUnit")
+                        .HasColumnType("numeric");
 
                     b.Property<Guid>("UpdateBy")
                         .HasColumnType("uuid");
@@ -10631,8 +10639,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.HasKey("GudangUnitId");
 
                     b.HasIndex("GudangId");
-
-                    b.HasIndex("InstalasiUnitId");
 
                     b.ToTable("GudangUnits");
                 });
@@ -22223,13 +22229,7 @@ namespace QuilvianSystemBackendDev.Migrations
                         .WithMany("GudangUnit")
                         .HasForeignKey("GudangId");
 
-                    b.HasOne("QuilvianSystemBackendDev.Areas.HRD.MasterData.Models.InstalasiUnit", "InstalasiUnit")
-                        .WithMany()
-                        .HasForeignKey("InstalasiUnitId");
-
                     b.Navigation("Gudang");
-
-                    b.Navigation("InstalasiUnit");
                 });
 
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.JadwalPraktek", b =>
