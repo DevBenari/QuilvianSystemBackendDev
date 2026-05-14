@@ -38,5 +38,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Interfaces
         Task<PagedRekapResult<PendapatanKasirHarianDto>> GetPendapatanHarianPagedAsync(
             PendapatanHarianPagedQuery q,
             CancellationToken ct = default);
+
     }
 }
