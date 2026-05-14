@@ -1966,6 +1966,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         .FirstOrDefaultAsync(x =>
                             x.PasienId == kunjungan.PasienId.Value &&
                             x.AsuransiId == vm.AsuransiId.Value &&
+                            x.NoPolis == vm.NoPolis &&
                             (x.IsDelete == false || x.IsDelete == null),
                             ct);
 
@@ -1979,6 +1980,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                             AsuransiPasienId = Guid.NewGuid(),
                             PasienId = kunjungan.PasienId.Value,
                             AsuransiId = vm.AsuransiId.Value,
+                            NoPolis = vm.NoPolis,
 
                             CreateDateTime = DateTimeOffset.UtcNow,
                             CreateBy = userActive.UserActiveId,
