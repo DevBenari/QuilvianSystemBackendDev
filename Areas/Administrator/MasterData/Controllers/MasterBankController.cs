@@ -41,6 +41,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                             b.BankId,
                             b.BankName,
                             b.BankShortName,
+                            b.BiayaAdminBank,
                             b.Keterangan,
                             b.CreateDateTime,
                             CreateByName = u.FullName
@@ -121,6 +122,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
 
             data.BankName = model.BankName;
             data.BankShortName = model.BankShortName;
+            data.BiayaAdminBank = model.BiayaAdminBank;
             data.Keterangan = model.Keterangan;
 
             data.UpdateBy = user?.UserActiveId ?? data.UpdateBy;
@@ -174,6 +176,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
                             b.BankId,
                             b.BankName,
                             b.BankShortName,
+                            b.BiayaAdminBank,
                             b.Keterangan,
                             b.CreateDateTime,
                             CreateByName = u.FullName

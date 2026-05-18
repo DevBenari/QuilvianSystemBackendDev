@@ -9,6 +9,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.ViewModels
 
         [MaxLength(100)]
         public string? BankShortName { get; set; }
+        public decimal? BiayaAdminBank { get; set; }
 
         [MaxLength(500)]
         public string? Keterangan { get; set; }

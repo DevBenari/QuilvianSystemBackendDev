@@ -34,6 +34,9 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.ViewModels
 
         [Column(TypeName = "numeric")]
         public decimal? NominalTambahan { get; set; }
+        public decimal? PPH23Per { get; set; }
+        [Column(TypeName = "numeric")]
+        public decimal? PPH23Nom { get; set; }
 
         [MaxLength(500)]
         public string? Keterangan { get; set; }

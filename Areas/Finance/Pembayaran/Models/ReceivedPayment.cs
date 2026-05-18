@@ -25,6 +25,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Models
 
         [Column(TypeName = "numeric")]
         public decimal? PembayaranKe { get; set; }
+        public bool? IsCanceled { get; set; }
 
         [MaxLength(500)]
         public string? Keterangan { get; set; }

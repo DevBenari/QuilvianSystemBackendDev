@@ -292,7 +292,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                 {
                     return Created("", new
                     {
-                        message = "Tambah data berhasil."
+                        message = "Tambah data berhasil.",
+                        data
                     });
                 }
 

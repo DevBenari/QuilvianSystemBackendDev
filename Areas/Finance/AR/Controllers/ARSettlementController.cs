@@ -40,6 +40,80 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
             _webHostEnvironment = webHostEnvironment;
         }
 
+        [HttpGet("viewtabel")]
+        public async Task<IActionResult> GetAllJoinData()
+        {
+            try
+            {
+                var result = await (
+                    from settlement in _applicationDbContext.ARSettlements
+
+                    join detail in _applicationDbContext.ARSettlementDetails
+                        on settlement.SettlementARId equals detail.SettlementARId
+
+                    join payment in _applicationDbContext.DetailReceivedPayments
+                        on detail.NoInvoice equals payment.NoInvoice
+
+                    select new
+                    {
+                        // FIN_ARSettlement
+                        settlement.SettlementARId,
+                        settlement.KunjunganId,
+                        settlement.PasienId,
+                        settlement.NamaPasien,
+                        settlement.NoInvoice,
+                        settlement.BeginingBalance,
+                        settlement.EndingBalance,
+
+                        // FIN_ARSettlementDetail
+                        detail.DetailSettlementARId,
+                        detail.NoRegistrasi,
+                        detail.NoBill,
+                        DetailNoInvoice = detail.NoInvoice,
+                        detail.TglTransaksi,
+                        detail.JumlahUang,
+                        detail.Saldo,
+                        detail.PembayaranKe,
+                        detail.IsCanceled,
+                        detail.User,
+                        detail.TipeSettlement,
+                        DetailKeterangan = detail.Keterangan,
+
+                        // Fin_DetailReceivedPayment
+                        payment.DetailReceivedPaymentId,
+                        payment.ReceivedPaymentId,
+                        payment.AsuransiId,
+                        PaymentNoInvoice = payment.NoInvoice,
+                        payment.TotalInvoice,
+                        payment.DueDate,
+                        PaymentIsCanceled = payment.IsCanceled,
+                        payment.COADiskonId,
+                        payment.NamaCOADiskon,
+                        payment.PersenCOADiskon,
+                        payment.COATambahanId,
+                        payment.NamaCoaTambahan,
+                        payment.NominalTambahan,
+                        PaymentKeterangan = payment.Keterangan
+                    }
+                ).ToListAsync();
+
+                return Ok(new
+                {
+                    message = "Data berhasil diambil",
+                    total = result.Count,
+                    data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
+
+                return StatusCode(500, new
+                {
+                    message = ex.Message
+                });
+            }
+        }
         // =====================================================
         // PAGED
         // =====================================================

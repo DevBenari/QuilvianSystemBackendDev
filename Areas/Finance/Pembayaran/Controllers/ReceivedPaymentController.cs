@@ -58,6 +58,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                              rp.SisaPembayaran,
                              rp.TotalTagihanPasien,
                              rp.PembayaranKe,
+                             rp.IsCanceled,
                              rp.Keterangan,
                              rp.CreateDateTime,
                              CreateByName = u.FullName
@@ -210,6 +211,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                 data.SisaPembayaran = model.SisaPembayaran;
                 data.TotalTagihanPasien = model.TotalTagihanPasien;
                 data.PembayaranKe = model.PembayaranKe;
+                data.IsCanceled = model.IsCanceled;
                 data.Keterangan = model.Keterangan;
 
                 data.UpdateBy = getUserActive.UserActiveId;
@@ -321,6 +323,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                                 rp.SisaPembayaran,
                                 rp.TotalTagihanPasien,
                                 rp.PembayaranKe,
+                                rp.IsCanceled,
                                 rp.Keterangan,
                                 rp.CreateDateTime,
                                 CreateByName = u.FullName

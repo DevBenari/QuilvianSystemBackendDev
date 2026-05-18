@@ -7,6 +7,7 @@ using QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Models;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
+using System.Runtime.Intrinsics.Arm;
 using System.Security.Claims;
 
 namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
@@ -62,6 +63,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                              drp.NamaCOADiskon,
                              drp.PersenCOADiskon,
                              drp.COATambahanId,
+                             drp.PPH23Per,
+                             drp.PPH23Nom,
                              drp.NamaCoaTambahan,
                              drp.NominalTambahan,
                              drp.Keterangan,
@@ -222,6 +225,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                 data.COATambahanId = model.COATambahanId;
                 data.NamaCoaTambahan = model.NamaCoaTambahan;
                 data.NominalTambahan = model.NominalTambahan;
+                data.PPH23Per = model.PPH23Per;
+                data.PPH23Nom = model.PPH23Nom;
                 data.Keterangan = model.Keterangan;
 
                 data.UpdateBy = getUserActive.UserActiveId;
@@ -339,6 +344,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                                 drp.COATambahanId,
                                 drp.NamaCoaTambahan,
                                 drp.NominalTambahan,
+                                drp.PPH23Nom,
+                                drp.PPH23Per,
                                 drp.Keterangan,
                                 drp.CreateDateTime,
                                 CreateByName = u.FullName

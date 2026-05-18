@@ -33,7 +33,10 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Models
 
         [Column(TypeName = "numeric")]
         public decimal? TotalPiutang { get; set; }
-
+        public decimal? PiutangTerbayar { get; set; }
+        public int? PembayaranKe { get; set; }
+        public string? ApprovedVp { get; set; }
+        public string? FileBuktiPembayaran { get; set; }
         public DateTime? TglJaatuhTempo { get; set; }
 
         public bool? IsTerbayar { get; set; }

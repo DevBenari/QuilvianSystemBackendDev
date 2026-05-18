@@ -15,6 +15,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models
 
         [MaxLength(100)]
         public string? BankShortName { get; set; }
+        public decimal? BiayaAdminBank { get; set; }
 
         [MaxLength(500)]
         public string? Keterangan { get; set; }

@@ -59,6 +59,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                             d.TglTerima,
                             d.TglKirim,
                             d.TglTagihan,
+                            d.PiutangTerbayar,
+                            d.PembayaranKe,
                             d.TotalPiutang,
                             d.TglJaatuhTempo,
                             d.IsTerbayar,
@@ -67,7 +69,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                             CreateByName = u.FullName
                         };
 
-            var totalRows = await query.CountAsync();
+        var totalRows = await query.CountAsync();
             var data = await query
                 .OrderByDescending(x => x.CreateDateTime)
                 .Skip((page - 1) * perPage)
@@ -149,6 +151,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
             data.TglKirim = model.TglKirim;
             data.TglTagihan = model.TglTagihan;
             data.TotalPiutang = model.TotalPiutang;
+            data.PiutangTerbayar = model.PiutangTerbayar;
+            data.PembayaranKe = model.PembayaranKe;
             data.TglJaatuhTempo = model.TglJaatuhTempo;
             data.IsTerbayar = model.IsTerbayar;
             data.Keterangan = model.Keterangan;
