@@ -355,6 +355,52 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
         // =====================================================
         // UPDATE
         // =====================================================
+        [HttpPut("cancel/{id}")]
+        public async Task<IActionResult> CancelARDetail(Guid id)
+        {
+            try
+            {
+                var data = await _applicationDbContext.ARDetails
+                    .FirstOrDefaultAsync(x => x.ARDetailId == id);
+
+                if (data == null)
+                {
+                    return NotFound(new
+                    {
+                        message = "Data AR Detail tidak ditemukan."
+                    });
+                }
+
+                data.IsCanceled = true;
+
+                _applicationDbContext.ARDetails.Update(data);
+
+                int result =
+                    await _applicationDbContext.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    return Ok(new
+                    {
+                        message = "AR Detail berhasil dibatalkan."
+                    });
+                }
+
+                return StatusCode(500, new
+                {
+                    message = "Gagal membatalkan AR Detail."
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
+
+                return StatusCode(500, new
+                {
+                    message = ex.Message
+                });
+            }
+        }
 
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(

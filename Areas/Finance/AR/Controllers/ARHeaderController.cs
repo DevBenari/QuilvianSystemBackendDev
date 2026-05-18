@@ -530,11 +530,57 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
             }
         }
 
-            // =========================================================
-            // UPDATE
-            // =========================================================
+        // =========================================================
+        // UPDATE
+        // =========================================================
+        [HttpPut("cancel/{id}")]
+        public async Task<IActionResult> CancelARHeader(Guid id)
+        {
+            try
+            {
+                var header = await _applicationDbContext.ARHeaders
+                    .FirstOrDefaultAsync(x => x.ARHeaderId == id);
 
-            [HttpPut("{id}")]
+                if (header == null)
+                {
+                    return NotFound(new
+                    {
+                        message = "AR Header tidak ditemukan."
+                    });
+                }
+
+                // optional safety: kalau sudah canceled
+                if (header.IsCanceled)
+                {
+                    return BadRequest(new
+                    {
+                        message = "AR Header sudah dibatalkan."
+                    });
+                }
+
+                header.IsCanceled = true;
+
+                _applicationDbContext.ARHeaders.Update(header);
+
+                await _applicationDbContext.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    message = "AR Header berhasil dibatalkan."
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
+
+                return StatusCode(500, new
+                {
+                    message = ex.Message
+                });
+            }
+        }
+
+        [HttpPut("{id}")]
             public async Task<IActionResult> Update(
                 Guid id,
                 [FromBody] ARHeaderViewModel vm)

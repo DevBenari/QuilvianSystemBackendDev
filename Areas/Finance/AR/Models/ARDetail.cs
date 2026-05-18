@@ -25,6 +25,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Models
         public decimal DiskonTagihan { get; set; }
         public decimal SelisihTagihan { get; set; }
         public decimal TotalSetelahDiskon { get; set; }
+        public bool IsCanceled { get; set; }
 
         public string Keterangan { get; set; }
     }

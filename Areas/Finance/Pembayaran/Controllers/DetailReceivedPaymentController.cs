@@ -172,7 +172,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                 {
                     return Ok(new
                     {
-                        message = "Data berhasil disimpan."
+                        message = "Data berhasil disimpan.",
+                        data = model
                     });
                 }
 

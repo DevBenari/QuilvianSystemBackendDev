@@ -25,6 +25,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Models
         public DateTime? TglJatuhTempo { get; set; }
 
         public bool IsDocumentComplited { get; set; }
+        public bool IsCanceled { get; set; }
 
         public string Keterangan { get; set; }
     }

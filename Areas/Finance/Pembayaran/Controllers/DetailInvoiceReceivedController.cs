@@ -123,7 +123,9 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
             _context.DetailInvoiceReceiveds.Add(model);
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "created" });
+            return Ok(new { message = "created",
+                data = model
+            });
         }
 
         // ================= UPDATE =================
