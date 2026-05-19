@@ -109,6 +109,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                         d.DiskonTagihan,
                         d.SelisihTagihan,
                         d.TotalSetelahDiskon,
+                        d.IsCanceled,
 
                         d.Keterangan,
 
@@ -320,6 +321,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                     SelisihTagihan = vm.SelisihTagihan,
                     TotalSetelahDiskon = vm.TotalSetelahDiskon,
 
+                    IsCanceled = vm.IsCanceled,
+
                     Keterangan = vm.Keterangan
                 };
 
@@ -442,6 +445,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                 data.DiskonTagihan = vm.DiskonTagihan;
                 data.SelisihTagihan = vm.SelisihTagihan;
                 data.TotalSetelahDiskon = vm.TotalSetelahDiskon;
+
+                data.IsCanceled = vm.IsCanceled;
 
                 data.Keterangan = vm.Keterangan;
 

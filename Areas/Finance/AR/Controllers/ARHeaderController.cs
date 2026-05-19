@@ -194,7 +194,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                         ar.TotalInvoice,
 
                         ar.IsDocumentComplited,
-
+                        ar.IsCanceled,
                         ar.Keterangan,
 
                         ar.CreateDateTime,
@@ -493,6 +493,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                     TglJatuhTempo = vm.TglJatuhTempo,
 
                     IsDocumentComplited = vm.IsDocumentComplited,
+
+                    IsCanceled = vm.IsCanceled,
                     Keterangan = vm.Keterangan,
 
                     CreateDateTime = DateTime.UtcNow,
