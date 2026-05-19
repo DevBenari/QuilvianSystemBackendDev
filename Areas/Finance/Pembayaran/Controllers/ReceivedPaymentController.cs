@@ -53,6 +53,15 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                          {
                              rp.ReceivedPaymentId,
                              rp.BankId,
+
+                             rp.NamaPasien,
+                             rp.NoRm,
+                             rp.NamaPerusahaan,
+                             rp.NamaAsuransi,
+                             rp.NoInvoice,
+                             rp.TotalSaldoAwal,
+                             rp.DetailReceivedPaymentId,
+
                              rp.TotalReceived,
                              rp.TglPembayaran,
                              rp.SisaPembayaran,
@@ -207,6 +216,15 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                     .FirstOrDefaultAsync(x => x.Email == emailLogin);
 
                 data.BankId = model.BankId;
+
+                data.NamaPasien = model.NamaPasien;
+                data.NoRm = model.NoRm;
+                data.NamaPerusahaan = model.NamaPerusahaan;
+                data.NamaAsuransi = model.NamaAsuransi;
+                data.NoInvoice = model.NoInvoice;
+                data.TotalSaldoAwal = model.TotalSaldoAwal;
+                data.DetailReceivedPaymentId = model.DetailReceivedPaymentId;
+
                 data.TotalReceived = model.TotalReceived;
                 data.TglPembayaran = model.TglPembayaran;
                 data.SisaPembayaran = model.SisaPembayaran;
@@ -319,6 +337,16 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                             {
                                 rp.ReceivedPaymentId,
                                 rp.BankId,
+
+
+                                rp.NamaPasien,
+                                rp.NoRm,
+                                rp.NamaPerusahaan,
+                                rp.NamaAsuransi,
+                                rp.NoInvoice,
+                                rp.TotalSaldoAwal,
+                                rp.DetailReceivedPaymentId,
+
                                 rp.TotalReceived,
                                 rp.TglPembayaran,
                                 rp.SisaPembayaran,

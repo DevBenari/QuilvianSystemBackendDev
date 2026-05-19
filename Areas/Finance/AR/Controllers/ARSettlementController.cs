@@ -45,57 +45,198 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
         {
             try
             {
-                var result = await (
-                    from settlement in _applicationDbContext.ARSettlements
+                // =========================
+                // RAW DATA
+                // =========================
 
-                    join detail in _applicationDbContext.ARSettlementDetails
-                        on settlement.SettlementARId equals detail.SettlementARId
+                var rawData = await (
+                    from ar in _applicationDbContext.ARHeaders
 
-                    join payment in _applicationDbContext.DetailReceivedPayments
-                        on detail.NoInvoice equals payment.NoInvoice
+                    join a in _applicationDbContext.Asuransis.AsNoTracking()
+                        on ar.AsuransiId equals a.AsuransiId
+
+                    join d in _applicationDbContext.ARDetails
+                        on ar.ARHeaderId equals d.ARHeaderId
+
+                    join payment in _applicationDbContext.DetailInvoiceReceiveds
+                        on d.KunjunganId equals payment.KunjunganId
+                        into paymentGroup
+
+                    from payment in paymentGroup.DefaultIfEmpty()
 
                     select new
                     {
-                        // FIN_ARSettlement
-                        settlement.SettlementARId,
-                        settlement.KunjunganId,
-                        settlement.PasienId,
-                        settlement.NamaPasien,
-                        settlement.NoInvoice,
-                        settlement.BeginingBalance,
-                        settlement.EndingBalance,
+                        // HEADER
 
-                        // FIN_ARSettlementDetail
-                        detail.DetailSettlementARId,
-                        detail.NoRegistrasi,
-                        detail.NoBill,
-                        DetailNoInvoice = detail.NoInvoice,
-                        detail.TglTransaksi,
-                        detail.JumlahUang,
-                        detail.Saldo,
-                        detail.PembayaranKe,
-                        detail.IsCanceled,
-                        detail.User,
-                        detail.TipeSettlement,
-                        DetailKeterangan = detail.Keterangan,
+                        ar.ARHeaderId,
+                        ar.AsuransiId,
+                        AsuransiName = a.NamaAsuransi,
+                        ar.Tipe_Kunjungan,
+                        ar.JenisAR,
+                        ar.NoInvoice,
+                        ar.TglPembuatanInvoice,
+                        ar.TglJatuhTempo,
+                        ar.DueDate,
+                        ar.TotalInvoice,
 
-                        // Fin_DetailReceivedPayment
-                        payment.DetailReceivedPaymentId,
-                        payment.ReceivedPaymentId,
-                        payment.AsuransiId,
-                        PaymentNoInvoice = payment.NoInvoice,
-                        payment.TotalInvoice,
-                        payment.DueDate,
-                        PaymentIsCanceled = payment.IsCanceled,
-                        payment.COADiskonId,
-                        payment.NamaCOADiskon,
-                        payment.PersenCOADiskon,
-                        payment.COATambahanId,
-                        payment.NamaCoaTambahan,
-                        payment.NominalTambahan,
-                        PaymentKeterangan = payment.Keterangan
+                        // DETAIL
+
+                        d.ARDetailId,
+                        d.KunjunganId,
+                        d.PasienId,
+                        d.NoRM,
+                        d.NamaPasien,
+                        d.NoBilling,
+                        d.NoRegistrasi,
+                        d.TglKunjungan,
+                        d.TglKeluar,
+                        d.TotalPiutang,
+                        d.TotalPembayaran,
+                        d.DiskonTagihan,
+                        d.SelisihTagihan,
+                        d.TotalSetelahDiskon,
+                        d.IsCanceled,
+                        d.Keterangan,
+
+                        // PAYMENT
+
+                        DetailInvoicePaymentId = payment != null
+                            ? (Guid?)payment.DetailInvoicePaymentId
+                            : null,
+
+                        DetailReceivedPaymentId = payment != null
+                            ? payment.DetailReceivedPaymentId
+                            : null,
+
+                        TglTerima = payment != null
+                            ? payment.TglTerima
+                            : null,
+
+                        TglKirim = payment != null
+                            ? payment.TglKirim
+                            : null,
+
+                        TglTagihan = payment != null
+                            ? payment.TglTagihan
+                            : null,
+
+                        PiutangTerbayar = payment != null
+                            ? payment.PiutangTerbayar
+                            : 0,
+
+                        PembayaranKe = payment != null
+                            ? payment.PembayaranKe
+                            : 0,
+
+                        TotalPiutangDRP = payment != null
+                            ? payment.TotalPiutang
+                            : 0,
+
+                        TglJaatuhTempo = payment != null
+                            ? payment.TglJaatuhTempo
+                            : null,
+
+                        IsTerbayar = payment != null
+                            ? payment.IsTerbayar
+                            : false,
+
+                        KeteranganDRP = payment != null
+                            ? payment.Keterangan
+                            : null
                     }
                 ).ToListAsync();
+
+                // =========================
+                // GROUPING
+                // =========================
+
+                var result = rawData
+                    .GroupBy(x => new
+                    {
+                        x.ARHeaderId,
+                        x.AsuransiId,
+                        x.AsuransiName,
+                        x.Tipe_Kunjungan,
+                        x.JenisAR,
+                        x.NoInvoice,
+                        x.TglPembuatanInvoice,
+                        x.TglJatuhTempo,
+                        x.DueDate,
+                        x.TotalInvoice
+                    })
+                    .Select(header => new
+                    {
+                        header.Key.ARHeaderId,
+                        header.Key.AsuransiId,
+                        header.Key.AsuransiName,
+                        header.Key.Tipe_Kunjungan,
+                        header.Key.JenisAR,
+                        header.Key.NoInvoice,
+                        header.Key.TglPembuatanInvoice,
+                        header.Key.TglJatuhTempo,
+                        header.Key.DueDate,
+                        header.Key.TotalInvoice,
+
+                        ArDetails = header
+                            .GroupBy(d => new
+                            {
+                                d.ARDetailId,
+                                d.KunjunganId,
+                                d.PasienId,
+                                d.NoRM,
+                                d.NamaPasien,
+                                d.NoBilling,
+                                d.NoRegistrasi,
+                                d.TglKunjungan,
+                                d.TglKeluar,
+                                d.TotalPiutang,
+                                d.TotalPembayaran,
+                                d.DiskonTagihan,
+                                d.SelisihTagihan,
+                                d.TotalSetelahDiskon,
+                                d.IsCanceled,
+                                d.Keterangan
+                            })
+                            .Select(detail => new
+                            {
+                                detail.Key.ARDetailId,
+                                detail.Key.KunjunganId,
+                                detail.Key.PasienId,
+                                detail.Key.NoRM,
+                                detail.Key.NamaPasien,
+                                detail.Key.NoBilling,
+                                detail.Key.NoRegistrasi,
+                                detail.Key.TglKunjungan,
+                                detail.Key.TglKeluar,
+                                detail.Key.TotalPiutang,
+                                detail.Key.TotalPembayaran,
+                                detail.Key.DiskonTagihan,
+                                detail.Key.SelisihTagihan,
+                                detail.Key.TotalSetelahDiskon,
+                                detail.Key.IsCanceled,
+                                detail.Key.Keterangan,
+
+                                Payments = detail
+                                    .Where(p => p.DetailInvoicePaymentId != null)
+                                    .Select(p => new
+                                    {
+                                        p.DetailInvoicePaymentId,
+                                        p.DetailReceivedPaymentId,
+                                        p.TglTerima,
+                                        p.TglKirim,
+                                        p.TglTagihan,
+                                        p.PiutangTerbayar,
+                                        p.PembayaranKe,
+                                        p.TotalPiutangDRP,
+                                        p.TglJaatuhTempo,
+                                        p.IsTerbayar,
+                                        p.KeteranganDRP
+                                    })
+                                    .ToList()
+                            })
+                            .ToList()
+                    })
+                    .ToList();
 
                 return Ok(new
                 {
@@ -112,6 +253,292 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                 {
                     message = ex.Message
                 });
+            }
+        }
+
+        [HttpGet("sattlementdetail/{idkunjungan}")]
+        public async Task<IActionResult> GetAllJoinData(Guid idkunjungan)
+        {
+            try
+            {
+                // =========================
+                // RAW DATA
+                // =========================
+
+                var rawData = await (
+                    from ar in _applicationDbContext.ARHeaders
+
+                    join a in _applicationDbContext.Asuransis.AsNoTracking()
+                        on ar.AsuransiId equals a.AsuransiId
+
+                    join d in _applicationDbContext.ARDetails
+                        on ar.ARHeaderId equals d.ARHeaderId
+
+                    join payment in _applicationDbContext.DetailInvoiceReceiveds
+                        on d.KunjunganId equals payment.KunjunganId
+                        into paymentGroup
+
+                    from payment in paymentGroup.DefaultIfEmpty()
+
+                    where d.KunjunganId == idkunjungan  // Filter berdasarkan idkunjungan
+
+                    select new
+                    {
+                        // HEADER
+
+                        ar.ARHeaderId,
+                        ar.AsuransiId,
+                        AsuransiName = a.NamaAsuransi,
+                        ar.Tipe_Kunjungan,
+                        ar.JenisAR,
+                        ar.NoInvoice,
+                        ar.TglPembuatanInvoice,
+                        ar.TglJatuhTempo,
+                        ar.DueDate,
+                        ar.TotalInvoice,
+
+                        // DETAIL
+
+                        d.ARDetailId,
+                        d.KunjunganId,
+                        d.PasienId,
+                        d.NoRM,
+                        d.NamaPasien,
+                        d.NoBilling,
+                        d.NoRegistrasi,
+                        d.TglKunjungan,
+                        d.TglKeluar,
+                        d.TotalPiutang,
+                        d.TotalPembayaran,
+                        d.DiskonTagihan,
+                        d.SelisihTagihan,
+                        d.TotalSetelahDiskon,
+                        d.IsCanceled,
+                        d.Keterangan,
+
+                        // PAYMENT
+
+                        DetailInvoicePaymentId = payment != null
+                            ? (Guid?)payment.DetailInvoicePaymentId
+                            : null,
+
+                        DetailReceivedPaymentId = payment != null
+                            ? payment.DetailReceivedPaymentId
+                            : null,
+
+                        TglTerima = payment != null
+                            ? payment.TglTerima
+                            : null,
+
+                        TglKirim = payment != null
+                            ? payment.TglKirim
+                            : null,
+
+                        TglTagihan = payment != null
+                            ? payment.TglTagihan
+                            : null,
+
+                        PiutangTerbayar = payment != null
+                            ? payment.PiutangTerbayar
+                            : 0,
+
+                        PembayaranKe = payment != null
+                            ? payment.PembayaranKe
+                            : 0,
+
+                        TotalPiutangDRP = payment != null
+                            ? payment.TotalPiutang
+                            : 0,
+
+                        TglJaatuhTempo = payment != null
+                            ? payment.TglJaatuhTempo
+                            : null,
+
+                        IsTerbayar = payment != null
+                            ? payment.IsTerbayar
+                            : false,
+
+                        KeteranganDRP = payment != null
+                            ? payment.Keterangan
+                            : null
+                    }
+                ).ToListAsync();
+
+                // Cek jika data tidak ditemukan
+                if (!rawData.Any())
+                {
+                    return NotFound(new
+                    {
+                        message = "Data kunjungan tidak ditemukan"
+                    });
+                }
+
+                // =========================
+                // GROUPING
+                // =========================
+
+                var result = rawData
+                    .GroupBy(x => new
+                    {
+                        x.ARHeaderId,
+                        x.AsuransiId,
+                        x.AsuransiName,
+                        x.Tipe_Kunjungan,
+                        x.JenisAR,
+                        x.NoInvoice,
+                        x.TglPembuatanInvoice,
+                        x.TglJatuhTempo,
+                        x.DueDate,
+                        x.TotalInvoice
+                    })
+                    .Select(header => new
+                    {
+                        header.Key.ARHeaderId,
+                        header.Key.AsuransiId,
+                        header.Key.AsuransiName,
+                        header.Key.Tipe_Kunjungan,
+                        header.Key.JenisAR,
+                        header.Key.NoInvoice,
+                        header.Key.TglPembuatanInvoice,
+                        header.Key.TglJatuhTempo,
+                        header.Key.DueDate,
+                        header.Key.TotalInvoice,
+
+                        ArDetails = header
+                            .GroupBy(d => new
+                            {
+                                d.ARDetailId,
+                                d.KunjunganId,
+                                d.PasienId,
+                                d.NoRM,
+                                d.NamaPasien,
+                                d.NoBilling,
+                                d.NoRegistrasi,
+                                d.TglKunjungan,
+                                d.TglKeluar,
+                                d.TotalPiutang,
+                                d.TotalPembayaran,
+                                d.DiskonTagihan,
+                                d.SelisihTagihan,
+                                d.TotalSetelahDiskon,
+                                d.IsCanceled,
+                                d.Keterangan
+                            })
+                            .Select(detail => new
+                            {
+                                detail.Key.ARDetailId,
+                                detail.Key.KunjunganId,
+                                detail.Key.PasienId,
+                                detail.Key.NoRM,
+                                detail.Key.NamaPasien,
+                                detail.Key.NoBilling,
+                                detail.Key.NoRegistrasi,
+                                detail.Key.TglKunjungan,
+                                detail.Key.TglKeluar,
+                                detail.Key.TotalPiutang,
+                                detail.Key.TotalPembayaran,
+                                detail.Key.DiskonTagihan,
+                                detail.Key.SelisihTagihan,
+                                detail.Key.TotalSetelahDiskon,
+                                detail.Key.IsCanceled,
+                                detail.Key.Keterangan,
+
+                                Payments = detail
+                                    .Where(p => p.DetailInvoicePaymentId != null)
+                                    .Select(p => new
+                                    {
+                                        p.DetailInvoicePaymentId,
+                                        p.DetailReceivedPaymentId,
+                                        p.TglTerima,
+                                        p.TglKirim,
+                                        p.TglTagihan,
+                                        p.PiutangTerbayar,
+                                        p.PembayaranKe,
+                                        p.TotalPiutangDRP,
+                                        p.TglJaatuhTempo,
+                                        p.IsTerbayar,
+                                        p.KeteranganDRP
+                                    })
+                                    .ToList()
+                            })
+                            .ToList()
+                    })
+                    .ToList();
+
+                return Ok(new
+                {
+                    message = "Data berhasil diambil",
+                    total = result.Count,
+                    data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
+
+                return StatusCode(500, new
+                {
+                    message = ex.Message
+                });
+            }
+        }
+
+        [HttpGet("sattlementdetail")]
+        public async Task<IActionResult> GetAllSettlementDetail()
+        {
+            try
+            {
+                var result = await (
+                    from ar in _applicationDbContext.ARHeaders
+                    join a in _applicationDbContext.Asuransis.AsNoTracking()
+                        on ar.AsuransiId equals a.AsuransiId
+                    join d in _applicationDbContext.ARDetails
+                        on ar.ARHeaderId equals d.ARHeaderId
+                    select new
+                    {
+                        // DETAIL
+                        d.ARDetailId,
+                        d.KunjunganId,
+                        d.PasienId,
+                        d.NoRM,
+                        d.NamaPasien,
+                        d.NoBilling,
+                        d.NoRegistrasi,
+                        d.TglKunjungan,
+                        d.TglKeluar,
+                        d.TotalPiutang,
+                        d.TotalPembayaran,
+                        d.DiskonTagihan,
+                        d.SelisihTagihan,
+                        d.TotalSetelahDiskon,
+                        d.IsCanceled,
+                        d.Keterangan,
+
+                        // HEADER
+                        ar.ARHeaderId,
+                        ar.AsuransiId,
+                        AsuransiName = a.NamaAsuransi,
+                        ar.Tipe_Kunjungan,
+                        ar.JenisAR,
+                        ar.NoInvoice,
+                        ar.TglPembuatanInvoice,
+                        ar.TglJatuhTempo,
+                        ar.DueDate,
+                        ar.TotalInvoice
+                    }
+                ).ToListAsync();
+
+                return Ok(new
+                {
+                    message = "Data berhasil diambil",
+                    total = result.Count,
+                    data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
+                return StatusCode(500, new { message = ex.Message });
             }
         }
         // =====================================================
