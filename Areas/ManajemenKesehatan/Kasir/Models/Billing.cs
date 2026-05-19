@@ -14,6 +14,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models
         public Guid? DiskonId { get; set; }
         public Guid? AsuransiId { get; set; }
         public Guid? AsuransiExcessId { get; set; }
+        public Guid? ResepTebusId { get; set; }
         public DateTime? BillingDate { get; set; }
         public string? BillingKode { get; set; }
         public Guid? ItemId { get; set; }
