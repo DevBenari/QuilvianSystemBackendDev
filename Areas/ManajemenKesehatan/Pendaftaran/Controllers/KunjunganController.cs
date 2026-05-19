@@ -682,6 +682,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                             ? a.Pasien.NamaLengkap
                             : null,
 
+                        NoKaryawan = a.Pasien != null
+                            ? a.Pasien.NoKaryawan
+                            : null,
+
                         TanggalLahir = a.Pasien != null
                             ? a.Pasien.TanggalLahir
                             : null,
@@ -2674,6 +2678,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                             ? a.Pasien.NamaLengkap
                             : null,
 
+                        NoKaryawan = a.Pasien != null
+                            ? a.Pasien.NoKaryawan
+                            : null,
+
                         TanggalLahir = a.Pasien != null
                             ? a.Pasien.TanggalLahir
                             : null,
@@ -3072,6 +3080,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         r.NamaDokter,
 
                         r.PasienId,
+                        r.NoKaryawan,
                         r.AsalKunjungan,
                         r.NamaPasien,
                         r.TanggalLahir,
