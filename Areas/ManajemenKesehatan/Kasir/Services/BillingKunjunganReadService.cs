@@ -187,6 +187,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 k.AsuransiId,
 
                 NamaLengkap = p != null ? p.NamaLengkap : null,
+                NoKaryawan = p != null ? p.NoKaryawan: null,
                 NoHp = p != null ? p.NoPasien : null,
                 NoRekamMedis = p != null ? p.NoRekamMedis : null,
                 TanggalLahir = p != null ? p.TanggalLahir : (DateTime?)null,
@@ -213,6 +214,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             IsClosed = header.IsClosed,
             IsPresent = header.IsPresent,
             NamaLengkap = header.NamaLengkap,
+            NoKaryawan = header.NoKaryawan,
             NoHP = header.NoHp,
             NoRekamMedis = header.NoRekamMedis,
             NmDokter = header.NmDokter,
@@ -1123,6 +1125,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 k.AsuransiId,
 
                 NamaLengkap = p != null ? p.NamaLengkap : null,
+                NoKaryawan = p != null ? p.NoKaryawan : null,
                 NoHp = p != null ? p.NoPasien : null,
                 NoRekamMedis = p != null ? p.NoRekamMedis : null,
                 TanggalLahir = p != null ? p.TanggalLahir : (DateTime?)null,
@@ -1150,6 +1153,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
             IsClosed = header.IsClosed,
             IsPresent = header.IsPresent,
             NamaLengkap = header.NamaLengkap,
+            NoKaryawan = header.NoKaryawan,
             NoHP = header.NoHp,
             NoRekamMedis = header.NoRekamMedis,
             NmDokter = header.NmDokter,
@@ -1989,8 +1993,8 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
     #endregion
 
     #endregion
-    
-    
+
+    #region Paged Billing Per Kunjungan
     // ================================
     // FUNCTION GET ALL BILLING PAGED
     // ================================
@@ -2223,6 +2227,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 k.PasienId,
                 k.AsuransiId,
                 NamaLengkap = p != null ? p.NamaLengkap : null,
+                NoKaryawan = p != null ? p.NoKaryawan : null,
                 NoRekamMedis = p != null ? p.NoRekamMedis : null,
                 TanggalLahir = p != null ? p.TanggalLahir : (DateTime?)null,
                 NoHp = p != null ? p.NoPasien : null,
@@ -2496,6 +2501,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 KasirId = kasirMap.TryGetValue(kid, out var kasirId) ? kasirId : null,
 
                 NamaLengkap = h.NamaLengkap,
+                NoKaryawan = h.NoKaryawan,
                 NoRekamMedis = h.NoRekamMedis,
                 NoHP = h.NoHp,
                 NmDokter = h.NmDokter,
@@ -3180,6 +3186,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 dto.TanggalKunjungan,
                 dto.KasirId,
                 dto.NamaLengkap,
+                dto.NoKaryawan,
                 dto.NoHP,
                 dto.NoRekamMedis,
                 dto.NmDokter,
@@ -3243,7 +3250,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 .ToArray()
         };
     }
-
+    #endregion
     // ======================================================
     // FUNCTION GET BY ID MAIN KASIR (pembayaran dan detailnya)
     // =======================================================

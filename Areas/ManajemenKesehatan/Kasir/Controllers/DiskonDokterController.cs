@@ -321,11 +321,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                     expiredMinutes: 10
                 );
 
+                var resultToken = AutoLoginHelper.ValidateTokenDebug(token, _optAutoLogin.SecretKey);
+
+                if (!resultToken.IsValid || string.IsNullOrWhiteSpace(resultToken.UserId))
+                    return Unauthorized(new { message = "Token tidak valid atau sudah kadaluarsa.", debug = resultToken.Error });
+
                 var autoLoginUrl =
-                    $"{_optAutoLogin.BaseUrl.TrimEnd('/')}/api/Auth/AutoLogin" +
+                    $"http://103.153.61.119:8084/api/Auth/AutoLogin" +
                     $"?token={Uri.EscapeDataString(token)}" +
                     $"&redirect=true" +
                     $"&setCookie=true";
+
+                //var autoLoginUrl =
+                //    $"{_optAutoLogin.BaseUrl.TrimEnd('/')}/api/Auth/AutoLogin" +
+                //    $"?token={Uri.EscapeDataString(token)}" +
+                //    $"&redirect=true" +
+                //    $"&setCookie=true";
 
                 WhatsAppResultDto waResult;
 

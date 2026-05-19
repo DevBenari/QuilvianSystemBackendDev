@@ -682,6 +682,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                             ? a.Pasien.NamaLengkap
                             : null,
 
+                        NoKaryawan = a.Pasien != null
+                            ? a.Pasien.NoKaryawan
+                            : null,
+
                         TanggalLahir = a.Pasien != null
                             ? a.Pasien.TanggalLahir
                             : null,
@@ -1892,37 +1896,37 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 // =====================================================
                 // VALIDASI BATAS WAKTU UBAH ASURANSI
                 // =====================================================
-                var tanggalKunjungan = GetTanggalKunjungan(kunjungan);
+                //var tanggalKunjungan = GetTanggalKunjungan(kunjungan);
 
-                if (!tanggalKunjungan.HasValue)
-                {
-                    return BadRequest(new
-                    {
-                        message = "Tanggal kunjungan tidak ditemukan, perubahan asuransi tidak dapat dilakukan."
-                    });
-                }
+                //if (!tanggalKunjungan.HasValue)
+                //{
+                //    return BadRequest(new
+                //    {
+                //        message = "Tanggal kunjungan tidak ditemukan, perubahan asuransi tidak dapat dilakukan."
+                //    });
+                //}
 
-                var tanggalKunjunganDate = tanggalKunjungan.Value.Date;
+                //var tanggalKunjunganDate = tanggalKunjungan.Value.Date;
 
-                // Boleh ubah sampai H+2 jam 23:59:59
-                var batasAkhirPerubahan = tanggalKunjunganDate
-                    .AddDays(2)
-                    .AddDays(1)
-                    .AddTicks(-1);
+                //// Boleh ubah sampai H+2 jam 23:59:59
+                //var batasAkhirPerubahan = tanggalKunjunganDate
+                //    .AddDays(2)
+                //    .AddDays(1)
+                //    .AddTicks(-1);
 
-                var now = DateTime.Now;
+                //var now = DateTime.Now;
 
-                if (now > batasAkhirPerubahan)
-                {
-                    return BadRequest(new
-                    {
-                        alert = true,
-                        message = "Perubahan asuransi hanya dapat dilakukan maksimal 2 hari dari tanggal kunjungan.",
-                        tanggalKunjungan = tanggalKunjunganDate,
-                        batasAkhirPerubahan,
-                        waktuSekarang = now
-                    });
-                }
+                //if (now > batasAkhirPerubahan)
+                //{
+                //    return BadRequest(new
+                //    {
+                //        alert = true,
+                //        message = "Perubahan asuransi hanya dapat dilakukan maksimal 2 hari dari tanggal kunjungan.",
+                //        tanggalKunjungan = tanggalKunjunganDate,
+                //        batasAkhirPerubahan,
+                //        waktuSekarang = now
+                //    });
+                //}
 
                 var oldAsuransiId = kunjungan.AsuransiId;
                 var oldAsuransiPasienId = kunjungan.AsuransiPasienId;
@@ -2037,8 +2041,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                             kunjungan.TipePembayaran
                         },
 
-                        tanggalKunjungan = tanggalKunjunganDate,
-                        batasAkhirPerubahan
+                        //tanggalKunjungan = tanggalKunjunganDate,
+                        //batasAkhirPerubahan
                     }
                 });
             }
@@ -2674,6 +2678,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                             ? a.Pasien.NamaLengkap
                             : null,
 
+                        NoKaryawan = a.Pasien != null
+                            ? a.Pasien.NoKaryawan
+                            : null,
+
                         TanggalLahir = a.Pasien != null
                             ? a.Pasien.TanggalLahir
                             : null,
@@ -3072,6 +3080,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         r.NamaDokter,
 
                         r.PasienId,
+                        r.NoKaryawan,
                         r.AsalKunjungan,
                         r.NamaPasien,
                         r.TanggalLahir,

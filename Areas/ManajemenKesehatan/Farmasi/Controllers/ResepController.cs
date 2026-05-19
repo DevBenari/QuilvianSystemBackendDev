@@ -112,43 +112,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             return obatUnit;
         }
 
-        private async Task<Guid> ReserveObatUnitAsync(
-            Guid obatId,
-            Guid instalasiUnitId,
-            decimal qty,
-            Guid userActiveId,
-            CancellationToken ct)
-        {
-            if (qty <= 0)
-                throw new InvalidOperationException("Qty obat harus lebih dari 0.");
-
-            var obatUnit = await GetObatUnitForUpdateAsync(obatId, instalasiUnitId, ct);
-
-            var qtyTersedia = obatUnit.QtyTersedia ?? 0;
-
-            if (qtyTersedia < qty)
-            {
-                throw new InvalidOperationException(
-                    $"Stok obat tidak mencukupi pada unit layanan. Qty tersedia: {qtyTersedia}, qty diminta: {qty}.");
-            }
-
-            obatUnit.QtyAmbil = (obatUnit.QtyAmbil ?? 0) + qty;
-            obatUnit.QtyTersedia = qtyTersedia - qty;
-
-            obatUnit.UpdateBy = userActiveId;
-            obatUnit.UpdateDateTime = DateTimeOffset.UtcNow;
-
-            return obatUnit.ObatUnitId;
-        }
-
-        private void ClearChangeTracker()
-        {
-            foreach (var entry in _applicationDbContext.ChangeTracker.Entries().ToList())
-            {
-                entry.State = EntityState.Detached;
-            }
-        }
-
         private static bool IsRetryableDatabaseException(Exception ex)
         {
             if (ex is PostgresException pg)
