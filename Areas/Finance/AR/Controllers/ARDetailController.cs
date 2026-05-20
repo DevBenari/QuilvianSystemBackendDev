@@ -53,6 +53,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
             string? orderBy = "TglKunjungan",
             string? sortDirection = "desc",
             bool? isCanceled = null,
+            Guid? arHeaderId = null,
 
             [FromQuery, SwaggerSchema(Format = "date-time")]
             DateTime? startDate = null,
@@ -153,6 +154,11 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                 if (isCanceled.HasValue)
                 {
                     query = query.Where(x => x.IsCanceled == isCanceled.Value);
+                }
+                // FILTER AR HEADER ID
+                if (arHeaderId.HasValue)
+                {
+                    query = query.Where(x => x.ARHeaderId == arHeaderId.Value);
                 }
                 // SORTING
                 var sortColumn =
