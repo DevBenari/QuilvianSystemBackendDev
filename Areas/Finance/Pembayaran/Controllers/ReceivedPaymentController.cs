@@ -307,45 +307,83 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
             string? search = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
+            string? isCanceled = null,
+
             [FromQuery, SwaggerSchema(Format = "date-time")]
             DateTime? startDate = null,
+
             [FromQuery, SwaggerSchema(Format = "date-time")]
-            DateTime? endDate = null)
+            DateTime? endDate = null
+        )
         {
             try
             {
-                var query = from rp in _applicationDbContext.ReceivedPayments
-                            join u in _applicationDbContext.UserActives
-                            on rp.CreateBy equals u.UserActiveId
-                            where rp.IsDelete == false
-                            select new
-                            {
-                                rp.ReceivedPaymentId,
-                                rp.BankId,
+                if (page < 1)
+                    page = 1;
 
-                                rp.TotalReceived,
-                                rp.TglPembayaran,
-                                rp.SisaPembayaran,
-                                rp.TotalTagihanPasien,
-                                rp.PembayaranKe,
-                                rp.IsCanceled,
-                                rp.Keterangan,
-                                rp.CreateDateTime,
-                                CreateByName = u.FullName
-                            };
+                if (perPage < 1)
+                    perPage = 10;
 
+                // DEFAULT TANGGAL HARI INI
+                startDate ??= DateTime.UtcNow.Date;
+                endDate ??= DateTime.UtcNow.Date;
+
+                var query =
+                    from rp in _applicationDbContext.ReceivedPayments
+
+                    join u in _applicationDbContext.UserActives
+                        on rp.CreateBy equals u.UserActiveId
+
+                    where rp.IsDelete == false
+
+                    select new
+                    {
+                        rp.ReceivedPaymentId,
+                        rp.BankId,
+
+                        rp.TotalReceived,
+                        rp.TglPembayaran,
+                        rp.SisaPembayaran,
+                        rp.TotalTagihanPasien,
+                        rp.PembayaranKe,
+
+                        rp.IsCanceled,
+                        rp.Keterangan,
+
+                        rp.CreateDateTime,
+
+                        CreateByName = u.FullName
+                    };
+
+                // SEARCH
                 if (!string.IsNullOrWhiteSpace(search))
                 {
-                    search = $"%{search.ToLower()}%";
+                    var keyword = $"%{search.Trim().ToLower()}%";
 
                     query = query.Where(x =>
-                        EF.Functions.ILike(x.Keterangan, search));
+                        EF.Functions.ILike(x.Keterangan ?? "", keyword)
+                    );
                 }
 
+                // FILTER ISCANCELED
+                if (!string.IsNullOrWhiteSpace(isCanceled))
+                {
+                    bool parsedIsCanceled =
+                        bool.Parse(isCanceled);
+
+                    query = query.Where(x =>
+                        x.IsCanceled == parsedIsCanceled);
+                }
+
+                // FILTER DATE
                 if (startDate.HasValue && endDate.HasValue)
                 {
-                    var startUtc = startDate.Value.Date.ToUniversalTime();
-                    var endUtc = endDate.Value.Date.AddDays(1)
+                    var startUtc =
+                        startDate.Value.Date.ToUniversalTime();
+
+                    var endUtc =
+                        endDate.Value.Date
+                        .AddDays(1)
                         .AddTicks(-1)
                         .ToUniversalTime();
 
@@ -354,26 +392,37 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                         x.CreateDateTime <= endUtc);
                 }
 
-                var sortColumn = orderBy?.ToLower() ?? "createdatetime";
-                var isDescending = sortDirection?.ToLower() == "desc";
+                // SORTING
+                var sortColumn =
+                    orderBy?.ToLower() ?? "createdatetime";
+
+                var isDescending =
+                    sortDirection?.ToLower() == "desc";
 
                 query = sortColumn switch
                 {
-                    "tglpembayaran" => isDescending
-                        ? query.OrderByDescending(x => x.TglPembayaran)
-                        : query.OrderBy(x => x.TglPembayaran),
+                    "tglpembayaran" =>
+                        isDescending
+                            ? query.OrderByDescending(x => x.TglPembayaran)
+                            : query.OrderBy(x => x.TglPembayaran),
 
-                    "totalreceived" => isDescending
-                        ? query.OrderByDescending(x => x.TotalReceived)
-                        : query.OrderBy(x => x.TotalReceived),
+                    "totalreceived" =>
+                        isDescending
+                            ? query.OrderByDescending(x => x.TotalReceived)
+                            : query.OrderBy(x => x.TotalReceived),
 
-                    _ => isDescending
-                        ? query.OrderByDescending(x => x.CreateDateTime)
-                        : query.OrderBy(x => x.CreateDateTime)
+                    _ =>
+                        isDescending
+                            ? query.OrderByDescending(x => x.CreateDateTime)
+                            : query.OrderBy(x => x.CreateDateTime)
                 };
 
-                int totalRows = await query.CountAsync();
-                int totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+                // PAGINATION
+                int totalRows =
+                    await query.CountAsync();
+
+                int totalPages =
+                    (int)Math.Ceiling(totalRows / (double)perPage);
 
                 var rows = await query
                     .Skip((page - 1) * perPage)
@@ -384,6 +433,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                 {
                     status = "success",
                     message = "Data berhasil diambil",
+
                     data = new
                     {
                         Rows = rows,

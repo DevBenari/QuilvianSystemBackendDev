@@ -551,7 +551,12 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
             int perPage = 10,
             string? search = null,
             string? orderBy = "NamaPasien",
-            string? sortDirection = "desc"
+            string? sortDirection = "desc",
+            string? arHeaderId = null,
+            string? NoInvoice = null,
+            string? AsuransiName = null,
+            DateTime? startDate = null,
+            DateTime? endDate = null
         )
         {
             try
@@ -564,76 +569,153 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                     });
                 }
 
-                if (page < 1)
-                    page = 1;
+                if (page < 1) page = 1;
+                if (perPage < 1) perPage = 10;
 
-                if (perPage < 1)
-                    perPage = 10;
+                // =========================
+                // BASE QUERY (JOIN)
+                // =========================
+                var query =
+                    from ar in _applicationDbContext.ARHeaders.AsNoTracking()
+                    join a in _applicationDbContext.Asuransis.AsNoTracking()
+                        on ar.AsuransiId equals a.AsuransiId
+                    join d in _applicationDbContext.ARDetails.AsNoTracking()
+                        on ar.ARHeaderId equals d.ARHeaderId
+                    where ar.IsDelete == false
+                    select new
+                    {
+                        // DETAIL
+                        d.ARDetailId,
+                        d.KunjunganId,
+                        d.PasienId,
+                        d.NoRM,
+                        d.NamaPasien,
+                        d.NoBilling,
+                        d.NoRegistrasi,
+                        d.TglKunjungan,
+                        d.TglKeluar,
+                        d.TotalPiutang,
+                        d.TotalPembayaran,
+                        d.DiskonTagihan,
+                        d.SelisihTagihan,
+                        d.TotalSetelahDiskon,
+                        d.IsCanceled,
+                        d.Keterangan,
 
-                var query = _applicationDbContext.ARSettlements
-                    .AsNoTracking()
-                    .AsQueryable();
+                        // HEADER
+                        ar.ARHeaderId,
+                        ar.AsuransiId,
+                        AsuransiName = a.NamaAsuransi,
+                        ar.Tipe_Kunjungan,
+                        ar.JenisAR,
+                        ar.NoInvoice,
+                        ar.TglPembuatanInvoice,
+                        ar.TglJatuhTempo,
+                        ar.DueDate,
+                        ar.TotalInvoice
+                    };
 
-                // SEARCH
+                // SEARCH GLOBAL
                 if (!string.IsNullOrWhiteSpace(search))
                 {
-                    search = $"%{search.Trim().ToLower()}%";
+                    var keyword = $"%{search.Trim().ToLower()}%";
 
                     query = query.Where(x =>
-                        EF.Functions.ILike(x.NamaPasien, search) ||
-                        EF.Functions.ILike(x.NoInvoice, search)
+                        EF.Functions.ILike(x.NoRM ?? "", keyword) ||
+                        EF.Functions.ILike(x.NamaPasien ?? "", keyword) ||
+                        EF.Functions.ILike(x.NoInvoice ?? "", keyword) ||
+                        EF.Functions.ILike(x.AsuransiName ?? "", keyword)
                     );
                 }
 
-                // SORTING
-                var sortColumn =
-                    orderBy?.ToLower() ?? "namapasien";
+                // FILTER NO INVOICE
+                if (!string.IsNullOrWhiteSpace(NoInvoice))
+                {
+                    var keywordInvoice = $"%{NoInvoice.Trim()}%";
 
-                var isDescending =
-                    sortDirection?.ToLower() == "desc";
+                    query = query.Where(x =>
+                        EF.Functions.ILike(x.NoInvoice ?? "", keywordInvoice)
+                    );
+                }
+
+                // FILTER ASURANSI
+                if (!string.IsNullOrWhiteSpace(AsuransiName))
+                {
+                    var keywordAsuransi = $"%{AsuransiName.Trim()}%";
+
+                    query = query.Where(x =>
+                        EF.Functions.ILike(x.AsuransiName ?? "", keywordAsuransi)
+                    );
+                }
+
+                // FILTER DATE
+                if (startDate.HasValue && endDate.HasValue)
+                {
+                    var startUtc = startDate.Value.Date.ToUniversalTime();
+
+                    var endUtc = endDate.Value.Date
+                        .AddDays(1)
+                        .AddTicks(-1)
+                        .ToUniversalTime();
+
+                    query = query.Where(x =>
+                        x.TglPembuatanInvoice >= startUtc &&
+                        x.TglPembuatanInvoice <= endUtc
+                    );
+                }
+
+                // =========================
+                // SORTING
+                // =========================
+                var sortColumn = orderBy?.ToLower() ?? "namapasien";
+                var isDesc = sortDirection?.ToLower() == "desc";
 
                 query = sortColumn switch
                 {
                     "namapasien" =>
-                        isDescending
-                            ? query.OrderByDescending(x => x.NamaPasien)
-                            : query.OrderBy(x => x.NamaPasien),
+                        isDesc ? query.OrderByDescending(x => x.NamaPasien)
+                               : query.OrderBy(x => x.NamaPasien),
+
+                    "norm" =>
+                        isDesc ? query.OrderByDescending(x => x.NoRM)
+                               : query.OrderBy(x => x.NoRM),
 
                     "noinvoice" =>
-                        isDescending
-                            ? query.OrderByDescending(x => x.NoInvoice)
-                            : query.OrderBy(x => x.NoInvoice),
+                        isDesc ? query.OrderByDescending(x => x.NoInvoice)
+                               : query.OrderBy(x => x.NoInvoice),
 
-                    "beginingbalance" =>
-                        isDescending
-                            ? query.OrderByDescending(x => x.BeginingBalance)
-                            : query.OrderBy(x => x.BeginingBalance),
+                    "namaasuransi" =>
+                        isDesc ? query.OrderByDescending(x => x.AsuransiName)
+                               : query.OrderBy(x => x.AsuransiName),
 
-                    "endingbalance" =>
-                        isDescending
-                            ? query.OrderByDescending(x => x.EndingBalance)
-                            : query.OrderBy(x => x.EndingBalance),
+                    "tglpembuataninvoice" =>
+                        isDesc ? query.OrderByDescending(x => x.TglPembuatanInvoice)
+                               : query.OrderBy(x => x.TglPembuatanInvoice),
+
+                    "totalpiutang" =>
+                        isDesc ? query.OrderByDescending(x => x.TotalPiutang)
+                               : query.OrderBy(x => x.TotalPiutang),
 
                     _ =>
-                        query.OrderByDescending(x => x.NamaPasien)
+                        query.OrderByDescending(x => x.TglPembuatanInvoice)
                 };
 
+                // =========================
                 // PAGINATION
-                int totalRows = await query.CountAsync();
-
-                int totalPages =
-                    (int)Math.Ceiling(totalRows / (double)perPage);
+                // =========================
+                var totalRows = await query.CountAsync();
 
                 var rows = await query
                     .Skip((page - 1) * perPage)
                     .Take(perPage)
                     .ToListAsync();
 
+                var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
                 return Ok(new
                 {
                     status = "success",
                     message = "Data berhasil diambil",
-
                     data = new
                     {
                         Rows = rows,
@@ -647,10 +729,10 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, ex.Message);
-
                 return StatusCode(500, new
                 {
-                    message = ex.Message
+                    message = ex.Message,
+                    inner = ex.InnerException?.Message
                 });
             }
         }
@@ -659,210 +741,211 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
         // GET BY ID
         // =====================================================
 
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(Guid id)
-        {
-            try
-            {
-                var data = await _applicationDbContext.ARSettlements
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(x =>
-                        x.SettlementARId == id);
+        //[HttpGet("{id}")]
+        //public async Task<IActionResult> GetById(Guid id)
+        //{
+        //    try
+        //    {
+        //        var data = await _applicationDbContext.ARSettlements
+        //            .AsNoTracking()
+        //            .FirstOrDefaultAsync(x =>
+        //                x.SettlementARId == id);
 
-                if (data == null)
-                {
-                    return NotFound(new
-                    {
-                        message = "Data tidak ditemukan."
-                    });
-                }
+        //        if (data == null)
+        //        {
+        //            return NotFound(new
+        //            {
+        //                message = "Data tidak ditemukan."
+        //            });
+        //        }
 
-                return Ok(new
-                {
-                    status = "success",
-                    data
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, ex.Message);
+        //        return Ok(new
+        //        {
+        //            status = "success",
+        //            data
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, ex.Message);
 
-                return StatusCode(500, new
-                {
-                    message = ex.Message
-                });
-            }
-        }
+        //        return StatusCode(500, new
+        //        {
+        //            message = ex.Message
+        //        });
+        //    }
+        //}
 
-        // =====================================================
-        // CREATE
-        // =====================================================
+        //// =====================================================
+        //// CREATE
+        //// =====================================================
 
-        [HttpPost]
-        public async Task<IActionResult> Create(
-            [FromBody] ARSettlementViewModel vm)
-        {
-            try
-            {
-                if (!ModelState.IsValid)
-                {
-                    return BadRequest(ModelState);
-                }
+        //[HttpPost]
+        //public async Task<IActionResult> Create(
+        //    [FromBody] ARSettlementViewModel vm)
+        //{
+        //    try
+        //    {
+        //        if (!ModelState.IsValid)
+        //        {
+        //            return BadRequest(ModelState);
+        //        }
 
-                var data = new ARSettlement
-                {
-                    SettlementARId = Guid.NewGuid(),
+        //        var data = new ARSettlement
+        //        {
+        //            SettlementARId = Guid.NewGuid(),
 
-                    KunjunganId = vm.KunjunganId,
-                    PasienId = vm.PasienId,
+        //            KunjunganId = vm.KunjunganId,
+        //            PasienId = vm.PasienId,
 
-                    NamaPasien = vm.NamaPasien,
-                    NoInvoice = vm.NoInvoice,
+        //            NamaPasien = vm.NamaPasien,
+        //            NoInvoice = vm.NoInvoice,
 
-                    BeginingBalance = vm.BeginingBalance,
-                    EndingBalance = vm.EndingBalance
-                };
+        //            BeginingBalance = vm.BeginingBalance,
+        //            EndingBalance = vm.EndingBalance
+        //        };
 
-                _applicationDbContext.ARSettlements.Add(data);
+        //        _applicationDbContext.ARSettlements.Add(data);
 
-                int result =
-                    await _applicationDbContext.SaveChangesAsync();
+        //        int result =
+        //            await _applicationDbContext.SaveChangesAsync();
 
-                if (result > 0)
-                {
-                    return Created("", new
-                    {
-                        message = "Tambah data berhasil."
-                    });
-                }
+        //        if (result > 0)
+        //        {
+        //            return Created("", new
+        //            {
+        //                message = "Tambah data berhasil."
+        //            });
+        //        }
 
-                return StatusCode(500, new
-                {
-                    message = "Gagal menyimpan data."
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, ex.Message);
+        //        return StatusCode(500, new
+        //        {
+        //            message = "Gagal menyimpan data."
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, ex.Message);
 
-                return StatusCode(500, new
-                {
-                    message = ex.Message
-                });
-            }
-        }
+        //        return StatusCode(500, new
+        //        {
+        //            message = ex.Message
+        //        });
+        //    }
+        //}
 
-        // =====================================================
-        // UPDATE
-        // =====================================================
+        //// =====================================================
+        //// UPDATE
+        //// =====================================================
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(
-            Guid id,
-            [FromBody] ARSettlementViewModel vm)
-        {
-            try
-            {
-                var data =
-                    await _applicationDbContext.ARSettlements
-                    .FirstOrDefaultAsync(x =>
-                        x.SettlementARId == id);
+        //[HttpPut("{id}")]
+        //public async Task<IActionResult> Update(
+        //    Guid id,
+        //    [FromBody] ARSettlementViewModel vm)
+        //{
+        //    try
+        //    {
+        //        var data =
+        //            await _applicationDbContext.ARSettlements
+        //            .FirstOrDefaultAsync(x =>
+        //                x.SettlementARId == id);
 
-                if (data == null)
-                {
-                    return NotFound(new
-                    {
-                        message = "Data tidak ditemukan."
-                    });
-                }
+        //        if (data == null)
+        //        {
+        //            return NotFound(new
+        //            {
+        //                message = "Data tidak ditemukan."
+        //            });
+        //        }
 
-                data.KunjunganId = vm.KunjunganId;
-                data.PasienId = vm.PasienId;
+        //        data.KunjunganId = vm.KunjunganId;
+        //        data.PasienId = vm.PasienId;
 
-                data.NamaPasien = vm.NamaPasien;
-                data.NoInvoice = vm.NoInvoice;
+        //        data.NamaPasien = vm.NamaPasien;
+        //        data.NoInvoice = vm.NoInvoice;
 
-                data.BeginingBalance = vm.BeginingBalance;
-                data.EndingBalance = vm.EndingBalance;
+        //        data.BeginingBalance = vm.BeginingBalance;
+        //        data.EndingBalance = vm.EndingBalance;
 
-                _applicationDbContext.ARSettlements.Update(data);
+        //        _applicationDbContext.ARSettlements.Update(data);
 
-                int result =
-                    await _applicationDbContext.SaveChangesAsync();
+        //        int result =
+        //            await _applicationDbContext.SaveChangesAsync();
 
-                if (result > 0)
-                {
-                    return Ok(new
-                    {
-                        message = "Update data berhasil."
-                    });
-                }
+        //        if (result > 0)
+        //        {
+        //            return Ok(new
+        //            {
+        //                message = "Update data berhasil."
+        //            });
+        //        }
 
-                return StatusCode(500, new
-                {
-                    message = "Gagal update data."
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, ex.Message);
+        //        return StatusCode(500, new
+        //        {
+        //            message = "Gagal update data."
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, ex.Message);
 
-                return StatusCode(500, new
-                {
-                    message = ex.Message
-                });
-            }
-        }
+        //        return StatusCode(500, new
+        //        {
+        //            message = ex.Message
+        //        });
+        //    }
+        //}
 
-        // =====================================================
-        // DELETE
-        // =====================================================
+        //// =====================================================
+        //// DELETE
+        //// =====================================================
 
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(Guid id)
-        {
-            try
-            {
-                var data =
-                    await _applicationDbContext.ARSettlements
-                    .FirstOrDefaultAsync(x =>
-                        x.SettlementARId == id);
+        //[HttpDelete("{id}")]
+        //public async Task<IActionResult> Delete(Guid id)
+        //{
+        //    try
+        //    {
+        //        var data =
+        //            await _applicationDbContext.ARSettlements
+        //            .FirstOrDefaultAsync(x =>
+        //                x.SettlementARId == id);
 
-                if (data == null)
-                {
-                    return NotFound(new
-                    {
-                        message = "Data tidak ditemukan."
-                    });
-                }
+        //        if (data == null)
+        //        {
+        //            return NotFound(new
+        //            {
+        //                message = "Data tidak ditemukan."
+        //            });
+        //        }
 
-                _applicationDbContext.ARSettlements.Remove(data);
+        //        _applicationDbContext.ARSettlements.Remove(data);
 
-                int result =
-                    await _applicationDbContext.SaveChangesAsync();
+        //        int result =
+        //            await _applicationDbContext.SaveChangesAsync();
 
-                if (result > 0)
-                {
-                    return Ok(new
-                    {
-                        message = "Delete berhasil."
-                    });
-                }
+        //        if (result > 0)
+        //        {
+        //            return Ok(new
+        //            {
+        //                message = "Delete berhasil."
+        //            });
+        //        }
 
-                return StatusCode(500, new
-                {
-                    message = "Gagal delete data."
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, ex.Message);
+        //        return StatusCode(500, new
+        //        {
+        //            message = "Gagal delete data."
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, ex.Message);
 
-                return StatusCode(500, new
-                {
-                    message = ex.Message
-                });
-            }
-        }
+        //        return StatusCode(500, new
+        //        {
+        //            message = ex.Message
+        //        });
+        //    }
+        //}
+    
     }
 }
