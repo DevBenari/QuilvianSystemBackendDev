@@ -504,7 +504,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
 
                     IsDocumentComplited = vm.IsDocumentComplited,
 
-                    IsCanceled = vm.IsCanceled,
+                    IsCanceled = false,
                     Keterangan = vm.Keterangan,
 
                     CreateDateTime = DateTime.UtcNow,
@@ -545,40 +545,73 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
         // =========================================================
         // UPDATE
         // =========================================================
+        
         [HttpPut("cancel/{id}")]
-        public async Task<IActionResult> CancelARHeader(Guid id)
+        public async Task<IActionResult> CancelARDetail(
+        Guid id,
+        [FromBody] CancelViewModel vm)
         {
             try
             {
-                var header = await _applicationDbContext.ARHeaders
-                    .FirstOrDefaultAsync(x => x.ARHeaderId == id);
+                var data = await _applicationDbContext.ARHeaders
+                    .FirstOrDefaultAsync(x =>
+                        x.ARHeaderId == id &&
+                        x.IsDelete == false);
 
-                if (header == null)
+                if (data == null)
                 {
                     return NotFound(new
                     {
-                        message = "AR Header tidak ditemukan."
+                        message = "Data tidak ditemukan."
                     });
                 }
 
-                // optional safety: kalau sudah canceled
-                if (header.IsCanceled)
+                var emailLogin =
+                    User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (string.IsNullOrEmpty(emailLogin))
                 {
-                    return BadRequest(new
+                    return Unauthorized(new
                     {
-                        message = "AR Header sudah dibatalkan."
+                        message = "User tidak terautentikasi."
                     });
                 }
 
-                header.IsCanceled = true;
+                var getUserActive =
+                    await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(x =>
+                        x.Email == emailLogin);
 
-                _applicationDbContext.ARHeaders.Update(header);
-
-                await _applicationDbContext.SaveChangesAsync();
-
-                return Ok(new
+                if (getUserActive == null)
                 {
-                    message = "AR Header berhasil dibatalkan."
+                    return Unauthorized(new
+                    {
+                        message = "User aktif tidak ditemukan."
+                    });
+                }
+
+                // UPDATE ISCANCELED
+                data.IsCanceled = vm.IsCanceled;
+
+                data.UpdateDateTime = DateTime.UtcNow;
+                data.UpdateBy = getUserActive.UserActiveId;
+
+                _applicationDbContext.ARHeaders.Update(data);
+
+                int result =
+                    await _applicationDbContext.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    return Ok(new
+                    {
+                        message = "Status cancel berhasil diupdate."
+                    });
+                }
+
+                return StatusCode(500, new
+                {
+                    message = "Gagal update data."
                 });
             }
             catch (Exception ex)
@@ -591,6 +624,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                 });
             }
         }
+
 
         [HttpPut("{id}")]
             public async Task<IActionResult> Update(

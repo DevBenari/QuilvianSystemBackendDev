@@ -8,6 +8,7 @@ using QuilvianSystemBackendDev.Areas.Finance.AR.ViewModels;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
+using System.Security.Claims;
 
 namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
 {
@@ -51,6 +52,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
             string? search = null,
             string? orderBy = "TglKunjungan",
             string? sortDirection = "desc",
+            bool? isCanceled = null,
 
             [FromQuery, SwaggerSchema(Format = "date-time")]
             DateTime? startDate = null,
@@ -147,7 +149,11 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                         x.TglKunjungan >= startUtc &&
                         x.TglKunjungan <= endUtc);
                 }
-
+                // FILTER ISCANCELED
+                if (isCanceled.HasValue)
+                {
+                    query = query.Where(x => x.IsCanceled == isCanceled.Value);
+                }
                 // SORTING
                 var sortColumn =
                     orderBy?.ToLower() ?? "tglkunjungan";
@@ -321,7 +327,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                     SelisihTagihan = vm.SelisihTagihan,
                     TotalSetelahDiskon = vm.TotalSetelahDiskon,
 
-                    IsCanceled = vm.IsCanceled,
+                    IsCanceled = false,
 
                     Keterangan = vm.Keterangan
                 };
@@ -358,23 +364,56 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
         // =====================================================
         // UPDATE
         // =====================================================
+        
         [HttpPut("cancel/{id}")]
-        public async Task<IActionResult> CancelARDetail(Guid id)
+        public async Task<IActionResult> CancelARDetail(
+        Guid id,
+        [FromBody] CancelViewModel vm)
         {
             try
             {
                 var data = await _applicationDbContext.ARDetails
-                    .FirstOrDefaultAsync(x => x.ARDetailId == id);
+                    .FirstOrDefaultAsync(x =>
+                        x.ARDetailId == id &&
+                        x.IsDelete == false);
 
                 if (data == null)
                 {
                     return NotFound(new
                     {
-                        message = "Data AR Detail tidak ditemukan."
+                        message = "Data tidak ditemukan."
                     });
                 }
 
-                data.IsCanceled = true;
+                var emailLogin =
+                    User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (string.IsNullOrEmpty(emailLogin))
+                {
+                    return Unauthorized(new
+                    {
+                        message = "User tidak terautentikasi."
+                    });
+                }
+
+                var getUserActive =
+                    await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(x =>
+                        x.Email == emailLogin);
+
+                if (getUserActive == null)
+                {
+                    return Unauthorized(new
+                    {
+                        message = "User aktif tidak ditemukan."
+                    });
+                }
+
+                // UPDATE ISCANCELED
+                data.IsCanceled = vm.IsCanceled;
+
+                data.UpdateDateTime = DateTime.UtcNow;
+                data.UpdateBy = getUserActive.UserActiveId;
 
                 _applicationDbContext.ARDetails.Update(data);
 
@@ -385,13 +424,13 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                 {
                     return Ok(new
                     {
-                        message = "AR Detail berhasil dibatalkan."
+                        message = "Status cancel berhasil diupdate."
                     });
                 }
 
                 return StatusCode(500, new
                 {
-                    message = "Gagal membatalkan AR Detail."
+                    message = "Gagal update data."
                 });
             }
             catch (Exception ex)
@@ -404,6 +443,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                 });
             }
         }
+
 
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(
