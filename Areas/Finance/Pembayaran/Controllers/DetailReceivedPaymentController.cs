@@ -102,6 +102,30 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
             });
         }
 
+
+        [HttpGet("ReceivedPayment/{ReceivedPayment}")]
+        public async Task<IActionResult> GetReceivedPaymentById(Guid ReceivedPayment)
+        {
+            var data = await _applicationDbContext.DetailReceivedPayments
+                .FirstOrDefaultAsync(x =>
+                    x.ReceivedPaymentId == ReceivedPayment &&
+                    x.IsDelete == false);
+
+            if (data == null)
+            {
+                return NotFound(new
+                {
+                    message = "Data tidak ditemukan."
+                });
+            }
+
+            return Ok(new
+            {
+                message = "Data ditemukan",
+                data = data
+            });
+        }
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetDetailReceivedPaymentById(Guid id)
         {

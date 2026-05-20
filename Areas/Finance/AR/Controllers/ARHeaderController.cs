@@ -134,6 +134,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
             string? asuransi = null,
             string? noInvoice = null,
             string? tipeKunjungan = null,
+            string? isCanceled = null,
 
             string? search = null,
             string? orderBy = "CreateDateTime",
@@ -233,6 +234,14 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                     );
                 }
 
+                // FILTER TIPE KUNJUNGAN SENDIRI
+                if (!string.IsNullOrWhiteSpace(isCanceled))
+                {
+                    bool parsedIsCanceled = bool.Parse(isCanceled);
+
+                    query = query.Where(x => x.IsCanceled == parsedIsCanceled);
+                }
+
                 // SEARCH GLOBAL
                 if (!string.IsNullOrWhiteSpace(search))
                 {
@@ -242,7 +251,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                         EF.Functions.ILike(x.NoInvoice, keyword) ||
                         EF.Functions.ILike(x.Keterangan ?? "", keyword) ||
                         EF.Functions.ILike(x.Tipe_Kunjungan, keyword) ||
-                        EF.Functions.ILike(x.AsuransiName, keyword)
+                        EF.Functions.ILike(x.AsuransiName, keyword) ||
+                        x.IsCanceled.ToString().ToLower().Contains(search.Trim().ToLower())
                     );
                 }
 

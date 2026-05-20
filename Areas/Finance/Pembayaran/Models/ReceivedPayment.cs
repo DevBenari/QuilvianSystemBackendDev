@@ -12,20 +12,6 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Models
 
         public Guid? BankId { get; set; }
 
-        public string? NamaPasien { get; set; }
-
-        public string? NoRm { get; set; }
-
-        public string? NamaPerusahaan { get; set; }
-
-        public string? NamaAsuransi { get; set; }
-
-        public string? NoInvoice { get; set; }
-
-        public decimal TotalSaldoAwal { get; set; }
-
-        public Guid DetailReceivedPaymentId { get; set; }
-
         [Column(TypeName = "numeric")]
         public decimal? TotalReceived { get; set; }
 
