@@ -95,9 +95,10 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
         public async Task<IActionResult> detailReceivedPaymentId(Guid id)
         {
             var data = await _context.DetailInvoiceReceiveds
-                .FirstOrDefaultAsync(x => x.DetailReceivedPaymentId == id && x.IsDelete == false);
+                .Where(x => x.DetailReceivedPaymentId == id && x.IsDelete == false)
+                .ToListAsync();
 
-            if (data == null)
+            if (data == null || !data.Any())
                 return NotFound(new { message = "Data tidak ditemukan" });
 
             return Ok(new { message = "success", data });
@@ -217,12 +218,21 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                         select new
                         {
                             d.DetailInvoicePaymentId,
+                            d.DetailReceivedPaymentId,
+                            d.KunjunganId,
+                            d.PasiemId,
                             d.NoRM,
                             d.NamaPasien,
                             d.NoBilling,
+                            d.TglTerima,
+                            d.TglKirim,
+                            d.TglTagihan,
+                            d.PiutangTerbayar,
+                            d.PembayaranKe,
                             d.TotalPiutang,
-                            d.IsTerbayar,
                             d.TglJaatuhTempo,
+                            d.IsTerbayar,
+                            d.Keterangan,
                             d.CreateDateTime,
                             CreateByName = u.FullName
                         };
