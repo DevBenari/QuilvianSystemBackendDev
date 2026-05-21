@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using QuilvianSystemBackendDev.Areas.Finance.AR.ViewModels;
 using QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Models;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
@@ -53,7 +54,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                          {
                              rp.ReceivedPaymentId,
                              rp.BankId,
-
+                             rp.NoInvoice,
                              rp.TotalReceived,
                              rp.TglPembayaran,
                              rp.SisaPembayaran,
@@ -116,6 +117,86 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                 message = "Data ditemukan",
                 data = data
             });
+        }
+
+
+        [HttpPut("cancelReceivedPaymentId/{id}")]
+        public async Task<IActionResult> CancelARDetail(
+        Guid id,
+        [FromBody] CancelViewModel vm)
+        {
+            try
+            {
+                var data = await _applicationDbContext.ReceivedPayments
+                    .FirstOrDefaultAsync(x =>
+                        x.ReceivedPaymentId == id &&
+                        x.IsDelete == false);
+
+                if (data == null)
+                {
+                    return NotFound(new
+                    {
+                        message = "Data tidak ditemukan."
+                    });
+                }
+
+                var emailLogin =
+                    User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (string.IsNullOrEmpty(emailLogin))
+                {
+                    return Unauthorized(new
+                    {
+                        message = "User tidak terautentikasi."
+                    });
+                }
+
+                var getUserActive =
+                    await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(x =>
+                        x.Email == emailLogin);
+
+                if (getUserActive == null)
+                {
+                    return Unauthorized(new
+                    {
+                        message = "User aktif tidak ditemukan."
+                    });
+                }
+
+                // UPDATE ISCANCELED
+                data.IsCanceled = vm.IsCanceled;
+
+                data.UpdateDateTime = DateTime.UtcNow;
+                data.UpdateBy = getUserActive.UserActiveId;
+
+                _applicationDbContext.ReceivedPayments.Update(data);
+
+                int result =
+                    await _applicationDbContext.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    return Ok(new
+                    {
+                        message = "Status cancel berhasil diupdate."
+                    });
+                }
+
+                return StatusCode(500, new
+                {
+                    message = "Gagal update data."
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
+
+                return StatusCode(500, new
+                {
+                    message = ex.Message
+                });
+            }
         }
 
         [HttpPost]
@@ -209,6 +290,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                     .FirstOrDefaultAsync(x => x.Email == emailLogin);
 
                 data.BankId = model.BankId;
+                data.NoInvoice = model.NoInvoice;
 
                 data.TotalReceived = model.TotalReceived;
                 data.TglPembayaran = model.TglPembayaran;
@@ -340,6 +422,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                     {
                         rp.ReceivedPaymentId,
                         rp.BankId,
+                        rp.NoInvoice,
 
                         rp.TotalReceived,
                         rp.TglPembayaran,
