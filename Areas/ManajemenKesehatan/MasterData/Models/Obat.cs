@@ -18,6 +18,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public Guid? BentukObatId { get; set; }
         public decimal HTEPrice { get; set; }
         public decimal? HNAPrice { get; set; }
+        public decimal? HargaJual { get; set; }
         public bool? IsActive { get; set; }
         public int Stock { get; set; }
         public int? Minimal { get; set; }

@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
 using QuilvianSystemBackendDev.Models;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
@@ -35,5 +36,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public string? AlasanPembatalan {  get; set; }
         public string? TTDPembatalanPath { get; set; }
         public string? TipeLayanan {  get; set; }
+        public Guid? VerifikatorId { get; set; }
+        public DateTime? WaktuVerifikasi { get; set;}
+
+        // Navigation
+        public LabBooking? LabBooking { get; set; }
+        public PendaftaranPasienBaru? Pasien { get; set; }
+        public LabPemeriksaan? PemeriksaanLab { get; set; }
+        public Lab? Lab { get; set; }
+        public SpecimenAsal? AsalSpecimen { get; set; }
     }
 }

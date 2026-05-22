@@ -97,5 +97,56 @@ namespace QuilvianSystemBackendDev.Helpers
             return leftBytes.Length == rightBytes.Length &&
                    CryptographicOperations.FixedTimeEquals(leftBytes, rightBytes);
         }
+
+        public static (bool IsValid, string? UserId, string? TargetUrl, string? Error) ValidateTokenDebug(
+            string token,
+            string secretKey)
+        {
+            try
+            {
+                token = token.Replace('-', '+').Replace('_', '/');
+
+                switch (token.Length % 4)
+                {
+                    case 2: token += "=="; break;
+                    case 3: token += "="; break;
+                    case 1: return (false, null, null, "Invalid base64 token format");
+                }
+
+                var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(token));
+                var parts = decoded.Split('|');
+
+                if (parts.Length != 4)
+                    return (false, null, null, $"Jumlah bagian token tidak valid. Parts={parts.Length}");
+
+                var userId = parts[0];
+                var safeTargetUrl = parts[1];
+                var expiresRaw = parts[2];
+                var signature = parts[3];
+
+                var expires = DateTime.ParseExact(
+                    expiresRaw,
+                    "O",
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.RoundtripKind);
+
+                var payload = $"{userId}|{safeTargetUrl}|{expires:O}";
+                var expectedSig = ComputeHmac(payload, secretKey);
+
+                if (!FixedTimeEquals(signature, expectedSig))
+                    return (false, null, null, "Signature mismatch. SecretKey generate dan validate kemungkinan berbeda.");
+
+                if (expires < DateTime.UtcNow)
+                    return (false, null, null, $"Expired. Exp={expires:O}, Now={DateTime.UtcNow:O}");
+
+                var targetUrl = Uri.UnescapeDataString(safeTargetUrl);
+
+                return (true, userId, targetUrl, null);
+            }
+            catch (Exception ex)
+            {
+                return (false, null, null, ex.Message);
+            }
+        }
     }
 }

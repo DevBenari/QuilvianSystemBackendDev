@@ -2,6 +2,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Models;
 
@@ -21,7 +22,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
         public Guid? PasienId { get; set; }
         public string NoRekamMedis { get; set; }
         public string? TipePasien { get; set; }
-        public string TipePembayaran { get; set; }
+        public string? NoRegistrasi { get; set; }
+        public string? TipePembayaran { get; set; }
         public bool? IsFinished { get; set; } = false;
         public string JenisKunjungan { get; set; }
         public string? Antrian { get; set; }
@@ -51,6 +53,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models
 
         public ICollection<AlatPemakaian> AlatPemakaians { get; set; } = new List<AlatPemakaian>();
         public ICollection<LogRacikPenerimaan> LogRacikPenerimaans { get; set; } = new HashSet<LogRacikPenerimaan>();
+
+        public ICollection<Billing> Billings { get; set; } = new List<Billing>();
+
+        public ICollection<KunjunganLayanan> KunjunganLayanans { get; set; } = new List<KunjunganLayanan>();
     }
 
 }

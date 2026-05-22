@@ -1,5 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
 using QuilvianSystemBackendDev.Models;
 
 namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
@@ -38,5 +40,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public string? HasilPenunjangLab { get; set; }
         public string? AnjuranDiet {  get; set; }
 
+        // Navigation
+        public Kunjungan? Kunjungan { get; set; }
+        public PendaftaranPasienBaru? Pasien { get; set; }
+        public Asuransi? Asuransi { get; set; }
+        public Kelas? Kelas { get; set; }
+        public Dokter? Dokter { get; set; }
+        public Dokter? DokterKonsulen { get; set; }
+
+        // Relasi paling penting
+        public ICollection<LabBookingDetail> LabBookingDetails { get; set; } = new HashSet<LabBookingDetail>();
     }
 }

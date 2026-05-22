@@ -290,10 +290,18 @@ namespace QuilvianSystemBackendDev.Controllers
             if (string.IsNullOrWhiteSpace(token))
                 return BadRequest(new { message = "Token kosong." });
 
-            var result = AutoLoginHelper.ValidateToken(token, _optAutoLogin.SecretKey);
+            var result = AutoLoginHelper.ValidateTokenDebug(token, _optAutoLogin.SecretKey);
 
             if (!result.IsValid || string.IsNullOrWhiteSpace(result.UserId))
-                return Unauthorized(new { message = "Token tidak valid atau sudah kadaluarsa." });
+            {
+                return Unauthorized(new
+                {
+                    message = "Token tidak valid atau sudah kadaluarsa.",
+                    debug = result.Error,
+                    serverUtcNow = DateTime.UtcNow,
+                    secretLength = _optAutoLogin.SecretKey?.Length
+                });
+            }
 
             if (!Guid.TryParse(result.UserId, out Guid userId))
                 return Unauthorized(new { message = "UserId pada token tidak valid." });

@@ -15,6 +15,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
         public bool? StatusPengambilan { get; set; } = false;
         public bool? IsCancelled { get; set; } = false;
         public bool? IsLunas { get; set; }
+        public Guid? GudangUnitId { get; set; }
+        public Guid? InstalasiUnitId { get; set; }
+        public string? JenisLayanan { get; set; }
+        public decimal? TotalHargaResep { get; set; }
+        public DateTime? TanggalLunas { get; set; }
+        public Guid? PetugasFarmasiId { get; set; }
+        public string? NoResepLuar { get; set; }
+        public string? AsalFaskes { get; set; }
+        public string? NoHpPenebus { get; set; }
         public DateTime? TanggalPembuatanResep { get; set; }
     }
 }

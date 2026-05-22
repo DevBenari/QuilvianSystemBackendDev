@@ -31,6 +31,8 @@ using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using QuilvianSystemBackendDev.Services;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Interfaces;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -59,14 +61,18 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =
 builder.Services.Configure<AutoLoginDTO>(builder.Configuration.GetSection("AutoLogin"));
 
 #region CORS
+var allowedOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins")
+    .Get<string[]>() ?? Array.Empty<string>();
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowSpecific", policy =>
+    options.AddPolicy("FrontendCorsPolicy", policy =>
     {
         policy
-            .SetIsOriginAllowed(origin => true)
-            .AllowAnyMethod()
+            .WithOrigins(allowedOrigins)
             .AllowAnyHeader()
+            .AllowAnyMethod()
             .AllowCredentials();
     });
 });
@@ -121,7 +127,6 @@ builder.Services.AddSession(options =>
 });
 
 #endregion
-
 
 #region AUTH JWT + COOKIE SMART SCHEME
 builder.Services.AddAuthentication(options =>
@@ -362,6 +367,11 @@ builder.Services.AddScoped<IPerkiraanBillingRanapService, PerkiraanBillingRanapS
 builder.Services.AddScoped<IDepositRanapNumberService, DepositRanapNumberService>();
 builder.Services.AddScoped<IAsuransiCoverageService, AsuransiCoverageService>();
 builder.Services.AddScoped<INotification, NotificationService>();
+builder.Services.AddScoped<IKunjunganAdminBillingService, KunjunganAdminBillingService>();
+builder.Services.AddScoped<IKunjunganNoRegistrasiService, KunjunganNoRegistrasiService>();
+builder.Services.AddScoped<INoBillService, NoBillService>();
+builder.Services.AddScoped<IObatUnitStockService, ObatUnitReserveService>();
+builder.Services.AddScoped<IResepStockService, ResepStockService>();
 #endregion
 
 #region Setting Container
@@ -384,10 +394,6 @@ app.UseHttpsRedirection();
 
 app.UseStaticFiles();
 
-/*
- * Swagger dibuat public.
- * Jadi user belum login tetap bisa membuka halaman Swagger.
- */
 #region Swagger
 
 app.UseSwagger();
@@ -410,7 +416,7 @@ app.UseSwaggerUI(c =>
 
 app.UseRouting();
 
-app.UseCors("AllowSpecific");
+app.UseCors("FrontendCorsPolicy");
 
 app.UseSession();
 
@@ -422,6 +428,7 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.MapHub<KunjunganHub>("/hubs/kunjungan");
+app.MapHub<TindakanKunjunganHub>("/hubs/tindakankunjungan");
 app.MapHub<VitalSignHub>("/hubs/vitalsign");
 app.MapHub<SOAPHub>("/hubs/soap");
 app.MapHub<PainAssesmentHub>("/hubs/painassessment");

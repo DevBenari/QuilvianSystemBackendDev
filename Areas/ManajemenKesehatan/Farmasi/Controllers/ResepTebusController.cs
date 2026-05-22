@@ -45,6 +45,94 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             _webHostEnvironment = webHostEnvironment;
         }
 
+        private async Task<GudangUnit> ResolveGudangUnitResepTebusAsync(
+        ResepTebusViewModel vm,
+        CancellationToken ct)
+        {
+            if (vm.GudangUnitId.HasValue)
+            {
+                var gudangUnit = await _applicationDbContext.GudangUnits
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(x =>
+                        x.GudangUnitId == vm.GudangUnitId.Value &&
+                        (x.IsDelete == false),
+                        ct);
+
+                if (gudangUnit == null)
+                    throw new InvalidOperationException("Gudang unit resep tebus tidak valid.");
+
+                return gudangUnit;
+            }
+
+            if (vm.InstalasiUnitId.HasValue)
+            {
+                var gudangUnit = await _applicationDbContext.GudangUnits
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(x =>
+                        x.InstalasiUnitId == vm.InstalasiUnitId.Value &&
+                        (x.IsDelete == false),
+                        ct);
+
+                if (gudangUnit == null)
+                    throw new InvalidOperationException("Gudang unit untuk instalasi unit tersebut belum disetting.");
+
+                return gudangUnit;
+            }
+
+            throw new InvalidOperationException("GudangUnitId atau InstalasiUnitId wajib diisi.");
+        }
+
+        private async Task<ObatUnit> GetObatUnitForUpdateAsync(
+            Guid obatId,
+            Guid gudangUnitId,
+            CancellationToken ct)
+        {
+            var obatUnit = await _applicationDbContext.ObatUnits
+                .FromSqlInterpolated($@"
+            SELECT *
+            FROM public.""MstObatUnit""
+            WHERE ""ObatId"" = {obatId}
+              AND ""GudangUnitId"" = {gudangUnitId}
+              AND COALESCE(""IsDelete"", false) = false
+            FOR UPDATE
+        ")
+                .FirstOrDefaultAsync(ct);
+
+            if (obatUnit == null)
+                throw new InvalidOperationException("Obat tidak tersedia pada gudang unit resep tebus.");
+
+            return obatUnit;
+        }
+
+        private async Task<Guid> ReserveObatUnitAsync(
+            Guid obatId,
+            Guid gudangUnitId,
+            decimal qty,
+            Guid userActiveId,
+            CancellationToken ct)
+        {
+            if (qty <= 0)
+                throw new InvalidOperationException("Qty obat harus lebih dari 0.");
+
+            var obatUnit = await GetObatUnitForUpdateAsync(obatId, gudangUnitId, ct);
+
+            var qtyTersedia = obatUnit.QtyTersedia ?? 0;
+
+            if (qtyTersedia < qty)
+            {
+                throw new InvalidOperationException(
+                    $"Stok obat tidak mencukupi. Qty tersedia: {qtyTersedia}, qty diminta: {qty}.");
+            }
+
+            obatUnit.QtyAmbil = (obatUnit.QtyAmbil ?? 0) + qty;
+            obatUnit.QtyTersedia = qtyTersedia - qty;
+
+            obatUnit.UpdateBy = userActiveId;
+            obatUnit.UpdateDateTime = DateTimeOffset.UtcNow;
+
+            return obatUnit.ObatUnitId;
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
         {
@@ -750,5 +838,260 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 }
             });
         }
+
+
+        //[HttpPost]
+        //public async Task<IActionResult> Create([FromBody] ResepTebusViewModel vm, CancellationToken ct)
+        //{
+        //    if (vm == null || !ModelState.IsValid)
+        //        return BadRequest(new { message = "Data tidak valid." });
+
+        //    if (vm.DaftarObat == null || !vm.DaftarObat.Any())
+        //        return BadRequest(new { message = "Daftar obat wajib diisi." });
+
+        //    if (!await _applicationDbContext.Database.CanConnectAsync(ct))
+        //        return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+
+        //    var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        //    if (string.IsNullOrWhiteSpace(emailLogin))
+        //        return Unauthorized(new { message = "User tidak terautentikasi." });
+
+        //    var userActive = await _applicationDbContext.UserActives
+        //        .FirstOrDefaultAsync(x => x.Email == emailLogin, ct);
+
+        //    if (userActive == null)
+        //        return Unauthorized(new { message = "User tidak ditemukan." });
+
+        //    await using var trx = await _applicationDbContext.Database
+        //        .BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
+
+        //    try
+        //    {
+        //        var gudangUnit = await ResolveGudangUnitResepTebusAsync(vm, ct);
+
+        //        var gudangUnitId = gudangUnit.GudangUnitId;
+        //        var instalasiUnitId = gudangUnit.InstalasiUnitId ?? vm.InstalasiUnitId;
+
+        //        var today = DateTime.UtcNow.Date;
+        //        var todayText = DateTime.UtcNow.ToString("yyyyMMdd");
+
+        //        var lastResep = await _applicationDbContext.ResepTebuss
+        //            .Where(x => x.CreateDateTime.Date == today)
+        //            .OrderByDescending(x => x.AntrianResep)
+        //            .FirstOrDefaultAsync(ct);
+
+        //        var nextAntrian = (lastResep?.AntrianResep ?? 0) + 1;
+
+        //        var resepTebusId = Guid.NewGuid();
+        //        var kasirId = Guid.NewGuid();
+
+        //        var invoiceBilling = $"RT-{todayText}-{nextAntrian:D4}";
+        //        var noBill = $"BILL-RT-{todayText}-{nextAntrian:D4}";
+
+        //        var resepTebus = new ResepTebus
+        //        {
+        //            ResepTebusId = resepTebusId,
+
+        //            AntrianResep = nextAntrian,
+        //            NamaPenebus = vm.NamaPenebus,
+        //            NoResepLuar = vm.NoResepLuar,
+        //            AsalFaskes = vm.AsalFaskes,
+        //            NoHpPenebus = vm.NoHpPenebus,
+
+        //            GudangUnitId = gudangUnitId,
+        //            InstalasiUnitId = instalasiUnitId,
+        //            JenisLayanan = vm.JenisLayanan ?? "RESEP_TEBUS",
+
+        //            StatusPembuatanResep = vm.StatusPembuatanResep ?? "Reserved",
+        //            StatusPengambilan = false,
+        //            IsCancelled = false,
+        //            IsLunas = false,
+
+        //            TotalHargaResep = 0,
+        //            TanggalLunas = null,
+        //            PetugasFarmasiId = vm.PetugasFarmasiId ?? userActive.UserActiveId,
+        //            TanggalPembuatanResep = DateTime.UtcNow,
+
+        //            CreateBy = userActive.UserActiveId,
+        //            CreateDateTime = DateTimeOffset.UtcNow,
+        //            IsDelete = false
+        //        };
+
+        //        _applicationDbContext.ResepTebuss.Add(resepTebus);
+
+        //        decimal totalHargaResep = 0;
+        //        int billingIndex = 0;
+
+        //        foreach (var item in vm.DaftarObat.Where(x => x.IsRacikan != true))
+        //        {
+        //            if (item.ObatId == null)
+        //                throw new InvalidOperationException("ObatId wajib diisi.");
+
+        //            var obatId = item.ObatId.Value;
+        //            var qty = item.Qty ?? 0;
+
+        //            if (qty <= 0)
+        //                throw new InvalidOperationException("Qty obat harus lebih dari 0.");
+
+        //            var obat = await _applicationDbContext.Obats
+        //                .AsNoTracking()
+        //                .FirstOrDefaultAsync(x =>
+        //                    x.ObatId == obatId &&
+        //                    (x.IsDelete == false || x.IsDelete == null),
+        //                    ct);
+
+        //            if (obat == null)
+        //                throw new InvalidOperationException($"Obat tidak ditemukan: {obatId}");
+
+        //            var obatUnitId = await ReserveObatUnitAsync(
+        //                obatId,
+        //                gudangUnitId,
+        //                qty,
+        //                userActive.UserActiveId,
+        //                ct);
+
+        //            var harga = item.HargaObat ?? obat.HTEPrice;
+        //            var subTotal = harga * qty;
+
+        //            totalHargaResep += subTotal;
+
+        //            var detail = new ResepTebusDetail
+        //            {
+        //                ResepTebusDetailId = Guid.NewGuid(),
+        //                ResepTebusId = resepTebusId,
+
+        //                RacikanId = item.RacikanId,
+        //                IsRacikan = false,
+
+        //                ObatId = obatId,
+        //                ObatUnitId = obatUnitId,
+        //                InstalasiUnitId = instalasiUnitId,
+
+        //                Qty = qty,
+
+        //                Signa = item.Signa,
+        //                SignaTambahan = item.SignaTambahan,
+        //                HargaObat = harga,
+
+        //                CreateBy = userActive.UserActiveId,
+        //                CreateDateTime = DateTimeOffset.UtcNow,
+        //                IsDelete = false
+        //            };
+
+        //            _applicationDbContext.ResepTebusDetails.Add(detail);
+
+        //            billingIndex++;
+
+        //            var billing = new Billing
+        //            {
+        //                BillingId = Guid.NewGuid(),
+
+        //                KunjunganId = null,
+        //                ResepTebusId = resepTebusId,
+
+        //                BillingDate = DateTime.UtcNow,
+        //                BillingKode = $"{billingIndex:D3}",
+        //                InvoiceBilling = invoiceBilling,
+
+        //                IsListWhiteOff = false,
+
+        //                ItemId = obatId,
+        //                NamaItem = obat.ObatName,
+        //                HargaItem = harga,
+        //                QtyItem = qty,
+        //                SubTotalItem = subTotal,
+
+        //                JenisBilling = "Obat",
+
+        //                StatusPengambilan = false,
+        //                StatusBilling = false,
+
+        //                TanggalInvoice = DateTime.UtcNow,
+        //                TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
+
+        //                CreateBy = userActive.UserActiveId,
+        //                CreateDateTime = DateTimeOffset.UtcNow,
+        //                IsDelete = false
+        //            };
+
+        //            _applicationDbContext.Billings.Add(billing);
+        //        }
+
+        //        resepTebus.TotalHargaResep = totalHargaResep;
+
+        //        var mainKasir = new MainKasir
+        //        {
+        //            KasirId = kasirId,
+
+        //            KunjunganId = null,
+        //            ResepTebusId = resepTebusId,
+
+        //            StatusPembayaran = "Belum Lunas",
+
+        //            NoBill = noBill,
+        //            InvoiceBilling = invoiceBilling,
+
+        //            TotalBiayaObat = totalHargaResep,
+        //            IsVerified = false,
+
+        //            Keterangan = $"Kasir resep tebus untuk {vm.NamaPenebus}",
+
+        //            CreateBy = userActive.UserActiveId,
+        //            CreateDateTime = DateTimeOffset.UtcNow,
+        //        };
+
+        //        _applicationDbContext.MainKasirs.Add(mainKasir);
+
+        //        var saved = await _applicationDbContext.SaveChangesAsync(ct);
+
+        //        if (saved <= 0)
+        //        {
+        //            await trx.RollbackAsync(ct);
+        //            return StatusCode(500, new { message = "Data tidak berhasil disimpan." });
+        //        }
+
+        //        await trx.CommitAsync(ct);
+
+        //        return Created("", new
+        //        {
+        //            message = "Resep tebus berhasil dibuat, billing dan header kasir berhasil dibuat.",
+        //            resepTebusId = resepTebus.ResepTebusId,
+        //            kasirId = mainKasir.KasirId,
+        //            invoiceBilling,
+        //            noBill,
+        //            antrianResep = resepTebus.AntrianResep,
+        //            gudangUnitId = resepTebus.GudangUnitId,
+        //            instalasiUnitId = resepTebus.InstalasiUnitId,
+        //            totalHargaResep = resepTebus.TotalHargaResep,
+        //            statusPembayaran = mainKasir.StatusPembayaran,
+        //            statusBilling = mainKasir.StatusBilling
+        //        });
+        //    }
+        //    catch (InvalidOperationException ex)
+        //    {
+        //        await trx.RollbackAsync(ct);
+        //        return BadRequest(new { message = ex.Message });
+        //    }
+        //    catch (DbUpdateException dbEx)
+        //    {
+        //        await trx.RollbackAsync(ct);
+        //        return StatusCode(500, new
+        //        {
+        //            message = $"Gagal menyimpan data: {dbEx.InnerException?.Message ?? dbEx.Message}"
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        await trx.RollbackAsync(ct);
+        //        return StatusCode(500, new
+        //        {
+        //            message = $"Terjadi kesalahan internal: {ex.Message}"
+        //        });
+        //    }
+        //}
+    
+    
+    
     }
 }

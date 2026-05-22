@@ -9,5 +9,10 @@ namespace QuilvianSystemBackendDev.Interfaces
             string? jenisBilling,
             Guid? itemId = null,
             CancellationToken ct = default);
+
+        Task RefreshCoverageBillingByKunjunganAsync(
+            Guid kunjunganId,
+            Guid userActiveId,
+            CancellationToken ct = default);
     }
 }

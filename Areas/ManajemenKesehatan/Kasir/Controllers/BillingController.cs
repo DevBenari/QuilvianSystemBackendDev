@@ -180,6 +180,31 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             return Ok(new { message = "Status covered item berhasil diperbarui." });
         }
 
+        [HttpPut("{id}/AsuransiExcess-CoveredBilling")]
+        public async Task<IActionResult> UpdateAsuransiExcessCoveredBilling(Guid id, [FromBody] UpdateAsuransiExcessBillingViewModel request)
+        {
+            var data = await _applicationDbContext.Billings.FindAsync(id);
+            if (data == null)
+                return NotFound(new { message = "Billing tidak ditemukan." });
+
+            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(EmailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == EmailLogin);
+            var userId = user?.UserActiveId ?? Guid.Empty;
+
+            data.IsCoveredExcess = request.IsCoveredExcess;
+            data.UpdateDateTime = DateTimeOffset.UtcNow;
+            data.UpdateBy = userId;
+
+            _applicationDbContext.Billings.Update(data);
+
+            _applicationDbContext.SaveChanges();
+
+            return Ok(new { message = "Status covered exess item berhasil diperbarui." });
+        }
+
         [HttpGet("GetBillingByKunjunganId/{kunjunganId}")]
         public async Task<IActionResult> GetBillingByKunjunganId(Guid kunjunganId, CancellationToken ct)
         {

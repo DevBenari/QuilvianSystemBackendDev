@@ -63,13 +63,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
+                             NamaGudang = a.Gudang.NamaGudang ?? null,
+                             
+                             a.InstalasiUnitId,
+                             NamaInstalasiUnit = a.InstalasiUnit.NamaInstalasiUnit ?? null,
                              a.GudangUnitId,
-                             a.GudangId,
-                             a.ObatId,
-                             a.StockGudangUnit,
-                             a.MinStockGudangUnit,
-                             a.MaxStockGudangUnit,
-                             a.StockPenyanggaGudangUnit,
+                             a.NamaGudangUnit,
+                             a.KodeGudangUnit,
                              a.Keterangan,
                          }).OrderByDescending(a => a.CreateDateTime);
 
@@ -163,11 +163,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     GudangUnitId = Guid.NewGuid(),
                     GudangId = vm.GudangId,
-                    ObatId = vm.ObatId,
-                    StockGudangUnit = vm.StockGudangUnit,
-                    MinStockGudangUnit = vm.MinStockGudangUnit,
-                    MaxStockGudangUnit = vm.MaxStockGudangUnit,
-                    StockPenyanggaGudangUnit = vm.StockPenyanggaGudangUnit,
+                    InstalasiUnitId = vm.InstalasiUnitId,
+                    NamaGudangUnit = vm.NamaGudangUnit,
+                    KodeGudangUnit = vm.KodeGudangUnit,
                     Keterangan = vm.Keterangan,
 
                     CreateBy = userActiveId,
@@ -237,11 +235,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 // **Update Data**
                 data.GudangId = vm.GudangId;
-                data.ObatId = vm.ObatId;
-                data.StockGudangUnit = vm.StockGudangUnit;
-                data.MinStockGudangUnit = vm.MinStockGudangUnit;
-                data.MaxStockGudangUnit = vm.MaxStockGudangUnit;
-                data.StockPenyanggaGudangUnit = vm.StockPenyanggaGudangUnit;
+                data.InstalasiUnitId = vm.InstalasiUnitId;
+                data.NamaGudangUnit = vm.NamaGudangUnit;
+                data.KodeGudangUnit = vm.KodeGudangUnit;
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
@@ -335,6 +331,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         int page = 1,
         int perPage = 10,
         string? search = null,
+        Guid? gudangId = null,
+        Guid? instalasiUnitId = null,
         string? orderBy = "CreateDateTime",
         string? sortDirection = "desc",
         [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
@@ -354,24 +352,37 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
-                             a.GudangUnitId,
                              a.GudangId,
-                             a.ObatId,
-                             a.StockGudangUnit,
-                             a.MinStockGudangUnit,
-                             a.MaxStockGudangUnit,
-                             a.StockPenyanggaGudangUnit,
+                             NamaGudang = a.Gudang.NamaGudang ?? null,
+                             a.GudangUnitId,
+                             a.InstalasiUnitId,
+                             NamaInstalasiUnit = a.InstalasiUnit.NamaInstalasiUnit ?? null,
+                             a.NamaGudangUnit,
+                             a.KodeGudangUnit,
                              a.Keterangan,
                          });
 
+            if (gudangId.HasValue)
+            {
+                query = query.Where(u=>u.GudangId == gudangId.Value);
+            }
+
+
+            if (instalasiUnitId.HasValue)
+            {
+                query = query.Where(u=>u.InstalasiUnitId == instalasiUnitId.Value);
+            }
+
             // **Filter berdasarkan search (Perbaikan agar bisa mencari 1 huruf)**
-            //if (!string.IsNullOrWhiteSpace(search))
-            //{
-            //    search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
-            //    query = query.Where(u =>
-            //        EF.Functions.ILike(u.NamaDiskon, search)
-            //    );
-            //}
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
+                query = query.Where(u =>
+                    EF.Functions.ILike(u.NamaGudangUnit, search) ||
+                    EF.Functions.ILike(u.NamaGudang, search) ||
+                    EF.Functions.ILike(u.NamaInstalasiUnit, search)
+                );
+            }
 
             //// **Filter berdasarkan tanggal**
             if (startDate.HasValue && endDate.HasValue)

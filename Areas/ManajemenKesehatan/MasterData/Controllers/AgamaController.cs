@@ -95,7 +95,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             // Return hasil dengan paging info
             return Ok(new
             {
-                message = "Berhasil || 200 OK",
+                message = "Berhasil Tampilkan Data",
                 data = listdata,
                 pagination = new
                 {

@@ -1,8 +1,10 @@
-﻿using System.Globalization;
+﻿using System.Data;
+using System.Globalization;
 using System.Linq;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
 using Microsoft.AspNet.SignalR.Client.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
@@ -21,7 +23,9 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Interfaces;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Services;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewModels;
 using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
@@ -46,7 +50,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly IHubContext<KunjunganHub> _hubContext;
         private readonly IDepositRanapNumberService _depositRanapNumberService;
-
+        private readonly IKunjunganAdminBillingService _kunjunganAdminBillingService;
+        private readonly IConfiguration _configuration;
+        private readonly IKunjunganNoRegistrasiService _kunjunganNoRegistrasiService;
+        private readonly INoBillService _noBillService;
+        private readonly IAsuransiCoverageService _asuransiCoverageService;
 
         public KunjunganController
         (
@@ -57,7 +65,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             ILogger<KunjunganController> logger,
             IWebHostEnvironment webHostEnvironment,
             IHubContext<KunjunganHub> hubContext,
-            IDepositRanapNumberService depositRanapNumberService
+            IDepositRanapNumberService depositRanapNumberService,
+            IKunjunganAdminBillingService kunjunganAdminBillingService,
+            IConfiguration configuration,
+            IKunjunganNoRegistrasiService kunjunganNoRegistrasiService,
+            INoBillService noBillService,
+            IAsuransiCoverageService asuransiCoverageService
 
         )
         {
@@ -69,6 +82,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             _hubContext = hubContext;
             _generateInvoiceBillingService = generateInvoiceBillingService;
             _depositRanapNumberService = depositRanapNumberService;
+            _kunjunganAdminBillingService = kunjunganAdminBillingService;
+            _configuration = configuration;
+            _kunjunganNoRegistrasiService = kunjunganNoRegistrasiService;
+            _noBillService = noBillService;
+            _asuransiCoverageService = asuransiCoverageService;
+
         }
         private DateTime? TryParseTanggalLahir(string dateString)
         {
@@ -80,6 +99,24 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                 out DateTime parsedDate))
             {
                 return DateTime.SpecifyKind(parsedDate, DateTimeKind.Utc);
+            }
+
+            return null;
+        }
+
+        private static DateTime? GetTanggalKunjungan(Kunjungan kunjungan)
+        {
+            if (kunjungan == null)
+                return null;
+
+            if (kunjungan.TglMasuk.HasValue)
+            {
+                return kunjungan.TglMasuk.Value;
+            }
+
+            if (kunjungan.CreateDateTime != default)
+            {
+                return kunjungan.CreateDateTime.LocalDateTime;
             }
 
             return null;
@@ -213,7 +250,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
 
                         a.PasienId,
                         a.AsalKunjungan,
-
+                        a.NoRegistrasi,
                         NamaLengkap = a.Pasien != null
                             ? a.Pasien.NamaLengkap
                             : null,
@@ -593,6 +630,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         NoPolis = a.AsuransiPasien != null
                             ? a.AsuransiPasien.NoPolis
                             : null,
+                        a.NoRegistrasi,
 
                         // =====================
                         // ASURANSI EXCESS
@@ -642,6 +680,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
 
                         NamaPasien = a.Pasien != null
                             ? a.Pasien.NamaLengkap
+                            : null,
+
+                        NoKaryawan = a.Pasien != null
+                            ? a.Pasien.NoKaryawan
                             : null,
 
                         TanggalLahir = a.Pasien != null
@@ -836,7 +878,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateKunjunganPasien([FromBody] KunjunganViewModel request)
+        public async Task<IActionResult> CreateKunjunganPasien(
+            [FromBody] KunjunganViewModel request,
+            CancellationToken ct)
         {
             if (request == null || !request.PasienId.HasValue || request.PasienId == Guid.Empty)
             {
@@ -845,270 +889,308 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
 
             try
             {
-                var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(EmailLogin))
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(emailLogin))
                 {
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
                 }
 
-                var GetUserActive = _applicationDbContext.UserActives.AsNoTracking().FirstOrDefault(u => u.Email == EmailLogin);
-                var UserActiveId = GetUserActive?.UserActiveId ?? Guid.Empty;
+                var getUserActive = await _applicationDbContext.UserActives
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin, ct);
 
-                // Validasi tipe pasien
-                if (!new[] { "Rujukan", "Umum" }.Contains(request.TipePasien, StringComparer.OrdinalIgnoreCase))
+                var userActiveId = getUserActive?.UserActiveId ?? Guid.Empty;
+
+                if (userActiveId == Guid.Empty)
                 {
-                    return BadRequest(new { message = "Tipe pasien tidak valid. Gunakan hanya 'Rujukan' atau 'Umum'." });
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
                 }
 
-                // Validasi jenis kunjungan (default "Rawat Jalan" jika kosong/"string")
+                // Validasi tipe pasien
+                if (!new[] { "Rujukan", "Umum" }
+                    .Contains(request.TipePasien, StringComparer.OrdinalIgnoreCase))
+                {
+                    return BadRequest(new
+                    {
+                        message = "Tipe pasien tidak valid. Gunakan hanya 'Rujukan' atau 'Umum'."
+                    });
+                }
+
+                // Validasi jenis kunjungan
                 var inputJenis = string.IsNullOrWhiteSpace(request.JenisKunjungan) ||
                                  request.JenisKunjungan.Equals("string", StringComparison.OrdinalIgnoreCase)
                     ? "Rawat Jalan"
                     : request.JenisKunjungan;
 
-                if (!new[] { "Rawat Inap", "Rawat Jalan" }.Contains(inputJenis, StringComparer.OrdinalIgnoreCase))
+                if (!new[] { "Rawat Inap", "Rawat Jalan" }
+                    .Contains(inputJenis, StringComparer.OrdinalIgnoreCase))
                 {
-                    return BadRequest(new { message = "Jenis kunjungan tidak valid. Gunakan hanya 'Rawat Inap' atau 'Rawat Jalan'." });
+                    return BadRequest(new
+                    {
+                        message = "Jenis kunjungan tidak valid. Gunakan hanya 'Rawat Inap' atau 'Rawat Jalan'."
+                    });
                 }
 
-                string kodeJenis = inputJenis == "Rawat Inap" ? "IP" : "OP";
+                string kodeJenis = inputJenis.Equals("Rawat Inap", StringComparison.OrdinalIgnoreCase)
+                    ? "IP"
+                    : "OP";
+
+                if (kodeJenis == "IP" &&
+                    (request.DepositRanap == null || request.DepositRanap <= 0))
+                {
+                    return BadRequest(new
+                    {
+                        message = "Kunjungan IP (rawat inap) wajib mengisi nominal deposit."
+                    });
+                }
+
                 var today = DateTime.UtcNow.Date;
+                var tomorrow = today.AddDays(1);
 
                 // =============================
-                // 🔎 Cek apakah pasien masih punya kunjungan aktif
+                // Cek apakah pasien masih punya kunjungan aktif
                 // =============================
-                bool isAlreadyRegistered = false;
+                bool isAlreadyRegistered;
 
                 if (kodeJenis == "OP")
                 {
-                    isAlreadyRegistered = _applicationDbContext.Kunjungans.Any(k =>
+                    isAlreadyRegistered = await _applicationDbContext.Kunjungans.AnyAsync(k =>
                         k.PasienId == request.PasienId &&
                         k.PoliklinikId == request.PoliklinikId &&
                         !k.IsDelete &&
                         k.IsFinished == false &&
                         k.IsFinishedKasir == false &&
                         k.JenisKunjungan == "OP" &&
-                        k.CreateDateTime.Date == today);
+                        k.CreateDateTime >= today &&
+                        k.CreateDateTime < tomorrow,
+                        ct);
                 }
-                else if (kodeJenis == "IP")
+                else
                 {
-                    isAlreadyRegistered = _applicationDbContext.Kunjungans.Any(k =>
+                    isAlreadyRegistered = await _applicationDbContext.Kunjungans.AnyAsync(k =>
                         k.PasienId == request.PasienId &&
                         !k.IsDelete &&
                         k.IsFinished == false &&
                         k.IsFinishedKasir == false &&
-                        k.JenisKunjungan == "IP");
+                        k.JenisKunjungan == "IP",
+                        ct);
                 }
 
                 if (isAlreadyRegistered)
                 {
-                    return BadRequest(new { message = "Pasien sudah terdaftar untuk kunjungan aktif yang belum selesai." });
+                    return BadRequest(new
+                    {
+                        message = "Pasien sudah terdaftar untuk kunjungan aktif yang belum selesai."
+                    });
                 }
 
                 // =============================
-                // 🩺 Penentuan Nomor Antrean
+                // Penentuan Nomor Antrean
                 // =============================
-                string nomorAntrianFormatted = null;
-                string kodePoli = null;
+                string? nomorAntrianFormatted = null;
+                string? kodePoli = null;
 
-                // Hanya generate antrean jika AsalKunjungan bukan IGD
                 if (!string.Equals(request.AsalKunjungan?.Trim(), "igd", StringComparison.OrdinalIgnoreCase))
                 {
-                    // Pastikan PoliklinikId ada
                     if (request.PoliklinikId == null || request.PoliklinikId == Guid.Empty)
                     {
-                        return BadRequest(new { message = "Poliklinik wajib dipilih untuk kunjungan non-IGD." });
+                        return BadRequest(new
+                        {
+                            message = "Poliklinik wajib dipilih untuk kunjungan non-IGD."
+                        });
                     }
 
-                    // Ambil kode antrean poli
-                    kodePoli = _applicationDbContext.Polikliniks
+                    kodePoli = await _applicationDbContext.Polikliniks
                         .Where(p => p.PoliklinikId == request.PoliklinikId)
                         .Select(p => p.KodeAntreanPoli)
-                        .FirstOrDefault();
+                        .FirstOrDefaultAsync(ct);
 
                     if (string.IsNullOrEmpty(kodePoli))
-                        return BadRequest(new { message = "Kode antrean poli tidak ditemukan untuk poliklinik ini!" });
+                    {
+                        return BadRequest(new
+                        {
+                            message = "Kode antrean poli tidak ditemukan untuk poliklinik ini!"
+                        });
+                    }
 
-                    // Hitung jumlah antrean hari ini
-                    var jumlahAntrianHariIni = _applicationDbContext.Kunjungans
-                        .Count(k => k.PoliklinikId == request.PoliklinikId &&
-                                    k.CreateDateTime.Date == today &&
-                                    !k.IsDelete);
+                    var jumlahAntrianHariIni = await _applicationDbContext.Kunjungans
+                        .CountAsync(k =>
+                            k.PoliklinikId == request.PoliklinikId &&
+                            k.CreateDateTime >= today &&
+                            k.CreateDateTime < tomorrow &&
+                            !k.IsDelete,
+                            ct);
 
                     int nomorAntrian = jumlahAntrianHariIni + 1;
                     nomorAntrianFormatted = $"{kodePoli}{nomorAntrian:000}";
                 }
 
                 // =============================
-                // 🔐 Generate ID unik untuk kunjungan
+                // Generate ID unik untuk kunjungan
                 // =============================
                 Guid newKunjunganId;
                 int attempt = 0;
+
                 do
                 {
                     newKunjunganId = Guid.NewGuid();
                     attempt++;
-                } while (await _applicationDbContext.Kunjungans.AnyAsync(k => k.KunjunganID == newKunjunganId) && attempt < 5);
+                }
+                while (await _applicationDbContext.Kunjungans
+                           .AnyAsync(k => k.KunjunganID == newKunjunganId, ct)
+                       && attempt < 5);
 
-                if (await _applicationDbContext.Kunjungans.AnyAsync(k => k.KunjunganID == newKunjunganId))
+                if (await _applicationDbContext.Kunjungans
+                        .AnyAsync(k => k.KunjunganID == newKunjunganId, ct))
                 {
-                    return StatusCode(500, new { message = "Gagal membuat KunjunganID unik. Silakan coba lagi." });
+                    return StatusCode(500, new
+                    {
+                        message = "Gagal membuat KunjunganID unik. Silakan coba lagi."
+                    });
                 }
 
-                // =============================
-                // 💾 Simpan data kunjungan
-                // =============================
-                var newKunjungan = new Kunjungan
+                await using var trx = await _applicationDbContext.Database
+                    .BeginTransactionAsync(IsolationLevel.Serializable, ct);
+
+                try
                 {
-                    KunjunganID = newKunjunganId,
-                    PasienId = request.PasienId,
-                    DokterId = request.DokterId,
-                    PoliklinikId = request.PoliklinikId,
-                    AsuransiId = request.AsuransiId,
-                    AsuransiPasienId = request.AsuransiPasienId,
-                    AsuransiExcessId = request.AsuransiExcessId,
-                    JenisKunjungan = kodeJenis,
-                    CreateDateTime = DateTimeOffset.UtcNow,
-                    CreateBy = UserActiveId,
-                    NoRekamMedis = request.NoRekamMedis,
-                    TipePasien = request.TipePasien,
-                    TipePembayaran = request.TipePembayaran,
-                    IsFinished = false,
-                    IsDelete = false,
-                    IsScreening = false,
-                    IsPresent = true,
-                    IsFinishedKasir = false,
-                    IsTriage = false,
-                    IsCTTPasienIGD = false,
-                    IsClosed = false,
-                    Antrian = nomorAntrianFormatted, // null jika IGD
-                    AsalKunjungan = request.AsalKunjungan,
-                    TglMasuk = request.TglMasuk,
-                    CaraMasukRS = request.CaraMasukRS,
-                    KondisiKeluar = request.KondisiKeluar,
-                };
-
-                _applicationDbContext.Kunjungans.Add(newKunjungan);
-
-                // =============================
-                // 💰 Tambahkan Biaya Administrasi (jika ada)
-                // =============================
-                var biayaAdmin = await _applicationDbContext.BiayaAdministrasis
-                    .Where(b => b.BiayaAdministrasiKode == kodeJenis)
-                    .FirstOrDefaultAsync();
-
-                // Ambil / buat invoice sekali saja untuk semua billing yang akan dibuat
-                var invoice = await _generateInvoiceBillingService.GetOrCreateAsync(
-                    newKunjungan.KunjunganID,
-                    DateTime.UtcNow
-                );
-
-                // Jika ada biaya admin, tambahkan billingnya
-                if (biayaAdmin != null)
-                {
-                    var bill = new Billing
+                    var noRegistrasi = await _kunjunganNoRegistrasiService
+                        .GenerateNoRegistrasiAsync(ct);
+                    // =============================
+                    // Simpan data kunjungan
+                    // =============================
+                    var newKunjungan = new Kunjungan
                     {
-                        BillingId = Guid.NewGuid(),
-                        KunjunganId = newKunjungan.KunjunganID,
-                        ItemId = biayaAdmin.BiayaAdministrasiId,
-                        NamaItem = biayaAdmin.NamaBiayaAdministrasi,
-                        HargaItem = biayaAdmin.NominalBiayaAdministrasi,
-                        QtyItem = 1,
-                        SubTotalItem = biayaAdmin.NominalBiayaAdministrasi,
-
-                        InvoiceBilling = invoice,
-                        IsListWhiteOff = false,
-                        BillingKode = "001",
-                        JenisBilling = "Biaya Admin",
-                        StatusBilling = false,
-                        BillingDate = DateTime.UtcNow,
-                        TanggalInvoice = DateTime.UtcNow,
-                        TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
+                        KunjunganID = newKunjunganId,
+                        PasienId = request.PasienId,
+                        DokterId = request.DokterId,
+                        PoliklinikId = request.PoliklinikId,
+                        AsuransiId = request.AsuransiId,
+                        AsuransiPasienId = request.AsuransiPasienId,
+                        AsuransiExcessId = request.AsuransiExcessId,
+                        JenisKunjungan = kodeJenis,
+                        NoRegistrasi = noRegistrasi,
+                        NoRekamMedis = request.NoRekamMedis,
+                        TipePasien = request.TipePasien,
+                        TipePembayaran = request.TipePembayaran,
+                        IsFinished = false,
+                        IsDelete = false,
+                        IsScreening = false,
+                        IsPresent = true,
+                        IsFinishedKasir = false,
+                        IsTriage = false,
+                        IsCTTPasienIGD = false,
+                        IsClosed = false,
+                        Antrian = nomorAntrianFormatted,
+                        AsalKunjungan = request.AsalKunjungan,
+                        TglMasuk = request.TglMasuk,
+                        CaraMasukRS = request.CaraMasukRS,
+                        KondisiKeluar = request.KondisiKeluar,
                         CreateDateTime = DateTimeOffset.UtcNow,
-                        CreateBy = UserActiveId
+                        CreateBy = userActiveId,
                     };
 
-                    _applicationDbContext.Billings.Add(bill);
-                }
+                    _applicationDbContext.Kunjungans.Add(newKunjungan);
 
-                // =============================================
-                //  Deposit wajib untuk kunjungan IP
-                // =============================================
-                if (kodeJenis == "IP")
-                {
-                    // WARNING / VALIDASI
-                    if (request.DepositRanap == null || request.DepositRanap <= 0)
+                    await _applicationDbContext.SaveChangesAsync(ct);
+
+                    // =============================================
+                    // Deposit wajib untuk kunjungan IP / Rawat Inap
+                    // =============================================
+                    if (kodeJenis == "IP")
                     {
-                        // kamu bisa ganti dengan return sesuai pola API kamu (ProblemDetails / ModelState)
-                        return BadRequest(new
+                        var noKwitansi = await _depositRanapNumberService.GenerateNoKwitansiAsync();
+
+                        var depo = new DepositRanap
                         {
-                            message = "Kunjungan IP (rawat inap) wajib mengisi nominal deposit. "
-                        });
+                            DepositRanapId = Guid.NewGuid(),
+                            KunjunganId = newKunjungan.KunjunganID,
+                            TglTransaksi = DateTime.UtcNow,
+                            NominalMasuk = request.DepositRanap,
+                            SaldoDeposit = request.DepositRanap,
+                            NoKwitansi = noKwitansi,
+                            StatusDeposit = "Pemasukkan",
+                            CreateDateTime = DateTimeOffset.UtcNow,
+                            CreateBy = userActiveId
+                        };
+
+                        _applicationDbContext.DepositRanaps.Add(depo);
+
+                        await _kunjunganAdminBillingService.ApplyBillingAdmisiRanapBaruAsync(
+                                newKunjungan.KunjunganID,
+                                userActiveId,
+                                ct
+                        );
                     }
 
-                    var noKwitansi = await _depositRanapNumberService.GenerateNoKwitansiAsync();
+                    var noBill = await _noBillService.GenerateNoBillAsync(
+                        newKunjungan.KunjunganID,
+                        ct
+                    );
 
-                    var depo = new DepositRanap
+                    var kasir = new MainKasir
                     {
-                        DepositRanapId = Guid.NewGuid(),
+                        KasirId = Guid.NewGuid(),
                         KunjunganId = newKunjungan.KunjunganID,
-                        TglTransaksi = DateTime.UtcNow,
-                        NominalMasuk = request.DepositRanap,
-                        SaldoDeposit = request.DepositRanap,
-                        NoKwitansi = noKwitansi,
-                        StatusDeposit = "Pemasukkan",
-
-                        CreateDateTime = DateTimeOffset.UtcNow,
-                        CreateBy = UserActiveId
+                        StatusPembayaran = "Belum Lunas",
+                        NoBill = noBill,
+                        CreateDateTime = DateTime.UtcNow
                     };
 
-                    _applicationDbContext.DepositRanaps.Add(depo);
+                    _applicationDbContext.MainKasirs.Add(kasir);
 
-                }
+                    await _applicationDbContext.SaveChangesAsync(ct);
+                    await trx.CommitAsync(ct);
 
-                MainKasir kasir;
-                kasir = new MainKasir
-                {
-                    KasirId = Guid.NewGuid(),
-                    KunjunganId = newKunjungan.KunjunganID,
-                    StatusPembayaran = "Belum Lunas",
-                    CreateDateTime = DateTime.UtcNow
-                };
-                _applicationDbContext.MainKasirs.Add(kasir);
-                await _applicationDbContext.SaveChangesAsync();
-
-                // =============================
-                // 🔔 Kirim notifikasi SignalR
-                // =============================
-                await _hubContext.Clients.All.SendAsync("Kunjungan ditambah", new
-                {
-                    action = "create",
-                    kunjunganId = newKunjungan.KunjunganID,
-                    pasienId = request.PasienId,
-                    dokterId = request.DokterId,
-                    kasirId = kasir.KasirId,
-                    NomorAntrian = nomorAntrianFormatted
-                });
-
-                return Ok(new
-                {
-                    message = "Kunjungan baru berhasil ditambahkan.",
-                    data = new
+                    // =============================
+                    // Kirim notifikasi setelah commit berhasil
+                    // =============================
+                    await _hubContext.Clients.All.SendAsync("Kunjungan ditambah", new
                     {
-                        request.PasienId,
-                        request.DokterId,
-                        newKunjungan.KunjunganID,
-                        JenisKunjungan = inputJenis,
-                        NomorAntrian = nomorAntrianFormatted ?? "Tanpa antrean (IGD)",
-                        kasirId = kasir.KasirId
-                    }
+                        action = "create",
+                        kunjunganId = newKunjungan.KunjunganID,
+                        pasienId = request.PasienId,
+                        dokterId = request.DokterId,
+                        kasirId = kasir.KasirId,
+                        NomorAntrian = nomorAntrianFormatted
+                    }, ct);
+
+                    return Ok(new
+                    {
+                        message = "Kunjungan baru berhasil ditambahkan.",
+                        data = new
+                        {
+                            request.PasienId,
+                            request.DokterId,
+                            newKunjungan.KunjunganID,
+                            JenisKunjungan = inputJenis,
+                            NomorAntrian = nomorAntrianFormatted ?? "Tanpa antrean (IGD)",
+                            kasirId = kasir.KasirId
+                        }
+                    });
+                }
+                catch
+                {
+                    await trx.RollbackAsync(ct);
+                    throw;
+                }
+            }
+            catch (DbUpdateException dbEx)
+            {
+                return StatusCode(500, new
+                {
+                    message = $"Gagal menyimpan data: {dbEx.InnerException?.Message ?? dbEx.Message}"
                 });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = $"Terjadi kesalahan: {ex.Message}" });
+                return StatusCode(500, new
+                {
+                    message = $"Terjadi kesalahan: {ex.Message}"
+                });
             }
         }
+
 
         //[HttpPost]
         //public async Task<IActionResult> CreateKunjunganPasien([FromBody] KunjunganViewModel request)
@@ -1760,6 +1842,231 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
             return Ok(new { message = "Status TransferPasien berhasil diperbarui." });
         }
 
+        [HttpPut("{id}/Ubah-Asuransi")]
+        public async Task<IActionResult> UpdateAsuransiKunjungan(
+            Guid id,
+            [FromBody] UbahAsuransiViewModel vm,
+            CancellationToken ct)
+        {
+            if (vm == null)
+            {
+                return BadRequest(new { message = "Data tidak valid." });
+            }
+
+            await using var transaction = await _applicationDbContext.Database.BeginTransactionAsync(ct);
+
+            try
+            {
+                if (!await _applicationDbContext.Database.CanConnectAsync(ct))
+                {
+                    return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+                }
+
+                var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (string.IsNullOrEmpty(emailLogin))
+                {
+                    return Unauthorized(new { message = "User tidak terautentikasi!" });
+                }
+
+                var userActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin, ct);
+
+                if (userActive == null)
+                {
+                    return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+                }
+
+                var kunjungan = await _applicationDbContext.Kunjungans
+                    .FirstOrDefaultAsync(x =>
+                        x.KunjunganID == id &&
+                        !x.IsDelete,
+                        ct);
+
+                if (kunjungan == null)
+                {
+                    return NotFound(new { message = "Data kunjungan tidak ditemukan." });
+                }
+
+                if (!kunjungan.PasienId.HasValue || kunjungan.PasienId.Value == Guid.Empty)
+                {
+                    return BadRequest(new { message = "PasienId pada kunjungan tidak valid." });
+                }
+
+                // =====================================================
+                // VALIDASI BATAS WAKTU UBAH ASURANSI
+                // =====================================================
+                //var tanggalKunjungan = GetTanggalKunjungan(kunjungan);
+
+                //if (!tanggalKunjungan.HasValue)
+                //{
+                //    return BadRequest(new
+                //    {
+                //        message = "Tanggal kunjungan tidak ditemukan, perubahan asuransi tidak dapat dilakukan."
+                //    });
+                //}
+
+                //var tanggalKunjunganDate = tanggalKunjungan.Value.Date;
+
+                //// Boleh ubah sampai H+2 jam 23:59:59
+                //var batasAkhirPerubahan = tanggalKunjunganDate
+                //    .AddDays(2)
+                //    .AddDays(1)
+                //    .AddTicks(-1);
+
+                //var now = DateTime.Now;
+
+                //if (now > batasAkhirPerubahan)
+                //{
+                //    return BadRequest(new
+                //    {
+                //        alert = true,
+                //        message = "Perubahan asuransi hanya dapat dilakukan maksimal 2 hari dari tanggal kunjungan.",
+                //        tanggalKunjungan = tanggalKunjunganDate,
+                //        batasAkhirPerubahan,
+                //        waktuSekarang = now
+                //    });
+                //}
+
+                var oldAsuransiId = kunjungan.AsuransiId;
+                var oldAsuransiPasienId = kunjungan.AsuransiPasienId;
+                var oldTipePembayaran = kunjungan.TipePembayaran;
+
+                Guid? finalAsuransiPasienId = null;
+
+                // =====================================================
+                // JIKA ASURANSI NULL / EMPTY => UBAH KE MANDIRI
+                // =====================================================
+                if (!vm.AsuransiId.HasValue || vm.AsuransiId.Value == Guid.Empty)
+                {
+                    kunjungan.AsuransiId = null;
+                    kunjungan.AsuransiPasienId = null;
+                    kunjungan.TipePembayaran = "Mandiri";
+                }
+                else
+                {
+                    // =====================================================
+                    // VALIDASI ASURANSI MASTER
+                    // =====================================================
+                    var asuransi = await _applicationDbContext.Asuransis
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(x =>
+                            x.AsuransiId == vm.AsuransiId.Value &&
+                            (x.IsDelete == false || x.IsDelete == null),
+                            ct);
+
+                    if (asuransi == null)
+                    {
+                        return BadRequest(new
+                        {
+                            message = "Asuransi tidak ditemukan atau sudah tidak aktif."
+                        });
+                    }
+
+                    // =====================================================
+                    // CEK APAKAH PASIEN SUDAH TERDAFTAR DI ASURANSI PASIEN
+                    // =====================================================
+                    var asuransiPasien = await _applicationDbContext.AsuransiPasiens
+                        .FirstOrDefaultAsync(x =>
+                            x.PasienId == kunjungan.PasienId.Value &&
+                            x.AsuransiId == vm.AsuransiId.Value &&
+                            x.NoPolis == vm.NoPolis &&
+                            (x.IsDelete == false || x.IsDelete == null),
+                            ct);
+
+                    if (asuransiPasien == null)
+                    {
+                        // =====================================================
+                        // JIKA BELUM ADA, DAFTARKAN KE ASURANSI PASIEN
+                        // =====================================================
+                        asuransiPasien = new AsuransiPasien
+                        {
+                            AsuransiPasienId = Guid.NewGuid(),
+                            PasienId = kunjungan.PasienId.Value,
+                            AsuransiId = vm.AsuransiId.Value,
+                            NoPolis = vm.NoPolis,
+
+                            CreateDateTime = DateTimeOffset.UtcNow,
+                            CreateBy = userActive.UserActiveId,
+                            IsDelete = false
+                        };
+
+                        _applicationDbContext.AsuransiPasiens.Add(asuransiPasien);
+                    }
+
+                    finalAsuransiPasienId = asuransiPasien.AsuransiPasienId;
+
+                    kunjungan.AsuransiId = vm.AsuransiId.Value;
+                    kunjungan.AsuransiPasienId = finalAsuransiPasienId;
+                    kunjungan.TipePembayaran = "Asuransi";
+                }
+
+                kunjungan.UpdateDateTime = DateTimeOffset.UtcNow;
+                kunjungan.UpdateBy = userActive.UserActiveId;
+
+                /*
+                 * Save dulu supaya AsuransiCoverageService membaca AsuransiId terbaru
+                 * dari tabel Kunjungan.
+                 */
+                await _applicationDbContext.SaveChangesAsync(ct);
+
+                await _asuransiCoverageService.RefreshCoverageBillingByKunjunganAsync(
+                    id,
+                    userActive.UserActiveId,
+                    ct
+                );
+
+                await _applicationDbContext.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
+
+                return Ok(new
+                {
+                    message = "Perubahan asuransi kunjungan berhasil.",
+                    data = new
+                    {
+                        kunjungan.KunjunganID,
+                        kunjungan.PasienId,
+
+                        before = new
+                        {
+                            AsuransiId = oldAsuransiId,
+                            AsuransiPasienId = oldAsuransiPasienId,
+                            TipePembayaran = oldTipePembayaran
+                        },
+
+                        after = new
+                        {
+                            kunjungan.AsuransiId,
+                            kunjungan.AsuransiPasienId,
+                            kunjungan.TipePembayaran
+                        },
+
+                        //tanggalKunjungan = tanggalKunjunganDate,
+                        //batasAkhirPerubahan
+                    }
+                });
+            }
+            catch (DbUpdateException dbEx)
+            {
+                await transaction.RollbackAsync(ct);
+
+                return StatusCode(500, new
+                {
+                    message = $"Gagal mengubah asuransi: {dbEx.InnerException?.Message}"
+                });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync(ct);
+
+                return StatusCode(500, new
+                {
+                    message = $"Terjadi kesalahan internal: {ex.Message}"
+                });
+            }
+        }
+
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
@@ -2311,6 +2618,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         NoPolis = a.AsuransiPasien != null
                             ? a.AsuransiPasien.NoPolis
                             : null,
+                        a.NoRegistrasi,
 
                         // =====================
                         // Asuransi excess
@@ -2368,6 +2676,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
 
                         NamaPasien = a.Pasien != null
                             ? a.Pasien.NamaLengkap
+                            : null,
+
+                        NoKaryawan = a.Pasien != null
+                            ? a.Pasien.NoKaryawan
                             : null,
 
                         TanggalLahir = a.Pasien != null
@@ -2768,10 +3080,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
                         r.NamaDokter,
 
                         r.PasienId,
+                        r.NoKaryawan,
                         r.AsalKunjungan,
                         r.NamaPasien,
                         r.TanggalLahir,
                         r.JenisKelamin,
+                        r.NoRegistrasi,
                         r.NoPasien,
                         r.NoWali1,
                         r.NoWali2,

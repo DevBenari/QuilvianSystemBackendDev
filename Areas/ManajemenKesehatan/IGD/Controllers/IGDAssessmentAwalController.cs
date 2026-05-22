@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using System.Linq;
 using System.Security.Claims;
+using System.Threading;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
@@ -9,10 +10,13 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Interfaces;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
 using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
@@ -34,6 +38,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
         private readonly string _uploadUrl;
         private readonly ITTDService _ttdService;
         private readonly IHubContext<IGDAssessmentAwalHub> _hubContext;
+        private readonly IKunjunganAdminBillingService _kunjunganAdminBillingService;
+        private readonly IConfiguration _configuration;
 
         public IGDAssessmentAwalController(
             ApplicationDbContext applicationDbContext,
@@ -43,7 +49,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
             IWebHostEnvironment webHostEnvironment,
             IConfiguration configuration,
             IHubContext<IGDAssessmentAwalHub> hubContext,
-            ITTDService ttdService)
+            ITTDService ttdService,
+            IKunjunganAdminBillingService kunjunganAdminBillingService
+            )
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
@@ -53,6 +61,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
             _uploadUrl = configuration["FileStorage:UploadUrl"];
             _hubContext = hubContext;
             _ttdService = ttdService;
+            _kunjunganAdminBillingService = kunjunganAdminBillingService;
+            _configuration = configuration;
         }
 
         // ====================== GET ALL ======================
@@ -152,10 +162,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
         // ====================== CREATE ======================
         [HttpPost]
-        public async Task<IActionResult> Create([FromForm] IGDAssessmentAwalViewModel vm)
+        public async Task<IActionResult> Create([FromForm] IGDAssessmentAwalViewModel vm, CancellationToken ct)
         {
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
+
+            await using var transaction = await _applicationDbContext.Database.BeginTransactionAsync(ct);
 
             try
             {
@@ -166,19 +178,19 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                 if (string.IsNullOrEmpty(emailLogin))
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
 
-                var user = await _applicationDbContext.UserActives.FirstOrDefaultAsync(u => u.Email == emailLogin);
+                var user = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin, ct);
+
                 if (user == null)
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
 
-                // cek ttd
                 var ttd = await _ttdService.CheckTTDAsync(user.UserActiveId);
 
-
-                // ✅ Upload Gambar Penandaan jika ada
                 var gambarPath = "";
+
                 if (vm.GambarPenandaan != null && vm.GambarPenandaan.Length > 0)
                 {
-                    var maxSize = 1 * 1024 * 1024; // max 1MB
+                    var maxSize = 1 * 1024 * 1024;
                     var allowedExt = new List<string> { ".jpg", ".jpeg" };
                     var ext = Path.GetExtension(vm.GambarPenandaan.FileName).ToLower();
 
@@ -194,27 +206,36 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
 
                     using var client = new HttpClient();
                     using var ms = new MemoryStream();
-                    await vm.GambarPenandaan.CopyToAsync(ms);
+
+                    await vm.GambarPenandaan.CopyToAsync(ms, ct);
                     ms.Position = 0;
 
-                    var content = new MultipartFormDataContent {
-                        { new StreamContent(ms) {
-                            Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.GambarPenandaan.ContentType) }
-                        }, "file", fileName },
+                    var content = new MultipartFormDataContent
+                    {
+                        {
+                            new StreamContent(ms)
+                            {
+                                Headers =
+                                {
+                                    ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(vm.GambarPenandaan.ContentType)
+                                }
+                            },
+                            "file",
+                            fileName
+                        },
                         { new StringContent("GambarPenandaanIGD"), "folderTarget" }
                     };
 
-                    var response = await client.PostAsync(_uploadUrl, content);
-                    if (!response.IsSuccessStatusCode)
-                        return StatusCode(500, new { message = "Gagal upload tanda tangan ke Flask." });
+                    var response = await client.PostAsync(_uploadUrl, content, ct);
 
-                    var body = await response.Content.ReadAsStringAsync();
+                    if (!response.IsSuccessStatusCode)
+                        return StatusCode(500, new { message = "Gagal upload gambar penandaan ke Flask." });
+
+                    var body = await response.Content.ReadAsStringAsync(ct);
                     dynamic json = JsonConvert.DeserializeObject(body);
                     gambarPath = json?.url ?? json?.fileUrl ?? json?.path ?? "";
                 }
 
-                
-                // ✅ Simpan ke database
                 var data = new IGDAssessmentAwal
                 {
                     AssessmentAwalIGD = Guid.NewGuid(),
@@ -237,24 +258,38 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.Controllers
                     HasilAlloanamnesis = vm.HasilAlloanamnesis,
 
                     CreateBy = user.UserActiveId,
-                    CreateDateTime = DateTimeOffset.UtcNow
+                    CreateDateTime = DateTimeOffset.UtcNow,
+                    IsDelete = false
                 };
 
                 _applicationDbContext.IGDAssessmentAwals.Add(data);
-                await _applicationDbContext.SaveChangesAsync();
+
+                await _kunjunganAdminBillingService.ApplyAdminIGDAsync(
+                    data.KunjunganId,
+                    user.UserActiveId,
+                    ct
+                );
+
+                await _applicationDbContext.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
 
                 await _hubContext.Clients.All.SendAsync("IGD Assessment awal Created", new
                 {
                     Action = "create",
                     data = data.AssessmentAwalIGD,
                     ttdId = ttd.TTDId
-                });
+                }, ct);
 
                 return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
+                await transaction.RollbackAsync(ct);
+
+                return StatusCode(500, new
+                {
+                    message = $"Terjadi kesalahan internal: {ex.Message}"
+                });
             }
         }
 

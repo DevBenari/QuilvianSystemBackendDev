@@ -107,8 +107,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     LayananId = vm.LayananId,
                     KodeLayanan = vm.KodeLayanan,
                     KategoriLayanan = vm.KategoriLayanan,
-                    MaxHarga = vm.MaxHarga,
-                    MaxQty = vm.MaxQty,
+                    HargaItem = vm.HargaItem,
+                    KelasId = vm.KelasId,
                     Keterangan = vm.Keterangan,
                     
                     CreateBy = userActiveId,
@@ -183,8 +183,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 existingData.LayananId = vm.LayananId;
                 existingData.KodeLayanan = vm.KodeLayanan;
                 existingData.KategoriLayanan = vm.KategoriLayanan;
-                existingData.MaxHarga = vm.MaxHarga;
-                existingData.MaxQty = vm.MaxQty;
+                existingData.HargaItem = vm.HargaItem;
+                existingData.KelasId = vm.KelasId;
                 existingData.Keterangan = vm.Keterangan;
 
                 // **Audit Fields untuk Update**
@@ -304,8 +304,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.LayananId,
                             a.KodeLayanan,
                             a.KategoriLayanan,
-                            a.MaxHarga,
-                            a.MaxQty,
+                            a.HargaItem,
+                            a.KelasId,
                             a.Keterangan,
                         };
 

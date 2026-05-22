@@ -1,16 +1,20 @@
 ﻿using System.Security.Claims;
+using Microsoft.AspNet.SignalR.Client.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using OpenCvSharp;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Tindakan.Models;
 using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
@@ -32,6 +36,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         private readonly ILogger<TindakanKunjunganController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly IAsuransiCoverageService _asuransiCoverageService;
+        private readonly IHubContext<TindakanKunjunganHub> _hubContext;
 
         public TindakanKunjunganController(
             ApplicationDbContext applicationDbContext,
@@ -40,7 +45,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             ILogger<TindakanKunjunganController> logger,
             IWebHostEnvironment webHostEnvironment,
             IGenerateInvoiceBillingService generateInvoiceBillingService,
-            IAsuransiCoverageService asuransiCoverageService)
+            IAsuransiCoverageService asuransiCoverageService,
+            IHubContext<TindakanKunjunganHub> hubContext)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
@@ -49,6 +55,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             _webHostEnvironment = webHostEnvironment;
             _generateInvoiceBillingService = generateInvoiceBillingService;
             _asuransiCoverageService = asuransiCoverageService;
+            _hubContext = hubContext;
         }
 
 
@@ -86,6 +93,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                             a.TanggalPemeriksaan,
                             a.Disposition,
                             a.TipeLayanan,
+                            a.IsFoC,
                             a.Keterangan,
                         }).OrderByDescending(a => a.CreateDateTime);
 
@@ -221,6 +229,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                     Total = totalqty, // Masukkan nilai Total yang telah dihitung
                     TipeLayanan = vm.TipeLayanan,
                     TanggalPemeriksaan = vm.TanggalPemeriksaan,
+                    IsFoC = vm.IsFoC,
                     Keterangan = vm.Keterangan,
                     Disposition = vm.Disposition,
                     CreateBy = userActiveId,
@@ -292,6 +301,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 if (result > 0)
                 {
+                    // Notifikasi SignalR
+                    await _hubContext.Clients.All.SendAsync("TindakanKunjungan Added", new
+                    {
+                        action = "AddTindakanKunjungan",
+                    });
+
                     return Created("", new { message = "Tambah Data Berhasil || 201 Created" });
                 }
                 else
@@ -390,6 +405,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 data.Total = totalqty;
                 data.TipeLayanan = vm.TipeLayanan;
                 data.TanggalPemeriksaan = vm.TanggalPemeriksaan;
+                data.IsFoC = vm.IsFoC;
                 data.Disposition = vm.Disposition;
                 data.Keterangan = vm.Keterangan;
 
@@ -475,6 +491,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 if (result > 0)
                 {
+                    // Notifikasi SignalR
+                    await _hubContext.Clients.All.SendAsync("TindakanKunjungan Changed", new
+                    {
+                        action = "EditTindakanKunjungan",
+                    });
+
                     return Ok(new { message = "Update Data Berhasil || 200 OK" });
                 }
                 else
@@ -490,6 +512,36 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             {
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
+        }
+
+        [HttpPut("{id}/is-FoC")]
+        public async Task<IActionResult> UpdateIsCTTPasienIGD(Guid id, [FromBody] UpdateIsFoCViewModel request)
+        {
+            var kunjungan = await _applicationDbContext.TindakanKunjungans.FindAsync(id);
+            if (kunjungan == null)
+                return NotFound(new { message = "Kunjungan tidak ditemukan." });
+
+            var EmailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(EmailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var user = _applicationDbContext.UserActives.AsNoTracking().FirstOrDefault(u => u.Email == EmailLogin);
+            var userId = user?.UserActiveId ?? Guid.Empty;
+
+            kunjungan.IsFoC = request.IsFoC;
+            kunjungan.UpdateDateTime = DateTimeOffset.UtcNow;
+            kunjungan.UpdateBy = userId;
+            await _applicationDbContext.SaveChangesAsync();
+
+            // Notifikasi SignalR
+            await _hubContext.Clients.All.SendAsync("IsFoC Changed", new
+            {
+                action = "updateIsFoC",
+                kunjunganId = kunjungan.KunjunganId,
+                IsFoC = request.IsFoC
+            });
+
+            return Ok(new { message = "Status IsCTTPasienIGD berhasil diperbarui." });
         }
 
         [HttpDelete("{id}")]
@@ -707,6 +759,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                         a.Total,
                         a.TanggalPemeriksaan,
                         a.TipeLayanan,
+                        a.IsFoC,
                         a.Keterangan,
                     };
 

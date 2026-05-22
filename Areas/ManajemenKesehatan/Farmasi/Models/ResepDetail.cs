@@ -16,6 +16,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models
         public bool? IsRacikan { get; set; } // "Ya" or "Tidak"
         public string? NamaAsuransi { get; set; }
         public Guid? ObatId { get; set; }
+        public Guid? ObatUnitId { get; set; }
+        public Guid? InstalasiUnitId { get; set; }
         public int? Qty { get; set; }
         public decimal? TakaranDosis { get; set; }
         public string? JenisRacikan { get; set; }

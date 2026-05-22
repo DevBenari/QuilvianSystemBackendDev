@@ -18,5 +18,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models
         public decimal? Total { get; set; }
         public string? Disposition { get; set; }
         public string? Keterangan { get; set; }
+        public bool? IsFoC {  get; set; }
     }
 }

@@ -6,5 +6,6 @@
         public Guid? KunjunganId { get; set; }
         public Guid? PasienId { get; set; }
         public Guid? Approved1Id { get; set; }
+        public IFormFile? FormFile { get; set; }
     }
 }

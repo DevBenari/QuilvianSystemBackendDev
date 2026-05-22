@@ -99,38 +99,38 @@ public class AiController : ControllerBase
         var mime = string.IsNullOrWhiteSpace(request.KtpImage.ContentType) ? "image/jpeg" : request.KtpImage.ContentType;
 
         var promptText = @"
-            Tolong ekstrak semua informasi dari KTP berikut dan kembalikan dalam format JSON:
-            - Nama
-            - Tempat/Tanggal Lahir
-            - Jenis Kelamin
-            - Alamat
-            - RT/RW
-            - Kelurahan/Desa
-            - Kecamatan
-            - Agama
-            - Status Perkawinan
-            - Pekerjaan
-            - Kewarganegaraan
-            - Nomor KTP
-            - Berlaku Hingga
+             Tolong ekstrak semua informasi dari KTP berikut dan kembalikan dalam format JSON:
+             - Nama
+             - Tempat/Tanggal Lahir
+             - Jenis Kelamin
+             - Alamat
+             - RT/RW
+             - Kelurahan/Desa
+             - Kecamatan
+             - Agama
+             - Status Perkawinan
+             - Pekerjaan
+             - Kewarganegaraan
+             - Nomor KTP
+             - Berlaku Hingga
 
-            Output WAJIB JSON valid, tanpa markdown, tanpa ```.
-            ".Trim();
+             Output WAJIB JSON valid, tanpa markdown, tanpa ```.
+             ".Trim();
 
         var requestBody = new
         {
             model = cfg.model,
             messages = new object[]
             {
-                new
-                {
-                    role = "user",
-                    content = new object[]
-                    {
-                        new { type = "text", text = promptText },
-                        new { type = "image_url", image_url = new { url = $"data:{mime};base64,{base64}" } }
-                    }
-                }
+                 new
+                 {
+                     role = "user",
+                     content = new object[]
+                     {
+                         new { type = "text", text = promptText },
+                         new { type = "image_url", image_url = new { url = $"data:{mime};base64,{base64}" } }
+                     }
+                 }
             },
             temperature = 0
         };
