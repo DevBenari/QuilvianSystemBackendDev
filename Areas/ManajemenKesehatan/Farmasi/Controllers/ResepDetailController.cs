@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.HubSignalR;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Interfaces;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
@@ -33,6 +34,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         private readonly ILogger<ResepDetailController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly IHubContext<ResepDetailHub> _hubContext;
+        private readonly IResepStockService _resepStockService;
 
         public ResepDetailController(
             ApplicationDbContext applicationDbContext,
@@ -40,7 +42,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             SignInManager<ApplicationUser> signInManager,
             ILogger<ResepDetailController> logger,
             IWebHostEnvironment webHostEnvironment,
-            IHubContext<ResepDetailHub> hubContext
+            IHubContext<ResepDetailHub> hubContext,
+            IResepStockService resepStockService
             )
         {
             _applicationDbContext = applicationDbContext;
@@ -49,6 +52,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
             _hubContext = hubContext;
+            _resepStockService = resepStockService;
         }
 
         private DateTime? TryParseTanggalToUtc(string tanggal)
@@ -537,7 +541,103 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
-        
+
+        [HttpPut("{id}/PengambilanObatRanap")]
+        public async Task<IActionResult> UpdatePengambilanObatRanap(
+            Guid id,
+            [FromBody] StatusPengambilanObatViewModel request,
+            CancellationToken ct)
+        {
+            if (request == null)
+                return BadRequest(new { message = "Request tidak valid." });
+
+            if (request.Status != true)
+            {
+                return BadRequest(new
+                {
+                    message = "Status hanya boleh true untuk pemberian obat. Pembatalan harus melalui proses retur/koreksi."
+                });
+            }
+
+            if (request.WaktuPengambilan == null || !request.WaktuPengambilan.Any())
+            {
+                return BadRequest(new
+                {
+                    message = "Waktu pengambilan wajib dipilih minimal satu: PAGI, SIANG, atau MALAM."
+                });
+            }
+
+            var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrWhiteSpace(emailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var userActiveId = await _applicationDbContext.UserActives
+                .Where(x => x.Email == emailLogin)
+                .Select(x => (Guid?)x.UserActiveId)
+                .FirstOrDefaultAsync(ct);
+
+            if (!userActiveId.HasValue)
+                return Unauthorized(new { message = "User tidak ditemukan!" });
+
+            await using var transaction = await _applicationDbContext.Database
+                .BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
+
+            try
+            {
+                await _resepStockService.FinalizeRanapPemberianAsync(
+                    id,
+                    request.WaktuPengambilan,
+                    userActiveId.Value,
+                    ct);
+
+                var result = await _applicationDbContext.SaveChangesAsync(ct);
+
+                if (result <= 0)
+                {
+                    await transaction.RollbackAsync(ct);
+                    return StatusCode(500, new { message = "Data pemberian obat tidak berhasil disimpan." });
+                }
+
+                await transaction.CommitAsync(ct);
+
+                await _hubContext.Clients.All.SendAsync("PengambilanObatRanapChanged", new
+                {
+                    Action = "update",
+                    DetailResepId = id,
+                    WaktuPengambilan = request.WaktuPengambilan
+                }, ct);
+
+                return Ok(new
+                {
+                    message = "Pengambilan obat ranap berhasil dicatat dan stok berhasil dipotong.",
+                    detailResepId = id,
+                    waktuPengambilan = request.WaktuPengambilan
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                await transaction.RollbackAsync(ct);
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (DbUpdateException dbEx)
+            {
+                await transaction.RollbackAsync(ct);
+                return StatusCode(500, new
+                {
+                    message = $"Gagal menyimpan data: {dbEx.InnerException?.Message ?? dbEx.Message}"
+                });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync(ct);
+                return StatusCode(500, new
+                {
+                    message = $"Terjadi kesalahan internal: {ex.Message}"
+                });
+            }
+        }
+
         [HttpPut("{id}/IsStopped")]
         public async Task<IActionResult> UpdateStopObat(Guid id, [FromBody] StatusPengambilanObatViewModel request)
         {

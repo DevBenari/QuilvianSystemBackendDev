@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Text.RegularExpressions;
+using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Interfaces;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
 using QuilvianSystemBackendDev.Repositories;
@@ -18,14 +19,32 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Services
             _obatUnitStockService = obatUnitStockService;
         }
 
-        // ======================================================
-        // RAJAL: stok dipotong saat kasir lunas
-        // ======================================================
+        // =====================================================
+        // RAJAL / OP
+        // Stok dipotong saat kasir lunas.
+        // =====================================================
         public async Task FinalizeRajalByKunjunganAsync(
             Guid kunjunganId,
             Guid userActiveId,
             CancellationToken ct)
         {
+            var kunjungan = await _applicationDbContext.Kunjungans
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x =>
+                    x.KunjunganID == kunjunganId &&
+                    (x.IsDelete == false || x.IsDelete == null),
+                    ct);
+
+            if (kunjungan == null)
+                throw new InvalidOperationException("Kunjungan tidak ditemukan.");
+
+            if (!IsRawatJalan(kunjungan.JenisKunjungan))
+            {
+                // Kalau IP/RANAP, jangan potong stok di kasir.
+                // Stok ranap dipotong saat obat diberikan.
+                return;
+            }
+
             var reseps = await _applicationDbContext.Reseps
                 .Include(x => x.ResepDetails)
                 .Where(x =>
@@ -34,9 +53,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Services
                     x.IsCancelled != true &&
                     (x.IsDelete == false || x.IsDelete == null))
                 .ToListAsync(ct);
-
-            if (!reseps.Any())
-                return;
 
             foreach (var resep in reseps)
             {
@@ -53,6 +69,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Services
             CancellationToken ct)
         {
             var resep = await _applicationDbContext.Reseps
+                .Include(x => x.Kunjungan)
                 .Include(x => x.ResepDetails)
                 .FirstOrDefaultAsync(x =>
                     x.ResepId == resepId &&
@@ -63,6 +80,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Services
 
             if (resep == null)
                 throw new InvalidOperationException("Resep tidak ditemukan, sudah lunas, atau sudah dibatalkan.");
+
+            if (resep.Kunjungan == null)
+                throw new InvalidOperationException("Data kunjungan pada resep tidak ditemukan.");
+
+            if (!IsRawatJalan(resep.Kunjungan.JenisKunjungan))
+                throw new InvalidOperationException("Resep ini bukan resep rawat jalan, stok tidak boleh dipotong melalui kasir rajal.");
 
             await FinalizeRajalInternalAsync(
                 resep,
@@ -75,14 +98,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Services
             Guid userActiveId,
             CancellationToken ct)
         {
-            if (resep.ResepDetails.Any(x =>
-                    x.IsRacikan == true &&
-                    (x.IsDelete == false || x.IsDelete == null)))
-            {
-                throw new InvalidOperationException(
-                    "Finalisasi stok racikan belum didukung. RacikanDetail perlu menyimpan ObatUnitId komposisi racikan.");
-            }
-
             var details = resep.ResepDetails
                 .Where(x =>
                     x.IsRacikan != true &&
@@ -107,10 +122,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Services
                     userActiveId,
                     ct);
 
-                // Untuk RAJAL, kalau bayar = obat langsung diambil,
-                // status ini boleh dibuat true.
-                //detail.StatusPengambilanObat = true;
-                //detail.StatusDiberikanPasien = true;
+                // Kalau di flow Anda pembayaran = obat langsung diambil,
+                // boleh true-kan dua status ini.
+                // Kalau pengambilan obat punya endpoint terpisah, hapus 2 baris ini.
+                detail.StatusPengambilanObat = true;
+                detail.StatusDiberikanPasien = true;
 
                 detail.UpdateBy = userActiveId;
                 detail.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -123,23 +139,30 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Services
             resep.UpdateDateTime = DateTimeOffset.UtcNow;
         }
 
-        // ======================================================
-        // RANAP: stok dipotong saat obat diberikan
-        // ======================================================
+        // =====================================================
+        // RANAP / IP
+        // Stok dipotong saat obat diberikan.
+        // Bisa pilih pagi, siang, malam sekaligus.
+        // =====================================================
         public async Task FinalizeRanapPemberianAsync(
             Guid detailResepId,
-            string waktuPemberian,
-            int qtyDiberikan,
+            List<string> waktuPengambilan,
             Guid userActiveId,
             CancellationToken ct)
         {
-            if (qtyDiberikan <= 0)
-                throw new InvalidOperationException("QtyDiberikan wajib lebih dari 0.");
+            if (waktuPengambilan == null || !waktuPengambilan.Any())
+                throw new InvalidOperationException("Waktu pengambilan wajib dipilih.");
 
-            var waktu = (waktuPemberian ?? string.Empty).Trim().ToUpper();
+            var normalizedWaktu = waktuPengambilan
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Select(x => x.Trim().ToUpper())
+                .Distinct()
+                .ToList();
 
-            if (waktu != "PAGI" && waktu != "SIANG" && waktu != "MALAM")
-                throw new InvalidOperationException("Waktu pemberian hanya boleh PAGI, SIANG, atau MALAM.");
+            var allowed = new[] { "PAGI", "SIANG", "MALAM" };
+
+            if (normalizedWaktu.Any(x => !allowed.Contains(x)))
+                throw new InvalidOperationException("Waktu pengambilan hanya boleh PAGI, SIANG, atau MALAM.");
 
             var detail = await _applicationDbContext.DetailReseps
                 .Include(x => x.Resep)
@@ -162,42 +185,75 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Services
             if (detail.ObatUnitId == null)
                 throw new InvalidOperationException("ObatUnitId pada detail resep belum terisi.");
 
-            if (waktu == "PAGI")
-            {
-                if (detail.ObatPagiDiambil == true)
-                    throw new InvalidOperationException("Obat pagi sudah pernah diberikan.");
+            if (detail.Qty == null || detail.Qty <= 0)
+                throw new InvalidOperationException("Qty detail resep tidak valid.");
 
-                detail.ObatPagiDiambil = true;
+            var signaInfo = ParseSigna(detail.Signa);
+
+            var existingGivenCount = CountExistingGivenTimes(detail);
+
+            var waktuBaru = new List<string>();
+
+            foreach (var waktu in normalizedWaktu)
+            {
+                if (waktu == "PAGI")
+                {
+                    if (detail.ObatPagiDiambil == true)
+                        continue;
+
+                    detail.ObatPagiDiambil = true;
+                    waktuBaru.Add("PAGI");
+                }
+                else if (waktu == "SIANG")
+                {
+                    if (detail.ObatSiangDiambil == true)
+                        continue;
+
+                    detail.ObatSiangDiambil = true;
+                    waktuBaru.Add("SIANG");
+                }
+                else if (waktu == "MALAM")
+                {
+                    if (detail.ObatMalamDiambil == true)
+                        continue;
+
+                    detail.ObatMalamDiambil = true;
+                    waktuBaru.Add("MALAM");
+                }
             }
-            else if (waktu == "SIANG")
-            {
-                if (detail.ObatSiangDiambil == true)
-                    throw new InvalidOperationException("Obat siang sudah pernah diberikan.");
 
-                detail.ObatSiangDiambil = true;
+            if (!waktuBaru.Any())
+                throw new InvalidOperationException("Semua waktu yang dipilih sudah pernah diberikan.");
+
+            var totalGivenAfter = existingGivenCount + waktuBaru.Count;
+
+            if (totalGivenAfter > signaInfo.FrekuensiPerHari)
+            {
+                throw new InvalidOperationException(
+                    $"Jumlah waktu pemberian melebihi Signa. Signa: {detail.Signa}, frekuensi: {signaInfo.FrekuensiPerHari} kali/hari, total pemberian setelah update: {totalGivenAfter}.");
             }
-            else if (waktu == "MALAM")
-            {
-                if (detail.ObatMalamDiambil == true)
-                    throw new InvalidOperationException("Obat malam sudah pernah diberikan.");
 
-                detail.ObatMalamDiambil = true;
+            var qtyFinal = signaInfo.QtyPerPemberian * waktuBaru.Count;
+
+            if (qtyFinal <= 0)
+                throw new InvalidOperationException("Qty pemberian tidak valid.");
+
+            if (qtyFinal > detail.Qty)
+            {
+                throw new InvalidOperationException(
+                    $"Qty pemberian melebihi Qty resep. Qty resep: {detail.Qty}, qty yang akan dipotong: {qtyFinal}.");
             }
 
             await _obatUnitStockService.FinalizeReservedAsync(
                 detail.ObatUnitId.Value,
-                qtyDiberikan,
+                qtyFinal,
                 userActiveId,
                 ct);
 
             detail.StatusDiberikanPasien = true;
 
-            if (detail.ObatPagiDiambil == true &&
-                detail.ObatSiangDiambil == true &&
-                detail.ObatMalamDiambil == true)
-            {
+            if (totalGivenAfter >= signaInfo.FrekuensiPerHari)
                 detail.StatusPengambilanObat = true;
-            }
 
             detail.UpdateBy = userActiveId;
             detail.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -206,9 +262,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Services
             detail.Resep.UpdateDateTime = DateTimeOffset.UtcNow;
         }
 
-        // ======================================================
-        // RESEP TEBUS: stok dipotong saat kasir resep tebus lunas
-        // ======================================================
+        // =====================================================
+        // RESEP TEBUS
+        // Stok dipotong saat kasir resep tebus lunas.
+        // =====================================================
         public async Task FinalizeResepTebusAsync(
             Guid resepTebusId,
             Guid userActiveId,
@@ -258,6 +315,79 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Services
             resepTebus.TanggalLunas = DateTime.UtcNow;
             resepTebus.UpdateBy = userActiveId;
             resepTebus.UpdateDateTime = DateTimeOffset.UtcNow;
+        }
+
+        // =====================================================
+        // Helpers
+        // =====================================================
+        private static bool IsRawatJalan(string? jenisKunjungan)
+        {
+            var value = (jenisKunjungan ?? string.Empty).Trim().ToUpper();
+
+            return value == "OP" ||
+                   value == "RAJAL" ||
+                   value == "RAWAT_JALAN" ||
+                   value == "RAWAT JALAN";
+        }
+
+        private static int CountExistingGivenTimes(ResepDetail detail)
+        {
+            var count = 0;
+
+            if (detail.ObatPagiDiambil == true)
+                count++;
+
+            if (detail.ObatSiangDiambil == true)
+                count++;
+
+            if (detail.ObatMalamDiambil == true)
+                count++;
+
+            return count;
+        }
+
+        private static SignaInfo ParseSigna(string? signa)
+        {
+            if (string.IsNullOrWhiteSpace(signa))
+                throw new InvalidOperationException("Signa belum diisi.");
+
+            var normalized = signa.Trim().ToLower();
+
+            // Format didukung:
+            // 3 x 1
+            // 3x1
+            // 3 X 1
+            // 3×1
+            var match = Regex.Match(
+                normalized,
+                @"^\s*(\d+)\s*[x×]\s*(\d+)\s*$");
+
+            if (!match.Success)
+            {
+                throw new InvalidOperationException(
+                    $"Format Signa tidak valid: '{signa}'. Gunakan format seperti '3 x 1', '2 x 1', atau '1 x 1'.");
+            }
+
+            var frekuensiPerHari = int.Parse(match.Groups[1].Value);
+            var qtyPerPemberian = int.Parse(match.Groups[2].Value);
+
+            if (frekuensiPerHari <= 0)
+                throw new InvalidOperationException("Frekuensi pada Signa tidak valid.");
+
+            if (qtyPerPemberian <= 0)
+                throw new InvalidOperationException("Qty per pemberian pada Signa tidak valid.");
+
+            return new SignaInfo
+            {
+                FrekuensiPerHari = frekuensiPerHari,
+                QtyPerPemberian = qtyPerPemberian
+            };
+        }
+
+        private class SignaInfo
+        {
+            public int FrekuensiPerHari { get; set; }
+            public int QtyPerPemberian { get; set; }
         }
     }
 }
