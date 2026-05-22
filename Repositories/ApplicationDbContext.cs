@@ -924,7 +924,6 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<DiskonTagihan> DiskonTagihans { get; set; }
         public DbSet<BiayaAdministrasi> BiayaAdministrasis { get; set; }
         public DbSet<MainKasir> MainKasirs { get; set; }
-        public DbSet<KasirTebusResep> KasirTebusReseps { get; set; }
         public DbSet<MainKasirDetail> MainKasirDetails { get; set; }
         public DbSet<Billing> Billings { get; set; }
         public DbSet<MasterDenominasi> MasterDenominasies { get; set; }

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -12,9 +13,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260520071427_AddTabelGudangUnitResepTebus")]
+    partial class AddTabelGudangUnitResepTebus
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1345,9 +1347,6 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("Keterangan")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
-
-                    b.Property<string>("NoInvoice")
-                        .HasColumnType("text");
 
                     b.Property<decimal?>("PembayaranKe")
                         .HasColumnType("numeric");
@@ -7142,6 +7141,62 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.ToTable("DiskonTagihans");
                 });
 
+            modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models.KasirTebusResep", b =>
+                {
+                    b.Property<Guid>("KasirTebusResepId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CreateBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreateDateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DeleteBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("DeleteDateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Keterangan")
+                        .HasColumnType("text");
+
+                    b.Property<string>("NamaMetode")
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("NoAntrian")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("NoRegistrasi")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("PaymentMethodId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ResepTebusId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool?>("StatusPembayaran")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("TanggalBayar")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UpdateBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdateDateTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("KasirTebusResepId");
+
+                    b.ToTable("KasirTebusResep", "public");
+                });
+
             modelBuilder.Entity("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models.MainKasir", b =>
                 {
                     b.Property<Guid>("KasirId")
@@ -8096,12 +8151,6 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("UpdateDateTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("VerifikatorId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("WaktuVerifikasi")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("DetailBookingLabId");

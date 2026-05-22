@@ -36,6 +36,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public string? AlasanPembatalan {  get; set; }
         public string? TTDPembatalanPath { get; set; }
         public string? TipeLayanan {  get; set; }
+        public Guid? VerifikatorId { get; set; }
+        public DateTime? WaktuVerifikasi { get; set;}
 
         // Navigation
         public LabBooking? LabBooking { get; set; }
