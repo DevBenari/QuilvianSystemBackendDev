@@ -31,6 +31,8 @@ using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using QuilvianSystemBackendDev.Services;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Interfaces;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -374,6 +376,8 @@ builder.Services.AddScoped<INotification, NotificationService>();
 builder.Services.AddScoped<IKunjunganAdminBillingService, KunjunganAdminBillingService>();
 builder.Services.AddScoped<IKunjunganNoRegistrasiService, KunjunganNoRegistrasiService>();
 builder.Services.AddScoped<INoBillService, NoBillService>();
+builder.Services.AddScoped<IObatUnitStockService, ObatUnitReserveService>();
+builder.Services.AddScoped<IResepStockService, ResepStockService>();
 #endregion
 
 #region Setting Container

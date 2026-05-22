@@ -465,7 +465,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 var becameLunas = (sisaStart > 0 && sisaAfterFinal <= 0);
                 if (becameLunas)
                 {
-                    affectedBilling = await _billingService.MarkBillingAsPaidAsync(kunjunganId);
+                    affectedBilling = await _billingService.MarkBillingKunjunganAsPaidAsync(kunjunganId, (Guid)userActiveId, ct);
                 }
 
                 await trx.CommitAsync(ct);

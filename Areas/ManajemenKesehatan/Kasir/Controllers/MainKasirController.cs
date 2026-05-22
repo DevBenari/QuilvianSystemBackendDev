@@ -1,4 +1,5 @@
-﻿using System.Drawing.Printing;
+﻿using System.Data;
+using System.Drawing.Printing;
 using System.Globalization;
 using System.Linq;
 using System.Security.Claims;
@@ -11,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using OpenCvSharp;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Interfaces;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Interfaces;
@@ -49,6 +51,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
         private readonly IGenerateUrutanAngsuran _generateUrutanAngsuran;
         private readonly ICountAngsuran _countAngsuran;
         private readonly IBillingKunjunganReadService _billingKunjunganReadService;
+        private readonly IResepStockService _resepTebusStockService;
+
 
         public MainKasirController(
             ApplicationDbContext applicationDbContext,
@@ -62,7 +66,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             INoKwitansiService noKwitansiService,
             IGenerateUrutanAngsuran generateUrutanAngsuran,
             ICountAngsuran countAngsuran,
-            IBillingKunjunganReadService billingKunjunganReadService)
+            IBillingKunjunganReadService billingKunjunganReadService,
+            IResepStockService resepTebusStockService)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
@@ -76,6 +81,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
             _generateUrutanAngsuran = generateUrutanAngsuran;
             _countAngsuran = countAngsuran;
             _billingKunjunganReadService = billingKunjunganReadService;
+            _resepTebusStockService = resepTebusStockService;
         }
 
         public static string HitungUmurLengkap(DateTime? tanggalLahir)
@@ -962,7 +968,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
                         TglPembayaran = tglPembayaran.UtcDateTime,
 
-                        CreateBy = userActiveId.Value,
+                        CreateBy = (Guid)userActiveId,
                         CreateDateTime = DateTimeOffset.UtcNow,
                         IsDelete = false
                     };
@@ -988,7 +994,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 var becameLunas = (sisaBefore > 0m && sisaAfter <= 0m);
                 if (becameLunas)
                 {
-                    affectedBilling = await _billingService.MarkBillingAsPaidAsync(kunjunganId);
+                    affectedBilling = await _billingService.MarkBillingKunjunganAsPaidAsync(kunjunganId, (Guid)userActiveId, ct);
                 }
 
                 await trx.CommitAsync(ct);
@@ -1315,7 +1321,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
                 var isLunasNow = string.Equals(finalStatus, "Lunas", StringComparison.OrdinalIgnoreCase);
                 if (!wasLunas && isLunasNow)
                 {
-                    affectedBilling = await _billingService.MarkBillingAsPaidAsync(kunjunganId);
+                    affectedBilling = await _billingService.MarkBillingKunjunganAsPaidAsync(kunjunganId, (Guid)userActiveId, ct);
                 }
 
                 await trx.CommitAsync(ct);
@@ -1389,7 +1395,231 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers
 
             return Ok(new { message = "Status Billing berhasil diperbarui." });
         }
-        
+
+
+        [HttpPost("Resep-Tebus")]
+        public async Task<IActionResult> PayResepTebus(
+        [FromBody] MainKasirTebusResepViewModel vm,
+        CancellationToken ct)
+        {
+            if (vm == null || !ModelState.IsValid)
+                return BadRequest(new { message = "Data tidak valid." });
+
+            if (!vm.ResepTebusId.HasValue || vm.ResepTebusId.Value == Guid.Empty)
+                return BadRequest(new { message = "ResepTebusId wajib diisi." });
+
+            if (vm.Details == null || !vm.Details.Any())
+                return BadRequest(new { message = "Detail pembayaran wajib diisi." });
+
+            if (vm.Details.Count != 1)
+                return BadRequest(new { message = "Resep tebus tidak boleh split payment. Hanya boleh 1 metode pembayaran." });
+
+            if (!await _applicationDbContext.Database.CanConnectAsync(ct))
+                return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+
+            var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrWhiteSpace(emailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi." });
+
+            var userActiveId = await _applicationDbContext.UserActives
+                .Where(x => x.Email == emailLogin)
+                .Select(x => (Guid?)x.UserActiveId)
+                .FirstOrDefaultAsync(ct);
+
+            if (!userActiveId.HasValue)
+                return Unauthorized(new { message = "User aktif tidak ditemukan." });
+
+            await using var trx = await _applicationDbContext.Database
+                .BeginTransactionAsync(IsolationLevel.Serializable, ct);
+
+            try
+            {
+                var resepTebusId = vm.ResepTebusId.Value;
+
+                var resepTebus = await _applicationDbContext.ResepTebuss
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(x =>
+                        x.ResepTebusId == resepTebusId &&
+                        x.IsCancelled != true &&
+                        (x.IsDelete == false || x.IsDelete == null),
+                        ct);
+
+                if (resepTebus == null)
+                    return NotFound(new { message = "Resep tebus tidak ditemukan atau sudah dibatalkan." });
+
+                if (resepTebus.IsLunas == true)
+                    return Conflict(new { message = "Resep tebus ini sudah lunas." });
+
+                var header = await _applicationDbContext.MainKasirs
+                    .FirstOrDefaultAsync(x =>
+                        x.ResepTebusId == resepTebusId &&
+                        x.KunjunganId == null &&
+                        (x.IsDelete == false || x.IsDelete == null),
+                        ct);
+
+                if (header == null)
+                    return NotFound(new { message = "Header kasir resep tebus belum dibuat." });
+
+                if (string.Equals(header.StatusPembayaran, "Lunas", StringComparison.OrdinalIgnoreCase))
+                    return Conflict(new { message = "Tagihan resep tebus ini sudah lunas." });
+
+                var sudahAdaPembayaran = await _applicationDbContext.MainKasirDetails
+                    .AsNoTracking()
+                    .AnyAsync(x =>
+                        x.MainKasirId == header.KasirId &&
+                        (x.IsDelete == false || x.IsDelete == null),
+                        ct);
+
+                if (sudahAdaPembayaran)
+                    return Conflict(new { message = "Pembayaran resep tebus sudah pernah dibuat. Resep tebus tidak boleh angsuran." });
+
+                decimal totalTagihan =
+                    header.GrandTotalPembayaran
+                    ?? resepTebus.TotalHargaResep
+                    ?? 0m;
+
+                if (totalTagihan <= 0)
+                    return BadRequest(new { message = "Total tagihan resep tebus belum valid." });
+
+                var detailVm = vm.Details.Single();
+
+                var nominalBayar = detailVm.NominalPembayaran ?? 0m;
+
+                if (nominalBayar <= 0)
+                    return BadRequest(new { message = "Nominal pembayaran wajib lebih dari 0." });
+
+                if (nominalBayar < totalTagihan)
+                {
+                    var kurangBayar = totalTagihan - nominalBayar;
+
+                    return BadRequest(new
+                    {
+                        message = "Pembayaran kurang dari total tagihan. Resep tebus wajib langsung lunas.",
+                        totalTagihan,
+                        nominalBayar,
+                        kurangBayar
+                    });
+                }
+
+                var kembalian = nominalBayar > totalTagihan
+                    ? nominalBayar - totalTagihan
+                    : 0m;
+
+                var tglPembayaran = DateTimeOffset.UtcNow;
+
+                var noKwitansi = await _noKwitansiService.GenerateNoKwitansiAsync(
+                    tglPembayaran,
+                    ct);
+
+                var detail = new MainKasirDetail
+                {
+                    MainKasirDetailId = Guid.NewGuid(),
+                    MainKasirId = header.KasirId,
+
+                    KunjunganId = null,
+                    PasienId = null,
+                    //DiskonId = detailVm.DiskonId,
+
+                    TipeDiskonDokter = detailVm.TipeDiskonDokter,
+                    ValueDiskonDokter = detailVm.ValueDiskonDokter,
+
+                    TotalPembayaran = totalTagihan,
+                    NominalPembayaran = nominalBayar,
+                    SisaPembayaran = 0,
+
+                    MetodePembayaranId = detailVm.MetodePembayaranId,
+                    ReferenceId = resepTebusId,
+                    NamaMetode = detailVm.NamaMetode,
+                    Keterangan = detailVm.Keterangan,
+
+                    NoKwitansi = noKwitansi,
+                    AngsuranKe = 0,
+
+                    TglPembayaran = tglPembayaran.UtcDateTime,
+
+                    CreateBy = userActiveId.Value,
+                    CreateDateTime = DateTimeOffset.UtcNow,
+                    IsDelete = false
+                };
+
+                _applicationDbContext.MainKasirDetails.Add(detail);
+
+                header.StatusPembayaran = "Lunas";
+                header.StatusBilling = "Lunas";
+                header.GrandTotalPembayaran = totalTagihan;
+                header.TotalPembayaran = totalTagihan;
+                header.TotalBiayaObat = totalTagihan;
+                header.TotalBiayaTindakan = 0;
+                header.TglPembayaran = tglPembayaran;
+                header.IsVerified = vm.IsVerified ?? header.IsVerified;
+                header.TTDUserVerfiedId = vm.TTDUserVerfiedId ?? header.TTDUserVerfiedId;
+                header.Keterangan = vm.Keterangan ?? header.Keterangan;
+                header.JumlahAngsuran = 0;
+                header.UpdateBy = userActiveId.Value;
+                header.UpdateDateTime = DateTimeOffset.UtcNow;
+
+                var affectedBilling = await _billingService.MarkBillingResepTebusAsPaidAsync(
+                    resepTebusId,
+                    userActiveId.Value,
+                    ct);
+
+                await _resepTebusStockService.FinalizeResepTebusAsync(
+                    resepTebusId,
+                    userActiveId.Value,
+                    ct);
+
+                var saved = await _applicationDbContext.SaveChangesAsync(ct);
+
+                if (saved <= 0)
+                {
+                    await trx.RollbackAsync(ct);
+                    return StatusCode(500, new { message = "Data pembayaran tidak berhasil disimpan." });
+                }
+
+                await trx.CommitAsync(ct);
+
+                return Ok(new
+                {
+                    message = "Pembayaran resep tebus berhasil lunas dan stok berhasil dipotong.",
+                    kasirId = header.KasirId,
+                    resepTebusId,
+                    statusPembayaran = "Lunas",
+                    statusBilling = "Lunas",
+                    totalTagihan,
+                    nominalBayar,
+                    kembalian,
+                    sisaPembayaran = 0,
+                    billingUpdated = affectedBilling,
+                    noKwitansi = detail.NoKwitansi,
+                    metodePembayaranId = detail.MetodePembayaranId,
+                    namaMetode = detail.NamaMetode
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                await trx.RollbackAsync(ct);
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (DbUpdateException dbEx)
+            {
+                await trx.RollbackAsync(ct);
+                return StatusCode(500, new
+                {
+                    message = $"Gagal menyimpan data: {dbEx.InnerException?.Message ?? dbEx.Message}"
+                });
+            }
+            catch (Exception ex)
+            {
+                await trx.RollbackAsync(ct);
+                return StatusCode(500, new
+                {
+                    message = $"Terjadi kesalahan internal: {ex.Message}"
+                });
+            }
+        }
+
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {

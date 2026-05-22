@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.HubSignalR;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Interfaces;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
@@ -38,7 +39,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
         private readonly IHubContext<ResepHub> _hubContext;
         private readonly ITTDService _ttdService;
         private readonly IAsuransiCoverageService _asuransiCoverageService;
-
+        private readonly IObatUnitStockService _obatUnitStockService;
 
         public ResepController(
             ApplicationDbContext applicationDbContext,
@@ -49,7 +50,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             IHubContext<ResepHub> hubContext,
             IGenerateInvoiceBillingService generateInvoiceBillingService,
             ITTDService ttdService,
-            IAsuransiCoverageService asuransiCoverageServices
+            IAsuransiCoverageService asuransiCoverageServices,
+            IObatUnitStockService obatUnitStockService
             )
         {
             _applicationDbContext = applicationDbContext;
@@ -61,6 +63,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             _generateInvoiceBillingService = generateInvoiceBillingService;
             _ttdService = ttdService;
             _asuransiCoverageService = asuransiCoverageServices;
+            _obatUnitStockService = obatUnitStockService;
+        }
+
+        private void ClearChangeTracker()
+        {
+            _applicationDbContext.ChangeTracker.Clear();
         }
 
         private DateTime? TryParseTanggalToUtc(string tanggal)
@@ -86,30 +94,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
             }
 
             return null;
-        }
-        private async Task<ObatUnit> GetObatUnitForUpdateAsync(
-            Guid obatId,
-            Guid instalasiUnitId,
-            CancellationToken ct)
-        {
-            var obatUnit = await _applicationDbContext.ObatUnits
-                .FromSqlInterpolated($@"
-            SELECT *
-            FROM public.""MstObatUnit""
-            WHERE ""ObatId"" = {obatId}
-              AND ""InstalasiUnitId"" = {instalasiUnitId}
-              AND COALESCE(""IsDelete"", false) = false
-            FOR UPDATE
-        ")
-                .FirstOrDefaultAsync(ct);
-
-            if (obatUnit == null)
-            {
-                throw new InvalidOperationException(
-                    "Obat tidak tersedia pada instalasi unit layanan pasien.");
-            }
-
-            return obatUnit;
         }
 
         private static bool IsRetryableDatabaseException(Exception ex)
@@ -2592,526 +2576,377 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
 
         #region new logic resep
 
-        //[HttpPost]
-        //public async Task<IActionResult> CreateResep2([FromBody] ResepViewModel vm, CancellationToken ct)
-        //{
-        //    if (vm == null || !ModelState.IsValid)
-        //        return BadRequest(new { message = "Data tidak valid!" });
+        [HttpPost("ResepNew")]
+        public async Task<IActionResult> CreateResepNew([FromBody] ResepViewModel vm, CancellationToken ct)
+        {
+            if (vm == null || !ModelState.IsValid)
+                return BadRequest(new { message = "Data tidak valid!" });
 
-        //    if (vm.KunjunganId == null)
-        //        return BadRequest(new { message = "KunjunganId wajib diisi." });
+            if (vm.KunjunganId == null)
+                return BadRequest(new { message = "KunjunganId wajib diisi." });
 
-        //    if (vm.DaftarObat == null || !vm.DaftarObat.Any())
-        //        return BadRequest(new { message = "Daftar obat wajib diisi." });
+            if (vm.DaftarObat == null || !vm.DaftarObat.Any())
+                return BadRequest(new { message = "Daftar obat wajib diisi." });
 
-        //    if (!await _applicationDbContext.Database.CanConnectAsync(ct))
-        //        return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
+            if (vm.DaftarObat.Any(x => x.IsRacikan == true))
+            {
+                return BadRequest(new
+                {
+                    message = "Untuk sementara endpoint ini hanya memproses obat non-racikan. Racikan perlu menambahkan ObatUnitId pada RacikanDetail agar stok bisa difinalisasi dengan benar."
+                });
+            }
 
-        //    var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!await _applicationDbContext.Database.CanConnectAsync(ct))
+                return StatusCode(500, new { message = "Tidak dapat terhubung ke database." });
 
-        //    var getUserActive = await _applicationDbContext.UserActives
-        //        .FirstOrDefaultAsync(u => u.Email == emailLogin, ct);
+            var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-        //    if (getUserActive == null)
-        //        return Unauthorized(new { message = "User tidak ditemukan!" });
+            if (string.IsNullOrWhiteSpace(emailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi." });
 
-        //    const int maxRetry = 3;
+            var userActive = await _applicationDbContext.UserActives
+                .FirstOrDefaultAsync(x => x.Email == emailLogin, ct);
 
-        //    for (int attempt = 1; attempt <= maxRetry; attempt++)
-        //    {
-        //        await using var transaction = await _applicationDbContext.Database
-        //            .BeginTransactionAsync(IsolationLevel.Serializable, ct);
+            if (userActive == null)
+                return Unauthorized(new { message = "User tidak ditemukan!" });
 
-        //        try
-        //        {
-        //            var kunjungan = await _applicationDbContext.Kunjungans
-        //                .FirstOrDefaultAsync(k => k.KunjunganID == vm.KunjunganId, ct);
+            const int maxRetry = 3;
 
-        //            if (kunjungan == null)
-        //                throw new InvalidOperationException("Data kunjungan tidak ditemukan.");
+            for (int attempt = 1; attempt <= maxRetry; attempt++)
+            {
+                await using var transaction = await _applicationDbContext.Database
+                    .BeginTransactionAsync(IsolationLevel.Serializable, ct);
 
-        //            var activeLayananQuery = _applicationDbContext.KunjunganLayanans
-        //                .AsNoTracking()
-        //                .Where(x =>
-        //                    x.KunjunganId == vm.KunjunganId &&
-        //                    x.IsActive == true &&
-        //                    (x.IsDelete == false || x.IsDelete == null));
+                try
+                {
+                    var kunjungan = await _applicationDbContext.Kunjungans
+                        .FirstOrDefaultAsync(x =>
+                            x.KunjunganID == vm.KunjunganId &&
+                            (x.IsDelete == false || x.IsDelete == null),
+                            ct);
 
-        //            if (vm.KunjunganLayananId.HasValue)
-        //            {
-        //                activeLayananQuery = activeLayananQuery
-        //                    .Where(x => x.KunjunganLayananId == vm.KunjunganLayananId.Value);
-        //            }
+                    if (kunjungan == null)
+                        throw new InvalidOperationException("Data kunjungan tidak ditemukan.");
 
-        //            var activeLayanan = await activeLayananQuery.FirstOrDefaultAsync(ct);
+                    var activeLayananQuery = _applicationDbContext.KunjunganLayanans
+                        .AsNoTracking()
+                        .Where(x =>
+                            x.KunjunganId == vm.KunjunganId &&
+                            x.IsActive == true &&
+                            (x.IsDelete == false || x.IsDelete == null));
 
-        //            if (activeLayanan == null)
-        //                throw new InvalidOperationException("Layanan aktif pasien tidak ditemukan.");
+                    if (vm.KunjunganLayananId.HasValue)
+                    {
+                        activeLayananQuery = activeLayananQuery
+                            .Where(x => x.KunjunganLayananId == vm.KunjunganLayananId.Value);
+                    }
 
-        //            if (activeLayanan.InstalasiUnitId == null)
-        //                throw new InvalidOperationException("Instalasi unit pada layanan aktif pasien belum diisi.");
+                    var activeLayanan = await activeLayananQuery.FirstOrDefaultAsync(ct);
 
-        //            var instalasiUnitId = activeLayanan.InstalasiUnitId.Value;
+                    if (activeLayanan == null)
+                        throw new InvalidOperationException("Layanan aktif pasien tidak ditemukan.");
 
-        //            var dokterId = vm.DokterId
-        //                ?? activeLayanan.DokterId
-        //                ?? kunjungan.DokterId;
+                    if (activeLayanan.InstalasiUnitId == null)
+                        throw new InvalidOperationException("Instalasi unit pada layanan aktif pasien belum diisi.");
 
-        //            if (dokterId == null)
-        //                throw new InvalidOperationException("DokterId tidak ditemukan pada resep, layanan, atau kunjungan.");
+                    var instalasiUnitId = activeLayanan.InstalasiUnitId.Value;
 
-        //            string? antrian = kunjungan.Antrian;
+                    var dokterId = vm.DokterId
+                        ?? activeLayanan.DokterId
+                        ?? kunjungan.DokterId;
+
+                    if (dokterId == null)
+                        throw new InvalidOperationException("DokterId tidak ditemukan pada resep, layanan, atau kunjungan.");
+
+                    var today = DateTime.UtcNow.Date;
 
-        //            var today = DateTime.UtcNow.Date;
-        //            var todayString = today.ToString("yyyyMMdd");
+                    var lastResep = await _applicationDbContext.Reseps
+                        .Where(x => x.CreateDateTime.Date == today)
+                        .OrderByDescending(x => x.AntrianResep)
+                        .FirstOrDefaultAsync(ct);
 
-        //            var lastResep = await _applicationDbContext.Reseps
-        //                .Where(r => r.CreateDateTime.Date == today)
-        //                .OrderByDescending(r => r.AntrianResep)
-        //                .FirstOrDefaultAsync(ct);
-
-        //            int nextAntrian = (lastResep?.AntrianResep ?? 0) + 1;
-
-        //            var ttdDokter = await _ttdService.CheckTTDAsync(dokterId.Value);
-
-        //            var resep = new Resep
-        //            {
-        //                ResepId = Guid.NewGuid(),
-
-        //                KunjunganId = vm.KunjunganId,
-
-        //                KunjunganLayananId = activeLayanan.KunjunganLayananId,
-        //                InstalasiUnitId = activeLayanan.InstalasiUnitId,
-        //                JenisLayanan = activeLayanan.JenisLayanan,
-
-        //                AsuransiId = vm.AsuransiId,
-        //                NamaAsuransi = vm.NamaAsuransi,
-
-        //                PasienId = vm.PasienId ?? kunjungan.PasienId,
-        //                NamaPasien = vm.NamaPasien,
-
-        //                PoliklinikId = activeLayanan.PoliklinikId ?? vm.PoliklinikId,
-        //                NamaPoliklinik = vm.NamaPoliklinik,
-
-        //                DokterId = dokterId,
-        //                NamaDokter = vm.NamaDokter,
-
-        //                PathTTDDokter = ttdDokter?.Path,
-
-        //                AntrianResep = nextAntrian,
-        //                AntrianRegistrasi = antrian,
-
-        //                StatusPembuatanResep = vm.StatusPembuatanResep ?? "Reserved",
-        //                StatusPengambilanResep = false,
-        //                IsCancelled = false,
-        //                IsLunas = false,
-        //                IsVerifyByDoctor = vm.IsVerifyByDoctor,
-        //                TanggalPembuatanResep = DateTime.UtcNow,
-
-        //                IsResepPulang = vm.IsResepPulang,
-
-        //                PetugasFarmasiId = vm.PetugasFarmasiId,
-
-        //                CreateBy = getUserActive.UserActiveId,
-        //                CreateDateTime = DateTimeOffset.UtcNow
-        //            };
-
-        //            _applicationDbContext.Reseps.Add(resep);
-
-        //            int billingIndex = await _applicationDbContext.Billings
-        //                .CountAsync(b =>
-        //                    b.KunjunganId == vm.KunjunganId &&
-        //                    b.JenisBilling != null &&
-        //                    b.JenisBilling.ToLower() == "obat",
-        //                    ct);
-
-        //            var obatBiasaGroups = vm.DaftarObat
-        //                .Where(o => o.IsRacikan != true && o.ObatId != null)
-        //                .GroupBy(o => o.ObatId!.Value)
-        //                .Select(g => new
-        //                {
-        //                    ObatId = g.Key,
-        //                    Qty = g.Sum(x => x.Qty ?? 0),
-        //                    First = g.First()
-        //                })
-        //                .ToList();
-
-        //            var obatIds = obatBiasaGroups
-        //                .Select(x => x.ObatId)
-        //                .Distinct()
-        //                .ToList();
-
-        //            var obatDbList = await _applicationDbContext.Obats
-        //                .Where(o => obatIds.Contains(o.ObatId))
-        //                .ToDictionaryAsync(o => o.ObatId, ct);
-
-        //            foreach (var group in obatBiasaGroups)
-        //            {
-        //                var obatId = group.ObatId;
-        //                var qtyInput = group.Qty;
-        //                var obatVm = group.First;
-
-        //                if (qtyInput <= 0)
-        //                    throw new InvalidOperationException("Qty obat harus lebih dari 0.");
-
-        //                if (!obatDbList.TryGetValue(obatId, out var obatDb))
-        //                    throw new InvalidOperationException($"Obat tidak ditemukan: {obatId}");
-
-        //                var obatUnitId = await ReserveObatUnitAsync(
-        //                    obatId,
-        //                    instalasiUnitId,
-        //                    qtyInput,
-        //                    getUserActive.UserActiveId,
-        //                    ct);
-
-        //                var resepDetail = new ResepDetail
-        //                {
-        //                    DetailResepId = Guid.NewGuid(),
-        //                    ResepId = resep.ResepId,
-
-        //                    ObatId = obatId,
-        //                    ObatUnitId = obatUnitId,
-        //                    InstalasiUnitId = instalasiUnitId,
-
-        //                    Qty = qtyInput,
-
-        //                    AsuransiId = obatVm.AsuransiId ?? vm.AsuransiId,
-        //                    NamaAsuransi = obatVm.NamaAsuransi ?? vm.NamaAsuransi,
-
-        //                    Signa = obatVm.Signa,
-        //                    SignaTambahan = obatVm.SignaTambahan,
-
-        //                    HargaObat = obatDb.HTEPrice,
-        //                    TotalHargaObat = obatDb.HTEPrice * qtyInput,
-
-        //                    StatusCoverObat = obatVm.StatusCoverObat,
-        //                    JenisObat = obatVm.JenisObat,
-
-        //                    IsRacikan = false,
-        //                    IsContinued = obatVm.IsContinued,
-        //                    RacikanId = null,
-
-        //                    TakaranDosis = obatDb.TakaranDosis,
-
-        //                    StatusPengambilanObat = false,
-        //                    StatusDiberikanPasien = obatVm.StatusDiberikanPasien,
-
-        //                    EstimasiPemberian = obatVm.EstimasiPemberian,
-        //                    CaraPemakaian = obatVm.CaraPemakaian,
-        //                    TglStopPemakaian = TryParseTanggalToUtc(obatVm.TglStopPemakaian),
-
-        //                    IsObatDibawaPlg = false,
-        //                    ObatPagiDiambil = false,
-        //                    ObatMalamDiambil = false,
-        //                    ObatSiangDiambil = false,
-
-        //                    IsReturn = false,
-        //                    IsStopped = false,
-        //                    IsIntervensiFarmakologi = obatVm.IsIntervensiFarmakologi,
-
-        //                    CreateBy = getUserActive.UserActiveId,
-        //                    CreateDateTime = DateTimeOffset.UtcNow
-        //                };
-
-        //                _applicationDbContext.DetailReseps.Add(resepDetail);
-
-        //                var coverage = await _asuransiCoverageService.ResolveCoverageAsync(
-        //                    vm.KunjunganId,
-        //                    "Obat",
-        //                    obatId,
-        //                    ct);
-
-        //                billingIndex++;
-
-        //                var billing = new Billing
-        //                {
-        //                    KunjunganId = vm.KunjunganId,
-        //                    DiskonId = vm.DiskonId,
-        //                    BillingDate = DateTime.UtcNow,
-        //                    BillingKode = $"{billingIndex:D3}",
-
-        //                    InvoiceBilling = await _generateInvoiceBillingService.GetOrCreateAsync(
-        //                        resep.KunjunganId!.Value,
-        //                        DateTime.UtcNow),
-
-        //                    IsListWhiteOff = false,
-
-        //                    ItemId = obatId,
-        //                    NamaItem = obatDb.ObatName,
-        //                    HargaItem = obatDb.HTEPrice,
-        //                    QtyItem = qtyInput,
-        //                    SubTotalItem = obatDb.HTEPrice * qtyInput,
-
-        //                    JenisBilling = "Obat",
-
-        //                    StatusPengambilan = false,
-        //                    StatusBilling = false,
-
-        //                    IsCovered = coverage?.IsCovered,
-        //                    IsCoveredExcess = coverage?.IsCoveredExcess,
-        //                    AsuransiId = coverage?.AsuransiId,
-        //                    AsuransiExcessId = coverage?.AsuransiExcessId,
-
-        //                    TanggalInvoice = DateTime.UtcNow,
-        //                    TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
-
-        //                    LayananId = vm.LayananId,
-
-        //                    CreateBy = getUserActive.UserActiveId,
-        //                    CreateDateTime = DateTimeOffset.UtcNow
-        //                };
-
-        //                _applicationDbContext.Billings.Add(billing);
-
-        //                // Jangan potong stok master obat di sini.
-        //                // Jangan lagi:
-        //                // obatDb.Stock -= qtyInput;
-        //            }
-
-        //            foreach (var obat in vm.DaftarObat.Where(o => o.IsRacikan == true))
-        //            {
-        //                if (obat.Racikan == null || !obat.Racikan.Any())
-        //                    continue;
-
-        //                foreach (var racikan in obat.Racikan)
-        //                {
-        //                    var racikanId = Guid.NewGuid();
-
-        //                    int racikanCountToday = await _applicationDbContext.Racikans
-        //                        .CountAsync(r => r.CreateDateTime.Date == today, ct);
-
-        //                    string kodeRacikan = $"RCK-{(racikanCountToday + 1):D3}{todayString}";
-
-        //                    var racikanEntity = new Racikan
-        //                    {
-        //                        RacikanId = racikanId,
-        //                        NamaRacikan = racikan.NamaRacikan,
-        //                        Keterangan = racikan.Keterangan,
-        //                        Signa = racikan.Signa,
-        //                        SignaTambahan = racikan.SignaTambahan,
-        //                        QtyRacikan = obat.Qty ?? 1,
-        //                        KodeRacikan = kodeRacikan,
-        //                        BentukRacikanId = racikan.BentukRacikanId,
-
-        //                        CreateBy = getUserActive.UserActiveId,
-        //                        CreateDateTime = DateTimeOffset.UtcNow
-        //                    };
-
-        //                    _applicationDbContext.Racikans.Add(racikanEntity);
-
-        //                    decimal totalHargaRacikan = 0;
-
-        //                    foreach (var detailRacikan in racikan.DaftarRacikan)
-        //                    {
-        //                        var obatDbRacikan = await _applicationDbContext.Obats
-        //                            .FirstOrDefaultAsync(x => x.ObatId == detailRacikan.ObatId, ct);
-
-        //                        if (obatDbRacikan == null)
-        //                            throw new InvalidOperationException($"Obat racikan tidak ditemukan: {detailRacikan.ObatId}");
-
-        //                        if (obatDbRacikan.TakaranDosis <= 0)
-        //                            throw new InvalidOperationException($"Takaran dosis obat tidak valid: {obatDbRacikan.ObatName}");
-
-        //                        var qtyRacikan = racikanEntity.QtyRacikan ?? 1;
-
-        //                        var qtyPakai = Math.Ceiling(
-        //                            (decimal)((detailRacikan.KomposisiDosis * qtyRacikan) / obatDbRacikan.TakaranDosis));
-
-        //                        if (qtyPakai <= 0)
-        //                            throw new InvalidOperationException($"Qty pakai racikan tidak valid: {obatDbRacikan.ObatName}");
-
-        //                        var hargaKomposisi = qtyPakai * obatDbRacikan.HTEPrice;
-        //                        totalHargaRacikan += hargaKomposisi;
-
-        //                        var obatUnitRacikanId = await ReserveObatUnitAsync(
-        //                            (Guid)detailRacikan.ObatId,
-        //                            instalasiUnitId,
-        //                            qtyPakai,
-        //                            getUserActive.UserActiveId,
-        //                            ct);
-
-        //                        var racikanDetail = new RacikanDetail
-        //                        {
-        //                            DetailRacikanId = Guid.NewGuid(),
-        //                            RacikanId = racikanId,
-
-        //                            ObatId = detailRacikan.ObatId,
-
-        //                            // Aktifkan kalau model RacikanDetail sudah punya field ini:
-        //                            // ObatUnitId = obatUnitRacikanId,
-        //                            // InstalasiUnitId = instalasiUnitId,
-
-        //                            QtyUsed = (int)qtyPakai,
-        //                            KomposisiDosis = detailRacikan.KomposisiDosis,
-        //                            HargaKomposisi = hargaKomposisi,
-
-        //                            CreateBy = getUserActive.UserActiveId,
-        //                            CreateDateTime = DateTimeOffset.UtcNow
-        //                        };
-
-        //                        _applicationDbContext.RacikanDetails.Add(racikanDetail);
-
-        //                        // Jangan potong stok master obat di sini.
-        //                        // Jangan lagi:
-        //                        // obatDbRacikan.Stock -= (int)qtyPakai;
-        //                    }
-
-        //                    var resepDetail = new ResepDetail
-        //                    {
-        //                        DetailResepId = Guid.NewGuid(),
-        //                        ResepId = resep.ResepId,
-
-        //                        ObatId = null,
-        //                        ObatUnitId = null,
-        //                        InstalasiUnitId = instalasiUnitId,
-
-        //                        Qty = racikanEntity.QtyRacikan,
-
-        //                        AsuransiId = obat.AsuransiId ?? vm.AsuransiId,
-        //                        NamaAsuransi = obat.NamaAsuransi ?? vm.NamaAsuransi,
-
-        //                        Signa = racikanEntity.Signa,
-        //                        SignaTambahan = racikanEntity.SignaTambahan,
-
-        //                        HargaObat = totalHargaRacikan,
-        //                        TotalHargaObat = totalHargaRacikan,
-
-        //                        StatusCoverObat = false,
-        //                        JenisObat = obat.JenisObat,
-
-        //                        IsRacikan = true,
-        //                        RacikanId = racikanId,
-        //                        IsContinued = obat.IsContinued,
-
-        //                        TakaranDosis = null,
-
-        //                        StatusPengambilanObat = false,
-        //                        StatusDiberikanPasien = obat.StatusDiberikanPasien,
-
-        //                        CaraPemakaian = obat.CaraPemakaian,
-        //                        EstimasiPemberian = obat.EstimasiPemberian,
-        //                        TglStopPemakaian = TryParseTanggalToUtc(obat.TglStopPemakaian),
-
-        //                        IsObatDibawaPlg = false,
-        //                        ObatPagiDiambil = false,
-        //                        ObatMalamDiambil = false,
-        //                        ObatSiangDiambil = false,
-
-        //                        IsReturn = false,
-        //                        IsStopped = false,
-        //                        IsIntervensiFarmakologi = obat.IsIntervensiFarmakologi,
-
-        //                        CreateBy = getUserActive.UserActiveId,
-        //                        CreateDateTime = DateTimeOffset.UtcNow
-        //                    };
-
-        //                    _applicationDbContext.DetailReseps.Add(resepDetail);
-
-        //                    billingIndex++;
-
-        //                    var billing = new Billing
-        //                    {
-        //                        KunjunganId = vm.KunjunganId,
-        //                        DiskonId = vm.DiskonId,
-        //                        BillingDate = DateTime.UtcNow,
-        //                        BillingKode = $"{billingIndex:D3}",
-
-        //                        InvoiceBilling = await _generateInvoiceBillingService.GetOrCreateAsync(
-        //                            resep.KunjunganId!.Value,
-        //                            DateTime.UtcNow),
-
-        //                        IsListWhiteOff = false,
-
-        //                        ItemId = racikanId,
-        //                        NamaItem = racikanEntity.NamaRacikan,
-        //                        HargaItem = totalHargaRacikan,
-        //                        QtyItem = racikanEntity.QtyRacikan ?? 1,
-        //                        SubTotalItem = totalHargaRacikan,
-
-        //                        JenisBilling = "Obat",
-
-        //                        StatusPengambilan = false,
-        //                        StatusBilling = false,
-
-        //                        TanggalInvoice = DateTime.UtcNow,
-        //                        TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
-
-        //                        LayananId = vm.LayananId,
-
-        //                        CreateBy = getUserActive.UserActiveId,
-        //                        CreateDateTime = DateTimeOffset.UtcNow
-        //                    };
-
-        //                    _applicationDbContext.Billings.Add(billing);
-        //                }
-        //            }
-
-        //            int result = await _applicationDbContext.SaveChangesAsync(ct);
-
-        //            await transaction.CommitAsync(ct);
-
-        //            await _hubContext.Clients.All.SendAsync("ResepChanged", new
-        //            {
-        //                Action = "create",
-        //                ResepId = resep.ResepId
-        //            }, ct);
-
-        //            if (result > 0)
-        //            {
-        //                return Created("", new
-        //                {
-        //                    message = "Tambah Data Berhasil || 201 Created",
-        //                    resepId = resep.ResepId,
-        //                    kunjunganLayananId = resep.KunjunganLayananId,
-        //                    instalasiUnitId = resep.InstalasiUnitId,
-        //                    jenisLayanan = resep.JenisLayanan
-        //                });
-        //            }
-
-        //            return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
-        //        }
-        //        catch (InvalidOperationException ex)
-        //        {
-        //            await transaction.RollbackAsync(ct);
-        //            ClearChangeTracker();
-
-        //            return BadRequest(new { message = ex.Message });
-        //        }
-        //        catch (Exception ex) when (IsRetryableDatabaseException(ex) && attempt < maxRetry)
-        //        {
-        //            await transaction.RollbackAsync(ct);
-        //            ClearChangeTracker();
-
-        //            continue;
-        //        }
-        //        catch (DbUpdateException dbEx)
-        //        {
-        //            await transaction.RollbackAsync(ct);
-        //            ClearChangeTracker();
-
-        //            return StatusCode(500, new
-        //            {
-        //                message = $"Gagal menyimpan data: {dbEx.InnerException?.Message ?? dbEx.Message}"
-        //            });
-        //        }
-        //        catch (Exception ex)
-        //        {
-        //            await transaction.RollbackAsync(ct);
-        //            ClearChangeTracker();
-
-        //            return StatusCode(500, new
-        //            {
-        //                message = $"Terjadi kesalahan internal: {ex.Message}"
-        //            });
-        //        }
-        //    }
-
-        //    return StatusCode(409, new
-        //    {
-        //        message = "Gagal membuat resep karena terjadi konflik stok. Silakan coba lagi."
-        //    });
-        //}
-
+                    var nextAntrian = (lastResep?.AntrianResep ?? 0) + 1;
+
+                    var ttdDokter = await _ttdService.CheckTTDAsync(dokterId.Value);
+
+                    var resep = new Resep
+                    {
+                        ResepId = Guid.NewGuid(),
+
+                        KunjunganId = vm.KunjunganId,
+
+                        KunjunganLayananId = activeLayanan.KunjunganLayananId,
+                        InstalasiUnitId = instalasiUnitId,
+                        JenisLayanan = activeLayanan.JenisLayanan,
+
+                        AsuransiId = vm.AsuransiId,
+                        NamaAsuransi = vm.NamaAsuransi,
+
+                        PasienId = vm.PasienId ?? kunjungan.PasienId,
+                        NamaPasien = vm.NamaPasien,
+
+                        PoliklinikId = activeLayanan.PoliklinikId ?? vm.PoliklinikId,
+                        NamaPoliklinik = vm.NamaPoliklinik,
+
+                        DokterId = dokterId,
+                        NamaDokter = vm.NamaDokter,
+
+                        PathTTDDokter = ttdDokter?.Path,
+
+                        AntrianResep = nextAntrian,
+                        AntrianRegistrasi = kunjungan.Antrian,
+
+                        StatusPembuatanResep = vm.StatusPembuatanResep ?? "Reserved",
+                        StatusPengambilanResep = false,
+                        IsCancelled = false,
+                        IsLunas = false,
+
+                        TanggalPembuatanResep = DateTime.UtcNow,
+                        IsResepPulang = vm.IsResepPulang,
+                        IsVerifyByDoctor = vm.IsVerifyByDoctor,
+                        PetugasFarmasiId = vm.PetugasFarmasiId,
+
+                        CreateBy = userActive.UserActiveId,
+                        CreateDateTime = DateTimeOffset.UtcNow,
+                        IsDelete = false
+                    };
+
+                    _applicationDbContext.Reseps.Add(resep);
+
+                    var invoiceBilling = await _generateInvoiceBillingService.GetOrCreateAsync(
+                        resep.KunjunganId!.Value,
+                        DateTime.UtcNow);
+
+                    var billingIndex = await _applicationDbContext.Billings
+                        .CountAsync(x =>
+                            x.KunjunganId == vm.KunjunganId &&
+                            x.JenisBilling != null &&
+                            x.JenisBilling.ToLower() == "obat" &&
+                            (x.IsDelete == false || x.IsDelete == null),
+                            ct);
+
+                    var obatGroups = vm.DaftarObat
+                        .Where(x => x.IsRacikan != true && x.ObatId != null)
+                        .GroupBy(x => x.ObatId!.Value)
+                        .Select(g => new
+                        {
+                            ObatId = g.Key,
+                            Qty = g.Sum(x => x.Qty ?? 0),
+                            First = g.First()
+                        })
+                        .ToList();
+
+                    if (!obatGroups.Any())
+                        throw new InvalidOperationException("Daftar obat non-racikan tidak ditemukan.");
+
+                    var obatIds = obatGroups
+                        .Select(x => x.ObatId)
+                        .Distinct()
+                        .ToList();
+
+                    var obatDbList = await _applicationDbContext.Obats
+                        .Where(x =>
+                            obatIds.Contains(x.ObatId) &&
+                            (x.IsDelete == false || x.IsDelete == null))
+                        .ToDictionaryAsync(x => x.ObatId, ct);
+
+                    foreach (var group in obatGroups)
+                    {
+                        var obatId = group.ObatId;
+                        var qtyInput = group.Qty;
+                        var obatVm = group.First;
+
+                        if (qtyInput <= 0)
+                            throw new InvalidOperationException("Qty obat harus lebih dari 0.");
+
+                        if (!obatDbList.TryGetValue(obatId, out var obatDb))
+                            throw new InvalidOperationException($"Obat tidak ditemukan: {obatId}");
+
+                        /*
+                         * PENTING:
+                         * Service ini akan:
+                         * 1. Cari GudangUnit berdasarkan InstalasiUnitId.
+                         * 2. Cari ObatUnit berdasarkan ObatId + GudangUnitId.
+                         * 3. Lock row ObatUnit pakai FOR UPDATE.
+                         * 4. QtyAmbil naik.
+                         * 5. QtyTersedia turun.
+                         * 6. Qty fisik belum dipotong.
+                         */
+                        var obatUnitId = await _obatUnitStockService.ReserveByInstalasiUnitAsync(
+                            obatId,
+                            instalasiUnitId,
+                            qtyInput,
+                            userActive.UserActiveId,
+                            ct);
+
+                        var hargaObat = obatVm.HargaObat ?? obatDb.HTEPrice;
+                        var totalHargaObat = hargaObat * qtyInput;
+
+                        var resepDetail = new ResepDetail
+                        {
+                            DetailResepId = Guid.NewGuid(),
+                            ResepId = resep.ResepId,
+
+                            ObatId = obatId,
+                            ObatUnitId = obatUnitId,
+
+                            InstalasiUnitId = instalasiUnitId,
+
+                            Qty = qtyInput,
+                            TakaranDosis = obatDb.TakaranDosis,
+
+                            AsuransiId = obatVm.AsuransiId ?? vm.AsuransiId,
+                            NamaAsuransi = obatVm.NamaAsuransi ?? vm.NamaAsuransi,
+
+                            Signa = obatVm.Signa,
+                            SignaTambahan = obatVm.SignaTambahan,
+                            JenisObat = obatVm.JenisObat,
+
+                            HargaObat = hargaObat,
+                            TotalHargaObat = totalHargaObat,
+
+                            StatusCoverObat = obatVm.StatusCoverObat,
+                            StatusPengambilanObat = false,
+                            StatusDiberikanPasien = false,
+
+                            IsRacikan = false,
+                            IsContinued = obatVm.IsContinued,
+                            RacikanId = null,
+
+                            EstimasiPemberian = obatVm.EstimasiPemberian,
+                            CaraPemakaian = obatVm.CaraPemakaian,
+                            TglStopPemakaian = TryParseTanggalToUtc(obatVm.TglStopPemakaian),
+
+                            IsObatDibawaPlg = false,
+                            ObatPagiDiambil = false,
+                            ObatSiangDiambil = false,
+                            ObatMalamDiambil = false,
+
+                            IsReturn = false,
+                            IsStopped = false,
+                            IsIntervensiFarmakologi = obatVm.IsIntervensiFarmakologi,
+
+                            CreateBy = userActive.UserActiveId,
+                            CreateDateTime = DateTimeOffset.UtcNow,
+                            IsDelete = false
+                        };
+
+                        _applicationDbContext.DetailReseps.Add(resepDetail);
+
+                        var coverage = await _asuransiCoverageService.ResolveCoverageAsync(
+                            vm.KunjunganId,
+                            "Obat",
+                            obatId,
+                            ct);
+
+                        billingIndex++;
+
+                        var billing = new Billing
+                        {
+                            KunjunganId = vm.KunjunganId,
+                            DiskonId = vm.DiskonId,
+
+                            BillingDate = DateTime.UtcNow,
+                            BillingKode = $"{billingIndex:D3}",
+                            InvoiceBilling = invoiceBilling,
+
+                            IsListWhiteOff = false,
+
+                            ItemId = obatId,
+                            NamaItem = obatDb.ObatName,
+                            HargaItem = hargaObat,
+                            QtyItem = qtyInput,
+                            SubTotalItem = totalHargaObat,
+
+                            JenisBilling = "Obat",
+
+                            StatusPengambilan = false,
+                            StatusBilling = false,
+
+                            IsCovered = coverage?.IsCovered,
+                            IsCoveredExcess = coverage?.IsCoveredExcess,
+                            AsuransiId = coverage?.AsuransiId,
+                            AsuransiExcessId = coverage?.AsuransiExcessId,
+
+                            TanggalInvoice = DateTime.UtcNow,
+                            TanggalJatuhTempo = DateTime.UtcNow.Date.AddDays(90),
+
+                            LayananId = vm.LayananId,
+
+                            CreateBy = userActive.UserActiveId,
+                            CreateDateTime = DateTimeOffset.UtcNow,
+                            IsDelete = false
+                        };
+
+                        _applicationDbContext.Billings.Add(billing);
+                    }
+
+                    var result = await _applicationDbContext.SaveChangesAsync(ct);
+
+                    await transaction.CommitAsync(ct);
+
+                    await _hubContext.Clients.All.SendAsync("ResepChanged", new
+                    {
+                        Action = "create",
+                        ResepId = resep.ResepId
+                    }, ct);
+
+                    if (result > 0)
+                    {
+                        return Created("", new
+                        {
+                            message = "Tambah Data Berhasil || 201 Created",
+                            resepId = resep.ResepId,
+                            kunjunganLayananId = resep.KunjunganLayananId,
+                            instalasiUnitId = resep.InstalasiUnitId,
+                            jenisLayanan = resep.JenisLayanan,
+                            statusPembuatanResep = resep.StatusPembuatanResep
+                        });
+                    }
+
+                    return StatusCode(500, new { message = "Data tidak berhasil disimpan ke database." });
+                }
+                catch (InvalidOperationException ex)
+                {
+                    await transaction.RollbackAsync(ct);
+                    ClearChangeTracker();
+
+                    return BadRequest(new { message = ex.Message });
+                }
+                catch (Exception ex) when (IsRetryableDatabaseException(ex) && attempt < maxRetry)
+                {
+                    await transaction.RollbackAsync(ct);
+                    ClearChangeTracker();
+
+                    continue;
+                }
+                catch (DbUpdateException dbEx)
+                {
+                    await transaction.RollbackAsync(ct);
+                    ClearChangeTracker();
+
+                    return StatusCode(500, new
+                    {
+                        message = $"Gagal menyimpan data: {dbEx.InnerException?.Message ?? dbEx.Message}"
+                    });
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync(ct);
+                    ClearChangeTracker();
+
+                    return StatusCode(500, new
+                    {
+                        message = $"Terjadi kesalahan internal: {ex.Message}"
+                    });
+                }
+            }
+
+            return StatusCode(409, new
+            {
+                message = "Gagal membuat resep karena terjadi konflik stok. Silakan coba lagi."
+            });
+        }
         #endregion
     }
 }

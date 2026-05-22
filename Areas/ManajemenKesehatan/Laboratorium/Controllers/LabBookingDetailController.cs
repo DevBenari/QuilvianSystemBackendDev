@@ -512,6 +512,54 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             });
         }
 
+        [HttpPut("Verifikasi-Lab/{id}")]
+        public async Task<IActionResult> VerikasiBooking(Guid id, [FromBody] VerifikasiLabViewModel vm)
+        {
+            if (vm == null)
+                return BadRequest(new { message = "Data pembatalan tidak valid." });
+
+            var booking = await _applicationDbContext.LabBookingDetails
+                .FirstOrDefaultAsync(b => b.DetailBookingLabId == id);
+
+            if (booking == null)
+                return NotFound(new { message = "Data booking tidak ditemukan." });
+
+            // 🔐 Ambil user dari JWT Claims
+            var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(emailLogin))
+                return Unauthorized(new { message = "User tidak terautentikasi!" });
+
+            var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
+            if (getUserActive == null)
+                return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+
+            var userActiveId = getUserActive.UserActiveId;
+
+            // ==================================================
+            // ✅ UPDATE DATA BOOKING MENJADI TERVERIFIKASI
+            // ==================================================
+
+            booking.StatusVerifikasi = vm.Status;
+            booking.VerifikatorId = vm.VerifkatorId;
+            booking.WaktuVerifikasi = DateTime.UtcNow;
+
+            booking.UpdateBy = userActiveId;
+            booking.UpdateDateTime = DateTimeOffset.UtcNow;
+
+            _applicationDbContext.LabBookingDetails.Update(booking);
+
+            await _applicationDbContext.SaveChangesAsync();
+
+            // ==================================================
+            // ✅ RESPONSE
+            // ==================================================
+            return Ok(new
+            {
+                message = "Booking lab berhasil diverifikasi",
+                bookingId = booking.DetailBookingLabId,
+            });
+        }
+
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] LabBookingDetailViewModel vm, CancellationToken ct)
         {

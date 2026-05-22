@@ -1775,6 +1775,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 from lp in lpGroup.DefaultIfEmpty()
                 join lab in _applicationDbContext.Labs.AsNoTracking()
                     on d.LabId equals lab.LabId into labGroup
+                join v in _applicationDbContext.UserActives.AsNoTracking()
+                    on d.VerifikatorId equals v.UserActiveId into vGroup
+                from v in vGroup.DefaultIfEmpty()
                 from lab in labGroup.DefaultIfEmpty()
                 where d.BookingLabId.HasValue
                       && pagedIds.Contains(d.BookingLabId.Value)
@@ -1797,6 +1800,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     d.StatusVerifikasi,
                     d.TanggalSelesai,
                     d.CreateDateTime,
+                    d.VerifikatorId,
+                    NamaVerifikator= v.FullName ?? null,
+                    d.WaktuVerifikasi,
                     d.IsDelete
                 };
 
@@ -1895,6 +1901,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         d.Satuan,
                         d.StatusPemeriksaan,
                         d.StatusVerifikasi,
+                        d.VerifikatorId,
+                        d.NamaVerifikator,
+                        d.WaktuVerifikasi,
                         d.TanggalSelesai,
                         d.CreateDateTime,
                         d.IsDelete,
@@ -2181,6 +2190,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      on d.PemeriksaanLabId equals lp.PemeriksaanLabId into lpJoin
                  from lp in lpJoin.DefaultIfEmpty()
 
+                 join v in _applicationDbContext.UserActives.AsNoTracking()
+                    on d.VerifikatorId equals v.UserActiveId into vGroup
+                 from v in vGroup.DefaultIfEmpty()
+
                  where d.BookingLabId != null
                        && pagedIdSet.Contains(d.BookingLabId.Value)
                        && (d.IsDelete == false || d.IsDelete == null)
@@ -2203,6 +2216,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      d.Satuan,
                      d.StatusPemeriksaan,
                      d.StatusVerifikasi,
+                     d.VerifikatorId,
+                     NamaVerifikator = v.FullName ?? null,
+                     d.WaktuVerifikasi,
                      d.TanggalSelesai,
                      d.CreateDateTime,
                      d.IsDelete
@@ -2286,6 +2302,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         d.Satuan,
                         d.StatusPemeriksaan,
                         d.StatusVerifikasi,
+                        d.VerifikatorId,
+                        d.NamaVerifikator,
+                        d.WaktuVerifikasi,
                         d.TanggalSelesai,
                         d.CreateDateTime,
                         d.IsDelete,
@@ -2637,6 +2656,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      on d.PemeriksaanLabId equals lp.PemeriksaanLabId into lpJoin
                  from lp in lpJoin.DefaultIfEmpty()
 
+                 join v in _applicationDbContext.UserActives.AsNoTracking()
+                    on d.VerifikatorId equals v.UserActiveId into vGroup
+                 from v in vGroup.DefaultIfEmpty()
+
                  where d.BookingLabId != null
                        && pagedIdSet.Contains((Guid)d.BookingLabId)
                        && (d.IsDelete == false || d.IsDelete == null)
@@ -2651,6 +2674,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      NamaPemeriksaan = lp.NamaPemeriksaan,
                      HargaPemeriksaan = lp.HargaPemeriksaan,
                      Lab = lab.NamaLab,
+                     d.VerifikatorId,
+                     NamaVerifikator = v.FullName ?? null,
+                     d.WaktuVerifikasi,
                      d.Satuan,
                      d.IsDelete
                  }).ToListAsync();
@@ -3012,6 +3038,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      on d.PemeriksaanLabId equals lp.PemeriksaanLabId into lpJoin
                  from lp in lpJoin.DefaultIfEmpty()
 
+                 join v in _applicationDbContext.UserActives.AsNoTracking()
+                    on d.VerifikatorId equals v.UserActiveId into vGroup
+                 from v in vGroup.DefaultIfEmpty()
+
                  where d.BookingLabId != null
                        && pagedIdSet.Contains((Guid)d.BookingLabId)
                        && (d.IsDelete == false || d.IsDelete == null)
@@ -3027,6 +3057,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      HargaPemeriksaan = lp.HargaPemeriksaan,
                      Lab = lab.NamaLab,
                      d.Satuan,
+                     d.VerifikatorId,
+                     NamaVerifikator = v.FullName ?? null,
+                     d.WaktuVerifikasi,
                      d.IsDelete
                  }).ToListAsync();
 
@@ -3393,6 +3426,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              on d.PemeriksaanLabId equals lp.PemeriksaanLabId into lpJoin
                          from lp in lpJoin.DefaultIfEmpty()
 
+                         join v in _applicationDbContext.UserActives.AsNoTracking()
+                            on d.VerifikatorId equals v.UserActiveId into vGroup
+                         from v in vGroup.DefaultIfEmpty()
+
                          where d.BookingLabId != null
                                && pagedIdSet.Contains((Guid)d.BookingLabId)
                                && (d.IsDelete == false || d.IsDelete == null)
@@ -3407,6 +3444,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              NamaPemeriksaan = lp.NamaPemeriksaan,
                              HargaPemeriksaan = lp.HargaPemeriksaan,
                              Lab = lab.NamaLab,
+                             d.VerifikatorId,
+                             NamaVerifikator = v.FullName ?? null,
+                             d.WaktuVerifikasi,
                              d.Satuan,
                              d.IsDelete
                          }).ToListAsync();
