@@ -144,223 +144,223 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AyatSilangs.Controllers
         // CREATE
         // =========================================================
 
-        [HttpPost]
-        [RequestSizeLimit(50_000_000)] // 50 MB
-        public async Task<IActionResult> Create(
-            [FromForm] DokAyatSilang model)
-        {
-            try
-            {
-                var emailLogin =
-                    User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        //[HttpPost]
+        //[RequestSizeLimit(50_000_000)] // 50 MB
+        //public async Task<IActionResult> Create(
+        //    [FromForm] DokAyatSilang model)
+        //{
+        //    try
+        //    {
+        //        var emailLogin =
+        //            User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-                if (string.IsNullOrEmpty(emailLogin))
-                {
-                    return Unauthorized(new
-                    {
-                        message = "User tidak terautentikasi."
-                    });
-                }
+        //        if (string.IsNullOrEmpty(emailLogin))
+        //        {
+        //            return Unauthorized(new
+        //            {
+        //                message = "User tidak terautentikasi."
+        //            });
+        //        }
 
-                var getUserActive =
-                    await _applicationDbContext.UserActives
-                    .FirstOrDefaultAsync(x =>
-                        x.Email == emailLogin);
+        //        var getUserActive =
+        //            await _applicationDbContext.UserActives
+        //            .FirstOrDefaultAsync(x =>
+        //                x.Email == emailLogin);
 
-                if (getUserActive == null)
-                {
-                    return Unauthorized(new
-                    {
-                        message = "User aktif tidak ditemukan."
-                    });
-                }
+        //        if (getUserActive == null)
+        //        {
+        //            return Unauthorized(new
+        //            {
+        //                message = "User aktif tidak ditemukan."
+        //            });
+        //        }
 
-                // =========================================================
-                // VALIDASI FILE
-                // =========================================================
+        //        // =========================================================
+        //        // VALIDASI FILE
+        //        // =========================================================
 
-                if (model.FileAyatSilang == null ||
-                    model.FileAyatSilang.Length == 0)
-                {
-                    return BadRequest(new
-                    {
-                        message = "File wajib diupload."
-                    });
-                }
+        //        if (model.FileAyatSilang == null ||
+        //            model.FileAyatSilang.Length == 0)
+        //        {
+        //            return BadRequest(new
+        //            {
+        //                message = "File wajib diupload."
+        //            });
+        //        }
 
-                // =========================================================
-                // CEK AYAT SILANG
-                // =========================================================
+        //        // =========================================================
+        //        // CEK AYAT SILANG
+        //        // =========================================================
 
-                var cekAyatSilang =
-                    await _applicationDbContext.AyatSilangs
-                    .FirstOrDefaultAsync(x =>
-                        x.AyatSilangId == model.AyatSilangId &&
-                        x.IsDelete == false);
+        //        var cekAyatSilang =
+        //            await _applicationDbContext.AyatSilangs
+        //            .FirstOrDefaultAsync(x =>
+        //                x.AyatSilangId == model.AyatSilangId &&
+        //                x.IsDelete == false);
 
-                if (cekAyatSilang == null)
-                {
-                    return NotFound(new
-                    {
-                        message = "Data Ayat Silang tidak ditemukan."
-                    });
-                }
+        //        if (cekAyatSilang == null)
+        //        {
+        //            return NotFound(new
+        //            {
+        //                message = "Data Ayat Silang tidak ditemukan."
+        //            });
+        //        }
 
-                // =========================================================
-                // PATH FOLDER
-                // =========================================================
+        //        // =========================================================
+        //        // PATH FOLDER
+        //        // =========================================================
 
-                string folderPath =
-                    Path.Combine(
-                        _webHostEnvironment.WebRootPath,
-                        "Upload",
-                        "DokAyatSilang"
-                    );
+        //        string folderPath =
+        //            Path.Combine(
+        //                _webHostEnvironment.WebRootPath,
+        //                "Upload",
+        //                "DokAyatSilang"
+        //            );
 
-                if (!Directory.Exists(folderPath))
-                {
-                    Directory.CreateDirectory(folderPath);
-                }
+        //        if (!Directory.Exists(folderPath))
+        //        {
+        //            Directory.CreateDirectory(folderPath);
+        //        }
 
-                // =========================================================
-                // GENERATE FILE NAME
-                // =========================================================
+        //        // =========================================================
+        //        // GENERATE FILE NAME
+        //        // =========================================================
 
-                string extension =
-                    Path.GetExtension(model.FileAyatSilang.FileName);
+        //        string extension =
+        //            Path.GetExtension(model.FileAyatSilang.FileName);
 
-                string fileName =
-                    $"{Guid.NewGuid()}{extension}";
+        //        string fileName =
+        //            $"{Guid.NewGuid()}{extension}";
 
-                string fullPath =
-                    Path.Combine(folderPath, fileName);
+        //        string fullPath =
+        //            Path.Combine(folderPath, fileName);
 
-                // =========================================================
-                // SAVE FILE
-                // =========================================================
+        //        // =========================================================
+        //        // SAVE FILE
+        //        // =========================================================
 
-                using (var stream =
-                    new FileStream(fullPath, FileMode.Create))
-                {
-                    await model.FileAyatSilang.CopyToAsync(stream);
-                }
+        //        using (var stream =
+        //            new FileStream(fullPath, FileMode.Create))
+        //        {
+        //            await model.FileAyatSilang.CopyToAsync(stream);
+        //        }
 
-                // =========================================================
-                // SAVE DATABASE
-                // =========================================================
+        //        // =========================================================
+        //        // SAVE DATABASE
+        //        // =========================================================
 
-                var data = new DokAyatSilang
-                {
-                    DokAyatSilangId = Guid.NewGuid(),
+        //        var data = new DokAyatSilang
+        //        {
+        //            DokAyatSilangId = Guid.NewGuid(),
 
-                    AyatSilangId = model.AyatSilangId,
+        //            AyatSilangId = model.AyatSilangId,
 
-                    NamaDokumen = fileName,
+        //            NamaDokumen = fileName,
 
-                    TglPenyimpanan = DateTime.UtcNow,
+        //            TglPenyimpanan = DateTime.UtcNow,
 
-                    Keterangan = model.Keterangan,
+        //            Keterangan = model.Keterangan,
 
-                    CreateDateTime = DateTime.UtcNow,
-                    CreateBy = getUserActive.UserActiveId,
+        //            CreateDateTime = DateTime.UtcNow,
+        //            CreateBy = getUserActive.UserActiveId,
 
-                    IsDelete = false
-                };
+        //            IsDelete = false
+        //        };
 
-                _applicationDbContext.DokAyatSilangs.Add(data);
+        //        _applicationDbContext.DokAyatSilangs.Add(data);
 
-                int result =
-                    await _applicationDbContext.SaveChangesAsync();
+        //        int result =
+        //            await _applicationDbContext.SaveChangesAsync();
 
-                if (result > 0)
-                {
-                    return Ok(new
-                    {
-                        message = "Upload dokumen berhasil.",
-                        fileName
-                    });
-                }
+        //        if (result > 0)
+        //        {
+        //            return Ok(new
+        //            {
+        //                message = "Upload dokumen berhasil.",
+        //                fileName
+        //            });
+        //        }
 
-                return StatusCode(500, new
-                {
-                    message = "Gagal menyimpan data."
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, ex.Message);
+        //        return StatusCode(500, new
+        //        {
+        //            message = "Gagal menyimpan data."
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, ex.Message);
 
-                return StatusCode(500, new
-                {
-                    message = ex.Message,
-                    inner = ex.InnerException?.Message
-                });
-            }
-        }
+        //        return StatusCode(500, new
+        //        {
+        //            message = ex.Message,
+        //            inner = ex.InnerException?.Message
+        //        });
+        //    }
+        //}
 
-        // =========================================================
-        // DOWNLOAD FILE
-        // =========================================================
+        //// =========================================================
+        //// DOWNLOAD FILE
+        //// =========================================================
 
-        [HttpGet("download/{id}")]
-        public async Task<IActionResult> Download(Guid id)
-        {
-            try
-            {
-                var data =
-                    await _applicationDbContext.DokAyatSilangs
-                    .FirstOrDefaultAsync(x =>
-                        x.DokAyatSilangId == id &&
-                        x.IsDelete == false);
+        //[HttpGet("download/{id}")]
+        //public async Task<IActionResult> Download(Guid id)
+        //{
+        //    try
+        //    {
+        //        var data =
+        //            await _applicationDbContext.DokAyatSilangs
+        //            .FirstOrDefaultAsync(x =>
+        //                x.DokAyatSilangId == id &&
+        //                x.IsDelete == false);
 
-                if (data == null)
-                {
-                    return NotFound(new
-                    {
-                        message = "Dokumen tidak ditemukan."
-                    });
-                }
+        //        if (data == null)
+        //        {
+        //            return NotFound(new
+        //            {
+        //                message = "Dokumen tidak ditemukan."
+        //            });
+        //        }
 
-                string folderPath =
-                    Path.Combine(
-                        _webHostEnvironment.WebRootPath,
-                        "Upload",
-                        "DokAyatSilang"
-                    );
+        //        string folderPath =
+        //            Path.Combine(
+        //                _webHostEnvironment.WebRootPath,
+        //                "Upload",
+        //                "DokAyatSilang"
+        //            );
 
-                string fullPath =
-                    Path.Combine(folderPath, data.NamaDokumen);
+        //        string fullPath =
+        //            Path.Combine(folderPath, data.NamaDokumen);
 
-                if (!System.IO.File.Exists(fullPath))
-                {
-                    return NotFound(new
-                    {
-                        message = "File fisik tidak ditemukan."
-                    });
-                }
+        //        if (!System.IO.File.Exists(fullPath))
+        //        {
+        //            return NotFound(new
+        //            {
+        //                message = "File fisik tidak ditemukan."
+        //            });
+        //        }
 
-                byte[] fileBytes =
-                    await System.IO.File.ReadAllBytesAsync(fullPath);
+        //        byte[] fileBytes =
+        //            await System.IO.File.ReadAllBytesAsync(fullPath);
 
-                string contentType =
-                    "application/octet-stream";
+        //        string contentType =
+        //            "application/octet-stream";
 
-                return File(
-                    fileBytes,
-                    contentType,
-                    data.NamaDokumen
-                );
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, ex.Message);
+        //        return File(
+        //            fileBytes,
+        //            contentType,
+        //            data.NamaDokumen
+        //        );
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, ex.Message);
 
-                return StatusCode(500, new
-                {
-                    message = ex.Message
-                });
-            }
-        }
+        //        return StatusCode(500, new
+        //        {
+        //            message = ex.Message
+        //        });
+        //    }
+        //}
 
         // =========================================================
         // DELETE
