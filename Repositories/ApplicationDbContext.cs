@@ -553,8 +553,8 @@ namespace QuilvianSystemBackendDev.Repositories
                 entity.HasIndex(e => e.KelasId)
                     .HasDatabaseName("IX_LabBooking_KelasId");
 
-                entity.HasIndex(e => e.DokterId)
-                    .HasDatabaseName("IX_LabBooking_DokterId");
+                entity.HasIndex(e => e.DokterPemeriksaId)
+                    .HasDatabaseName("IX_LabBooking_DokterPemeriksaId");
 
                 entity.HasIndex(e => e.DokterKonsulenId)
                     .HasDatabaseName("IX_LabBooking_DokterKonsulenId");
@@ -574,8 +574,8 @@ namespace QuilvianSystemBackendDev.Repositories
                 entity.HasIndex(e => e.StatusPemeriksaan)
                     .HasDatabaseName("IX_LabBooking_StatusPemeriksaan");
 
-                entity.HasIndex(e => e.StatusPembayaran)
-                    .HasDatabaseName("IX_LabBooking_StatusPembayaran");
+                entity.HasIndex(e => e.IsLunas)
+                    .HasDatabaseName("IX_LabBooking_IsLunas");
 
                 entity.HasIndex(e => e.TglBooking)
                     .HasDatabaseName("IX_LabBooking_TglBooking");
@@ -589,8 +589,8 @@ namespace QuilvianSystemBackendDev.Repositories
                 entity.HasIndex(e => new { e.PasienId, e.CreateDateTime })
                     .HasDatabaseName("IX_LabBooking_PasienId_CreateDateTime");
 
-                entity.HasIndex(e => new { e.DokterId, e.CreateDateTime })
-                    .HasDatabaseName("IX_LabBooking_DokterId_CreateDateTime");
+                entity.HasIndex(e => new { e.DokterPemeriksaId, e.CreateDateTime })
+                    .HasDatabaseName("IX_LabBooking_DokterPemeriksaId_CreateDateTime");
 
                 entity.HasIndex(e => new { e.KunjunganId, e.CreateDateTime })
                     .HasDatabaseName("IX_LabBooking_KunjunganId_CreateDateTime");
@@ -627,9 +627,9 @@ namespace QuilvianSystemBackendDev.Repositories
                     .OnDelete(DeleteBehavior.Restrict)
                     .HasConstraintName("FK_LabBooking_MstKelas_KelasId");
 
-                entity.HasOne(e => e.Dokter)
+                entity.HasOne(e => e.DokterPemeriksa)
                     .WithMany()
-                    .HasForeignKey(e => e.DokterId)
+                    .HasForeignKey(e => e.DokterPemeriksaId)
                     .IsRequired(false)
                     .OnDelete(DeleteBehavior.Restrict)
                     .HasConstraintName("FK_LabBooking_MstDokter_DokterId");
@@ -668,8 +668,6 @@ namespace QuilvianSystemBackendDev.Repositories
                 entity.HasIndex(e => e.PemeriksaanLabId)
                     .HasDatabaseName("IX_LabBookingDetail_PemeriksaanLabId");
 
-                entity.HasIndex(e => e.LabId)
-                    .HasDatabaseName("IX_LabBookingDetail_LabId");
 
                 entity.HasIndex(e => e.AsalSpecimenId)
                     .HasDatabaseName("IX_LabBookingDetail_AsalSpecimenId");
@@ -723,13 +721,6 @@ namespace QuilvianSystemBackendDev.Repositories
                     .IsRequired(false)
                     .OnDelete(DeleteBehavior.Restrict)
                     .HasConstraintName("FK_LabBookingDetail_MstPemeriksaanLab_PemeriksaanLabId");
-
-                entity.HasOne(e => e.Lab)
-                    .WithMany()
-                    .HasForeignKey(e => e.LabId)
-                    .IsRequired(false)
-                    .OnDelete(DeleteBehavior.Restrict)
-                    .HasConstraintName("FK_LabBookingDetail_MstLab_LabId");
 
                 entity.HasOne(e => e.AsalSpecimen)
                     .WithMany()
