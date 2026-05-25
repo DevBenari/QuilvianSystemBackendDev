@@ -56,11 +56,15 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AyatSilangs.Controllers
                         join u in _applicationDbContext.UserActives.AsNoTracking()
                             on ayat.CreateBy equals u.UserActiveId
 
+                        // LEFT JOIN Asuransi
                         join a in _applicationDbContext.Asuransis.AsNoTracking()
-                            on ayat.AsuransiId equals a.AsuransiId
+                            on ayat.AsuransiId equals a.AsuransiId into asuransiJoin
+                        from a in asuransiJoin.DefaultIfEmpty()
 
+                            // LEFT JOIN MasterBanks
                         join b in _applicationDbContext.MasterBanks.AsNoTracking()
-                            on ayat.BankId equals b.BankId
+                            on ayat.BankId equals b.BankId into bankJoin
+                        from b in bankJoin.DefaultIfEmpty()
 
                         where ayat.IsDelete == false
 
@@ -477,12 +481,15 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AyatSilangs.Controllers
 
                 var query =
                     from ayat in _applicationDbContext.AyatSilangs.AsNoTracking()
-
+                        // LEFT JOIN Asuransi
                     join a in _applicationDbContext.Asuransis.AsNoTracking()
-                        on ayat.AsuransiId equals a.AsuransiId
+                        on ayat.AsuransiId equals a.AsuransiId into asuransiJoin
+                    from a in asuransiJoin.DefaultIfEmpty()
 
+                        // LEFT JOIN MasterBanks
                     join b in _applicationDbContext.MasterBanks.AsNoTracking()
-                        on ayat.BankId equals b.BankId
+                        on ayat.BankId equals b.BankId into bankJoin
+                    from b in bankJoin.DefaultIfEmpty()
 
                     join u in _applicationDbContext.UserActives.AsNoTracking()
                         on ayat.CreateBy equals u.UserActiveId
