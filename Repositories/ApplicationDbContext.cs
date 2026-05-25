@@ -5,6 +5,7 @@ using NuGet.Configuration;
 using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers;
 using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.Finance.AR.Models;
+using QuilvianSystemBackendDev.Areas.Finance.AyatSilangs.Models;
 using QuilvianSystemBackendDev.Areas.Finance.COA.Models;
 using QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers;
 using QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Models;
@@ -1168,8 +1169,8 @@ namespace QuilvianSystemBackendDev.Repositories
             public DbSet<ARHeader> ARHeaders { get; set; }
             public DbSet<ARDetail> ARDetails { get; set; }
             public DbSet<ARDokumen> ARDokumens { get; set; }
-            public DbSet<ARSettlement> ARSettlements { get; set; }
-            public DbSet<ARSettlementDetail> ARSettlementDetails { get; set; }
+            //public DbSet<ARSettlement> ARSettlements { get; set; }
+            //public DbSet<ARSettlementDetail> ARSettlementDetails { get; set; }
             public DbSet<ARCanceled> ARCanceleds { get; set; }
             #endregion
 
@@ -1193,6 +1194,13 @@ namespace QuilvianSystemBackendDev.Repositories
             public DbSet<ReceivedPayment> ReceivedPayments { get; set; }
 
         #endregion
+
+            #region AyatSilang
+            public DbSet<AyatSilang> AyatSilangs { get; set; }
+            public DbSet<DokAyatSilang> DokAyatSilangs { get; set; }
+            public DbSet<TransaksiAyatSilang> TransaksiAyatSilangs { get; set; }
+
+            #endregion
 
         public DbSet<MasterBank> MasterBanks { get; set; }
         #endregion

@@ -1,7 +1,7 @@
 ﻿using QuilvianSystemBackendDev.Models;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace QuilvianSystemBackendDev.Areas.Finance.AyatSilang.Models
+namespace QuilvianSystemBackendDev.Areas.Finance.AyatSilangs.Models
 {
     [Table("Fin_TransaksiAyatSilang", Schema = "public")]
     public class TransaksiAyatSilang : UserActivity
