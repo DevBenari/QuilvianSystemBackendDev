@@ -62,8 +62,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AyatSilangs.Controllers
                         from a in asuransiJoin.DefaultIfEmpty()
 
                             // LEFT JOIN MasterBanks
-                        join b in _applicationDbContext.MasterBanks.AsNoTracking()
-                            on ayat.BankId equals b.BankId into bankJoin
+                        join b in _applicationDbContext.BankAccounts.AsNoTracking()
+                            on ayat.BankId equals b.BankAccountId into bankJoin
                         from b in bankJoin.DefaultIfEmpty()
 
                         where ayat.IsDelete == false
@@ -487,8 +487,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AyatSilangs.Controllers
                     from a in asuransiJoin.DefaultIfEmpty()
 
                         // LEFT JOIN MasterBanks
-                    join b in _applicationDbContext.MasterBanks.AsNoTracking()
-                        on ayat.BankId equals b.BankId into bankJoin
+                    join b in _applicationDbContext.BankAccounts.AsNoTracking()
+                        on ayat.BankId equals b.BankAccountId into bankJoin
                     from b in bankJoin.DefaultIfEmpty()
 
                     join u in _applicationDbContext.UserActives.AsNoTracking()
