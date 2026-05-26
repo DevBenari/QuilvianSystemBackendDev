@@ -213,6 +213,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                         d.NoOrder,
                         d.QtyOrder,
+                        d.NoPhoto,
                         d.StatusPemeriksaan,
                         d.TanggalSelesai,
                         d.StatusVerifikasi,
@@ -446,6 +447,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                         d.NoOrder,
                         d.QtyOrder,
+                        d.NoPhoto,
                         d.StatusPemeriksaan,
                         d.TanggalSelesai,
                         d.StatusVerifikasi,
@@ -1688,6 +1690,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
                     HargaPemeriksaan = lp != null ? (decimal?)lp.HargaPemeriksaan : null,
                     d.QtyOrder,
+                    d.NoPhoto,
                     d.StatusPemeriksaan,
                     d.StatusVerifikasi,
                     d.TanggalSelesai,
@@ -1778,6 +1781,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         d.NamaPemeriksaan,
                         d.HargaPemeriksaan,
                         d.QtyOrder,
+                        d.NoPhoto,
                         d.StatusPemeriksaan,
                         d.StatusVerifikasi,
                         d.VerifikatorId,
@@ -2097,6 +2101,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     TipeLayanan = d.TipeLayanan,
                     d.PemeriksaanLabId,
                     d.NoOrder,
+                    d.NoPhoto,
                     NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
                     HargaPemeriksaan = lp != null ? lp.HargaPemeriksaan : null,
                     d.QtyOrder,
@@ -2182,6 +2187,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         d.PasienId,
                         d.PemeriksaanLabId,
                         d.NoOrder,
+                        d.NoPhoto,
                         d.NamaPemeriksaan,
                         d.HargaPemeriksaan,
                         d.QtyOrder,
@@ -2594,6 +2600,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                      d.DetailBookingLabId,
                      d.NoOrder,
+                     d.NoPhoto,
                      TipeLayanan = d.TipeLayanan,
 
                      d.PemeriksaanLabId,
@@ -3032,6 +3039,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      HargaPemeriksaan = lp != null ? lp.HargaPemeriksaan : null,
 
                      d.QtyOrder,
+                     d.NoPhoto,
                      d.VerifikatorId,
                      NamaVerifikator = v != null ? v.FullName : null,
                      d.WaktuVerifikasi,
@@ -3436,6 +3444,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                      d.DetailBookingLabId,
                      d.NoOrder,
+                     d.NoPhoto,
                      TipeLayanan = d.TipeLayanan,
 
                      d.PemeriksaanLabId,

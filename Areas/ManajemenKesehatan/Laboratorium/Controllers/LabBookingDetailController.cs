@@ -117,7 +117,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              d.StatusPemeriksaan,
                              d.TanggalSelesai,
                              d.StatusVerifikasi,
-                             d.QtyOrder
+                             d.QtyOrder,
+                             d.NoPhoto
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -219,6 +220,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                      d.TanggalSelesai,
                                      d.StatusVerifikasi,
                                      d.QtyOrder,
+                                     d.NoPhoto
                                  })
                                   .FirstOrDefaultAsync();
 
@@ -853,6 +855,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     d.TanggalSelesai,
                     d.StatusVerifikasi,
                     d.QtyOrder,
+                    d.NoPhoto
                 };
 
             // Filter kunjunganId

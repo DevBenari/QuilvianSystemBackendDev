@@ -27,6 +27,7 @@
         public DateTime? TanggalSelesai { get; set; }
         public bool? StatusVerifikasi { get; set; }
         public string? AlasanPembatalan {  get; set; }
+        public string? NoPhoto { get; set; }
 
     }
 }
