@@ -313,16 +313,13 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 on lbd.PemeriksaanLabId equals lp.PemeriksaanLabId into pg
             from lp in pg.DefaultIfEmpty()
 
-            join la in _db.Labs.AsNoTracking()
-                on lbd.LabId equals la.LabId into lg
-            from la in lg.DefaultIfEmpty()
 
             select new
             {
                 lbd.BookingLabId,
                 lbd.DetailBookingLabId,
                 PemeriksaanLabId = lbd.PemeriksaanLabId,
-                NamaLab = la != null ? la.NamaLab : null,
+                NamaLab = lb.Lab != null ? lb.Lab.NamaLab : null,
                 NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
                 HargaPemeriksaan = (decimal?)lp.HargaPemeriksaan ?? 0m
             }
@@ -1252,16 +1249,12 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 on lbd.PemeriksaanLabId equals lp.PemeriksaanLabId into pg
             from lp in pg.DefaultIfEmpty()
 
-            join la in _db.Labs.AsNoTracking()
-                on lbd.LabId equals la.LabId into lg
-            from la in lg.DefaultIfEmpty()
-
             select new
             {
                 lbd.BookingLabId,
                 lbd.DetailBookingLabId,
                 PemeriksaanLabId = lbd.PemeriksaanLabId,
-                NamaLab = la != null ? la.NamaLab : null,
+                NamaLab = lb.Lab != null ? lb.Lab.NamaLab : null,
                 NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
                 HargaPemeriksaan = (decimal?)lp.HargaPemeriksaan ?? 0m
             }
@@ -1284,7 +1277,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 {
                     x.BookingLabId,
                     x.DetailBookingLabId,
-                    x.NamaLab,
+                    //x.NamaLab,
                     x.NamaPemeriksaan,
                     AsuransiId = bill?.AsuransiId,
                     IsCovered = bill?.IsCovered,
@@ -2335,10 +2328,6 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 on lbd.PemeriksaanLabId equals lp.PemeriksaanLabId into pg
             from lp in pg.DefaultIfEmpty()
 
-            join la in _db.Labs.AsNoTracking()
-                on lbd.LabId equals la.LabId into lg
-            from la in lg.DefaultIfEmpty()
-
             select new
             {
                 KunjunganId = lb.KunjunganId.Value,
@@ -2346,7 +2335,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 lbd.BookingLabId,
                 lbd.DetailBookingLabId,
                 PemeriksaanLabId = lbd.PemeriksaanLabId,
-                NamaLab = la != null ? la.NamaLab : null,
+                NamaLab = lb.Lab != null ? lb.Lab.NamaLab : null,
                 NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
                 HargaPemeriksaan = (decimal?)lp.HargaPemeriksaan ?? 0m
             }

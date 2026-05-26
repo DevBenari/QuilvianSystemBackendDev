@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuilvianSystemBackendDev.Repositories;
@@ -12,9 +13,10 @@ using QuilvianSystemBackendDev.Repositories;
 namespace QuilvianSystemBackendDev.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260525051330_addKolomLabBookingTTgDokterPerujuk")]
+    partial class addKolomLabBookingTTgDokterPerujuk
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -7886,10 +7888,10 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("DiagnosaAwal")
                         .HasColumnType("text");
 
-                    b.Property<Guid?>("DokterKonsulenId")
+                    b.Property<Guid?>("DokterId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("DokterPemeriksaId")
+                    b.Property<Guid?>("DokterKonsulenId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid?>("DokterPerujukId")
@@ -7906,9 +7908,6 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.Property<bool>("IsDelete")
                         .HasColumnType("boolean");
-
-                    b.Property<string>("IsLunas")
-                        .HasColumnType("text");
 
                     b.Property<Guid?>("KelasId")
                         .HasColumnType("uuid");
@@ -7949,6 +7948,9 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<bool?>("StatusBookingLab")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("StatusPembayaran")
+                        .HasColumnType("text");
+
                     b.Property<string>("StatusPemeriksaan")
                         .HasColumnType("text");
 
@@ -7984,16 +7986,13 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.HasIndex("AsuransiId")
                         .HasDatabaseName("IX_LabBooking_AsuransiId");
 
+                    b.HasIndex("DokterId")
+                        .HasDatabaseName("IX_LabBooking_DokterId");
+
                     b.HasIndex("DokterKonsulenId")
                         .HasDatabaseName("IX_LabBooking_DokterKonsulenId");
 
-                    b.HasIndex("DokterPemeriksaId")
-                        .HasDatabaseName("IX_LabBooking_DokterPemeriksaId");
-
                     b.HasIndex("DokterPerujukId");
-
-                    b.HasIndex("IsLunas")
-                        .HasDatabaseName("IX_LabBooking_IsLunas");
 
                     b.HasIndex("KelasId")
                         .HasDatabaseName("IX_LabBooking_KelasId");
@@ -8017,6 +8016,9 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.HasIndex("PasienId")
                         .HasDatabaseName("IX_LabBooking_PasienId");
 
+                    b.HasIndex("StatusPembayaran")
+                        .HasDatabaseName("IX_LabBooking_StatusPembayaran");
+
                     b.HasIndex("StatusPemeriksaan")
                         .HasDatabaseName("IX_LabBooking_StatusPemeriksaan");
 
@@ -8029,8 +8031,8 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.HasIndex("TglPemeriksaan")
                         .HasDatabaseName("IX_LabBooking_TglPemeriksaan");
 
-                    b.HasIndex("DokterPemeriksaId", "CreateDateTime")
-                        .HasDatabaseName("IX_LabBooking_DokterPemeriksaId_CreateDateTime");
+                    b.HasIndex("DokterId", "CreateDateTime")
+                        .HasDatabaseName("IX_LabBooking_DokterId_CreateDateTime");
 
                     b.HasIndex("IsDelete", "CreateDateTime")
                         .HasDatabaseName("IX_LabBooking_IsDelete_CreateDateTime");
@@ -8077,6 +8079,9 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<DateTimeOffset>("DeleteDateTime")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("Diagnosa")
+                        .HasColumnType("text");
+
                     b.Property<bool>("IsDelete")
                         .HasColumnType("boolean");
 
@@ -8095,6 +8100,9 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("KeteranganKlinik")
                         .HasColumnType("text");
 
+                    b.Property<Guid?>("LabId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("LokasiSpecimen")
                         .HasColumnType("text");
 
@@ -8102,9 +8110,6 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("NoOrder")
-                        .HasColumnType("text");
-
-                    b.Property<string>("NoPhoto")
                         .HasColumnType("text");
 
                     b.Property<Guid?>("PasienId")
@@ -8119,7 +8124,7 @@ namespace QuilvianSystemBackendDev.Migrations
                     b.Property<string>("PenyakitSebelumnya")
                         .HasColumnType("text");
 
-                    b.Property<decimal?>("QtyOrder")
+                    b.Property<decimal?>("Satuan")
                         .HasColumnType("numeric");
 
                     b.Property<List<Guid>>("SpecimenJenisId")
@@ -8162,6 +8167,9 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.HasIndex("BookingLabId")
                         .HasDatabaseName("IX_LabBookingDetail_BookingLabId");
+
+                    b.HasIndex("LabId")
+                        .HasDatabaseName("IX_LabBookingDetail_LabId");
 
                     b.HasIndex("NoOrder")
                         .HasDatabaseName("IX_LabBookingDetail_NoOrder");
@@ -22205,17 +22213,17 @@ namespace QuilvianSystemBackendDev.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("FK_LabBooking_MstAsuransi_AsuransiId");
 
+                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Dokter", "Dokter")
+                        .WithMany()
+                        .HasForeignKey("DokterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_LabBooking_MstDokter_DokterId");
+
                     b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Dokter", "DokterKonsulen")
                         .WithMany()
                         .HasForeignKey("DokterKonsulenId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("FK_LabBooking_MstDokter_DokterKonsulenId");
-
-                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Dokter", "DokterPemeriksa")
-                        .WithMany()
-                        .HasForeignKey("DokterPemeriksaId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("FK_LabBooking_MstDokter_DokterId");
 
                     b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models.Dokter", "DokterPerujuk")
                         .WithMany()
@@ -22249,9 +22257,9 @@ namespace QuilvianSystemBackendDev.Migrations
 
                     b.Navigation("Asuransi");
 
-                    b.Navigation("DokterKonsulen");
+                    b.Navigation("Dokter");
 
-                    b.Navigation("DokterPemeriksa");
+                    b.Navigation("DokterKonsulen");
 
                     b.Navigation("DokterPerujuk");
 
@@ -22280,6 +22288,12 @@ namespace QuilvianSystemBackendDev.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("FK_LabBookingDetail_LabBooking_BookingLabId");
 
+                    b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models.Lab", "Lab")
+                        .WithMany()
+                        .HasForeignKey("LabId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_LabBookingDetail_MstLab_LabId");
+
                     b.HasOne("QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models.PendaftaranPasienBaru", "Pasien")
                         .WithMany()
                         .HasForeignKey("PasienId")
@@ -22293,6 +22307,8 @@ namespace QuilvianSystemBackendDev.Migrations
                         .HasConstraintName("FK_LabBookingDetail_MstPemeriksaanLab_PemeriksaanLabId");
 
                     b.Navigation("AsalSpecimen");
+
+                    b.Navigation("Lab");
 
                     b.Navigation("LabBooking");
 

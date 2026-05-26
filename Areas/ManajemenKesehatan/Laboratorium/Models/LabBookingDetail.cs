@@ -12,7 +12,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public Guid? BookingLabId { get; set; } // Relasi ke tabel Booking Lab
         public Guid? PasienId { get; set; } // Relasi ke tabel Pasien
         public Guid? PemeriksaanLabId { get; set; } // Relasi ke tabel Pemeriksaan Lab
-        public Guid? LabId { get; set; } // Relasi ke tabel Lab
         public List<Guid>?  SpecimenJenisId { get; set; }
         public List<Guid>?  SpecimenMethodId { get; set; }
         public Guid?  AsalSpecimenId { get; set; }
@@ -27,9 +26,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public string? BahanNonGC { get; set; } // Non-Gynaecological Cytology
         public string? BahanMicrobiologi { get; set; } // Jenis specimen mikrobiologi (urine, wound, respiratory, dll)
         public string? MasaHaidTerakhir { get; set; } // Informasi masa haid terakhir (jika relevan)
-        public string? Diagnosa {  get; set; }
         public string? NoOrder { get; set; }
-        public decimal? Satuan {  get; set; }
+        public decimal? QtyOrder {  get; set; }
         public string? StatusPemeriksaan {  get; set; }
         public DateTime? TanggalSelesai { get; set; }
         public bool? StatusVerifikasi { get; set; }
@@ -38,12 +36,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public string? TipeLayanan {  get; set; }
         public Guid? VerifikatorId { get; set; }
         public DateTime? WaktuVerifikasi { get; set;}
+        public string? NoPhoto {  get; set; }
 
         // Navigation
         public LabBooking? LabBooking { get; set; }
         public PendaftaranPasienBaru? Pasien { get; set; }
         public LabPemeriksaan? PemeriksaanLab { get; set; }
-        public Lab? Lab { get; set; }
         public SpecimenAsal? AsalSpecimen { get; set; }
     }
 }
