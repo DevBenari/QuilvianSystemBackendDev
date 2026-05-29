@@ -13,5 +13,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public decimal? HargaPemeriksaan { get; set; } // Harga Pemeriksaan
         public Guid? KategoriPemeriksaanId { get; set; } // Relasi ke tabel Kategori Pemeriksaan
         public string? Keterangan { get; set; } // Keterangan tambahan
+
+        public LabKategoriPemeriksaan? KategoriPemeriksaan { get; set; }
     }
 }

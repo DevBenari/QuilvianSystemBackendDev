@@ -61,12 +61,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId into userGroup
                     from u in userGroup.DefaultIfEmpty()
 
-                    join k in _applicationDbContext.LabKategoriPemeriksaans on a.KategoriPemeriksaanId equals k.KategoriPemeriksaanId into kategoriGroup
-                    from k in kategoriGroup.DefaultIfEmpty()
-
-                    join l in _applicationDbContext.Labs on k.LabId equals l.LabId into labGroup
-                    from l in labGroup.DefaultIfEmpty()
-
                     where a.IsDelete == false || a.IsDelete == null
 
                     orderby a.CreateDateTime descending
@@ -83,12 +77,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         CreateByName = u != null ? u.FullName : null,
 
                         KategoriPemeriksaanId = a.KategoriPemeriksaanId,
-                        NamaKategori = k != null ? k.NamaKategori : null,
-                        KodeKategoriPemeriksaan = k != null ? k.KodeKategori : null,
+                        NamaKategori = a.KategoriPemeriksaan != null ? a.KategoriPemeriksaan.NamaKategori : null,
+                        KodeKategoriPemeriksaan = a.KategoriPemeriksaan != null ? a.KategoriPemeriksaan.KodeKategori : null,
 
-                        LabId = l != null ? l.LabId : null,
-                        NamaLab = l != null ? l.NamaLab : null,
-                        KodeLab = l != null ? l.KodeKategori : null,
+                        LabId = a.KategoriPemeriksaan != null ? a.KategoriPemeriksaan.LabId : null,
+                        NamaLab = a.KategoriPemeriksaan.Lab != null ? a.KategoriPemeriksaan.Lab.NamaLab : null,
+                        KodeLab = a.KategoriPemeriksaan.Lab != null ? a.KategoriPemeriksaan.Lab.KodeKategori : null,
                         TarifKelas = new List<object>()
 
                     }
@@ -171,27 +165,31 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     from a in _applicationDbContext.LabPemeriksaans
                     join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId into userGroup
                     from u in userGroup.DefaultIfEmpty()
-                    join k in _applicationDbContext.LabKategoriPemeriksaans on a.KategoriPemeriksaanId equals k.KategoriPemeriksaanId into kategoriGroup
-                    from k in kategoriGroup.DefaultIfEmpty()
-                    join l in _applicationDbContext.Labs on k.LabId equals l.LabId into labGroup
-                    from l in labGroup.DefaultIfEmpty()
-                    where a.PemeriksaanLabId == id && (a.IsDelete == false || a.IsDelete == null)
-                    select new
+
+                    where a.PemeriksaanLabId == id && (a.IsDelete == false)
+
+                    orderby a.CreateDateTime descending
+
+                    select new 
                     {
-                        a.PemeriksaanLabId,
-                        a.NamaPemeriksaan,
-                        a.HargaPemeriksaan,
-                        a.KodePemeriksaan,
-                        a.Keterangan,
-                        a.CreateDateTime,
-                        a.CreateBy,
+                        PemeriksaanLabId = a.PemeriksaanLabId,
+                        NamaPemeriksaan = a.NamaPemeriksaan,
+                        HargaPemeriksaan = a.HargaPemeriksaan,
+                        KodePemeriksaan = a.KodePemeriksaan,
+                        Keterangan = a.Keterangan,
+                        CreateDateTime = a.CreateDateTime,
+                        CreateBy = a.CreateBy,
                         CreateByName = u != null ? u.FullName : null,
+
                         KategoriPemeriksaanId = a.KategoriPemeriksaanId,
-                        NamaKategori = k != null ? k.NamaKategori : null,
-                        KodeKategoriPemeriksaan = k != null ? k.KodeKategori : null,
-                        LabId = l != null ? l.LabId : (Guid?)null,
-                        NamaLab = l != null ? l.NamaLab : null,
-                        KodeLab = l != null ? l.KodeKategori : null
+                        NamaKategori = a.KategoriPemeriksaan != null ? a.KategoriPemeriksaan.NamaKategori : null,
+                        KodeKategoriPemeriksaan = a.KategoriPemeriksaan != null ? a.KategoriPemeriksaan.KodeKategori : null,
+
+                        LabId = a.KategoriPemeriksaan != null ? a.KategoriPemeriksaan.LabId : null,
+                        NamaLab = a.KategoriPemeriksaan.Lab != null ? a.KategoriPemeriksaan.Lab.NamaLab : null,
+                        KodeLab = a.KategoriPemeriksaan.Lab != null ? a.KategoriPemeriksaan.Lab.KodeKategori : null,
+                        TarifKelas = new List<object>()
+
                     }
                 ).FirstOrDefaultAsync();
 
@@ -534,42 +532,35 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 // ======================================================
                 // 1) BASE QUERY
                 // ======================================================
-                var query =
-                    from a in _applicationDbContext.LabPemeriksaans.AsNoTracking()
-                    where (a.IsDelete == false || a.IsDelete == null)
+                var query = 
+                    from a in _applicationDbContext.LabPemeriksaans
+                    join u in _applicationDbContext.UserActives on a.CreateBy equals u.UserActiveId into userGroup
+                    from u in userGroup.DefaultIfEmpty()
 
-                    join u0 in _applicationDbContext.UserActives.AsNoTracking()
-                        on a.CreateBy equals u0.UserActiveId into userJoin
-                    from u in userJoin.DefaultIfEmpty()
+                    where a.IsDelete == false || a.IsDelete == null
 
-                    join k0 in _applicationDbContext.LabKategoriPemeriksaans.AsNoTracking()
-                        on a.KategoriPemeriksaanId equals k0.KategoriPemeriksaanId into kategoriGroup
-                    from k in kategoriGroup.DefaultIfEmpty()
-
-                    join l0 in _applicationDbContext.Labs.AsNoTracking()
-                        on k.LabId equals l0.LabId into labGroup
-                    from l in labGroup.DefaultIfEmpty()
+                    orderby a.CreateDateTime descending
 
                     select new
                     {
-                        a.CreateDateTime,
-                        a.CreateBy,
+                        PemeriksaanLabId = a.PemeriksaanLabId,
+                        NamaPemeriksaan = a.NamaPemeriksaan,
+                        HargaPemeriksaan = a.HargaPemeriksaan,
+                        KodePemeriksaan = a.KodePemeriksaan,
+                        Keterangan = a.Keterangan,
+                        CreateDateTime = a.CreateDateTime,
+                        CreateBy = a.CreateBy,
                         CreateByName = u != null ? u.FullName : null,
 
-                        a.PemeriksaanLabId,
-                        a.NamaPemeriksaan,
-                        a.HargaPemeriksaan,
-                        a.KodePemeriksaan,
-                        a.KategoriPemeriksaanId,
+                        KategoriPemeriksaanId = a.KategoriPemeriksaanId,
+                        NamaKategori = a.KategoriPemeriksaan != null ? a.KategoriPemeriksaan.NamaKategori : null,
+                        KodeKategoriPemeriksaan = a.KategoriPemeriksaan != null ? a.KategoriPemeriksaan.KodeKategori : null,
 
-                        NamaKategori = k != null ? k.NamaKategori : null,
-                        KodeKategoriPemeriksaan = k != null ? k.KodeKategori : null,
+                        LabId = a.KategoriPemeriksaan != null ? a.KategoriPemeriksaan.LabId : null,
+                        NamaLab = a.KategoriPemeriksaan.Lab != null ? a.KategoriPemeriksaan.Lab.NamaLab : null,
+                        KodeLab = a.KategoriPemeriksaan.Lab != null ? a.KategoriPemeriksaan.Lab.KodeKategori : null,
+                        TarifKelas = new List<object>()
 
-                        LabId = l != null ? (Guid?)l.LabId : null,
-                        NamaLab = l != null ? l.NamaLab : null,
-                        KodeLab = l != null ? l.KodeKategori : null,
-
-                        a.Keterangan
                     };
 
                 // ======================================================

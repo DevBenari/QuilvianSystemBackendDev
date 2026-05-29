@@ -7,8 +7,7 @@
 
         public string NamaDokumen { get; set; }
 
-        public IFormFile FileAyatSilang { get; set; }
-        public string? FilePath { get; set; }
+        public IFormFile? FileAyatSilang { get; set; }
 
         public DateTime TglPenyimpanan { get; set; }
 

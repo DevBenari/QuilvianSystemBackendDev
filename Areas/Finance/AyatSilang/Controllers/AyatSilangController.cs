@@ -275,6 +275,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AyatSilangs.Controllers
                     return Created("", new
                     {
                         message = "Tambah data berhasil.",
+                        data.AyatSilangId,
                         noAyatSilang
                     });
                 }

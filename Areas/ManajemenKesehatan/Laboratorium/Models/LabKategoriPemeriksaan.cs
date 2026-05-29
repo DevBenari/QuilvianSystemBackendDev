@@ -13,5 +13,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public string? KodeKategori { get; set; }
         public Guid? LabId { get; set; }
         public string? Keterangan { get; set; } // Keterangan tambahan
+
+        public Lab? Lab { get; set; }
     }
 }
