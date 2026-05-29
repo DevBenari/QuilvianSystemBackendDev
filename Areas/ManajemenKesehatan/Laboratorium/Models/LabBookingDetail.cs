@@ -12,6 +12,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public Guid? BookingLabId { get; set; } // Relasi ke tabel Booking Lab
         public Guid? PasienId { get; set; } // Relasi ke tabel Pasien
         public Guid? PemeriksaanLabId { get; set; } // Relasi ke tabel Pemeriksaan Lab
+        public Guid? LabId { get; set; } // Relasi ke tabel Pemeriksaan Lab
         public List<Guid>?  SpecimenJenisId { get; set; }
         public List<Guid>?  SpecimenMethodId { get; set; }
         public Guid?  AsalSpecimenId { get; set; }
@@ -40,6 +41,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
 
         // Navigation
         public LabBooking? LabBooking { get; set; }
+        public Lab? Lab { get; set; }
         public PendaftaranPasienBaru? Pasien { get; set; }
         public LabPemeriksaan? PemeriksaanLab { get; set; }
         public SpecimenAsal? AsalSpecimen { get; set; }

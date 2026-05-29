@@ -292,6 +292,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     StatusPemeriksaan = vm.StatusPemeriksaan,
                     StatusVerifikasi = vm.StatusVerifikasi,
                     TanggalSelesai = vm.TanggalSelesai,
+                    NoPhoto = vm.NoPhoto,
                     QtyOrder = vm.QtyOrder,
 
                     CreateBy = userActiveId,
@@ -602,6 +603,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 existingData.StatusPemeriksaan = vm.StatusPemeriksaan;
                 existingData.TanggalSelesai = vm.TanggalSelesai;
                 //existingData.NoOrder = newNoOrder;
+                existingData.NoPhoto = vm.NoPhoto;
                 existingData.QtyOrder = vm.QtyOrder;
 
                 existingData.UpdateBy = userActiveId;
