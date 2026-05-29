@@ -123,11 +123,46 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AyatSilangs.Controllers
         {
             try
             {
-                var data = await _applicationDbContext.AyatSilangs
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(x =>
-                        x.AyatSilangId == id &&
-                        x.IsDelete == false);
+                var data = from ayat in _applicationDbContext.AyatSilangs.AsNoTracking()
+                               // LEFT JOIN Asuransi
+                           join a in _applicationDbContext.Asuransis.AsNoTracking()
+                               on ayat.AsuransiId equals a.AsuransiId into asuransiJoin
+                           from a in asuransiJoin.DefaultIfEmpty()
+
+                               // LEFT JOIN MasterBanks
+                           join b in _applicationDbContext.BankAccounts.AsNoTracking()
+                               on ayat.BankId equals b.BankAccountId into bankJoin
+                           from b in bankJoin.DefaultIfEmpty()
+
+                           join u in _applicationDbContext.UserActives.AsNoTracking()
+                               on ayat.CreateBy equals u.UserActiveId
+
+                           where ayat.IsDelete == false && ayat.AyatSilangId == id
+
+                           select new
+                           {
+                               ayat.AyatSilangId,
+
+                               ayat.NoReferensi,
+                               ayat.NoAyatSilang,
+
+                               ayat.AsuransiId,
+                               AsuransiName = a.NamaAsuransi,
+
+                               ayat.BankId,
+                               BankName = b.BankName,
+
+                               ayat.TotalPembayaran,
+                               ayat.TglPembayaran,
+
+                               ayat.IsSudahTerpakai,
+
+                               ayat.Keterangan,
+
+                               ayat.CreateDateTime,
+
+                               CreateByName = u.FullName
+                           };
 
                 if (data == null)
                 {

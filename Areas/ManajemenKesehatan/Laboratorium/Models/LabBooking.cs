@@ -18,7 +18,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public DateTime? TglBooking { get; set; } // Tanggal booking lab
         public DateTime? TglPemeriksaan { get; set; }
         public Guid? KelasId { get; set; } // Relasi ke tabel Kelas
-        public Guid? LabId { get; set; } // Relasi ke tabel Kelas
 
         // Dokter
         public Guid? DokterPemeriksaId { get; set; } // Relasi ke tabel Dokter
@@ -57,7 +56,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public Dokter? DokterKonsulen { get; set; }
         public Dokter? DokterPerujuk { get; set; }
         public UserActive? Konfirmator { get; set; }
-        public Lab? Lab { get; set; }
 
         // Relasi paling penting
         public ICollection<LabBookingDetail> LabBookingDetails { get; set; } = new HashSet<LabBookingDetail>();

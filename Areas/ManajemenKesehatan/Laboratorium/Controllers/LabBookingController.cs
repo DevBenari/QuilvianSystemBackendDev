@@ -336,8 +336,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     select new
                     {
                         b.BookingLabId,
-                        b.LabId,
-                        NamaLab = b.Lab != null ? b.Lab.NamaLab : null,
+
 
                         KunjunganId = b.KunjunganId,
                         AsalKunjungan = b.Kunjungan != null ? b.Kunjungan.AsalKunjungan : null,
@@ -417,7 +416,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     .Select(d => new
                     {
                         LabBookingDetailId = d.DetailBookingLabId,
-
+                        d.LabId,
+                        NamaLab = d.Lab != null ? d.Lab.NamaLab : null,
                         d.PemeriksaanLabId,
                         PemeriksaanNama = d.PemeriksaanLab != null
                             ? d.PemeriksaanLab.NamaPemeriksaan
@@ -464,9 +464,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 var result = new
                 {
                     header.BookingLabId,
-                    header.LabId,
-                    header.NamaLab,
-
                     header.KunjunganId,
                     header.AsalKunjungan,
                     header.TipePasien,
@@ -563,48 +560,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 var userActiveId = getUserActive.UserActiveId;
 
-                // ==========================================================
-                // ✅ Ambil data lab untuk generate NoOrder
-                // ==========================================================
-                if (vm.LabId == null)
-                    return BadRequest(new { message = "LabId wajib diisi untuk menentukan NoOrder." });
-
-                var lab = await _applicationDbContext.Labs.AsNoTracking()
-                    .FirstOrDefaultAsync(l => l.LabId == vm.LabId);
-
-                if (lab == null)
-                    return NotFound(new { message = "Lab dengan ID tersebut tidak ditemukan." });
-
-                var kodeKategori = lab.KodeKategori?.Trim().ToUpper() ?? "UNK";
-                string labPrefix = kodeKategori.StartsWith("LAB") && kodeKategori.Length > 3
-                    ? kodeKategori.Substring(3, Math.Min(3, kodeKategori.Length - 3))
-                    : kodeKategori.Length > 3 ? kodeKategori.Substring(0, 3) : kodeKategori;
-
-                var today = DateTimeOffset.UtcNow.Date;
-                var start = today;
-                var end = today.AddDays(1);
-
-                var lastOrderToday = await _applicationDbContext.LabBookingDetails
-                    .Where(d =>
-                        d.CreateDateTime >= start &&
-                        d.CreateDateTime < end &&
-                        d.NoOrder.StartsWith(labPrefix))
-                    .OrderByDescending(d => d.NoOrder)
-                    .FirstOrDefaultAsync();
-
-                int nextNumber = 1;
-
-                if (lastOrderToday != null)
-                {
-                    string lastNo = lastOrderToday.NoOrder;
-                    string lastNumStr = lastNo.Substring(lastNo.Length - 4);
-
-                    if (int.TryParse(lastNumStr, out int lastNum))
-                        nextNumber = lastNum + 1;
-                }
-
-                string newNoOrder = $"{labPrefix}{today:yyyyMMdd}{nextNumber:D4}";
-
                 // ======================================
                 // ✅ Simpan ke Database
                 // ======================================
@@ -614,7 +569,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     KunjunganId = vm.KunjunganId,
                     PasienId = vm.PasienId,
                     AsuransiId = vm.AsuransiId,
-                    LabId = vm.LabId,
                     TglPenyerahanSampling = vm.TglPenyerahanSampling,
                     TglBooking = vm.TglBooking,
                     TglPemeriksaan = vm.TglPemeriksaan,
@@ -632,7 +586,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     CatatanJaminan = vm.CatatanJaminan,
                     NoLab = vm.NoLab,
                     NoPA = vm.NoPA,
-                    NoOrder = newNoOrder,
                     StatusBookingLab = false,
                     AlasanPembatalan = vm.AlasanPembatalan,
                     ProsesBooking = vm.ProsesBooking,
@@ -718,57 +671,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 if (entity == null)
                     return NotFound(new { message = "Data Booking Lab tidak ditemukan. || 404 Not Found" });
 
-                // ==========================================================
-                // ✅ Generate NoOrder jika LabId berubah
-                // ==========================================================
-                string newNoOrder = entity.NoOrder; // default: tetap
-                if (vm.LabId != entity.LabId && vm.LabId != null)
-                {
-                    var lab = await _applicationDbContext.Labs.AsNoTracking()
-                        .FirstOrDefaultAsync(l => l.LabId == vm.LabId);
-
-                    if (lab == null)
-                        return NotFound(new { message = "Lab dengan ID tersebut tidak ditemukan." });
-
-                    var kodeKategori = lab.KodeKategori?.Trim().ToUpper() ?? "UNK";
-                    string labPrefix = kodeKategori.StartsWith("LAB") && kodeKategori.Length > 3
-                        ? kodeKategori.Substring(3, Math.Min(3, kodeKategori.Length - 3))
-                        : kodeKategori.Length > 3 ? kodeKategori.Substring(0, 3) : kodeKategori;
-
-                    var today = DateTimeOffset.UtcNow.Date;
-                    var start = today;
-                    var end = today.AddDays(1);
-
-                    var lastOrderToday = await _applicationDbContext.LabBookingDetails
-                        .Where(d =>
-                            d.CreateDateTime >= start &&
-                            d.CreateDateTime < end &&
-                            d.NoOrder.StartsWith(labPrefix))
-                        .OrderByDescending(d => d.NoOrder)
-                        .FirstOrDefaultAsync();
-
-                    int nextNumber = 1;
-
-                    if (lastOrderToday != null)
-                    {
-                        string lastNo = lastOrderToday.NoOrder;
-                        string lastNumStr = lastNo.Substring(lastNo.Length - 4);
-
-                        if (int.TryParse(lastNumStr, out int lastNum))
-                            nextNumber = lastNum + 1;
-                    }
-
-                    newNoOrder = $"{labPrefix}{today:yyyyMMdd}{nextNumber:D4}";
-
-                }
-
                 // ======================================
                 // ⚙️ Update nilai field
                 // ======================================
                 entity.KunjunganId = vm.KunjunganId;
                 entity.PasienId = vm.PasienId;
                 entity.AsuransiId = vm.AsuransiId;
-                entity.LabId = vm.LabId;
                 entity.TglPenyerahanSampling = vm.TglPenyerahanSampling;
                 entity.TglBooking = vm.TglBooking;
                 entity.TglPemeriksaan = vm.TglPemeriksaan;
@@ -780,7 +688,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 entity.Keterangan = vm.Keterangan;
                 entity.IsCito = vm.IsCito;
                 entity.DiagnosaAwal = vm.DiagnosaAwal;
-                entity.NoOrder = newNoOrder;
                 entity.StatusPemeriksaan = vm.StatusPemeriksaan;
                 entity.DokterKonsulenId = vm.DokterKonsulenId;
                 entity.TerapisId = vm.TerapisId;
@@ -1422,8 +1329,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             // filter JenisKunjungan
             if (JenisKunjungan.HasValue)
             {
-                var jk = JenisKunjungan.Value.ToString();
-                parentQuery = parentQuery.Where(u => u.Kunjungan.JenisKunjungan == jk);
+                var jk = JenisKunjungan.Value;
+
+                parentQuery =
+                    from b in parentQuery
+                    where b.Kunjungan.JenisKunjungan == jk.ToString()
+                    select b;
             }
 
             // filter periode
@@ -1519,22 +1430,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     b.CreateDateTime >= start && b.CreateDateTime < endExclusive);
             }
 
-            // filter namaLab
-            if (!string.IsNullOrWhiteSpace(namaLab))
-            {
-                var nl = namaLab.Trim();
-                parentQuery = parentQuery.Where(u =>
-                    EF.Functions.ILike(u.Lab.NamaLab, $"%{nl}%")
-                );
-               
-            }
-            // filter labId
-            if (labId.HasValue)
-            {
-                var lid = labId.Value;
-                parentQuery = parentQuery.Where(u => u.LabId == lid);
-            }
-
             // =========================================
             // 2) TOTAL ROWS
             // =========================================
@@ -1597,8 +1492,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 select new
                 {
                     b.BookingLabId,
-                    b.LabId,
-                    NamaLab = b.Lab != null ? b.Lab.NamaLab : null,
                     b.NoOrder,
 
                     KunjunganId = b.KunjunganId,
@@ -1689,6 +1582,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     TipeLayanan = d.TipeLayanan ?? null,
                     NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
                     HargaPemeriksaan = lp != null ? (decimal?)lp.HargaPemeriksaan : null,
+                    d.LabId,
+                    NamaLab = d.Lab != null ? d.Lab.NamaLab : null,
                     d.QtyOrder,
                     d.NoPhoto,
                     d.StatusPemeriksaan,
@@ -1701,6 +1596,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     d.IsDelete
                 };
 
+            if (!string.IsNullOrWhiteSpace(namaLab))
+            {
+                var nl = namaLab.Trim();
+                detailQ = detailQ.Where(x => x.NamaLab != null && EF.Functions.ILike(x.NamaLab, $"%{nl}%"));
+            }
+
+            if (labId.HasValue)
+            {
+                var lid = labId.Value;
+                detailQ = detailQ.Where(x => x.LabId == lid);
+            }
 
             var rawDetails = await detailQ
                 .OrderByDescending(x => x.CreateDateTime)
@@ -1776,6 +1682,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         d.DetailBookingLabId,
                         d.KunjunganId,
                         d.PasienId,
+                        d.LabId,
+                        d.NamaLab,
                         d.PemeriksaanLabId,
                         d.NoOrder,
                         d.NamaPemeriksaan,
@@ -1855,14 +1763,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             // =============================
             var radiologiLabIds = await _applicationDbContext.Labs
                 .AsNoTracking()
-                .Where(l =>
-                    l.NamaLab != null &&
-                    l.NamaLab.ToLower().Replace(" ", "") == "radiologi" &&
-                    (l.IsDelete == false || l.IsDelete == null))
+                .Where(l => l.NamaLab != null &&
+                            l.NamaLab.ToLower().Replace(" ", "") == "radiologi")
                 .Select(l => l.LabId)
                 .ToListAsync();
 
-            if (!radiologiLabIds.Any())
+            if (radiologiLabIds.Count == 0)
             {
                 return Ok(new
                 {
@@ -1885,10 +1791,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             // =============================
             var baseQuery = _applicationDbContext.LabBookings
                 .AsNoTracking()
-                .Where(b =>
-                    (b.IsDelete == false || b.IsDelete == null) &&
-                    b.LabId.HasValue &&
-                    radiologiLabIds.Contains(b.LabId.Value));
+                .Where(b => b.IsDelete == false || b.IsDelete == null);
 
             if (kunjunganId.HasValue)
                 baseQuery = baseQuery.Where(b => b.KunjunganId == kunjunganId.Value);
@@ -1922,12 +1825,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             baseQuery = baseQuery.Where(b =>
                 _applicationDbContext.LabBookingDetails.Any(d =>
                     d.BookingLabId == b.BookingLabId &&
-                    (d.IsDelete == false || d.IsDelete == null)));
+                    (d.IsDelete == false || d.IsDelete == null) &&
+                    radiologiLabIds.Contains(d.LabId)
+                )
+            );
 
             // =============================
             // 2) TOTAL ROWS HEADER
             // =============================
-            var totalRows = await baseQuery.CountAsync();
+            int totalRows = await baseQuery.CountAsync();
 
             // =============================
             // 3) SORTING HEADER
@@ -1959,7 +1865,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 .Select(b => b.BookingLabId)
                 .ToListAsync();
 
-            if (!pagedParentIds.Any())
+            if (pagedParentIds.Count == 0)
             {
                 return Ok(new
                 {
@@ -1997,11 +1903,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 select new
                 {
                     b.BookingLabId,
-
-                    // LabId sekarang dari header
-                    b.LabId,
-                    NamaLab = b.Lab != null ? b.Lab.NamaLab : null,
-
                     b.NoOrder,
 
                     KunjunganId = b.KunjunganId,
@@ -2090,10 +1991,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 select new
                 {
                     BookingLabId = d.BookingLabId.Value,
-
-                    // LabId dari header booking
-                    LabId = b.LabId,
-                    NamaLab = b.Lab != null ? b.Lab.NamaLab : null,
+                    LabId = d.LabId,
+                    NamaLab = d.Lab != null ? d.Lab.NamaLab : null,
 
                     KunjunganId = b.KunjunganId,
                     d.DetailBookingLabId,
@@ -2264,10 +2163,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             // =============================
             var rehabLabIds = await _applicationDbContext.Labs
                 .AsNoTracking()
-                .Where(l =>
-                    l.NamaLab != null &&
-                    l.NamaLab.ToLower().Replace(" ", "") == "rehabmedis" &&
-                    (l.IsDelete == false || l.IsDelete == null))
+                .Where(l => l.NamaLab != null &&
+                            l.NamaLab.ToLower().Replace(" ", "") == "rehabmedis")
                 .Select(l => l.LabId)
                 .ToListAsync();
 
@@ -2294,10 +2191,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             // =============================
             var baseQuery = _applicationDbContext.LabBookings
                 .AsNoTracking()
-                .Where(b =>
-                    (b.IsDelete == false || b.IsDelete == null) &&
-                    b.LabId.HasValue &&
-                    rehabLabIds.Contains(b.LabId.Value));
+                .Where(b => b.IsDelete == false || b.IsDelete == null);
 
             if (kunjunganId.HasValue)
                 baseQuery = baseQuery.Where(b => b.KunjunganId == kunjunganId.Value);
@@ -2501,11 +2395,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 select new
                 {
                     b.BookingLabId,
-
-                    // LabId sekarang dari header
-                    b.LabId,
-                    NamaLab = b.Lab != null ? b.Lab.NamaLab : null,
-
                     b.NoOrder,
 
                     KunjunganId = b.KunjunganId,
@@ -2594,9 +2483,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                  {
                      BookingLabId = d.BookingLabId,
 
-                     // LabId dan nama lab dari header booking
-                     LabId = b.LabId,
-                     Lab = b.Lab != null ? b.Lab.NamaLab : null,
+                     LabId = d.LabId,
+                     NamaLab = d.Lab != null ? d.Lab.NamaLab : null,
 
                      d.DetailBookingLabId,
                      d.NoOrder,
@@ -2678,10 +2566,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             // =============================
             var giziLabIds = await _applicationDbContext.Labs
                 .AsNoTracking()
-                .Where(l =>
-                    l.NamaLab != null &&
-                    l.NamaLab.ToLower().Replace(" ", "") == "gizi" &&
-                    (l.IsDelete == false || l.IsDelete == null))
+                .Where(l => l.NamaLab != null &&
+                            l.NamaLab.ToLower().Replace(" ", "") == "gizi")
                 .Select(l => l.LabId)
                 .ToListAsync();
 
@@ -2704,14 +2590,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
             // =============================
             // 1) BASE QUERY HEADER
-            // LabId sekarang ada di LabBooking
             // =============================
             var baseQuery = _applicationDbContext.LabBookings
                 .AsNoTracking()
-                .Where(b =>
-                    (b.IsDelete == false || b.IsDelete == null) &&
-                    b.LabId.HasValue &&
-                    giziLabIds.Contains(b.LabId.Value));
+                .Where(b => b.IsDelete == false || b.IsDelete == null);
 
             if (kunjunganId.HasValue)
                 baseQuery = baseQuery.Where(b => b.KunjunganId == kunjunganId.Value);
@@ -2934,10 +2816,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 {
                     b.BookingLabId,
 
-                    // LabId sekarang dari header
-                    b.LabId,
-                    NamaLab = b.Lab != null ? b.Lab.NamaLab : null,
-
                     b.NoOrder,
 
                     KunjunganId = b.KunjunganId,
@@ -3026,9 +2904,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                  {
                      BookingLabId = d.BookingLabId,
 
-                     // Lab dari header booking
-                     LabId = b.LabId,
-                     Lab = b.Lab != null ? b.Lab.NamaLab : null,
+                     LabId = d.LabId,
+                     NamaLab = d.Lab != null ? d.Lab.NamaLab : null,
 
                      d.DetailBookingLabId,
                      d.NoOrder,
@@ -3132,16 +3009,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 });
             }
 
-            // =============================
-            // 1) BASE QUERY HEADER
-            // LabId sekarang ada di LabBooking
-            // =============================
-            var baseQuery = _applicationDbContext.LabBookings
-                .AsNoTracking()
-                .Where(b =>
-                    (b.IsDelete == false || b.IsDelete == null) &&
-                    b.LabId.HasValue &&
-                    mcuLabIds.Contains(b.LabId.Value));
+                    // =============================
+                    // 1) BASE QUERY
+                    // =============================
+                    var baseQuery = _applicationDbContext.LabBookings
+                        .AsNoTracking()
+                        .Where(b => b.IsDelete == false || b.IsDelete == null);
 
             if (kunjunganId.HasValue)
                 baseQuery = baseQuery.Where(b => b.KunjunganId == kunjunganId.Value);
@@ -3345,11 +3218,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 select new
                 {
                     b.BookingLabId,
-
-                    // LabId sekarang dari header
-                    b.LabId,
-                    NamaLab = b.Lab != null ? b.Lab.NamaLab : null,
-
                     b.NoOrder,
 
                     KunjunganId = b.KunjunganId,
@@ -3438,9 +3306,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                  {
                      BookingLabId = d.BookingLabId,
 
-                     // Lab dari header booking
-                     LabId = b.LabId,
-                     Lab = b.Lab != null ? b.Lab.NamaLab : null,
+                     LabId = d.LabId,
+                     NamaLab = d.Lab != null ? d.Lab.NamaLab : null,
 
                      d.DetailBookingLabId,
                      d.NoOrder,

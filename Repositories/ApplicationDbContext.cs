@@ -1190,6 +1190,7 @@ namespace QuilvianSystemBackendDev.Repositories
             public DbSet<AyatSilang> AyatSilangs { get; set; }
             public DbSet<DokAyatSilang> DokAyatSilangs { get; set; }
             public DbSet<TransaksiAyatSilang> TransaksiAyatSilangs { get; set; }
+            public DbSet<CanceledReceivedPayment> CanceledReceivedPayments { get; set; }
 
             #endregion
 

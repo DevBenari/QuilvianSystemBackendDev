@@ -9,7 +9,6 @@
         public DateTime? TglBooking { get; set; } // Tanggal booking lab
         public DateTime? TglPemeriksaan { get; set; }
         public Guid? KelasId { get; set; } // Relasi ke tabel Kelas
-        public Guid? LabId { get; set; } // Relasi ke tabel Kelas
 
         // dokter
         public Guid? DokterPemeriksaId { get; set; } // Relasi ke tabel Dokter

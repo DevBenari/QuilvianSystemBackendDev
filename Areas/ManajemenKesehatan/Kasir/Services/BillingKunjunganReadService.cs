@@ -319,7 +319,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 lbd.BookingLabId,
                 lbd.DetailBookingLabId,
                 PemeriksaanLabId = lbd.PemeriksaanLabId,
-                NamaLab = lb.Lab != null ? lb.Lab.NamaLab : null,
+                NamaLab = lbd.Lab != null ? lbd.Lab.NamaLab : null,
                 NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
                 HargaPemeriksaan = (decimal?)lp.HargaPemeriksaan ?? 0m
             }
@@ -1254,7 +1254,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 lbd.BookingLabId,
                 lbd.DetailBookingLabId,
                 PemeriksaanLabId = lbd.PemeriksaanLabId,
-                NamaLab = lb.Lab != null ? lb.Lab.NamaLab : null,
+                NamaLab = lbd.Lab != null ? lbd.Lab.NamaLab : null,
                 NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
                 HargaPemeriksaan = (decimal?)lp.HargaPemeriksaan ?? 0m
             }
@@ -2335,7 +2335,7 @@ public sealed class BillingKunjunganReadService : IBillingKunjunganReadService
                 lbd.BookingLabId,
                 lbd.DetailBookingLabId,
                 PemeriksaanLabId = lbd.PemeriksaanLabId,
-                NamaLab = lb.Lab != null ? lb.Lab.NamaLab : null,
+                NamaLab = lbd.Lab != null ? lbd.Lab.NamaLab : null,
                 NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
                 HargaPemeriksaan = (decimal?)lp.HargaPemeriksaan ?? 0m
             }

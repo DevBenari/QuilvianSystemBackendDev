@@ -54,6 +54,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                          {
                              rp.ReceivedPaymentId,
                              rp.BankId,
+                             rp.AyatSilangId,
                              rp.NoInvoice,
                              rp.TotalReceived,
                              rp.TglPembayaran,
@@ -422,6 +423,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                     {
                         rp.ReceivedPaymentId,
                         rp.BankId,
+                        rp.AyatSilangId,
                         rp.NoInvoice,
 
                         rp.TotalReceived,

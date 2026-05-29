@@ -2,21 +2,24 @@
 using System.Text.Json;
 using Hangfire;
 using Hangfire.PostgreSql;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Hubs;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.HubSignalR;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Interfaces;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Services;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.IGD.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Interfaces;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Services;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.HubSignalR;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Services;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Services;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
@@ -31,8 +34,6 @@ using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using QuilvianSystemBackendDev.Services;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Interfaces;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -378,6 +379,7 @@ builder.Services.AddScoped<IKunjunganNoRegistrasiService, KunjunganNoRegistrasiS
 builder.Services.AddScoped<INoBillService, NoBillService>();
 builder.Services.AddScoped<IObatUnitStockService, ObatUnitReserveService>();
 builder.Services.AddScoped<IResepStockService, ResepStockService>();
+builder.Services.AddScoped<INoPhotoGeneratorService, NoPhotoGeneratorService>();
 #endregion
 
 #region Setting Container
