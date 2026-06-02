@@ -57,6 +57,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public Dokter? DokterPerujuk { get; set; }
         public UserActive? Konfirmator { get; set; }
 
+
         // Relasi paling penting
         public ICollection<LabBookingDetail> LabBookingDetails { get; set; } = new HashSet<LabBookingDetail>();
     }
