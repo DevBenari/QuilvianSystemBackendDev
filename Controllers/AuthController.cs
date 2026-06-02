@@ -520,14 +520,16 @@ namespace QuilvianSystemBackendDev.Controllers
         [Authorize]
         public IActionResult DebugAuth()
         {
+            var authType = User.Identity?.AuthenticationType;
+
             return Ok(new
             {
-                IsAuthenticated = User.Identity?.IsAuthenticated,
-                AuthenticationType = User.Identity?.AuthenticationType,
-                Claims = User.Claims.Select(c => new
+                authenticated = User.Identity?.IsAuthenticated,
+                authType,
+                claims = User.Claims.Select(x => new
                 {
-                    c.Type,
-                    c.Value
+                    x.Type,
+                    x.Value
                 })
             });
         }
