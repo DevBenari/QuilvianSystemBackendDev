@@ -397,140 +397,203 @@ namespace QuilvianSystemBackendDev.Controllers
         }
 
         [HttpGet("me")]
-        [Authorize]
-        //[Authorize(AuthenticationSchemes = "Identity.Application")]
+        [Authorize(AuthenticationSchemes = "Identity.Application")]
         public async Task<IActionResult> Me(CancellationToken ct)
         {
-            try
+            var email =
+                User.FindFirst(ClaimTypes.Email)?.Value ??
+                User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(email))
             {
-                if (User?.Identity?.IsAuthenticated != true)
-                {
-                    return Unauthorized(new
-                    {
-                        success = false,
-                        statusCode = 401,
-                        message = "User belum login."
-                    });
-                }
-
-                var email =
-                    User.FindFirst(ClaimTypes.Email)?.Value ??
-                    User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                var fullName =
-                    User.FindFirst(ClaimTypes.Name)?.Value;
-
-                var role =
-                    User.FindFirst("role")?.Value ??
-                    User.FindFirst(ClaimTypes.Role)?.Value;
-
-                var userActiveId =
-                    User.FindFirst("UserActiveId")?.Value;
-
-                // Superadmin hardcode
-                if (email?.Equals(
-                        "superadmin@admin.com",
-                        StringComparison.OrdinalIgnoreCase) == true)
-                {
-                    return Ok(new
-                    {
-                        success = true,
-                        statusCode = 200,
-                        data = new
-                        {
-                            Email = email,
-                            FullName = fullName,
-                            Role = role,
-                            UserActiveId = userActiveId,
-                            IsSuperAdmin = true
-                        }
-                    });
-                }
-
-                if (string.IsNullOrWhiteSpace(email))
-                {
-                    return Unauthorized(new
-                    {
-                        success = false,
-                        statusCode = 401,
-                        message = "Claim email tidak ditemukan."
-                    });
-                }
-
-                var user = await _context.UserActives
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(x =>
-                        x.Email == email &&
-                        x.IsActive &&
-                        (x.IsDelete == false || x.IsDelete == null),
-                        ct);
-
-                if (user == null)
-                {
-                    await HttpContext.SignOutAsync("Identity.Application");
-
-                    return Unauthorized(new
-                    {
-                        success = false,
-                        statusCode = 401,
-                        message = "User tidak ditemukan atau sudah tidak aktif."
-                    });
-                }
-
-                var tipeUser = await _context.TipeUsers
-                    .AsNoTracking()
-                    .Where(x => x.TipeUserId == user.TipeUserId)
-                    .Select(x => x.NamaTipeUser)
-                    .FirstOrDefaultAsync(ct);
-
-                return Ok(new
-                {
-                    success = true,
-                    statusCode = 200,
-                    data = new
-                    {
-                        user.UserActiveId,
-                        user.UserActiveCode,
-                        user.FullName,
-                        user.Email,
-                        user.Handphone,
-                        user.IsActive,
-                        user.DepartemenId,
-                        user.PositionId,
-                        user.TipeUserId,
-                        Role = tipeUser ?? role,
-                        IsSuperAdmin = false
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, ex.Message);
-
-                return StatusCode(500, new
+                return Unauthorized(new
                 {
                     success = false,
-                    statusCode = 500,
-                    message = ex.Message
+                    message = "Claim email tidak ditemukan."
                 });
             }
+
+            var user = await _context.UserActives
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x =>
+                    x.Email == email &&
+                    x.IsActive &&
+                    (x.IsDelete == false || x.IsDelete == null),
+                    ct);
+
+            if (user == null)
+            {
+                await HttpContext.SignOutAsync(
+                    IdentityConstants.ApplicationScheme);
+
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = "User tidak ditemukan atau tidak aktif."
+                });
+            }
+
+            return Ok(new
+            {
+                success = true,
+                data = new
+                {
+                    user.UserActiveId,
+                    user.FullName,
+                    user.Email,
+                    user.IsActive
+                }
+            });
         }
+
+        //[HttpGet("me")]
+        //[Authorize]
+        ////[Authorize(AuthenticationSchemes = "Identity.Application")]
+        //public async Task<IActionResult> Me(CancellationToken ct)
+        //{
+        //    try
+        //    {
+        //        if (User?.Identity?.IsAuthenticated != true)
+        //        {
+        //            return Unauthorized(new
+        //            {
+        //                success = false,
+        //                statusCode = 401,
+        //                message = "User belum login."
+        //            });
+        //        }
+
+        //        var email =
+        //            User.FindFirst(ClaimTypes.Email)?.Value ??
+        //            User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        //        var fullName =
+        //            User.FindFirst(ClaimTypes.Name)?.Value;
+
+        //        var role =
+        //            User.FindFirst("role")?.Value ??
+        //            User.FindFirst(ClaimTypes.Role)?.Value;
+
+        //        var userActiveId =
+        //            User.FindFirst("UserActiveId")?.Value;
+
+        //        // Superadmin hardcode
+        //        if (email?.Equals(
+        //                "superadmin@admin.com",
+        //                StringComparison.OrdinalIgnoreCase) == true)
+        //        {
+        //            return Ok(new
+        //            {
+        //                success = true,
+        //                statusCode = 200,
+        //                data = new
+        //                {
+        //                    Email = email,
+        //                    FullName = fullName,
+        //                    Role = role,
+        //                    UserActiveId = userActiveId,
+        //                    IsSuperAdmin = true
+        //                }
+        //            });
+        //        }
+
+        //        if (string.IsNullOrWhiteSpace(email))
+        //        {
+        //            return Unauthorized(new
+        //            {
+        //                success = false,
+        //                statusCode = 401,
+        //                message = "Claim email tidak ditemukan."
+        //            });
+        //        }
+
+        //        var user = await _context.UserActives
+        //            .AsNoTracking()
+        //            .FirstOrDefaultAsync(x =>
+        //                x.Email == email &&
+        //                x.IsActive &&
+        //                (x.IsDelete == false || x.IsDelete == null),
+        //                ct);
+
+        //        if (user == null)
+        //        {
+        //            await HttpContext.SignOutAsync("Identity.Application");
+
+        //            return Unauthorized(new
+        //            {
+        //                success = false,
+        //                statusCode = 401,
+        //                message = "User tidak ditemukan atau sudah tidak aktif."
+        //            });
+        //        }
+
+        //        var tipeUser = await _context.TipeUsers
+        //            .AsNoTracking()
+        //            .Where(x => x.TipeUserId == user.TipeUserId)
+        //            .Select(x => x.NamaTipeUser)
+        //            .FirstOrDefaultAsync(ct);
+
+        //        return Ok(new
+        //        {
+        //            success = true,
+        //            statusCode = 200,
+        //            data = new
+        //            {
+        //                user.UserActiveId,
+        //                user.UserActiveCode,
+        //                user.FullName,
+        //                user.Email,
+        //                user.Handphone,
+        //                user.IsActive,
+        //                user.DepartemenId,
+        //                user.PositionId,
+        //                user.TipeUserId,
+        //                Role = tipeUser ?? role,
+        //                IsSuperAdmin = false
+        //            }
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, ex.Message);
+
+        //        return StatusCode(500, new
+        //        {
+        //            success = false,
+        //            statusCode = 500,
+        //            message = ex.Message
+        //        });
+        //    }
+        //}
 
         [HttpGet("debug-auth")]
         [Authorize]
         public IActionResult DebugAuth()
         {
-            var authType = User.Identity?.AuthenticationType;
-
             return Ok(new
             {
-                authenticated = User.Identity?.IsAuthenticated,
-                authType,
-                claims = User.Claims.Select(x => new
+                IsAuthenticated = User.Identity?.IsAuthenticated,
+                AuthenticationType = User.Identity?.AuthenticationType,
+                Claims = User.Claims.Select(x => new
                 {
                     x.Type,
                     x.Value
                 })
+            });
+        }
+
+        [HttpGet("debug-cookie")]
+        [AllowAnonymous]
+        public IActionResult DebugCookie()
+        {
+            return Ok(new
+            {
+                Cookies = Request.Cookies.Keys.ToList(),
+                HasAuthCookie = Request.Cookies.ContainsKey(".Quilvian.Auth"),
+                HasSessionCookie = Request.Cookies.ContainsKey(".Quilvian.Session"),
+                AuthCookie = Request.Cookies.ContainsKey(".Quilvian.Auth")
+                    ? "FOUND"
+                    : "NOT_FOUND"
             });
         }
 

@@ -153,8 +153,25 @@ builder.Services.AddAuthentication(options =>
             return JwtBearerDefaults.AuthenticationScheme;
         }
 
-        return IdentityConstants.ApplicationScheme;
+        if (context.Request.Cookies.ContainsKey(".Quilvian.Auth"))
+        {
+            return IdentityConstants.ApplicationScheme;
+        }
+
+        return JwtBearerDefaults.AuthenticationScheme;
     };
+    //options.ForwardDefaultSelector = context =>
+    //{
+    //    var authorization = context.Request.Headers.Authorization.ToString();
+
+    //    if (!string.IsNullOrWhiteSpace(authorization) &&
+    //        authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+    //    {
+    //        return JwtBearerDefaults.AuthenticationScheme;
+    //    }
+
+    //    return IdentityConstants.ApplicationScheme;
+    //};
 })
 .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
 {
@@ -246,6 +263,18 @@ builder.Services.ConfigureApplicationCookie(options =>
 
     options.Events = new CookieAuthenticationEvents
     {
+        OnValidatePrincipal = context =>
+        {
+            var logger = context.HttpContext.RequestServices
+                .GetRequiredService<ILogger<Program>>();
+
+            logger.LogInformation(
+                "Cookie Auth ditemukan. User={User}",
+                context.Principal?.Identity?.Name);
+
+            return Task.CompletedTask;
+        },
+
         OnRedirectToLogin = async context =>
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
