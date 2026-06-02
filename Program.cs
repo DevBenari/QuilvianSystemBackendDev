@@ -443,8 +443,6 @@ app.UseSwaggerUI(c =>
 
     c.RoutePrefix = "swagger";
     c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None);
-    // Supaya token tetap tersimpan saat pindah-pindah definition / reload Swagger
-    c.EnablePersistAuthorization();
 });
 
 #endregion
