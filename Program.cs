@@ -220,8 +220,9 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Cookie.Name = ".Quilvian.Auth";
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
-
-    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.SlidingExpiration = true;
+    //options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Cookie.SameSite = SameSiteMode.None;
     options.Cookie.SecurePolicy = CookieSecurePolicy.None;
     //kalo pake https ini dinyalakan
     //options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
