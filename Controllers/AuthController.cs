@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers;
 using QuilvianSystemBackendDev.Helpers;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
@@ -27,18 +28,22 @@ namespace QuilvianSystemBackendDev.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly AutoLoginDTO _optAutoLogin;
+        private readonly ILogger<AuthController> _logger;
 
         public AuthController(
             IConfiguration configuration,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ApplicationDbContext context,
-            IOptions<AutoLoginDTO> optAutoLogin)
+            IOptions<AutoLoginDTO> optAutoLogin,
+            ILogger<AuthController> logger
+            )
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _configuration = configuration;
             _context = context;
+            _logger = logger;
             _optAutoLogin = optAutoLogin.Value;
         }
 
@@ -388,6 +393,291 @@ namespace QuilvianSystemBackendDev.Controllers
                 sessionExpiresAtUtc = HttpContext.Session.GetString("SessionExpiresAtUtc"),
                 sessionDurationMinutes = GetSessionTimeoutMinutes()
             });
+        }
+
+        [HttpGet("me")]
+        [Authorize(AuthenticationSchemes = "Identity.Application")]
+        public async Task<IActionResult> Me(CancellationToken ct)
+        {
+            try
+            {
+                var emailLogin =
+                    User.FindFirst(ClaimTypes.Email)?.Value
+                    ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                    ?? User.Identity?.Name;
+
+                if (string.IsNullOrWhiteSpace(emailLogin))
+                {
+                    return Unauthorized(new
+                    {
+                        success = false,
+                        statusCode = 401,
+                        message = "User tidak terautentikasi atau cookie tidak valid."
+                    });
+                }
+
+                var userData = await
+                    (from u in _context.UserActives.AsNoTracking()
+
+                     join t in _context.TipeUsers.AsNoTracking()
+                         on u.TipeUserId equals t.TipeUserId into tipeJoin
+                     from tipe in tipeJoin.DefaultIfEmpty()
+
+                     join d in _context.Departements.AsNoTracking()
+                         on u.DepartemenId equals d.DepartementId into departementJoin
+                     from d in departementJoin.DefaultIfEmpty()
+
+                     join p in _context.Positions.AsNoTracking()
+                         on u.PositionId equals p.PositionId into positionJoin
+                     from p in positionJoin.DefaultIfEmpty()
+
+                     where u.Email == emailLogin
+                           && (u.IsDelete == false || u.IsDelete == null)
+
+                     select new
+                     {
+                         u.UserActiveId,
+                         u.UserActiveCode,
+                         u.FullName,
+                         u.IdentityNumber,
+                         u.PlaceOfBirth,
+                         u.DateOfBirth,
+                         u.Gender,
+                         u.Address,
+                         u.Handphone,
+                         u.Email,
+                         u.IsActive,
+
+                         u.DepartemenId,
+                         NamaDepartement = d != null ? d.NamaDepartement : null,
+
+                         u.PositionId,
+                         NamaPosisi = p != null ? p.PositionName : null,
+
+                         u.TipeUserId,
+                         NamaTipeUser = tipe != null ? tipe.NamaTipeUser : null,
+
+                         u.NoSTR,
+                         u.StatusPegawai,
+                         u.FotoName,
+                         u.FotoPath,
+
+                         u.CreateDateTime,
+                         u.CreateBy,
+                         u.UpdateDateTime,
+                         u.UpdateBy,
+                         u.DeleteDateTime,
+                         u.DeleteBy,
+                         u.IsDelete
+                     })
+                    .FirstOrDefaultAsync(ct);
+
+                // Khusus superadmin hardcode dari Login
+                if (userData == null && emailLogin.Equals("superadmin@admin.com", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Ok(new
+                    {
+                        success = true,
+                        statusCode = 200,
+                        message = "User profile berhasil diambil.",
+                        data = new
+                        {
+                            IsSuperAdmin = true,
+                            TipeUser = "SuperAdmin",
+                            UserActive = new
+                            {
+                                UserActiveId = User.FindFirst("UserActiveId")?.Value,
+                                UserActiveCode = (string?)null,
+                                FullName = User.FindFirst("FullName")?.Value ?? "SuperAdmin",
+                                IdentityNumber = (string?)null,
+                                PlaceOfBirth = (string?)null,
+                                DateOfBirth = (DateTime?)null,
+                                Gender = (string?)null,
+                                Address = (string?)null,
+                                Handphone = (string?)null,
+                                Email = emailLogin,
+                                IsActive = true,
+                                DepartemenId = (Guid?)null,
+                                NamaDepartement = (string?)null,
+                                PositionId = (Guid?)null,
+                                NamaPosisi = (string?)null,
+                                TipeUserId = (Guid?)null,
+                                NamaTipeUser = "SuperAdmin",
+                                NoSTR = (string?)null,
+                                StatusPegawai = (string?)null,
+                                FotoName = (string?)null,
+                                FotoPath = (string?)null
+                            },
+                            ProfileDetail = (object?)null
+                        }
+                    });
+                }
+
+                if (userData == null)
+                {
+                    return NotFound(new
+                    {
+                        success = false,
+                        statusCode = 404,
+                        message = "Data user tidak ditemukan."
+                    });
+                }
+
+                var namaTipeUser = (userData.NamaTipeUser ?? string.Empty).Trim();
+
+                var isSuperAdmin =
+                    namaTipeUser.Equals("Super Admin", StringComparison.OrdinalIgnoreCase)
+                    || namaTipeUser.Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase);
+
+                var isDokter =
+                    namaTipeUser.Equals("Dokter", StringComparison.OrdinalIgnoreCase);
+
+                var userActiveResult = new
+                {
+                    userData.UserActiveId,
+                    userData.UserActiveCode,
+                    userData.FullName,
+                    userData.IdentityNumber,
+                    userData.PlaceOfBirth,
+                    userData.DateOfBirth,
+                    userData.Gender,
+                    userData.Address,
+                    userData.Handphone,
+                    userData.Email,
+                    userData.IsActive,
+
+                    userData.DepartemenId,
+                    userData.NamaDepartement,
+
+                    userData.PositionId,
+                    userData.NamaPosisi,
+
+                    userData.TipeUserId,
+                    NamaTipeUser = namaTipeUser,
+
+                    userData.NoSTR,
+                    userData.StatusPegawai,
+                    userData.FotoName,
+                    userData.FotoPath,
+
+                    userData.CreateDateTime,
+                    userData.CreateBy,
+                    userData.UpdateDateTime,
+                    userData.UpdateBy,
+                    userData.DeleteDateTime,
+                    userData.DeleteBy,
+                    userData.IsDelete
+                };
+
+                if (isDokter)
+                {
+                    var dokter = await _context.Dokters
+                        .AsNoTracking()
+                        .Where(d =>
+                            d.UserActiveId == userData.UserActiveId
+                            && (d.IsDelete == false || d.IsDelete == null))
+                        .Select(d => new
+                        {
+                            d.DokterId,
+                            d.UserActiveId,
+                            d.KdDokter,
+                            d.NmDokter,
+                            d.Email,
+                            d.Nohp,
+                            d.Alamat,
+                            d.Sip,
+                            d.Str,
+                            d.Spesialis,
+                            d.TglSip,
+                            d.TglStr,
+                            d.CreateDateTime,
+                            d.CreateBy,
+                            d.UpdateDateTime,
+                            d.UpdateBy
+                        })
+                        .FirstOrDefaultAsync(ct);
+
+                    if (dokter == null)
+                    {
+                        return NotFound(new
+                        {
+                            success = false,
+                            statusCode = 404,
+                            message = "User bertipe Dokter, tetapi data dokter tidak ditemukan."
+                        });
+                    }
+
+                    return Ok(new
+                    {
+                        success = true,
+                        statusCode = 200,
+                        message = isSuperAdmin
+                            ? "Data profile Super Admin (Dokter) ditemukan."
+                            : "Data profile dokter ditemukan.",
+                        data = new
+                        {
+                            IsSuperAdmin = isSuperAdmin,
+                            TipeUser = namaTipeUser,
+                            Roles = new[] { namaTipeUser },
+                            UserActive = userActiveResult,
+                            ProfileDetail = dokter
+                        }
+                    });
+                }
+
+                var karyawan = await _context.Karyawans
+                    .AsNoTracking()
+                    .Where(k =>
+                        k.UserActiveId == userData.UserActiveId
+                        && (k.IsDelete == false || k.IsDelete == null))
+                    .Select(k => new
+                    {
+                        k.KaryawanId,
+                        k.UserActiveId,
+                        k.NoIdentitas,
+                        k.Email,
+                        k.NoHandphone,
+                        k.TanggalAkhirKerja,
+                        k.TanggalAwalKerja,
+                        k.Alamat,
+                        k.DepartementId,
+                        k.FotoPath,
+                        k.FotoName,
+                        k.CreateDateTime,
+                        k.CreateBy,
+                        k.UpdateDateTime,
+                        k.UpdateBy
+                    })
+                    .FirstOrDefaultAsync(ct);
+
+                return Ok(new
+                {
+                    success = true,
+                    statusCode = 200,
+                    message = isSuperAdmin
+                        ? "Data profile Super Admin ditemukan."
+                        : "Data profile user ditemukan.",
+                    data = new
+                    {
+                        IsSuperAdmin = isSuperAdmin,
+                        TipeUser = namaTipeUser,
+                        Roles = new[] { namaTipeUser },
+                        UserActive = userActiveResult,
+                        ProfileDetail = karyawan
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
+
+                return StatusCode(500, new
+                {
+                    success = false,
+                    statusCode = 500,
+                    message = ex.Message
+                });
+            }
         }
 
         [HttpPost("keep-alive")]
