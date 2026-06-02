@@ -381,7 +381,8 @@ namespace QuilvianSystemBackendDev.Controllers
         }
 
         [HttpGet("session-info")]
-        [Authorize(AuthenticationSchemes = "Bearer,Identity.Application")]
+        [Authorize]
+        //[Authorize(AuthenticationSchemes = "Bearer,Identity.Application")]
         public IActionResult SessionInfo()
         {
             return Ok(new
@@ -396,7 +397,8 @@ namespace QuilvianSystemBackendDev.Controllers
         }
 
         [HttpGet("me")]
-        [Authorize(AuthenticationSchemes = "Identity.Application")]
+        [Authorize]
+        //[Authorize(AuthenticationSchemes = "Identity.Application")]
         public async Task<IActionResult> Me(CancellationToken ct)
         {
             try
@@ -512,6 +514,22 @@ namespace QuilvianSystemBackendDev.Controllers
                     message = ex.Message
                 });
             }
+        }
+
+        [HttpGet("debug-auth")]
+        [Authorize]
+        public IActionResult DebugAuth()
+        {
+            return Ok(new
+            {
+                IsAuthenticated = User.Identity?.IsAuthenticated,
+                AuthenticationType = User.Identity?.AuthenticationType,
+                Claims = User.Claims.Select(c => new
+                {
+                    c.Type,
+                    c.Value
+                })
+            });
         }
 
         [HttpPost("keep-alive")]
