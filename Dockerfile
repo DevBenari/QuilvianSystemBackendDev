@@ -1,31 +1,31 @@
-
-# Use the official .NET SDK images quilviandev tes
-
 FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
 
-# Set the working directory inside the container
 WORKDIR /app
 
-# Copy the main project file
-COPY QuilvianSystemBackendDev.csproj ./
+COPY ["QuilvianSystemBackendDev.csproj", "./"]
 
-# Restore dependencies
-RUN dotnet restore QuilvianSystemBackendDev.csproj
+RUN dotnet restore "QuilvianSystemBackendDev.csproj"
 
-# Copy the rest of the application code
-COPY . ./
+COPY . .
 
-# Publish the app to a directory in the container
-RUN dotnet publish -c Release -o out
+RUN dotnet publish "QuilvianSystemBackendDev.csproj" \
+    -c Release \
+    -o /app/out \
+    --no-restore \
+    /p:UseAppHost=false \
+    /p:DebugType=None \
+    /p:DebugSymbols=false \
+    /p:RunAnalyzers=false \
+    /p:ContinuousIntegrationBuild=true \
+    /clp:ErrorsOnly
 
-# Use the official ASP.NET image for runtime
-FROM mcr.microsoft.com/dotnet/aspnet:6.0
+FROM mcr.microsoft.com/dotnet/aspnet:6.0 AS final
 
-# Set the working directory inside the container
 WORKDIR /app
 
-# Copy the published app from the previous image
+ENV ASPNETCORE_URLS=http://+:80
+EXPOSE 80
+
 COPY --from=build /app/out .
 
-# Set the entry point to start the application
 ENTRYPOINT ["dotnet", "QuilvianSystemBackendDev.dll"]
