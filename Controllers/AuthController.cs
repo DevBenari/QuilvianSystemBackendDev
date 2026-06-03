@@ -243,7 +243,8 @@ namespace QuilvianSystemBackendDev.Controllers
         }
 
         [HttpPost("logout")]
-        [Authorize(AuthenticationSchemes = "Bearer,Identity.Application")]
+        [AllowAnonymous]
+        //[Authorize(AuthenticationSchemes = "Bearer,Identity.Application")]
         public async Task<IActionResult> Logout()
         {
             var email = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value
@@ -278,7 +279,10 @@ namespace QuilvianSystemBackendDev.Controllers
             }
 
             HttpContext.Session.Clear();
-            await HttpContext.SignOutAsync(IdentityScheme);
+            await HttpContext.SignOutAsync("Identity.Application");
+
+            Response.Cookies.Delete(".Quilvian.Auth");
+            Response.Cookies.Delete(".Quilvian.Session");
 
             return Ok(new { message = "Logout berhasil." });
         }
@@ -397,7 +401,8 @@ namespace QuilvianSystemBackendDev.Controllers
         }
 
         [HttpGet("me")]
-        [Authorize(AuthenticationSchemes = "Identity.Application")]
+        [Authorize]
+        //[Authorize(AuthenticationSchemes = "Identity.Application")]
         public async Task<IActionResult> Me(CancellationToken ct)
         {
             var email =
