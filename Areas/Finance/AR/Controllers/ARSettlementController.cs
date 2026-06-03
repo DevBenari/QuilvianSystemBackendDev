@@ -277,8 +277,11 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                     join payment in _applicationDbContext.DetailInvoiceReceiveds
                         on d.KunjunganId equals payment.KunjunganId
                         into paymentGroup
-
                     from payment in paymentGroup.DefaultIfEmpty()
+
+                    join rp in _applicationDbContext.ReceivedPayments
+                        on ar.NoInvoice equals rp.NoInvoice into rpGroup
+                    from rp in rpGroup.DefaultIfEmpty()
 
                     where d.KunjunganId == idkunjungan  // Filter berdasarkan idkunjungan
 
@@ -315,6 +318,16 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                         d.TotalSetelahDiskon,
                         d.IsCanceled,
                         d.Keterangan,
+
+                        // RECEIVED PAYMENT
+
+                        ReceivedPaymentId = rp != null
+                        ? (Guid?)rp.ReceivedPaymentId
+                        : null,
+
+                        IsCancelledReceivedPayment = rp != null
+                        ? rp.IsCanceled
+                        : false,
 
                         // PAYMENT
 
@@ -389,7 +402,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                         x.TglPembuatanInvoice,
                         x.TglJatuhTempo,
                         x.DueDate,
-                        x.TotalInvoice
+                        x.TotalInvoice,
+                        x.IsCancelledReceivedPayment
                     })
                     .Select(header => new
                     {
@@ -403,6 +417,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                         header.Key.TglJatuhTempo,
                         header.Key.DueDate,
                         header.Key.TotalInvoice,
+                        header.Key.IsCancelledReceivedPayment,
 
                         ArDetails = header
                             .GroupBy(d => new

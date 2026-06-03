@@ -46,33 +46,59 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
             if (page < 1) page = 1;
             if (perPage < 1) perPage = 10;
 
-            var query = (from rp in _applicationDbContext.ReceivedPayments
-                         join u in _applicationDbContext.UserActives
-                         on rp.CreateBy equals u.UserActiveId
-                         where rp.IsDelete == false
-                         select new
-                         {
-                             rp.ReceivedPaymentId,
-                             rp.BankId,
-                             rp.NoInvoice,
-                             rp.TotalReceived,
-                             rp.TglPembayaran,
-                             rp.SisaPembayaran,
-                             rp.TotalTagihanPasien,
-                             rp.PembayaranKe,
-                             rp.IsCanceled,
-                             rp.Keterangan,
-                             rp.CreateDateTime,
-                             CreateByName = u.FullName
-                         }).OrderByDescending(x => x.CreateDateTime);
+            var query =
+                from rp in _applicationDbContext.ReceivedPayments.AsNoTracking()
 
-            int totalRows = query.Count();
-            int totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+                join u0 in _applicationDbContext.UserActives.AsNoTracking()
+                    on rp.CreateBy equals u0.UserActiveId into uu
+                from u in uu.DefaultIfEmpty()
 
-            var listData = query
+                join b0 in _applicationDbContext.MasterBanks.AsNoTracking()
+                    on rp.BankId equals b0.BankId into bb
+                from b in bb.DefaultIfEmpty()
+
+                join a0 in _applicationDbContext.AyatSilangs.AsNoTracking()
+                    on rp.AyatSilangId equals a0.AyatSilangId into aa
+                from a in aa.DefaultIfEmpty()
+
+                join an in _applicationDbContext.Asuransis.AsNoTracking()
+                on a.AsuransiId equals an.AsuransiId into anGroup
+                from an in anGroup.DefaultIfEmpty()
+
+                where rp.IsDelete == false || rp.IsDelete == null
+
+                orderby rp.CreateDateTime descending
+
+                select new
+                {
+                    rp.ReceivedPaymentId,
+                    rp.BankId,
+                    BankName = b != null ? b.BankName : null,              // sesuaikan nama field
+                    rp.AyatSilangId,
+                    NoAyatSilang = a != null ? a.NoAyatSilang : null,  // sesuaikan nama field
+                    NoReferensi = a != null ? a.NoReferensi : null,
+                    TotalPembayaran = a != null ? a.TotalPembayaran : 0,
+                    AsuransiId = a != null ? a.AsuransiId : (Guid?)null,
+                    NamaAsuransi = an != null ? an.NamaAsuransi : null,
+                    rp.NoInvoice,
+                    rp.TotalReceived,
+                    rp.TglPembayaran,
+                    rp.SisaPembayaran,
+                    rp.TotalTagihanPasien,
+                    rp.PembayaranKe,
+                    rp.IsCanceled,
+                    rp.Keterangan,
+                    rp.CreateDateTime,
+                    CreateByName = u != null ? u.FullName : null
+                };
+
+            var totalRows = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalRows / (double)perPage);
+
+            var listData = await query
                 .Skip((page - 1) * perPage)
                 .Take(perPage)
-                .ToList();
+                .ToListAsync();
 
             if (!listData.Any())
             {
@@ -96,13 +122,60 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
             });
         }
 
+
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetReceivedPaymentById(Guid id)
+        public async Task<IActionResult> GetById(Guid id)
         {
-            var data = await _applicationDbContext.ReceivedPayments
-                .FirstOrDefaultAsync(x =>
-                    x.ReceivedPaymentId == id &&
-                    x.IsDelete == false);
+            var data =
+                await (
+                    from rp in _applicationDbContext.ReceivedPayments.AsNoTracking()
+
+                    join u0 in _applicationDbContext.UserActives.AsNoTracking()
+                        on rp.CreateBy equals u0.UserActiveId into uu
+                    from u in uu.DefaultIfEmpty()
+
+                    join b0 in _applicationDbContext.MasterBanks.AsNoTracking()
+                        on rp.BankId equals b0.BankId into bb
+                    from b in bb.DefaultIfEmpty()
+
+                    join a0 in _applicationDbContext.AyatSilangs.AsNoTracking()
+                        on rp.AyatSilangId equals a0.AyatSilangId into aa
+                    from a in aa.DefaultIfEmpty()
+
+                    join an0 in _applicationDbContext.Asuransis.AsNoTracking()
+                        on a.AsuransiId equals an0.AsuransiId into anGroup
+                    from an in anGroup.DefaultIfEmpty()
+
+                    where rp.ReceivedPaymentId == id
+                          && (rp.IsDelete == false || rp.IsDelete == null)
+
+                    select new
+                    {
+                        rp.ReceivedPaymentId,
+                        rp.BankId,
+                        BankName = b != null ? b.BankName : null,
+
+                        rp.AyatSilangId,
+                        NoAyatSilang = a != null ? a.NoAyatSilang : null,
+                        NoReferensi = a != null ? a.NoReferensi : null,
+                        TotalPembayaran = a != null ? a.TotalPembayaran : 0,
+
+                        AsuransiId = a != null ? a.AsuransiId : (Guid?)null,
+                        NamaAsuransi = an != null ? an.NamaAsuransi : null,
+
+                        rp.NoInvoice,
+                        rp.TotalReceived,
+                        rp.TglPembayaran,
+                        rp.SisaPembayaran,
+                        rp.TotalTagihanPasien,
+                        rp.PembayaranKe,
+                        rp.IsCanceled,
+                        rp.Keterangan,
+                        rp.CreateDateTime,
+                        rp.CreateBy,
+                        CreateByName = u != null ? u.FullName : null
+                    }
+                ).FirstOrDefaultAsync();
 
             if (data == null)
             {
@@ -114,8 +187,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
 
             return Ok(new
             {
-                message = "Data ditemukan",
-                data = data
+                message = "Berhasil tampilkan data",
+                data
             });
         }
 
@@ -411,32 +484,50 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                 endDate ??= DateTime.UtcNow.Date;
 
                 var query =
-                    from rp in _applicationDbContext.ReceivedPayments
+                   from rp in _applicationDbContext.ReceivedPayments.AsNoTracking()
 
-                    join u in _applicationDbContext.UserActives
-                        on rp.CreateBy equals u.UserActiveId
+                   join u0 in _applicationDbContext.UserActives.AsNoTracking()
+                       on rp.CreateBy equals u0.UserActiveId into uu
+                   from u in uu.DefaultIfEmpty()
 
-                    where rp.IsDelete == false
+                   join b0 in _applicationDbContext.MasterBanks.AsNoTracking()
+                       on rp.BankId equals b0.BankId into bb
+                   from b in bb.DefaultIfEmpty()
 
-                    select new
-                    {
-                        rp.ReceivedPaymentId,
-                        rp.BankId,
-                        rp.NoInvoice,
+                   join a0 in _applicationDbContext.AyatSilangs.AsNoTracking()
+                       on rp.AyatSilangId equals a0.AyatSilangId into aa
+                   from a in aa.DefaultIfEmpty()
 
-                        rp.TotalReceived,
-                        rp.TglPembayaran,
-                        rp.SisaPembayaran,
-                        rp.TotalTagihanPasien,
-                        rp.PembayaranKe,
+                   join an in _applicationDbContext.Asuransis.AsNoTracking()
+                   on a.AsuransiId equals an.AsuransiId into anGroup
+                   from an in anGroup.DefaultIfEmpty()
 
-                        rp.IsCanceled,
-                        rp.Keterangan,
+                   where rp.IsDelete == false || rp.IsDelete == null
 
-                        rp.CreateDateTime,
+                   orderby rp.CreateDateTime descending
 
-                        CreateByName = u.FullName
-                    };
+                   select new
+                   {
+                       rp.ReceivedPaymentId,
+                       rp.BankId,
+                       BankName = b != null ? b.BankName : null,              // sesuaikan nama field
+                       rp.AyatSilangId,
+                       NoAyatSilang = a != null ? a.NoAyatSilang : null,  // sesuaikan nama field
+                       NoReferensi = a != null ? a.NoReferensi : null,
+                       TotalPembayaran = a != null ? a.TotalPembayaran : 0,
+                       AsuransiId = a != null ? a.AsuransiId : (Guid?)null,
+                       NamaAsuransi = an != null ? an.NamaAsuransi : null,
+                       rp.NoInvoice,
+                       rp.TotalReceived,
+                       rp.TglPembayaran,
+                       rp.SisaPembayaran,
+                       rp.TotalTagihanPasien,
+                       rp.PembayaranKe,
+                       rp.IsCanceled,
+                       rp.Keterangan,
+                       rp.CreateDateTime,
+                       CreateByName = u != null ? u.FullName : null
+                   };
 
                 // SEARCH
                 if (!string.IsNullOrWhiteSpace(search))

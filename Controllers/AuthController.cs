@@ -2,7 +2,6 @@
 using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -20,25 +19,26 @@ namespace QuilvianSystemBackendDev.Controllers
     [Route("api/[controller]")]
     public class AuthController : Controller
     {
-        private const string IdentityScheme = "Identity.Application";
-
         private readonly ApplicationDbContext _context;
         private readonly IConfiguration _configuration;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly AutoLoginDTO _optAutoLogin;
+        private readonly ILogger<AuthController> _logger;
 
         public AuthController(
             IConfiguration configuration,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ApplicationDbContext context,
-            IOptions<AutoLoginDTO> optAutoLogin)
+            IOptions<AutoLoginDTO> optAutoLogin,
+            ILogger<AuthController> logger)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _configuration = configuration;
             _context = context;
+            _logger = logger;
             _optAutoLogin = optAutoLogin.Value;
         }
 
@@ -49,13 +49,9 @@ namespace QuilvianSystemBackendDev.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(new { message = "Model login tidak valid" });
 
-            if (User?.Identity?.IsAuthenticated == true)
-                return BadRequest(new { message = "User sedang online || Response Code: 400" });
-
             var idfinger = await _context.Fingerprints
                 .FirstOrDefaultAsync(u => u.UserId == model.Email);
 
-            var setCookie = true;
             // 1. SUPERADMIN
             if (model.Email == "superadmin@admin.com" && model.Password == "Admin@123")
             {
@@ -66,15 +62,7 @@ namespace QuilvianSystemBackendDev.Controllers
                     "Superadmin"
                 );
 
-                if (setCookie)
-                {
-                    await SignInIdentityCookieAsync(
-                        model.Email,
-                        "Superadmin",
-                        null,
-                        "Superadmin"
-                    );
-                }
+                SetJwtCookie(jwt.Token, jwt.ExpirationUtc);
 
                 SetSession(
                     model.Email,
@@ -83,14 +71,7 @@ namespace QuilvianSystemBackendDev.Controllers
                     "Superadmin"
                 );
 
-                return Ok(new
-                {
-                    message = "Berhasil || 200 OK",
-                    token = jwt.Token,
-                    expiration = jwt.ExpirationUtc,
-                    sessionDurationMinutes = GetSessionTimeoutMinutes(),
-                    cookieCreated = setCookie
-                });
+                return Ok(LoginSuccessResponse(jwt.ExpirationUtc));
             }
 
             // 2. LOGIN FINGERPRINT
@@ -124,15 +105,7 @@ namespace QuilvianSystemBackendDev.Controllers
                     userActiveFinger.FullName
                 );
 
-                if (setCookie)
-                {
-                    await SignInIdentityCookieAsync(
-                        userActiveFinger.Email ?? model.Email,
-                        userActiveFinger.FullName ?? string.Empty,
-                        userActiveFinger.UserActiveId.ToString(),
-                        roleNameFinger
-                    );
-                }
+                SetJwtCookie(jwt.Token, jwt.ExpirationUtc);
 
                 SetSession(
                     userActiveFinger.Email ?? model.Email,
@@ -148,14 +121,7 @@ namespace QuilvianSystemBackendDev.Controllers
                     await _userManager.UpdateAsync(identityUserFinger);
                 }
 
-                return Ok(new
-                {
-                    message = "Berhasil || 200 OK",
-                    token = jwt.Token,
-                    expiration = jwt.ExpirationUtc,
-                    sessionDurationMinutes = GetSessionTimeoutMinutes(),
-                    cookieCreated = setCookie
-                });
+                return Ok(LoginSuccessResponse(jwt.ExpirationUtc));
             }
 
             // 3. LOGIN EMAIL + PASSWORD
@@ -190,15 +156,7 @@ namespace QuilvianSystemBackendDev.Controllers
                     userActive.FullName
                 );
 
-                if (setCookie)
-                {
-                    await SignInIdentityCookieAsync(
-                        model.Email,
-                        userActive.FullName ?? string.Empty,
-                        userActive.UserActiveId.ToString(),
-                        roleName
-                    );
-                }
+                SetJwtCookie(jwt.Token, jwt.ExpirationUtc);
 
                 SetSession(
                     model.Email,
@@ -210,14 +168,7 @@ namespace QuilvianSystemBackendDev.Controllers
                 user.IsOnline = true;
                 await _userManager.UpdateAsync(user);
 
-                return Ok(new
-                {
-                    message = "Berhasil || 200 OK",
-                    token = jwt.Token,
-                    expiration = jwt.ExpirationUtc,
-                    sessionDurationMinutes = GetSessionTimeoutMinutes(),
-                    cookieCreated = setCookie
-                });
+                return Ok(LoginSuccessResponse(jwt.ExpirationUtc));
             }
 
             if (result.IsLockedOut)
@@ -238,7 +189,7 @@ namespace QuilvianSystemBackendDev.Controllers
         }
 
         [HttpPost("logout")]
-        [Authorize(AuthenticationSchemes = "Bearer,Identity.Application")]
+        [AllowAnonymous]
         public async Task<IActionResult> Logout()
         {
             var email = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value
@@ -246,40 +197,48 @@ namespace QuilvianSystemBackendDev.Controllers
                      ?? HttpContext.Session.GetString("Email")
                      ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-            if (string.IsNullOrEmpty(email))
-                return Unauthorized(new { message = "User tidak terautentikasi!" });
-
-            var user = await _userManager.FindByEmailAsync(email);
-            if (user != null)
+            if (!string.IsNullOrWhiteSpace(email))
             {
-                user.IsOnline = false;
-                await _userManager.UpdateAsync(user);
-            }
-
-            var userActive = await _context.UserActives
-                .FirstOrDefaultAsync(x => x.Email == email);
-
-            if (userActive != null)
-            {
-                var fingerprint = await _context.Fingerprints
-                    .FirstOrDefaultAsync(f => f.UserId == userActive.UserActiveId.ToString());
-
-                if (fingerprint != null)
+                var user = await _userManager.FindByEmailAsync(email);
+                if (user != null)
                 {
-                    fingerprint.DeviceId = Guid.NewGuid().ToString();
-                    _context.Fingerprints.Update(fingerprint);
-                    await _context.SaveChangesAsync();
+                    user.IsOnline = false;
+                    await _userManager.UpdateAsync(user);
+                }
+
+                var userActive = await _context.UserActives
+                    .FirstOrDefaultAsync(x => x.Email == email);
+
+                if (userActive != null)
+                {
+                    var fingerprint = await _context.Fingerprints
+                        .FirstOrDefaultAsync(f => f.UserId == userActive.UserActiveId.ToString());
+
+                    if (fingerprint != null)
+                    {
+                        fingerprint.DeviceId = Guid.NewGuid().ToString();
+                        _context.Fingerprints.Update(fingerprint);
+                        await _context.SaveChangesAsync();
+                    }
                 }
             }
 
             HttpContext.Session.Clear();
-            await HttpContext.SignOutAsync(IdentityScheme);
+
+            DeleteJwtCookie();
+            DeleteSessionCookie();
+
+            // Hapus cookie lama kalau masih tersisa dari versi Identity Cookie sebelumnya.
+            Response.Cookies.Delete(".Quilvian.Auth", new CookieOptions
+            {
+                Secure = true,
+                SameSite = SameSiteMode.Lax,
+                Path = "/"
+            });
 
             return Ok(new { message = "Logout berhasil." });
         }
 
-   
-        // swagger/service: /api/auth?token=xxx&redirect=false&setCookie=false
         [AllowAnonymous]
         [HttpGet("AutoLogin")]
         public async Task<IActionResult> AutoLogin(
@@ -321,14 +280,16 @@ namespace QuilvianSystemBackendDev.Controllers
                 .Select(t => t.NamaTipeUser)
                 .FirstOrDefaultAsync() ?? "Guest";
 
+            var jwt = BuildJwtToken(
+                userActive.Email ?? userActive.UserActiveId.ToString(),
+                roleName,
+                userActive.UserActiveId.ToString(),
+                userActive.FullName
+            );
+
             if (setCookie)
             {
-                await SignInIdentityCookieAsync(
-                    userActive.Email ?? userActive.UserActiveId.ToString(),
-                    userActive.FullName ?? string.Empty,
-                    userActive.UserActiveId.ToString(),
-                    roleName
-                );
+                SetJwtCookie(jwt.Token, jwt.ExpirationUtc);
             }
 
             SetSession(
@@ -341,13 +302,6 @@ namespace QuilvianSystemBackendDev.Controllers
             appUser.IsOnline = true;
             await _userManager.UpdateAsync(appUser);
 
-            var jwt = BuildJwtToken(
-                userActive.Email ?? userActive.UserActiveId.ToString(),
-                roleName,
-                userActive.UserActiveId.ToString(),
-                userActive.FullName
-            );
-
             if (redirect)
             {
                 if (string.IsNullOrWhiteSpace(result.TargetUrl))
@@ -356,27 +310,24 @@ namespace QuilvianSystemBackendDev.Controllers
                 if (!IsAllowedRedirect(result.TargetUrl))
                     return BadRequest(new { message = "Target URL tidak valid." });
 
-                return AutoLoginRedirectWithJwt(
-                    jwt.Token,
-                    jwt.ExpirationUtc,
-                    result.TargetUrl
-                );
+                return AutoLoginRedirect(result.TargetUrl);
             }
 
             return Ok(new
             {
                 message = "Autologin berhasil",
-                token = jwt.Token,
                 expiration = jwt.ExpirationUtc,
                 targetUrl = result.TargetUrl,
                 sessionDurationMinutes = GetSessionTimeoutMinutes(),
-                cookieCreated = setCookie,
-                tokenType = "Bearer"
+                sessionExpiresAtUtc = DateTime.UtcNow.AddMinutes(GetSessionTimeoutMinutes()),
+                jwtCookieCreated = setCookie,
+                tokenType = "Bearer",
+                authMode = "JwtHttpOnlyCookie"
             });
         }
 
         [HttpGet("session-info")]
-        [Authorize(AuthenticationSchemes = "Bearer,Identity.Application")]
+        [Authorize]
         public IActionResult SessionInfo()
         {
             return Ok(new
@@ -390,9 +341,120 @@ namespace QuilvianSystemBackendDev.Controllers
             });
         }
 
+        [HttpGet("me")]
+        [Authorize]
+        public async Task<IActionResult> Me(CancellationToken ct)
+        {
+            var email =
+                User.FindFirst(ClaimTypes.Email)?.Value ??
+                User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ??
+                User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(email))
+            {
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = "Claim email tidak ditemukan."
+                });
+            }
+
+            if (email.Equals("superadmin@admin.com", StringComparison.OrdinalIgnoreCase))
+            {
+                return Ok(new
+                {
+                    success = true,
+                    data = new
+                    {
+                        UserActiveId = (string?)null,
+                        FullName = "Superadmin",
+                        Email = email,
+                        IsActive = true,
+                        IsSuperAdmin = true
+                    }
+                });
+            }
+
+            var user = await _context.UserActives
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x =>
+                    x.Email == email &&
+                    x.IsActive &&
+                    (x.IsDelete == false || x.IsDelete == null),
+                    ct);
+
+            if (user == null)
+            {
+                DeleteJwtCookie();
+                DeleteSessionCookie();
+
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = "User tidak ditemukan atau tidak aktif."
+                });
+            }
+
+            return Ok(new
+            {
+                success = true,
+                data = new
+                {
+                    user.UserActiveId,
+                    user.FullName,
+                    user.Email,
+                    user.IsActive
+                }
+            });
+        }
+
+        [HttpGet("debug-auth")]
+        [Authorize]
+        public IActionResult DebugAuth()
+        {
+            return Ok(new
+            {
+                IsAuthenticated = User.Identity?.IsAuthenticated,
+                AuthenticationType = User.Identity?.AuthenticationType,
+
+                JwtCookieName = GetJwtCookieName(),
+                HasJwtCookie = Request.Cookies.ContainsKey(GetJwtCookieName()),
+                HasSessionCookie = Request.Cookies.ContainsKey(".Quilvian.Session"),
+                HasOldIdentityAuthCookie = Request.Cookies.ContainsKey(".Quilvian.Auth"),
+
+                HasAuthorizationHeader = Request.Headers.ContainsKey("Authorization"),
+
+                Claims = User.Claims.Select(x => new
+                {
+                    x.Type,
+                    x.Value
+                })
+            });
+        }
+
+        [HttpGet("debug-cookie")]
+        [AllowAnonymous]
+        public IActionResult DebugCookie()
+        {
+            var jwtCookieName = GetJwtCookieName();
+
+            return Ok(new
+            {
+                Cookies = Request.Cookies.Keys.ToList(),
+
+                JwtCookieName = jwtCookieName,
+                HasJwtCookie = Request.Cookies.ContainsKey(jwtCookieName),
+
+                HasSessionCookie = Request.Cookies.ContainsKey(".Quilvian.Session"),
+
+                // Cookie lama dari Identity Cookie. Seharusnya nanti tidak dipakai lagi.
+                HasOldIdentityAuthCookie = Request.Cookies.ContainsKey(".Quilvian.Auth")
+            });
+        }
+
         [HttpPost("keep-alive")]
-        [Authorize(AuthenticationSchemes = "Bearer,Identity.Application")]
-        public async Task<IActionResult> KeepAlive([FromQuery] bool setCookie = true)
+        [Authorize]
+        public async Task<IActionResult> KeepAlive()
         {
             var email = User.FindFirst(ClaimTypes.Email)?.Value
                      ?? User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value
@@ -422,6 +484,36 @@ namespace QuilvianSystemBackendDev.Controllers
 
             if (userActive == null)
             {
+                if (email?.Equals("superadmin@admin.com", StringComparison.OrdinalIgnoreCase) == true)
+                {
+                    var superJwt = BuildJwtToken(
+                        email,
+                        "Superadmin",
+                        null,
+                        "Superadmin"
+                    );
+
+                    SetJwtCookie(superJwt.Token, superJwt.ExpirationUtc);
+
+                    SetSession(
+                        email,
+                        "Superadmin",
+                        null,
+                        "Superadmin"
+                    );
+
+                    return Ok(new
+                    {
+                        message = "Session diperpanjang.",
+                        tokenType = "Bearer",
+                        authMode = "JwtHttpOnlyCookie",
+                        expiration = superJwt.ExpirationUtc,
+                        sessionDurationMinutes = GetSessionTimeoutMinutes(),
+                        sessionExpiresAtUtc = DateTime.UtcNow.AddMinutes(GetSessionTimeoutMinutes()),
+                        jwtCookieUpdated = true
+                    });
+                }
+
                 return Unauthorized(new { message = "User tidak ditemukan atau tidak aktif." });
             }
 
@@ -430,15 +522,14 @@ namespace QuilvianSystemBackendDev.Controllers
                 .Select(t => t.NamaTipeUser)
                 .FirstOrDefaultAsync() ?? "Guest";
 
-            if (setCookie)
-            {
-                await SignInIdentityCookieAsync(
-                    userActive.Email ?? userActive.UserActiveId.ToString(),
-                    userActive.FullName ?? string.Empty,
-                    userActive.UserActiveId.ToString(),
-                    roleName
-                );
-            }
+            var jwt = BuildJwtToken(
+                userActive.Email ?? userActive.UserActiveId.ToString(),
+                roleName,
+                userActive.UserActiveId.ToString(),
+                userActive.FullName
+            );
+
+            SetJwtCookie(jwt.Token, jwt.ExpirationUtc);
 
             SetSession(
                 userActive.Email ?? userActive.UserActiveId.ToString(),
@@ -447,22 +538,15 @@ namespace QuilvianSystemBackendDev.Controllers
                 roleName
             );
 
-            var jwt = BuildJwtToken(
-                userActive.Email ?? userActive.UserActiveId.ToString(),
-                roleName,
-                userActive.UserActiveId.ToString(),
-                userActive.FullName
-            );
-
             return Ok(new
             {
                 message = "Session diperpanjang.",
-                token = jwt.Token,
                 tokenType = "Bearer",
+                authMode = "JwtHttpOnlyCookie",
                 expiration = jwt.ExpirationUtc,
                 sessionDurationMinutes = GetSessionTimeoutMinutes(),
                 sessionExpiresAtUtc = DateTime.UtcNow.AddMinutes(GetSessionTimeoutMinutes()),
-                cookieUpdated = setCookie
+                jwtCookieUpdated = true
             });
         }
 
@@ -477,7 +561,9 @@ namespace QuilvianSystemBackendDev.Controllers
                 new Claim(JwtRegisteredClaimNames.Sub, email),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new Claim("role", role ?? "Guest"),
+                new Claim(ClaimTypes.Role, role ?? "Guest"),
                 new Claim(ClaimTypes.Email, email),
+                new Claim(ClaimTypes.NameIdentifier, email),
                 new Claim(ClaimTypes.Name, fullName ?? email)
             };
 
@@ -485,6 +571,7 @@ namespace QuilvianSystemBackendDev.Controllers
                 claims.Add(new Claim("UserActiveId", userActiveId));
 
             var expiresUtc = DateTime.UtcNow.AddMinutes(GetJwtExpireMinutes());
+
             var token = new JwtSecurityToken(
                 issuer: jwtSettings["Issuer"],
                 audience: jwtSettings["Audience"],
@@ -500,38 +587,10 @@ namespace QuilvianSystemBackendDev.Controllers
             };
         }
 
-        private async Task SignInIdentityCookieAsync(string email, string fullName, string? userActiveId, string role)
-        {
-            var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.NameIdentifier, email),
-                new Claim(ClaimTypes.Email, email),
-                new Claim(ClaimTypes.Name, fullName ?? string.Empty),
-                new Claim("role", role ?? "Guest")
-            };
-
-            if (!string.IsNullOrWhiteSpace(userActiveId))
-                claims.Add(new Claim("UserActiveId", userActiveId));
-
-            var identity = new ClaimsIdentity(claims, IdentityScheme);
-            var principal = new ClaimsPrincipal(identity);
-
-            await HttpContext.SignInAsync(
-                IdentityScheme,
-                principal,
-                new AuthenticationProperties
-                {
-                    IsPersistent = true,
-                    AllowRefresh = true,
-                    ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(GetSessionTimeoutMinutes())
-                    //ExpiresUtc = DateTimeOffset.UtcNow.AddSeconds(GetSessionTimeoutSeconds())
-                });
-        }
-
         private void SetSession(string email, string fullName, string? userActiveId, string role)
         {
             var expiresAt = DateTime.UtcNow.AddMinutes(GetSessionTimeoutMinutes());
-            //var expiresAt = DateTime.UtcNow.AddSeconds(GetSessionTimeoutSeconds());
+
             HttpContext.Session.SetString("Email", email);
             HttpContext.Session.SetString("FullName", fullName ?? string.Empty);
             HttpContext.Session.SetString("Role", role ?? "Guest");
@@ -542,22 +601,74 @@ namespace QuilvianSystemBackendDev.Controllers
                 HttpContext.Session.SetString("UserActiveId", userActiveId);
         }
 
-        //private int GetJwtExpireSeconds()
-        //{
-        //    var seconds = _configuration.GetValue<int?>("Jwt:ExpirationInSeconds");
+        private string GetJwtCookieName()
+        {
+            return _configuration["Jwt:CookieName"] ?? ".Quilvian.AccessToken";
+        }
 
-        //    if (seconds.HasValue && seconds.Value > 0)
-        //        return seconds.Value;
+        private void SetJwtCookie(string token, DateTime expirationUtc)
+        {
+            Response.Cookies.Append(
+                GetJwtCookieName(),
+                token,
+                new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = true,
+                    SameSite = SameSiteMode.Lax,
+                    Expires = new DateTimeOffset(expirationUtc),
+                    IsEssential = true,
+                    Path = "/"
+                });
+        }
 
-        //    var minutes = _configuration.GetValue<int?>("Jwt:ExpirationInMinutes");
+        private void DeleteJwtCookie()
+        {
+            Response.Cookies.Delete(
+                GetJwtCookieName(),
+                new CookieOptions
+                {
+                    Secure = true,
+                    SameSite = SameSiteMode.Lax,
+                    Path = "/"
+                });
+        }
 
-        //    return (minutes.HasValue && minutes.Value > 0 ? minutes.Value : 180) * 60;
-        //}
+        private void DeleteSessionCookie()
+        {
+            Response.Cookies.Delete(
+                ".Quilvian.Session",
+                new CookieOptions
+                {
+                    Secure = true,
+                    SameSite = SameSiteMode.Lax,
+                    Path = "/"
+                });
+        }
+
+        private object LoginSuccessResponse(DateTime expirationUtc)
+        {
+            return new
+            {
+                message = "Berhasil || 200 OK",
+                expiration = expirationUtc,
+                tokenType = "Bearer",
+                authMode = "JwtHttpOnlyCookie",
+                jwtCookieCreated = true,
+                sessionDurationMinutes = GetSessionTimeoutMinutes(),
+                sessionExpiresAtUtc = DateTime.UtcNow.AddMinutes(GetSessionTimeoutMinutes())
+            };
+        }
 
         private int GetJwtExpireMinutes()
         {
-            var value = _configuration.GetValue<int?>("Jwt:ExpirationInMinutes");
-            return value.HasValue && value.Value > 0 ? value.Value : 180;
+            var expireMinutes =
+                _configuration.GetValue<int?>("Jwt:ExpirationInMinutes") ??
+                _configuration.GetValue<int?>("Jwt:ExpireMinutes");
+
+            return expireMinutes.HasValue && expireMinutes.Value > 0
+                ? expireMinutes.Value
+                : 180;
         }
 
         private int GetSessionTimeoutMinutes()
@@ -566,17 +677,6 @@ namespace QuilvianSystemBackendDev.Controllers
             return value.HasValue && value.Value > 0 ? value.Value : 180;
         }
 
-        //private int GetSessionTimeoutSeconds()
-        //{
-        //    var seconds = _configuration.GetValue<int?>("AuthSession:CookieExpireSeconds");
-
-        //    if (seconds.HasValue && seconds.Value > 0)
-        //        return seconds.Value;
-
-        //    var minutes = _configuration.GetValue<int?>("AuthSession:CookieExpireMinutes");
-
-        //    return (minutes.HasValue && minutes.Value > 0 ? minutes.Value : 180) * 60;
-        //}
         private bool IsAllowedRedirect(string targetUrl)
         {
             if (Url.IsLocalUrl(targetUrl))
@@ -592,16 +692,11 @@ namespace QuilvianSystemBackendDev.Controllers
             return allowedHosts.Any(h => h.Equals(uri.Host, StringComparison.OrdinalIgnoreCase));
         }
 
-        private ContentResult AutoLoginRedirectWithJwt(
-                string token,
-                DateTime expirationUtc,
-                string targetUrl)
-                    {
-                        var safeToken = JavaScriptEncoder.Default.Encode(token);
-                        var safeExpiration = JavaScriptEncoder.Default.Encode(expirationUtc.ToString("O"));
-                        var safeTarget = JavaScriptEncoder.Default.Encode(targetUrl);
+        private ContentResult AutoLoginRedirect(string targetUrl)
+        {
+            var safeTarget = JavaScriptEncoder.Default.Encode(targetUrl);
 
-                        var html = $@"
+            var html = $@"
             <!DOCTYPE html>
             <html>
             <head>
@@ -612,10 +707,6 @@ namespace QuilvianSystemBackendDev.Controllers
                 <p>Sedang login otomatis...</p>
 
                 <script>
-                    localStorage.setItem('token', '{safeToken}');
-                    localStorage.setItem('expiration', '{safeExpiration}');
-                    localStorage.setItem('tokenType', 'Bearer');
-
                     window.location.replace('{safeTarget}');
                 </script>
             </body>
@@ -635,9 +726,5 @@ namespace QuilvianSystemBackendDev.Controllers
     {
         public string Email { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
-
-        // false = hanya JWT
-        // true  = JWT + cookie Identity
-        //public bool SetCookie { get; set; } = false;
     }
 }

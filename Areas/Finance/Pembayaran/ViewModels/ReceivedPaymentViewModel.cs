@@ -6,6 +6,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.ViewModels
     public class ReceivedPaymentViewModel
     {
         public Guid? BankId { get; set; }
+        public Guid? AyatSilangId { get; set; }
         public string? NoInvoice { get; set; }
 
         [Column(TypeName = "numeric")]

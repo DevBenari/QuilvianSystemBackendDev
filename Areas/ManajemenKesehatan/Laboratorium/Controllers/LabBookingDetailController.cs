@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using System.Threading;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
@@ -12,6 +13,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Services;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
 using QuilvianSystemBackendDev.Interfaces;
@@ -37,6 +39,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly IGenerateInvoiceBillingService _generateInvoiceBillingService;
         private readonly IAsuransiCoverageService _asuransiCoverageService;
+        private readonly INoPhotoGeneratorService _noPhotoGeneratorService;
 
         public LabBookingDetailController(
             ApplicationDbContext applicationDbContext,
@@ -48,7 +51,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             ITTDService ttdService,
             IHubContext<LabBookingDetailHub> hubContext,
             IGenerateInvoiceBillingService generateInvoiceBillingService,
-            IAsuransiCoverageService asuransiCoverageService)
+            IAsuransiCoverageService asuransiCoverageService,
+            INoPhotoGeneratorService noPhotoGeneratorService)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
@@ -60,6 +64,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             _ttdService = ttdService;
             _generateInvoiceBillingService = generateInvoiceBillingService;
             _asuransiCoverageService = asuransiCoverageService;
+            _noPhotoGeneratorService = noPhotoGeneratorService;
         }
 
         [HttpGet]
@@ -73,12 +78,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             var query = (from d in _applicationDbContext.LabBookingDetails
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on d.CreateBy equals u.UserActiveId
-
-                         // join lab
-                         join l in _applicationDbContext.Labs
-                         on d.LabId equals l.LabId into labGroup
-                         from l in labGroup.DefaultIfEmpty()
-
 
                              // join ke lab booking
                          join b in _applicationDbContext.LabBookings
@@ -98,14 +97,13 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              CreateByName = u.FullName,
                              d.DetailBookingLabId,
                              d.BookingLabId,
+                             NamaLab = d.Lab != null ? d.Lab.NamaLab : null,
                              d.NoOrder,
                              d.PasienId,
                              b.KunjunganId,
                              d.PemeriksaanLabId,
                              NamaPemeriksaan = p.NamaPemeriksaan ?? "-",
                              HargaPemeriksaan = p.HargaPemeriksaan ?? null,
-                             d.LabId,
-                             NamaLab = l.NamaLab ?? "-",
                              d.KategoriPatologiAnatomi,
                              d.JenisSpecimen,
                              d.LokasiSpecimen,
@@ -117,7 +115,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              d.BahanNonGC,
                              d.BahanMicrobiologi,
                              d.MasaHaidTerakhir,
-                             d.Diagnosa,
                              d.SpecimenJenisId,
                              d.SpecimenMethodId,
                              d.AsalSpecimenId,
@@ -126,7 +123,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              d.StatusPemeriksaan,
                              d.TanggalSelesai,
                              d.StatusVerifikasi,
-                             d.Satuan
+                             d.QtyOrder,
+                             d.NoPhoto
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -175,22 +173,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                      on d.CreateBy equals u.UserActiveId into ug
                                  from u in ug.DefaultIfEmpty()
 
-                                 join l in _applicationDbContext.Labs.AsNoTracking()
-                                     on d.LabId equals l.LabId into lg
-                                 from l in lg.DefaultIfEmpty()
-
-                                 join b in _applicationDbContext.LabBookings.AsNoTracking()
-                                     on d.BookingLabId equals b.BookingLabId into bg
-                                 from b in bg.DefaultIfEmpty()
-
-                                 join p in _applicationDbContext.LabPemeriksaans.AsNoTracking()
-                                     on d.PemeriksaanLabId equals p.PemeriksaanLabId into pg
-                                 from p in pg.DefaultIfEmpty()
-
-                                 join k in _applicationDbContext.Kunjungans.AsNoTracking()
-                                     on b.KunjunganId equals k.KunjunganID into kg
-                                 from k in kg.DefaultIfEmpty()
-
                                  join bl in _applicationDbContext.Billings.AsNoTracking()
                                      on d.PemeriksaanLabId equals bl.ItemId into blg
                                  from bl in blg.DefaultIfEmpty()
@@ -202,16 +184,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                      CreateByName = u != null ? u.FullName : null,
                                      d.DetailBookingLabId,
                                      d.BookingLabId,
+                                     NamaLab = d.Lab != null ? d.Lab.NamaLab : null,
                                      d.PasienId,
                                      d.NoOrder,
                                      d.TipeLayanan,
-                                     KunjunganId = b != null ? b.KunjunganId : (Guid?)null,
-                                     JenisKunjungan = k != null ? k.JenisKunjungan : null,
+                                     KunjunganId = d.LabBooking.Kunjungan != null ? d.LabBooking.Kunjungan.KunjunganID : (Guid?)null,
+                                     JenisKunjungan = d.LabBooking.Kunjungan != null ? d.LabBooking.Kunjungan.JenisKunjungan : null,
                                      d.PemeriksaanLabId,
-                                     NamaPemeriksaan = p != null ? (p.NamaPemeriksaan ?? "-") : "-",
-                                     HargaPemeriksaan = p != null ? p.HargaPemeriksaan : (decimal?)null,
-                                     d.LabId,
-                                     NamaLab = l != null ? (l.NamaLab ?? "-") : "-",
+                                     NamaPemeriksaan = d.PemeriksaanLab != null ? (d.PemeriksaanLab.NamaPemeriksaan ?? "-") : "-",
+                                     HargaPemeriksaan = d.PemeriksaanLab != null ? d.PemeriksaanLab.HargaPemeriksaan : (decimal?)null,
                                      bl.BillingId,
                                      bl.StatusBilling,
                                      d.KategoriPatologiAnatomi,
@@ -225,7 +206,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                      d.BahanNonGC,
                                      d.BahanMicrobiologi,
                                      d.MasaHaidTerakhir,
-                                     d.Diagnosa,
                                      d.SpecimenJenisId,
                                      d.SpecimenMethodId,
                                      d.AsalSpecimenId,
@@ -234,7 +214,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                      d.StatusPemeriksaan,
                                      d.TanggalSelesai,
                                      d.StatusVerifikasi,
-                                     d.Satuan,
+                                     d.QtyOrder,
+                                     d.NoPhoto
                                  })
                                   .FirstOrDefaultAsync();
 
@@ -278,48 +259,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 var userActiveId = getUserActive.UserActiveId;
 
-                // ==========================================================
-                // ✅ Ambil data lab untuk generate NoOrder
-                // ==========================================================
-                if (vm.LabId == null)
-                    return BadRequest(new { message = "LabId wajib diisi untuk menentukan NoOrder." });
-
-                var lab = await _applicationDbContext.Labs.AsNoTracking()
-                    .FirstOrDefaultAsync(l => l.LabId == vm.LabId);
-
-                if (lab == null)
-                    return NotFound(new { message = "Lab dengan ID tersebut tidak ditemukan." });
-
-                var kodeKategori = lab.KodeKategori?.Trim().ToUpper() ?? "UNK";
-                string labPrefix = kodeKategori.StartsWith("LAB") && kodeKategori.Length > 3
-                    ? kodeKategori.Substring(3, Math.Min(3, kodeKategori.Length - 3))
-                    : kodeKategori.Length > 3 ? kodeKategori.Substring(0, 3) : kodeKategori;
-
-                var today = DateTimeOffset.UtcNow.Date;
-                var start = today;
-                var end = today.AddDays(1);
-
-                var lastOrderToday = await _applicationDbContext.LabBookingDetails
-                    .Where(d =>
-                        d.CreateDateTime >= start &&
-                        d.CreateDateTime < end &&
-                        d.NoOrder.StartsWith(labPrefix))
-                    .OrderByDescending(d => d.NoOrder)
-                    .FirstOrDefaultAsync();
-
-                int nextNumber = 1;
-
-                if (lastOrderToday != null)
+                if (vm.LabId  == null)
                 {
-                    string lastNo = lastOrderToday.NoOrder;
-                    string lastNumStr = lastNo.Substring(lastNo.Length - 4);
-
-                    if (int.TryParse(lastNumStr, out int lastNum))
-                        nextNumber = lastNum + 1;
+                    return BadRequest(new
+                    {
+                        message = "Lab Id harus diisi"
+                    });
                 }
 
-                string newNoOrder = $"{labPrefix}{today:yyyyMMdd}{nextNumber:D4}";
+                var noPhoto = await _noPhotoGeneratorService.GenerateNoPhotoAsync(
+                            vm.PemeriksaanLabId,
+                            ct);
 
+                var noOder = await _noPhotoGeneratorService.GenerateNoOrderByLabIdAsync
+                        ((Guid)vm.LabId, ct);
 
                 // ==========================================================
                 // ✅ Buat data baru LabBookingDetail
@@ -343,15 +296,15 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     BahanNonGC = vm.BahanNonGC,
                     BahanMicrobiologi = vm.BahanMicrobiologi,
                     MasaHaidTerakhir = vm.MasaHaidTerakhir,
-                    Diagnosa = vm.Diagnosa,
                     AsalSpecimenId = vm.AsalSpecimenId,
                     SpecimenMethodId = vm.SpecimenMethodId,
                     SpecimenJenisId = vm.SpecimenJenisId,
-                    NoOrder = newNoOrder,
                     StatusPemeriksaan = vm.StatusPemeriksaan,
                     StatusVerifikasi = vm.StatusVerifikasi,
                     TanggalSelesai = vm.TanggalSelesai,
-                    Satuan = vm.Satuan,
+                    NoPhoto = noPhoto,
+                    NoOrder = noOder,
+                    QtyOrder = vm.QtyOrder,
 
                     CreateBy = userActiveId,
                     CreateDateTime = DateTimeOffset.UtcNow,
@@ -403,7 +356,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                             AsuransiExcessId = coverage?.AsuransiExcessId,
                             CreateBy = userActiveId,
                             CreateDateTime = DateTimeOffset.UtcNow,
-                            Keterangan = $"Booking Lab ({newNoOrder})"
                         };
 
                         _applicationDbContext.Billings.Add(billing);
@@ -512,53 +464,53 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             });
         }
 
-        [HttpPut("Verifikasi-Lab/{id}")]
-        public async Task<IActionResult> VerikasiBooking(Guid id, [FromBody] VerifikasiLabViewModel vm)
-        {
-            if (vm == null)
-                return BadRequest(new { message = "Data pembatalan tidak valid." });
+        //[HttpPut("Verifikasi-Lab/{id}")]
+        //public async Task<IActionResult> VerikasiBooking(Guid id, [FromBody] VerifikasiLabViewModel vm)
+        //{
+        //    if (vm == null)
+        //        return BadRequest(new { message = "Data pembatalan tidak valid." });
 
-            var booking = await _applicationDbContext.LabBookingDetails
-                .FirstOrDefaultAsync(b => b.DetailBookingLabId == id);
+        //    var booking = await _applicationDbContext.LabBookingDetails
+        //        .FirstOrDefaultAsync(b => b.DetailBookingLabId == id);
 
-            if (booking == null)
-                return NotFound(new { message = "Data booking tidak ditemukan." });
+        //    if (booking == null)
+        //        return NotFound(new { message = "Data booking tidak ditemukan." });
 
-            // 🔐 Ambil user dari JWT Claims
-            var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(emailLogin))
-                return Unauthorized(new { message = "User tidak terautentikasi!" });
+        //    // 🔐 Ambil user dari JWT Claims
+        //    var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        //    if (string.IsNullOrEmpty(emailLogin))
+        //        return Unauthorized(new { message = "User tidak terautentikasi!" });
 
-            var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
-            if (getUserActive == null)
-                return Unauthorized(new { message = "User aktif tidak ditemukan!" });
+        //    var getUserActive = _applicationDbContext.UserActives.FirstOrDefault(u => u.Email == emailLogin);
+        //    if (getUserActive == null)
+        //        return Unauthorized(new { message = "User aktif tidak ditemukan!" });
 
-            var userActiveId = getUserActive.UserActiveId;
+        //    var userActiveId = getUserActive.UserActiveId;
 
-            // ==================================================
-            // ✅ UPDATE DATA BOOKING MENJADI TERVERIFIKASI
-            // ==================================================
+        //    // ==================================================
+        //    // ✅ UPDATE DATA BOOKING MENJADI TERVERIFIKASI
+        //    // ==================================================
 
-            booking.StatusVerifikasi = vm.Status;
-            booking.VerifikatorId = vm.VerifkatorId;
-            booking.WaktuVerifikasi = DateTime.UtcNow;
+        //    booking.StatusVerifikasi = vm.Status;
+        //    booking.VerifikatorId = vm.VerifkatorId;
+        //    booking.WaktuVerifikasi = DateTime.UtcNow;
 
-            booking.UpdateBy = userActiveId;
-            booking.UpdateDateTime = DateTimeOffset.UtcNow;
+        //    booking.UpdateBy = userActiveId;
+        //    booking.UpdateDateTime = DateTimeOffset.UtcNow;
 
-            _applicationDbContext.LabBookingDetails.Update(booking);
+        //    _applicationDbContext.LabBookingDetails.Update(booking);
 
-            await _applicationDbContext.SaveChangesAsync();
+        //    await _applicationDbContext.SaveChangesAsync();
 
-            // ==================================================
-            // ✅ RESPONSE
-            // ==================================================
-            return Ok(new
-            {
-                message = "Booking lab berhasil diverifikasi",
-                bookingId = booking.DetailBookingLabId,
-            });
-        }
+        //    // ==================================================
+        //    // ✅ RESPONSE
+        //    // ==================================================
+        //    return Ok(new
+        //    {
+        //        message = "Booking lab berhasil diverifikasi",
+        //        bookingId = booking.DetailBookingLabId,
+        //    });
+        //}
 
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] LabBookingDetailViewModel vm, CancellationToken ct)
@@ -597,45 +549,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 // ==========================================================
                 // ✅ Generate NoOrder jika LabId berubah
                 // ==========================================================
-                string newNoOrder = existingData.NoOrder; // default: tetap
-                if (vm.LabId != existingData.LabId && vm.LabId != null)
+                if (existingData.LabId != vm.LabId)
                 {
-                    var lab = await _applicationDbContext.Labs.AsNoTracking()
-                        .FirstOrDefaultAsync(l => l.LabId == vm.LabId);
+                    existingData.NoPhoto = await _noPhotoGeneratorService.GenerateNoOrderByLabIdAsync(
+                        (Guid)vm.LabId,
+                        ct);
+                }
 
-                    if (lab == null)
-                        return NotFound(new { message = "Lab dengan ID tersebut tidak ditemukan." });
-
-                    var kodeKategori = lab.KodeKategori?.Trim().ToUpper() ?? "UNK";
-                    string labPrefix = kodeKategori.StartsWith("LAB") && kodeKategori.Length > 3
-                        ? kodeKategori.Substring(3, Math.Min(3, kodeKategori.Length - 3))
-                        : kodeKategori.Length > 3 ? kodeKategori.Substring(0, 3) : kodeKategori;
-
-                    var today = DateTimeOffset.UtcNow.Date;
-                    var start = today;
-                    var end = today.AddDays(1);
-
-                    var lastOrderToday = await _applicationDbContext.LabBookingDetails
-                        .Where(d =>
-                            d.CreateDateTime >= start &&
-                            d.CreateDateTime < end &&
-                            d.NoOrder.StartsWith(labPrefix))
-                        .OrderByDescending(d => d.NoOrder)
-                        .FirstOrDefaultAsync();
-
-                    int nextNumber = 1;
-
-                    if (lastOrderToday != null)
-                    {
-                        string lastNo = lastOrderToday.NoOrder;
-                        string lastNumStr = lastNo.Substring(lastNo.Length - 4);
-
-                        if (int.TryParse(lastNumStr, out int lastNum))
-                            nextNumber = lastNum + 1;
-                    }
-
-                    newNoOrder = $"{labPrefix}{today:yyyyMMdd}{nextNumber:D4}";
-
+                // ============================================
+                // NoPhoto hanya berubah jika PemeriksaanLabId berubah
+                // ============================================
+                if (existingData.PemeriksaanLabId != vm.PemeriksaanLabId)
+                {
+                    existingData.NoPhoto = await _noPhotoGeneratorService.GenerateNoPhotoAsync(
+                        vm.PemeriksaanLabId,
+                        ct);
                 }
 
                 // ==========================================================
@@ -645,7 +573,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 existingData.PasienId = vm.PasienId;
                 existingData.PemeriksaanLabId = vm.PemeriksaanLabId;
                 existingData.LabId = vm.LabId;
-
                 existingData.KategoriPatologiAnatomi = vm.KategoriPatologiAnatomi;
                 existingData.JenisSpecimen = vm.JenisSpecimen;
                 existingData.LokasiSpecimen = vm.LokasiSpecimen;
@@ -657,14 +584,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 existingData.BahanNonGC = vm.BahanNonGC;
                 existingData.BahanMicrobiologi = vm.BahanMicrobiologi;
                 existingData.MasaHaidTerakhir = vm.MasaHaidTerakhir;
-                existingData.Diagnosa = vm.Diagnosa;
                 existingData.SpecimenJenisId = vm.SpecimenJenisId;
                 existingData.SpecimenMethodId = vm.SpecimenMethodId;
                 existingData.AsalSpecimenId = vm.AsalSpecimenId;
                 existingData.StatusPemeriksaan = vm.StatusPemeriksaan;
                 existingData.TanggalSelesai = vm.TanggalSelesai;
-                existingData.NoOrder = newNoOrder;
-                existingData.Satuan = vm.Satuan;
+                existingData.QtyOrder = vm.QtyOrder;
 
                 existingData.UpdateBy = userActiveId;
                 existingData.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -726,7 +651,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                 CreateBy = userActiveId,
                                 CreateDateTime = DateTimeOffset.UtcNow,
                                 StatusPengambilan = false,
-                                Keterangan = $"Otomatis dari Update Booking Lab ({newNoOrder})"
                             };
 
                             _applicationDbContext.Billings.Add(billing);
@@ -841,7 +765,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             int page = 1,
             int perPage = 10,
             Guid? labbookingdeatilId = null,
-            string? NamaLaboratorium = null,
             Guid? kunjunganId = null,
             bool? isLunas = null,
             string? orderBy = "CreateDateTime",
@@ -866,22 +789,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     on d.CreateBy equals u.UserActiveId into ug
                 from u in ug.DefaultIfEmpty()
 
-                join l in _applicationDbContext.Labs.AsNoTracking()
-                    on d.LabId equals l.LabId into lg
-                from l in lg.DefaultIfEmpty()
-
-                join b in _applicationDbContext.LabBookings.AsNoTracking()
-                    on d.BookingLabId equals b.BookingLabId into bg
-                from b in bg.DefaultIfEmpty()
-
-                join p in _applicationDbContext.LabPemeriksaans.AsNoTracking()
-                    on d.PemeriksaanLabId equals p.PemeriksaanLabId into pg
-                from p in pg.DefaultIfEmpty()
-
-                join k in _applicationDbContext.Kunjungans.AsNoTracking()
-                    on b.KunjunganId equals k.KunjunganID into kg
-                from k in kg.DefaultIfEmpty()
-
                 join bl in _applicationDbContext.Billings.AsNoTracking()
                     on d.PemeriksaanLabId equals bl.ItemId into blg
                 from bl in blg.DefaultIfEmpty()
@@ -893,16 +800,16 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     CreateByName = u != null ? u.FullName : null,
                     d.DetailBookingLabId,
                     d.BookingLabId,
+                    d.LabId,
+                    NamaLab = d.Lab != null ? d.Lab.NamaLab : null,
                     d.PasienId,
                     d.NoOrder,
                     d.TipeLayanan,
-                    KunjunganId = b != null ? b.KunjunganId : (Guid?)null,
-                    JenisKunjungan = k != null ? k.JenisKunjungan : null,
+                    KunjunganId = d.LabBooking.Kunjungan != null ? d.LabBooking.Kunjungan.KunjunganID : (Guid?)null,
+                    JenisKunjungan = d.LabBooking.Kunjungan != null ? d.LabBooking.Kunjungan.JenisKunjungan : null,
                     d.PemeriksaanLabId,
-                    NamaPemeriksaan = p != null ? (p.NamaPemeriksaan ?? "-") : "-",
-                    HargaPemeriksaan = p != null ? p.HargaPemeriksaan : (decimal?)null,
-                    d.LabId,
-                    NamaLab = l != null ? (l.NamaLab ?? "-") : "-",
+                    NamaPemeriksaan = d.PemeriksaanLab != null ? (d.PemeriksaanLab.NamaPemeriksaan ?? "-") : "-",
+                    HargaPemeriksaan = d.PemeriksaanLab != null ? d.PemeriksaanLab.HargaPemeriksaan : (decimal?)null,
                     BillingId = bl != null ? (Guid?)bl.BillingId : null,
                     IsLunas = bl != null ? (bool?)bl.StatusBilling : null,
                     d.KategoriPatologiAnatomi,
@@ -916,7 +823,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     d.BahanNonGC,
                     d.BahanMicrobiologi,
                     d.MasaHaidTerakhir,
-                    d.Diagnosa,
                     d.SpecimenJenisId,
                     d.SpecimenMethodId,
                     d.AsalSpecimenId,
@@ -925,7 +831,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     d.StatusPemeriksaan,
                     d.TanggalSelesai,
                     d.StatusVerifikasi,
-                    d.Satuan,
+                    d.QtyOrder,
+                    d.NoPhoto
                 };
 
             // Filter kunjunganId
@@ -939,13 +846,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             // filter based on status billing
             if (isLunas.HasValue)
                 query = query.Where(x=>x.IsLunas == isLunas.Value);
-
-            // Filter search NamaLaboratorium (ILike pakai pattern)
-            if (!string.IsNullOrWhiteSpace(NamaLaboratorium))
-            {
-                var pattern = $"%{NamaLaboratorium.Trim().ToLower()}%";
-                query = query.Where(x => EF.Functions.ILike(x.NamaLab, pattern));
-            }
 
             // Filter periode/date range (gunakan range, jangan .Date)
             // Kita pakai UTC date boundary agar index CreateDateTime kepakai.

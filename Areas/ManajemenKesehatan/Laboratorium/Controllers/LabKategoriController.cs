@@ -66,6 +66,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.NamaKategori,
                              a.KodeKategori,
                              a.LabId,
+                             NamaLab = a.Lab != null ? a.Lab.NamaLab : null,
                              a.Keterangan,
                          }).OrderByDescending(a => a.CreateDateTime);
 
@@ -102,7 +103,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.LabKategoriPemeriksaans.Find(id);
+            var listdata = from a in _applicationDbContext.LabKategoriPemeriksaans
+                            join u in _applicationDbContext.UserActives.DefaultIfEmpty()
+                            on a.CreateBy equals u.UserActiveId
+                            where a.IsDelete == false && a.KategoriPemeriksaanId == id
+                            select new
+                            {
+                                a.CreateDateTime,
+                                a.CreateBy,
+                                CreateByName = u.FullName,
+                                a.KategoriPemeriksaanId,
+                                a.NamaKategori,
+                                a.KodeKategori,
+                                a.LabId,
+                                NamaLab = a.Lab != null ? a.Lab.NamaLab : null,
+                                a.Keterangan,
+                            };
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -384,6 +400,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.NamaKategori,
                              a.KodeKategori,
                              a.LabId,
+                             NamaLab = a.Lab != null ? a.Lab.NamaLab : null,
                              a.Keterangan,
                          });
 
