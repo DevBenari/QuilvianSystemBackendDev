@@ -1,75 +1,69 @@
 name: QuilvianSta-Deploy
+
 on:
   push:
     branches:
-      - QuilvianSta  # Branch utama sekarang
+      - QuilvianSta
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: quilvian-backend-staging-deploy
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ghcr.io/devbenari/quilviansystembackenddev
+  IMAGE_TAG: staging
 
 jobs:
-  deploy:
+  build-and-deploy:
+    name: Build, Push, and Deploy
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Setup SSH Connection
-      run: |
-        mkdir -p ~/.ssh
-        echo "${{ secrets.SSH_PRIVATE_KEY_BACKEND_PRO }}" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -H ${{ secrets.SSH_IP_BACKEND_PRO }} >> ~/.ssh/known_hosts
+      - name: Check build context size
+        run: |
+          echo "Repository size:"
+          du -sh .
+          echo "Top largest files/folders:"
+          du -ah . | sort -rh | head -30
 
-    - name: Deploy to Server
-      run: |
-        ssh ${{ secrets.SSH_USER_BACKEND }}@${{ secrets.SSH_IP_BACKEND_PRO }} << 'EOF'
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-          cd ~/QuilvianSta
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-          echo "Resetting local changes..."
-          git reset --hard origin/QuilvianSta
-          git clean -fd
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-          echo "Pulling latest changes..."
-          git pull origin QuilvianSta
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY_BACKEND }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SSH_IP_BACKEND }} >> ~/.ssh/known_hosts
 
-          IMAGE_NAME="quilviansta-backend"
-          CONTAINER_NAME="quilviansta-container"
-
-          DEPLOY_TIME=$(date +"%A, %d-%m-%Y %H:%M:%S") 
-
-          echo "Building new Docker image..."
-          docker build -t $IMAGE_NAME .
-
-          echo "Stopping and removing old container..."
-          docker stop $CONTAINER_NAME || true
-          docker rm $CONTAINER_NAME || true
-
-          echo "Creating new container (no ports)..."
-          # docker run -d --name $CONTAINER_NAME --memory="1g" --memory-swap="1g" --restart unless-stopped $IMAGE_NAME
-          docker run -d \
-            --name $CONTAINER_NAME \
-            -p 5000:80 \
-            --memory="1g" \
-            --memory-swap="1g" \
-            --restart unless-stopped \
-            $IMAGE_NAME
-
-          echo "Cleaning up unused Docker images..."
-          docker system prune -af
-
-          echo "Deployment completed!"
-
-          PUSHER="${{ github.actor }}"
-          
-          # Kirim notifikasi ke Telegram setelah update
-          curl -X POST "https://api.telegram.org/bot7630899059:AAFqAUGUB7I5V9VGKXbcmoWmbYWvrdmnje8/sendMessage" \
-              -d chat_id=-1002437306112 \
-              -d text="✅ Deployment Sukses! 🚀
-              *Docker Image:* $IMAGE_NAME
-              *Container:* $CONTAINER_NAME
-              *Tanggal:* $DEPLOY_TIME%0A
-              Deployment dilakukan Backend Branch *$PUSHER*%0A
-              🔄 Container telah diperbarui dan berjalan dengan baik. 🎉"
-
-        EOF
-        #ikbal
+      - name: Deploy to server
+        run: |
+          ssh ${{ secrets.SSH_USER_BACKEND }}@${{ secrets.SSH_IP_BACKEND }} "bash /opt/QuilvianStaging/deploy.sh"
