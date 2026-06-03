@@ -49,8 +49,13 @@ namespace QuilvianSystemBackendDev.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(new { message = "Model login tidak valid" });
 
+            if (User?.Identity?.IsAuthenticated == true)
+                return BadRequest(new { message = "User sedang online || Response Code: 400" });
+
             var idfinger = await _context.Fingerprints
                 .FirstOrDefaultAsync(u => u.UserId == model.Email);
+
+            var setCookie = true;
 
             // 1. SUPERADMIN
             if (model.Email == "superadmin@admin.com" && model.Password == "Admin@123")
@@ -62,7 +67,10 @@ namespace QuilvianSystemBackendDev.Controllers
                     "Superadmin"
                 );
 
-                SetJwtCookie(jwt.Token, jwt.ExpirationUtc);
+                if (setCookie)
+                {
+                    SetJwtCookie(jwt.Token, jwt.ExpirationUtc);
+                }
 
                 SetSession(
                     model.Email,
@@ -71,57 +79,14 @@ namespace QuilvianSystemBackendDev.Controllers
                     "Superadmin"
                 );
 
-                return Ok(LoginSuccessResponse(jwt.ExpirationUtc));
-            }
-
-            // 2. LOGIN FINGERPRINT
-            if (idfinger != null && idfinger.UserId == model.Email && idfinger.DeviceId == model.Password)
-            {
-                var userActiveFinger = await _context.UserActives
-                    .FirstOrDefaultAsync(u => u.UserActiveId.ToString() == model.Email && u.IsActive);
-
-                if (userActiveFinger == null)
-                    return Unauthorized(new { message = "User fingerprint tidak ditemukan atau tidak aktif" });
-
-                var roleNameFinger = await _context.TipeUsers
-                    .Where(t => t.TipeUserId == userActiveFinger.TipeUserId)
-                    .Select(t => t.NamaTipeUser)
-                    .FirstOrDefaultAsync() ?? "Guest";
-
-                var fingerprint = await _context.Fingerprints
-                    .FirstOrDefaultAsync(f => f.UserId == idfinger.UserId);
-
-                if (fingerprint != null)
+                return Ok(new
                 {
-                    fingerprint.DeviceId = Guid.NewGuid().ToString();
-                    _context.Fingerprints.Update(fingerprint);
-                    await _context.SaveChangesAsync();
-                }
-
-                var jwt = BuildJwtToken(
-                    userActiveFinger.Email ?? model.Email,
-                    roleNameFinger,
-                    userActiveFinger.UserActiveId.ToString(),
-                    userActiveFinger.FullName
-                );
-
-                SetJwtCookie(jwt.Token, jwt.ExpirationUtc);
-
-                SetSession(
-                    userActiveFinger.Email ?? model.Email,
-                    userActiveFinger.FullName ?? string.Empty,
-                    userActiveFinger.UserActiveId.ToString(),
-                    roleNameFinger
-                );
-
-                var identityUserFinger = await _userManager.FindByEmailAsync(userActiveFinger.Email ?? "");
-                if (identityUserFinger != null)
-                {
-                    identityUserFinger.IsOnline = true;
-                    await _userManager.UpdateAsync(identityUserFinger);
-                }
-
-                return Ok(LoginSuccessResponse(jwt.ExpirationUtc));
+                    message = "Berhasil || 200 OK",
+                    token = jwt.Token,
+                    expiration = jwt.ExpirationUtc,
+                    sessionDurationMinutes = GetSessionTimeoutMinutes(),
+                    cookieCreated = setCookie
+                });
             }
 
             // 3. LOGIN EMAIL + PASSWORD
@@ -156,7 +121,10 @@ namespace QuilvianSystemBackendDev.Controllers
                     userActive.FullName
                 );
 
-                SetJwtCookie(jwt.Token, jwt.ExpirationUtc);
+                if (setCookie)
+                {
+                    SetJwtCookie(jwt.Token, jwt.ExpirationUtc);
+                }
 
                 SetSession(
                     model.Email,
@@ -168,7 +136,14 @@ namespace QuilvianSystemBackendDev.Controllers
                 user.IsOnline = true;
                 await _userManager.UpdateAsync(user);
 
-                return Ok(LoginSuccessResponse(jwt.ExpirationUtc));
+                return Ok(new
+                {
+                    message = "Berhasil || 200 OK",
+                    token = jwt.Token,
+                    expiration = jwt.ExpirationUtc,
+                    sessionDurationMinutes = GetSessionTimeoutMinutes(),
+                    cookieCreated = setCookie
+                });
             }
 
             if (result.IsLockedOut)
@@ -644,20 +619,6 @@ namespace QuilvianSystemBackendDev.Controllers
                     SameSite = SameSiteMode.Lax,
                     Path = "/"
                 });
-        }
-
-        private object LoginSuccessResponse(DateTime expirationUtc)
-        {
-            return new
-            {
-                message = "Berhasil || 200 OK",
-                expiration = expirationUtc,
-                tokenType = "Bearer",
-                authMode = "JwtHttpOnlyCookie",
-                jwtCookieCreated = true,
-                sessionDurationMinutes = GetSessionTimeoutMinutes(),
-                sessionExpiresAtUtc = DateTime.UtcNow.AddMinutes(GetSessionTimeoutMinutes())
-            };
         }
 
         private int GetJwtExpireMinutes()
