@@ -1,0 +1,92 @@
+# Git
+**/.git
+**/.github
+.gitignore
+.gitattributes
+
+# IDE
+**/.vs
+**/.vscode
+**/.idea
+**/*.user
+**/*.suo
+**/*.rsuser
+**/*.csproj.user
+**/*.sln.docstates
+
+# Build output
+**/bin
+**/obj
+bin/
+obj/
+out/
+publish/
+artifacts/
+**/out/
+**/publish/
+**/artifacts/
+
+# Test / coverage
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+coverage/
+**/coverage/
+
+# Environment / secrets
+.env
+.env.*
+**/.env
+**/.env.*
+secrets.dev.yaml
+values.dev.yaml
+**/secrets.dev.yaml
+**/values.dev.yaml
+
+# Appsettings yang tidak perlu ikut build image
+appsettings.Development.json
+appsettings.Production.json
+appsettings.Local.json
+
+# Logs
+*.log
+logs/
+**/logs/
+
+# Node if any
+node_modules/
+**/node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docs
+README.md
+LICENSE
+*.md
+
+# Docker compose local
+docker-compose.yml
+docker-compose.*.yml
+
+# Archives / backup
+*.zip
+*.rar
+*.7z
+*.tar
+*.gz
+*.bak
+*.backup
+
+# Database / generated
+*.dbmdl
+*.jfm
+*.pdb
+*.mdb
+*.sqlite
+*.sqlite3
