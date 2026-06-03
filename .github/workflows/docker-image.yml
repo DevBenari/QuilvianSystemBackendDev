@@ -62,8 +62,37 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY_BACKEND }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.SSH_IP_BACKEND }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H "${{ secrets.SSH_IP_BACKEND }}" >> ~/.ssh/known_hosts
 
       - name: Deploy to server
         run: |
-          ssh ${{ secrets.SSH_USER_BACKEND }}@${{ secrets.SSH_IP_BACKEND }} "bash /opt/QuilvianStaging/deploy.sh"
+          ssh "${{ secrets.SSH_USER_BACKEND }}@${{ secrets.SSH_IP_BACKEND }}" << 'EOF'
+            set -e
+
+            echo "=== SSH DEBUG ==="
+            echo "User:"
+            whoami
+
+            echo "Hostname:"
+            hostname
+
+            echo "Current directory:"
+            pwd
+
+            echo "Docker version:"
+            docker --version
+            docker compose version
+
+            echo "=== Check /opt ==="
+            ls -la /opt
+
+            echo "=== Check /opt/QuilvianStaging ==="
+            ls -la /opt/QuilvianStaging
+
+            echo "=== Check deploy.sh ==="
+            ls -la /opt/QuilvianStaging/deploy.sh
+            bash -n /opt/QuilvianStaging/deploy.sh
+
+            echo "=== Run deploy ==="
+            bash /opt/QuilvianStaging/deploy.sh
+          EOF
