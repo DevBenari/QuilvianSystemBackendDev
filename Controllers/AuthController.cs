@@ -83,7 +83,7 @@ namespace QuilvianSystemBackendDev.Controllers
                 });
             }
 
-            // 3. LOGIN EMAIL + PASSWORD
+            // 2. LOGIN EMAIL + PASSWORD
             var user = await _signInManager.UserManager.FindByNameAsync(model.Email)
                        ?? await _userManager.FindByEmailAsync(model.Email);
 
