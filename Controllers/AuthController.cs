@@ -49,12 +49,6 @@ namespace QuilvianSystemBackendDev.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(new { message = "Model login tidak valid" });
 
-            if (User?.Identity?.IsAuthenticated == true)
-                return BadRequest(new { message = "User sedang online || Response Code: 400" });
-
-            var idfinger = await _context.Fingerprints
-                .FirstOrDefaultAsync(u => u.UserId == model.Email);
-
             var setCookie = true;
 
             // 1. SUPERADMIN
