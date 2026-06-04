@@ -368,4 +368,4 @@ FodyWeavers.xsd
 .svn/
 
 # jangan ikut commit
-appsettings.json
+appsettings.Development.json

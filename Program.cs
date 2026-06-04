@@ -70,6 +70,29 @@ var allowedOrigins = builder.Configuration
     .GetSection("Cors:AllowedOrigins")
     .Get<string[]>() ?? Array.Empty<string>();
 
+Console.WriteLine("====================================");
+Console.WriteLine("RUNTIME CONFIG CHECK");
+Console.WriteLine($"ASPNETCORE_ENVIRONMENT: {builder.Environment.EnvironmentName}");
+Console.WriteLine($"ApplicationName: {builder.Environment.ApplicationName}");
+Console.WriteLine($"ContentRootPath: {builder.Environment.ContentRootPath}");
+Console.WriteLine("CORS AllowedOrigins yang terbaca:");
+
+if (allowedOrigins.Length == 0)
+{
+    Console.WriteLine("- TIDAK ADA ORIGIN YANG TERBACA");
+}
+else
+{
+    foreach (var origin in allowedOrigins)
+    {
+        Console.WriteLine($"- {origin}");
+    }
+}
+
+Console.WriteLine($"Jwt CookieName: {builder.Configuration["Jwt:CookieName"]}");
+Console.WriteLine($"Jwt Issuer: {builder.Configuration["Jwt:Issuer"]}");
+Console.WriteLine($"Jwt Audience: {builder.Configuration["Jwt:Audience"]}");
+Console.WriteLine("====================================");
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("FrontendCorsPolicy", policy =>
