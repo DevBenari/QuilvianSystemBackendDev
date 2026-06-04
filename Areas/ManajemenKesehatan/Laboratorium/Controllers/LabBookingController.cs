@@ -29,7 +29,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    [EnableCors("AllowSpecific")]
+    [EnableCors("FrontendCorsPolicy")]
     public class LabBookingController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;

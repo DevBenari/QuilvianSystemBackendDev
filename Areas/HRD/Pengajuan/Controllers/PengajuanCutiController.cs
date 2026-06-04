@@ -15,7 +15,7 @@ namespace QuilvianSystemBackendDev.Areas.HRD.Pengajuan.Controllers
     [ApiController]
     [Route("api/[controller]")]
     //[Authorize]
-    //[EnableCors("AllowSpecific")]
+    //[EnableCors("FrontendCorsPolicy")]
     public class PengajuanCutiController : ControllerBase
     {
         private readonly ApplicationDbContext _context;

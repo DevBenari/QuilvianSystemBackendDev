@@ -20,7 +20,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Controll
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    [EnableCors("AllowSpecific")]
+    [EnableCors("FrontendCorsPolicy")]
     public class PendaftaranPasienUGDController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;

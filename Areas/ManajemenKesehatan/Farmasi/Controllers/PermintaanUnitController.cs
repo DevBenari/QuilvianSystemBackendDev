@@ -26,7 +26,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    [EnableCors("AllowSpecific")]
+    [EnableCors("FrontendCorsPolicy")]
     public class PermintaanUnitController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;

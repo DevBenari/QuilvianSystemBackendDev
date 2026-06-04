@@ -24,7 +24,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.OperasiOK.Controller
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    [EnableCors("AllowSpecific")]
+    [EnableCors("FrontendCorsPolicy")]
     public class PraOperasiController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;

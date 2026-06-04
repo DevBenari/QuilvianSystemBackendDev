@@ -29,7 +29,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Alkes.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    [EnableCors("AllowSpecific")]
+    [EnableCors("FrontendCorsPolicy")]
     public class AlatPemakaianController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;

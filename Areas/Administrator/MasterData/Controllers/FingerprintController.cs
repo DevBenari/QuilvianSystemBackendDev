@@ -11,7 +11,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    [EnableCors("AllowSpecific")]
+    [EnableCors("FrontendCorsPolicy")]
     public class FingerprintController : Controller
     {
         private readonly ApplicationDbContext _db;

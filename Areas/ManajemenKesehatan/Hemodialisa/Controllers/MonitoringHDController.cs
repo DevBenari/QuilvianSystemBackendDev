@@ -21,7 +21,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Hemodialisa.Controll
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    [EnableCors("AllowSpecific")]
+    [EnableCors("FrontendCorsPolicy")]
     public class MonitoringHDController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;

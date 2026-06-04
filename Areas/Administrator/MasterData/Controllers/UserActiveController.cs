@@ -40,7 +40,7 @@ namespace QuilvianSystemBackendDev.Areas.Administrator.MasterData.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    [EnableCors("AllowSpecific")]
+    [EnableCors("FrontendCorsPolicy")]
     public class UserActiveController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;

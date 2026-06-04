@@ -18,7 +18,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Gizi.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    [EnableCors("AllowSpecific")]
+    [EnableCors("FrontendCorsPolicy")]
     public class GiziAssessmentController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;

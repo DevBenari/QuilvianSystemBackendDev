@@ -13,7 +13,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
     [ApiController]
     [Route("api/[controller]")]
     //[Authorize]
-    //[EnableCors("AllowSpecific")]
+    //[EnableCors("FrontendCorsPolicy")]
     public class RoleDepartemenController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;

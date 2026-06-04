@@ -14,7 +14,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Po.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    [EnableCors("AllowSpecific")]
+    [EnableCors("FrontendCorsPolicy")]
     public class PoController : ControllerBase
     {
         private readonly ApplicationDbContext _context;

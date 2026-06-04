@@ -22,7 +22,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    [EnableCors("AllowSpecific")]
+    [EnableCors("FrontendCorsPolicy")]
     public class CanceledReceivedPaymentController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;

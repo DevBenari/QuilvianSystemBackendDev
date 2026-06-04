@@ -11,7 +11,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.COA.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    [EnableCors("AllowSpecific")]
+    [EnableCors("FrontendCorsPolicy")]
     public class MasterGrupController : Controller
     {
         private readonly ApplicationDbContext _context;

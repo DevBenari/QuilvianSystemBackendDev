@@ -17,7 +17,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Observasi.Controller
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    [EnableCors("AllowSpecific")]
+    [EnableCors("FrontendCorsPolicy")]
     public class ObservasiCairanWsdController : ControllerBase
     {
         private readonly ApplicationDbContext _db;

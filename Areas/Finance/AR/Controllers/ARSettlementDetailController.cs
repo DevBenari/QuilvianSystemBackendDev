@@ -14,7 +14,7 @@
 //    [ApiController]
 //    [Route("api/[controller]")]
 //    [Authorize]
-//    [EnableCors("AllowSpecific")]
+//    [EnableCors("FrontendCorsPolicy")]
 //    public class ARSettlementDetailController : ControllerBase
 //    {
 //        private readonly ApplicationDbContext _applicationDbContext;

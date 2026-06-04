@@ -14,7 +14,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AyatSilangs.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    [EnableCors("AllowSpecific")]
+    [EnableCors("FrontendCorsPolicy")]
     public class DokAyatSilangController : ControllerBase
     {
         private readonly ApplicationDbContext _applicationDbContext;

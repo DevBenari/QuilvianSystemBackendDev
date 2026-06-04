@@ -15,7 +15,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
     [ApiController]
     [Route("api/[controller]")]
     //[Authorize]
-    //[EnableCors("AllowSpecific")]
+    //[EnableCors("FrontendCorsPolicy")]
     public class RoleUserController : ControllerBase
     {
         private readonly UserManager<ApplicationUser> _userManager;

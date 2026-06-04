@@ -6,9 +6,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.ViewModels;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
@@ -16,28 +15,27 @@ using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers
+namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("FrontendCorsPolicy")]
-    public class ASATipeController : Controller
+    public class LabPersiapanPemeriksaanController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<ASATipeController> _logger;
-        private readonly IWebHostEnvironment _webHostEnvironment; 
+        private readonly ILogger<LabPersiapanPemeriksaanController> _logger;
+        private readonly IWebHostEnvironment _webHostEnvironment;
 
-
-        public ASATipeController(
-            ApplicationDbContext applicationDbContext,
-            UserManager<ApplicationUser> userManager,
-            SignInManager<ApplicationUser> signInManager,
-            ILogger<ASATipeController> logger,
-            IWebHostEnvironment webHostEnvironment)
+        public LabPersiapanPemeriksaanController(
+        ApplicationDbContext applicationDbContext,
+        UserManager<ApplicationUser> userManager,
+        SignInManager<ApplicationUser> signInManager,
+        ILogger<LabPersiapanPemeriksaanController> logger,
+        IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
@@ -45,7 +43,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
         }
-
 
         [HttpGet]
         public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
@@ -55,7 +52,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = (from a in _applicationDbContext.ASATipes
+            var query = (from a in _applicationDbContext.LabPersiapanPemeriksaans
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
                          where a.IsDelete == false || a.IsDelete == null
@@ -64,8 +61,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
-                             a.TipeASAId,
-                             a.NamaTipeASA,
+                             a.LabPersiapanPemeriksaanId,
+                             a.PersiapanPemeriksaan,
+                             a.TipePersiapan,
+                             a.IsDetailPersiapan,
                              a.Keterangan,
                          }).OrderByDescending(a => a.CreateDateTime);
 
@@ -99,11 +98,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             });
         }
 
-
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = _applicationDbContext.ASATipes.Find(id);
+            var listdata = _applicationDbContext.LabPersiapanPemeriksaans.Find(id);
             if (listdata == null)
             {
                 return NotFound(new { message = "Data tidak ditemukan." });
@@ -117,7 +115,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] ASATipeViewModel vm)
+        public async Task<IActionResult> Create([FromBody] LabPersiapanPemeriksaanViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -147,20 +145,22 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 //cek duplikasi
-                bool isDuplicate = await _applicationDbContext.ASATipes
-                    .AnyAsync(c => c.NamaTipeASA.ToLower().Trim()
-                    == vm.NamaTipeASA.ToLower().Trim() && c.IsDelete == false);
+                //bool isDuplicate = await _applicationDbContext.AnastesiTipes
+                //    .AnyAsync(c => c.NamaTipeAnastesi.ToLower().Trim()
+                //    == vm.NamaTipeAnastesi.ToLower().Trim() && c.IsDelete == false);
 
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Tipe ASA ini telah tersedia" });
-                }
+                //if (isDuplicate)
+                //{
+                //    return Conflict(new { message = "Tipe Anastesi ini telah tersedia" });
+                //}
 
                 // **Buat Data Baru**
-                var data = new ASATipe
+                var data = new LabPersiapanPemeriksaan
                 {
-                    TipeASAId = Guid.NewGuid(),
-                    NamaTipeASA = vm.NamaTipeASA,
+                    LabPersiapanPemeriksaanId = Guid.NewGuid(),
+                    PersiapanPemeriksaan = vm.PersiapanPemeriksaan,
+                    TipePersiapan = vm.TipePersiapan,
+                    IsDetailPersiapan = vm.IsDetailPersiapan,
                     Keterangan = vm.Keterangan,
 
                     CreateBy = userActiveId,
@@ -168,7 +168,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 };
 
                 // **Simpan ke Database**
-                _applicationDbContext.ASATipes.Add(data);
+                _applicationDbContext.LabPersiapanPemeriksaans.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -191,7 +191,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] ASATipeViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] LabPersiapanPemeriksaanViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -222,30 +222,32 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.ASATipes.FindAsync(id);
+                var data = await _applicationDbContext.LabPersiapanPemeriksaans.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
                 }
 
                 //cek duplikasi
-                bool isDuplicate = await _applicationDbContext.ASATipes
-                    .AnyAsync(c => c.NamaTipeASA.ToLower().Trim()
-                    == vm.NamaTipeASA.ToLower().Trim() && c.TipeASAId != id);
+                //bool isDuplicate = await _applicationDbContext.AnastesiTipes
+                //    .AnyAsync(c => c.NamaTipeAnastesi.ToLower().Trim()
+                //    == vm.NamaTipeAnastesi.ToLower().Trim() && c.TipeAnastesiId != id);
 
-                if (isDuplicate)
-                {
-                    return Conflict(new { message = "Tipe ASA ini telah tersedia" });
-                }
+                //if (isDuplicate)
+                //{
+                //    return Conflict(new { message = "Tipe anastesi ini telah tersedia" });
+                //}
 
                 // **Update Data**
-                data.NamaTipeASA = vm.NamaTipeASA;
+                data.PersiapanPemeriksaan = vm.PersiapanPemeriksaan;
+                data.IsDetailPersiapan = vm.IsDetailPersiapan;
+                data.TipePersiapan = vm.TipePersiapan;
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.ASATipes.Update(data);
+                _applicationDbContext.LabPersiapanPemeriksaans.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -294,7 +296,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.ASATipes.FindAsync(id);
+                var data = await _applicationDbContext.LabPersiapanPemeriksaans.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -306,7 +308,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
 
                 data.IsDelete = true;
 
-                _applicationDbContext.ASATipes.Update(data);
+                _applicationDbContext.LabPersiapanPemeriksaans.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -329,21 +331,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
         }
 
         [HttpGet("paged")]
-        public IActionResult Paged(
-        int page = 1,
-        int perPage = 10,
-        string? search = null,
-        string? orderBy = "CreateDateTime",
-        string? sortDirection = "desc",
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                        DateTime? startDate = null,
-        [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                        DateTime? endDate = null,
-        [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
+        public async Task<IActionResult> Paged(
+            int page = 1,
+            int perPage = 10,
+            string? search = null,
+            string? orderBy = "CreateDateTime",
+            string? sortDirection = "desc",
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+                                    DateTime? startDate = null,
+            [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
+                                    DateTime? endDate = null,
+            [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
 
             // Query data
-            var query = (from a in _applicationDbContext.ASATipes
+            var query = (from a in _applicationDbContext.LabPersiapanPemeriksaans
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
                          where a.IsDelete == false || a.IsDelete == null
@@ -352,8 +354,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
-                             a.TipeASAId,
-                             a.NamaTipeASA,
+                             a.LabPersiapanPemeriksaanId,
+                             a.PersiapanPemeriksaan,
+                             a.TipePersiapan,
+                             a.IsDetailPersiapan,
                              a.Keterangan,
                          });
 
@@ -362,7 +366,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
             {
                 search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
-                    EF.Functions.ILike(u.NamaTipeASA, search)
+                    EF.Functions.ILike(u.PersiapanPemeriksaan, search)
                 );
             }
 
@@ -432,14 +436,12 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 {
                     "CreateDateTime" => query.OrderByDescending(u => u.CreateDateTime),
                     "CreateByName" => query.OrderByDescending(u => u.CreateByName),
-                    "NamaTipeASA" => query.OrderByDescending(u => u.NamaTipeASA),
                     _ => query.OrderByDescending(u => u.CreateDateTime)
                 }
                 : orderBy switch
                 {
                     "CreateDateTime" => query.OrderBy(u => u.CreateDateTime),
                     "CreateByName" => query.OrderBy(u => u.CreateByName),
-                    "NamaTipeASA" => query.OrderBy(u => u.NamaTipeASA),
                     _ => query.OrderBy(u => u.CreateDateTime)
                 };
 
@@ -467,6 +469,5 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controlle
                 }
             });
         }
-
     }
 }

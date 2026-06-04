@@ -20,7 +20,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Farmasi.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    [EnableCors("AllowSpecific")]
+    [EnableCors("FrontendCorsPolicy")]
     public class DetailPenerimaanUnitController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;

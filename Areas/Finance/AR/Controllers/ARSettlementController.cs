@@ -14,7 +14,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    [EnableCors("AllowSpecific")]
+    [EnableCors("FrontendCorsPolicy")]
     public class ARSettlementController : ControllerBase
     {
         private readonly ApplicationDbContext _applicationDbContext;

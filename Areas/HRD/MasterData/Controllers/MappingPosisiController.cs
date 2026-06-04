@@ -21,7 +21,7 @@ namespace QuilvianSystemBackendDev.Areas.HRD.MasterData.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    [EnableCors("AllowSpecific")]
+    [EnableCors("FrontendCorsPolicy")]
     public class MappingPosisiController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
