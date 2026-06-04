@@ -70,29 +70,29 @@ var allowedOrigins = builder.Configuration
     .GetSection("Cors:AllowedOrigins")
     .Get<string[]>() ?? Array.Empty<string>();
 
-Console.WriteLine("====================================");
-Console.WriteLine("RUNTIME CONFIG CHECK");
-Console.WriteLine($"ASPNETCORE_ENVIRONMENT: {builder.Environment.EnvironmentName}");
-Console.WriteLine($"ApplicationName: {builder.Environment.ApplicationName}");
-Console.WriteLine($"ContentRootPath: {builder.Environment.ContentRootPath}");
-Console.WriteLine("CORS AllowedOrigins yang terbaca:");
+//Console.WriteLine("====================================");
+//Console.WriteLine("RUNTIME CONFIG CHECK");
+//Console.WriteLine($"ASPNETCORE_ENVIRONMENT: {builder.Environment.EnvironmentName}");
+//Console.WriteLine($"ApplicationName: {builder.Environment.ApplicationName}");
+//Console.WriteLine($"ContentRootPath: {builder.Environment.ContentRootPath}");
+//Console.WriteLine("CORS AllowedOrigins yang terbaca:");
 
-if (allowedOrigins.Length == 0)
-{
-    Console.WriteLine("- TIDAK ADA ORIGIN YANG TERBACA");
-}
-else
-{
-    foreach (var origin in allowedOrigins)
-    {
-        Console.WriteLine($"- {origin}");
-    }
-}
+//if (allowedOrigins.Length == 0)
+//{
+//    Console.WriteLine("- TIDAK ADA ORIGIN YANG TERBACA");
+//}
+//else
+//{
+//    foreach (var origin in allowedOrigins)
+//    {
+//        Console.WriteLine($"- {origin}");
+//    }
+//}
 
-Console.WriteLine($"Jwt CookieName: {builder.Configuration["Jwt:CookieName"]}");
-Console.WriteLine($"Jwt Issuer: {builder.Configuration["Jwt:Issuer"]}");
-Console.WriteLine($"Jwt Audience: {builder.Configuration["Jwt:Audience"]}");
-Console.WriteLine("====================================");
+//Console.WriteLine($"Jwt CookieName: {builder.Configuration["Jwt:CookieName"]}");
+//Console.WriteLine($"Jwt Issuer: {builder.Configuration["Jwt:Issuer"]}");
+//Console.WriteLine($"Jwt Audience: {builder.Configuration["Jwt:Audience"]}");
+//Console.WriteLine("====================================");
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("FrontendCorsPolicy", policy =>
@@ -388,7 +388,38 @@ app.UseSwaggerUI(c =>
 #endregion
 
 app.UseRouting();
+app.Use(async (context, next) =>
+{
+    if (HttpMethods.IsOptions(context.Request.Method))
+    {
+        var origin = context.Request.Headers["Origin"].ToString();
 
+        if (!string.IsNullOrWhiteSpace(origin) &&
+            allowedOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase))
+        {
+            context.Response.Headers["Access-Control-Allow-Origin"] = origin;
+            context.Response.Headers["Access-Control-Allow-Credentials"] = "true";
+            context.Response.Headers["Vary"] = "Origin";
+
+            var requestMethod = context.Request.Headers["Access-Control-Request-Method"].ToString();
+            context.Response.Headers["Access-Control-Allow-Methods"] =
+                string.IsNullOrWhiteSpace(requestMethod)
+                    ? "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+                    : requestMethod;
+
+            var requestHeaders = context.Request.Headers["Access-Control-Request-Headers"].ToString();
+            context.Response.Headers["Access-Control-Allow-Headers"] =
+                string.IsNullOrWhiteSpace(requestHeaders)
+                    ? "authorization,content-type"
+                    : requestHeaders;
+        }
+
+        context.Response.StatusCode = StatusCodes.Status204NoContent;
+        return;
+    }
+
+    await next();
+});
 app.UseCors("FrontendCorsPolicy");
 
 app.UseSession();

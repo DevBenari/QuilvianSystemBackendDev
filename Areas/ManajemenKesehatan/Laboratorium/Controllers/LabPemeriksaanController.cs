@@ -71,6 +71,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         NamaPemeriksaan = a.NamaPemeriksaan,
                         HargaPemeriksaan = a.HargaPemeriksaan,
                         KodePemeriksaan = a.KodePemeriksaan,
+                        a.DurasiPuasa,
+                        a.IsButuhPersiapan,
                         Keterangan = a.Keterangan,
                         CreateDateTime = a.CreateDateTime,
                         CreateBy = a.CreateBy,
@@ -176,6 +178,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         NamaPemeriksaan = a.NamaPemeriksaan,
                         HargaPemeriksaan = a.HargaPemeriksaan,
                         KodePemeriksaan = a.KodePemeriksaan,
+                        a.DurasiPuasa,
+                        a.IsButuhPersiapan,
                         Keterangan = a.Keterangan,
                         CreateDateTime = a.CreateDateTime,
                         CreateBy = a.CreateBy,
@@ -225,6 +229,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     mainData.NamaPemeriksaan,
                     mainData.HargaPemeriksaan,
                     mainData.KodePemeriksaan,
+                    mainData.DurasiPuasa,
+                    mainData.IsButuhPersiapan,
                     mainData.Keterangan,
                     mainData.CreateDateTime,
                     mainData.CreateBy,
@@ -301,6 +307,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     KodePemeriksaan = vm.KodePemeriksaan,
                     HargaPemeriksaan = vm.HargaPemeriksaan,
                     KategoriPemeriksaanId = vm.KategoriPemeriksaanId,
+                    DurasiPuasa = vm.DurasiPuasa,
+                    IsButuhPersiapan = vm.IsButuhPersiapan,
                     Keterangan = vm.Keterangan,
 
                     CreateBy = userActiveId,
@@ -381,6 +389,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 existingData.KodePemeriksaan = vm.KodePemeriksaan; // tetap diperbolehkan diubah jika memang boleh
                 existingData.HargaPemeriksaan = vm.HargaPemeriksaan;
                 existingData.KategoriPemeriksaanId = vm.KategoriPemeriksaanId;
+                existingData.DurasiPuasa = vm.DurasiPuasa;
+                existingData.IsButuhPersiapan = vm.IsButuhPersiapan;
                 existingData.Keterangan = vm.Keterangan;
                 existingData.UpdateBy = userActiveId;
                 existingData.UpdateDateTime = DateTimeOffset.UtcNow;
@@ -547,6 +557,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         NamaPemeriksaan = a.NamaPemeriksaan,
                         HargaPemeriksaan = a.HargaPemeriksaan,
                         KodePemeriksaan = a.KodePemeriksaan,
+                        a.DurasiPuasa,
+                        a.IsButuhPersiapan,
                         Keterangan = a.Keterangan,
                         CreateDateTime = a.CreateDateTime,
                         CreateBy = a.CreateBy,

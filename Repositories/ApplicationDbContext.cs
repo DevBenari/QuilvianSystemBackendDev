@@ -1102,6 +1102,13 @@ namespace QuilvianSystemBackendDev.Repositories
             public DbSet<DarahDetail> DarahDetails { get; set; }
             public DbSet<LabBookingDetailSpecimenJenis> LabBookingDetailSpecimenJenises { get; set; }
             public DbSet<LabBookingDetailSpecimenMethod> LabBookingDetailSpecimenMethods { get; set; }
+            public DbSet<LabPersiapanPemeriksaan> LabPersiapanPemeriksaans { get; set; }
+            public DbSet<LabPemeriksaanPersiapan> LabPemeriksaanPersiapans { get; set; }
+            public DbSet<LabJawabanPersiapan> LabJawabanPersiapans { get; set; }
+            public DbSet<RiwayatBendaMedisPasien> RiwayatBendaMedisPasiens { get; set; }
+            public DbSet<RiwayatOperasiPasien> RiwayatOperasiPasiens { get; set; }
+
+
         #endregion
 
         #region IGD

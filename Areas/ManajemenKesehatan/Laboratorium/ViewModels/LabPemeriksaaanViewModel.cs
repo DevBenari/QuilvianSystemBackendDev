@@ -6,6 +6,8 @@
         public string? KodePemeriksaan { get; set; }
         public decimal? HargaPemeriksaan { get; set; } // Harga Pemeriksaan
         public Guid? KategoriPemeriksaanId { get; set; } // Relasi ke tabel Kategori Pemeriksaan
+        public decimal? DurasiPuasa { get; set; }
+        public bool? IsButuhPersiapan { get; set; }
         public string? Keterangan { get; set; } // Keterangan tambahan
     }
 }
