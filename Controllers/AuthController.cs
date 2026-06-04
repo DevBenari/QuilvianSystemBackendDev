@@ -584,7 +584,7 @@ namespace QuilvianSystemBackendDev.Controllers
                 {
                     HttpOnly = true,
                     Secure = true,
-                    SameSite = SameSiteMode.Lax,
+                    SameSite = SameSiteMode.None,
                     Expires = new DateTimeOffset(expirationUtc),
                     IsEssential = true,
                     Path = "/"
@@ -598,7 +598,7 @@ namespace QuilvianSystemBackendDev.Controllers
                 new CookieOptions
                 {
                     Secure = true,
-                    SameSite = SameSiteMode.Lax,
+                    SameSite = SameSiteMode.None,
                     Path = "/"
                 });
         }
@@ -610,7 +610,7 @@ namespace QuilvianSystemBackendDev.Controllers
                 new CookieOptions
                 {
                     Secure = true,
-                    SameSite = SameSiteMode.Lax,
+                    SameSite = SameSiteMode.None,
                     Path = "/"
                 });
         }

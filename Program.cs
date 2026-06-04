@@ -135,15 +135,20 @@ builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {
     var idleMinutes = builder.Configuration.GetValue<int?>("AuthSession:IdleTimeoutMinutes") ?? 180;
+    var idleTimeout = TimeSpan.FromMinutes(idleMinutes);
 
-    options.IdleTimeout = TimeSpan.FromMinutes(idleMinutes);
+    options.IdleTimeout = idleTimeout;
 
     options.Cookie.Name = ".Quilvian.Session";
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
 
-    options.Cookie.SameSite = SameSiteMode.Lax;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    options.Cookie.SameSite = SameSiteMode.None;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;    
+    
+    // Opsional: supaya Chrome menampilkan Max-Age/Expires,
+    // tapi timeout server tetap dikontrol oleh IdleTimeout.
+    options.Cookie.MaxAge = idleTimeout;
 });
 
 #endregion

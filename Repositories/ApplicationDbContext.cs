@@ -746,6 +746,85 @@ namespace QuilvianSystemBackendDev.Repositories
             });
             #endregion
 
+            #region Lab Persiapan
+            modelBuilder.Entity<LabPemeriksaanPersiapan>(entity =>
+            {
+                entity.HasKey(e => e.LabPemeriksaanPersiapanId);
+
+                entity.HasOne(e => e.Lab)
+                    .WithMany()
+                    .HasForeignKey(e => e.LabId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.LabPemeriksaan)
+                    .WithMany()
+                    .HasForeignKey(e => e.PemeriksaanLabId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.LabPersiapanPemeriksaan)
+                    .WithMany(e => e.LabPemeriksaanPersiapans)
+                    .HasForeignKey(e => e.LabPersiapanPemeriksaanId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+
+            modelBuilder.Entity<LabJawabanPersiapan>(entity =>
+            {
+                entity.HasKey(e => e.LabJawabanPersiapanId);
+
+                entity.HasOne(e => e.Kunjungan)
+                    .WithMany()
+                    .HasForeignKey(e => e.KunjunganId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Pasien)
+                    .WithMany()
+                    .HasForeignKey(e => e.PasienId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.PemeriksaanLab)
+                    .WithMany()
+                    .HasForeignKey(e => e.PemeriksaanLabId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.LabPersiapanPemeriksaan)
+                    .WithMany(e => e.LabJawabanPersiapans)
+                    .HasForeignKey(e => e.LabPersiapanPemeriksaanId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+
+            modelBuilder.Entity<RiwayatBendaMedisPasien>(entity =>
+            {
+                entity.HasKey(e => e.RiwayatBendaMedisPasienId);
+
+                entity.HasOne(e => e.Kunjungan)
+                    .WithMany()
+                    .HasForeignKey(e => e.KunjunganId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Pasien)
+                    .WithMany()
+                    .HasForeignKey(e => e.PasienId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+
+            modelBuilder.Entity<RiwayatOperasiPasien>(entity =>
+            {
+                entity.HasKey(e => e.RiwayatOperasiPasienId);
+
+                entity.HasOne(e => e.Kunjungan)
+                    .WithMany()
+                    .HasForeignKey(e => e.KunjunganId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Pasien)
+                    .WithMany()
+                    .HasForeignKey(e => e.PasienId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+            #endregion
             #endregion
         }
 
