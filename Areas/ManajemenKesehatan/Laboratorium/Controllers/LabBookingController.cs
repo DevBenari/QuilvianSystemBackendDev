@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using System.Linq;
 using System.Security.Claims;
+using System.Threading;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
@@ -15,6 +16,7 @@ using QuilvianSystemBackendDev.Areas.HRD.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Kasir.Controllers;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.HubSignalR;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Services;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
@@ -40,6 +42,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         private readonly ILogger<LabBookingController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly IHubContext<LabBookingHub> _hubContext;
+        private readonly INoPhotoGeneratorService _noPhotoGeneratorService;
 
         public LabBookingController(
             ApplicationDbContext applicationDbContext,
@@ -49,7 +52,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             IWebHostEnvironment webHostEnvironment,
             //IConfiguration configuration,
             ITTDService ttDService,
-            IHubContext<LabBookingHub> hubContext
+            IHubContext<LabBookingHub> hubContext,
+            INoPhotoGeneratorService noPhotoGeneratorService
             )
         {
             _applicationDbContext = applicationDbContext;
@@ -60,6 +64,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             //_uploadUrl = configuration["FileStorage:UploadUrl"];
             _hubContext = hubContext;
             _ttdService = ttDService;
+            _noPhotoGeneratorService = noPhotoGeneratorService;
         }
         private DateTime? TryParseTanggalToUtc(string tanggal)
         {
@@ -638,7 +643,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] LabBookingEditViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] LabBookingEditViewModel vm, CancellationToken ct)
         {
             if (id == Guid.Empty)
                 return BadRequest(new { message = "Parameter ID tidak valid." });
@@ -670,6 +675,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 if (entity == null)
                     return NotFound(new { message = "Data Booking Lab tidak ditemukan. || 404 Not Found" });
+
+                // generate no photo di lab booking details
+                var generatedCount = await _noPhotoGeneratorService
+                    .GenerateNoPhotosByLabBookingIdAsync(entity.BookingLabId, ct);
 
                 // ======================================
                 // ⚙️ Update nilai field
@@ -722,6 +731,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         data = new
                         {
                             entity.BookingLabId,
+                            totalNoPhotoGenerated = generatedCount,
                             entity.NoOrder,
                             entity.NomorSuratJaminan,
                             entity.CatatanJaminan,
@@ -1565,9 +1575,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 join lp in _applicationDbContext.LabPemeriksaans.AsNoTracking()
                     on d.PemeriksaanLabId equals lp.PemeriksaanLabId into lpGroup
                 from lp in lpGroup.DefaultIfEmpty()
-                join v in _applicationDbContext.UserActives.AsNoTracking()
-                    on d.VerifikatorId equals v.UserActiveId into vGroup
-                from v in vGroup.DefaultIfEmpty()
                 where d.BookingLabId.HasValue
                       && pagedIds.Contains(d.BookingLabId.Value)
                       && (d.IsDelete == false || d.IsDelete == null)
@@ -1590,9 +1597,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     d.StatusVerifikasi,
                     d.TanggalSelesai,
                     d.CreateDateTime,
-                    d.VerifikatorId,
-                    NamaVerifikator= v.FullName ?? null,
-                    d.WaktuVerifikasi,
                     d.IsDelete
                 };
 
@@ -1692,9 +1696,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         d.NoPhoto,
                         d.StatusPemeriksaan,
                         d.StatusVerifikasi,
-                        d.VerifikatorId,
-                        d.NamaVerifikator,
-                        d.WaktuVerifikasi,
                         d.TanggalSelesai,
                         d.CreateDateTime,
                         d.IsDelete,
@@ -1978,10 +1979,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     on d.PemeriksaanLabId equals lp.PemeriksaanLabId into lpJoin
                 from lp in lpJoin.DefaultIfEmpty()
 
-                join v in _applicationDbContext.UserActives.AsNoTracking()
-                    on d.VerifikatorId equals v.UserActiveId into vGroup
-                from v in vGroup.DefaultIfEmpty()
-
                 where d.BookingLabId != null
                       && pagedIdSet.Contains(d.BookingLabId.Value)
                       && (d.IsDelete == false || d.IsDelete == null)
@@ -2006,9 +2003,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     d.QtyOrder,
                     d.StatusPemeriksaan,
                     d.StatusVerifikasi,
-                    d.VerifikatorId,
-                    NamaVerifikator = v != null ? v.FullName : null,
-                    d.WaktuVerifikasi,
                     d.TanggalSelesai,
                     d.CreateDateTime,
                     d.IsDelete
@@ -2092,9 +2086,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         d.QtyOrder,
                         d.StatusPemeriksaan,
                         d.StatusVerifikasi,
-                        d.VerifikatorId,
-                        d.NamaVerifikator,
-                        d.WaktuVerifikasi,
                         d.TanggalSelesai,
                         d.CreateDateTime,
                         d.IsDelete,
@@ -2471,10 +2462,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      on d.PemeriksaanLabId equals lp.PemeriksaanLabId into lpJoin
                  from lp in lpJoin.DefaultIfEmpty()
 
-                 join v in _applicationDbContext.UserActives.AsNoTracking()
-                     on d.VerifikatorId equals v.UserActiveId into vGroup
-                 from v in vGroup.DefaultIfEmpty()
-
                  where d.BookingLabId != null
                        && pagedIdSet.Contains(d.BookingLabId.Value)
                        && (d.IsDelete == false || d.IsDelete == null)
@@ -2495,9 +2482,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
                      HargaPemeriksaan = lp != null ? lp.HargaPemeriksaan : null,
 
-                     d.VerifikatorId,
-                     NamaVerifikator = v != null ? v.FullName : null,
-                     d.WaktuVerifikasi,
 
                      d.QtyOrder,
                      d.IsDelete
@@ -2892,10 +2876,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      on d.PemeriksaanLabId equals lp.PemeriksaanLabId into lpJoin
                  from lp in lpJoin.DefaultIfEmpty()
 
-                 join v in _applicationDbContext.UserActives.AsNoTracking()
-                     on d.VerifikatorId equals v.UserActiveId into vGroup
-                 from v in vGroup.DefaultIfEmpty()
-
                  where d.BookingLabId != null
                        && pagedIdSet.Contains(d.BookingLabId.Value)
                        && (d.IsDelete == false || d.IsDelete == null)
@@ -2917,9 +2897,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                      d.QtyOrder,
                      d.NoPhoto,
-                     d.VerifikatorId,
-                     NamaVerifikator = v != null ? v.FullName : null,
-                     d.WaktuVerifikasi,
                      d.IsDelete
                  })
                 .ToListAsync();
@@ -3294,10 +3271,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      on d.PemeriksaanLabId equals lp.PemeriksaanLabId into lpJoin
                  from lp in lpJoin.DefaultIfEmpty()
 
-                 join v in _applicationDbContext.UserActives.AsNoTracking()
-                     on d.VerifikatorId equals v.UserActiveId into vGroup
-                 from v in vGroup.DefaultIfEmpty()
-
                  where d.BookingLabId != null
                        && pagedIdSet.Contains(d.BookingLabId.Value)
                        && (d.IsDelete == false || d.IsDelete == null)
@@ -3317,10 +3290,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      d.PemeriksaanLabId,
                      NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
                      HargaPemeriksaan = lp != null ? lp.HargaPemeriksaan : null,
-
-                     d.VerifikatorId,
-                     NamaVerifikator = v != null ? v.FullName : null,
-                     d.WaktuVerifikasi,
                      d.QtyOrder,
                      d.IsDelete
                  })

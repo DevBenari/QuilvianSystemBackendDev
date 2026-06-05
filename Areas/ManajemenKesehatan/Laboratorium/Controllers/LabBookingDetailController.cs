@@ -84,10 +84,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                          on d.BookingLabId equals b.BookingLabId into labBookings
                          from b in labBookings.DefaultIfEmpty()
 
-                         join v in _applicationDbContext.UserActives.AsNoTracking()
-                            on d.VerifikatorId equals v.UserActiveId into vg
-                         from v in vg.DefaultIfEmpty()
-
                              // joimn ke lab pemeriksaan
                          join p in _applicationDbContext.LabPemeriksaans
                          on d.PemeriksaanLabId equals p.PemeriksaanLabId into labPemeriksaans
@@ -129,8 +125,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              d.StatusVerifikasi,
                              d.QtyOrder,
                              d.NoPhoto,
-                             d.VerifikatorId,
-                             NamaVerifikator = vg != null ? v.FullName : null,
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -179,10 +173,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                      on d.CreateBy equals u.UserActiveId into ug
                                  from u in ug.DefaultIfEmpty()
 
-                                  join v in _applicationDbContext.UserActives.AsNoTracking()
-                                    on d.VerifikatorId equals v.UserActiveId into vg
-                                  from v in vg.DefaultIfEmpty()
-
                                   join bl in _applicationDbContext.Billings.AsNoTracking()
                                      on d.PemeriksaanLabId equals bl.ItemId into blg
                                  from bl in blg.DefaultIfEmpty()
@@ -226,8 +216,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                      d.StatusVerifikasi,
                                      d.QtyOrder,
                                      d.NoPhoto,
-                                     d.VerifikatorId,
-                                     NamaVerifikator = vg != null ? v.FullName : null,
+
                                  })
                                   .FirstOrDefaultAsync();
 
@@ -593,8 +582,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 existingData.StatusPemeriksaan = vm.StatusPemeriksaan;
                 existingData.TanggalSelesai = vm.TanggalSelesai;
                 existingData.NoPhoto = noPhoto;
-                existingData.WaktuVerifikasi = vm.WaktuVerifikasi;
-                existingData.VerifikatorId = vm.VerifikatorId;
                 existingData.QtyOrder = vm.QtyOrder;
 
                 existingData.UpdateBy = userActiveId;

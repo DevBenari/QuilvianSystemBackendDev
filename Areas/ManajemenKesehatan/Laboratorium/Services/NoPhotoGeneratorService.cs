@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Data;
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using QuilvianSystemBackendDev.Repositories;
 
@@ -6,8 +7,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Service
 {
     public interface INoPhotoGeneratorService
     {
-        Task<string> GenerateNoPhotoAsync(Guid? pemeriksaanLabId, CancellationToken cancellationToken = default);
         Task<string> GenerateNoOrderByLabIdAsync(Guid labId, CancellationToken cancellationToken = default);
+        Task<int> GenerateNoPhotosByLabBookingIdAsync(Guid labBookingId, CancellationToken cancellationToken = default);
 
     }
 
@@ -41,54 +42,114 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Service
             _context = context;
         }
 
-        public async Task<string> GenerateNoPhotoAsync(Guid? pemeriksaanLabId, CancellationToken cancellationToken = default)
+        public async Task<int> GenerateNoPhotosByLabBookingIdAsync(
+    Guid labBookingId,
+    CancellationToken cancellationToken = default)
         {
             var now = DateTime.Now;
 
-            var kategori = await (
-                from p in _context.LabPemeriksaans.AsNoTracking()
-                where p.PemeriksaanLabId == pemeriksaanLabId
-                select new
-                {
-                    KodeKategori = p.KategoriPemeriksaan != null ? p.KategoriPemeriksaan.KodeKategori : null,
-                    NamaKategori = p.KategoriPemeriksaan != null ? p.KategoriPemeriksaan.NamaKategori : null
-                }
-            ).FirstOrDefaultAsync(cancellationToken);
+            var transaction = _context.Database.CurrentTransaction == null
+                ? await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken)
+                : null;
 
-            if (kategori == null)
-                throw new Exception("Kategori pemeriksaan tidak ditemukan dari PemeriksaanLabId tersebut.");
-
-            var modality = GetModalityCode(kategori.KodeKategori, kategori.NamaKategori);
-
-            var hospitalYear = ReferenceHospitalYear + (now.Year - ReferenceYear);
-            if (hospitalYear < 0)
-                throw new Exception("Perhitungan tahun berjalan rumah sakit tidak valid.");
-
-            var monthCode = GetMonthCode(now.Month);
-
-            var prefix = $"{modality}{hospitalYear:00}{monthCode}-";
-
-            var lastNoPhoto = await _context.LabBookingDetails
-                .AsNoTracking()
-                .Where(x => x.NoPhoto != null && x.NoPhoto.StartsWith(prefix))
-                .OrderByDescending(x => x.NoPhoto)
-                .Select(x => x.NoPhoto)
-                .FirstOrDefaultAsync(cancellationToken);
-
-            var nextNumber = 1;
-
-            if (!string.IsNullOrWhiteSpace(lastNoPhoto))
+            try
             {
-                var match = Regex.Match(lastNoPhoto, @"-(\d+)$");
-                if (match.Success && int.TryParse(match.Groups[1].Value, out var lastNumber))
+                var booking = await _context.LabBookings
+                    .FirstOrDefaultAsync(x => x.BookingLabId == labBookingId, cancellationToken);
+
+                if (booking == null)
+                    throw new Exception("Booking lab tidak ditemukan.");
+
+                // Sesuaikan nama property ini dengan model kamu.
+                // Misalnya: booking.IsKonfirmasi, booking.IsConfirmed, atau booking.KonfirmasiId.
+                if (booking.KonfirmatorId != null)
+                    throw new Exception("No Photo hanya bisa digenerate jika booking lab sudah dikonfirmasi.");
+
+                var details = await _context.LabBookingDetails
+                    .Where(x =>
+                        x.BookingLabId == labBookingId &&
+                        (x.NoPhoto == null || x.NoPhoto == ""))
+                    .OrderBy(x => x.CreateDateTime)
+                    .ToListAsync(cancellationToken);
+
+                if (!details.Any())
                 {
-                    nextNumber = lastNumber + 1;
+                    if (transaction != null)
+                        await transaction.CommitAsync(cancellationToken);
+
+                    return 0;
                 }
+
+                var labIds = details
+                    .Select(x => x.LabId)
+                    .Distinct()
+                    .ToList();
+
+                var kategoriByLabId = await _context.LabPemeriksaans
+                    .AsNoTracking()
+                    .Where(x => labIds.Contains(x.PemeriksaanLabId))
+                    .Select(x => new
+                    {
+                        LabId = x.PemeriksaanLabId,
+                        KodeKategori = x.KategoriPemeriksaan != null
+                            ? x.KategoriPemeriksaan.KodeKategori
+                            : null,
+                        NamaKategori = x.KategoriPemeriksaan != null
+                            ? x.KategoriPemeriksaan.NamaKategori
+                            : null
+                    })
+                    .ToDictionaryAsync(x => x.LabId, cancellationToken);
+
+                var hospitalYear = ReferenceHospitalYear + (now.Year - ReferenceYear);
+                if (hospitalYear < 0)
+                    throw new Exception("Perhitungan tahun berjalan rumah sakit tidak valid.");
+
+                var monthCode = GetMonthCode(now.Month);
+
+                var lastNumberByPrefix = new Dictionary<string, int>();
+
+                foreach (var detail in details)
+                {
+                    if (!kategoriByLabId.TryGetValue((Guid)detail.LabId, out var kategori))
+                        throw new Exception($"Kategori pemeriksaan tidak ditemukan untuk LabId: {detail.LabId}");
+
+                    var modality = GetModalityCode(kategori.KodeKategori, kategori.NamaKategori);
+
+                    var prefix = $"{modality}{hospitalYear:00}{monthCode}-";
+
+                    if (!lastNumberByPrefix.ContainsKey(prefix))
+                    {
+                        lastNumberByPrefix[prefix] =
+                            await GetLastNoPhotoNumberByPrefixAsync(prefix, cancellationToken);
+                    }
+
+                    var nextNumber = lastNumberByPrefix[prefix] + 1;
+
+                    detail.NoPhoto = $"{prefix}{nextNumber:000}";
+
+                    lastNumberByPrefix[prefix] = nextNumber;
+                }
+
+                var updatedCount = await _context.SaveChangesAsync(cancellationToken);
+
+                if (transaction != null)
+                    await transaction.CommitAsync(cancellationToken);
+
+                return details.Count;
             }
+            catch
+            {
+                if (transaction != null)
+                    await transaction.RollbackAsync(cancellationToken);
 
-            return $"{prefix}{nextNumber:000}";
+                throw;
+            }
+            finally
+            {
+                if (transaction != null)
+                    await transaction.DisposeAsync();
+            }
         }
-
         public async Task<string> GenerateNoOrderByLabIdAsync(Guid labId, CancellationToken cancellationToken = default)
         {
             var lastNoOrder = await _context.LabBookingDetails
@@ -128,6 +189,32 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Service
                 throw new ArgumentOutOfRangeException(nameof(month), "Month harus 1 sampai 12.");
 
             return code;
+        }
+
+        private async Task<int> GetLastNoPhotoNumberByPrefixAsync(
+            string prefix,
+            CancellationToken cancellationToken = default)
+        {
+            var existingNoPhotos = await _context.LabBookingDetails
+                .AsNoTracking()
+                .Where(x => x.NoPhoto != null && x.NoPhoto.StartsWith(prefix))
+                .Select(x => x.NoPhoto!)
+                .ToListAsync(cancellationToken);
+
+            var maxNumber = 0;
+
+            foreach (var noPhoto in existingNoPhotos)
+            {
+                var match = Regex.Match(noPhoto, @"-(\d+)$");
+
+                if (match.Success && int.TryParse(match.Groups[1].Value, out var number))
+                {
+                    if (number > maxNumber)
+                        maxNumber = number;
+                }
+            }
+
+            return maxNumber;
         }
     }
 }
