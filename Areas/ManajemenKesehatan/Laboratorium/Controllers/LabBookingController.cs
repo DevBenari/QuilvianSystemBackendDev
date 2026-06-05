@@ -1551,7 +1551,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     NamaKelas = kl != null ? kl.NamaKelas : null,
                     b.HemodialisaKe,
                     b.StatusPemeriksaan,
-                    b.NomorSuratJaminan,
 
                     b.DiagnosaAwal,
                     b.Keterangan,
