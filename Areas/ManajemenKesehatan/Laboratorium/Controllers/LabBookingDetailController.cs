@@ -84,6 +84,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                          on d.BookingLabId equals b.BookingLabId into labBookings
                          from b in labBookings.DefaultIfEmpty()
 
+                         join v in _applicationDbContext.UserActives.AsNoTracking()
+                            on d.VerifikatorId equals v.UserActiveId into vg
+                         from v in vg.DefaultIfEmpty()
+
                              // joimn ke lab pemeriksaan
                          join p in _applicationDbContext.LabPemeriksaans
                          on d.PemeriksaanLabId equals p.PemeriksaanLabId into labPemeriksaans
@@ -124,7 +128,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              d.TanggalSelesai,
                              d.StatusVerifikasi,
                              d.QtyOrder,
-                             d.NoPhoto
+                             d.NoPhoto,
+                             d.VerifikatorId,
+                             NamaVerifikator = vg != null ? v.FullName : null,
                          }).OrderByDescending(a => a.CreateDateTime);
 
             // Hitung total data sebelum paginasi
@@ -173,7 +179,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                      on d.CreateBy equals u.UserActiveId into ug
                                  from u in ug.DefaultIfEmpty()
 
-                                 join bl in _applicationDbContext.Billings.AsNoTracking()
+                                  join v in _applicationDbContext.UserActives.AsNoTracking()
+                                    on d.VerifikatorId equals v.UserActiveId into vg
+                                  from v in vg.DefaultIfEmpty()
+
+                                  join bl in _applicationDbContext.Billings.AsNoTracking()
                                      on d.PemeriksaanLabId equals bl.ItemId into blg
                                  from bl in blg.DefaultIfEmpty()
 
@@ -215,7 +225,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                      d.TanggalSelesai,
                                      d.StatusVerifikasi,
                                      d.QtyOrder,
-                                     d.NoPhoto
+                                     d.NoPhoto,
+                                     d.VerifikatorId,
+                                     NamaVerifikator = vg != null ? v.FullName : null,
                                  })
                                   .FirstOrDefaultAsync();
 
@@ -267,10 +279,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     });
                 }
 
-                var noPhoto = await _noPhotoGeneratorService.GenerateNoPhotoAsync(
-                            vm.PemeriksaanLabId,
-                            ct);
-
                 var noOder = await _noPhotoGeneratorService.GenerateNoOrderByLabIdAsync
                         ((Guid)vm.LabId, ct);
 
@@ -300,9 +308,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     SpecimenMethodId = vm.SpecimenMethodId,
                     SpecimenJenisId = vm.SpecimenJenisId,
                     StatusPemeriksaan = vm.StatusPemeriksaan,
-                    StatusVerifikasi = vm.StatusVerifikasi,
                     TanggalSelesai = vm.TanggalSelesai,
-                    NoPhoto = noPhoto,
                     NoOrder = noOder,
                     QtyOrder = vm.QtyOrder,
 
@@ -513,7 +519,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         //}
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] LabBookingDetailViewModel vm, CancellationToken ct)
+        public async Task<IActionResult> Update(Guid id, [FromBody] LabBookingDetailEditViewModel vm, CancellationToken ct)
         {
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
@@ -557,14 +563,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 }
 
                 // ============================================
-                // NoPhoto hanya berubah jika PemeriksaanLabId berubah
+                // NoPhoto 
                 // ============================================
-                if (existingData.PemeriksaanLabId != vm.PemeriksaanLabId)
-                {
-                    existingData.NoPhoto = await _noPhotoGeneratorService.GenerateNoPhotoAsync(
-                        vm.PemeriksaanLabId,
-                        ct);
-                }
+                var noPhoto = await _noPhotoGeneratorService.GenerateNoPhotoAsync(
+                            vm.PemeriksaanLabId,
+                            ct);
 
                 // ==========================================================
                 // ✅ Update field dari ViewModel
@@ -589,6 +592,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 existingData.AsalSpecimenId = vm.AsalSpecimenId;
                 existingData.StatusPemeriksaan = vm.StatusPemeriksaan;
                 existingData.TanggalSelesai = vm.TanggalSelesai;
+                existingData.NoPhoto = noPhoto;
+                existingData.WaktuVerifikasi = vm.WaktuVerifikasi;
+                existingData.VerifikatorId = vm.VerifikatorId;
                 existingData.QtyOrder = vm.QtyOrder;
 
                 existingData.UpdateBy = userActiveId;
@@ -789,6 +795,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     on d.CreateBy equals u.UserActiveId into ug
                 from u in ug.DefaultIfEmpty()
 
+                join v in _applicationDbContext.UserActives.AsNoTracking()
+                    on d.VerifikatorId equals v.UserActiveId into vg
+                from v in vg.DefaultIfEmpty()
+
                 join bl in _applicationDbContext.Billings.AsNoTracking()
                     on d.PemeriksaanLabId equals bl.ItemId into blg
                 from bl in blg.DefaultIfEmpty()
@@ -831,6 +841,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     d.StatusPemeriksaan,
                     d.TanggalSelesai,
                     d.StatusVerifikasi,
+                    d.VerifikatorId,
+                    NamaVerifikator = vg != null ? v.FullName : null,
                     d.QtyOrder,
                     d.NoPhoto
                 };

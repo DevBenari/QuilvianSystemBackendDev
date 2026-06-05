@@ -1,6 +1,6 @@
 ﻿namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.ViewModels
 {
-    public class LabBookingDetailViewModel
+    public class LabBookingDetailEditViewModel
     {
         public Guid? BookingLabId { get; set; } // Relasi ke tabel Booking Lab
         public Guid? PasienId { get; set; } // Relasi ke tabel Pasien
@@ -26,6 +26,9 @@
         public decimal? QtyOrder { get; set; }
         public string? StatusPemeriksaan { get; set; }
         public DateTime? TanggalSelesai { get; set; }
+        public Guid? VerifikatorId { get; set; }
+        public DateTime? WaktuVerifikasi { get; set; }
+        public bool? StatusVerifikasi { get; set; }
 
     }
 }

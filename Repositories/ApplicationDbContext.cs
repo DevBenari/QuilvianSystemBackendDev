@@ -825,6 +825,45 @@ namespace QuilvianSystemBackendDev.Repositories
                     .OnDelete(DeleteBehavior.Restrict);
             });
             #endregion
+
+            #region Tarif Film
+            modelBuilder.Entity<Film>(entity =>
+            {
+                entity.HasKey(e => e.FilmId);
+
+                entity.Property(e => e.NamaFilm)
+                    .IsRequired();
+
+                entity.Property(e => e.IsDelete)
+                    .HasDefaultValue(false);
+            });
+
+            modelBuilder.Entity<TarifFilm>(entity =>
+            {
+                entity.HasKey(e => e.TarifFilmId);
+
+                entity.Property(e => e.TarifDokter).HasColumnType("numeric");
+                entity.Property(e => e.TarifRs).HasColumnType("numeric");
+                entity.Property(e => e.TarifJp).HasColumnType("numeric");
+                entity.Property(e => e.TarifBahp).HasColumnType("numeric");
+                entity.Property(e => e.TarifLain).HasColumnType("numeric");
+                entity.Property(e => e.TarifTotal).HasColumnType("numeric");
+                entity.Property(e => e.KSO).HasColumnType("numeric");
+
+                entity.Property(e => e.IsDelete)
+                    .HasDefaultValue(false);
+
+                entity.HasOne(e => e.Film)
+                    .WithMany(e => e.TarifFilms)
+                    .HasForeignKey(e => e.FilmId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Kelas)
+                    .WithMany()
+                    .HasForeignKey(e => e.KelasId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+            #endregion
             #endregion
         }
 
@@ -983,6 +1022,8 @@ namespace QuilvianSystemBackendDev.Repositories
         public DbSet<SupplierObatAlkes> SupplierObatAlkess { get; set; }
         public DbSet<DokterInstalasiUnit> DokterInstalasiUnits { get; set; }
         public DbSet<KunjunganLayanan> KunjunganLayanans { get; set; }
+        public DbSet<Film> Films { get; set; }
+        public DbSet<TarifFilm> TarifFilms { get; set; }
 
 
         #endregion

@@ -8,11 +8,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.ViewModels;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Controllers;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
-using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
@@ -23,20 +19,20 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
     [Route("api/[controller]")]
     [Authorize]
     [EnableCors("FrontendCorsPolicy")]
-    public class LabJawabanPersiapanController : Controller
+    public class RiwayatOperasiPasienController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        private readonly ILogger<LabJawabanPersiapanController> _logger;
+        private readonly ILogger<RiwayatOperasiPasienController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public LabJawabanPersiapanController(
+        public RiwayatOperasiPasienController(
             ApplicationDbContext applicationDbContext,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<LabJawabanPersiapanController> logger,
+            ILogger<RiwayatOperasiPasienController> logger,
             IWebHostEnvironment webHostEnvironment)
         {
             _applicationDbContext = applicationDbContext;
@@ -54,7 +50,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             if (perPage < 1) perPage = 10;
 
             // Query data
-            var query = (from a in _applicationDbContext.LabJawabanPersiapans
+            var query = (from a in _applicationDbContext.RiwayatOperasiPasiens
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
                          where a.IsDelete == false || a.IsDelete == null
@@ -63,18 +59,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
-                             a.LabJawabanPersiapanId,
+                             a.RiwayatOperasiPasienId,
                              a.KunjunganId,
-                             JenisKunjungan = a.Kunjungan!= null ?a.Kunjungan.JenisKunjungan : null,
-                             AsalKunjungan = a.Kunjungan!= null ?a.Kunjungan.AsalKunjungan : null,
+                             JenisKunjungan = a.Kunjungan != null ? a.Kunjungan.JenisKunjungan : null,
+                             AsalKunjungan = a.Kunjungan != null ? a.Kunjungan.AsalKunjungan : null,
                              a.PasienId,
                              NamaLengkap = a.Pasien != null ? a.Pasien.NamaLengkap : null,
                              NoRekamMedis = a.Pasien != null ? a.Pasien.NoRekamMedis : null,
-                             a.PemeriksaanLabId,
-                             NamaPemeriksaanLab = a.PemeriksaanLab != null ? a.PemeriksaanLab.NamaPemeriksaan : null,
-                             a.LabPersiapanPemeriksaanId,
-                             PersiapanPemeriksaan = a.LabPersiapanPemeriksaan != null ? a.LabPersiapanPemeriksaan.PersiapanPemeriksaan : null,
-                             a.IsJawabanPersiapan,
+                             a.NamaOperasi,
+                             a.NamaSumberData,
+                             a.LokasiTubuh,
+                             a.IndikasiOperasi,
+                             a.WaktuOperasi,
                              a.Keterangan,
                          }).OrderByDescending(a => a.CreateDateTime);
 
@@ -111,27 +107,27 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var listdata = (from a in _applicationDbContext.LabJawabanPersiapans
+            var listdata = (from a in _applicationDbContext.RiwayatOperasiPasiens
                             join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                             on a.CreateBy equals u.UserActiveId
-                            where a.IsDelete == false && a.LabJawabanPersiapanId == id
+                            where a.IsDelete == false && a.RiwayatOperasiPasienId == id
                             select new
                             {
                                 a.CreateDateTime,
                                 a.CreateBy,
                                 CreateByName = u.FullName,
-                                a.LabJawabanPersiapanId,
+                                a.RiwayatOperasiPasienId,
                                 a.KunjunganId,
                                 JenisKunjungan = a.Kunjungan != null ? a.Kunjungan.JenisKunjungan : null,
                                 AsalKunjungan = a.Kunjungan != null ? a.Kunjungan.AsalKunjungan : null,
                                 a.PasienId,
                                 NamaLengkap = a.Pasien != null ? a.Pasien.NamaLengkap : null,
                                 NoRekamMedis = a.Pasien != null ? a.Pasien.NoRekamMedis : null,
-                                a.PemeriksaanLabId,
-                                NamaPemeriksaanLab = a.PemeriksaanLab != null ? a.PemeriksaanLab.NamaPemeriksaan : null,
-                                a.LabPersiapanPemeriksaanId,
-                                PersiapanPemeriksaan = a.LabPersiapanPemeriksaan != null ? a.LabPersiapanPemeriksaan.PersiapanPemeriksaan : null,
-                                a.IsJawabanPersiapan,
+                                a.NamaOperasi,
+                                a.NamaSumberData,
+                                a.LokasiTubuh,
+                                a.IndikasiOperasi,
+                                a.WaktuOperasi,
                                 a.Keterangan,
                             });
             if (listdata == null)
@@ -147,7 +143,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] LabJawabanPersiapanViewModel vm)
+        public async Task<IActionResult> Create([FromBody] RiwayatOperasiPasienViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -187,14 +183,17 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 //}
 
                 // **Buat Data Baru**
-                var data = new LabJawabanPersiapan
+                var data = new RiwayatOperasiPasien
                 {
-                    LabJawabanPersiapanId = Guid.NewGuid(),
+                    RiwayatOperasiPasienId = Guid.NewGuid(),
                     KunjunganId = vm.KunjunganId,
                     PasienId = vm.PasienId,
-                    PemeriksaanLabId = vm.PemeriksaanLabId,
-                    LabPersiapanPemeriksaanId = vm.LabPersiapanPemeriksaanId,
-                    IsJawabanPersiapan = vm.IsJawabanPersiapan,
+                    SumberDataId = vm.SumberDataId,
+                    NamaSumberData = vm.NamaSumberData,
+                    NamaOperasi = vm.NamaOperasi,
+                    LokasiTubuh = vm.LokasiTubuh,
+                    IndikasiOperasi = vm.IndikasiOperasi,
+                    WaktuOperasi = vm.WaktuOperasi,
                     Keterangan = vm.Keterangan,
 
                     CreateBy = userActiveId,
@@ -202,7 +201,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 };
 
                 // **Simpan ke Database**
-                _applicationDbContext.LabJawabanPersiapans.Add(data);
+                _applicationDbContext.RiwayatOperasiPasiens.Add(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -225,7 +224,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] LabJawabanPersiapanViewModel vm)
+        public async Task<IActionResult> Update(Guid id, [FromBody] RiwayatOperasiPasienViewModel vm)
         {
             if (vm == null || !ModelState.IsValid)
             {
@@ -256,7 +255,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.LabJawabanPersiapans.FindAsync(id);
+                var data = await _applicationDbContext.RiwayatOperasiPasiens.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -275,15 +274,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 // **Update Data**
                 data.KunjunganId = vm.KunjunganId;
                 data.PasienId = vm.PasienId;
-                data.PemeriksaanLabId = vm.PemeriksaanLabId;
-                data.LabPersiapanPemeriksaanId = vm.LabPersiapanPemeriksaanId;
-                data.IsJawabanPersiapan = vm.IsJawabanPersiapan;
+                data.SumberDataId = vm.SumberDataId;
+                data.NamaSumberData = vm.NamaSumberData;
+                data.NamaOperasi = vm.NamaOperasi;
+                data.LokasiTubuh = vm.LokasiTubuh;
+                data.IndikasiOperasi = vm.IndikasiOperasi;
+                data.WaktuOperasi = vm.WaktuOperasi;
                 data.Keterangan = vm.Keterangan;
 
                 data.UpdateBy = userActiveId;
                 data.UpdateDateTime = DateTimeOffset.UtcNow;
 
-                _applicationDbContext.LabJawabanPersiapans.Update(data);
+                _applicationDbContext.RiwayatOperasiPasiens.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -304,6 +306,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
+
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
@@ -332,7 +335,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 var userActiveId = getUserActive.UserActiveId;
 
                 // **Cari Data**
-                var data = await _applicationDbContext.LabJawabanPersiapans.FindAsync(id);
+                var data = await _applicationDbContext.RiwayatOperasiPasiens.FindAsync(id);
                 if (data == null)
                 {
                     return NotFound(new { message = "Data tidak ditemukan." });
@@ -344,7 +347,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 data.IsDelete = true;
 
-                _applicationDbContext.LabJawabanPersiapans.Update(data);
+                _applicationDbContext.RiwayatOperasiPasiens.Update(data);
                 int result = await _applicationDbContext.SaveChangesAsync();
 
                 if (result > 0)
@@ -376,14 +379,14 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                                    DateTime? startDate = null,
+                                            DateTime? startDate = null,
             [FromQuery, SwaggerSchema(Format = "date-time", Description = "Format: YYYY-MM-DD")]
-                                    DateTime? endDate = null,
+                                            DateTime? endDate = null,
             [FromQuery, JsonConverter(typeof(StringEnumConverter))] PeriodeFilter? periode = null)
         {
 
             // Query data
-            var query = (from a in _applicationDbContext.LabJawabanPersiapans
+            var query = (from a in _applicationDbContext.RiwayatOperasiPasiens
                          join u in _applicationDbContext.UserActives.DefaultIfEmpty()
                          on a.CreateBy equals u.UserActiveId
                          where a.IsDelete == false || a.IsDelete == null
@@ -392,18 +395,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              a.CreateDateTime,
                              a.CreateBy,
                              CreateByName = u.FullName,
-                             a.LabJawabanPersiapanId,
+                             a.RiwayatOperasiPasienId,
                              a.KunjunganId,
                              JenisKunjungan = a.Kunjungan != null ? a.Kunjungan.JenisKunjungan : null,
                              AsalKunjungan = a.Kunjungan != null ? a.Kunjungan.AsalKunjungan : null,
                              a.PasienId,
                              NamaLengkap = a.Pasien != null ? a.Pasien.NamaLengkap : null,
                              NoRekamMedis = a.Pasien != null ? a.Pasien.NoRekamMedis : null,
-                             a.PemeriksaanLabId,
-                             NamaPemeriksaanLab = a.PemeriksaanLab != null ? a.PemeriksaanLab.NamaPemeriksaan : null,
-                             a.LabPersiapanPemeriksaanId,
-                             PersiapanPemeriksaan = a.LabPersiapanPemeriksaan != null ? a.LabPersiapanPemeriksaan.PersiapanPemeriksaan : null,
-                             a.IsJawabanPersiapan,
+                             a.NamaOperasi,
+                             a.NamaSumberData,
+                             a.LokasiTubuh,
+                             a.IndikasiOperasi,
+                             a.WaktuOperasi,
                              a.Keterangan,
                          });
 
@@ -412,20 +415,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             {
                 search = $"%{search.ToLower()}%"; // Format wildcard untuk PostgreSQL ILIKE
                 query = query.Where(u =>
-                    EF.Functions.ILike(u.NamaLengkap, search)
+                    EF.Functions.ILike(u.NamaLengkap, search) ||
+                    EF.Functions.ILike(u.NamaOperasi, search)
                 );
             }
 
             // filter based on kunjungan id
             if (kunjunganId.HasValue)
             {
-                query = query.Where(u=>u.KunjunganId==kunjunganId.Value);
+                query = query.Where(u => u.KunjunganId == kunjunganId.Value);
             }
 
             // filter based pasien id
             if (pasienId.HasValue)
             {
-                query = query.Where(u=>u.PasienId == pasienId.Value);
+                query = query.Where(u => u.PasienId == pasienId.Value);
             }
 
             //// **Filter berdasarkan tanggal**
