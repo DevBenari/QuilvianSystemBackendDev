@@ -672,9 +672,6 @@ namespace QuilvianSystemBackendDev.Repositories
                 entity.HasIndex(e => e.AsalSpecimenId)
                     .HasDatabaseName("IX_LabBookingDetail_AsalSpecimenId");
 
-                entity.HasIndex(e => e.NoOrder)
-                    .HasDatabaseName("IX_LabBookingDetail_NoOrder");
-
                 entity.HasIndex(e => e.StatusPemeriksaan)
                     .HasDatabaseName("IX_LabBookingDetail_StatusPemeriksaan");
 

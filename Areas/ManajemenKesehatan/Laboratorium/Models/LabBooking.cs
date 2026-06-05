@@ -38,6 +38,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public string? NoPA { get; set; }
         public bool? StatusBookingLab { get; set; }
         public string? IsLunas { get; set; }
+        public string? IsPasienPersiapan { get; set; }
         public string? AlasanPembatalan { get; set; }
         public string? TTDPathPembatalan { get; set; }
         public string? PetugasPembatalan { get; set; }

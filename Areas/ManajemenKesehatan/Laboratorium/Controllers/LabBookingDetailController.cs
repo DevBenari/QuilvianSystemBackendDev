@@ -39,7 +39,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly IGenerateInvoiceBillingService _generateInvoiceBillingService;
         private readonly IAsuransiCoverageService _asuransiCoverageService;
-        private readonly INoPhotoGeneratorService _noPhotoGeneratorService;
 
         public LabBookingDetailController(
             ApplicationDbContext applicationDbContext,
@@ -51,8 +50,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             ITTDService ttdService,
             IHubContext<LabBookingDetailHub> hubContext,
             IGenerateInvoiceBillingService generateInvoiceBillingService,
-            IAsuransiCoverageService asuransiCoverageService,
-            INoPhotoGeneratorService noPhotoGeneratorService)
+            IAsuransiCoverageService asuransiCoverageService)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
@@ -64,7 +62,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             _ttdService = ttdService;
             _generateInvoiceBillingService = generateInvoiceBillingService;
             _asuransiCoverageService = asuransiCoverageService;
-            _noPhotoGeneratorService = noPhotoGeneratorService;
         }
 
         [HttpGet]
@@ -98,7 +95,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              d.DetailBookingLabId,
                              d.BookingLabId,
                              NamaLab = d.Lab != null ? d.Lab.NamaLab : null,
-                             d.NoOrder,
                              d.PasienId,
                              b.KunjunganId,
                              d.PemeriksaanLabId,
@@ -186,7 +182,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                      d.BookingLabId,
                                      NamaLab = d.Lab != null ? d.Lab.NamaLab : null,
                                      d.PasienId,
-                                     d.NoOrder,
                                      d.TipeLayanan,
                                      KunjunganId = d.LabBooking.Kunjungan != null ? d.LabBooking.Kunjungan.KunjunganID : (Guid?)null,
                                      JenisKunjungan = d.LabBooking.Kunjungan != null ? d.LabBooking.Kunjungan.JenisKunjungan : null,
@@ -268,9 +263,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     });
                 }
 
-                var noOder = await _noPhotoGeneratorService.GenerateNoOrderByLabIdAsync
-                        ((Guid)vm.LabId, ct);
-
                 // ==========================================================
                 // ✅ Buat data baru LabBookingDetail
                 // ==========================================================
@@ -298,7 +290,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     SpecimenJenisId = vm.SpecimenJenisId,
                     StatusPemeriksaan = vm.StatusPemeriksaan,
                     TanggalSelesai = vm.TanggalSelesai,
-                    NoOrder = noOder,
                     QtyOrder = vm.QtyOrder,
 
                     CreateBy = userActiveId,
@@ -369,8 +360,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     message = "Tambah Data Detail Booking Lab & Billing Berhasil || 201 Created",
                     data = new
                     {
-                        data.DetailBookingLabId,
-                        data.NoOrder
+                        data.DetailBookingLabId
                     }
                 });
             }
@@ -541,22 +531,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 if (existingData == null)
                     return NotFound(new { message = "Data detail booking lab tidak ditemukan." });
 
-                // ==========================================================
-                // ✅ Generate NoOrder jika LabId berubah
-                // ==========================================================
-                if (existingData.LabId != vm.LabId)
-                {
-                    existingData.NoPhoto = await _noPhotoGeneratorService.GenerateNoOrderByLabIdAsync(
-                        (Guid)vm.LabId,
-                        ct);
-                }
-
-                // ============================================
-                // NoPhoto 
-                // ============================================
-                var noPhoto = await _noPhotoGeneratorService.GenerateNoPhotoAsync(
-                            vm.PemeriksaanLabId,
-                            ct);
 
                 // ==========================================================
                 // ✅ Update field dari ViewModel
@@ -581,7 +555,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 existingData.AsalSpecimenId = vm.AsalSpecimenId;
                 existingData.StatusPemeriksaan = vm.StatusPemeriksaan;
                 existingData.TanggalSelesai = vm.TanggalSelesai;
-                existingData.NoPhoto = noPhoto;
                 existingData.QtyOrder = vm.QtyOrder;
 
                 existingData.UpdateBy = userActiveId;
@@ -677,8 +650,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     message = "Update Data Detail Booking Lab & Billing Berhasil || 200 OK",
                     data = new
                     {
-                        existingData.DetailBookingLabId,
-                        existingData.NoOrder
+                        existingData.DetailBookingLabId
                     }
                 });
             }
@@ -782,10 +754,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     on d.CreateBy equals u.UserActiveId into ug
                 from u in ug.DefaultIfEmpty()
 
-                join v in _applicationDbContext.UserActives.AsNoTracking()
-                    on d.VerifikatorId equals v.UserActiveId into vg
-                from v in vg.DefaultIfEmpty()
-
                 join bl in _applicationDbContext.Billings.AsNoTracking()
                     on d.PemeriksaanLabId equals bl.ItemId into blg
                 from bl in blg.DefaultIfEmpty()
@@ -800,7 +768,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     d.LabId,
                     NamaLab = d.Lab != null ? d.Lab.NamaLab : null,
                     d.PasienId,
-                    d.NoOrder,
                     d.TipeLayanan,
                     KunjunganId = d.LabBooking.Kunjungan != null ? d.LabBooking.Kunjungan.KunjunganID : (Guid?)null,
                     JenisKunjungan = d.LabBooking.Kunjungan != null ? d.LabBooking.Kunjungan.JenisKunjungan : null,
@@ -828,8 +795,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     d.StatusPemeriksaan,
                     d.TanggalSelesai,
                     d.StatusVerifikasi,
-                    d.VerifikatorId,
-                    NamaVerifikator = vg != null ? v.FullName : null,
                     d.QtyOrder,
                     d.NoPhoto
                 };

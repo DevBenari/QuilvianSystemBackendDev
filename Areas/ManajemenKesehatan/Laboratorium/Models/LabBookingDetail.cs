@@ -27,7 +27,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public string? BahanNonGC { get; set; } // Non-Gynaecological Cytology
         public string? BahanMicrobiologi { get; set; } // Jenis specimen mikrobiologi (urine, wound, respiratory, dll)
         public string? MasaHaidTerakhir { get; set; } // Informasi masa haid terakhir (jika relevan)
-        public string? NoOrder { get; set; }
         public decimal? QtyOrder {  get; set; }
         public string? StatusPemeriksaan {  get; set; }
         public DateTime? TanggalSelesai { get; set; }

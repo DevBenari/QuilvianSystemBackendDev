@@ -20,6 +20,7 @@ using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Services;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.ViewModels;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Enum;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Enum;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
 using QuilvianSystemBackendDev.Interfaces;
 using QuilvianSystemBackendDev.Models;
 using QuilvianSystemBackendDev.Repositories;
@@ -216,7 +217,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         d.BahanMicrobiologi,
                         d.MasaHaidTerakhir,
 
-                        d.NoOrder,
                         d.QtyOrder,
                         d.NoPhoto,
                         d.StatusPemeriksaan,
@@ -450,7 +450,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         d.BahanMicrobiologi,
                         d.MasaHaidTerakhir,
 
-                        d.NoOrder,
                         d.QtyOrder,
                         d.NoPhoto,
                         d.StatusPemeriksaan,
@@ -544,7 +543,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] LabBookingViewModel vm)
+        public async Task<IActionResult> Create([FromBody] LabBookingViewModel vm, CancellationToken ct)
         {
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
@@ -564,6 +563,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
 
                 var userActiveId = getUserActive.UserActiveId;
+
+                var noOrder = await _noPhotoGeneratorService.GetLastNoOrderNumberByKunjunganIdAsync(
+                    (Guid)vm.KunjunganId, ct);
 
                 // ======================================
                 // ✅ Simpan ke Database
@@ -591,6 +593,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     CatatanJaminan = vm.CatatanJaminan,
                     NoLab = vm.NoLab,
                     NoPA = vm.NoPA,
+                    NoOrder = noOrder,
                     StatusBookingLab = false,
                     AlasanPembatalan = vm.AlasanPembatalan,
                     ProsesBooking = vm.ProsesBooking,
@@ -1503,6 +1506,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 {
                     b.BookingLabId,
                     b.NoOrder,
+                    b.NoLab,
+                    b.NoPA,
+                    b.NomorSuratJaminan,
 
                     KunjunganId = b.KunjunganId,
                     AsalKunjungan = b.Kunjungan != null ? b.Kunjungan.AsalKunjungan : null,
@@ -1585,7 +1591,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     d.DetailBookingLabId,
                     d.PasienId,
                     d.PemeriksaanLabId,
-                    d.NoOrder,
                     TipeLayanan = d.TipeLayanan ?? null,
                     NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
                     HargaPemeriksaan = lp != null ? (decimal?)lp.HargaPemeriksaan : null,
@@ -1689,7 +1694,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         d.LabId,
                         d.NamaLab,
                         d.PemeriksaanLabId,
-                        d.NoOrder,
                         d.NamaPemeriksaan,
                         d.HargaPemeriksaan,
                         d.QtyOrder,
@@ -1996,7 +2000,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     d.PasienId,
                     TipeLayanan = d.TipeLayanan,
                     d.PemeriksaanLabId,
-                    d.NoOrder,
                     d.NoPhoto,
                     NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
                     HargaPemeriksaan = lp != null ? lp.HargaPemeriksaan : null,
@@ -2079,7 +2082,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         d.KunjunganId,
                         d.PasienId,
                         d.PemeriksaanLabId,
-                        d.NoOrder,
                         d.NoPhoto,
                         d.NamaPemeriksaan,
                         d.HargaPemeriksaan,
@@ -2474,7 +2476,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      NamaLab = d.Lab != null ? d.Lab.NamaLab : null,
 
                      d.DetailBookingLabId,
-                     d.NoOrder,
                      d.NoPhoto,
                      TipeLayanan = d.TipeLayanan,
 
@@ -2888,7 +2889,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      NamaLab = d.Lab != null ? d.Lab.NamaLab : null,
 
                      d.DetailBookingLabId,
-                     d.NoOrder,
                      TipeLayanan = d.TipeLayanan,
 
                      d.PemeriksaanLabId,
@@ -3283,7 +3283,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      NamaLab = d.Lab != null ? d.Lab.NamaLab : null,
 
                      d.DetailBookingLabId,
-                     d.NoOrder,
                      d.NoPhoto,
                      TipeLayanan = d.TipeLayanan,
 

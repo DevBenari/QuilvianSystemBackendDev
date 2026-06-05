@@ -7,7 +7,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Service
 {
     public interface INoPhotoGeneratorService
     {
-        Task<string> GenerateNoOrderByLabIdAsync(Guid labId, CancellationToken cancellationToken = default);
+        Task<string> GetLastNoOrderNumberByKunjunganIdAsync(Guid kunjunganId,CancellationToken cancellationToken = default); 
         Task<int> GenerateNoPhotosByLabBookingIdAsync(Guid labBookingId, CancellationToken cancellationToken = default);
 
     }
@@ -43,8 +43,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Service
         }
 
         public async Task<int> GenerateNoPhotosByLabBookingIdAsync(
-    Guid labBookingId,
-    CancellationToken cancellationToken = default)
+        Guid labBookingId,
+        CancellationToken cancellationToken = default)
         {
             var now = DateTime.Now;
 
@@ -150,24 +150,30 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Service
                     await transaction.DisposeAsync();
             }
         }
-        public async Task<string> GenerateNoOrderByLabIdAsync(Guid labId, CancellationToken cancellationToken = default)
+        public async Task<string> GetLastNoOrderNumberByKunjunganIdAsync(
+            Guid kunjunganId,
+            CancellationToken cancellationToken = default)
         {
-            var lastNoOrder = await _context.LabBookingDetails
+            var existingNoOrders = await _context.LabBookings
                 .AsNoTracking()
-                .Where(x => x.LabId == labId &&
-                            x.NoOrder != null &&
-                            x.NoOrder != "")
-                .OrderByDescending(x => x.NoOrder)
-                .Select(x => x.NoOrder)
-                .FirstOrDefaultAsync(cancellationToken);
+                .Where(x =>
+                    x.KunjunganId == kunjunganId &&
+                    x.NoOrder != null &&
+                    x.NoOrder != "")
+                .Select(x => x.NoOrder!)
+                .ToListAsync(cancellationToken);
 
-            var nextNumber = 1;
+            var maxNumber = 0;
 
-            if (!string.IsNullOrWhiteSpace(lastNoOrder) &&
-                int.TryParse(lastNoOrder, out var parsed))
+            foreach (var noOrder in existingNoOrders)
             {
-                nextNumber = parsed + 1;
+                if (int.TryParse(noOrder, out var number) && number > maxNumber)
+                {
+                    maxNumber = number;
+                }
             }
+
+            var nextNumber = maxNumber + 1;
 
             return nextNumber.ToString("D6"); // 000001
         }
