@@ -5,6 +5,7 @@
         public Guid? BookingLabId { get; set; } // Relasi ke tabel Booking Lab
         public Guid? PasienId { get; set; } // Relasi ke tabel Pasien
         public Guid? PemeriksaanLabId { get; set; } // Relasi ke tabel Pemeriksaan Lab
+        public Guid? DokterPemeriksaId { get; set; } // Relasi ke tabel Dokter
         public List<Guid>? SpecimenJenisId { get; set; }
         public List<Guid>? SpecimenMethodId { get; set; }
         public Guid? AsalSpecimenId { get; set; }

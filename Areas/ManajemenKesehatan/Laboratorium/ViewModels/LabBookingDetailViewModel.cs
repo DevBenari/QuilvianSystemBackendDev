@@ -10,6 +10,7 @@
         public Guid? AsalSpecimenId { get; set; }
         public Guid? KunjunganId { get; set; }
         public Guid? LabId { get; set; }
+        public Guid? DokterPemeriksaId { get; set; } // Relasi ke tabel Dokter
         public string? TipeLayanan { get; set; }
         public string? KategoriPatologiAnatomi { get; set; } // Histological / Cytology / Non Gynae Cytology
         public string? JenisSpecimen { get; set; } // Biopsi / Operasi / Kerokan / Cairan Tubuh, dll

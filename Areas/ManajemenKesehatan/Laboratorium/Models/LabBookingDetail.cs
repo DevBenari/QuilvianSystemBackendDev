@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Pendaftaran.Models;
 using QuilvianSystemBackendDev.Models;
 
@@ -13,6 +14,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public Guid? PasienId { get; set; } // Relasi ke tabel Pasien
         public Guid? PemeriksaanLabId { get; set; } // Relasi ke tabel Pemeriksaan Lab
         public Guid? LabId { get; set; } // Relasi ke tabel Pemeriksaan Lab
+        public Guid? DokterPemeriksaId { get; set; } // Relasi ke tabel Dokter
         public List<Guid>?  SpecimenJenisId { get; set; }
         public List<Guid>?  SpecimenMethodId { get; set; }
         public Guid?  AsalSpecimenId { get; set; }
@@ -42,5 +44,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public PendaftaranPasienBaru? Pasien { get; set; }
         public LabPemeriksaan? PemeriksaanLab { get; set; }
         public SpecimenAsal? AsalSpecimen { get; set; }
+        public Dokter? DokterPemeriksa { get; set; }
     }
 }

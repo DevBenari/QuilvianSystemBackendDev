@@ -100,6 +100,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                              d.PemeriksaanLabId,
                              NamaPemeriksaan = p.NamaPemeriksaan ?? "-",
                              HargaPemeriksaan = p.HargaPemeriksaan ?? null,
+                             d.DokterPemeriksaId,
+                             NamaDokter = d.DokterPemeriksa != null ?d.DokterPemeriksa.NmDokter : null,
                              d.KategoriPatologiAnatomi,
                              d.JenisSpecimen,
                              d.LokasiSpecimen,
@@ -188,6 +190,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                                      d.PemeriksaanLabId,
                                      NamaPemeriksaan = d.PemeriksaanLab != null ? (d.PemeriksaanLab.NamaPemeriksaan ?? "-") : "-",
                                      HargaPemeriksaan = d.PemeriksaanLab != null ? d.PemeriksaanLab.HargaPemeriksaan : (decimal?)null,
+                                     d.DokterPemeriksaId,
+                                     NamaDokter = d.DokterPemeriksa != null ? d.DokterPemeriksa.NmDokter : null,
                                      bl.BillingId,
                                      bl.StatusBilling,
                                      d.KategoriPatologiAnatomi,
@@ -273,6 +277,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     PasienId = vm.PasienId,
                     PemeriksaanLabId = vm.PemeriksaanLabId,
                     LabId = vm.LabId,
+                    DokterPemeriksaId = vm.DokterPemeriksaId,
                     TipeLayanan = vm.TipeLayanan,
                     KategoriPatologiAnatomi = vm.KategoriPatologiAnatomi,
                     JenisSpecimen = vm.JenisSpecimen,
@@ -539,6 +544,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 existingData.PasienId = vm.PasienId;
                 existingData.PemeriksaanLabId = vm.PemeriksaanLabId;
                 existingData.LabId = vm.LabId;
+                existingData.DokterPemeriksaId = vm.DokterPemeriksaId;
                 existingData.KategoriPatologiAnatomi = vm.KategoriPatologiAnatomi;
                 existingData.JenisSpecimen = vm.JenisSpecimen;
                 existingData.LokasiSpecimen = vm.LokasiSpecimen;
@@ -776,6 +782,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     HargaPemeriksaan = d.PemeriksaanLab != null ? d.PemeriksaanLab.HargaPemeriksaan : (decimal?)null,
                     BillingId = bl != null ? (Guid?)bl.BillingId : null,
                     IsLunas = bl != null ? (bool?)bl.StatusBilling : null,
+                    d.DokterPemeriksaId,
+                    NamaDokter = d.DokterPemeriksa != null ? d.DokterPemeriksa.NmDokter : null,
                     d.KategoriPatologiAnatomi,
                     d.JenisSpecimen,
                     d.LokasiSpecimen,

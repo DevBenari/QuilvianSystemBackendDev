@@ -150,10 +150,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         x.Booking.StatusPemeriksaan,
 
                         x.Booking.KelasId,
-
-                        x.Booking.DokterPemeriksaId,
-                        NamaDokter = x.Booking.DokterPemeriksa != null ? x.Booking.DokterPemeriksa.NmDokter : null,
-
                         x.Booking.Keterangan,
                         x.Booking.IsCito,
                         x.Booking.DiagnosaAwal,
@@ -267,10 +263,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         b.StatusPemeriksaan,
 
                         b.KelasId,
-
-                        b.DokterPemeriksaId,
-                        b.NamaDokter,
-
                         b.Keterangan,
                         b.IsCito,
                         b.DiagnosaAwal,
@@ -386,9 +378,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         AsuransiId = b.AsuransiId,
                         AsuransiNama = b.Asuransi != null ? b.Asuransi.NamaAsuransi : null,
 
-                        DokterPemeriksaId = b.DokterPemeriksaId,
-                        DokterPemeriksa = b.DokterPemeriksa != null ? b.DokterPemeriksa.NmDokter : null,
-
                         DokterKonsulenId = b.DokterKonsulenId,
                         DokterKonsulen = b.DokterKonsulen != null ? b.DokterKonsulen.NmDokter : null,
 
@@ -493,9 +482,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     header.AsuransiId,
                     header.AsuransiNama,
 
-                    header.DokterPemeriksaId,
-                    header.DokterPemeriksa,
-
                     header.DokterKonsulenId,
                     header.DokterKonsulen,
 
@@ -580,7 +566,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     TglBooking = vm.TglBooking,
                     TglPemeriksaan = vm.TglPemeriksaan,
                     KelasId = vm.KelasId,
-                    DokterPemeriksaId = vm.DokterPemeriksaId,
                     DokterPerujukId = vm.DokterPerujukId,
                     Keterangan = vm.Keterangan,
                     IsCito = vm.IsCito,
@@ -693,7 +678,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 entity.TglBooking = vm.TglBooking;
                 entity.TglPemeriksaan = vm.TglPemeriksaan;
                 entity.KelasId = vm.KelasId;
-                entity.DokterPemeriksaId = vm.DokterPemeriksaId;
                 entity.DokterPerujukId = vm.DokterPerujukId;
                 entity.KonfirmatorId = vm.KonfirmatorId;
                 entity.TglKonfirmasi = DateTime.UtcNow;
@@ -1291,8 +1275,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             int perPage = 10,
             Guid? kunjunganId = null,
             Guid? labBookingId = null,
+            bool? isPasienPersiapan = null,
             Guid? labId = null,
-            Guid? dokterPemeriksaId = null,
             [FromQuery] EnumJenisKunjungan? JenisKunjungan = null,
             string? namaLab = null,
             string? orderBy = "CreateDateTime",
@@ -1336,8 +1320,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             if (labBookingId.HasValue)
                 parentQuery = parentQuery.Where(b => b.BookingLabId == labBookingId.Value);
 
-            if (dokterPemeriksaId.HasValue)
-                parentQuery = parentQuery.Where(b => b.DokterPemeriksaId == dokterPemeriksaId.Value);
+            //if (isPasienPersiapan.HasValue)
+            //    parentQuery = parentQuery.Where(b => b.IsPasienPersiapan == isPasienPersiapan);
 
             // filter JenisKunjungan
             if (JenisKunjungan.HasValue)
@@ -1529,9 +1513,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     b.AsuransiId,
                     AsuransiNama = b.Asuransi != null ? b.Asuransi.NamaAsuransi : null,
 
-                    DokterPemeriksaId = b.DokterPemeriksaId,
-                    DokterNama = b.DokterPemeriksa != null ? b.DokterPemeriksa.NmDokter : null,
-
                     DokterKonsulenId = b.DokterKonsulenId,
                     DokterKonsulen = b.DokterKonsulen != null ? b.DokterKonsulen.NmDokter : null,
 
@@ -1590,6 +1571,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     d.DetailBookingLabId,
                     d.PasienId,
                     d.PemeriksaanLabId,
+                    d.DokterPemeriksaId,
+                    NamaDokter = d.DokterPemeriksa != null ? d.DokterPemeriksa.NmDokter : null,
                     TipeLayanan = d.TipeLayanan ?? null,
                     NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
                     HargaPemeriksaan = lp != null ? (decimal?)lp.HargaPemeriksaan : null,
@@ -1699,6 +1682,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         d.NoPhoto,
                         d.StatusPemeriksaan,
                         d.StatusVerifikasi,
+                        d.DokterPemeriksaId,
+                        d.NamaDokter,
                         d.TanggalSelesai,
                         d.CreateDateTime,
                         d.IsDelete,
@@ -1751,7 +1736,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             int perPage = 10,
             Guid? kunjunganId = null,
             Guid? labBookingId = null,
-            Guid? dokterPemeriksaId = null,
             [FromQuery] EnumJenisKunjungan? JenisKunjungan = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
@@ -1802,9 +1786,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
             if (labBookingId.HasValue)
                 baseQuery = baseQuery.Where(b => b.BookingLabId == labBookingId.Value);
-
-            if (dokterPemeriksaId.HasValue)
-                baseQuery = baseQuery.Where(b => b.DokterPemeriksaId == dokterPemeriksaId.Value);
 
             if (JenisKunjungan.HasValue)
             {
@@ -1928,9 +1909,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     b.AsuransiId,
                     AsuransiNama = b.Asuransi != null ? b.Asuransi.NamaAsuransi : null,
 
-                    DokterPemeriksaId = b.DokterPemeriksaId,
-                    DokterNama = b.DokterPemeriksa != null ? b.DokterPemeriksa.NmDokter : null,
-
                     DokterKonsulenId = b.DokterKonsulenId,
                     DokterKonsulen = b.DokterKonsulen != null ? b.DokterKonsulen.NmDokter : null,
 
@@ -2002,6 +1980,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     d.NoPhoto,
                     NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
                     HargaPemeriksaan = lp != null ? lp.HargaPemeriksaan : null,
+                    d.DokterPemeriksaId,
+                    NamaDokter = d.DokterPemeriksa != null ? d.DokterPemeriksa.NmDokter : null,
                     d.QtyOrder,
                     d.StatusPemeriksaan,
                     d.StatusVerifikasi,
@@ -2088,6 +2068,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         d.StatusPemeriksaan,
                         d.StatusVerifikasi,
                         d.TanggalSelesai,
+                        d.DokterPemeriksaId,
+                        d.NamaDokter,
                         d.CreateDateTime,
                         d.IsDelete,
                         IsLunas = detailIsLunas
@@ -2139,7 +2121,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             int perPage = 10,
             Guid? kunjunganId = null,
             Guid? labBookingId = null,
-            Guid? dokterPemeriksaId = null,
             [FromQuery] EnumJenisKunjungan? JenisKunjungan = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
@@ -2190,9 +2171,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
             if (labBookingId.HasValue)
                 baseQuery = baseQuery.Where(b => b.BookingLabId == labBookingId.Value);
-
-            if (dokterPemeriksaId.HasValue)
-                baseQuery = baseQuery.Where(b => b.DokterPemeriksaId == dokterPemeriksaId.Value);
 
             if (JenisKunjungan.HasValue)
             {
@@ -2408,9 +2386,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     b.AsuransiId,
                     AsuransiNama = b.Asuransi != null ? b.Asuransi.NamaAsuransi : null,
 
-                    DokterPemeriksaId = b.DokterPemeriksaId,
-                    DokterNama = b.DokterPemeriksa != null ? b.DokterPemeriksa.NmDokter : null,
-
                     DokterKonsulenId = b.DokterKonsulenId,
                     DokterKonsulen = b.DokterKonsulen != null ? b.DokterKonsulen.NmDokter : null,
 
@@ -2584,9 +2559,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
             if (labBookingId.HasValue)
                 baseQuery = baseQuery.Where(b => b.BookingLabId == labBookingId.Value);
-
-            if (dokterPemeriksaId.HasValue)
-                baseQuery = baseQuery.Where(b => b.DokterPemeriksaId == dokterPemeriksaId.Value);
 
             // =============================
             // 2) Filter periode
@@ -2821,9 +2793,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     b.AsuransiId,
                     AsuransiNama = b.Asuransi != null ? b.Asuransi.NamaAsuransi : null,
 
-                    DokterPemeriksaId = b.DokterPemeriksaId,
-                    DokterNama = b.DokterPemeriksa != null ? b.DokterPemeriksa.NmDokter : null,
-
                     DokterKonsulenId = b.DokterKonsulenId,
                     DokterKonsulen = b.DokterKonsulen != null ? b.DokterKonsulen.NmDokter : null,
 
@@ -2893,7 +2862,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      d.PemeriksaanLabId,
                      NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
                      HargaPemeriksaan = lp != null ? lp.HargaPemeriksaan : null,
-
+                     d.DokterPemeriksaId,
+                     NamaDokter = d.DokterPemeriksa != null ? d.DokterPemeriksa.NmDokter : null,
                      d.QtyOrder,
                      d.NoPhoto,
                      d.IsDelete
@@ -2944,7 +2914,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             int perPage = 10,
             Guid? kunjunganId = null,
             Guid? labBookingId = null,
-            Guid? dokterPemeriksaId = null,
             string? dokterKonsul = null,
             [FromQuery] EnumJenisKunjungan? JenisKunjungan = null,
             string? orderBy = "CreateDateTime",
@@ -2998,8 +2967,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             if (labBookingId.HasValue)
                 baseQuery = baseQuery.Where(b => b.BookingLabId == labBookingId.Value);
 
-            if (dokterPemeriksaId.HasValue)
-                baseQuery = baseQuery.Where(b => b.DokterPemeriksaId == dokterPemeriksaId.Value);
 
             // =============================
             // 2) Filter jenis kunjungan
@@ -3215,9 +3182,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     b.AsuransiId,
                     AsuransiNama = b.Asuransi != null ? b.Asuransi.NamaAsuransi : null,
 
-                    DokterPemeriksaId = b.DokterPemeriksaId,
-                    DokterNama = b.DokterPemeriksa != null ? b.DokterPemeriksa.NmDokter : null,
-
                     DokterKonsulenId = b.DokterKonsulenId,
                     DokterKonsulen = b.DokterKonsulen != null ? b.DokterKonsulen.NmDokter : null,
 
@@ -3289,6 +3253,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                      NamaPemeriksaan = lp != null ? lp.NamaPemeriksaan : null,
                      HargaPemeriksaan = lp != null ? lp.HargaPemeriksaan : null,
                      d.QtyOrder,
+                     d.DokterPemeriksaId,
+                     NamaDokter = d.DokterPemeriksa != null ? d.DokterPemeriksa.NmDokter : null,
                      d.IsDelete
                  })
                 .ToListAsync();
