@@ -1320,8 +1320,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             if (labBookingId.HasValue)
                 parentQuery = parentQuery.Where(b => b.BookingLabId == labBookingId.Value);
 
-            //if (isPasienPersiapan.HasValue)
-            //    parentQuery = parentQuery.Where(b => b.IsPasienPersiapan == isPasienPersiapan);
+            if (isPasienPersiapan.HasValue)
+                parentQuery = parentQuery.Where(b => b.IsPasienPersiapan == isPasienPersiapan);
 
             // filter JenisKunjungan
             if (JenisKunjungan.HasValue)
