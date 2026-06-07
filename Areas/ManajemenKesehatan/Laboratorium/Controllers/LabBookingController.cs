@@ -139,6 +139,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         x.Booking.KunjunganId,
                         AsalKunjungan = x.Booking.Kunjungan != null ? x.Booking.Kunjungan.AsalKunjungan : null,
                         TipePasien = x.Booking.Kunjungan != null ? x.Booking.Kunjungan.TipePasien : null,
+                        NoRegistrasi = x.Booking.Kunjungan != null ? x.Booking.Kunjungan.NoRegistrasi : null,
+                        x.Booking.IsPasienPersiapan,
 
                         x.Booking.PasienId,
                         NamaLengkap = x.Booking.Pasien != null ? x.Booking.Pasien.NamaLengkap : null,
@@ -252,6 +254,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         b.KunjunganId,
                         b.AsalKunjungan,
                         b.TipePasien,
+                        b.NoRegistrasi,
+                        b.IsPasienPersiapan,
 
                         b.PasienId,
                         b.NamaLengkap,
@@ -340,6 +344,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         TipePasien = b.Kunjungan != null ? b.Kunjungan.TipePasien : null,
                         JenisKunjungan = b.Kunjungan != null ? b.Kunjungan.JenisKunjungan : null,
                         NoRegistrasi = b.Kunjungan != null ? b.Kunjungan.NoRegistrasi : null,
+                        b.IsPasienPersiapan,
 
                         PoliId = b.Kunjungan != null ? b.Kunjungan.PoliklinikId : null,
                         NamaPoli = b.Kunjungan != null && b.Kunjungan.Poliklinik != null
@@ -461,6 +466,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     header.AsalKunjungan,
                     header.TipePasien,
                     header.JenisKunjungan,
+                    header.NoRegistrasi,
+                    header.IsPasienPersiapan,
+
                     header.PoliId,
                     header.NamaPoli,
 
@@ -1499,6 +1507,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     TipePasien = b.Kunjungan != null ? b.Kunjungan.TipePasien : null,
                     JenisKunjungan = b.Kunjungan != null ? b.Kunjungan.JenisKunjungan : null,
                     NoRegistrasi = b.Kunjungan != null ? b.Kunjungan.NoRegistrasi : null,
+                    IsPasienPersiapan= b.IsPasienPersiapan,
 
                     PasienId = b.PasienId,
                     NamaLengkap = b.Pasien != null ? b.Pasien.NamaLengkap : null,
