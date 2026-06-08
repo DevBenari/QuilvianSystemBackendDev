@@ -577,6 +577,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     DokterPerujukId = vm.DokterPerujukId,
                     Keterangan = vm.Keterangan,
                     IsCito = vm.IsCito,
+                    IsPasienPersiapan = vm.IsPasienPersiapan,
                     DiagnosaAwal = vm.DiagnosaAwal,
                     StatusPemeriksaan = vm.StatusPemeriksaan,
                     DokterKonsulenId = vm.DokterKonsulenId,
@@ -691,6 +692,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 entity.TglKonfirmasi = DateTime.UtcNow;
                 entity.Keterangan = vm.Keterangan;
                 entity.IsCito = vm.IsCito;
+                entity.IsPasienPersiapan = vm.IsPasienPersiapan;
                 entity.DiagnosaAwal = vm.DiagnosaAwal;
                 entity.StatusPemeriksaan = vm.StatusPemeriksaan;
                 entity.DokterKonsulenId = vm.DokterKonsulenId;
@@ -1746,6 +1748,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             int perPage = 10,
             Guid? kunjunganId = null,
             Guid? labBookingId = null,
+            bool? isPasienPersiapan = null,
             [FromQuery] EnumJenisKunjungan? JenisKunjungan = null,
             string? orderBy = "CreateDateTime",
             string? sortDirection = "desc",
@@ -1796,6 +1799,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
             if (labBookingId.HasValue)
                 baseQuery = baseQuery.Where(b => b.BookingLabId == labBookingId.Value);
+
+            if (isPasienPersiapan.HasValue)
+                baseQuery = baseQuery.Where(b => b.IsPasienPersiapan == isPasienPersiapan);
+
 
             if (JenisKunjungan.HasValue)
             {
@@ -1905,6 +1912,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     TipePasien = b.Kunjungan != null ? b.Kunjungan.TipePasien : null,
                     JenisKunjungan = b.Kunjungan != null ? b.Kunjungan.JenisKunjungan : null,
                     NoRegistrasi = b.Kunjungan != null ? b.Kunjungan.NoRegistrasi : null,
+                    isPasienPersiapan = b.IsPasienPersiapan,
 
                     PasienId = b.PasienId,
                     NamaLengkap = b.Pasien != null ? b.Pasien.NamaLengkap : null,

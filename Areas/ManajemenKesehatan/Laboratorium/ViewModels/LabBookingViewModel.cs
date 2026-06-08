@@ -11,13 +11,13 @@
         public Guid? KelasId { get; set; } // Relasi ke tabel Kelas
 
         // dokter
-        public Guid? DokterPemeriksaId { get; set; } // Relasi ke tabel Dokter
         public Guid? DokterKonsulenId { get; set; }
         public Guid? TerapisId { get; set; }
         public Guid? DokterPerujukId { get; set; }
 
         public string? Keterangan { get; set; } // Catatan atau keterangan tambahan
         public bool? IsCito { get; set; } // Penanda apakah pemeriksaan bersifat "Cito" (darurat)
+        public bool? IsPasienPersiapan { get; set; } 
         public string? DiagnosaAwal { get; set; }
         public string? StatusPemeriksaan { get; set; }
         public decimal? HemodialisaKe { get; set; }
