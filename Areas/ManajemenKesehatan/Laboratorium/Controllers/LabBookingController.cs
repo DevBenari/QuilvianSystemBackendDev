@@ -647,37 +647,33 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
 
+            await using var transaction = await _applicationDbContext.Database.BeginTransactionAsync(ct);
+
             try
             {
-                // ======================================
-                // 🔐 Ambil user aktif dari JWT
-                // ======================================
                 var emailLogin = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(emailLogin))
                     return Unauthorized(new { message = "User tidak terautentikasi!" });
 
-                var getUserActive = _applicationDbContext.UserActives
-                    .FirstOrDefault(u => u.Email == emailLogin);
+                var getUserActive = await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(u => u.Email == emailLogin, ct);
+
                 if (getUserActive == null)
                     return Unauthorized(new { message = "User aktif tidak ditemukan!" });
 
                 var userActiveId = getUserActive.UserActiveId;
 
-                // ======================================
-                // 🔎 Cek apakah data booking ada
-                // ======================================
                 var entity = await _applicationDbContext.LabBookings
-                    .FirstOrDefaultAsync(b => b.BookingLabId == id && (b.IsDelete == false || b.IsDelete == null));
+                    .FirstOrDefaultAsync(b =>
+                        b.BookingLabId == id &&
+                        (b.IsDelete == false || b.IsDelete == null),
+                        ct);
 
                 if (entity == null)
                     return NotFound(new { message = "Data Booking Lab tidak ditemukan. || 404 Not Found" });
 
-                // generate no photo di lab booking details
-                var generatedCount = await _noPhotoGeneratorService
-                    .GenerateNoPhotosByLabBookingIdAsync(entity.BookingLabId, ct);
-
                 // ======================================
-                // ⚙️ Update nilai field
+                // Update nilai field dulu
                 // ======================================
                 entity.KunjunganId = vm.KunjunganId;
                 entity.PasienId = vm.PasienId;
@@ -687,6 +683,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 entity.TglPemeriksaan = vm.TglPemeriksaan;
                 entity.KelasId = vm.KelasId;
                 entity.DokterPerujukId = vm.DokterPerujukId;
+
                 entity.KonfirmatorId = vm.KonfirmatorId;
                 entity.TglKonfirmasi = DateTime.UtcNow;
                 entity.Keterangan = vm.Keterangan;
@@ -703,54 +700,62 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 entity.HasilPenunjangLab = vm.HasilPenunjangLab;
                 entity.AnjuranDiet = vm.AnjuranDiet;
 
-
-                // ======================================
-                // 🕒 Update metadata
-                // ======================================
                 entity.UpdateBy = userActiveId;
                 entity.UpdateDateTime = DateTime.UtcNow;
 
-                _applicationDbContext.LabBookings.Update(entity);
-                int result = await _applicationDbContext.SaveChangesAsync();
+                // Simpan dulu supaya KonfirmatorId sudah masuk ke DB
+                await _applicationDbContext.SaveChangesAsync(ct);
 
-                if (result > 0)
+                // ======================================
+                // Generate NoPhoto hanya kalau sudah konfirmasi
+                // ======================================
+                var generatedCount = 0;
+
+                if (entity.KonfirmatorId.HasValue)
                 {
-                    await _hubContext.Clients.All.SendAsync("Lab booking changed", new
-                    {
-                        Action = "changed",
-                        TriageId = entity.BookingLabId
-                    });
-
-                    return Ok(new
-                    {
-                        message = "Data berhasil diperbarui. || 200 OK",
-                        data = new
-                        {
-                            entity.BookingLabId,
-                            totalNoPhotoGenerated = generatedCount,
-                            entity.NoOrder,
-                            entity.NomorSuratJaminan,
-                            entity.CatatanJaminan,
-                            entity.TglBooking,
-                            entity.IsCito,
-                            entity.UpdateDateTime
-                        }
-                    });
+                    generatedCount = await _noPhotoGeneratorService
+                        .GenerateNoPhotosByLabBookingIdAsync(entity.BookingLabId, ct);
                 }
 
-                return StatusCode(500, new { message = "Gagal memperbarui data ke database." });
+                await transaction.CommitAsync(ct);
+
+                await _hubContext.Clients.All.SendAsync("Lab booking changed", new
+                {
+                    Action = "changed",
+                    TriageId = entity.BookingLabId
+                }, ct);
+
+                return Ok(new
+                {
+                    message = "Data berhasil diperbarui. || 200 OK",
+                    data = new
+                    {
+                        entity.BookingLabId,
+                        totalNoPhotoGenerated = generatedCount,
+                        entity.NoOrder,
+                        entity.NomorSuratJaminan,
+                        entity.CatatanJaminan,
+                        entity.TglBooking,
+                        entity.TglPemeriksaan,
+                        entity.TglKonfirmasi,
+                        entity.KonfirmatorId,
+                        entity.IsCito,
+                        entity.UpdateDateTime
+                    }
+                });
             }
             catch (DbUpdateException dbEx)
             {
+                await transaction.RollbackAsync(ct);
                 return StatusCode(500, new { message = $"Kesalahan database: {dbEx.InnerException?.Message}" });
             }
             catch (Exception ex)
             {
+                await transaction.RollbackAsync(ct);
                 _logger.LogError(ex, "Error saat memperbarui booking lab");
                 return StatusCode(500, new { message = $"Terjadi kesalahan internal: {ex.Message}" });
             }
         }
-
         [HttpPut("StatusPemeriksaanLab/{id}")]
         public async Task<IActionResult> StatusPemeriksaanLab(Guid id, [FromBody] string status)
         {
