@@ -522,6 +522,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             Guid? Labid = null,
             Guid? kelasId = null,
             Guid? asuransiId = null,
+            bool? isButuhPersiapan = null,
             string? search = null,
             string? kodePemeriksaan = null,
             string? namaLab = null,
@@ -816,16 +817,38 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 var result = rows.Select(r =>
                 {
                     var coverList = coverByPemeriksaan[r.PemeriksaanLabId]
-                        .Select(x => new { x.AsuransiId, x.NamaAsuransi, x.MarkupTotal })
+                        .Select(x => new
+                        {
+                            x.AsuransiId,
+                            x.NamaAsuransi,
+                            x.MarkupTotal
+                        })
                         .ToList();
+
                     return new
                     {
                         r.PemeriksaanLabId,
                         r.NamaPemeriksaan,
-                        r.NamaLab,
-                        r.NamaKategori,
-                        r.KodePemeriksaan,
                         r.HargaPemeriksaan,
+                        r.KodePemeriksaan,
+                        r.DurasiPuasa,
+                        r.IsButuhPersiapan,
+                        r.Keterangan,
+
+                        r.CreateDateTime,
+                        r.CreateBy,
+                        r.CreateByName,
+
+                        r.KategoriPemeriksaanId,
+                        r.NamaKategori,
+                        r.KodeKategoriPemeriksaan,
+
+                        r.LabId,
+                        r.NamaLab,
+                        r.KodeLab,
+
+                        r.TarifKelas,
+
                         AsuransiCoverages = coverList
                     };
                 });

@@ -92,7 +92,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             return null;
         }
 
-
         [HttpGet]
         public async Task<IActionResult> GetAll(int page = 1, int perPage = 10)
         {
