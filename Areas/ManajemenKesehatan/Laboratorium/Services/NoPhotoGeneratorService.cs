@@ -43,8 +43,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Service
         }
 
         public async Task<int> GenerateNoPhotosByLabBookingIdAsync(
-        Guid labBookingId,
-        CancellationToken cancellationToken = default)
+            Guid labBookingId,
+            CancellationToken cancellationToken = default)
         {
             var now = DateTime.Now;
 
@@ -60,9 +60,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Service
                 if (booking == null)
                     throw new Exception("Booking lab tidak ditemukan.");
 
-                // Sesuaikan nama property ini dengan model kamu.
-                // Misalnya: booking.IsKonfirmasi, booking.IsConfirmed, atau booking.KonfirmasiId.
-                if (booking.KonfirmatorId != null)
+                if (booking.KonfirmatorId == null)
                     throw new Exception("No Photo hanya bisa digenerate jika booking lab sudah dikonfirmasi.");
 
                 var details = await _context.LabBookingDetails
@@ -80,17 +78,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Service
                     return 0;
                 }
 
-                var labIds = details
-                    .Select(x => x.LabId)
+                var pemeriksaanLabIds = details
+                    .Where(x => x.PemeriksaanLabId.HasValue)
+                    .Select(x => x.PemeriksaanLabId!.Value)
                     .Distinct()
                     .ToList();
 
-                var kategoriByLabId = await _context.LabPemeriksaans
+                var kategoriByPemeriksaanLabId = await _context.LabPemeriksaans
                     .AsNoTracking()
-                    .Where(x => labIds.Contains(x.PemeriksaanLabId))
+                    .Where(x => pemeriksaanLabIds.Contains(x.PemeriksaanLabId))
                     .Select(x => new
                     {
-                        LabId = x.PemeriksaanLabId,
+                        PemeriksaanLabId = x.PemeriksaanLabId,
                         KodeKategori = x.KategoriPemeriksaan != null
                             ? x.KategoriPemeriksaan.KodeKategori
                             : null,
@@ -98,7 +97,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Service
                             ? x.KategoriPemeriksaan.NamaKategori
                             : null
                     })
-                    .ToDictionaryAsync(x => x.LabId, cancellationToken);
+                    .ToDictionaryAsync(x => x.PemeriksaanLabId, cancellationToken);
 
                 var hospitalYear = ReferenceHospitalYear + (now.Year - ReferenceYear);
                 if (hospitalYear < 0)
@@ -110,8 +109,11 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Service
 
                 foreach (var detail in details)
                 {
-                    if (!kategoriByLabId.TryGetValue((Guid)detail.LabId, out var kategori))
-                        throw new Exception($"Kategori pemeriksaan tidak ditemukan untuk LabId: {detail.LabId}");
+                    if (!detail.PemeriksaanLabId.HasValue)
+                        throw new Exception($"PemeriksaanLabId kosong untuk DetailBookingLabId: {detail.DetailBookingLabId}");
+
+                    if (!kategoriByPemeriksaanLabId.TryGetValue(detail.PemeriksaanLabId.Value, out var kategori))
+                        throw new Exception($"Kategori pemeriksaan tidak ditemukan untuk PemeriksaanLabId: {detail.PemeriksaanLabId}");
 
                     var modality = GetModalityCode(kategori.KodeKategori, kategori.NamaKategori);
 
@@ -130,7 +132,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Service
                     lastNumberByPrefix[prefix] = nextNumber;
                 }
 
-                var updatedCount = await _context.SaveChangesAsync(cancellationToken);
+                await _context.SaveChangesAsync(cancellationToken);
 
                 if (transaction != null)
                     await transaction.CommitAsync(cancellationToken);
@@ -150,6 +152,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Service
                     await transaction.DisposeAsync();
             }
         }
+
         public async Task<string> GetLastNoOrderNumberByKunjunganIdAsync(
             Guid kunjunganId,
             CancellationToken cancellationToken = default)
