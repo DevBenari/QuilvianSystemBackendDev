@@ -44,6 +44,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
             if (perPage < 1) perPage = 10;
 
             var query = from d in _context.DetailInvoiceReceiveds
+                        join dr in _context.DetailReceivedPayments
+                            on d.DetailReceivedPaymentId equals dr.DetailReceivedPaymentId
                         join u in _context.UserActives
                         on d.CreateBy equals u.UserActiveId
                         where d.IsDelete == false
@@ -51,6 +53,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                         {
                             d.DetailInvoicePaymentId,
                             d.DetailReceivedPaymentId,
+                            dr.NoInvoice, // tampilkan NoInvoice
                             d.KunjunganId,
                             d.PasiemId,
                             d.NoRM,
@@ -212,6 +215,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
             string? search = null)
         {
             var query = from d in _context.DetailInvoiceReceiveds
+                        join dr in _context.DetailReceivedPayments
+                            on d.DetailReceivedPaymentId equals dr.DetailReceivedPaymentId
                         join u in _context.UserActives
                         on d.CreateBy equals u.UserActiveId
                         where d.IsDelete == false
@@ -219,6 +224,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                         {
                             d.DetailInvoicePaymentId,
                             d.DetailReceivedPaymentId,
+                            dr.NoInvoice, // tampilkan NoInvoice
                             d.KunjunganId,
                             d.PasiemId,
                             d.NoRM,
