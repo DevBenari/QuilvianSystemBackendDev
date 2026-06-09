@@ -7,6 +7,7 @@ using QuilvianSystemBackendDev.Areas.Administrator.MasterData.Models;
 using QuilvianSystemBackendDev.Areas.Finance.AR.Models;
 using QuilvianSystemBackendDev.Areas.Finance.AyatSilangs.Models;
 using QuilvianSystemBackendDev.Areas.Finance.COA.Models;
+using QuilvianSystemBackendDev.Areas.Finance.Faktur.Models;
 using QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers;
 using QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Models;
 using QuilvianSystemBackendDev.Areas.Finance.Po.Models;
@@ -1306,6 +1307,8 @@ namespace QuilvianSystemBackendDev.Repositories
             #endregion
 
         public DbSet<MasterBank> MasterBanks { get; set; }
+        public DbSet<TukarFaktur> TukarFakturs { get; set; }
+        public DbSet<DetailTukarFaktur> DetailTukarFakturs { get; set; }
         #endregion
     }
 }
