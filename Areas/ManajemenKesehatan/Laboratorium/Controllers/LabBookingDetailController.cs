@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Data;
+using System.Security.Claims;
 using System.Threading;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
@@ -38,7 +39,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
         private readonly ILogger<LabBookingDetailController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly IGenerateInvoiceBillingService _generateInvoiceBillingService;
-        private readonly IAsuransiCoverageService _asuransiCoverageService;
+        private readonly IAsuransiCoverageService _asuransiCoverageService; 
+        private readonly INoPhotoGeneratorService _noPhotoGeneratorService;
 
         public LabBookingDetailController(
             ApplicationDbContext applicationDbContext,
@@ -50,7 +52,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             ITTDService ttdService,
             IHubContext<LabBookingDetailHub> hubContext,
             IGenerateInvoiceBillingService generateInvoiceBillingService,
-            IAsuransiCoverageService asuransiCoverageService)
+            IAsuransiCoverageService asuransiCoverageService,
+            INoPhotoGeneratorService noPhotoGeneratorService)
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
@@ -62,6 +65,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             _ttdService = ttdService;
             _generateInvoiceBillingService = generateInvoiceBillingService;
             _asuransiCoverageService = asuransiCoverageService;
+            _noPhotoGeneratorService = noPhotoGeneratorService;
         }
 
         [HttpGet]
@@ -243,6 +247,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
             if (vm == null || !ModelState.IsValid)
                 return BadRequest(new { message = "Data tidak valid." });
 
+            await using var transaction = await _applicationDbContext.Database
+                .BeginTransactionAsync(IsolationLevel.Serializable, ct);
+
             try
             {
                 if (!_applicationDbContext.Database.CanConnect())
@@ -259,14 +266,18 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 var userActiveId = getUserActive.UserActiveId;
 
-                if (vm.LabId  == null)
-                {
-                    return BadRequest(new
-                    {
-                        message = "Lab Id harus diisi"
-                    });
-                }
+                if (!vm.BookingLabId.HasValue)
+                    return BadRequest(new { message = "BookingLabId wajib diisi." });
 
+                if (!vm.LabId.HasValue)
+                    return BadRequest(new { message = "LabId wajib diisi." });
+
+                var noOrder = await _noPhotoGeneratorService.EnsureNoOrderForBookingAsync(
+                    vm.BookingLabId.Value,
+                    vm.LabId.Value,
+                    userActiveId,
+                    ct
+                );
                 // ==========================================================
                 // ✅ Buat data baru LabBookingDetail
                 // ==========================================================
@@ -302,7 +313,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 };
 
                 _applicationDbContext.LabBookingDetails.Add(data);
-                await _applicationDbContext.SaveChangesAsync();
+                await _applicationDbContext.SaveChangesAsync(ct);
 
                 // ==========================================================
                 // ✅ Tambahkan otomatis ke Billing
@@ -353,7 +364,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         await _applicationDbContext.SaveChangesAsync();
                     }
                 }
-
+                await transaction.CommitAsync(ct);
                 await _hubContext.Clients.All.SendAsync("Lab booking detail created", new
                 {
                     Action = "create",

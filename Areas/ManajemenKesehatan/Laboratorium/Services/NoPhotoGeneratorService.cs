@@ -7,18 +7,32 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Service
 {
     public interface INoPhotoGeneratorService
     {
-        Task<string> GetLastNoOrderNumberByKunjunganIdAsync(Guid kunjunganId,CancellationToken cancellationToken = default); 
-        Task<int> GenerateNoPhotosByLabBookingIdAsync(Guid labBookingId, CancellationToken cancellationToken = default);
+        Task<string> GenerateNoOrderByLabIdAsync(
+            Guid labId,
+            CancellationToken cancellationToken = default);
 
+        Task<string> EnsureNoOrderForBookingAsync(
+            Guid bookingLabId,
+            Guid labId,
+            Guid? updateBy = null,
+            CancellationToken cancellationToken = default);
+
+        Task<int> GenerateNoPhotosByLabBookingIdAsync(
+            Guid labBookingId,
+            CancellationToken cancellationToken = default);
     }
 
     public class NoPhotoGeneratorService : INoPhotoGeneratorService
     {
         private readonly ApplicationDbContext _context;
 
-        // Januari 2026 = umur RS 40 tahun
-        private const int ReferenceYear = 2026;
-        private const int ReferenceHospitalYear = 40;
+        // Januari 2026 = umur RS 40 tahun.
+        // Berarti tahun berdiri RS = 1986.
+        // Nilai ini tidak perlu diganti setiap tahun.
+        private const int HospitalEstablishedYear = 1986;
+
+        // RS berulang tahun setiap bulan Januari.
+        private const int HospitalAnniversaryMonth = 1;
 
         // Januari=A, Februari=B, ... Desember=L
         private static readonly Dictionary<int, string> MonthCodes = new()
@@ -42,10 +56,138 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Service
             _context = context;
         }
 
+        // =========================================================
+        // NO ORDER
+        // Format: 000001
+        // Naik berdasarkan LabId / layanan penunjang.
+        //
+        // Contoh:
+        // Radiologi   -> 000001, 000002, 000003
+        // Laboratorium -> 000001, 000002, 000003
+        // =========================================================
+        public async Task<string> GenerateNoOrderByLabIdAsync(
+            Guid labId,
+            CancellationToken cancellationToken = default)
+        {
+            if (labId == Guid.Empty)
+                throw new Exception("LabId tidak valid.");
+
+            var existingNoOrders = await _context.LabBookings
+                .AsNoTracking()
+                .Where(b =>
+                    b.NoOrder != null &&
+                    b.NoOrder != "" &&
+                    _context.LabBookingDetails.Any(d =>
+                        d.BookingLabId.HasValue &&
+                        d.BookingLabId.Value == b.BookingLabId &&
+                        d.LabId.HasValue &&
+                        d.LabId.Value == labId
+                    )
+                )
+                .Select(b => b.NoOrder!)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
+            var maxNumber = 0;
+
+            foreach (var noOrder in existingNoOrders)
+            {
+                if (int.TryParse(noOrder, out var number) && number > maxNumber)
+                {
+                    maxNumber = number;
+                }
+            }
+
+            var nextNumber = maxNumber + 1;
+
+            return nextNumber.ToString("D6"); // 000001
+        }
+
+        // =========================================================
+        // ENSURE NO ORDER
+        //
+        // Dipanggil saat LabBookingDetail dibuat.
+        //
+        // Logic:
+        // - Kalau LabBooking.NoOrder masih kosong, generate berdasarkan LabId.
+        // - Kalau LabBooking.NoOrder sudah ada, pakai nomor lama.
+        // - Jadi detail kedua, ketiga, dst dalam BookingLabId yang sama
+        //   tetap memakai NoOrder yang sama.
+        // =========================================================
+        public async Task<string> EnsureNoOrderForBookingAsync(
+            Guid bookingLabId,
+            Guid labId,
+            Guid? updateBy = null,
+            CancellationToken cancellationToken = default)
+        {
+            if (bookingLabId == Guid.Empty)
+                throw new Exception("BookingLabId tidak valid.");
+
+            if (labId == Guid.Empty)
+                throw new Exception("LabId tidak valid.");
+
+            var booking = await _context.LabBookings
+                .FirstOrDefaultAsync(x =>
+                    x.BookingLabId == bookingLabId &&
+                    (x.IsDelete == false || x.IsDelete == null),
+                    cancellationToken);
+
+            if (booking == null)
+                throw new Exception("Booking lab tidak ditemukan.");
+
+            // Satu BookingLabId hanya boleh punya satu jenis LabId / layanan penunjang.
+            var existingLabIds = await _context.LabBookingDetails
+                .AsNoTracking()
+                .Where(x =>
+                    x.BookingLabId.HasValue &&
+                    x.BookingLabId.Value == bookingLabId &&
+                    x.LabId.HasValue &&
+                    (x.IsDelete == false || x.IsDelete == null))
+                .Select(x => x.LabId!.Value)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
+            if (existingLabIds.Any() && !existingLabIds.Contains(labId))
+            {
+                throw new Exception("Satu BookingLabId tidak boleh memiliki LabId / layanan penunjang berbeda.");
+            }
+
+            // Kalau sudah punya NoOrder, jangan generate ulang.
+            if (!string.IsNullOrWhiteSpace(booking.NoOrder))
+                return booking.NoOrder;
+
+            var noOrder = await GenerateNoOrderByLabIdAsync(labId, cancellationToken);
+
+            booking.NoOrder = noOrder;
+            booking.UpdateDateTime = DateTime.UtcNow;
+
+            if (updateBy.HasValue)
+                booking.UpdateBy = updateBy.Value;
+
+            return noOrder;
+        }
+
+        // =========================================================
+        // NO PHOTO
+        //
+        // Format:
+        // [KodeModality][UmurRS][KodeBulan]-[Urutan]
+        //
+        // Contoh:
+        // R40A-001
+        //
+        // R  = Radiologi / huruf pertama kode kategori
+        // 40 = umur RS
+        // A  = Januari
+        // 001 = urutan
+        // =========================================================
         public async Task<int> GenerateNoPhotosByLabBookingIdAsync(
             Guid labBookingId,
             CancellationToken cancellationToken = default)
         {
+            if (labBookingId == Guid.Empty)
+                throw new Exception("BookingLabId tidak valid.");
+
             var now = DateTime.Now;
 
             var transaction = _context.Database.CurrentTransaction == null
@@ -55,7 +197,10 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Service
             try
             {
                 var booking = await _context.LabBookings
-                    .FirstOrDefaultAsync(x => x.BookingLabId == labBookingId, cancellationToken);
+                    .FirstOrDefaultAsync(x =>
+                        x.BookingLabId == labBookingId &&
+                        (x.IsDelete == false || x.IsDelete == null),
+                        cancellationToken);
 
                 if (booking == null)
                     throw new Exception("Booking lab tidak ditemukan.");
@@ -66,7 +211,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Service
                 var details = await _context.LabBookingDetails
                     .Where(x =>
                         x.BookingLabId == labBookingId &&
-                        (x.NoPhoto == null || x.NoPhoto == ""))
+                        (x.NoPhoto == null || x.NoPhoto == "") &&
+                        (x.IsDelete == false || x.IsDelete == null))
                     .OrderBy(x => x.CreateDateTime)
                     .ToListAsync(cancellationToken);
 
@@ -89,7 +235,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Service
                     .Where(x => pemeriksaanLabIds.Contains(x.PemeriksaanLabId))
                     .Select(x => new
                     {
-                        PemeriksaanLabId = x.PemeriksaanLabId,
+                        x.PemeriksaanLabId,
                         KodeKategori = x.KategoriPemeriksaan != null
                             ? x.KategoriPemeriksaan.KodeKategori
                             : null,
@@ -99,10 +245,7 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Service
                     })
                     .ToDictionaryAsync(x => x.PemeriksaanLabId, cancellationToken);
 
-                var hospitalYear = ReferenceHospitalYear + (now.Year - ReferenceYear);
-                if (hospitalYear < 0)
-                    throw new Exception("Perhitungan tahun berjalan rumah sakit tidak valid.");
-
+                var hospitalYear = GetHospitalYear(now);
                 var monthCode = GetMonthCode(now.Month);
 
                 var lastNumberByPrefix = new Dictionary<string, int>();
@@ -110,12 +253,21 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Service
                 foreach (var detail in details)
                 {
                     if (!detail.PemeriksaanLabId.HasValue)
-                        throw new Exception($"PemeriksaanLabId kosong untuk DetailBookingLabId: {detail.DetailBookingLabId}");
+                    {
+                        throw new Exception(
+                            $"PemeriksaanLabId kosong untuk DetailBookingLabId: {detail.DetailBookingLabId}");
+                    }
 
                     if (!kategoriByPemeriksaanLabId.TryGetValue(detail.PemeriksaanLabId.Value, out var kategori))
-                        throw new Exception($"Kategori pemeriksaan tidak ditemukan untuk PemeriksaanLabId: {detail.PemeriksaanLabId}");
+                    {
+                        throw new Exception(
+                            $"Kategori pemeriksaan tidak ditemukan untuk PemeriksaanLabId: {detail.PemeriksaanLabId}");
+                    }
 
-                    var modality = GetModalityCode(kategori.KodeKategori, kategori.NamaKategori);
+                    var modality = GetModalityCode(
+                        kategori.KodeKategori,
+                        kategori.NamaKategori
+                    );
 
                     var prefix = $"{modality}{hospitalYear:00}{monthCode}-";
 
@@ -153,32 +305,23 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Service
             }
         }
 
-        public async Task<string> GetLastNoOrderNumberByKunjunganIdAsync(
-            Guid kunjunganId,
-            CancellationToken cancellationToken = default)
+        // =========================================================
+        // HELPER
+        // =========================================================
+
+        private static int GetHospitalYear(DateTime date)
         {
-            var existingNoOrders = await _context.LabBookings
-                .AsNoTracking()
-                .Where(x =>
-                    x.KunjunganId == kunjunganId &&
-                    x.NoOrder != null &&
-                    x.NoOrder != "")
-                .Select(x => x.NoOrder!)
-                .ToListAsync(cancellationToken);
+            var hospitalYear = date.Year - HospitalEstablishedYear;
 
-            var maxNumber = 0;
-
-            foreach (var noOrder in existingNoOrders)
+            if (date.Month < HospitalAnniversaryMonth)
             {
-                if (int.TryParse(noOrder, out var number) && number > maxNumber)
-                {
-                    maxNumber = number;
-                }
+                hospitalYear--;
             }
 
-            var nextNumber = maxNumber + 1;
+            if (hospitalYear < 0)
+                throw new Exception("Perhitungan umur rumah sakit tidak valid.");
 
-            return nextNumber.ToString("D6"); // 000001
+            return hospitalYear;
         }
 
         private static string GetModalityCode(string? kodeKategori, string? namaKategori)
@@ -206,7 +349,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Service
         {
             var existingNoPhotos = await _context.LabBookingDetails
                 .AsNoTracking()
-                .Where(x => x.NoPhoto != null && x.NoPhoto.StartsWith(prefix))
+                .Where(x =>
+                    x.NoPhoto != null &&
+                    x.NoPhoto.StartsWith(prefix))
                 .Select(x => x.NoPhoto!)
                 .ToListAsync(cancellationToken);
 

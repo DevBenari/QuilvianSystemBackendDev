@@ -15,6 +15,9 @@
         public Guid? TerapisId { get; set; }
         public Guid? DokterPerujukId { get; set; }
 
+        public TimeOnly? WaktuPemeriksaan { get; set; }
+        public TimeOnly? WaktuPemeriksaanPersiapan { get; set; }
+
         public string? Keterangan { get; set; } // Catatan atau keterangan tambahan
         public bool? IsCito { get; set; } // Penanda apakah pemeriksaan bersifat "Cito" (darurat)
         public bool? IsPasienPersiapan { get; set; } 

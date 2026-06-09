@@ -163,6 +163,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         x.Booking.AsuransiId,
                         NamaAsuransi = x.Booking.Asuransi != null ? x.Booking.Asuransi.NamaAsuransi : null,
 
+                        x.Booking.WaktuPemeriksaan,
+                        x.Booking.WaktuPemeriksaanPersiapan,
+
                         x.Booking.HemodialisaKe,
                         x.Booking.NoLab,
                         x.Booking.NoPA,
@@ -277,7 +280,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                         b.AsuransiId,
                         b.NamaAsuransi,
-
+                        b.WaktuPemeriksaan,
+                        b.WaktuPemeriksaanPersiapan,
                         b.HemodialisaKe,
                         b.NoLab,
                         b.NoPA,
@@ -363,6 +367,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                         b.TglPemeriksaan,
                         b.TglBooking,
                         b.TglPenyerahanSampling,
+
+                        b.WaktuPemeriksaan,
+                        b.WaktuPemeriksaanPersiapan,
 
                         b.KelasId,
                         b.Keterangan,
@@ -499,6 +506,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     header.NamaKonfirmator,
                     header.TglKonfrimasi,
 
+                    header.WaktuPemeriksaan,
+                    header.WaktuPemeriksaanPersiapan,
+
                     header.IsCito,
                     header.DiagnosaAwal,
                     header.HemodialisaKe,
@@ -557,9 +567,6 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
 
                 var userActiveId = getUserActive.UserActiveId;
 
-                var noOrder = await _noPhotoGeneratorService.GetLastNoOrderNumberByKunjunganIdAsync(
-                    (Guid)vm.KunjunganId, ct);
-
                 // ======================================
                 // ✅ Simpan ke Database
                 // ======================================
@@ -586,7 +593,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     CatatanJaminan = vm.CatatanJaminan,
                     NoLab = vm.NoLab,
                     NoPA = vm.NoPA,
-                    NoOrder = noOrder,
+                    WaktuPemeriksaan = vm.WaktuPemeriksaan,
+                    WaktuPemeriksaanPersiapan = vm.WaktuPemeriksaanPersiapan,
                     StatusBookingLab = false,
                     AlasanPembatalan = vm.AlasanPembatalan,
                     ProsesBooking = vm.ProsesBooking,
@@ -688,6 +696,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                 entity.TglKonfirmasi = DateTime.UtcNow;
                 entity.Keterangan = vm.Keterangan;
                 entity.IsCito = vm.IsCito;
+                entity.WaktuPemeriksaan = vm.WaktuPemeriksaan;
+                entity.WaktuPemeriksaanPersiapan = vm.WaktuPemeriksaanPersiapan;
                 entity.IsPasienPersiapan = vm.IsPasienPersiapan;
                 entity.DiagnosaAwal = vm.DiagnosaAwal;
                 entity.StatusPemeriksaan = vm.StatusPemeriksaan;
@@ -1538,7 +1548,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     KonfirmatorId = b.KonfirmatorId,
                     NamaKonfirmator = b.Konfirmator != null ? b.Konfirmator.FullName : null,
                     TglKonfrimasi = b.TglKonfirmasi,
-
+                    b.WaktuPemeriksaan,
+                    b.WaktuPemeriksaanPersiapan,
                     b.TglPemeriksaan,
                     b.TglBooking,
                     b.AlasanPembatalan,
@@ -1940,7 +1951,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     KonfirmatorId = b.KonfirmatorId,
                     NamaKonfirmator = b.Konfirmator != null ? b.Konfirmator.FullName : null,
                     TglKonfirmasi = b.TglKonfirmasi,
-
+                    b.WaktuPemeriksaan,
+                    b.WaktuPemeriksaanPersiapan,
                     b.TglPemeriksaan,
                     b.TglBooking,
                     b.AlasanPembatalan,
@@ -2417,7 +2429,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     KonfirmatorId = b.KonfirmatorId,
                     NamaKonfirmator = b.Konfirmator != null ? b.Konfirmator.FullName : null,
                     TglKonfirmasi = b.TglKonfirmasi,
-
+                    b.WaktuPemeriksaan,
+                    b.WaktuPemeriksaanPersiapan,
                     b.TglPemeriksaan,
                     b.TglBooking,
                     b.AlasanPembatalan,
@@ -2824,7 +2837,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     KonfirmatorId = b.KonfirmatorId,
                     NamaKonfirmator = b.Konfirmator != null ? b.Konfirmator.FullName : null,
                     TglKonfirmasi = b.TglKonfirmasi,
-
+                    b.WaktuPemeriksaan,
+                    b.WaktuPemeriksaanPersiapan,
                     b.TglPemeriksaan,
                     b.TglBooking,
                     b.AlasanPembatalan,
@@ -3213,7 +3227,8 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Control
                     KonfirmatorId = b.KonfirmatorId,
                     NamaKonfirmator = b.Konfirmator != null ? b.Konfirmator.FullName : null,
                     TglKonfirmasi = b.TglKonfirmasi,
-
+                    b.WaktuPemeriksaan,
+                    b.WaktuPemeriksaanPersiapan,
                     b.TglPemeriksaan,
                     b.TglBooking,
                     b.AlasanPembatalan,

@@ -46,6 +46,9 @@ namespace QuilvianSystemBackendDev.Areas.ManajemenKesehatan.Laboratorium.Models
         public string? HasilPenunjangLab { get; set; }
         public string? AnjuranDiet {  get; set; }
         public DateTime? TglKonfirmasi {  get; set; }
+        // Tambahan baru
+        public TimeOnly? WaktuPemeriksaan { get; set; }
+        public TimeOnly? WaktuPemeriksaanPersiapan { get; set; }
 
         // Navigation
         public Kunjungan? Kunjungan { get; set; }
