@@ -26,6 +26,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Models
 
         public bool IsDocumentComplited { get; set; }
         public bool IsCanceled { get; set; }
+        public bool IsLunas { get; set; } = false;
+        public decimal? SisaPembayaran { get; set; }
 
         public string Keterangan { get; set; }
     }
