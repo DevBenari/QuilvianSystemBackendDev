@@ -13,7 +13,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    [EnableCors("FrontendCorsPolicy")]
+    [EnableCors("AllowSpecific")]
     public class DetailInvoiceReceivedController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -44,6 +44,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
             if (perPage < 1) perPage = 10;
 
             var query = from d in _context.DetailInvoiceReceiveds
+                        join dr in _context.DetailReceivedPayments
+                            on d.DetailReceivedPaymentId equals dr.DetailReceivedPaymentId
                         join u in _context.UserActives
                         on d.CreateBy equals u.UserActiveId
                         where d.IsDelete == false
@@ -51,6 +53,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                         {
                             d.DetailInvoicePaymentId,
                             d.DetailReceivedPaymentId,
+                            dr.NoInvoice, // tampilkan NoInvoice
                             d.KunjunganId,
                             d.PasiemId,
                             d.NoRM,
@@ -69,7 +72,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                             CreateByName = u.FullName
                         };
 
-        var totalRows = await query.CountAsync();
+            var totalRows = await query.CountAsync();
             var data = await query
                 .OrderByDescending(x => x.CreateDateTime)
                 .Skip((page - 1) * perPage)
@@ -136,7 +139,9 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
             _context.DetailInvoiceReceiveds.Add(model);
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "created",
+            return Ok(new
+            {
+                message = "created",
                 data = model
             });
         }
@@ -212,6 +217,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
             string? search = null)
         {
             var query = from d in _context.DetailInvoiceReceiveds
+                        join dr in _context.DetailReceivedPayments
+                            on d.DetailReceivedPaymentId equals dr.DetailReceivedPaymentId
                         join u in _context.UserActives
                         on d.CreateBy equals u.UserActiveId
                         where d.IsDelete == false
@@ -219,6 +226,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                         {
                             d.DetailInvoicePaymentId,
                             d.DetailReceivedPaymentId,
+                            dr.NoInvoice, // tampilkan NoInvoice
                             d.KunjunganId,
                             d.PasiemId,
                             d.NoRM,
