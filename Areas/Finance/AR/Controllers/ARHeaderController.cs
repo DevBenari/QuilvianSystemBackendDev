@@ -16,7 +16,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    [EnableCors("FrontendCorsPolicy")]
+    [EnableCors("AllowSpecific")]
     public class ARHeaderController : ControllerBase
     {
         private readonly ApplicationDbContext _applicationDbContext;
@@ -94,6 +94,10 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
                             ar.TotalInvoice,
 
                             ar.IsDocumentComplited,
+
+                            ar.IsCanceled,
+                            ar.IsLunas,
+                            ar.SisaPembayaran,
 
                             ar.Keterangan,
 
@@ -196,6 +200,8 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
 
                         ar.IsDocumentComplited,
                         ar.IsCanceled,
+                        ar.IsLunas,
+                        ar.SisaPembayaran,
                         ar.Keterangan,
 
                         ar.CreateDateTime,
@@ -545,7 +551,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
         // =========================================================
         // UPDATE
         // =========================================================
-        
+
         [HttpPut("cancel/{id}")]
         public async Task<IActionResult> CancelARDetail(
         Guid id,
@@ -626,11 +632,97 @@ namespace QuilvianSystemBackendDev.Areas.Finance.AR.Controllers
         }
 
 
+        [HttpPut("sisapembayaran/{id}")]
+        public async Task<IActionResult> SisaPembayaran(
+        Guid id,
+        [FromBody] ARHeaderViewModel vm)
+        {
+            try
+            {
+                var data = await _applicationDbContext.ARHeaders
+                    .FirstOrDefaultAsync(x =>
+                        x.ARHeaderId == id &&
+                        x.IsDelete == false);
+
+                if (data == null)
+                {
+                    return NotFound(new
+                    {
+                        message = "Data tidak ditemukan."
+                    });
+                }
+
+                var emailLogin =
+                    User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (string.IsNullOrEmpty(emailLogin))
+                {
+                    return Unauthorized(new
+                    {
+                        message = "User tidak terautentikasi."
+                    });
+                }
+
+                var getUserActive =
+                    await _applicationDbContext.UserActives
+                    .FirstOrDefaultAsync(x =>
+                        x.Email == emailLogin);
+
+                if (getUserActive == null)
+                {
+                    return Unauthorized(new
+                    {
+                        message = "User aktif tidak ditemukan."
+                    });
+                }
+
+                // UPDATE ISCANCELED
+                data.SisaPembayaran = vm.SisaPembayaran;
+
+                // Jika sisa pembayaran 0, maka lunas
+                if (vm.SisaPembayaran.HasValue && vm.SisaPembayaran.Value == 0)
+                {
+                    data.IsLunas = true;
+                }
+
+                data.UpdateDateTime = DateTime.UtcNow;
+                data.UpdateBy = getUserActive.UserActiveId;
+
+                _applicationDbContext.ARHeaders.Update(data);
+
+                int result =
+                    await _applicationDbContext.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    return Ok(new
+                    {
+                        message = "Status cancel berhasil diupdate."
+                    });
+                }
+
+                return StatusCode(500, new
+                {
+                    message = "Gagal update data."
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
+
+                return StatusCode(500, new
+                {
+                    message = ex.Message
+                });
+            }
+        }
+
+
         [HttpPut("{id}")]
-            public async Task<IActionResult> Update(
+        public async Task<IActionResult> Update(
                 Guid id,
                 [FromBody] ARHeaderViewModel vm)
-            {
+        {
             try
             {
                 var data =
