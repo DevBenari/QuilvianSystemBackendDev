@@ -33,7 +33,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.ViewModels
         public string? ApprovedVp { get; set; }
         public string? FileBuktiPembayaran { get; set; }
         public DateTime? TglJaatuhTempo { get; set; }
-
+        public decimal? SisaPembayaran { get; set; }
         public bool? IsTerbayar { get; set; }
 
         [MaxLength(500)]

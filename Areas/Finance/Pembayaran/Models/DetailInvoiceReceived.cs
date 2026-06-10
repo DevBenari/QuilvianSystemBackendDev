@@ -40,6 +40,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Models
         public DateTime? TglJaatuhTempo { get; set; }
 
         public bool? IsTerbayar { get; set; }
+        public decimal? SisaPembayaran { get; set; }
 
         [MaxLength(500)]
         public string? Keterangan { get; set; }

@@ -67,6 +67,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                             d.TotalPiutang,
                             d.TglJaatuhTempo,
                             d.IsTerbayar,
+                            d.SisaPembayaran,
                             d.Keterangan,
                             d.CreateDateTime,
                             CreateByName = u.FullName
@@ -176,6 +177,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
             data.TglJaatuhTempo = model.TglJaatuhTempo;
             data.IsTerbayar = model.IsTerbayar;
             data.Keterangan = model.Keterangan;
+            data.SisaPembayaran = model.SisaPembayaran;
 
             data.UpdateBy = user?.UserActiveId ?? Guid.Empty;
             data.UpdateDateTime = DateTime.UtcNow;
@@ -240,6 +242,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                             d.TotalPiutang,
                             d.TglJaatuhTempo,
                             d.IsTerbayar,
+                            d.SisaPembayaran,
                             d.Keterangan,
                             d.CreateDateTime,
                             CreateByName = u.FullName
