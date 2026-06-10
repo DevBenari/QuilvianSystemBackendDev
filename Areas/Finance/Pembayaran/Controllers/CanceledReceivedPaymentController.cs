@@ -68,7 +68,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                              on a.ReceivedPaymentId equals rp.ReceivedPaymentId into receivedPaymentJoin
                          from rp in receivedPaymentJoin.DefaultIfEmpty()
 
-                         where a.IsDelete != false
+                         where a.IsDelete ==false
                          select new
                          {
                              a.CancelledReceivedPaymentId,
@@ -388,7 +388,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
                                          on a.ReceivedPaymentId equals rp.ReceivedPaymentId into receivedPaymentJoin
                                      from rp in receivedPaymentJoin.DefaultIfEmpty()
 
-                                     where a.IsDelete != false
+                                     where a.IsDelete ==false
                                      select new
                                      {
                                          a.CancelledReceivedPaymentId,
