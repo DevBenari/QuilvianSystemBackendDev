@@ -13,7 +13,7 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    [EnableCors("FrontendCorsPolicy")]
+    [EnableCors("AllowSpecific")]
     public class DetailInvoiceReceivedController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -212,21 +212,21 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
         // ================= PAGED (SEARCH + FILTER) =================
         [HttpGet("paged")]
         public async Task<IActionResult> Paged(
-            int page = 1,
-            int perPage = 10,
-            string? search = null)
+        int page = 1,
+        int perPage = 10,
+        string? search = null)
         {
             var query = from d in _context.DetailInvoiceReceiveds
                         join dr in _context.DetailReceivedPayments
                             on d.DetailReceivedPaymentId equals dr.DetailReceivedPaymentId
                         join u in _context.UserActives
-                        on d.CreateBy equals u.UserActiveId
+                            on d.CreateBy equals u.UserActiveId
                         where d.IsDelete == false
                         select new
                         {
                             d.DetailInvoicePaymentId,
                             d.DetailReceivedPaymentId,
-                            dr.NoInvoice, // tampilkan NoInvoice
+                            dr.NoInvoice,
                             d.KunjunganId,
                             d.PasiemId,
                             d.NoRM,
@@ -247,12 +247,13 @@ namespace QuilvianSystemBackendDev.Areas.Finance.Pembayaran.Controllers
 
             if (!string.IsNullOrWhiteSpace(search))
             {
-                search = $"%{search.ToLower()}%";
+                search = $"%{search.Trim().ToLower()}%";
 
                 query = query.Where(x =>
-                    EF.Functions.ILike(x.NoRM, search) ||
-                    EF.Functions.ILike(x.NamaPasien, search) ||
-                    EF.Functions.ILike(x.NoBilling, search));
+                    EF.Functions.ILike(x.NoInvoice ?? "", search) ||
+                    EF.Functions.ILike(x.NoRM ?? "", search) ||
+                    EF.Functions.ILike(x.NamaPasien ?? "", search) ||
+                    EF.Functions.ILike(x.NoBilling ?? "", search));
             }
 
             var totalRows = await query.CountAsync();
